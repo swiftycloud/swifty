@@ -1,0 +1,9 @@
+*.swp
+*.swo
+.git-ignore
+*.patch
+*.pyc
+cscope*
+tags
+TAGS
+.gitid
