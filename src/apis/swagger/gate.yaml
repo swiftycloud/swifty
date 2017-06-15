@@ -1,0 +1,485 @@
+swagger: '2.0'
+info:
+  version: 1.0.0
+  title: gate api
+host: 'localhost:8686'
+basePath: /v1
+schemes:
+  - https
+consumes:
+  - application/json
+produces:
+  - application/json
+paths:
+  /function/list:
+    post:
+      summary: List functions
+      parameters:
+        - name: data
+          in: body
+          description: List parameters
+          required: true
+          schema:
+            $ref: '#/definitions/FunctionList'
+      responses:
+        '200':
+          description: OK
+          schema:
+            properties:
+              functions:
+                type: array
+                items:
+                  $ref: '#/definitions/FunctionItem'
+        '400':
+          description: Bad request
+  /function/add:
+    post:
+      summary: Add a function
+      parameters:
+        - name: data
+          in: body
+          description: Function source and environment
+          required: true
+          schema:
+            $ref: '#/definitions/FunctionAdd'
+      responses:
+        '200':
+          description: Function added
+        '400':
+          description: Bad request
+  /function/update:
+    post:
+      summary: Update repo of a function
+      parameters:
+        - name: data
+          in: body
+          description: Function to update
+          required: true
+          schema:
+            $ref: '#/definitions/FunctionUpdate'
+      responses:
+        '200':
+          description: Function updated
+        '400':
+          description: Bad request
+  /function/remove:
+    post:
+      summary: Remove a function
+      parameters:
+        - name: data
+          in: body
+          description: Function to remove
+          required: true
+          schema:
+            $ref: '#/definitions/FunctionRemove'
+      responses:
+        '200':
+          description: Function removed
+        '400':
+          description: Bad request
+  /function/run:
+    post:
+      summary: Trigger execution
+      parameters:
+        - name: data
+          in: body
+          description: An array of command line arguments
+          required: false
+          schema:
+            $ref: '#/definitions/FunctionRun'
+      responses:
+        '200':
+          description: Function finished execution
+          schema:
+            $ref: '#/definitions/FunctionRunResult'
+        '400':
+          description: Bad request
+  /function/logs:
+    post:
+      summary: Show logs of a function
+      parameters:
+        - name: data
+          in: body
+          description: Function name to see logs for
+          required: true
+          schema:
+            $ref: '#/definitions/FunctionID'
+      responses:
+        '200':
+          description: OK
+          schema:
+            properties:
+              logs:
+                type: array
+                items:
+                  $ref: '#/definitions/FunctionLogEntry'
+        '400':
+          description: Bad request
+  /function/info:
+    post:
+      summary: Show extended info about a function
+      parameters:
+        - name: date
+          in: body
+          description: Function name
+          required: true
+          schema:
+            $ref: '#/definitions/FunctionID'
+    responses:
+      '200':
+        description: OK
+        schema:
+            $ref: '#/definitions/FunctionInfo'
+        '400':
+          description: Bad request
+  /mware/add:
+    post:
+      summary: Add middleware
+      parameters:
+        - name: data
+          in: body
+          description: Middleware specification
+          required: true
+          schema:
+            $ref: '#/definitions/MwareAdd'
+      responses:
+        '200':
+          description: Middleware added
+        '400':
+          description: Bad request
+  /mware/list:
+    post:
+      summary: List middleware
+      parameters:
+        - name: data
+          in: body
+          description: List parameters
+          required: true
+          schema:
+            $ref: '#/definitions/MwareList'
+      responses:
+        '200':
+          description: OK
+          schema:
+            properties:
+              mware:
+                type: array
+                items:
+                  $ref: '#/definitions/MwareGetItem'
+        '400':
+          description: Bad request
+  /mware/remove:
+    post:
+      summary: Remove middleware
+      parameters:
+        - name: data
+          in: body
+          description: Middleware to remove
+          required: true
+          schema:
+            $ref: '#/definitions/MwareRemove'
+      responses:
+        '200':
+          description: Middleware removed
+        '400':
+          description: Bad request
+definitions:
+  MwareItem:
+    type: object
+    description: Middleware item specification
+    required:
+      - id
+      - type
+    properties:
+      id:
+        type: string
+        description: Middleware id to share between several services
+        example: sqlsharedid
+      type:
+        type: string
+        enum:
+          - sql
+          - mq
+          - nosql
+        description: Type of middleware to install
+        example: sql
+  MwareAdd:
+    type: object
+    description: Middleware specification
+    required:
+      - project
+      - mware
+    properties:
+      project:
+        type: string
+        example: my-project
+      mware:
+        type: array
+        items:
+          $ref: '#/definitions/MwareItem'
+  MwareRemove:
+    type: object
+    description: Middleware specification
+    required:
+      - project
+      - mware
+    properties:
+      project:
+        type: string
+        example: my-project
+      mware:
+        type: array
+        items:
+          type: string
+          example:
+            - foo
+            - bar
+  MwareGetItem:
+    type: object
+    description: Middleware item specification
+    required:
+      - id
+      - type
+    properties:
+      id:
+        type: string
+        description: Middleware id to share between several services
+        example: sqlsharedid
+      type:
+        type: string
+        enum:
+          - sql
+          - mq
+          - nosql
+        description: Type of middleware to install
+        example: sql
+      counter:
+        type: integer
+        description: Middleware counter
+        example: 1
+      jsettings:
+        type: string
+        description: Middleware specific settings in JSON format
+  MwareList:
+    required:
+      - project
+    properties:
+      project:
+        type: string
+        example: my-project
+  FunctionList:
+    required:
+      - project
+    properties:
+      project:
+        type: string
+        example: my-project
+  FunctionInfo:
+    required:
+      - name
+      - state
+    properties:
+      name:
+        type: string
+        example: function-1
+      state:
+        type: string
+        description: State of a function
+        example: 'ready'
+      commit:
+        type: string
+        description: git id of the sources running
+      script:
+        $ref: '#/definitions/FunctionScript'
+      event:
+        $ref: '#/definitions/FunctionEvent'
+      mware:
+        type: array
+        items:
+          type: string
+          example:
+            - foo
+            - bar
+  FunctionScript:
+    type: object
+    description: Script specification
+    required:
+      - lang
+    properties:
+      lang:
+        type: string
+        description: 'Language of the source code, to choose docker image'
+        example: python
+      run:
+        type: string
+        description: Path to the file to launch
+        example: hello.py
+      env:
+        type: array
+        description: Environment variables to set
+        items:
+          type: string
+          example:
+            - VAR1=VALUE1
+            - VAR2=VALUE2
+  FunctionEvent:
+    type: object
+    description: Event specification
+    required:
+      - source
+    properties:
+      source:
+        type: string
+        description: 'Event source type, supported by platform'
+        example: mw
+      crontab:
+        type: string
+        description: Cron string if type is cron
+        example: '* * * * * *'
+      mwid:
+        type: string
+        description: Mware ID if type is mw
+        example: 'myrmq'
+      mqueue:
+        type: string
+        description: MQ queue name if type is mw and mwid refers to a message queue
+        example: 'myqueue'
+  CmdRun:
+    description: Command to execute
+    required:
+      - exe
+    properties:
+      exe:
+        type: string
+        description: Executable to run
+        example: go
+      args:
+        type: array
+        items:
+          type: string
+          example:
+            - build
+            - '-o'
+            - main
+  FunctionAdd:
+    required:
+      - project
+      - name
+      - repo
+      - script
+    properties:
+      project:
+        type: string
+        example: my-project
+      name:
+        type: string
+        example: function-1
+      replicas:
+        type: integer
+        example: 2
+      repo:
+        type: string
+        description: Repository to fetch source code from
+        example: 'https://github.com/cyrillos/test.git'
+      script:
+        $ref: '#/definitions/FunctionAddScript'
+      mware:
+        type: array
+        items:
+          $ref: '#/definitions/MwareItem'
+      event:
+        $ref: '#/definitions/FunctionEvent'
+  FunctionUpdate:
+    required:
+      - project
+      - name
+    properties:
+      project:
+        type: string
+        example: my-project
+      name:
+        type: string
+        example: function-1
+  FunctionRemove:
+    required:
+      - project
+      - name
+    properties:
+      project:
+        type: string
+        example: my-project
+      name:
+        type: string
+        example: function-1
+  FunctionRun:
+    required:
+      - project
+      - name
+    properties:
+      project:
+        type: string
+        example: my-project
+      name:
+        type: string
+        example: function-1
+      args:
+        type: array
+        items:
+          type: string
+          example:
+            - arg1
+            - arg2
+  FunctionID:
+    required:
+      - project
+      - name
+    properties:
+      project:
+        type: string
+        example: my-project
+      name:
+        type: string
+        example: function-1
+  FunctionItem:
+    required:
+      - name
+    properties:
+      name:
+        type: string
+        example: function-1
+      state:
+        type: string
+        example: ready
+  FunctionLogEntry:
+    required:
+      - commit
+      - event
+      - ts
+      - text
+    properties:
+      commit:
+        type: string
+        description: Function commit that generated the entry
+      event:
+        type: string
+        description: Reason why this entry appeared
+      ts:
+        type: string
+        description: Timestamp
+      text:
+        type: string
+  FunctionRunResult:
+    required:
+      - code
+      - stdout
+      - stderr
+    properties:
+      code:
+        type: integer
+        example: 0
+      stdout:
+        type: string
+        example: Hello word
+      stderr:
+        type: string
+        example: ''

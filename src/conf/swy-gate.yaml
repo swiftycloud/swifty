@@ -1,0 +1,41 @@
+---
+db:
+        name: "swifty"
+        address: "127.0.0.1:27017"
+        user: "swifty"
+        password: "1q2w3e"
+daemon:
+        address: "192.168.122.211:8686"
+        view: "/home/swifty/src/gate/view"
+        sources:
+                share: "/home/swifty-volume"
+                clone: "/home/swifty/local-sources"
+        loglevel: "debug"
+balancer:
+        localips:
+                - ip: "10.8.0.1"
+                  ports: "8680:8880"
+                - ip: "10.8.0.2"
+                  ports: "8780:8980"
+middleware:
+        sql:
+                address: "192.168.122.197:3306"
+                user: "root"
+                password: "aiNe1sah9ichu1re"
+        mq:
+                address: "192.168.122.197:5672"
+                user: "root"
+                password: "airooV1Echah4wei"
+                admport: "15672"
+runtime:
+        golang:
+                image: "swifty/golang"
+        python:
+                image: "swifty/python"
+        swift:
+                image: "swifty/swift"
+wdog:
+        ct-path: "/usr/bin/swy-wdog"
+        address: ":8687"
+kubernetes:
+        config-path: src/conf/kubeconfig

@@ -21,26 +21,181 @@ endef
 
 export msg-gen msg-clean
 
+MAKEFLAGS += --no-print-directory
+export MAKEFLAGS
+
 RM		?= rm -f
 MAKE		?= make
+GIT		?= git
+CP		?= cp -f
 GO		?= go
 GO-BUILD-OPTS	?= build
+GOTAGS		?= gotags
+MONGO		?= mongo --quiet localhost:27017/swifty
+KUBECTL		?= kubectl
+IPVSADM		?= ipvsadm
 
-export RM MAKE
+LOCAL_SOURCES	?= /home/swifty/local-sources
+VOLUME_DIR	?= /home/swifty-volume
+TEST_REPO	?= test/.repo
 
-go-y		+= src/main.go
+export RM MAKE GIT CP GO GO-BUILD-OPTS GOTAGS MONGO KUBECTL IPVSADM
 
-vzfaas: $(go-y) .FORCE
+go-gate-y	+= src/gate/db.go
+go-gate-y	+= src/gate/k8s.go
+go-gate-y	+= src/gate/mware.go
+go-gate-y	+= src/gate/balancer.go
+go-gate-y	+= src/gate/main.go
+go-gate-y	+= src/gate/mq.go
+go-gate-y	+= src/gate/event.go
+go-gate-y	+= src/gate/runtime.go
+go-gate-y	+= src/gate/repo.go
+go-gate-y	+= src/gate/funcurl.go
+
+swy-gate: $(go-gate-y) .FORCE
 	$(call msg-gen,$@)
-	$(Q) $(GO) $(GO-BUILD-OPTS) -o $@ $(go-y)
-all-y += vzfaas
+	$(Q) $(GO) $(GO-BUILD-OPTS) -o $@ $(go-gate-y)
+all-y += swy-gate
+
+go-wdog-y	+= src/wdog/main.go
+
+swy-wdog: $(go-wdog-y) .FORCE
+	$(call msg-gen,$@)
+	$(Q) $(GO) $(GO-BUILD-OPTS) -o $@ $(go-wdog-y)
+all-y += swy-wdog
+
+go-ctl-y	+= src/ctl/main.go
+
+swyctl: $(go-ctl-y) .FORCE
+	$(call msg-gen,$@)
+	$(Q) $(GO) $(GO-BUILD-OPTS) -o $@ $(go-ctl-y)
+all-y += swyctl
 
 # Default target
 all: $(all-y)
 
+#
+# Docker images
+swifty/python: swy-wdog kubectl/docker/images/python/Dockerfile
+	$(call msg-gen,$@)
+	$(Q) $(CP) swy-wdog  kubectl/docker/images/python/
+	$(Q) $(MAKE) -C kubectl/docker/images/python all
+.PHONY: swifty/python
+
+swifty/golang: swy-wdog kubectl/docker/images/golang/Dockerfile
+	$(call msg-gen,$@)
+	$(Q) $(CP) swy-wdog  kubectl/docker/images/golang/
+	$(Q) $(MAKE) -C kubectl/docker/images/golang all
+.PHONY: swifty/golang
+
+swifty/swift: swy-wdog kubectl/docker/images/swift/Dockerfile
+	$(call msg-gen,$@)
+	$(Q) $(CP) swy-wdog  kubectl/docker/images/swift/
+	$(Q) $(MAKE) -C kubectl/docker/images/swift all
+.PHONY: swifty/swift
+
+images: swifty/python swifty/golang swifty/swift
+	@true
+.PHONY: images
+
+help:
+	@echo '    Targets:'
+	@echo '      all             - Build all [*] targets'
+	@echo '      images          - Build all docker images'
+	@echo '      docs            - Build documentation'
+	@echo '    * swy-gate        - Build gate'
+	@echo '    * swy-wdog        - Build watchdog'
+	@echo '      swifty/python   - Build swifty/python docker image'
+	@echo '      swifty/golang   - Build swifty/golang docker image'
+	@echo '      swifty/swift    - Build swifty/swift docker image'
+	@echo '      rsclean         - Cleanup resources'
+	@echo '      mqclean         - Cleanup rabbitmq'
+	@echo '      sqlclean        - Cleanup mariadb'
+.PHONY: help
+
+tags:
+	$(Q) $(GOTAGS) -R src/ > tags
+.PHONY: tags
+
+docs: .FORCE
+	$(Q) $(MAKE) -C docs all
+.PHONY: docs
+
+tarball:
+	$(Q) $(GIT) archive --format=tar --prefix=swifty/ HEAD > swifty.tar
+.PHONY: tarball
+
+ifneq ($(filter mqclean,$(MAKECMDGOALS)),)
+rabbit-users := $(filter-out guest root, $(shell rabbitmqctl list_users | tail -n +2 | cut -f 1))
+rabbit-vhosts := $(filter-out /, $(shell rabbitmqctl list_vhosts | tail -n +2 | cut -f 1))
+endif
+
+mqclean: .FORCE
+	$(call msg-gen,"Cleaning up MessageQ")
+ifneq ($(rabbit-users),)
+	$(Q) rabbitmqctl delete_user $(rabbit-users)
+endif
+ifneq ($(rabbit-vhosts),)
+	$(Q) rabbitmqctl delete_vhost $(rabbit-vhosts)
+endif
+.PHONY: mqclean
+
+ifneq ($(filter sqlclean,$(MAKECMDGOALS)),)
+mysql-user ?= "root"
+mysql-pass ?= "aiNe1sah9ichu1re"
+sql-users := $(filter-out root, \
+	$(shell mysql -u$(mysql-user) -p$(mysql-pass) -N -e'select user from mysql.user' | cut -f1))
+sql-dbases := $(filter-out information_schema mysql performance_schema test, \
+	$(shell mysql -u$(mysql-user) -p$(mysql-pass) -N -e'show databases' | cut -f1))
+endif
+
+sqlclean: .FORCE
+	$(call msg-gen,"Cleaning up SQL")
+ifneq ($(sql-users),)
+	$(foreach user,$(sql-users),$(shell mysql -u$(mysql-user) -p$(mysql-pass) -e'drop user $(user)'))
+endif
+ifneq ($(sql-dbases),)
+	$(foreach db,$(sql-dbases),$(shell mysql -u$(mysql-user) -p$(mysql-pass) -e'drop database $(db)'))
+endif
+.PHONY: sqlclean
+
+rsclean:
+	$(call msg-gen,"Cleaning up kubernetes")
+	$(Q) $(KUBECTL) delete deployment --all
+	$(Q) $(KUBECTL) delete secret --all
+	#$(Q) $(KUBECTL) delete service --all
+	$(Q) $(KUBECTL) delete pod --all
+	$(call msg-gen,"Cleaning up IPVS")
+	$(Q) $(IPVSADM) -C
+	$(call msg-gen,"Cleaning up MongoDB")
+	$(Q) $(MONGO) --eval 'db.Function.remove({});'
+	$(Q) $(MONGO) --eval 'db.Mware.remove({});'
+	$(Q) $(MONGO) --eval 'db.Pods.remove({});'
+	$(Q) $(MONGO) --eval 'db.Balancer.remove({});'
+	$(Q) $(MONGO) --eval 'db.BalancerRS.remove({});'
+	#$(Q) $(MONGO) --eval 'db.Logs.remove({});'
+	$(call msg-gen,"Cleaning up FS")
+ifneq ($(wildcard $(LOCAL_SOURCES)/.*),)
+	$(Q) $(RM) -r $(LOCAL_SOURCES)/*
+endif
+ifneq ($(wildcard $(VOLUME_DIR)/.*),)
+	$(Q) $(RM) -r $(VOLUME_DIR)/*
+endif
+ifneq ($(wildcard $(TEST_REPO)/.*),)
+	$(Q) $(RM) -r $(TEST_REPO)/*
+endif
+
 clean:
-	$(call msg-clean,vzfaas)
-	$(Q) $(RM) vzfaas
+	$(call msg-clean,swy-gate)
+	$(Q) $(RM) swy-gate
+	$(call msg-clean,swy-wdog)
+	$(Q) $(RM) swy-wdog
+	$(Q) $(MAKE) -C docs clean
 .PHONY: clean
+
+mrproper: clean
+	$(call msg-clean,tags)
+	$(Q) $(RM) tags
+.PHONY: mrproper
 
 .SUFFIXES:

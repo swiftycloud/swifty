@@ -1,9 +1,12 @@
 *.swp
 *.swo
-.git-ignore
+.git-ignore/
+patches/
 *.patch
 *.pyc
-cscope*
 tags
 TAGS
 .gitid
+swy-gate
+swy-wdog
+swyctl

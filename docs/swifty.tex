@@ -1,0 +1,128 @@
+\documentclass[oneside,openany]{book}
+
+\usepackage[a4paper,margin=72pt]{geometry}
+
+\usepackage{listings}		% listings
+\usepackage{imakeidx}		% indexing
+\usepackage{hyperref}		% pdf bookmarks and such
+\usepackage[Sonny]{fncychap}	% chapter style
+\usepackage{parskip}		% no indent on first line
+\usepackage{fontspec}		% selecting fonts
+\usepackage{xunicode}		% unicode support
+\usepackage{xcolor}		% coloring
+\usepackage{xspace}		% spacing
+\usepackage{sectsty}		% colors for sections
+\usepackage{graphicx}		% images
+\usepackage[titles]{tocloft}	% coloring TOC
+\usepackage{tikz}
+
+\usetikzlibrary{shapes, arrows}
+
+\title{Swifty -- Function As a Service}
+\author{The Swifty Development Team}
+\date{2017}
+\input{version.tex}
+
+%
+% No rectangles
+\makeatletter
+\hypersetup{
+	pdfauthor=\@author,
+	pdftitle=\@title,
+	pdfkeywords={faas,swift,swifty},
+	hidelinks,
+}
+\makeatother
+
+%
+% Up to 4 levels nesting in menu
+\setcounter{tocdepth}{4}
+
+%
+% Highlight listings
+\definecolor{light-gray}{gray}{0.96}
+
+%
+% Setup document fonts
+\setmainfont{Open Sans}
+\setmonofont{Inconsolata}
+
+% Listings font and settings
+\newfontfamily{\lstsansserif}{Inconsolata}
+\lstset{
+	keepspaces=true,
+	backgroundcolor=\color{light-gray},
+	basicstyle=\lstsansserif,
+	breaklines=true,
+	breakatwhitespace=true,
+}
+
+%
+% Heading colors
+\definecolor{hcolor}{RGB}{63,105,174}
+\chapterfont{\color{hcolor}}
+\sectionfont{\color{hcolor}}
+\subsectionfont{\color{hcolor}}
+
+%
+% URL setup
+\definecolor{urlcolor}{RGB}{59,89,152}
+\newcommand{\urlref}[2]{\href{#1}{\textbf{\textcolor{urlcolor}{\underline{#2}}}}}
+
+%
+% Formatting macros
+\newcommand{\textindex}[1]{#1\index{#1}\xspace}
+\newcommand{\textindexlc}[1]{#1\index{\MakeLowercase{#1}}\xspace}
+\newcommand{\code}[1]{{\texttt{#1}}\xspace}
+\newcommand{\indexcode}[1]{\index{#1@\texttt{#1}}\xspace}
+\newcommand{\codeindex}[1]{\texttt{#1}\index{#1@\texttt{#1}}\xspace}
+\newcommand{\fullref}[1]{``\hyperref[{#1}]{\ref*{#1}\xspace\nameref*{#1}}''\xspace}
+\definecolor{jsonidcolor}{RGB}{0,128,0}
+\newcommand{\jsonid}[1]{{\texttt{\textbf{\textcolor{jsonidcolor}{#1}}}\xspace}}
+\definecolor{yamlcolor}{RGB}{0,128,0}
+\newcommand{\yamlid}[1]{{\texttt{\textbf{\textcolor{yamlcolor}{#1}}}\xspace}}
+\newcommand{\textsubindex}[2]{#2\index{#1!#2}\xspace}
+
+%
+% faas addresses
+\newcommand{\faasadr}[1]{\textcolor{urlcolor}{#1}}
+
+%
+% Index into TOC
+\makeindex[title=Index,columns=2,intoc,options=-s idxconf.ist]
+
+%
+% TOC headers
+\renewcommand{\cftchapfont}{\bfseries\color{hcolor}}
+\renewcommand{\cfttoctitlefont}{\huge\bfseries\color{hcolor}}
+
+\begin{document}
+\raggedright
+
+\makeatletter
+\begin{titlepage}
+	\begin{center} \vspace*{\fill}
+		\begin{flushleft}
+		{\huge \bfseries {\@title}}				\\
+		\end{flushleft}
+		\noindent\makebox[\linewidth]{\rule{\textwidth}{2pt}}	\\
+		\begin{flushright}
+		{\large \bfseries \emph{version \version}}		\\[8ex]
+		\end{flushright}
+		%\includegraphics[width=6cm]{img/virtuozzo.eps}
+	\vspace*{\fill} \end{center}
+   \end{titlepage}
+\makeatother
+\thispagestyle{empty}
+
+\tableofcontents
+\addtocontents{toc}{~\hfill\textcolor{hcolor}{\textbf{Page}}\par}
+
+%
+% Document chapters
+\input{intro.tex}
+\input{setup.tex}
+
+\printindex
+
+\end{document}

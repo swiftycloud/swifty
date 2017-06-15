@@ -1,0 +1,61 @@
+swagger: '2.0'
+info:
+  version: 1.0.0
+  title: watchdog api
+host: 'localhost:8687'
+basePath: /v1
+schemes:
+  - https
+consumes:
+  - application/json
+produces:
+  - application/json
+paths:
+  /function/run:
+    post:
+      summary: Trigger execution
+      parameters:
+        - name: data
+          in: body
+          description: An array of command line arguments
+          required: false
+          schema:
+            $ref: '#/definitions/SwdFunctionRun'
+      responses:
+        200:
+          description: Function finished execution
+          schema:
+            $ref: '#/definitions/SwdFunctionRunResult'
+        400:
+          description: Bad request
+definitions:
+  SwdFunctionRun:
+    required:
+      - podtoken
+    properties:
+      podtoken:
+        type: string
+        description: "Pod token"
+        example: 'ff3efef89c489334f24a2fbdffb58c3f88d4ac1410ee290b21889acda2544f94'
+      args:
+        type: array
+        items:
+          type: string
+          example:
+            - 'arg1'
+            - 'arg2'
+  SwdFunctionRunResult:
+    required:
+      - code
+      - stdout
+      - stderr
+    properties:
+      code:
+        type: integer
+        example: 0
+      stdout:
+        type: string
+        example: 'Hello'
+      stderr:
+        type: string
+        example: ''

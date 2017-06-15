@@ -1,0 +1,610 @@
+\chapter{Setting up Swifty}
+\label{ch:setup}
+
+\section{Components}
+\label{sec:setup-components}
+
+Swifty is a set of distributed components:
+
+\begin{itemize}
+\item{\code{swifty} daemon which serves incoming HTTP requests and may
+	be considered as a gate to all underlied serivces;}
+\item{\code{swy-wdog} daemon which runs inside each container serving as a watchdog;}
+\item{Kubernetes which manage resources requested by \code{swifty};}
+\item{Docker which spawns and deletes containers;}
+\item{NFS server and client to access functions source code
+	to run inside containers;}
+\item{Mongo database used by \code{swifty} to track resources;}
+\item{Middleware programs (MariaDB, RabbitMQ and etc) to serve requests from
+	containers.}
+\end{itemize}
+
+Each of these components may preset on sole hardware node or may be
+completely distributed in one per node mode.
+
+To provide an example of the setup procedure we create two virtual machines
+\textbf{fc1} and \textbf{fc2} based on
+\urlref{https://getfedora.org/en/workstation/download/}{Fedora 26} distributive
+with addresses \code{192.168.122.68} and \code{192.168.122.102} respectively.
+Where \textbf{fc1} is a \emph{master} node and \textbf{fc2} is a \emph{slave}.
+
+Thus \emph{master} will carry Kubernetes, MongoDB, NFS server and \code{swifty},
+while \textbf{fc2} for NFS client and Docker containers with \code{swy-wdog}
+watchdog inside.
+
+Add the following records to \code{/etc/hosts} on both nodes
+
+\begin{lstlisting}
+192.168.122.68		fed-master
+192.168.122.68		fc1
+192.168.122.102		fed-node
+192.168.122.102		fc2
+\end{lstlisting}
+
+Make sure they are connected and reacheable from each other.
+
+Disable the firewall
+
+\begin{lstlisting}
+systemctl stop firewalld
+systemctl disable firewalld
+\end{lstlisting}
+
+and SElinux if present in \code{/etc/sysconfig/selinux}
+
+\begin{lstlisting}
+SELINUX=disabled
+\end{lstlisting}
+
+Reboot the machines.
+
+\section{Setting up IPVS}
+\label{sec:setup-nfs}
+
+To balance a traffic between pods
+\urlref{http://www.linuxvirtualserver.org/software/ipvs.html}{IPVS} is used.
+
+First install \code{ipvsadm} utility on the \emph{master} node
+
+\begin{lstlisting}
+dnf -y install ipvsadm
+\end{lstlisting}
+
+Then add a route entry so that the kernel would push traffic
+frames into the interface where all other pods will be able
+to receive. In this manual it is \code{flannel.1} device.
+
+\begin{lstlisting}
+ip r add 10.8.0.0/24 dev flannel.1
+\end{lstlisting}
+
+The address of the interface must be in a local network and
+should match \code{balancer} section in configuratio file
+(see \fullref{subsec:setup-swifty-conf}).
+
+When \code{swifty} handles the function it basically takes new
+address from the config pool and adds pathes with \code{ipvsadm}
+help.
+
+Just for example here is a round robin balancing added for
+testing function with four replicas.
+
+\begin{lstlisting}
+[root@fc3 test]# ipvsadm -ln
+IP Virtual Server version 1.2.1 (size=4096)
+Prot LocalAddress:Port Scheduler Flags
+  -> RemoteAddress:Port           Forward Weight ActiveConn InActConn
+TCP  10.8.0.2:8687 rr
+  -> 16.16.42.2:8687              Masq    1      0          0         
+  -> 16.16.42.4:8687              Masq    1      0          0         
+  -> 16.16.103.2:8687             Masq    1      0          0         
+  -> 16.16.103.3:8687             Masq    1      0          0         
+\end{lstlisting}
+
+\section{Setting up NFS}
+\label{sec:setup-nfs}
+
+Setup NFS on both nodes
+
+\begin{lstlisting}
+dnf -y install nfs-utils
+systemctl start nfs
+systemctl enable nfs
+\end{lstlisting}
+
+Configure the \emph{master}
+
+\begin{lstlisting}
+mkdir -p /home/swifty-volume
+echo "/home/swifty-volume fed-node(rw,sync,no_root_squash)" >> /etc/exports
+exportfs -a
+\end{lstlisting}
+
+Configure the \emph{slave}
+
+\begin{lstlisting}
+mkdir -p /home/swifty-volume
+echo "fed-master:/home/swifty-volume /home/swifty-volume nfs user,rw,exec 0 0" >> /etc/fstab
+mount /home/swifty-volume
+\end{lstlisting}
+
+\section{Setting up Docker}
+\label{sec:setup-docker}
+
+On the \emph{slave} node install \urlref{https://www.docker.com/}{Docker}.
+
+\begin{lstlisting}
+dnf -y install docker
+systemctl enable docker
+\end{lstlisting}
+
+Then add and configure a separate disk for the docker images
+(say separate virtual qcow2 disk with 20G in size attached to
+the virtual machine, in our example it is \code{/dev/sdb}).
+
+\begin{lstlisting}
+systemctl stop docker
+pvcreate /dev/sdb
+vgcreate docker /dev/sdb
+lvcreate --wipesignatures y -n thinpool docker -l 95%VG
+lvcreate --wipesignatures y -n thinpoolmeta docker -l 1%VG
+lvconvert -y \
+--zero n \
+-c 512K \
+--thinpool docker/thinpool \
+--poolmetadata docker/thinpoolmeta
+\end{lstlisting}
+
+Then in \code{/etc/lvm/profile/docker-thinpool.profile} add
+
+\begin{lstlisting}
+activation {
+  thin_pool_autoextend_threshold=80
+  thin_pool_autoextend_percent=20
+}
+\end{lstlisting}
+
+and run
+
+\begin{lstlisting}
+lvchange --metadataprofile docker-thinpool docker/thinpool
+\end{lstlisting}
+
+In \code{/etc/docker/daemon.json} put
+
+\begin{lstlisting}
+{
+    "storage-driver": "devicemapper",
+    "storage-opts": [
+    "dm.thinpooldev=/dev/mapper/docker-thinpool",
+    "dm.use_deferred_removal=true",
+    "dm.use_deferred_deletion=true"
+    ]
+}
+\end{lstlisting}
+
+and finally run the docker itself
+
+\begin{lstlisting}
+systemctl start docker
+\end{lstlisting}
+
+\section{Setting up Kubernetes}
+\label{sec:setup-kuber}
+
+Docker containers are managed by \urlref{https://kubernetes.io/}{Kubernetes},
+which requires \urlref{https://github.com/coreos/etcd}{etcd} and
+\urlref{https://github.com/coreos/flannel}{flannel} for our setup case.
+
+\subsection{Configure both nodes}
+\label{subsec:setup-kuber-both}
+
+First install the programs needed
+
+\begin{lstlisting}
+dnf -y install kubernetes flannel
+\end{lstlisting}
+
+Edit \code{/etc/kubernetes/config} to assign the
+name of the \emph{master} server
+
+\begin{lstlisting}
+KUBE_MASTER="--master=http://fed-master:8080"
+\end{lstlisting}
+
+Configure flannel by \code{/etc/sysconfig/flanneld}
+
+\begin{lstlisting}
+FLANNEL_ETCD="http://fed-master:2379"
+FLANNEL_ETCD_KEY="/coreos.com/network"
+FLANNEL_OPTIONS=""
+\end{lstlisting}
+
+\subsection{Configure the master node}
+\label{subsec:setup-kuber-master}
+
+Install \code{etcd} daemon
+
+\begin{lstlisting}
+dnf -y install etcd
+\end{lstlisting}
+
+In \code{/etc/etcd/etcd.conf} write
+
+\begin{lstlisting}
+ETCD_LISTEN_CLIENT_URLS="http://0.0.0.0:2379"
+ETCD_ADVERTISE_CLIENT_URLS="http://0.0.0.0:2379"
+\end{lstlisting}
+
+Enable and restart it
+
+\begin{lstlisting}
+systemctl enable etcd
+systemctl restart etcd
+\end{lstlisting}
+
+Once the daemon is up and running upload \code{flannel}
+configuration by creating \code{flannel-config.json} file
+
+\begin{lstlisting}
+{
+    "Network": "16.16.0.0/16",
+    "SubnetLen": 24,
+    "Backend": {
+        "Type": "vxlan",
+        "VNI": 1
+     }
+}
+\end{lstlisting}
+
+and run
+
+\begin{lstlisting}
+etcdctl set /coreos.com/network/config < flannel-config.json
+\end{lstlisting}
+
+The enable \code{flannel} itself
+
+\begin{lstlisting}
+systemctl enable flanneld
+systemctl restart flanneld
+\end{lstlisting}
+
+Modify \code{/etc/kubernetes/apiserver}
+
+\label{kube-service-addresses}
+\begin{lstlisting}
+KUBE_API_ADDRESS="--insecure-bind-address=0.0.0.0"
+KUBE_ETCD_SERVERS="--etcd-servers=http://127.0.0.1:2379"
+KUBE_SERVICE_ADDRESSES="--service-cluster-ip-range=16.18.0.0/16"
+KUBE_ADMISSION_CONTROL=""
+KUBE_API_ARGS=""
+\end{lstlisting}
+
+Update the \code{/etc/kubernetes/kubelet}
+
+\begin{lstlisting}
+KUBELET_ADDRESS="--address=0.0.0.0"
+KUBELET_HOSTNAME="--hostname-override=fed-master"
+KUBELET_API_SERVER="--api-servers=http://fed-master:8080"
+KUBELET_ARGS="--cgroup-driver=systemd"
+\end{lstlisting}
+
+Restart and enable the services
+
+\begin{lstlisting}
+for i in kube-apiserver kube-controller-manager kube-scheduler; do
+    systemctl restart $i
+    systemctl enable $i
+done
+\end{lstlisting}
+
+\subsection{Configure the slave node}
+\label{subsec:setup-kuber-slave}
+
+Edit \code{/etc/kubernetes/kubelet}
+
+\begin{lstlisting}
+KUBELET_ADDRESS="--address=0.0.0.0"
+KUBELET_HOSTNAME="--hostname-override=fed-node"
+KUBELET_API_SERVER="--api-servers=http://fed-master:8080"
+KUBELET_ARGS="--cgroup-driver=systemd"
+\end{lstlisting}
+
+Restart and enable the services
+
+\begin{lstlisting}
+for i in kube-proxy kubelet flanneld; do
+    systemctl restart $i
+    systemctl enable $i
+done
+\end{lstlisting}
+
+Sometimes it is been found that \code{FORWARD} chain on
+the \emph{slave} node is having \code{DROP} policy by default
+and traffic from outside of the \emph{slave} node is not
+passed inside a container. In such case change the default
+policy to \code{ACCEPT} on the node boot up procedure.
+
+\begin{lstlisting}
+iptables -P FORWARD ACCEPT
+\end{lstlisting}
+
+\subsection{Register the slave node}
+\label{subsec:setup-kuber-register-slave}
+
+Once both nodes are prepared the \emph{slave} needs to be
+registered in kubernetes. For this on \emph{master}
+node create the following \code{node.json} file
+
+\begin{lstlisting}
+{
+    "apiVersion": "v1",
+    "kind": "Node",
+    "metadata": {
+        "name": "fed-node",
+        "labels":{ "name": "fed-node-label"}
+    },
+    "spec": {
+        "externalID": "fed-node"
+    }
+}
+\end{lstlisting}
+
+And announce it by
+\begin{lstlisting}
+kubectl create -f ./node.json
+\end{lstlisting}
+
+If everything done right the following report should
+appear on the \emph{master} 
+
+\begin{lstlisting}
+kubectl get nodes
+NAME            STATUS      AGE      VERSION
+fed-node        Ready       4h
+\end{lstlisting}
+
+\section{Setting up MongoDB}
+\label{sec:setup-mongodb}
+
+To track resources \code{swifty} uses
+\urlref{https://www.mongodb.com/}{MondoDB} database
+running on the \emph{master} node.
+
+\begin{lstlisting}
+dnf -y install mongodb-server mongo-tools mongodb
+systemctl start mongod
+systemctl enable mongod
+\end{lstlisting}
+
+Create \emph{swifty} database, add a user and a password,
+and prepare collections needed.
+
+A convenient way for this is to use \emph{mongo} interactive shell.
+
+\begin{lstlisting}
+use swifty
+db.createUser({user:"swifty", pwd:"1q2w3e", roles:[{role:"dbOwner",db:"swifty"}]})
+db.createCollection("Users")
+db.createCollection("Function")
+db.createCollection("Mware")
+db.createCollection("Logs")
+db.createCollection("Balancer")
+db.createCollection("BalancerRS")
+db.Users.insert({"pass" : "MXEydzNl",
+"email" : "janedoe@gmail.com",
+"userid" : "8257fbff9618952fbd2b83b4794eb694ff170adb5c1748c1110d44e137c8263c",
+"name" : "Jane Doe"})
+\end{lstlisting}
+
+The password should be changed to something strong rather than
+this weak one used as an example.
+
+\section{Setting up middleware}
+\label{sec:setup-mware}
+
+Currently the following middleware is supported:
+\begin{itemize}
+\item{\urlref{https://mariadb.com/}{MariaDB} as sql database;}
+\item{\urlref{https://www.rabbitmq.com/}{RabbitMQ} as message queue engine.}
+\end{itemize}
+
+Both of them should be installed on the \emph{slave} node
+
+\begin{lstlisting}
+dnf -y install mariadb mariadb-server-utils
+systemctl start mariadb
+systemctl enable mariadb
+mysqladmin -u root password aiNe1sah9ichu1re
+mysql -u root -p
+GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' IDENTIFIED BY 'aiNe1sah9ichu1re' WITH GRANT OPTION;
+dnf -y install rabbitmq-server librabbitmq
+systemctl start rabbitmq-server
+systemctl enable rabbitmq-server
+rabbitmqctl add_user root airooV1Echah4wei
+rabbitmqctl set_user_tags root administrator
+rabbitmqctl set_permissions -p / root ".*" ".*" ".*"
+rabbitmq-plugins enable rabbitmq_management
+\end{lstlisting}
+
+The passwords may be different of course.
+
+\section{Setting up \code{swifty} daemon}
+\label{sec:setup-swifty}
+
+The \code{swifty} daemon will run on the master node
+where Kubernetes is spinning.
+
+\subsection{Source installation}
+\label{subsec:setup-swifty-src}
+
+To build \code{swifty} install \urlref{https://golang.org/}{Go}
+language at least version
+\urlref{https://storage.googleapis.com/golang/go1.8.3.linux-amd64.tar.gz}{go-1.8.3}.
+
+\begin{lstlisting}
+dnf -y install git make
+tar -C /usr/local/bin -xzf go1.8.3.linux-amd64.tar.gz
+mkdir -p ~/go
+export GOROOT=/usr/local/bin/go
+export GOPATH=~/go
+export PATH=${PATH}:${GOROOT}/bin:${GOPATH}/bin
+\end{lstlisting}
+
+Install dependency packages
+
+\begin{lstlisting}
+go get gopkg.in/yaml.v2
+go get github.com/gorilla/mux
+go get go.uber.org/zap
+go get gopkg.in/mgo.v2
+go get github.com/go-sql-driver/mysql
+go get github.com/streadway/amqp
+go get github.com/michaelklishin/rabbit-hole
+go get gopkg.in/robfig/cron.v2
+\end{lstlisting}
+
+Bindings for Kubernetes is a bit tricky -- make sure you have v2.0.0 installed,
+otherwise the building procedure may fail
+
+\begin{lstlisting}
+go get k8s.io/client-go/...
+cd ~/go/src/k8s.io/client-go
+git checkout -fb v2.0.0  v2.0.0
+go get k8s.io/client-go/...
+\end{lstlisting}
+
+Then unpack \code{swifty} archive and run
+
+\begin{lstlisting}
+make swifty
+  GEN      swifty
+ln -s ${path-to-sources}/swifty /usr/sbin/swifty
+\end{lstlisting}
+
+To run tests install YAML engine for Python
+
+\begin{lstlisting}
+dnf -y install python3-PyYAML.x86_64
+\end{lstlisting}
+
+\subsection{Binary installation}
+\label{subsec:setup-swifty-bin}
+
+To install binary just put it somewhere into \code{/usr/bin}
+or \code{/usr/sbin}. FIXME: Web-UI.
+
+\subsection{Configure}
+\label{subsec:setup-swifty-conf}
+
+Because \code{swifty} daemon needs to communicate with Kubernetes,
+MongoDB, Docker and etc, create the \code{swifty.conf.yaml}
+configuration file as below
+
+\begin{lstlisting}
+---
+db:
+        name: "swifty"
+        address: "127.0.0.1:27017"
+        user: "swifty"
+        password: "1q2w3e"
+daemon:
+        address: "192.168.122.68:8686"
+        view: "/home/swifty/src/gate/view"
+        sources:
+                share: "/home/swifty-volume:/swifty-volume"
+                clone: "/home/swifty/local-sources"
+        loglevel: "debug"
+        balancer:
+                iprange: "10.8.0.0/24"
+                device: "flannel.1"
+middleware:
+        sql:
+                implementation: "mariadb"
+                address: "192.168.122.102:3306"
+                user: "root"
+                password: "aiNe1sah9ichu1re"
+        mq:
+                implementation: "rabbitmq"
+                address: "192.168.122.102:5672"
+                user: "root"
+                password: "airooV1Echah4wei"
+                admport: "15672"
+runtime:
+        golang:
+                image: "swifty/golang"
+                run: "go run"
+        python:
+                image: "swifty/python"
+                run: "python"
+        swift:
+                image: "swifty/swift"
+                run: "swift"
+wdog:
+        ct-path: "/usr/bin/swy-wdog"
+        address: ":8687"
+kubernetes:
+        config-path: src/conf/kubeconfig
+\end{lstlisting}
+
+where
+\begin{itemize}
+\item{\yamlid{db} describes connection to MongoDB;}
+\item{\yamlid{daemon} describes \code{swifty} connection;}
+\item{\yamlid{middleware} describes connetions to middleware;}
+\item{\yamlid{runtime} describes mapping for Docker images;}
+\item{\yamlid{wdog} describes \code{swy-wdog} watchog;}
+\item{\yamlid{kubernetes} contains path to config for Kubernetes settings.}
+\end{itemize}
+
+Makre sure the IP addresses, login and passwords are valid.
+
+The Kubernetes settings file should be the following
+
+\begin{lstlisting}
+Output:
+apiVersion: v1
+clusters:
+- cluster:
+    server: http://fed-master:8080
+  name: fed-cluster
+contexts:
+- context:
+    cluster: fed-cluster
+  name: fed-context
+current-context: fed-context
+kind: Config
+preferences: {}
+\end{lstlisting}
+
+When running from \code{swifty} source code, all settings are present
+in \code{src/conf} directory.
+
+\section{Create Docker images}
+\label{sec:setup-images}
+
+Since \code{swifty} is in pre-alfa stage the images are not public
+accessible yet and should be build from \code{swifty} source code.
+
+Copy source code archine into the \emph{slave} node (previously
+installing Go language on the \emph{slave} node, the same way
+as in \ref{subsec:setup-swifty-src}). Then install dependency packages
+and initiate image building procedure
+
+\begin{lstlisting}
+go get gopkg.in/yaml.v2
+go get go.uber.org/zap
+make images
+\end{lstlisting}
+
+If everything passed fine list the images built
+
+\begin{lstlisting}
+docker images
+REPOSITORY          TAG                 IMAGE ID            CREATED             SIZE
+swifty/python       latest              86b201a7fad6        6 seconds ago       745 MB
+...
+\end{lstlisting}
+
+Images with \code{swifty/} prefix are ones built for \code{swifty} usage.
