@@ -362,9 +362,18 @@ iptables -P FORWARD ACCEPT
 \subsection{Register the slave node}
 \label{subsec:setup-kuber-register-slave}
 
-Once both nodes are prepared the \emph{slave} needs to be
-registered in kubernetes. For this on \emph{master}
-node create the following \code{node.json} file
+Once both nodes are prepared the \emph{slave} might need
+to be registered in kubernetes.
+
+On master node run
+
+\begin{lstlisting}
+kubectl get nodes
+\end{lstlisting}
+
+If nothing found proceed the following. For this on
+\emph{master} node create the following \code{node.json}
+file
 
 \begin{lstlisting}
 {
