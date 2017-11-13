@@ -243,9 +243,8 @@ KUBE_MASTER="--master=http://fed-master:8080"
 Configure flannel by \code{/etc/sysconfig/flanneld}
 
 \begin{lstlisting}
-FLANNEL_ETCD="http://fed-master:2379"
-FLANNEL_ETCD_KEY="/coreos.com/network"
-FLANNEL_OPTIONS=""
+FLANNEL_ETCD_ENDPOINTS="http://fed-master:2379"
+FLANNEL_ETCD_PREFIX="/coreos.com/network"
 \end{lstlisting}
 
 \subsection{Configure the master node}
@@ -260,6 +259,8 @@ dnf -y install etcd
 In \code{/etc/etcd/etcd.conf} write
 
 \begin{lstlisting}
+ETCD_NAME=default
+ETCD_DATA_DIR="/var/lib/etcd/default.etcd"
 ETCD_LISTEN_CLIENT_URLS="http://0.0.0.0:2379"
 ETCD_ADVERTISE_CLIENT_URLS="http://0.0.0.0:2379"
 \end{lstlisting}
@@ -276,7 +277,7 @@ configuration by creating \code{flannel-config.json} file
 
 \begin{lstlisting}
 {
-    "Network": "16.16.0.0/16",
+    "Network": "16.18.0.0/16",
     "SubnetLen": 24,
     "Backend": {
         "Type": "vxlan",
