@@ -58,6 +58,15 @@ SELINUX=disabled
 
 Reboot the machines.
 
+\section{Add anc configure Keystone}
+Follow instructions on
+\usrref{https://docs.openstack.org/keystone/latest/install/index.html}
+to install Pike keystone, then start the kerystone service.
+
+Then add "keystone": section to gate conf with url, user, pass and domain.
+
+Gate uses the "/v3" API, no need to specify one in the URL string.
+
 \section{Setting up IPVS}
 \label{sec:setup-nfs}
 
