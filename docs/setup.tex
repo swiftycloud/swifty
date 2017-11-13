@@ -63,7 +63,21 @@ Follow instructions on
 \usrref{https://docs.openstack.org/keystone/latest/install/index.html}
 to install Pike keystone, then start the kerystone service.
 
-Then add "keystone": section to gate conf with url, user, pass and domain.
+Create the "swifty.owner" role with the
+\begin{lstlisting}
+openstack role create swifty.owner
+\end{lstlisting}
+command.
+
+Then add "keystone": section to gate conf with url, user, pass and domain,
+e.g. like this:
+\begin{lstlisting}
+keystone:
+	address: "192.168.122.197:5000"
+	user: "admin"
+	password: "1q2w3e"
+	domain: "default"
+\end{lstlisting}
 
 Gate uses the "/v3" API, no need to specify one in the URL string.
 
