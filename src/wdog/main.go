@@ -134,7 +134,7 @@ func handleGateCall(w http.ResponseWriter, r *http.Request) {
 		goto out
 	}
 
-	err = swy.HTTPReadAndUnmarshal(r, &params)
+	_, err = swy.HTTPReadAndUnmarshal(r, &params)
 	if err != nil {
 		goto out
 	}

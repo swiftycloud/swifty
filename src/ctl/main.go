@@ -14,9 +14,12 @@ import (
 )
 
 type login_info struct {
-	Proj string `json:"proj"`
-	Host string `json:"host"`
-	Port string `json:"port"`
+	Proj  string `json:"proj"`
+	Host  string `json:"host"`
+	Port  string `json:"port"`
+	Token string `json:"token"`
+	User  string `json:"user"`
+	Pass  string `json:"pass"`
 }
 
 var cur_login login_info
@@ -29,7 +32,7 @@ func SafeEnv(env_name string, defaul_value string) string {
 	return v
 }
 
-func make_faas_req(url string, in interface{}, out interface{}) {
+func make_faas_req_x(url string, in interface{}) (*http.Response, error) {
 	clnt := &http.Client{}
 
 	body, err := json.Marshal(in)
@@ -43,18 +46,47 @@ func make_faas_req(url string, in interface{}, out interface{}) {
 	}
 
 	req.Header.Set("Content-Type", "application/json")
+	if cur_login.Token != "" {
+		req.Header.Set("X-Subject-Token", cur_login.Token)
+	}
 
-	resp, err := clnt.Do(req)
+	return clnt.Do(req)
+}
+
+func faas_login() string {
+	resp, err := make_faas_req_x("user/login", swyapi.UserLogin {
+			UserName: cur_login.User, Password: cur_login.Pass,
+		})
 	if err != nil {
 		panic(err)
 	}
+
+	resp.Body.Close()
+	if resp.StatusCode != 200 {
+		panic(fmt.Errorf("Bad responce from server: " + string(resp.Status)))
+	}
+
+	token := resp.Header.Get("X-Subject-Token")
+	if token == "" {
+		panic("No auth token from server")
+	}
+
+	return token
+}
+
+func make_faas_req(url string, in interface{}, out interface{}) {
+	resp, err := make_faas_req_x(url, in)
+	if err != nil {
+		panic(err)
+	}
+
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
 		panic(fmt.Errorf("Bad responce from server: " + string(resp.Status)))
 	}
 
 	if out != nil {
-		body, err = ioutil.ReadAll(resp.Body)
+		body, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
 			panic(err)
 		}
@@ -272,15 +304,20 @@ func make_login(creds string) {
 		panic("No HOME dir set")
 	}
 
-	/* Login string is user@host:port/project */
+	/* Login string is user:pass@host:port/project */
 	/* FIXME -- add user */
-	a := strings.SplitN(creds, "@", 2) /* a = user , host:port/project */
+	a := strings.SplitN(creds, "@", 2) /* a = user:pass , host:port/project */
 	b := strings.SplitN(a[1], "/", 2)  /* b = host:port , project */
 	c := strings.SplitN(b[0], ":", 2)  /* c = host, port */
+	d := strings.SplitN(a[0], ":", 2)  /* d = user, pass */
 
-	cur_login.Proj = b[1]
 	cur_login.Host = c[0]
 	cur_login.Port = c[1]
+	cur_login.Proj = b[1]
+	cur_login.User = d[0]
+	cur_login.Pass = d[1]
+
+	cur_login.Token = faas_login()
 
 	data, err := json.Marshal(&cur_login)
 	if err != nil {

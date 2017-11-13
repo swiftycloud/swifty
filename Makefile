@@ -51,6 +51,7 @@ go-gate-y	+= src/gate/event.go
 go-gate-y	+= src/gate/runtime.go
 go-gate-y	+= src/gate/repo.go
 go-gate-y	+= src/gate/funcurl.go
+go-gate-y	+= src/gate/auth.go
 
 swy-gate: $(go-gate-y) .FORCE
 	$(call msg-gen,$@)

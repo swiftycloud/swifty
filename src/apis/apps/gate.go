@@ -7,6 +7,11 @@ type FunctionList struct {
 type ProjectList struct {
 }
 
+type UserLogin struct {
+	UserName	string			`json:"username"`
+	Password	string			`json:"password"`
+}
+
 type FunctionInfo struct {
 	Mware		[]string		`json:"mware"`
 	State		string			`json:"state"`
