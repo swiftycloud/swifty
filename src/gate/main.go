@@ -34,14 +34,27 @@ type FnEventDesc struct {
 	MQueue		string		`bson:"mqueue"`
 }
 
+type SwoId struct {
+	Tennant		string		`bson:"tennant"`
+	Project		string		`bson:"project"`
+	Name		string		`bson:"name"`
+}
+
+func makeSwoId(tennant, project, name string) *SwoId {
+	return &SwoId{Tennant: tennant, Project: project, Name: name}
+}
+
+func (id *SwoId) Str () string {
+	return id.Tennant + "_" + id.Project + "_" + id.Name
+}
+
 type FunctionDesc struct {
 	// These objects are kept in Mongo, which requires the below two
 	// fields to be present...
 	ObjID		bson.ObjectId	`bson:"_id,omitempty"`
 	Index		string		`bson:"index"`		// Project + FuncName
 
-	Project		string		`bson:"project"`	// Project name
-	FuncName	string		`bson:"name"`		// Function name
+	SwoId
 	Cookie		string		`bson:"cookie"`		// Some "unique" identifier
 	State		int		`bson:"state"`		// Function state
 	CronID		int		`bson:"cronid"`		// ID of cron trigger (if present)
@@ -207,9 +220,9 @@ func genFunctionDescJSON(conf *YAMLConf, fn *FunctionDesc, fi *FnInst) string {
 }
 
 func runFunctionOnce(fn *FunctionDesc) {
-	log.Debugf("oneshot RUN for %s", fn.FuncName)
+	log.Debugf("oneshot RUN for %s", fn.SwoId.Str())
 	doRun(fn, "oneshot", fn.Inst().DepName(), []string{})
-	log.Debugf("oneshor %s finished", fn.FuncName)
+	log.Debugf("oneshor %s finished", fn.SwoId.Str())
 
 	swk8sRemove(&conf, fn, fn.Inst())
 	dbFuncSetState(fn, swy.DBFuncStateStl);
@@ -220,9 +233,9 @@ func buildFunction(fn *FunctionDesc) error {
 	var orig_state int
 
 	build_cmd := strings.Split(RtBuildCmd(fn.Script.Lang), " ")
-	log.Debugf("build RUN %s args %v", fn.FuncName, build_cmd[1:])
+	log.Debugf("build RUN %s args %v", fn.SwoId.Str(), build_cmd[1:])
 	code, _, stderr, err := doRun(fn, "build", fn.InstBuild().DepName(), build_cmd[1:])
-	log.Debugf("build %s finished", fn.FuncName)
+	log.Debugf("build %s finished", fn.SwoId.Str())
 	logSaveEvent(fn, "built", "")
 	if err != nil {
 		goto out
@@ -274,7 +287,7 @@ func notifyPodUpdate(pod *BalancerPod) {
 	var err error = nil
 
 	if pod.State == swy.DBPodStateRdy {
-		fn, err2 := dbFuncFind(pod.Project, pod.FuncName)
+		fn, err2 := dbFuncFind(&pod.SwoId)
 		if err2 != nil {
 			err = err2
 			goto out
@@ -344,6 +357,7 @@ func handleGenericReq(r *http.Request, params interface{}) (string, error) {
 }
 
 func handleProjectList(w http.ResponseWriter, r *http.Request) {
+	var id *SwoId
 	var result []swyapi.ProjectItem
 	var params swyapi.ProjectList
 	var fns, mws []string
@@ -355,9 +369,11 @@ func handleProjectList(w http.ResponseWriter, r *http.Request) {
 		goto out
 	}
 
-	log.Debugf("List projects for " + tennant)
+	id = makeSwoId(tennant, "", "")
 
-	fns, mws, err = dbProjectListAll()
+	log.Debugf("List projects for %s", id.Str())
+
+	fns, mws, err = dbProjectListAll(id)
 	if err != nil {
 		goto out
 	}
@@ -386,15 +402,18 @@ out:
 
 func genCookie(fn *FunctionDesc) string {
 	h := sha256.New()
-	h.Write([]byte(fn.Project + "/" + fn.FuncName))
+	h.Write([]byte(fn.Tennant + "/" + fn.Project + "/" + fn.Name))
 
 	return hex.EncodeToString(h.Sum(nil))
 }
 
-func getFunctionDesc(p_add *swyapi.FunctionAdd) *FunctionDesc {
+func getFunctionDesc(tennant string, p_add *swyapi.FunctionAdd) *FunctionDesc {
 	fn := &FunctionDesc {
-		Project:	p_add.Project,
-		FuncName:	p_add.FuncName,
+		SwoId: SwoId {
+			Tennant: tennant,
+			Project: p_add.Project,
+			Name:	 p_add.FuncName,
+		},
 		Event:		FnEventDesc {
 			Source:		p_add.Event.Source,
 			CronTab:	p_add.Event.CronTab,
@@ -443,7 +462,7 @@ func handleFunctionAdd(w http.ResponseWriter, r *http.Request) {
 		goto out
 	}
 
-	fn = getFunctionDesc(&params)
+	fn = getFunctionDesc(tennant, &params)
 	if RtBuilding(fn.Script.Lang) {
 		fn.State = swy.DBFuncStateBld
 	} else {
@@ -456,7 +475,7 @@ func handleFunctionAdd(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// FIXME -- move to /built handler
-	err = mwareSetup(&conf, fn.Project, params.Mware, fn)
+	err = mwareSetup(&conf, fn.SwoId, params.Mware, fn)
 	if err != nil {
 		err = fmt.Errorf("Unable to setup middleware: %s", err.Error())
 		goto out_clean_func
@@ -498,7 +517,7 @@ func handleFunctionAdd(w http.ResponseWriter, r *http.Request) {
 out_clean_repo:
 	cleanRepo(fn)
 out_clean_mware:
-	mwareRemove(&conf, fn.Project, fn.Mware)
+	mwareRemove(&conf, fn.SwoId, fn.Mware)
 out_clean_func:
 	dbFuncRemove(fn)
 out:
@@ -507,6 +526,7 @@ out:
 }
 
 func handleFunctionUpdate(w http.ResponseWriter, r *http.Request) {
+	var id *SwoId
 	var fn FunctionDesc
 	var params swyapi.FunctionUpdate
 
@@ -515,16 +535,18 @@ func handleFunctionUpdate(w http.ResponseWriter, r *http.Request) {
 		goto out
 	}
 
-	log.Debugf("function/update for %s params %v", tennant, params)
+	id = makeSwoId(tennant, params.Project, params.FuncName)
 
-	fn, err = dbFuncFind(params.Project, params.FuncName)
+	log.Debugf("function/update for %s params %v", id.Str(), params)
+
+	fn, err = dbFuncFind(id)
 	if err != nil {
 		goto out
 	}
 
 	// FIXME -- lock other requests :\
 	if fn.State != swy.DBFuncStateRdy && fn.State != swy.DBFuncStateStl {
-		err = fmt.Errorf("function %s is not running", fn.FuncName)
+		err = fmt.Errorf("function %s is not running", fn.SwoId.Str())
 		goto out
 	}
 
@@ -568,6 +590,7 @@ out:
 }
 
 func handleFunctionRemove(w http.ResponseWriter, r *http.Request) {
+	var id *SwoId
 	var fn FunctionDesc
 	var params swyapi.FunctionRemove
 
@@ -576,18 +599,19 @@ func handleFunctionRemove(w http.ResponseWriter, r *http.Request) {
 		goto out
 	}
 
-	log.Debugf("function/remove for %s params %v", tennant, params)
+	id = makeSwoId(tennant, params.Project, params.FuncName)
+
+	log.Debugf("function/remove for %s params %v", id.Str(), params)
 
 	// Allow to remove function if only we're in known state,
 	// otherwise wait for function building to complete
-	err = dbFuncSetStateCond(params.Project, params.FuncName,
-					swy.DBFuncStateTrm,
+	err = dbFuncSetStateCond(id, swy.DBFuncStateTrm,
 					[]int{swy.DBFuncStateRdy, swy.DBFuncStateStl})
 	if err != nil {
 		goto out
 	}
 
-	fn, err = dbFuncFind(params.Project, params.FuncName)
+	fn, err = dbFuncFind(id)
 	if err != nil {
 		goto out
 	}
@@ -620,7 +644,7 @@ func forgetFunction(fn *FunctionDesc) {
 		}
 	}
 
-	err = mwareRemove(&conf, fn.Project, fn.Mware)
+	err = mwareRemove(&conf, fn.SwoId, fn.Mware)
 	if err != nil {
 		log.Errorf("remove mware error: %s", err.Error())
 	}
@@ -631,7 +655,7 @@ func forgetFunction(fn *FunctionDesc) {
 }
 
 func doRun(fn *FunctionDesc, event, depname string, args []string) (int, string, string, error) {
-	log.Debugf("RUN %s", fn.FuncName)
+	log.Debugf("RUN %s", fn.SwoId.Str())
 
 	var wd_result swyapi.SwdFunctionRunResult
 	var resp *http.Response
@@ -675,7 +699,7 @@ func doRun(fn *FunctionDesc, event, depname string, args []string) (int, string,
 	}
 
 	logSaveResult(fn, event, wd_result.Stdout, wd_result.Stderr)
-	log.Debugf("`- RUN %s OK: out[%s] err[%s]", fn.FuncName, wd_result.Stdout, wd_result.Stderr)
+	log.Debugf("`- RUN %s OK: out[%s] err[%s]", fn.SwoId.Str(), wd_result.Stdout, wd_result.Stderr)
 	return wd_result.Code, wd_result.Stdout, wd_result.Stderr, nil
 
 out:
@@ -683,6 +707,7 @@ out:
 }
 
 func handleFunctionInfo(w http.ResponseWriter, r *http.Request) {
+	var id *SwoId
 	var params swyapi.FunctionID
 	var fn FunctionDesc
 	var url = ""
@@ -692,9 +717,11 @@ func handleFunctionInfo(w http.ResponseWriter, r *http.Request) {
 		goto out
 	}
 
-	log.Debugf("Get FN Info %s", tennant)
+	id = makeSwoId(tennant, params.Project, params.FuncName)
 
-	fn, err = dbFuncFind(params.Project, params.FuncName)
+	log.Debugf("Get FN Info %s", id.Str())
+
+	fn, err = dbFuncFind(id)
 	if err != nil {
 		goto out
 	}
@@ -734,6 +761,7 @@ out:
 	log.Errorf("logs error %s", err.Error())
 }
 func handleFunctionLogs(w http.ResponseWriter, r *http.Request) {
+	var id *SwoId
 	var params swyapi.FunctionID
 	var resp []swyapi.FunctionLogEntry
 	var logs []DBLogRec
@@ -743,9 +771,11 @@ func handleFunctionLogs(w http.ResponseWriter, r *http.Request) {
 		goto out
 	}
 
+	id = makeSwoId(tennant, params.Project, params.FuncName)
+
 	log.Debugf("Get logs for %s", tennant)
 
-	logs, err = logGetFor(params.Project, params.FuncName)
+	logs, err = logGetFor(id)
 	if err != nil {
 		goto out
 	}
@@ -772,6 +802,7 @@ out:
 }
 
 func handleFunctionRun(w http.ResponseWriter, r *http.Request) {
+	var id *SwoId
 	var params swyapi.FunctionRun
 	var fn FunctionDesc
 	var stdout, stderr string
@@ -782,10 +813,11 @@ func handleFunctionRun(w http.ResponseWriter, r *http.Request) {
 		goto out
 	}
 
-	log.Debugf("handleFunctionRun: %s params %v", tennant, params)
+	id = makeSwoId(tennant, params.Project, params.FuncName)
 
-	fn, err = dbFuncFindStates(params.Project, params.FuncName,
-			[]int{swy.DBFuncStateRdy, swy.DBFuncStateUpd})
+	log.Debugf("handleFunctionRun: %s params %v", id.Str(), params)
+
+	fn, err = dbFuncFindStates(id, []int{swy.DBFuncStateRdy, swy.DBFuncStateUpd})
 	if err != nil {
 		err = errors.New("No such function")
 		goto out
@@ -854,6 +886,7 @@ var fnStates = map[int]string {
 }
 
 func handleFunctionList(w http.ResponseWriter, r *http.Request) {
+	var id *SwoId
 	var recs []FunctionDesc
 	var result []swyapi.FunctionItem
 	var params swyapi.FunctionList
@@ -868,8 +901,10 @@ func handleFunctionList(w http.ResponseWriter, r *http.Request) {
 		goto out
 	}
 
+	id = makeSwoId(tennant, params.Project, "")
+
 	// List all but terminating
-	recs, err = dbFuncListAll(params.Project, []int{
+	recs, err = dbFuncListAll(id, []int{
 				swy.DBFuncStateQue,
 				swy.DBFuncStateBld,
 				swy.DBFuncStateStl,
@@ -884,7 +919,7 @@ func handleFunctionList(w http.ResponseWriter, r *http.Request) {
 	for _, v := range recs {
 		result = append(result,
 			swyapi.FunctionItem{
-				FuncName:	v.FuncName,
+				FuncName:	v.Name,
 				State:		fnStates[v.State],
 		})
 	}
@@ -901,6 +936,7 @@ out:
 }
 
 func handleMwareAdd(w http.ResponseWriter, r *http.Request) {
+	var id *SwoId
 	var params swyapi.MwareAdd
 
 	tennant, err := handleGenericReq(r, &params)
@@ -908,9 +944,11 @@ func handleMwareAdd(w http.ResponseWriter, r *http.Request) {
 		goto out
 	}
 
+	id = makeSwoId(tennant, params.Project, "")
+
 	log.Debugf("mware/add: %s params %v", tennant, params)
 
-	err = mwareSetup(&conf, params.Project, params.Mware, nil)
+	err = mwareSetup(&conf, *id, params.Mware, nil)
 	if err != nil {
 		err = fmt.Errorf("Unable to setup middleware: %s", err.Error())
 		goto out
@@ -925,6 +963,7 @@ out:
 }
 
 func handleMwareList(w http.ResponseWriter, r *http.Request) {
+	var id *SwoId
 	var result []swyapi.MwareGetItem
 	var params swyapi.MwareList
 	var mwares []MwareDesc
@@ -934,9 +973,11 @@ func handleMwareList(w http.ResponseWriter, r *http.Request) {
 		goto out
 	}
 
+	id = makeSwoId(tennant, params.Project, "")
+
 	log.Debugf("list mware for %s", tennant)
 
-	mwares, err = dbMwareGetAll(params.Project)
+	mwares, err = dbMwareGetAll(id)
 	if err != nil {
 		goto out
 	}
@@ -945,7 +986,7 @@ func handleMwareList(w http.ResponseWriter, r *http.Request) {
 		result = append(result,
 			swyapi.MwareGetItem{
 				MwareItem: swyapi.MwareItem {
-					ID:	mware.MwareID,
+					ID:	mware.Name,
 					Type:	mware.MwareType,
 				},
 				Counter: mware.Counter,
@@ -965,6 +1006,7 @@ out:
 }
 
 func handleMwareRemove(w http.ResponseWriter, r *http.Request) {
+	var id *SwoId
 	var params swyapi.MwareRemove
 
 	tennant, err := handleGenericReq(r, &params)
@@ -972,8 +1014,10 @@ func handleMwareRemove(w http.ResponseWriter, r *http.Request) {
 		goto out
 	}
 
+	id = makeSwoId(tennant, params.Project, "")
+
 	log.Debugf("mware/remove: %s params %v", tennant, params)
-	err = mwareRemove(&conf, params.Project, params.MwareIDs)
+	err = mwareRemove(&conf, *id, params.MwareIDs)
 	if err != nil {
 		err = fmt.Errorf("Unable to setup middleware: %s", err.Error())
 		goto out
@@ -988,15 +1032,18 @@ out:
 }
 
 func handleMwareCinfo(w http.ResponseWriter, r *http.Request) {
+	var id *SwoId
 	var params swyapi.MwareCinfo
 	var envs []string
 
-	_, err := handleGenericReq(r, &params)
+	tennant, err := handleGenericReq(r, &params)
 	if err != nil {
 		goto out
 	}
 
-	envs, err = mwareGetEnv(&conf, params.Project, params.MwId)
+	id = makeSwoId(tennant, params.Project, params.MwId)
+
+	envs, err = mwareGetEnv(&conf, id)
 	if err != nil {
 		goto out
 	}

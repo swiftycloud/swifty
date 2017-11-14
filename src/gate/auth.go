@@ -147,6 +147,10 @@ func KeystoneVerify(conf *YAMLConfKeystone, token string) string {
 	 * Keystone project (formerly tennant) is the tennant in swifty terms --
 	 * a set of swifty projects (each of which is a set of functions)
 	 * available (for now) to a single user.
+	 *
+	 * Thus, when registering in keystone, there should appear a user of
+	 * desired name, a porject of some corresponding name and a role
+	 * tieing these two named "swifty.owner".
 	 */
 
 	/*

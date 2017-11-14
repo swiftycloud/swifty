@@ -92,8 +92,7 @@ func manageLocalIps() {
 }
 
 type BalancerPod struct {
-	Project		string
-	FuncName	string
+	SwoId
 	DepName		string
 	WdogAddr	string
 	UID		string

@@ -20,8 +20,7 @@ const (
 )
 
 type DBLogRec struct {
-	Project		string		`bson:"project"`
-	FuncName	string		`bson:"function"`
+	SwoId
 	Commit		string		`bson:"commit"`
 	Event		string		`bson:"event"`
 	Time		time.Time	`bson:"ts"`
@@ -42,29 +41,30 @@ func dbMwareSetStateCb(data interface{}) error {
 	return args.Col.Update(args.Q, args.Ch)
 }
 
-func dbMwareSetState(project string, mwareid string, state int) error {
+func dbMwareSetState(id *SwoId, state int) error {
 	err := swy.Retry10(dbMwareSetStateCb,
 			&dbMwareStateArgs{
 				Col:	dbSession.DB(dbDBName).C(DBColMware),
-				Q:	bson.M{"project": project, "mwareid": mwareid, "state": bson.M{"$ne": state}},
+				Q:	bson.M{"tennant": id.Tennant, "project": id.Project, "name": id.Name,
+						"state": bson.M{"$ne": state}},
 				Ch:	bson.M{"$set": bson.M{"state": state}},
 			})
 	if err != nil {
-		return fmt.Errorf("dbMwareSetState: Can't set state %d project %s mwareid %s:%s",
-					state, project, mwareid, err.Error())
+		return fmt.Errorf("dbMwareSetState: Can't set state %d mwareid %s: %s",
+					state, id.Str(), err.Error())
 	}
 	return nil
 }
 
-func dbMwareLock(project string, mwareid string) error {
-	return dbMwareSetState(project, mwareid, swy.DBMwareStateBsy)
+func dbMwareLock(id *SwoId) error {
+	return dbMwareSetState(id, swy.DBMwareStateBsy)
 }
 
-func dbMwareUnlock(project string, mwareid string) error {
-	return dbMwareSetState(project, mwareid, swy.DBMwareStateRdy)
+func dbMwareUnlock(id *SwoId) error {
+	return dbMwareSetState(id, swy.DBMwareStateRdy)
 }
 
-func dbMwareAddRefOrInsertLocked(project string, mwareid string) (bool, MwareDesc, error) {
+func dbMwareAddRefOrInsertLocked(id *SwoId) (bool, MwareDesc, error) {
 	c := dbSession.DB(dbDBName).C(DBColMware)
 	v := MwareDesc{}
 
@@ -75,13 +75,15 @@ func dbMwareAddRefOrInsertLocked(project string, mwareid string) (bool, MwareDes
 		Update:		bson.M{"$inc": bson.M{"counter": 1},
 					"$setOnInsert":
 						bson.M{"state": swy.DBMwareStateBsy,
-							"project": project,
-							"mwareid": mwareid}},
+							"tennant": id.Tennant,
+							"project": id.Project,
+							"name":	   id.Name}},
 		ReturnNew:	true,
 	}
 
-	querier := bson.M{	"project": project,
-				"mwareid": mwareid,
+	querier := bson.M{	"tennant": id.Tennant,
+				"project": id.Project,
+				"name":    id.Name,
 				"state": bson.M{"$eq": swy.DBMwareStateRdy}}
 
 	info, err := c.Find(querier).Apply(change, &v)
@@ -102,7 +104,7 @@ func dbMwareRemove(mwd MwareDesc) error {
 	return c.Remove(bson.M{"_id": mwd.ObjID})
 }
 
-func dbMwareDecRefLocked(project string, mwareid string) (bool, MwareDesc, error) {
+func dbMwareDecRefLocked(id *SwoId) (bool, MwareDesc, error) {
 	c := dbSession.DB(dbDBName).C(DBColMware)
 	v := MwareDesc{}
 
@@ -113,8 +115,9 @@ func dbMwareDecRefLocked(project string, mwareid string) (bool, MwareDesc, error
 		ReturnNew:	true,
 	}
 
-	querier := bson.M{	"project": project,
-				"mwareid": mwareid,
+	querier := bson.M{	"tennant": id.Tennant,
+				"project": id.Project,
+				"name": id.Name,
 				"state": bson.M{"$eq": swy.DBMwareStateBsy}}
 
 	info, err := c.Find(querier).Apply(change, &v)
@@ -133,14 +136,15 @@ func dbMwareDecRefLocked(project string, mwareid string) (bool, MwareDesc, error
 
 func dbMwareRemoveLocked(mwd MwareDesc) error {
 	c := dbSession.DB(dbDBName).C(DBColMware)
-	querier := bson.M{	"project": mwd.Project,
-				"mwareid": mwd.MwareID,
+	querier := bson.M{	"tennant": mwd.Tennant,
+				"project": mwd.Project,
+				"name":    mwd.Name,
 				"state": bson.M{"$eq": swy.DBMwareStateBsy}}
 
 	err := c.Remove(querier);
 	if err != nil {
 		return fmt.Errorf("dbMwareRemove: Can't remove mwareid %s: %s",
-						mwd.MwareID, err.Error())
+						mwd.SwoId.Str(), err.Error())
 	}
 	return nil
 }
@@ -154,8 +158,9 @@ func dbMwareAddSettingsUnlock(mwd MwareDesc, settings []byte) error {
 		Upsert:		false,
 		Remove:		false,
 		Update:
-			bson.M{	"project":	mwd.Project,
-				"mwareid":	mwd.MwareID,
+			bson.M{	"tennant":	mwd.Tennant,
+				"project":	mwd.Project,
+				"name":		mwd.Name,
 				"mwaretype":	mwd.MwareType,
 				"client":	mwd.Client,
 				"pass":		mwd.Pass,
@@ -172,22 +177,22 @@ func dbMwareAddSettingsUnlock(mwd MwareDesc, settings []byte) error {
 	if err != nil {
 		c.Remove(bson.M{"_id": mwd.ObjID})
 		return fmt.Errorf("dbMwareAdd: Can't add mware %s, removing: %s",
-					mwd.MwareID, err.Error())
+					mwd.SwoId.Str(), err.Error())
 	}
 	return nil
 }
 
-func dbMwareGetItem(project string, mwareid string) (MwareDesc, error) {
+func dbMwareGetItem(id *SwoId) (MwareDesc, error) {
 	c := dbSession.DB(dbDBName).C(DBColMware)
 	v := MwareDesc{}
-	err := c.Find(bson.M{"project": project, "mwareid": mwareid}).One(&v)
+	err := c.Find(bson.M{"tennant": id.Tennant, "project": id.Project, "name": id.Name}).One(&v)
 	return v, err
 }
 
-func dbMwareGetAll(project string) ([]MwareDesc, error) {
+func dbMwareGetAll(id *SwoId) ([]MwareDesc, error) {
 	var recs []MwareDesc
 	c := dbSession.DB(dbDBName).C(DBColMware)
-	err := c.Find(bson.M{"project": project}).All(&recs)
+	err := c.Find(bson.M{"tennant": id.Tennant, "project": id.Project}).All(&recs)
 	return recs, err
 }
 
@@ -247,40 +252,41 @@ func dbFuncUpdate(q, ch bson.M) (error) {
 	return c.Update(q, ch)
 }
 
-func dbFuncFind(project, funcname string) (FunctionDesc, error) {
-	return dbFuncFindOne(bson.M{"project": project, "name": funcname})
+func dbFuncFind(id *SwoId) (FunctionDesc, error) {
+	return dbFuncFindOne(bson.M{"tennant": id.Tennant, "project": id.Project, "name": id.Name})
 }
 
-func dbFuncFindStates(project, funcname string, states []int) (FunctionDesc, error) {
-	return dbFuncFindOne(bson.M{"project":	project, "name": funcname,
+func dbFuncFindStates(id *SwoId, states []int) (FunctionDesc, error) {
+	return dbFuncFindOne(bson.M{"tennant": id.Tennant, "project": id.Project, "name": id.Name,
 		"state": bson.M{"$in": states}})
 }
 
-func dbFuncListByProjCond(project string, cond bson.M) ([]FunctionDesc, error) {
-	vs, err := dbFuncFindAll(bson.M{"project": project, "state": cond})
+func dbFuncListByProjCond(id *SwoId, cond bson.M) ([]FunctionDesc, error) {
+	vs, err := dbFuncFindAll(bson.M{"tennant": id.Tennant, "project": id.Project, "state": cond})
 	return vs, err
 }
 
-func dbFuncListAll(project string, states []int) ([]FunctionDesc, error) {
-	return dbFuncListByProjCond(project, bson.M{"$in": states})
+func dbFuncListAll(id *SwoId, states []int) ([]FunctionDesc, error) {
+	return dbFuncListByProjCond(id, bson.M{"$in": states})
 }
 
-func dbFuncListByMwEvent(project, mwid, mqueue string) ([]FunctionDesc, error) {
-	return dbFuncFindAll(bson.M{"project": project,
-		"event.source": "mware", "event.mwid": mwid, "event.mqueue": mqueue})
+func dbFuncListByMwEvent(id *SwoId, mqueue string) ([]FunctionDesc, error) {
+	return dbFuncFindAll(bson.M{"tennant": id.Tennant, "project": id.Project,
+		"event.source": "mware", "event.mwid": id.Name, "event.mqueue": mqueue})
 }
 
 func dbFuncListWithEvents() ([]FunctionDesc, error) {
 	return dbFuncFindAll(bson.M{"event.source": bson.M{"$ne": ""}})
 }
 
-func dbFuncSetStateCond(project string, funcname string, state int, states []int) error {
+func dbFuncSetStateCond(id *SwoId, state int, states []int) error {
 	err := dbFuncUpdate(
-		bson.M{"project": project, "name": funcname, "state": bson.M{"$in": states}},
+		bson.M{"tennant": id.Tennant, "project": id.Project, "name": id.Name,
+				"state": bson.M{"$in": states}},
 		bson.M{"$set": bson.M{"state": state}})
 	if err != nil {
 		log.Errorf("dbFuncSetState: Can't change function %s to state %d: %s",
-				funcname, state, err.Error())
+				id.Name, state, err.Error())
 	}
 
 	return err
@@ -289,11 +295,12 @@ func dbFuncSetStateCond(project string, funcname string, state int, states []int
 func dbFuncSetState(fn *FunctionDesc, state int) error {
 	fn.State = state
 	err := dbFuncUpdate(
-		bson.M{"project": fn.Project, "name": fn.FuncName, "state": bson.M{"$ne": state}},
+		bson.M{"tennant": fn.Tennant, "project": fn.Project, "name": fn.Name,
+				"state": bson.M{"$ne": state}},
 		bson.M{"$set": bson.M{"state": state}})
 	if err != nil {
 		log.Errorf("dbFuncSetState: Can't change function %s state: %s",
-				fn.FuncName, err.Error())
+				fn.Name, err.Error())
 	}
 
 	return err
@@ -301,7 +308,7 @@ func dbFuncSetState(fn *FunctionDesc, state int) error {
 
 func dbFuncUpdateAdded(fn *FunctionDesc) error {
 	err := dbFuncUpdate(
-		bson.M{"project": fn.Project, "name": fn.FuncName},
+		bson.M{"tennant": fn.Tennant, "project": fn.Project, "name": fn.Name},
 		bson.M{"$set": bson.M{
 				"commit": fn.Commit,
 				"cronid": fn.CronID,
@@ -310,7 +317,7 @@ func dbFuncUpdateAdded(fn *FunctionDesc) error {
 				"urlcall": fn.URLCall,
 			}})
 	if err != nil {
-		log.Errorf("Can't update added %s: %s", fn.FuncName, err.Error())
+		log.Errorf("Can't update added %s: %s", fn.Name, err.Error())
 	}
 
 	return err
@@ -318,10 +325,10 @@ func dbFuncUpdateAdded(fn *FunctionDesc) error {
 
 func dbFuncUpdatePulled(fn *FunctionDesc) error {
 	err := dbFuncUpdate(
-		bson.M{"project": fn.Project, "name": fn.FuncName},
+		bson.M{"tennant": fn.Tennant, "project": fn.Project, "name": fn.Name},
 		bson.M{"$set": bson.M{"commit": fn.Commit, "oldcommit": fn.OldCommit, "state": fn.State, }})
 	if err != nil {
-		log.Errorf("Can't update pulled %s: %s", fn.FuncName, err.Error())
+		log.Errorf("Can't update pulled %s: %s", fn.Name, err.Error())
 	}
 
 	return err
@@ -349,8 +356,7 @@ func logSaveResult(fn *FunctionDesc, event, stdout, stderr string) {
 	c := dbSession.DB(dbDBName).C(DBColLogs)
 	text := fmt.Sprintf("out: [%s], err: [%s]", stdout, stderr)
 	c.Insert(DBLogRec{
-		Project:	fn.Project,
-		FuncName:	fn.FuncName,
+		SwoId:		fn.SwoId,
 		Commit:		fn.Commit,
 		Event:		event,
 		Time:		time.Now(),
@@ -361,8 +367,7 @@ func logSaveResult(fn *FunctionDesc, event, stdout, stderr string) {
 func logSaveEvent(fn *FunctionDesc, event, text string) {
 	c := dbSession.DB(dbDBName).C(DBColLogs)
 	c.Insert(DBLogRec{
-		Project:	fn.Project,
-		FuncName:	fn.FuncName,
+		SwoId:		fn.SwoId,
 		Commit:		fn.Commit,
 		Event:		event,
 		Time:		time.Now(),
@@ -370,20 +375,20 @@ func logSaveEvent(fn *FunctionDesc, event, text string) {
 	})
 }
 
-func logGetFor(project, funcname string) ([]DBLogRec, error) {
+func logGetFor(id *SwoId) ([]DBLogRec, error) {
 	var logs []DBLogRec
 	c := dbSession.DB(dbDBName).C(DBColLogs)
-	err := c.Find(bson.M{"project": project, "function": funcname}).All(&logs)
+	err := c.Find(bson.M{"tennant": id.Tennant, "project": id.Project, "function": id.Name}).All(&logs)
 	return logs, err
 }
 
 func logRemove(fn *FunctionDesc) {
 	c := dbSession.DB(dbDBName).C(DBColLogs)
-	_, err := c.RemoveAll(bson.M{"project": fn.Project, "function": fn.FuncName})
+	_, err := c.RemoveAll(bson.M{"tennant": fn.Tennant, "project": fn.Project, "function": fn.Name})
 	if err != nil {
-		log.Errorf("logs %s.%s remove error: %s", fn.Project, fn.FuncName, err.Error())
+		log.Errorf("logs %s.%s remove error: %s", fn.Project, fn.Name, err.Error())
 	} else {
-		log.Debugf("Removed logs for %s", fn.FuncName);
+		log.Debugf("Removed logs for %s", fn.Name);
 	}
 }
 
@@ -584,15 +589,15 @@ func dbBalancerLinkDel(link *BalancerLink) (error) {
 	return err
 }
 
-func dbProjectListAll() (fn []string, mw []string, err error) {
+func dbProjectListAll(id *SwoId) (fn []string, mw []string, err error) {
 	c := dbSession.DB(dbDBName).C(DBColFunc)
-	err = c.Find(nil).Distinct("project", &fn)
+	err = c.Find(bson.M{"tennant": id.Tennant}).Distinct("project", &fn)
 	if err != nil {
 		return
 	}
 
 	c = dbSession.DB(dbDBName).C(DBColMware)
-	err = c.Find(nil).Distinct("project", &mw)
+	err = c.Find(bson.M{"tennant": id.Tennant}).Distinct("project", &mw)
 	return
 }
 

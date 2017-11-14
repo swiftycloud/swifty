@@ -111,7 +111,7 @@ func startListener(conf *YAMLConf, vhost, queue string) error {
 
 			log.Debugf("mq: Resolved client to project %s", mware.Project)
 
-			funcs, err := dbFuncListByMwEvent(mware.Project, mware.MwareID, queue)
+			funcs, err := dbFuncListByMwEvent(&mware.SwoId, queue)
 			if err != nil {
 				/* FIXME -- this should be notified? Or what? */
 				log.Errorf("mq: Can't list functions for event")
@@ -122,7 +122,7 @@ func startListener(conf *YAMLConf, vhost, queue string) error {
 				log.Debugf("mq: `- [%s]", fn)
 
 				/* FIXME -- this is synchronous */
-				_, _, _, err := doRun(&fn, "mware:" + mware.MwareID + ":" + queue,
+				_, _, _, err := doRun(&fn, "mware:" + mware.Name + ":" + queue,
 						fn.Inst().DepName(), []string{string(d.Body)})
 
 				if err != nil {

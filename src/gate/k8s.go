@@ -81,14 +81,14 @@ func swk8sRemove(conf *YAMLConf, fn *FunctionDesc, fi *FnInst) error {
 	deploy := swk8sClientSet.Extensions().Deployments(v1.NamespaceDefault)
 	this, err := deploy.Get(depname)
 	if err != nil {
-		log.Errorf("Can't get deployment for %s", fn.FuncName)
+		log.Errorf("Can't get deployment for %s", fn.SwoId.Str())
 		return err
 	}
 
 	this.Spec.Replicas = &nr_replicas
 	_, err = deploy.Update(this)
 	if err != nil {
-		log.Errorf("Can't shrink replicas for %s: %s", fn.FuncName, err.Error())
+		log.Errorf("Can't shrink replicas for %s: %s", fn.SwoId.Str(), err.Error())
 		return err
 	}
 
@@ -103,13 +103,13 @@ func swk8sRemove(conf *YAMLConf, fn *FunctionDesc, fi *FnInst) error {
 				})
 	if err != nil {
 		log.Errorf("Can't delete deployment for %s: %s",
-				fn.FuncName, err.Error())
+				fn.SwoId.Str(), err.Error())
 		return err
 	}
 
 	swk8sSecretRemove(depname)
 
-	log.Debugf("Deleted deployment for %s", fn.FuncName)
+	log.Debugf("Deleted deployment for %s", fn.SwoId.Str())
 	return nil
 }
 
@@ -120,7 +120,7 @@ func swk8sGenEnvVar(conf *YAMLConf, fn *FunctionDesc, fi *FnInst, wdaddr string,
 		vs := strings.SplitN(v, "=", 2)
 		if strings.HasPrefix(vs[0], "SWD_") {
 			// FIXME -- check earlier and abort adding
-			log.Warn("Bogus env %s in %s.%s", vs[0], fn.Project, fn.FuncName)
+			log.Warn("Bogus env %s in %s", vs[0], fn.SwoId.Str())
 			continue
 		}
 		s = append(s, v1.EnvVar{Name: vs[0], Value: vs[1]})
@@ -139,11 +139,14 @@ func swk8sGenEnvVar(conf *YAMLConf, fn *FunctionDesc, fi *FnInst, wdaddr string,
 			Name:	"SWD_PORT",
 			Value:	strconv.Itoa(int(wd_port)), })
 	s = append(s, v1.EnvVar{
+			Name:	"SWD_TENNANT",
+			Value:	fn.Tennant, })
+	s = append(s, v1.EnvVar{
 			Name:	"SWD_PROJECT",
 			Value:	fn.Project, })
 	s = append(s, v1.EnvVar{
 			Name:	"SWD_FUNCNAME",
-			Value:	fn.FuncName, })
+			Value:	fn.Name, })
 	s = append(s, v1.EnvVar{
 			Name: "SWD_COMMIT_ID",
 			Value:	fn.Commit, })
@@ -306,7 +309,7 @@ func swk8sRun(conf *YAMLConf, fn *FunctionDesc, fi *FnInst) error {
 			HostNetwork:	hostnw,
 			Containers:	[]v1.Container{
 				{
-					Name:		fn.FuncName,
+					Name:		fn.SwoId.Str(),
 					Image:		rt.Image,
 					Command:	[]string{conf.Wdog.CtPath},
 					Ports:		ctPorts,
@@ -328,8 +331,8 @@ func swk8sRun(conf *YAMLConf, fn *FunctionDesc, fi *FnInst) error {
 
 	err = BalancerCreate(depname, uint(nr_replicas))
 	if err != nil {
-		log.Errorf("Can't create balancer %s for %s/%s: %s",
-				depname, fn.Project, fn.FuncName, err.Error())
+		log.Errorf("Can't create balancer %s for %s: %s",
+				depname, fn.SwoId.Str(), err.Error())
 		return err
 	}
 
@@ -353,7 +356,7 @@ func swk8sRun(conf *YAMLConf, fn *FunctionDesc, fi *FnInst) error {
 		swk8sSecretRemove(depname)
 		BalancerDelete(depname)
 		log.Errorf("Can't add function %s: %s",
-				fn.FuncName, err.Error())
+				fn.SwoId.Str(), err.Error())
 	} else {
 		log.Debugf("Started deployment %s", depname)
 	}
@@ -371,10 +374,12 @@ func genBalancerPod(pod *v1.Pod) (BalancerPod) {
 
 	for _, c := range pod.Spec.Containers {
 		for _, v := range c.Env {
-			if v.Name == "SWD_PROJECT" {
+			if v.Name == "SWD_TENNANT" {
+				r.Tennant = v.Value
+			} else if v.Name == "SWD_PROJECT" {
 				r.Project = v.Value
 			} else if v.Name == "SWD_FUNCNAME" {
-				r.FuncName = v.Value
+				r.Name = v.Value
 			} else if v.Name == "SWD_PORT" {
 				if r.WdogAddr != "" {
 					r.WdogAddr += ":" + v.Value
@@ -410,7 +415,7 @@ func genBalancerPod(pod *v1.Pod) (BalancerPod) {
 	}
 
 	if r.WdogAddr == "" || r.UID == "" ||
-		r.Project == "" || r.FuncName == "" ||
+		r.Tennant == "" || r.Project == "" || r.Name == "" ||
 		r.DepName == "" {
 		r.State = swy.DBPodStateNak
 	}

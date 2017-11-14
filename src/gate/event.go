@@ -24,11 +24,11 @@ func eventSetup(conf *YAMLConf, fn *FunctionDesc, on bool) error {
 }
 
 type faasCronJob struct {
-	project, fname string
+	Id SwoId
 }
 
 func (cj faasCronJob) Run () {
-	log.Debugf("Will run %s.%s function", cj.project, cj.fname)
+	log.Debugf("Will run %s function", cj.Id.Str())
 }
 
 func oneshotEventSetup(conf *YAMLConf, fn *FunctionDesc, on bool) error {
@@ -38,9 +38,9 @@ func oneshotEventSetup(conf *YAMLConf, fn *FunctionDesc, on bool) error {
 
 func cronEventSetup(conf *YAMLConf, fn *FunctionDesc, on bool) error {
 	if on {
-		id, err := cronRunner.AddJob(fn.Event.CronTab, faasCronJob{fn.Project, fn.FuncName})
+		id, err := cronRunner.AddJob(fn.Event.CronTab, faasCronJob{Id: fn.SwoId})
 		if err != nil {
-			log.Errorf("Can't setup cron trigger for %s.%s", fn.Project, fn.FuncName)
+			log.Errorf("Can't setup cron trigger for %s", fn.SwoId.Str())
 			return err
 		}
 
@@ -60,7 +60,7 @@ func eventsRestart(conf *YAMLConf) error {
 	}
 
 	for _, fn := range fns {
-		log.Debugf("Restart event for %s:%s", fn.Project, fn.FuncName)
+		log.Debugf("Restart event for %s", fn.SwoId.Str())
 		err = eventSetup(conf, &fn, true)
 		if err != nil {
 			return err

@@ -10,7 +10,7 @@ import (
 )
 
 func fnRepoClone(fn *FunctionDesc, prefix string) string {
-	return prefix + "/" + fn.Project + "/" + fn.FuncName
+	return prefix + "/" + fn.Tennant + "/" + fn.Project + "/" + fn.Name
 }
 
 func fnRepoCheckout(conf *YAMLConf, fn *FunctionDesc) string {
@@ -64,7 +64,7 @@ func cloneRepo(fn *FunctionDesc) error {
 
 	_, err := os.Stat(clone_to)
 	if err == nil || !os.IsNotExist(err) {
-		log.Errorf("repo %s/%s is already there", fn.Project, fn.FuncName)
+		log.Errorf("repo for %s is already there", fn.SwoId.Str())
 		return fmt.Errorf("can't clone repo")
 	}
 

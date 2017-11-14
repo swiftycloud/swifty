@@ -21,8 +21,7 @@ type MwareDesc struct {
 	// field to be present...
 	ObjID		bson.ObjectId	`bson:"_id,omitempty"`
 
-	Project		string		`bson:"project"`	// Project name
-	MwareID		string		`bson:"mwareid"`	// Middleware ID
+	SwoId
 	MwareType	string		`bson:"mwaretype"`	// Middleware type
 	Client		string		`bson:"client"`		// Middleware client
 	Pass		string		`bson:"pass"`		// Client password
@@ -40,7 +39,7 @@ type MwareOpsIface interface {
 }
 
 func mkEnv(mwd *MwareDesc, envName, value string) string {
-	return "MWARE_" + strings.ToUpper(mwd.MwareID) + "_" + envName + "=" + value
+	return "MWARE_" + strings.ToUpper(mwd.Name) + "_" + envName + "=" + value
 }
 
 func genEnvs(mwd *MwareDesc, mwaddr string) ([]string) {
@@ -315,18 +314,18 @@ var mwareHandlers = map[string]MwareOpsIface {
 	"mq":	settings.RabbitMQ,
 }
 
-func mwareGetEnv(conf *YAMLConf, project, mwid string) ([]string, error) {
+func mwareGetEnv(conf *YAMLConf, id *SwoId) ([]string, error) {
 	// No mware lock needed here since it's a pure
 	// read with mware counter increased already so
 	// can't disappear
-	item, err := dbMwareGetItem(project, mwid)
+	item, err := dbMwareGetItem(id)
 	if err != nil {
-		return nil, fmt.Errorf("Can't fetch settings for mware %s", mwid)
+		return nil, fmt.Errorf("Can't fetch settings for mware %s", id.Str())
 	}
 
 	handler, ok := mwareHandlers[item.MwareType]
 	if !ok {
-		return nil, fmt.Errorf("No handler for %s mware", mwid)
+		return nil, fmt.Errorf("No handler for %s mware", id.Str())
 	}
 
 	return handler.GetEnv(conf, &item), nil
@@ -336,7 +335,7 @@ func mwareGetFnEnv(conf *YAMLConf, fn *FunctionDesc) ([]string, error) {
 	var envs []string
 
 	for _, mwId := range fn.Mware {
-		env, err := mwareGetEnv(conf, fn.Project, mwId)
+		env, err := mwareGetEnv(conf, makeSwoId(fn.Tennant, fn.Project, mwId))
 		if err != nil {
 			return nil, err
 		}
@@ -347,33 +346,35 @@ func mwareGetFnEnv(conf *YAMLConf, fn *FunctionDesc) ([]string, error) {
 	return envs, nil
 }
 
-func mwareRemove(conf *YAMLConf, project string, mwIds []string) error {
+func mwareRemove(conf *YAMLConf, id SwoId, mwIds []string) error {
 	var ret error = nil
 
 	for _, mwId := range mwIds {
-		log.Debugf("remove wmare %s", mwId)
-		if dbMwareLock(project, mwId) != nil {
-			log.Errorf("Can't lock mware %s", mwId)
+		id.Name = mwId
+
+		log.Debugf("remove wmare %s", id.Str())
+		if dbMwareLock(&id) != nil {
+			log.Errorf("Can't lock mware %s", id.Str())
 			continue
 		}
 
-		removed, item, _ := dbMwareDecRefLocked(project, mwId)
+		removed, item, _ := dbMwareDecRefLocked(&id)
 		if removed == false {
-			dbMwareUnlock(project, mwId)
+			dbMwareUnlock(&id)
 			continue
 		}
 
 		handler, ok := mwareHandlers[item.MwareType]
 		if !ok {
-			log.Errorf("no handler for %s", mwId)
+			log.Errorf("no handler for %s", id.Str())
 			continue
 		}
 
 		err := handler.Fini(conf, &item)
 		if err != nil {
 			ret = err
-			dbMwareUnlock(project, mwId)
-			log.Errorf("Failed cleanup for mware %s", mwId)
+			dbMwareUnlock(&id)
+			log.Errorf("Failed cleanup for mware %s", id.Str())
 			continue
 		}
 
@@ -392,7 +393,7 @@ func mwareRemove(conf *YAMLConf, project string, mwIds []string) error {
 	return nil
 }
 
-func mwareSetup(conf *YAMLConf, project string, mwares []swyapi.MwareItem, fn *FunctionDesc) error {
+func mwareSetup(conf *YAMLConf, id SwoId, mwares []swyapi.MwareItem, fn *FunctionDesc) error {
 	var mwares_complete []string
 	var jsettings []byte
 	var found bool
@@ -401,17 +402,19 @@ func mwareSetup(conf *YAMLConf, project string, mwares []swyapi.MwareItem, fn *F
 	for _, mware := range mwares {
 		var mwd MwareDesc
 
-		log.Debugf("set up wmare %s:%s", mware.ID, mware.Type)
-		found, mwd, err = dbMwareAddRefOrInsertLocked(project, mware.ID)
+		id.Name = mware.ID
+
+		log.Debugf("set up wmare %s:%s", id.Str(), mware.Type)
+		found, mwd, err = dbMwareAddRefOrInsertLocked(&id)
 		if err == nil && found == false {
 			if mware.Type == "" {
-				err = fmt.Errorf("no type for new mware %s", mware.ID)
+				err = fmt.Errorf("no type for new mware %s", id.Str())
 				goto out
 			}
 
 			handler, ok := mwareHandlers[mware.Type]
 			if !ok {
-				err = fmt.Errorf("no handler for %s:%s", mware.ID, mware.Type)
+				err = fmt.Errorf("no handler for %s:%s", id.Str(), mware.Type)
 				dbMwareRemove(mwd)
 				goto out
 			}
@@ -428,7 +431,7 @@ func mwareSetup(conf *YAMLConf, project string, mwares []swyapi.MwareItem, fn *F
 		}
 
 		if err != nil {
-			err = fmt.Errorf("mwareSetup: Can't setup mwareid %s: %s", mware.ID, err.Error())
+			err = fmt.Errorf("mwareSetup: Can't setup mwareid %s: %s", id.Str(), err.Error())
 			goto out
 		}
 
@@ -443,12 +446,12 @@ func mwareSetup(conf *YAMLConf, project string, mwares []swyapi.MwareItem, fn *F
 
 out:
 	log.Errorf("mwareSetup: %s", err.Error())
-	mwareRemove(conf, project, mwares_complete)
+	mwareRemove(conf, id, mwares_complete)
 	return err
 }
 
 func mwareEventSetup(conf *YAMLConf, fn *FunctionDesc, on bool) error {
-	item, err := dbMwareGetItem(fn.Project, fn.Event.MwareId)
+	item, err := dbMwareGetItem(makeSwoId(fn.Tennant, fn.Project, fn.Event.MwareId))
 	if err != nil {
 		log.Errorf("Can't find mware %s for event", fn.Event.MwareId)
 		return err
