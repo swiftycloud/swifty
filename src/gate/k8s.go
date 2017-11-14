@@ -242,11 +242,31 @@ func swk8sSecretAdd(conf *YAMLConf, fn *FunctionDesc, depname string) (*v1.Secre
 }
 
 func swk8sUpdate(conf *YAMLConf, fn *FunctionDesc) error {
-	// FIXME -- k8s has built-in update functionality. USE IT
-	err := swk8sRemove(conf, fn, fn.InstOld())
-	if err == nil {
-		err = swk8sRun(conf, fn, fn.Inst())
+	depname := fn.Inst().DepName()
+
+	deploy := swk8sClientSet.Extensions().Deployments(v1.NamespaceDefault)
+	this, err := deploy.Get(depname)
+	if err != nil {
+		log.Errorf("Can't get deployment for %s", fn.SwoId.Str())
+		return err
 	}
+
+	/*
+	 * Function sources are at the new location now, so we only
+	 * need to fix that path and rollout the new version of the
+	 * deployment.
+	 */
+	this.Spec.Template.Spec.Volumes[0].VolumeSource.HostPath.Path = fnRepoCheckout(conf, fn)
+	_, err = deploy.Update(this)
+	if err != nil {
+		log.Errorf("Can't shrink replicas for %s: %s", fn.SwoId.Str(), err.Error())
+		return err
+	}
+
+	/*
+	 * FIXME -- after the new version of the deployment is rolled
+	 * out we may remove old checkout out sources
+	 */
 
 	return err
 }

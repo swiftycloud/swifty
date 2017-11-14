@@ -106,10 +106,6 @@ func (fn *FunctionDesc) Inst() *FnInst {
 	return &FnInst { Commit: fn.Commit, Build: false, fn: fn }
 }
 
-func (fn *FunctionDesc) InstOld() *FnInst {
-	return &FnInst { Commit: fn.OldCommit, Build: false, fn: fn }
-}
-
 func (fn *FunctionDesc) InstBuild() *FnInst {
 	return &FnInst { Commit: fn.Commit, Build: true, fn: fn }
 }
