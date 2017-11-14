@@ -630,6 +630,11 @@ db:
         address: "127.0.0.1:27017"
         user: "swifty"
         password: "1q2w3e"
+keystone:
+	address: "192.168.122.68:5000"
+	user: "admin"
+	password: "Cae6ThiekuShiece"
+	domain: "default"
 daemon:
         address: "192.168.122.68:8686"
         view: "/home/swifty/src/gate/view"
@@ -665,11 +670,6 @@ runtime:
 wdog:
         ct-path: "/usr/bin/swy-wdog"
         address: ":8687"
-keystone:
-	address: "192.168.122.68:5000"
-	user: "admin"
-	password: "Cae6ThiekuShiece"
-	domain: "default"
 kubernetes:
         config-path: src/conf/kubeconfig
 \end{lstlisting}
