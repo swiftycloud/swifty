@@ -158,11 +158,17 @@ Now setup a role, a user and a project
 
 \begin{lstlisting}
 openstack project create swifty.proj
-openstack project create swifty.proj
 openstack user create --project swifty.proj swifty.user
 openstack user set --password swifty swifty.user
 openstack role create swifty.owner
 openstack role add --user swifty.user --project swifty.proj swifty.owner
+\end{lstlisting}
+
+To run tests add a separate user
+
+\begin{lstlisting}
+openstack user create --project swifty.proj xemul.user
+openstack user set --password 123456 xemul.user
 \end{lstlisting}
 
 The \code{keystone} section in gate config must match the values
