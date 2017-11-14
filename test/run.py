@@ -120,12 +120,22 @@ class client:
 		self._project = opts.project
 		self._local_git = config['daemon']['sources']['clone']
 		self._shared_co = config['daemon']['sources']['share'].split(':')[0]
+		self._auth_token = None
+
+	def login(self, user, pswd):
+		conn = http.client.HTTPConnection(self._addr)
+		body = { 'username': user, 'password': pswd }
+		conn.request('POST', '/v1/user/login', json.dumps(body))
+		resp = conn.getresponse()
+		self._auth_token = resp.getheader("X-Subject-Token")
+		print('Got auth %s token' % self._auth_token[:18])
 
 	def _req(self, req, body):
 		conn = http.client.HTTPConnection(self._addr)
 		body['project'] = self._project
+		hdrs = { 'X-Subject-Token': self._auth_token, 'Content-Type': 'application/json' }
 		# print('B[%s]' % json.dumps(body))
-		conn.request('POST', req, json.dumps(body))
+		conn.request('POST', req, json.dumps(body), hdrs)
 		return conn.getresponse()
 
 	def _req_api(self, req_api, body):
@@ -585,6 +595,7 @@ opts = argp.parse_args()
 
 cfg = yaml.load(open(opts.conf))
 c = client(cfg)
+c.login("xemul.user", "123456")
 
 class fake_test:
 	def __init__(self):
