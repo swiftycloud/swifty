@@ -591,11 +591,13 @@ argp.add_argument("-f", "--flav", help="Test flavor to run", choices = [ x['id']
 argp.add_argument("-K", "--keep", help="Keep container and mware after run", action='store_true')
 argp.add_argument("-c", "--conf", help="Configuration file", dest = 'conf', default = swifty_default_config)
 argp.add_argument("-p", "--project", help="A project name to use", dest = 'project', default = 'swytest')
+argp.add_argument("-u", "--user", help="A user name to login", dest = 'login_user', default = "xemul.user")
+argp.add_argument("-s", "--pass", help="A password to login", dest = 'login_pass', default = "123456")
 opts = argp.parse_args()
 
 cfg = yaml.load(open(opts.conf))
 c = client(cfg)
-c.login("xemul.user", "123456")
+c.login(opts.login_user, opts.login_pass)
 
 class fake_test:
 	def __init__(self):
