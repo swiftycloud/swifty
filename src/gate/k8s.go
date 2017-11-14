@@ -1,6 +1,7 @@
 package main
 
 import (
+	"k8s.io/client-go/pkg/api/resource"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/pkg/api/unversioned"
 	"k8s.io/client-go/pkg/api/v1"
@@ -310,6 +311,18 @@ func swk8sRun(conf *YAMLConf, fn *FunctionDesc, fi *FnInst) error {
 				})
 	}
 
+	resources := RtGetFnResources(fn)
+
+	/* FIXME -- check for parse errors */
+	resspec := v1.ResourceRequirements {
+		Limits: v1.ResourceList{
+			v1.ResourceLimitsMemory:	resource.MustParse(resources["mem.lim"]),
+			v1.ResourceRequestsMemory:	resource.MustParse(resources["mem.req"]),
+			v1.ResourceLimitsCPU:		resource.MustParse(resources["cpu.lim"]),
+			v1.ResourceRequestsCPU:		resource.MustParse(resources["cpu.req"]),
+		},
+	}
+
 	podspec := v1.PodTemplateSpec{
 		ObjectMeta:	v1.ObjectMeta {
 			Name:	depname,
@@ -342,6 +355,7 @@ func swk8sRun(conf *YAMLConf, fn *FunctionDesc, fi *FnInst) error {
 						},
 					},
 					ImagePullPolicy: v1.PullNever,
+					Resources:	resspec,
 				},
 			},
 		},
