@@ -307,6 +307,7 @@ func dbFuncSetState(fn *FunctionDesc, state int) error {
 }
 
 func dbFuncUpdateAdded(fn *FunctionDesc) error {
+	log.Debugf("Update added %v", fn)
 	err := dbFuncUpdate(
 		bson.M{"tennant": fn.Tennant, "project": fn.Project, "name": fn.Name},
 		bson.M{"$set": bson.M{

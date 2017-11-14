@@ -54,7 +54,7 @@ type FunctionDesc struct {
 	ObjID		bson.ObjectId	`bson:"_id,omitempty"`
 	Index		string		`bson:"index"`		// Project + FuncName
 
-	SwoId
+	SwoId				`bson:",inline"`
 	Cookie		string		`bson:"cookie"`		// Some "unique" identifier
 	State		int		`bson:"state"`		// Function state
 	CronID		int		`bson:"cronid"`		// ID of cron trigger (if present)

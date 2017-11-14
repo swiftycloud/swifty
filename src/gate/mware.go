@@ -21,7 +21,7 @@ type MwareDesc struct {
 	// field to be present...
 	ObjID		bson.ObjectId	`bson:"_id,omitempty"`
 
-	SwoId
+	SwoId				`bson:",inline"`
 	MwareType	string		`bson:"mwaretype"`	// Middleware type
 	Client		string		`bson:"client"`		// Middleware client
 	Pass		string		`bson:"pass"`		// Client password
