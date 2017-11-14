@@ -28,9 +28,9 @@ To provide an example of the setup procedure we create two virtual machines
 with addresses \code{192.168.122.68} and \code{192.168.122.102} respectively.
 Where \textbf{fc1} is a \emph{master} node and \textbf{fc2} is a \emph{slave}.
 
-Thus \emph{master} will carry Kubernetes, MongoDB, NFS server and \code{swifty},
-while \textbf{fc2} for NFS client and Docker containers with \code{swy-wdog}
-watchdog inside.
+Thus \emph{master} will carry Kubernetes, Keystone, MongoDB, NFS server
+and \code{swifty}, while \textbf{fc2} for NFS client and Docker containers
+with \code{swy-wdog} watchdog inside.
 
 Add the following records to \code{/etc/hosts} on both nodes
 
