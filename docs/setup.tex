@@ -64,27 +64,109 @@ Reboot the machines.
 Follow the
 \urlref{https://docs.openstack.org/keystone/latest/install/index.html}{instructions}
 to install \urlref{https://www.openstack.org/software/releases/ocata/components/keystone}
-{Pike} keystone, then start the kerystone service.
+{Pike} keystone.
 
-Create the \code{swifty.owner} role with the
+We install it the \emph{master} node.
 
 \begin{lstlisting}
+dnf -y install mariadb mariadb-server-utils
+systemctl start mariadb
+systemctl enable mariadb
+\end{lstlisting}
+
+Configure \code{mariadb} and add a database for the keystone.
+
+\begin{lstlisting}
+mysqladmin -u root password aiNe1sah9ichu1re
+mysql -u root -p
+CREATE DATABASE keystone;
+GRANT ALL PRIVILEGES ON keystone.* TO 'keystone'@'localhost' \
+IDENTIFIED BY 'Ja7hey6keiThoyoi';
+GRANT ALL PRIVILEGES ON keystone.* TO 'keystone'@'%' \
+IDENTIFIED BY 'Ja7hey6keiThoyoi';
+\end{lstlisting}
+
+Install the packages needed (if shortener failed simply search for
+\code{rdo-release-pike.rpm}).
+
+\begin{lstlisting}
+dnf install https://goo.gl/qsXjTf
+dnf -y install openstack-keystone httpd mod_wsgi python-openstackclient
+\end{lstlisting}
+
+Configure \code{/etc/keystone/keystone.conf}
+
+\begin{lstlisting}
+[database]
+...
+connection = mysql+pymysql://keystone:Ja7hey6keiThoyoi@controller/keystone
+
+[token]
+...
+provider = fernet
+\end{lstlisting}
+
+Prepare keystone
+
+\begin{lstlisting}
+/bin/sh -c "keystone-manage db_sync" keystone
+keystone-manage fernet_setup --keystone-user \
+	keystone --keystone-group keystone
+keystone-manage credential_setup --keystone-user \
+	keystone --keystone-group keystone
+
+keystone-manage bootstrap --bootstrap-password Cae6ThiekuShiece \
+  --bootstrap-admin-url http://controller:35357/v3/ \
+  --bootstrap-internal-url http://controller:5000/v3/ \
+  --bootstrap-public-url http://controller:5000/v3/ \
+  --bootstrap-region-id RegionOne
+\end{lstlisting}
+
+In \code{/etc/httpd/conf/httpd.conf} setup server name
+
+\begin{lstlisting}
+ServerName controller
+\end{lstlisting}
+
+and add this alias to \code{/etc/hosts}
+
+\begin{lstlisting}
+127.0.0.1               controller
+\end{lstlisting}
+
+Link the wsgi config and start web server
+
+\begin{lstlisting}
+ln -s /usr/share/keystone/wsgi-keystone.conf /etc/httpd/conf.d/
+systemctl enable httpd.service
+systemctl start httpd.service
+\end{lstlisting}
+
+Put the folling variables into \code{\textasciitilde/.bashrc}
+
+\begin{lstlisting}
+export OS_USERNAME=admin
+export OS_PASSWORD=Cae6ThiekuShiece
+export OS_PROJECT_NAME=admin
+export OS_USER_DOMAIN_NAME=Default
+export OS_PROJECT_DOMAIN_NAME=Default
+export OS_AUTH_URL=http://controller:5000/v3
+export OS_IDENTITY_API_VERSION=3
+\end{lstlisting}
+
+Now setup a role, a user and a project
+
+\begin{lstlisting}
+openstack project create swifty.proj
+openstack project create swifty.proj
+openstack user create --project swifty.proj swifty.user
+openstack user set --password swifty swifty.user
 openstack role create swifty.owner
+openstack role add --user swifty.user --project swifty.proj swifty.owner
 \end{lstlisting}
 
-command.
-
-Then add \code{keystone} section to gate conf with url, user, pass
-and domain, e.g. like this:
-\begin{lstlisting}
-keystone:
-	address: "192.168.122.197:5000"
-	user: "admin"
-	password: "1q2w3e"
-	domain: "default"
-\end{lstlisting}
-
-Gate uses the \code{/v3} API, no need to specify one in the URL string.
+The \code{keystone} section in gate config must match the values
+provided here (see \fullref{subsec:setup-swifty-conf}).
 
 \section{Setting up IPVS}
 \label{sec:setup-nfs}
@@ -172,6 +254,7 @@ the virtual machine, in our example it is \code{/dev/sdb}).
 
 \begin{lstlisting}
 systemctl stop docker
+rm -rf /var/lib/docker
 pvcreate /dev/sdb
 vgcreate docker /dev/sdb
 lvcreate --wipesignatures y -n thinpool docker -l 95%VG
@@ -479,11 +562,11 @@ where Kubernetes is spinning.
 
 To build \code{swifty} install \urlref{https://golang.org/}{Go}
 language at least version
-\urlref{https://storage.googleapis.com/golang/go1.8.3.linux-amd64.tar.gz}{go-1.8.3}.
+\urlref{https://redirector.gvt1.com/edgedl/go/go1.9.2.linux-amd64.tar.gz}{go-1.9.2}.
 
 \begin{lstlisting}
 dnf -y install git make
-tar -C /usr/local/bin -xzf go1.8.3.linux-amd64.tar.gz
+tar -C /usr/local/bin -xzf go1.9.2.linux-amd64.tar.gz
 mkdir -p ~/go
 export GOROOT=/usr/local/bin/go
 export GOPATH=~/go
@@ -537,7 +620,7 @@ or \code{/usr/sbin}. FIXME: Web-UI.
 \label{subsec:setup-swifty-conf}
 
 Because \code{swifty} daemon needs to communicate with Kubernetes,
-MongoDB, Docker and etc, create the \code{swifty.conf.yaml}
+Keystone, MongoDB, Docker and etc, create the \code{swifty.conf.yaml}
 configuration file as below
 
 \begin{lstlisting}
@@ -582,6 +665,11 @@ runtime:
 wdog:
         ct-path: "/usr/bin/swy-wdog"
         address: ":8687"
+keystone:
+	address: "192.168.122.68:5000"
+	user: "admin"
+	password: "Cae6ThiekuShiece"
+	domain: "default"
 kubernetes:
         config-path: src/conf/kubeconfig
 \end{lstlisting}
