@@ -5,6 +5,7 @@ import (
 	"os"
 	"bytes"
 	"encoding/json"
+	"encoding/base64"
 	"io/ioutil"
 	"net/http"
 	"flag"
@@ -122,7 +123,7 @@ func info_function(project, name string) {
 	make_faas_req("function/info", swyapi.FunctionID{ Project: project, FuncName: name}, &ifo)
 
 	fmt.Printf("Lang:   %s\n", ifo.Script.Lang)
-	fmt.Printf("Commit: %s\n", ifo.Commit[:12])
+	fmt.Printf("Commit: %s\n", ifo.Commit[:8])
 	fmt.Printf("State:  %s\n", ifo.State)
 	if len(ifo.Mware) > 0 {
 		fmt.Printf("Mware:  %s\n", strings.Join(ifo.Mware, ", "))
@@ -156,20 +157,43 @@ func detect_script(repo string) string {
 	panic("can't detect function script")
 }
 
-func add_function(name, lang, repo, run, mwares, event string) {
-	repo, err := filepath.Abs(repo)
+func add_function(name, lang, src, run, mwares, event string) {
+	sources := swyapi.FunctionSources{}
+
+	st, err := os.Stat(src)
 	if err != nil {
-		panic("Can't get abs path for repo")
+		panic("Can't stat sources path")
 	}
 
-	fmt.Printf("Will add %s %s/%s\n", lang, repo, run)
+	if st.IsDir() {
+		repo, err := filepath.Abs(src)
+		if err != nil {
+			panic("Can't get abs path for repo")
+		}
+
+		fmt.Printf("Will add git repo %s\n", repo)
+		sources.Type = "git"
+		sources.Repo = repo
+	} else {
+		data, err := ioutil.ReadFile(src)
+		if err != nil {
+			panic("Can't read file sources")
+		}
+
+		enc := base64.StdEncoding.EncodeToString(data)
+
+		fmt.Printf("Will add file %s\n", src)
+		sources.Type = "code"
+		sources.Code = enc
+		run = filepath.Base(src)
+	}
 
 	if lang == "auto" {
-		lang = detect_language(repo)
+		lang = detect_language(src)
 	}
 
 	if run == "auto" {
-		run = detect_script(repo)
+		run = detect_script(src)
 	}
 
 	mw := []swyapi.MwareItem{}
@@ -199,10 +223,7 @@ func add_function(name, lang, repo, run, mwares, event string) {
 		swyapi.FunctionAdd{
 			Project: cur_login.Proj,
 			FuncName: name,
-			Sources: swyapi.FunctionSources {
-				Type: "git",
-				Repo: repo,
-			},
+			Sources: sources,
 			Script: swyapi.FunctionScript {
 				Lang: lang,
 				Run: run,
@@ -377,16 +398,16 @@ func main() {
 	}
 
 	if os.Args[1] == "add" {
-		var lang, repo, run, mware, event string
+		var lang, src, run, mware, event string
 
 		flag.StringVar(&lang, "lang", "auto", "language")
-		flag.StringVar(&repo, "repo", ".", "repository")
+		flag.StringVar(&src, "src", ".", "repository")
 		flag.StringVar(&run, "run", "", "script to run")
 		flag.StringVar(&mware, "mw", "", "mware to use, comma-separated")
 		flag.StringVar(&event, "event", "", "event this fn is to start")
 		flag.CommandLine.Parse(os.Args[3:])
 
-		add_function(os.Args[2], lang, repo, run, mware, event)
+		add_function(os.Args[2], lang, src, run, mware, event)
 		return
 	}
 
@@ -441,7 +462,7 @@ usage:
 	fmt.Printf("\tOn functions:\n")
 	fmt.Printf("\t\tls [PROJECT]\n")
 	fmt.Printf("\t\tinf [PROJECT] NAME\n");
-	fmt.Printf("\t\tadd NAME [-lang L] [-run S] [-repo R] [-mw MW,...]\n")
+	fmt.Printf("\t\tadd NAME [-lang L] [-run S] [-src P] [-mw MW,...]\n")
 	fmt.Printf("\t\trun NAME <args>\n")
 	fmt.Printf("\t\tupd NAME\n")
 	fmt.Printf("\t\tdel NAME\n")

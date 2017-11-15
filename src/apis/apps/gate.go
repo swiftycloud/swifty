@@ -34,7 +34,8 @@ type FunctionScript struct {
 
 type FunctionSources struct {
 	Type		string			`json:"type"`
-	Repo		string			`json:"repo"`
+	Repo		string			`json:"repo,omitempty"`
+	Code		string			`json:"code,omitempty"`
 }
 
 type FunctionEvent struct {

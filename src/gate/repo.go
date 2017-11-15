@@ -7,6 +7,7 @@ import (
 	"os"
 	"io"
 	"io/ioutil"
+	"encoding/base64"
 )
 
 func fnRepoClone(fn *FunctionDesc, prefix string) string {
@@ -63,6 +64,11 @@ var srcHandlers = map[string] struct {
 		get:	cloneGitRepo,
 		update:	updateGitRepo,
 	},
+
+	"code": {
+		get:	getFileFromReq,
+		update:	updateFileFromReq,
+	},
 }
 
 func getSources(fn *FunctionDesc) error {
@@ -107,6 +113,28 @@ func cloneGitRepo(fn *FunctionDesc) error {
 	return checkoutSources(fn)
 }
 
+func getFileFromReq(fn *FunctionDesc) error {
+	fn.Src.Commit = noCommit
+
+	to := fnRepoCheckout(&conf, fn)
+	err := os.MkdirAll(to, 0750)
+	if err != nil {
+		return fmt.Errorf("Can't put sources")
+	}
+
+	data, err := base64.StdEncoding.DecodeString(fn.Src.Code)
+	if err != nil {
+		return fmt.Errorf("Error decoding sources")
+	}
+
+	err = ioutil.WriteFile(to + "/" + fn.Script.Run, data, 0600)
+	if err != nil {
+		return fmt.Errorf("Can't write source file")
+	}
+
+	return nil
+}
+
 func updateSources(fn *FunctionDesc) error {
 	srch, ok := srcHandlers[fn.Src.Type]
 	if !ok {
@@ -136,6 +164,11 @@ func updateGitRepo(fn *FunctionDesc) error {
 	}
 
 	return checkoutSources(fn)
+}
+
+func updateFileFromReq(fn *FunctionDesc) error {
+	log.Errorf("No update of direct code possible (yet)")
+	return fmt.Errorf("Can't update code from req")
 }
 
 func dropDir(dir, subdir string) {

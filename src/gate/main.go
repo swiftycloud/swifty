@@ -32,6 +32,7 @@ type FnSrcDesc struct {
 	Type		string		`bson:"type"`
 	Repo		string		`bson:"repo,omitempty"`
 	Commit		string		`bson:"commit"`		// Top commit in the repo
+	Code		string		`bson:"-"`
 }
 
 type FnEventDesc struct {
@@ -79,6 +80,8 @@ var swyre = regexp.MustCompile("[._]")
 func swyMapName(name string) string {
 	return swyre.ReplaceAllString(name, "-")
 }
+
+var noCommit = "00000000"
 
 func (fi *FnInst)DepName() string {
 	dn := "swd-" + fi.fn.Cookie[:40] + "-" + fi.Commit[:8]
@@ -432,6 +435,7 @@ func getFunctionDesc(tennant string, p_add *swyapi.FunctionAdd) *FunctionDesc {
 		Src:		FnSrcDesc {
 			Type:		p_add.Sources.Type,
 			Repo:		p_add.Sources.Repo,
+			Code:		p_add.Sources.Code,
 		},
 		Replicas:	p_add.Replicas,
 		Script:		FnScriptDesc {
