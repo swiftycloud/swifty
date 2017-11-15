@@ -69,8 +69,6 @@ func reqKsToken(conf *YAMLConfKeystone, url string, in interface{}, out interfac
 		return "", err
 	}
 
-	log.Error("Keystone req [" + string(body) + "]")
-
 	req, err := http.NewRequest("POST", "http://" + conf.Addr + "/v3/" + url, bytes.NewBuffer(body))
 	if err != nil {
 		return "", err
