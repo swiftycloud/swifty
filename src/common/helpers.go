@@ -161,22 +161,22 @@ func MakeIPPort(ip string, port int32) string {
 	return ip + ":" + str
 }
 
-func HTTPReadAndUnmarshal(r *http.Request, data interface{}) (string, error) {
+func HTTPReadAndUnmarshal(r *http.Request, data interface{}) error {
 	defer r.Body.Close()
 
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		swylog.Errorf("\tCan't parse request: %s", err.Error())
-		return "", err
+		return err
 	}
 
 	err = json.Unmarshal(body, data)
 	if err != nil {
 		swylog.Errorf("\tUnmarshal error: %s", err.Error())
-		return "", err
+		return err
 	}
 
-	return r.Header.Get("X-Subject-Token"), nil
+	return nil
 }
 
 func HTTPMarshalAndWrite(w http.ResponseWriter, data interface{}) error {

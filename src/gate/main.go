@@ -323,7 +323,7 @@ func handleUserLogin(w http.ResponseWriter, r *http.Request) {
 	var params swyapi.UserLogin
 	var token string
 
-	_, err := swy.HTTPReadAndUnmarshal(r, &params)
+	err := swy.HTTPReadAndUnmarshal(r, &params)
 	if err != nil {
 		goto out
 	}
@@ -347,10 +347,11 @@ out:
 }
 
 func handleGenericReq(r *http.Request, params interface{}) (string, error) {
-	token, err := swy.HTTPReadAndUnmarshal(r, params)
+	err := swy.HTTPReadAndUnmarshal(r, params)
 	if err != nil {
 		return "", err
 	}
+	token := r.Header.Get("X-Subject-Token")
 
 	tennant := KeystoneVerify(&conf.Keystone, token)
 	if tennant == "" {
