@@ -367,24 +367,119 @@ func refresh_token(home string) {
 	}
 }
 
+const (
+	CMD_LOGIN string	= "login"
+	CMD_PS string		= "ps"
+	CMD_LS string		= "ls"
+	CMD_INF string		= "inf"
+	CMD_ADD string		= "add"
+	CMD_RUN string		= "run"
+	CMD_UPD string		= "upd"
+	CMD_DEL string		= "del"
+	CMD_LOGS string		= "logs"
+	CMD_MLS string		= "mls"
+	CMD_MADD string		= "madd"
+	CMD_MDEL string		= "mdel"
+	CMD_MENV string		= "menv"
+)
+
+var cmdOrder = []string {
+	CMD_LOGIN,
+	CMD_PS,
+	CMD_LS,
+	CMD_INF,
+	CMD_ADD,
+	CMD_RUN,
+	CMD_UPD,
+	CMD_DEL,
+	CMD_LOGS,
+	CMD_MLS,
+	CMD_MADD,
+	CMD_MDEL,
+	CMD_MENV,
+}
+
+var cmdMap = map[string]*flag.FlagSet {
+	CMD_LOGIN:	flag.NewFlagSet(CMD_LOGIN, flag.ExitOnError),
+	CMD_PS:		flag.NewFlagSet(CMD_PS, flag.ExitOnError),
+	CMD_LS:		flag.NewFlagSet(CMD_LS, flag.ExitOnError),
+	CMD_INF:	flag.NewFlagSet(CMD_INF, flag.ExitOnError),
+	CMD_ADD:	flag.NewFlagSet(CMD_ADD, flag.ExitOnError),
+	CMD_RUN:	flag.NewFlagSet(CMD_RUN, flag.ExitOnError),
+	CMD_UPD:	flag.NewFlagSet(CMD_UPD, flag.ExitOnError),
+	CMD_DEL:	flag.NewFlagSet(CMD_DEL, flag.ExitOnError),
+	CMD_LOGS:	flag.NewFlagSet(CMD_LOGS, flag.ExitOnError),
+	CMD_MLS:	flag.NewFlagSet(CMD_MLS, flag.ExitOnError),
+	CMD_MADD:	flag.NewFlagSet(CMD_MADD, flag.ExitOnError),
+	CMD_MDEL:	flag.NewFlagSet(CMD_MDEL, flag.ExitOnError),
+	CMD_MENV:	flag.NewFlagSet(CMD_MENV, flag.ExitOnError),
+}
+
+func bindCmdUsage(cmd, args, help string) {
+	cmdMap[cmd].Usage = func() {
+		fmt.Fprintf(os.Stderr, "%s %s\n  %s\n", cmd, args, help)
+		cmdMap[cmd].PrintDefaults()
+	}
+}
+
 func main() {
-	if len(os.Args) <= 1 {
+	var lang, src, run, mware, event string
+
+	bindCmdUsage(CMD_LOGIN, "USER@HOST:PORT", "Login into the system")
+
+	bindCmdUsage(CMD_PS, "", "List projects")
+
+	bindCmdUsage(CMD_LS, "[PROJECT]", "List functions of a project")
+
+	bindCmdUsage(CMD_INF, "[PROJECT] FUNCNAME", "Function info")
+
+	cmdMap[CMD_ADD].StringVar(&lang, "lang", "auto", "Language")
+	cmdMap[CMD_ADD].StringVar(&src, "src", ".", "Repository")
+	cmdMap[CMD_ADD].StringVar(&run, "run", "", "Script to run")
+	cmdMap[CMD_ADD].StringVar(&mware, "mw", "", "Mware to use, comma-separated")
+	cmdMap[CMD_ADD].StringVar(&event, "event", "", "Event this fn is to start")
+	bindCmdUsage(CMD_ADD, "", "Add a function")
+
+	bindCmdUsage(CMD_RUN, "FUNCNAME [ARGS]", "Run a function")
+	bindCmdUsage(CMD_UPD, "FUNCNAME", "Update a function")
+	bindCmdUsage(CMD_DEL, "FUNCNAME", "Delete a function")
+	bindCmdUsage(CMD_LOGS, "FUNCNAME", "Show function logs")
+
+	bindCmdUsage(CMD_MLS, "[PROJECT]", "List middleware")
+
+	bindCmdUsage(CMD_MADD, "TYPE:ID [TYPE:ID]", "Add middleware")
+	bindCmdUsage(CMD_MDEL, "ID [ID]", "Delete middleware")
+	bindCmdUsage(CMD_MENV, "ID", "Show middleware environment variables")
+
+	flag.Usage = func() {
+		for _, v := range cmdOrder {
+			cmdMap[v].Usage()
+		}
+	}
+
+	if len(os.Args) < 2 {
 		goto usage
 	}
 
-	if os.Args[1] == "login" {
+	if val, ok := cmdMap[os.Args[1]]; ok {
+		val.Parse(os.Args[2:])
+	} else {
+		goto usage
+	}
+
+	if cmdMap[CMD_LOGIN].Parsed() {
 		make_login(os.Args[2])
 		return
 	}
 
 	login()
 
-	if os.Args[1] == "ps" {
+	if cmdMap[CMD_PS].Parsed() {
 		list_projects()
 		return
 	}
 
-	if os.Args[1] == "ls" {
+	if cmdMap[CMD_LS].Parsed() {
 		proj := cur_login.Proj
 		if len(os.Args) > 2 {
 			proj = os.Args[2]
@@ -393,7 +488,7 @@ func main() {
 		return
 	}
 
-	if os.Args[1] == "inf" {
+	if cmdMap[CMD_INF].Parsed() {
 		var proj, fnam string
 
 		if len(os.Args) > 3 {
@@ -410,41 +505,32 @@ func main() {
 		return
 	}
 
-	if os.Args[1] == "add" {
-		var lang, src, run, mware, event string
-
-		flag.StringVar(&lang, "lang", "auto", "language")
-		flag.StringVar(&src, "src", ".", "repository")
-		flag.StringVar(&run, "run", "", "script to run")
-		flag.StringVar(&mware, "mw", "", "mware to use, comma-separated")
-		flag.StringVar(&event, "event", "", "event this fn is to start")
-		flag.CommandLine.Parse(os.Args[3:])
-
+	if cmdMap[CMD_ADD].Parsed() {
 		add_function(os.Args[2], lang, src, run, mware, event)
 		return
 	}
 
-	if os.Args[1] == "run" {
+	if cmdMap[CMD_RUN].Parsed() {
 		run_function(os.Args[2], os.Args[3:])
 		return
 	}
 
-	if os.Args[1] == "upd" {
+	if cmdMap[CMD_UPD].Parsed() {
 		update_function(os.Args[2])
 		return
 	}
 
-	if os.Args[1] == "del" {
+	if cmdMap[CMD_DEL].Parsed() {
 		del_function(os.Args[2])
 		return
 	}
 
-	if os.Args[1] == "logs" {
+	if cmdMap[CMD_LOGS].Parsed() {
 		show_logs(os.Args[2])
 		return
 	}
 
-	if os.Args[1] == "mls" {
+	if cmdMap[CMD_MLS].Parsed() {
 		proj := cur_login.Proj
 		if len(os.Args) > 2 {
 			proj = os.Args[2]
@@ -453,36 +539,23 @@ func main() {
 		return
 	}
 
-	if os.Args[1] == "madd" {
+	if cmdMap[CMD_MADD].Parsed() {
 		add_mware(os.Args[2:])
 		return
 	}
 
-	if os.Args[1] == "mdel" {
+	if cmdMap[CMD_MDEL].Parsed() {
 		del_mware(os.Args[2:])
 		return
 	}
 
-	if os.Args[1] == "menv" {
+	if cmdMap[CMD_MENV].Parsed() {
 		show_mware_env(os.Args[2])
 		return
 	}
 
+	return
 usage:
-	fmt.Printf("Actions:\n")
-	fmt.Printf("\t\tlogin USER@HOST:PORT/PROJECT\n")
-	fmt.Printf("\t\tps\n")
-	fmt.Printf("\tOn functions:\n")
-	fmt.Printf("\t\tls [PROJECT]\n")
-	fmt.Printf("\t\tinf [PROJECT] NAME\n");
-	fmt.Printf("\t\tadd NAME [-lang L] [-run S] [-src P] [-mw MW,...]\n")
-	fmt.Printf("\t\trun NAME <args>\n")
-	fmt.Printf("\t\tupd NAME\n")
-	fmt.Printf("\t\tdel NAME\n")
-	fmt.Printf("\t\tlogs NAME\n")
-	fmt.Printf("\tOn middleware:\n")
-	fmt.Printf("\t\tmls [PROJECT]\n")
-	fmt.Printf("\t\tmadd TYPE:NAME ...\n")
-	fmt.Printf("\t\tmdel NAME ...\n")
-	fmt.Printf("\t\tmenv NAME\n")
+	flag.Usage()
+	os.Exit(1)
 }
