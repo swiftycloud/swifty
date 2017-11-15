@@ -63,7 +63,7 @@ func faas_login() string {
 	}
 
 	resp.Body.Close()
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		panic(fmt.Errorf("Bad responce from server: " + string(resp.Status)))
 	}
 
@@ -76,13 +76,21 @@ func faas_login() string {
 }
 
 func make_faas_req(url string, in interface{}, out interface{}) {
+	first_attempt := true
+again:
 	resp, err := make_faas_req_x(url, in)
 	if err != nil {
 		panic(err)
 	}
 
 	defer resp.Body.Close()
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
+		if (resp.StatusCode == http.StatusUnauthorized) && first_attempt {
+			first_attempt = false
+			refresh_token("")
+			goto again
+		}
+
 		panic(fmt.Errorf("Bad responce from server: " + string(resp.Status)))
 	}
 
@@ -340,6 +348,18 @@ func make_login(creds string) {
 	cur_login.Proj = b[1]
 	cur_login.User = d[0]
 	cur_login.Pass = d[1]
+
+	refresh_token(home)
+}
+
+func refresh_token(home string) {
+	if home == "" {
+		var found bool
+		home, found = os.LookupEnv("HOME")
+		if !found {
+			panic("No HOME dir set")
+		}
+	}
 
 	cur_login.Token = faas_login()
 

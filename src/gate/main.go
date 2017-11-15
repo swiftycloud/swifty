@@ -329,6 +329,7 @@ out:
 func handleUserLogin(w http.ResponseWriter, r *http.Request) {
 	var params swyapi.UserLogin
 	var token string
+	var resp = http.StatusBadRequest
 
 	err := swy.HTTPReadAndUnmarshal(r, &params)
 	if err != nil {
@@ -339,6 +340,7 @@ func handleUserLogin(w http.ResponseWriter, r *http.Request) {
 
 	token, err = KeystoneAuthWithPass(&conf.Keystone, params.UserName, params.Password)
 	if err != nil {
+		resp = http.StatusUnauthorized
 		goto out
 	}
 
@@ -350,22 +352,25 @@ func handleUserLogin(w http.ResponseWriter, r *http.Request) {
 	return
 
 out:
-	http.Error(w, err.Error(), http.StatusBadRequest)
+	http.Error(w, err.Error(), resp)
 }
 
-func handleGenericReq(r *http.Request, params interface{}) (string, error) {
+func handleGenericReq(r *http.Request, params interface{}) (string, int, error) {
 	err := swy.HTTPReadAndUnmarshal(r, params)
 	if err != nil {
-		return "", err
+		return "", http.StatusBadRequest, err
 	}
 	token := r.Header.Get("X-Subject-Token")
-
-	tennant := KeystoneVerify(&conf.Keystone, token)
-	if tennant == "" {
-		return "", fmt.Errorf("User not authenticated")
+	if token == "" {
+		return "", http.StatusUnauthorized, fmt.Errorf("Auth token not provided")
 	}
 
-	return tennant, nil
+	tennant, code := KeystoneVerify(&conf.Keystone, token)
+	if tennant == "" {
+		return "", code, fmt.Errorf("Keystone authentication error")
+	}
+
+	return tennant, 0, nil
 }
 
 func handleProjectList(w http.ResponseWriter, r *http.Request) {
@@ -373,14 +378,16 @@ func handleProjectList(w http.ResponseWriter, r *http.Request) {
 	var result []swyapi.ProjectItem
 	var params swyapi.ProjectList
 	var fns, mws []string
+	var code int
 
 	projects := make(map[string]struct{})
 
-	tennant, err := handleGenericReq(r, &params)
+	tennant, code, err := handleGenericReq(r, &params)
 	if err != nil {
 		goto out
 	}
 
+	code = http.StatusBadRequest
 	id = makeSwoId(tennant, "", "")
 
 	log.Debugf("List projects for %s", id.Str())
@@ -409,7 +416,7 @@ func handleProjectList(w http.ResponseWriter, r *http.Request) {
 	return
 
 out:
-	http.Error(w, err.Error(), http.StatusBadRequest)
+	http.Error(w, err.Error(), code)
 }
 
 func genCookie(fn *FunctionDesc) string {
@@ -453,12 +460,14 @@ func handleFunctionAdd(w http.ResponseWriter, r *http.Request) {
 	var params swyapi.FunctionAdd
 	var fn *FunctionDesc
 	var fi *FnInst
+	var code int
 
-	tennant, err := handleGenericReq(r, &params)
+	tennant, code, err := handleGenericReq(r, &params)
 	if err != nil {
 		goto out
 	}
 
+	code = http.StatusBadRequest
 	log.Debugf("function/add for %s params %v", tennant, params)
 
 	if params.Replicas < 1 {
@@ -537,7 +546,7 @@ out_clean_mware:
 out_clean_func:
 	dbFuncRemove(fn)
 out:
-	http.Error(w, err.Error(), http.StatusBadRequest)
+	http.Error(w, err.Error(), code)
 	log.Errorf("function/add error %s", err.Error())
 }
 
@@ -545,12 +554,14 @@ func handleFunctionUpdate(w http.ResponseWriter, r *http.Request) {
 	var id *SwoId
 	var fn FunctionDesc
 	var params swyapi.FunctionUpdate
+	var code int
 
-	tennant, err := handleGenericReq(r, &params)
+	tennant, code, err := handleGenericReq(r, &params)
 	if err != nil {
 		goto out
 	}
 
+	code = http.StatusBadRequest
 	id = makeSwoId(tennant, params.Project, params.FuncName)
 
 	log.Debugf("function/update for %s params %v", id.Str(), params)
@@ -601,7 +612,7 @@ func handleFunctionUpdate(w http.ResponseWriter, r *http.Request) {
 	return
 
 out:
-	http.Error(w, err.Error(), http.StatusBadRequest)
+	http.Error(w, err.Error(), code)
 	log.Errorf("function/update error %s", err.Error())
 }
 
@@ -609,12 +620,14 @@ func handleFunctionRemove(w http.ResponseWriter, r *http.Request) {
 	var id *SwoId
 	var fn FunctionDesc
 	var params swyapi.FunctionRemove
+	var code int
 
-	tennant, err := handleGenericReq(r, &params)
+	tennant, code, err := handleGenericReq(r, &params)
 	if err != nil {
 		goto out
 	}
 
+	code = http.StatusBadRequest
 	id = makeSwoId(tennant, params.Project, params.FuncName)
 
 	log.Debugf("function/remove for %s params %v", id.Str(), params)
@@ -646,7 +659,7 @@ func handleFunctionRemove(w http.ResponseWriter, r *http.Request) {
 	return
 
 out:
-	http.Error(w, err.Error(), http.StatusBadRequest)
+	http.Error(w, err.Error(), code)
 	log.Errorf("function/remove error %s", err.Error())
 }
 
@@ -727,12 +740,14 @@ func handleFunctionInfo(w http.ResponseWriter, r *http.Request) {
 	var params swyapi.FunctionID
 	var fn FunctionDesc
 	var url = ""
+	var code int
 
-	tennant, err := handleGenericReq(r, &params)
+	tennant, code, err := handleGenericReq(r, &params)
 	if err != nil {
 		goto out
 	}
 
+	code = http.StatusBadRequest
 	id = makeSwoId(tennant, params.Project, params.FuncName)
 
 	log.Debugf("Get FN Info %s", id.Str())
@@ -773,7 +788,7 @@ func handleFunctionInfo(w http.ResponseWriter, r *http.Request) {
 	return
 
 out:
-	http.Error(w, err.Error(), http.StatusBadRequest)
+	http.Error(w, err.Error(), code)
 	log.Errorf("logs error %s", err.Error())
 }
 func handleFunctionLogs(w http.ResponseWriter, r *http.Request) {
@@ -781,12 +796,14 @@ func handleFunctionLogs(w http.ResponseWriter, r *http.Request) {
 	var params swyapi.FunctionID
 	var resp []swyapi.FunctionLogEntry
 	var logs []DBLogRec
+	var code int
 
-	tennant, err := handleGenericReq(r, &params)
+	tennant, code, err := handleGenericReq(r, &params)
 	if err != nil {
 		goto out
 	}
 
+	code = http.StatusBadRequest
 	id = makeSwoId(tennant, params.Project, params.FuncName)
 
 	log.Debugf("Get logs for %s", tennant)
@@ -813,7 +830,7 @@ func handleFunctionLogs(w http.ResponseWriter, r *http.Request) {
 	return
 
 out:
-	http.Error(w, err.Error(), http.StatusBadRequest)
+	http.Error(w, err.Error(), code)
 	log.Errorf("logs error %s", err.Error())
 }
 
@@ -822,13 +839,14 @@ func handleFunctionRun(w http.ResponseWriter, r *http.Request) {
 	var params swyapi.FunctionRun
 	var fn FunctionDesc
 	var stdout, stderr string
-	var code int
+	var code, fn_code int
 
-	tennant, err := handleGenericReq(r, &params)
+	tennant, code, err := handleGenericReq(r, &params)
 	if err != nil {
 		goto out
 	}
 
+	code = http.StatusBadRequest
 	id = makeSwoId(tennant, params.Project, params.FuncName)
 
 	log.Debugf("handleFunctionRun: %s params %v", id.Str(), params)
@@ -839,14 +857,14 @@ func handleFunctionRun(w http.ResponseWriter, r *http.Request) {
 		goto out
 	}
 
-	code, stdout, stderr, err = doRun(&fn, "run", fn.Inst().DepName(), params.Args)
+	fn_code, stdout, stderr, err = doRun(&fn, "run", fn.Inst().DepName(), params.Args)
 	if err != nil {
 		goto out
 	}
 
 	log.Debugf("handleFunctionRun: OK")
 	err = swy.HTTPMarshalAndWrite(w, swyapi.FunctionRunResult{
-		Code:		code,
+		Code:		fn_code,
 		Stdout:		stdout,
 		Stderr:		stderr,
 	})
@@ -855,7 +873,7 @@ func handleFunctionRun(w http.ResponseWriter, r *http.Request) {
 	}
 
 out:
-	http.Error(w, err.Error(), http.StatusBadRequest)
+	http.Error(w, err.Error(), code)
 	log.Errorf("handleFunctionRun: error: %s", err.Error())
 }
 
@@ -906,17 +924,14 @@ func handleFunctionList(w http.ResponseWriter, r *http.Request) {
 	var recs []FunctionDesc
 	var result []swyapi.FunctionItem
 	var params swyapi.FunctionList
+	var code int
 
-	tennant, err := handleGenericReq(r, &params)
+	tennant, code, err := handleGenericReq(r, &params)
 	if err != nil {
 		goto out
 	}
 
-	if tennant == "" || params.Project == "" {
-		err = errors.New("Parameters are missed")
-		goto out
-	}
-
+	code = http.StatusBadRequest
 	id = makeSwoId(tennant, params.Project, "")
 
 	// List all but terminating
@@ -948,18 +963,20 @@ func handleFunctionList(w http.ResponseWriter, r *http.Request) {
 	return
 
 out:
-	http.Error(w, err.Error(), http.StatusBadRequest)
+	http.Error(w, err.Error(), code)
 }
 
 func handleMwareAdd(w http.ResponseWriter, r *http.Request) {
 	var id *SwoId
 	var params swyapi.MwareAdd
+	var code int
 
-	tennant, err := handleGenericReq(r, &params)
+	tennant, code, err := handleGenericReq(r, &params)
 	if err != nil {
 		goto out
 	}
 
+	code = http.StatusBadRequest
 	id = makeSwoId(tennant, params.Project, "")
 
 	log.Debugf("mware/add: %s params %v", tennant, params)
@@ -974,7 +991,7 @@ func handleMwareAdd(w http.ResponseWriter, r *http.Request) {
 	return
 
 out:
-	http.Error(w, err.Error(), http.StatusBadRequest)
+	http.Error(w, err.Error(), code)
 	log.Errorf("mware/add error: %s", err.Error())
 }
 
@@ -983,12 +1000,14 @@ func handleMwareList(w http.ResponseWriter, r *http.Request) {
 	var result []swyapi.MwareGetItem
 	var params swyapi.MwareList
 	var mwares []MwareDesc
+	var code int
 
-	tennant, err := handleGenericReq(r, &params)
+	tennant, code, err := handleGenericReq(r, &params)
 	if err != nil {
 		goto out
 	}
 
+	code = http.StatusBadRequest
 	id = makeSwoId(tennant, params.Project, "")
 
 	log.Debugf("list mware for %s", tennant)
@@ -1017,19 +1036,21 @@ func handleMwareList(w http.ResponseWriter, r *http.Request) {
 	return
 
 out:
-	http.Error(w, err.Error(), http.StatusBadRequest)
+	http.Error(w, err.Error(), code)
 	log.Errorf("mware/get error: %s", err.Error())
 }
 
 func handleMwareRemove(w http.ResponseWriter, r *http.Request) {
 	var id *SwoId
 	var params swyapi.MwareRemove
+	var code int
 
-	tennant, err := handleGenericReq(r, &params)
+	tennant, code, err := handleGenericReq(r, &params)
 	if err != nil {
 		goto out
 	}
 
+	code = http.StatusBadRequest
 	id = makeSwoId(tennant, params.Project, "")
 
 	log.Debugf("mware/remove: %s params %v", tennant, params)
@@ -1043,7 +1064,7 @@ func handleMwareRemove(w http.ResponseWriter, r *http.Request) {
 	return
 
 out:
-	http.Error(w, err.Error(), http.StatusBadRequest)
+	http.Error(w, err.Error(), code)
 	log.Errorf("mware/remove error: %s", err.Error())
 }
 
@@ -1051,12 +1072,14 @@ func handleMwareCinfo(w http.ResponseWriter, r *http.Request) {
 	var id *SwoId
 	var params swyapi.MwareCinfo
 	var envs []string
+	var code int
 
-	tennant, err := handleGenericReq(r, &params)
+	tennant, code, err := handleGenericReq(r, &params)
 	if err != nil {
 		goto out
 	}
 
+	code = http.StatusBadRequest
 	id = makeSwoId(tennant, params.Project, params.MwId)
 
 	envs, err = mwareGetEnv(&conf, id)
@@ -1071,7 +1094,7 @@ func handleMwareCinfo(w http.ResponseWriter, r *http.Request) {
 	return
 
 out:
-	http.Error(w, err.Error(), http.StatusBadRequest)
+	http.Error(w, err.Error(), code)
 }
 
 func setupLogger(conf *YAMLConf) {

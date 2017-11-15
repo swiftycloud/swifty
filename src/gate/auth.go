@@ -127,7 +127,7 @@ func KeystoneAuthWithPass(conf *YAMLConfKeystone, username, password string) (st
 	return token, err
 }
 
-func KeystoneVerify(conf *YAMLConfKeystone, token string) string {
+func KeystoneVerify(conf *YAMLConfKeystone, token string) (string, int) {
 	var out KeystoneAuthResp
 
 	_, err := reqKsToken(conf, "auth/tokens", &KeystoneAuthReq {
@@ -140,7 +140,7 @@ func KeystoneVerify(conf *YAMLConfKeystone, token string) string {
 			},},}, &out)
 	if err != nil {
 		log.Error("Error checking user token: " + err.Error())
-		return ""
+		return "", http.StatusUnauthorized /* FIXME -- get status from keystone too */
 	}
 
 	/*
@@ -160,8 +160,8 @@ func KeystoneVerify(conf *YAMLConfKeystone, token string) string {
 
 	if len(out.Token.Roles) != 1 || out.Token.Roles[0].Name != "swifty.owner" {
 		log.Error("Error in roles -- need a swifty.owner one")
-		return ""
+		return "", http.StatusForbidden
 	}
 
-	return out.Token.Project.Name
+	return out.Token.Project.Name, 0
 }
