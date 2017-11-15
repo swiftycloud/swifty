@@ -1,16 +1,17 @@
 package main
 
 import (
-	"fmt"
-	"os"
-	"bytes"
 	"encoding/json"
 	"encoding/base64"
+	"path/filepath"
 	"io/ioutil"
 	"net/http"
-	"flag"
 	"strings"
-	"path/filepath"
+	"bytes"
+	"flag"
+	"fmt"
+	"os"
+
 	"../apis/apps"
 )
 
