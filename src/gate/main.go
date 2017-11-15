@@ -28,6 +28,12 @@ type FnScriptDesc struct {
 	Env		[]string	`bson:"env"`
 }
 
+type FnSrcDesc struct {
+	Type		string		`bson:"type"`
+	Repo		string		`bson:"repo,omitempty"`
+	Commit		string		`bson:"commit"`		// Top commit in the repo
+}
+
 type FnEventDesc struct {
 	Source		string		`bson:"source"`
 	CronTab		string		`bson:"crontab"`
@@ -60,12 +66,10 @@ type FunctionDesc struct {
 	State		int		`bson:"state"`		// Function state
 	CronID		int		`bson:"cronid"`		// ID of cron trigger (if present)
 	URLCall		bool		`bson:"urlcall"`	// Funciton is callable via direct URL
-	Commit		string		`bson:"commit"`		// Top commit in the repo
-	OldCommit	string		`bson:"oldcommit"`
 	Event		FnEventDesc	`bson:"event"`
-	Repo		string		`bson:"repo"`
 	Mware		[]string	`bson:"mware"`
 	Script		FnScriptDesc	`bson:"script"`
+	Src		FnSrcDesc	`bson:"src"`
 	Replicas	int		`bson:"replicas"`
 	OneShot		bool		`bson:"oneshot"`
 }
@@ -111,11 +115,11 @@ type FnInst struct {
 }
 
 func (fn *FunctionDesc) Inst() *FnInst {
-	return &FnInst { Commit: fn.Commit, Build: false, fn: fn }
+	return &FnInst { Commit: fn.Src.Commit, Build: false, fn: fn }
 }
 
 func (fn *FunctionDesc) InstBuild() *FnInst {
-	return &FnInst { Commit: fn.Commit, Build: true, fn: fn }
+	return &FnInst { Commit: fn.Src.Commit, Build: true, fn: fn }
 }
 
 var log *zap.SugaredLogger
@@ -425,7 +429,10 @@ func getFunctionDesc(tennant string, p_add *swyapi.FunctionAdd) *FunctionDesc {
 			MwareId:	p_add.Event.MwareId,
 			MQueue:		p_add.Event.MQueue,
 		},
-		Repo:		p_add.Repo,
+		Src:		FnSrcDesc {
+			Type:		p_add.Sources.Type,
+			Repo:		p_add.Sources.Repo,
+		},
 		Replicas:	p_add.Replicas,
 		Script:		FnScriptDesc {
 			Lang:		p_add.Script.Lang,
@@ -457,7 +464,7 @@ func handleFunctionAdd(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if params.Project == "" || params.FuncName == "" ||
-			params.Repo == "" || params.Script.Lang == "" {
+			params.Script.Lang == "" {
 		err = errors.New("Parameters are missed")
 		goto out
 	}
@@ -494,7 +501,7 @@ func handleFunctionAdd(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	err = cloneRepo(fn)
+	err = getSources(fn)
 	if err != nil {
 		goto out_clean_mware
 	}
@@ -555,7 +562,7 @@ func handleFunctionUpdate(w http.ResponseWriter, r *http.Request) {
 		goto out
 	}
 
-	err = updateRepo(&fn)
+	err = updateSources(&fn)
 	if err != nil {
 		goto out
 	}
@@ -585,7 +592,7 @@ func handleFunctionUpdate(w http.ResponseWriter, r *http.Request) {
 		goto out
 	}
 
-	logSaveEvent(&fn, "updated", fmt.Sprintf("to: %s", fn.Commit))
+	logSaveEvent(&fn, "updated", fmt.Sprintf("to: %s", fn.Src.Commit))
 	w.WriteHeader(http.StatusOK)
 	return
 
@@ -741,7 +748,7 @@ func handleFunctionInfo(w http.ResponseWriter, r *http.Request) {
 	err = swy.HTTPMarshalAndWrite(w,  swyapi.FunctionInfo{
 			State:          fnStates[fn.State],
 			Mware:          fn.Mware,
-			Commit:         fn.Commit,
+			Commit:         fn.Src.Commit,
 			URL:		url,
 			Script:		swyapi.FunctionScript{
 				Lang:		fn.Script.Lang,

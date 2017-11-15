@@ -32,6 +32,11 @@ type FunctionScript struct {
 	Env		[]string		`json:"env"`
 }
 
+type FunctionSources struct {
+	Type		string			`json:"type"`
+	Repo		string			`json:"repo"`
+}
+
 type FunctionEvent struct {
 	Source		string			`json:"source"`
 	CronTab		string			`json:"crontab"`
@@ -77,7 +82,7 @@ type FunctionAdd struct {
 	Project		string			`json:"project"`
 	FuncName	string			`json:"name"`
 	Replicas	int			`json:"replicas"`
-	Repo		string			`json:"repo"`
+	Sources		FunctionSources		`json:"sources"`
 	Script		FunctionScript		`json:"script"`
 	Mware		[]MwareItem		`json:"mware"`
 	Event		FunctionEvent		`json:"event"`

@@ -14,7 +14,7 @@ func fnRepoClone(fn *FunctionDesc, prefix string) string {
 }
 
 func fnRepoCheckout(conf *YAMLConf, fn *FunctionDesc) string {
-	return fnRepoClone(fn, conf.Daemon.Sources.Share) + "/" + fn.Commit
+	return fnRepoClone(fn, conf.Daemon.Sources.Share) + "/" + fn.Src.Commit
 }
 
 func checkoutSources(fn *FunctionDesc) error {
@@ -31,8 +31,8 @@ func checkoutSources(fn *FunctionDesc) error {
 		goto co_err
 	}
 
-	fn.Commit = stdout.String()
-	log.Debugf("Checkout, repo head @[%s]", fn.Commit)
+	fn.Src.Commit = stdout.String()
+	log.Debugf("Checkout, repo head @[%s]", fn.Src.Commit)
 
 	// Bring the necessary deps
 	err = update_deps(fn.Script.Lang, cloned_to)
@@ -55,12 +55,31 @@ co_err:
 	return err
 }
 
-func cloneRepo(fn *FunctionDesc) error {
+var srcHandlers = map[string] struct {
+	get func (*FunctionDesc) error
+	update func (*FunctionDesc) error
+} {
+	"git": {
+		get:	cloneGitRepo,
+		update:	updateGitRepo,
+	},
+}
+
+func getSources(fn *FunctionDesc) error {
+	srch, ok := srcHandlers[fn.Src.Type]
+	if !ok {
+		return fmt.Errorf("Unknown sources type %s", fn.Src.Type)
+	}
+
+	return srch.get(fn)
+}
+
+func cloneGitRepo(fn *FunctionDesc) error {
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 
 	clone_to := fnRepoClone(fn, conf.Daemon.Sources.Clone)
-	log.Debugf("clone %s -> %s", fn.Repo, clone_to)
+	log.Debugf("clone %s -> %s", fn.Src.Repo, clone_to)
 
 	_, err := os.Stat(clone_to)
 	if err == nil || !os.IsNotExist(err) {
@@ -73,14 +92,14 @@ func cloneRepo(fn *FunctionDesc) error {
 		return err
 	}
 
-	cmd := exec.Command("git", "-C", clone_to, "clone", fn.Repo, ".")
+	cmd := exec.Command("git", "-C", clone_to, "clone", fn.Src.Repo, ".")
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	log.Debugf("\tcloning %v", cmd)
 	err = cmd.Run()
 	if err != nil {
 		log.Errorf("can't clone %s -> %s: %s (%s:%s)",
-				fn.Repo, clone_to, err.Error(),
+				fn.Src.Repo, clone_to, err.Error(),
 				stdout.String(), stderr.String())
 		return err
 	}
@@ -88,12 +107,21 @@ func cloneRepo(fn *FunctionDesc) error {
 	return checkoutSources(fn)
 }
 
-func updateRepo(fn *FunctionDesc) error {
+func updateSources(fn *FunctionDesc) error {
+	srch, ok := srcHandlers[fn.Src.Type]
+	if !ok {
+		return fmt.Errorf("Unknown sources type %s", fn.Src.Type)
+	}
+
+	return srch.update(fn)
+}
+
+func updateGitRepo(fn *FunctionDesc) error {
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 
 	clone_to := fnRepoClone(fn, conf.Daemon.Sources.Clone)
-	log.Debugf("pull %s -> %s", fn.Repo, clone_to)
+	log.Debugf("pull %s -> %s", fn.Src.Repo, clone_to)
 
 	cmd := exec.Command("git", "-C", clone_to, "pull")
 	cmd.Stdout = &stdout
@@ -102,12 +130,11 @@ func updateRepo(fn *FunctionDesc) error {
 	err := cmd.Run()
 	if err != nil {
 		log.Errorf("can't pull %s -> %s: %s (%s:%s)",
-				fn.Repo, clone_to, err.Error(),
+				fn.Src.Repo, clone_to, err.Error(),
 				stdout.String(), stderr.String())
 		return err
 	}
 
-	fn.OldCommit = fn.Commit
 	return checkoutSources(fn)
 }
 

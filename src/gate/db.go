@@ -311,7 +311,7 @@ func dbFuncUpdateAdded(fn *FunctionDesc) error {
 	err := dbFuncUpdate(
 		bson.M{"tennant": fn.Tennant, "project": fn.Project, "name": fn.Name},
 		bson.M{"$set": bson.M{
-				"commit": fn.Commit,
+				"src.commit": fn.Src.Commit,
 				"cronid": fn.CronID,
 				"mware": fn.Mware,
 				"oneshot": fn.OneShot,
@@ -327,7 +327,7 @@ func dbFuncUpdateAdded(fn *FunctionDesc) error {
 func dbFuncUpdatePulled(fn *FunctionDesc) error {
 	err := dbFuncUpdate(
 		bson.M{"tennant": fn.Tennant, "project": fn.Project, "name": fn.Name},
-		bson.M{"$set": bson.M{"commit": fn.Commit, "oldcommit": fn.OldCommit, "state": fn.State, }})
+		bson.M{"$set": bson.M{"src.commit": fn.Src.Commit, "state": fn.State, }})
 	if err != nil {
 		log.Errorf("Can't update pulled %s: %s", fn.Name, err.Error())
 	}
@@ -358,7 +358,7 @@ func logSaveResult(fn *FunctionDesc, event, stdout, stderr string) {
 	text := fmt.Sprintf("out: [%s], err: [%s]", stdout, stderr)
 	c.Insert(DBLogRec{
 		SwoId:		fn.SwoId,
-		Commit:		fn.Commit,
+		Commit:		fn.Src.Commit,
 		Event:		event,
 		Time:		time.Now(),
 		Text:		text,
@@ -369,7 +369,7 @@ func logSaveEvent(fn *FunctionDesc, event, text string) {
 	c := dbSession.DB(dbDBName).C(DBColLogs)
 	c.Insert(DBLogRec{
 		SwoId:		fn.SwoId,
-		Commit:		fn.Commit,
+		Commit:		fn.Src.Commit,
 		Event:		event,
 		Time:		time.Now(),
 		Text:		text,

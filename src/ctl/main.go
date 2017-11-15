@@ -199,7 +199,10 @@ func add_function(name, lang, repo, run, mwares, event string) {
 		swyapi.FunctionAdd{
 			Project: cur_login.Proj,
 			FuncName: name,
-			Repo: repo,
+			Sources: swyapi.FunctionSources {
+				Type: "git",
+				Repo: repo,
+			},
 			Script: swyapi.FunctionScript {
 				Lang: lang,
 				Run: run,

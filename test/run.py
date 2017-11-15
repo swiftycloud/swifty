@@ -64,7 +64,10 @@ class function:
 
 		self.desc = {
 			'name': self.name,
-			'repo': os.path.abspath(self._repo),
+			'sources': {
+				'type': "git",
+				'repo': os.path.abspath(self._repo),
+			},
 			'script': {
 				'lang': lang['n'],
 			},

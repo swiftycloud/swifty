@@ -148,9 +148,6 @@ func swk8sGenEnvVar(conf *YAMLConf, fn *FunctionDesc, fi *FnInst, wdaddr string,
 	s = append(s, v1.EnvVar{
 			Name:	"SWD_FUNCNAME",
 			Value:	fn.Name, })
-	s = append(s, v1.EnvVar{
-			Name: "SWD_COMMIT_ID",
-			Value:	fn.Commit, })
 
 	s = append(s, v1.EnvVar{
 			Name:	"SWD_POD_IP",
