@@ -460,7 +460,11 @@ func main() {
 	}
 
 	if val, ok := cmdMap[os.Args[1]]; ok {
-		val.Parse(os.Args[2:])
+		if os.Args[1] == CMD_ADD {
+			val.Parse(os.Args[3:])
+		} else {
+			val.Parse(os.Args[2:])
+		}
 	} else {
 		goto usage
 	}
