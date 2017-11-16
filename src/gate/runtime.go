@@ -46,12 +46,3 @@ func RtGetWdogPath(fn *FunctionDesc) string {
 func RtRunCmd(fn *FunctionDesc) []string {
 	return rt_handlers[fn.Script.Lang].Run(fn)
 }
- func RtGetFnResources(fn *FunctionDesc) map[string]string {
-	 /* XXX Get from FN */
-	 return map[string]string {
-		 "mem.lim": "16Mi",
-		 "mem.req": "8Mi",
-		 "cpu.lim": "1",
-		 "cpu.req": "1",
-	 }
- }
