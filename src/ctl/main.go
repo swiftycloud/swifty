@@ -26,14 +26,6 @@ type login_info struct {
 
 var cur_login login_info
 
-func SafeEnv(env_name string, defaul_value string) string {
-	v, found := os.LookupEnv(env_name)
-	if found == false {
-		return defaul_value
-	}
-	return v
-}
-
 func make_faas_req_x(url string, in interface{}) (*http.Response, error) {
 	clnt := &http.Client{}
 
