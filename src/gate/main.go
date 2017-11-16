@@ -709,7 +709,7 @@ func doRun(fn *FunctionDesc, event, depname string, args []string) (int, string,
 				&swyapi.SwdFunctionRun{
 					PodToken:	fn.Cookie,
 					Args:		args,
-				})
+				}, nil)
 	if err != nil {
 		goto out
 	}
