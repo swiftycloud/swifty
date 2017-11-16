@@ -7,24 +7,30 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strings"
+	"regexp"
 	"bytes"
 	"flag"
 	"fmt"
 	"os"
 
+	"../common"
 	"../apis/apps"
 )
 
-type login_info struct {
-	Proj  string `json:"proj"`
-	Host  string `json:"host"`
-	Port  string `json:"port"`
-	Token string `json:"token"`
-	User  string `json:"user"`
-	Pass  string `json:"pass"`
+type LoginInfo struct {
+	Proj		string		`yaml:"proj"`
+	Host		string		`yaml:"host"`
+	Port		string		`yaml:"port"`
+	Token		string		`yaml:"token"`
+	User		string		`yaml:"user"`
+	Pass		string		`yaml:"pass"`
 }
 
-var cur_login login_info
+type YAMLConf struct {
+	Login		LoginInfo	`yaml:"login"`
+}
+
+var conf YAMLConf
 
 func make_faas_req_x(url string, in interface{}) (*http.Response, error) {
 	clnt := &http.Client{}
@@ -34,14 +40,14 @@ func make_faas_req_x(url string, in interface{}) (*http.Response, error) {
 		panic(err)
 	}
 
-	req, err := http.NewRequest("POST", "http://" + cur_login.Host + ":" + cur_login.Port + "/v1/" + url, bytes.NewBuffer(body))
+	req, err := http.NewRequest("POST", "http://" + conf.Login.Host + ":" + conf.Login.Port + "/v1/" + url, bytes.NewBuffer(body))
 	if err != nil {
 		panic(err)
 	}
 
 	req.Header.Set("Content-Type", "application/json")
-	if cur_login.Token != "" {
-		req.Header.Set("X-Subject-Token", cur_login.Token)
+	if conf.Login.Token != "" {
+		req.Header.Set("X-Subject-Token", conf.Login.Token)
 	}
 
 	return clnt.Do(req)
@@ -49,7 +55,7 @@ func make_faas_req_x(url string, in interface{}) (*http.Response, error) {
 
 func faas_login() string {
 	resp, err := make_faas_req_x("user/login", swyapi.UserLogin {
-			UserName: cur_login.User, Password: cur_login.Pass,
+			UserName: conf.Login.User, Password: conf.Login.Pass,
 		})
 	if err != nil {
 		panic(err)
@@ -222,7 +228,7 @@ func add_function(name, lang, src, run, mwares, event string) {
 
 	make_faas_req("function/add",
 		swyapi.FunctionAdd{
-			Project: cur_login.Proj,
+			Project: conf.Login.Proj,
 			FuncName: name,
 			Sources: sources,
 			Script: swyapi.FunctionScript {
@@ -238,7 +244,7 @@ func add_function(name, lang, src, run, mwares, event string) {
 func run_function(name string, args []string) {
 	var rres swyapi.FunctionRunResult
 	make_faas_req("function/run",
-		swyapi.FunctionRun{ Project: cur_login.Proj, FuncName: name, Args: args, }, &rres)
+		swyapi.FunctionRun{ Project: conf.Login.Proj, FuncName: name, Args: args, }, &rres)
 
 	fmt.Printf("code: %d\n", rres.Code);
 	fmt.Printf("%s", rres.Stdout)
@@ -247,19 +253,19 @@ func run_function(name string, args []string) {
 
 func update_function(name string) {
 	make_faas_req("function/update",
-		swyapi.FunctionUpdate{ Project: cur_login.Proj, FuncName: name, }, nil)
+		swyapi.FunctionUpdate{ Project: conf.Login.Proj, FuncName: name, }, nil)
 
 }
 
 func del_function(name string) {
 	make_faas_req("function/remove",
-		swyapi.FunctionRemove{ Project: cur_login.Proj, FuncName: name }, nil)
+		swyapi.FunctionRemove{ Project: conf.Login.Proj, FuncName: name }, nil)
 }
 
 func show_logs(name string) {
 	var res []swyapi.FunctionLogEntry
 	make_faas_req("function/logs",
-		swyapi.FunctionID{ Project: cur_login.Proj, FuncName: name, }, &res)
+		swyapi.FunctionID{ Project: conf.Login.Proj, FuncName: name, }, &res)
 
 	for _, le := range res {
 		fmt.Printf("%s %s/%s: %s\n", le.Ts, le.Commit[:8], le.Event, le.Text)
@@ -277,7 +283,7 @@ func list_mware(project string) {
 }
 
 func add_mware(mwares []string) {
-	req := swyapi.MwareAdd { Project: cur_login.Proj }
+	req := swyapi.MwareAdd { Project: conf.Login.Proj }
 
 	for _, mw := range mwares {
 		mws := strings.SplitN(mw, ":", 2)
@@ -293,13 +299,13 @@ func add_mware(mwares []string) {
 
 func del_mware(mwares []string) {
 	make_faas_req("mware/remove",
-		swyapi.MwareRemove{ Project: cur_login.Proj, MwareIDs: mwares, }, nil)
+		swyapi.MwareRemove{ Project: conf.Login.Proj, MwareIDs: mwares, }, nil)
 }
 
 func show_mware_env(mwid string) {
 	var r swyapi.MwareCinfoResp
 
-	make_faas_req("mware/cinfo", swyapi.MwareCinfo { Project: cur_login.Proj, MwId: mwid }, &r)
+	make_faas_req("mware/cinfo", swyapi.MwareCinfo { Project: conf.Login.Proj, MwId: mwid }, &r)
 	for _, e := range r.Envs {
 		fmt.Printf("%s\n", e)
 	}
@@ -311,15 +317,10 @@ func login() {
 		panic("No HOME dir set")
 	}
 
-	data, err := ioutil.ReadFile(home + "/.swifty.conf")
+	err := swy.ReadYamlConfig(home + "/.swifty.conf", &conf)
 	if err != nil {
 		fmt.Printf("Login first\n")
 		os.Exit(1)
-	}
-
-	err = json.Unmarshal(data, &cur_login)
-	if err != nil {
-		panic("Bad swifty.conf")
 	}
 }
 
@@ -329,20 +330,21 @@ func make_login(creds string) {
 		panic("No HOME dir set")
 	}
 
-	/* Login string is user:pass@host:port/project */
-	/* FIXME -- add user */
-	a := strings.SplitN(creds, "@", 2) /* a = user:pass , host:port/project */
-	b := strings.SplitN(a[1], "/", 2)  /* b = host:port , project */
-	c := strings.SplitN(b[0], ":", 2)  /* c = host, port */
-	d := strings.SplitN(a[0], ":", 2)  /* d = user, pass */
+	//
+	// Login string is user:pass@host:port/project
+	//
+	// swifty.user:swifty@10.94.96.216:8686/swifty.proj
+	//
+	data := regexp.MustCompile(":|/|@").Split(creds, -1)
+	if len(data) >= 5 {
+		conf.Login.User = data[0]
+		conf.Login.Pass = data[1]
+		conf.Login.Host = data[2]
+		conf.Login.Port = data[3]
+		conf.Login.Proj = data[4]
 
-	cur_login.Host = c[0]
-	cur_login.Port = c[1]
-	cur_login.Proj = b[1]
-	cur_login.User = d[0]
-	cur_login.Pass = d[1]
-
-	refresh_token(home)
+		refresh_token(home)
+	}
 }
 
 func refresh_token(home string) {
@@ -354,14 +356,9 @@ func refresh_token(home string) {
 		}
 	}
 
-	cur_login.Token = faas_login()
+	conf.Login.Token = faas_login()
 
-	data, err := json.Marshal(&cur_login)
-	if err != nil {
-		panic("Can't marshal login info")
-	}
-
-	err = ioutil.WriteFile(home + "/.swifty.conf", data, 0600)
+	err := swy.WriteYamlConfig(home + "/.swifty.conf", &conf)
 	if err != nil {
 		panic("Can't write swifty.conf")
 	}
@@ -425,7 +422,7 @@ func bindCmdUsage(cmd, args, help string) {
 func main() {
 	var lang, src, run, mware, event string
 
-	bindCmdUsage(CMD_LOGIN, "USER@HOST:PORT", "Login into the system")
+	bindCmdUsage(CMD_LOGIN, "USER:PASS@HOST:PORT/PROJECT", "Login into the system")
 
 	bindCmdUsage(CMD_PS, "", "List projects")
 
@@ -480,7 +477,7 @@ func main() {
 	}
 
 	if cmdMap[CMD_LS].Parsed() {
-		proj := cur_login.Proj
+		proj := conf.Login.Proj
 		if len(os.Args) > 2 {
 			proj = os.Args[2]
 		}
@@ -495,7 +492,7 @@ func main() {
 			proj = os.Args[2]
 			fnam = os.Args[3]
 		} else if len(os.Args) > 2 {
-			proj = cur_login.Proj
+			proj = conf.Login.Proj
 			fnam = os.Args[2]
 		} else {
 			goto usage
@@ -531,7 +528,7 @@ func main() {
 	}
 
 	if cmdMap[CMD_MLS].Parsed() {
-		proj := cur_login.Proj
+		proj := conf.Login.Proj
 		if len(os.Args) > 2 {
 			proj = os.Args[2]
 		}
