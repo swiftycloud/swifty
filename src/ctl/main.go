@@ -69,7 +69,10 @@ func make_faas_req(url string, in interface{}, out interface{}) {
 again:
 	resp, err := make_faas_req_x(url, in)
 	if err != nil {
-		panic(err)
+		if resp == nil || (resp != nil &&
+			resp.StatusCode != http.StatusUnauthorized) {
+			panic(err)
+		}
 	}
 
 	defer resp.Body.Close()
