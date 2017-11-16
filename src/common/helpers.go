@@ -141,6 +141,15 @@ func ReadYamlConfig(path string, c interface{}) error {
 	return err
 }
 
+func WriteYamlConfig(path string, c interface{}) error {
+	bytes, err := yaml.Marshal(c)
+	if err == nil {
+		return ioutil.WriteFile(path, bytes, 0600)
+	}
+	return err
+
+}
+
 // "ip:port" or ":port" expected
 func GetIPPort(str string) (string, int32) {
 	var port int = int(-1)
