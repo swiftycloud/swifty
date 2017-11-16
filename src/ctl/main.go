@@ -315,16 +315,27 @@ func login() {
 }
 
 func make_login(creds string) {
-	home, found := os.LookupEnv("HOME")
-	if !found {
-		panic("No HOME dir set")
-	}
-
 	//
 	// Login string is user:pass@host:port/project
 	//
 	// swifty.user:swifty@10.94.96.216:8686/swifty.proj
 	//
+	var match string = `([(a-z)(A-Z)(0-9)\.\-\_]+)` + `:` +
+			`([(a-z)(A-Z)(0-9)]+)` + `@` +
+			`([(0-9)\.])+` + `:` +
+			`([0-9])+` + `/` +
+			`([(a-z)(A-Z)(0-9)\.\-\_]+)`
+
+	home, found := os.LookupEnv("HOME")
+	if !found {
+		panic("No HOME dir set")
+	}
+
+	matched, err := regexp.MatchString(match, creds)
+	if err != nil || matched == false {
+		return
+	}
+
 	data := regexp.MustCompile(":|/|@").Split(creds, -1)
 	if len(data) >= 5 {
 		conf.Login.User = data[0]
