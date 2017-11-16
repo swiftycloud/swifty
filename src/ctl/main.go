@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"strings"
 	"regexp"
-	"bytes"
 	"flag"
 	"fmt"
 	"os"
@@ -33,24 +32,15 @@ type YAMLConf struct {
 var conf YAMLConf
 
 func make_faas_req_x(url string, in interface{}) (*http.Response, error) {
-	clnt := &http.Client{}
-
-	body, err := json.Marshal(in)
-	if err != nil {
-		panic(err)
+	var address string = "http://" + conf.Login.Host + ":" + conf.Login.Port + "/v1/" + url
+	var cb swy.HTTPMarshalAndPostCB = func(r *http.Request) error {
+			if conf.Login.Token != "" {
+				r.Header.Set("X-Subject-Token",
+						conf.Login.Token)
+			}
+			return nil
 	}
-
-	req, err := http.NewRequest("POST", "http://" + conf.Login.Host + ":" + conf.Login.Port + "/v1/" + url, bytes.NewBuffer(body))
-	if err != nil {
-		panic(err)
-	}
-
-	req.Header.Set("Content-Type", "application/json")
-	if conf.Login.Token != "" {
-		req.Header.Set("X-Subject-Token", conf.Login.Token)
-	}
-
-	return clnt.Do(req)
+	return swy.HTTPMarshalAndPost(address, in, cb)
 }
 
 func faas_login() string {
