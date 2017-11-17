@@ -14,7 +14,7 @@ import random
 import string
 import enum
 
-swifty_default_config="../src/conf/swy-gate.yaml"
+swifty_default_config="../src/conf/gate.yaml"
 
 class mware:
 	def __init__(self):
@@ -105,6 +105,9 @@ class function:
 
 	def setevent(self, evt):
 		self.desc['event'] = evt
+
+	def scale(self, nr):
+		self.desc['size'] = { 'replicas': nr }
 
 class Api(enum.Enum):
 	FUNCTION_ADD		= "/v1/function/add"
@@ -510,6 +513,7 @@ class test_2mw:
 class test_upd:
 	def __init__(self, lang, clnt):
 		self.fn = function('hw', lang, fname = 'hwupd')
+		self.fn.scale(2)
 		clnt.fn_add(self.fn)
 
 	def run(self, client):
@@ -529,13 +533,16 @@ class test_upd:
 			print("`- Waiting for fn to update")
 			time.sleep(wtime)
 			res = client.run(self.fn, [cookie, 'v2' ])
-			if res and not res['stderr']:
-				if res['stdout'] == '%s:arg2:%s.v2\n' % (lang['n'], cookie):
-					break
+			if not res:
+				print("Error running function during update")
+				return False
 
-				if res['stdout'] != '%s:arg:%s.v2\n' % (lang['n'], cookie):
-					print("Function corrupted while updating")
-					return False
+			if res['stdout'] == '%s:arg2:%s.v2\n' % (lang['n'], cookie):
+				break
+
+			if res['stdout'] != '%s:arg:%s.v2\n' % (lang['n'], cookie):
+				print("Function corrupted while updating")
+				return False
 
 			# BUG: Still no rolling update, fn is removed,
 			# then inserted back :( so on error we just wait
