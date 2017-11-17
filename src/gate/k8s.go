@@ -61,7 +61,6 @@ func swk8sSecretRemove(depname string) error {
 		return err
 	}
 
-	log.Debugf("Removed secret %s", depname)
 	return nil
 }
 
@@ -110,7 +109,7 @@ func swk8sRemove(conf *YAMLConf, fn *FunctionDesc, fi *FnInst) error {
 
 	swk8sSecretRemove(depname)
 
-	log.Debugf("Deleted deployment for %s", fn.SwoId.Str())
+	log.Debugf("Deleted %s deployment %s", fn.SwoId.Str(), depname)
 	return nil
 }
 
@@ -282,6 +281,7 @@ func swk8sRun(conf *YAMLConf, fn *FunctionDesc, fi *FnInst) error {
 	var ctPorts []v1.ContainerPort
 
 	depname := fi.DepName()
+	log.Debugf("Start %s deployment for %s", depname, fn.SwoId.Str())
 
 	rt, ok := conf.Runtime[fn.Script.Lang]
 	if !ok {
@@ -410,8 +410,6 @@ func swk8sRun(conf *YAMLConf, fn *FunctionDesc, fi *FnInst) error {
 		BalancerDelete(depname)
 		log.Errorf("Can't add function %s: %s",
 				fn.SwoId.Str(), err.Error())
-	} else {
-		log.Debugf("Started deployment %s", depname)
 	}
 
 	return err
@@ -477,17 +475,9 @@ func genBalancerPod(pod *v1.Pod) (BalancerPod) {
 }
 
 func swk8sPodAdd(obj interface{}) {
-	pod := obj.(*v1.Pod)
-	log.Debugf("swk8sPodAdd: deployment %s (%v)",
-			pod.ObjectMeta.Labels["deployment"],
-			genBalancerPod(pod))
 }
 
 func swk8sPodDel(obj interface{}) {
-	pod := obj.(*v1.Pod)
-	log.Debugf("swk8sPodDel: deployment %s (%v)",
-			pod.ObjectMeta.Labels["deployment"],
-			genBalancerPod(pod))
 }
 
 func swk8sPodUpd(obj_old, obj_new interface{}) {
@@ -498,28 +488,28 @@ func swk8sPodUpd(obj_old, obj_new interface{}) {
 
 	if pod_old.State != swy.DBPodStateRdy {
 		if pod_new.State == swy.DBPodStateRdy {
+			log.Debugf("POD %s (%s) up deploy %s", pod_new.UID, pod_new.WdogAddr, pod_new.DepName)
+
 			err = BalancerPodAdd(pod_new.DepName, pod_new.UID, pod_new.WdogAddr)
 			if err != nil {
-				log.Errorf("swk8sPodUpd: Can't add pod %s/%s/%s: %s",
+				log.Errorf("Can't add pod %s/%s/%s: %s",
 						pod_new.DepName, pod_new.UID,
 						pod_new.WdogAddr, err.Error())
 				return
 			}
-			log.Debugf("swk8sPodUpd: Pod added %s/%s/%s/%s",
-					pod_new.DepName, pod_new.UID, pod_new.WdogAddr)
 			notifyPodUpdate(&pod_new)
 		}
 	} else {
 		if pod_new.State != swy.DBPodStateRdy {
+			log.Debugf("POD %s down deploy %s", pod_new.UID, pod_new.DepName)
+
 			err = BalancerPodDel(pod_new.DepName, pod_new.UID)
 			if err != nil  && err != mgo.ErrNotFound {
-				log.Errorf("swk8sPodUpd: Can't delete pod %s/%s/%s: %s",
+				log.Errorf("Can't delete pod %s/%s/%s: %s",
 						pod_new.DepName, pod_new.UID,
 						pod_new.WdogAddr, err.Error())
 				return
 			}
-			log.Debugf("swk8sPodUpd: Pod deleted %s/%s/%s",
-					pod_new.DepName, pod_new.UID, pod_new.WdogAddr)
 			notifyPodUpdate(&pod_new)
 		}
 	}

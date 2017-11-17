@@ -89,7 +89,7 @@ type FunctionDesc struct {
 var noCommit = "00000000"
 
 func (fi *FnInst)DepName() string {
-	dn := "swd-" + fi.fn.Cookie[:40]
+	dn := "swd-" + fi.fn.Cookie[:32]
 	if fi.Build {
 		dn += "-bld"
 	}
@@ -216,11 +216,9 @@ func genFunctionDescJSON(conf *YAMLConf, fn *FunctionDesc, fi *FnInst) string {
 	if fi.Build {
 		// Build run.The rest of the fn.Build will be passed
 		// as arguments for doRun further.
-		log.Debugf("Building desc")
 		run = strings.Split(RtBuildCmd(fn.Script.Lang), " ")[:1]
 	} else {
 		// Classical run or after-the-build run.
-		log.Debugf("Running desc")
 		run = RtRunCmd(fn)
 	}
 
@@ -314,7 +312,6 @@ func notifyPodUpdate(pod *BalancerPod) {
 		}
 
 		logSaveEvent(&fn, "POD", fmt.Sprintf("state: %s", fnStates[fn.State]))
-		log.Debugf("POD %s stared", pod.UID)
 		if fn.State == swy.DBFuncStateBld || fn.State == swy.DBFuncStateUpd {
 			err = buildFunction(&fn)
 			if err != nil {
@@ -326,9 +323,8 @@ func notifyPodUpdate(pod *BalancerPod) {
 				runFunctionOnce(&fn)
 			}
 		}
-	} else {
-		log.Debugf("POD %s stopped", pod.UID)
 	}
+
 	return
 
 out:
@@ -480,7 +476,6 @@ func handleFunctionAdd(w http.ResponseWriter, r *http.Request) {
 	}
 
 	code = http.StatusBadRequest
-	log.Debugf("function/add for %s params %v", tennant, params)
 
 	if params.Size.Replicas < 1 {
 		params.Size.Replicas = 1
@@ -506,6 +501,8 @@ func handleFunctionAdd(w http.ResponseWriter, r *http.Request) {
 	} else {
 		fn.State = swy.DBFuncStateQue
 	}
+
+	log.Debugf("function/add %s (cookie %s)", fn.SwoId.Str(), fn.Cookie[:32])
 
 	err = dbFuncAdd(fn)
 	if err != nil {
@@ -579,7 +576,7 @@ func handleFunctionUpdate(w http.ResponseWriter, r *http.Request) {
 	code = http.StatusBadRequest
 	id = makeSwoId(tennant, params.Project, params.FuncName)
 
-	log.Debugf("function/update for %s params %v", id.Str(), params)
+	log.Debugf("function/update %s", id.Str())
 
 	fn, err = dbFuncFind(id)
 	if err != nil {
@@ -614,7 +611,7 @@ func handleFunctionUpdate(w http.ResponseWriter, r *http.Request) {
 		log.Debugf("Starting build dep")
 		err = swk8sRun(&conf, &fn, fn.InstBuild())
 	} else {
-		log.Debugf("Updating dep")
+		log.Debugf("Updating deploy")
 		err = swk8sUpdate(&conf, &fn)
 	}
 
@@ -645,7 +642,7 @@ func handleFunctionRemove(w http.ResponseWriter, r *http.Request) {
 	code = http.StatusBadRequest
 	id = makeSwoId(tennant, params.Project, params.FuncName)
 
-	log.Debugf("function/remove for %s params %v", id.Str(), params)
+	log.Debugf("function/remove %s", id.Str())
 
 	// Allow to remove function if only we're in known state,
 	// otherwise wait for function building to complete
@@ -700,7 +697,7 @@ func forgetFunction(fn *FunctionDesc) {
 }
 
 func doRun(fi *FnInst, event string, args []string) (int, string, string, error) {
-	log.Debugf("RUN %s", fi.fn.SwoId.Str())
+	log.Debugf("RUN %s(%s)", fi.fn.SwoId.Str(), strings.Join(args, ","))
 
 	var wd_result swyapi.SwdFunctionRunResult
 	var resp *http.Response
@@ -714,13 +711,11 @@ func doRun(fi *FnInst, event string, args []string) (int, string, string, error)
 		goto out
 	}
 
-	log.Debugf("`- RUN nr replicas %d available %d", link.NumRS, link.CntRS)
 	if link.NumRS == 0 {
 		err = fmt.Errorf("No available pods found")
 		goto out
 	}
 
-	log.Debugf("Will POST http://%s/v1/function/run", link.VIP())
 	resp, err = swy.HTTPMarshalAndPostTimeout("http://" + link.VIP() + "/v1/function/run",
 				120,
 				&swyapi.SwdFunctionRun{
@@ -745,7 +740,8 @@ func doRun(fi *FnInst, event string, args []string) (int, string, string, error)
 	}
 
 	logSaveResult(fi.fn, event, wd_result.Stdout, wd_result.Stderr)
-	log.Debugf("`- RUN %s OK: out[%s] err[%s]", fi.fn.SwoId.Str(), wd_result.Stdout, wd_result.Stderr)
+	log.Debugf("RETurn %s: %d out[%s] err[%s]", fi.fn.SwoId.Str(),
+			wd_result.Code, wd_result.Stdout, wd_result.Stderr)
 	return wd_result.Code, wd_result.Stdout, wd_result.Stderr, nil
 
 out:
@@ -872,7 +868,7 @@ func handleFunctionRun(w http.ResponseWriter, r *http.Request) {
 	code = http.StatusBadRequest
 	id = makeSwoId(tennant, params.Project, params.FuncName)
 
-	log.Debugf("handleFunctionRun: %s params %v", id.Str(), params)
+	log.Debugf("function/run %s", id.Str())
 
 	fn, err = dbFuncFindStates(id, []int{swy.DBFuncStateRdy, swy.DBFuncStateUpd})
 	if err != nil {
@@ -885,7 +881,6 @@ func handleFunctionRun(w http.ResponseWriter, r *http.Request) {
 		goto out
 	}
 
-	log.Debugf("handleFunctionRun: OK")
 	err = swy.HTTPMarshalAndWrite(w, swyapi.FunctionRunResult{
 		Code:		fn_code,
 		Stdout:		stdout,

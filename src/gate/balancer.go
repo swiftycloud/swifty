@@ -286,7 +286,7 @@ func BalancerCreate(depname string, numrs uint) (error) {
 		return lip.Err
 	}
 
-	log.Debugf("Allocated %s %d address", lip.Addr, lip.Port)
+	log.Debugf("Allocated %s:%d address, deployment %s", lip.Addr, lip.Port, depname)
 	link := &BalancerLink{
 		Addr:	 lip.Addr,
 		Port:	 lip.Port,

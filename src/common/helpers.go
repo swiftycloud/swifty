@@ -256,8 +256,6 @@ func Exec(exe string, args []string) (bytes.Buffer, bytes.Buffer, error) {
 	var cmd *exec.Cmd
 	var err error
 
-	swylog.Debugf("Exec: %s %s", exe, strings.Join(args, " "))
-
 	cmd = exec.Command(exe, args...)
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
@@ -271,7 +269,6 @@ func Exec(exe string, args []string) (bytes.Buffer, bytes.Buffer, error) {
 }
 
 func DropDir(dir, subdir string) {
-	swylog.Debugf("Remove %s %s", dir, subdir)
 	nname, err := ioutil.TempDir(dir, ".rm")
 	if err != nil {
 		swylog.Errorf("leaking %s: %s", subdir, err.Error())
@@ -284,13 +281,11 @@ func DropDir(dir, subdir string) {
 		return
 	}
 
-	swylog.Debugf("will remove %s", nname)
+	swylog.Debugf("Will remove %s/%s (via %s)", dir, subdir, nname)
 	go func() {
 		err = os.RemoveAll(nname)
 		if err != nil {
 			swylog.Errorf("can't remove %s (%s): %s", nname, subdir, err.Error())
-		} else {
-			swylog.Debugf("removed %s (%s)", nname, subdir)
 		}
 	}()
 }

@@ -312,7 +312,6 @@ func dbFuncSetState(fn *FunctionDesc, state int) error {
 }
 
 func dbFuncUpdateAdded(fn *FunctionDesc) error {
-	log.Debugf("Update added %v", fn)
 	err := dbFuncUpdate(
 		bson.M{"tennant": fn.Tennant, "project": fn.Project, "name": fn.Name},
 		bson.M{"$set": bson.M{
@@ -342,7 +341,6 @@ func dbFuncUpdatePulled(fn *FunctionDesc) error {
 
 func dbFuncAdd(desc *FunctionDesc) error {
 	desc.Index = desc.Cookie
-	log.Debugf("ADD FN DB %v", desc)
 	c := dbSession.DB(dbDBName).C(DBColFunc)
 	err := c.Insert(desc)
 	if err != nil {
@@ -393,8 +391,6 @@ func logRemove(fn *FunctionDesc) {
 	_, err := c.RemoveAll(bson.M{"tennant": fn.Tennant, "project": fn.Project, "function": fn.Name})
 	if err != nil {
 		log.Errorf("logs %s.%s remove error: %s", fn.Project, fn.Name, err.Error())
-	} else {
-		log.Debugf("Removed logs for %s", fn.Name);
 	}
 }
 

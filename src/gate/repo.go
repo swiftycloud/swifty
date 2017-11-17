@@ -34,7 +34,6 @@ func checkoutSources(fn *FunctionDesc) error {
 	}
 
 	fn.Src.Commit = stdout.String()
-	log.Debugf("Checkout, repo head @[%s]", fn.Src.Commit)
 
 	// Bring the necessary deps
 	err = update_deps(fn.Script.Lang, cloned_to)
@@ -45,6 +44,7 @@ func checkoutSources(fn *FunctionDesc) error {
 	// Now put the sources into shared place
 	share_to = fnRepoCheckout(&conf, fn)
 
+	log.Debugf("Checkout %s to %s", fn.Src.Commit[:12], share_to)
 	err = copy_git_files(cloned_to, share_to)
 	if err != nil {
 		goto co_err
@@ -86,7 +86,7 @@ func cloneGitRepo(fn *FunctionDesc) error {
 	var stderr bytes.Buffer
 
 	clone_to := fnRepoClone(fn, conf.Daemon.Sources.Clone)
-	log.Debugf("clone %s -> %s", fn.Src.Repo, clone_to)
+	log.Debugf("Git clone %s -> %s", fn.Src.Repo, clone_to)
 
 	_, err := os.Stat(clone_to)
 	if err == nil || !os.IsNotExist(err) {
@@ -102,7 +102,6 @@ func cloneGitRepo(fn *FunctionDesc) error {
 	cmd := exec.Command("git", "-C", clone_to, "clone", fn.Src.Repo, ".")
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
-	log.Debugf("\tcloning %v", cmd)
 	err = cmd.Run()
 	if err != nil {
 		log.Errorf("can't clone %s -> %s: %s (%s:%s)",
@@ -150,12 +149,11 @@ func updateGitRepo(fn *FunctionDesc) error {
 	var stderr bytes.Buffer
 
 	clone_to := fnRepoClone(fn, conf.Daemon.Sources.Clone)
-	log.Debugf("pull %s -> %s", fn.Src.Repo, clone_to)
+	log.Debugf("Git pull %s", clone_to)
 
 	cmd := exec.Command("git", "-C", clone_to, "pull")
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
-	log.Debugf("\tpulling %v", cmd)
 	err := cmd.Run()
 	if err != nil {
 		log.Errorf("can't pull %s -> %s: %s (%s:%s)",
