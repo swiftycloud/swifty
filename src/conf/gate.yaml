@@ -30,6 +30,10 @@ middleware:
                 admin: "root"
                 password: "airooV1Echah4wei"
                 admport: "15672"
+        mongo:
+                address: "192.168.122.197:27017"
+                admin: "admin"
+                password: "abc123"
 runtime:
         golang:
                 image: "swifty/golang"

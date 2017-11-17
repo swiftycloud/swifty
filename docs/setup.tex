@@ -511,6 +511,13 @@ and prepare collections needed.
 
 A convenient way for this is to use \emph{mongo} interactive shell.
 
+Another dababase instance is to be used as middleware. For
+this one enable authentication by setting security.authorization=enabled
+key. Also make sure the DB is accessible via network with the net.bindIp
+option.
+
+There should be a user with the role "root" in the "admin" database.
+
 \begin{lstlisting}
 use swifty
 db.createUser({user:"swifty", pwd:"1q2w3e", roles:[{role:"dbOwner",db:"swifty"}]})

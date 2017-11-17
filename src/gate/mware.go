@@ -60,8 +60,9 @@ func mwareGenerateClient(mwd *MwareDesc) (error) {
 }
 
 var mwareHandlers = map[string]MwareOps {
-	"sql":	MwareMariaDB,
-	"mq":	MwareRabbitMQ,
+	"sql":		MwareMariaDB,
+	"mq":		MwareRabbitMQ,
+	"mongo":	MwareMongo,
 }
 
 func mwareGetEnv(conf *YAMLConf, id *SwoId) ([]string, error) {

@@ -178,9 +178,14 @@ type YAMLConfSQL struct {
 	YAMLConfMWCreds				`yaml:",inline"`
 }
 
+type YAMLConfMongo struct {
+	YAMLConfMWCreds				`yaml:",inline"`
+}
+
 type YAMLConfMw struct {
 	MQ		YAMLConfMQ		`yaml:"mq"`
 	SQL		YAMLConfSQL		`yaml:"sql"`
+	MGO		YAMLConfMongo		`yaml:"mongo"`
 }
 
 type YAMLConfRt struct {
