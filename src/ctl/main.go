@@ -439,7 +439,7 @@ func main() {
 	cmdMap[CMD_ADD].StringVar(&run, "run", "", "Script to run")
 	cmdMap[CMD_ADD].StringVar(&mware, "mw", "", "Mware to use, comma-separated")
 	cmdMap[CMD_ADD].StringVar(&event, "event", "", "Event this fn is to start")
-	bindCmdUsage(CMD_ADD, "", "Add a function")
+	bindCmdUsage(CMD_ADD, "FUNCNAME", "Add a function")
 
 	bindCmdUsage(CMD_RUN, "FUNCNAME [ARGS]", "Run a function")
 	bindCmdUsage(CMD_UPD, "FUNCNAME", "Update a function")
