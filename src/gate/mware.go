@@ -31,11 +31,11 @@ type MwareDesc struct {
 	JSettings	string		`bson:"jsettings"`	// Middleware settings in json format
 }
 
-type MwareOpsIface interface {
-	Init(conf *YAMLConf, mwd *MwareDesc, mware *swyapi.MwareItem) ([]byte, error)
-	Fini(conf *YAMLConf, mwd *MwareDesc) (error)
-	Event(conf *YAMLConf, source *FnEventDesc, mwd *MwareDesc, on bool) (error)
-	GetEnv(conf *YAMLConf, mwd *MwareDesc) ([]string)
+type MwareOps struct {
+	Init	func(conf *YAMLConf, mwd *MwareDesc, mware *swyapi.MwareItem) ([]byte, error)
+	Fini	func(conf *YAMLConf, mwd *MwareDesc) (error)
+	Event	func(conf *YAMLConf, source *FnEventDesc, mwd *MwareDesc, on bool) (error)
+	GetEnv	func(conf *YAMLConf, mwd *MwareDesc) ([]string)
 }
 
 func mkEnv(mwd *MwareDesc, envName, value string) string {
@@ -56,12 +56,6 @@ type DBSettings struct {
 
 type MQSettings struct {
 	Vhost		string			`json:"vhost"`
-}
-
-type MariaDBSettings struct {
-}
-
-type RabbitMQSettings struct {
 }
 
 func stripName(name string) string {
@@ -109,7 +103,7 @@ func mariaReq(db *sql.DB, req string) error {
 // DROP USER IF EXISTS '8257fbff9618952fbd2b83b4794eb694'@'%';
 // DROP DATABASE IF EXISTS 8257fbff9618952fbd2b83b4794eb694;
 
-func (m MariaDBSettings) Init(conf *YAMLConf, mwd *MwareDesc, mware *swyapi.MwareItem) ([]byte, error) {
+func InitMariaDB(conf *YAMLConf, mwd *MwareDesc, mware *swyapi.MwareItem) ([]byte, error) {
 	dbs := DBSettings{ }
 
 	err := mwareGenerateClient(mwd)
@@ -143,7 +137,7 @@ func (m MariaDBSettings) Init(conf *YAMLConf, mwd *MwareDesc, mware *swyapi.Mwar
 	return json.Marshal(&dbs)
 }
 
-func (m MariaDBSettings) Fini(conf *YAMLConf, mwd *MwareDesc) error {
+func FiniMariaDB(conf *YAMLConf, mwd *MwareDesc) error {
 	var dbs DBSettings
 
 	err := json.Unmarshal([]byte(mwd.JSettings), &dbs)
@@ -171,11 +165,11 @@ func (m MariaDBSettings) Fini(conf *YAMLConf, mwd *MwareDesc) error {
 	return nil
 }
 
-func (m MariaDBSettings) Event(conf *YAMLConf, source *FnEventDesc, mwd *MwareDesc, on bool) (error) {
+func EventMariaDB(conf *YAMLConf, source *FnEventDesc, mwd *MwareDesc, on bool) (error) {
 	return fmt.Errorf("No events for mariadb")
 }
 
-func (m MariaDBSettings) GetEnv(conf *YAMLConf, mwd *MwareDesc) ([]string) {
+func GetEnvMariaDB(conf *YAMLConf, mwd *MwareDesc) ([]string) {
 	var dbs DBSettings
 	var envs []string
 	var err error
@@ -188,6 +182,13 @@ func (m MariaDBSettings) GetEnv(conf *YAMLConf, mwd *MwareDesc) ([]string) {
 	}
 
 	return envs
+}
+
+var MwareMariaDB = MwareOps {
+	Init:	InitMariaDB,
+	Fini:	FiniMariaDB,
+	Event:	EventMariaDB,
+	GetEnv:	GetEnvMariaDB,
 }
 
 func rabbitConn(conf *YAMLConf) (*rabbithole.Client, error) {
@@ -207,7 +208,7 @@ func rabbitErr(resp *http.Response, err error) error {
 	}
 }
 
-func (m RabbitMQSettings) Init(conf *YAMLConf, mwd *MwareDesc, mware *swyapi.MwareItem) ([]byte, error) {
+func InitRabbitMQ(conf *YAMLConf, mwd *MwareDesc, mware *swyapi.MwareItem) ([]byte, error) {
 	rmq := MQSettings{ }
 
 	err := mwareGenerateClient(mwd)
@@ -248,12 +249,12 @@ func (m RabbitMQSettings) Init(conf *YAMLConf, mwd *MwareDesc, mware *swyapi.Mwa
 	return json.Marshal(&rmq)
 }
 
-func (m RabbitMQSettings) Fini(conf *YAMLConf, mwd *MwareDesc) error {
+func FiniRabbitMQ(conf *YAMLConf, mwd *MwareDesc) error {
 	var rmq MQSettings
 
 	err := json.Unmarshal([]byte(mwd.JSettings), &rmq)
 	if err != nil {
-		return fmt.Errorf("RabbitMQSettings.Fini: Can't unmarshal data %s: %s",
+		return fmt.Errorf("rabbit: Can't unmarshal data %s: %s",
 					mwd.JSettings, err.Error())
 	}
 
@@ -275,7 +276,7 @@ func (m RabbitMQSettings) Fini(conf *YAMLConf, mwd *MwareDesc) error {
 	return nil
 }
 
-func (m RabbitMQSettings) Event(conf *YAMLConf, source *FnEventDesc, mwd *MwareDesc, on bool) (error) {
+func EventRabbitMQ(conf *YAMLConf, source *FnEventDesc, mwd *MwareDesc, on bool) (error) {
 	var rmq MQSettings
 
 	_ = json.Unmarshal([]byte(mwd.JSettings), &rmq)
@@ -287,7 +288,7 @@ func (m RabbitMQSettings) Event(conf *YAMLConf, source *FnEventDesc, mwd *MwareD
 	}
 }
 
-func (m RabbitMQSettings) GetEnv(conf *YAMLConf, mwd *MwareDesc) ([]string) {
+func GetEnvRabbitMQ(conf *YAMLConf, mwd *MwareDesc) ([]string) {
 	var rmq MQSettings
 	var envs []string
 	var err error
@@ -302,16 +303,16 @@ func (m RabbitMQSettings) GetEnv(conf *YAMLConf, mwd *MwareDesc) ([]string) {
 	return envs
 }
 
-type MwareSettings struct {
-	MariaDB		MariaDBSettings		`json:"mariadb"`
-	RabbitMQ	RabbitMQSettings	`json:"rabbitmq"`
+var MwareRabbitMQ = MwareOps {
+	Init:	InitRabbitMQ,
+	Fini:	FiniRabbitMQ,
+	Event:	EventRabbitMQ,
+	GetEnv:	GetEnvRabbitMQ,
 }
 
-var settings MwareSettings
-
-var mwareHandlers = map[string]MwareOpsIface {
-	"sql":	settings.MariaDB,
-	"mq":	settings.RabbitMQ,
+var mwareHandlers = map[string]MwareOps {
+	"sql":	MwareMariaDB,
+	"mq":	MwareRabbitMQ,
 }
 
 func mwareGetEnv(conf *YAMLConf, id *SwoId) ([]string, error) {
@@ -459,8 +460,8 @@ func mwareEventSetup(conf *YAMLConf, fn *FunctionDesc, on bool) error {
 
 	log.Debugf("set up event for %s.%s mware", fn.Event.MwareId, item.MwareType)
 
-	iface := mwareHandlers[item.MwareType]
-	if iface != nil {
+	iface, ok := mwareHandlers[item.MwareType]
+	if ok {
 		return iface.Event(conf, &fn.Event, &item, on)
 	}
 
