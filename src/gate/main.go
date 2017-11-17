@@ -116,18 +116,16 @@ func (fi *FnInst)Replicas() int32 {
  * new Regular one.
  */
 type FnInst struct {
-	Commit		string
 	Build		bool
-
 	fn		*FunctionDesc
 }
 
 func (fn *FunctionDesc) Inst() *FnInst {
-	return &FnInst { Commit: fn.Src.Commit, Build: false, fn: fn }
+	return &FnInst { Build: false, fn: fn }
 }
 
 func (fn *FunctionDesc) InstBuild() *FnInst {
-	return &FnInst { Commit: fn.Src.Commit, Build: true, fn: fn }
+	return &FnInst { Build: true, fn: fn }
 }
 
 var log *zap.SugaredLogger
@@ -244,7 +242,7 @@ func genFunctionDescJSON(conf *YAMLConf, fn *FunctionDesc, fi *FnInst) string {
 
 func runFunctionOnce(fn *FunctionDesc) {
 	log.Debugf("oneshot RUN for %s", fn.SwoId.Str())
-	doRun(fn, "oneshot", fn.Inst().DepName(), []string{})
+	doRun(fn.Inst(), "oneshot", []string{})
 	log.Debugf("oneshor %s finished", fn.SwoId.Str())
 
 	swk8sRemove(&conf, fn, fn.Inst())
@@ -257,7 +255,7 @@ func buildFunction(fn *FunctionDesc) error {
 
 	build_cmd := strings.Split(RtBuildCmd(fn.Script.Lang), " ")
 	log.Debugf("build RUN %s args %v", fn.SwoId.Str(), build_cmd[1:])
-	code, _, stderr, err := doRun(fn, "build", fn.InstBuild().DepName(), build_cmd[1:])
+	code, _, stderr, err := doRun(fn.InstBuild(), "build", build_cmd[1:])
 	log.Debugf("build %s finished", fn.SwoId.Str())
 	logSaveEvent(fn, "built", "")
 	if err != nil {
@@ -702,8 +700,8 @@ func forgetFunction(fn *FunctionDesc) {
 	dbFuncRemove(fn)
 }
 
-func doRun(fn *FunctionDesc, event, depname string, args []string) (int, string, string, error) {
-	log.Debugf("RUN %s", fn.SwoId.Str())
+func doRun(fi *FnInst, event string, args []string) (int, string, string, error) {
+	log.Debugf("RUN %s", fi.fn.SwoId.Str())
 
 	var wd_result swyapi.SwdFunctionRunResult
 	var resp *http.Response
@@ -711,9 +709,9 @@ func doRun(fn *FunctionDesc, event, depname string, args []string) (int, string,
 	var resp_body []byte
 	var err error
 
-	link = dbBalancerLinkFind(depname)
+	link = dbBalancerLinkFind(fi.DepName())
 	if link == nil {
-		err = fmt.Errorf("Can't find balancer link %s", depname)
+		err = fmt.Errorf("Can't find balancer link %s", fi.DepName())
 		goto out
 	}
 
@@ -727,7 +725,7 @@ func doRun(fn *FunctionDesc, event, depname string, args []string) (int, string,
 	resp, err = swy.HTTPMarshalAndPostTimeout("http://" + link.VIP() + "/v1/function/run",
 				120,
 				&swyapi.SwdFunctionRun{
-					PodToken:	fn.Cookie,
+					PodToken:	fi.fn.Cookie,
 					Args:		args,
 				}, nil)
 	if err != nil {
@@ -747,8 +745,8 @@ func doRun(fn *FunctionDesc, event, depname string, args []string) (int, string,
 		goto out
 	}
 
-	logSaveResult(fn, event, wd_result.Stdout, wd_result.Stderr)
-	log.Debugf("`- RUN %s OK: out[%s] err[%s]", fn.SwoId.Str(), wd_result.Stdout, wd_result.Stderr)
+	logSaveResult(fi.fn, event, wd_result.Stdout, wd_result.Stderr)
+	log.Debugf("`- RUN %s OK: out[%s] err[%s]", fi.fn.SwoId.Str(), wd_result.Stdout, wd_result.Stderr)
 	return wd_result.Code, wd_result.Stdout, wd_result.Stderr, nil
 
 out:
@@ -883,7 +881,7 @@ func handleFunctionRun(w http.ResponseWriter, r *http.Request) {
 		goto out
 	}
 
-	fn_code, stdout, stderr, err = doRun(&fn, "run", fn.Inst().DepName(), params.Args)
+	fn_code, stdout, stderr, err = doRun(fn.Inst(), "run", params.Args)
 	if err != nil {
 		goto out
 	}

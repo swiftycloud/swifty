@@ -122,8 +122,8 @@ func startListener(conf *YAMLConf, vhost, queue string) error {
 				log.Debugf("mq: `- [%s]", fn)
 
 				/* FIXME -- this is synchronous */
-				_, _, _, err := doRun(&fn, "mware:" + mware.Name + ":" + queue,
-						fn.Inst().DepName(), []string{string(d.Body)})
+				_, _, _, err := doRun(fn.Inst(), "mware:" + mware.Name + ":" + queue,
+							[]string{string(d.Body)})
 
 				if err != nil {
 					log.Errorf("mq: Error running FN %s", err.Error())
