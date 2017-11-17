@@ -269,3 +269,28 @@ func Exec(exe string, args []string) (bytes.Buffer, bytes.Buffer, error) {
 
 	return stdout, stderr, nil
 }
+
+func DropDir(dir, subdir string) {
+	swylog.Debugf("Remove %s %s", dir, subdir)
+	nname, err := ioutil.TempDir(dir, ".rm")
+	if err != nil {
+		swylog.Errorf("leaking %s: %s", subdir, err.Error())
+		return
+	}
+
+	err = os.Rename(dir + "/" + subdir, nname + "/_" /* Why _ ? Why not...*/)
+	if err != nil {
+		swylog.Errorf("can't move repo clone: %s", err.Error())
+		return
+	}
+
+	swylog.Debugf("will remove %s", nname)
+	go func() {
+		err = os.RemoveAll(nname)
+		if err != nil {
+			swylog.Errorf("can't remove %s (%s): %s", nname, subdir, err.Error())
+		} else {
+			swylog.Debugf("removed %s (%s)", nname, subdir)
+		}
+	}()
+}

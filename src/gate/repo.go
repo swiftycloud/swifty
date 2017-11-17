@@ -8,6 +8,7 @@ import (
 	"io"
 	"io/ioutil"
 	"encoding/base64"
+	"../common"
 )
 
 func fnRepoClone(fn *FunctionDesc, prefix string) string {
@@ -171,38 +172,14 @@ func updateFileFromReq(fn *FunctionDesc) error {
 	return fmt.Errorf("Can't update code from req")
 }
 
-func dropDir(dir, subdir string) {
-	nname, err := ioutil.TempDir(dir, ".rm")
-	if err != nil {
-		log.Error("leaking %s: %s", subdir, err.Error())
-		return
-	}
-
-	err = os.Rename(dir + "/" + subdir, nname + "/_" /* Why _ ? Why not...*/)
-	if err != nil {
-		log.Error("can't move repo clone: %s", err.Error())
-		return
-	}
-
-	log.Debugf("will remove %s", nname)
-	go func() {
-		err = os.RemoveAll(nname)
-		if err != nil {
-			log.Error("can't remove %s (%s): %s", nname, subdir, err.Error())
-		} else {
-			log.Debugf("removed %s (%s)", nname, subdir)
-		}
-	}()
-}
-
 func cleanRepo(fn *FunctionDesc) {
 	sd := fnRepoClone(fn, "")
 
 	clone_to := conf.Daemon.Sources.Clone
-	dropDir(clone_to, sd)
+	swy.DropDir(clone_to, sd)
 
 	share_to := conf.Daemon.Sources.Share
-	dropDir(share_to, sd)
+	swy.DropDir(share_to, sd)
 }
 
 func update_deps(lang, repo_path string) error {
