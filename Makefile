@@ -44,6 +44,8 @@ export RM MAKE GIT CP GO GO-BUILD-OPTS GOTAGS MONGO KUBECTL IPVSADM
 go-gate-y	+= src/gate/db.go
 go-gate-y	+= src/gate/k8s.go
 go-gate-y	+= src/gate/mware.go
+go-gate-y	+= src/gate/mw-maria.go
+go-gate-y	+= src/gate/mw-rabbit.go
 go-gate-y	+= src/gate/balancer.go
 go-gate-y	+= src/gate/main.go
 go-gate-y	+= src/gate/mq.go
