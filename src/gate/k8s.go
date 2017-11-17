@@ -254,7 +254,13 @@ func swk8sUpdate(conf *YAMLConf, fn *FunctionDesc) error {
 	 * need to fix that path and rollout the new version of the
 	 * deployment.
 	 */
-	this.Spec.Template.Spec.Volumes[0].VolumeSource.HostPath.Path = fnRepoCheckout(conf, fn)
+	for i := 0; i < 2; i++ {
+		if this.Spec.Template.Spec.Volumes[i].Name == "code" {
+			this.Spec.Template.Spec.Volumes[i].VolumeSource.HostPath.Path = fnRepoCheckout(conf, fn)
+			break;
+		}
+	}
+
 	_, err = deploy.Update(this)
 	if err != nil {
 		log.Errorf("Can't shrink replicas for %s: %s", fn.SwoId.Str(), err.Error())
@@ -329,10 +335,18 @@ func swk8sRun(conf *YAMLConf, fn *FunctionDesc, fi *FnInst) error {
 		Spec:			v1.PodSpec {
 			Volumes:	[]v1.Volume{
 				{
-					Name:		depname,
+					Name:		"code",
 					VolumeSource:	v1.VolumeSource {
 						HostPath: &v1.HostPathVolumeSource{
 								Path: fnRepoCheckout(conf, fn),
+							},
+					},
+				},
+				{
+					Name:		"stats",
+					VolumeSource:	v1.VolumeSource {
+						HostPath: &v1.HostPathVolumeSource{
+								Path: fnStatsDir(conf, fn),
 							},
 					},
 				},
@@ -347,9 +361,14 @@ func swk8sRun(conf *YAMLConf, fn *FunctionDesc, fi *FnInst) error {
 					Env:		swk8sGenEnvVar(conf, fn, fi, wdaddr, wd_port, secret),
 					VolumeMounts:	[]v1.VolumeMount{
 						{
-							Name:		depname,
+							Name:		"code",
 							ReadOnly:	false,
 							MountPath:	RtGetWdogPath(fn),
+						},
+						{
+							Name:		"stats",
+							ReadOnly:	false,
+							MountPath:	statsPodPath,
 						},
 					},
 					ImagePullPolicy: v1.PullNever,

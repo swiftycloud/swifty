@@ -12,6 +12,10 @@ type UserLogin struct {
 	Password	string			`json:"password"`
 }
 
+type FunctionStats struct {
+	Called		uint64			`json:"called"`
+}
+
 type FunctionInfo struct {
 	Mware		[]string		`json:"mware"`
 	State		string			`json:"state"`
@@ -19,6 +23,7 @@ type FunctionInfo struct {
 	Script		FunctionScript		`json:"script"`
 	Event		FunctionEvent		`json:"event"`
 	URL		string			`json:"url"`
+	Stats		FunctionStats		`json:"stats"`
 }
 
 type RunCmd struct {

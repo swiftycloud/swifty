@@ -219,6 +219,7 @@ func genFunctionDescJSON(conf *YAMLConf, fn *FunctionDesc, fi *FnInst) string {
 	jdata, err = json.Marshal(&swyapi.SwdFunctionDesc{
 				Run:		run,
 				Dir:		RtGetWdogPath(fn),
+				Stats:		statsPodPath,
 				PodToken:	fn.Cookie,
 				URLCall:	fn.URLCall,
 			})
@@ -519,6 +520,8 @@ func handleFunctionAdd(w http.ResponseWriter, r *http.Request) {
 		goto out_clean_mware
 	}
 
+	statsStartCollect(&conf, fn)
+
 	err = dbFuncUpdateAdded(fn)
 	if err != nil {
 		goto out_clean_repo
@@ -678,6 +681,7 @@ func forgetFunction(fn *FunctionDesc) {
 		log.Errorf("remove mware error: %s", err.Error())
 	}
 
+	statsStopCollect(&conf, fn)
 	cleanRepo(fn)
 	logRemove(fn)
 	dbFuncRemove(fn)
@@ -704,6 +708,7 @@ func doRun(fn *FunctionDesc, event, depname string, args []string) (int, string,
 		goto out
 	}
 
+	log.Debugf("Will POST http://%s/v1/function/run", link.VIP())
 	resp, err = swy.HTTPMarshalAndPostTimeout("http://" + link.VIP() + "/v1/function/run",
 				120,
 				&swyapi.SwdFunctionRun{
@@ -741,6 +746,7 @@ func handleFunctionInfo(w http.ResponseWriter, r *http.Request) {
 	var fn FunctionDesc
 	var url = ""
 	var code int
+	var stats *FnStats
 
 	tennant, code, err := handleGenericReq(r, &params)
 	if err != nil {
@@ -764,6 +770,8 @@ func handleFunctionInfo(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	stats = statsGet(&fn)
+
 	err = swy.HTTPMarshalAndWrite(w,  swyapi.FunctionInfo{
 			State:          fnStates[fn.State],
 			Mware:          fn.Mware,
@@ -779,6 +787,9 @@ func handleFunctionInfo(w http.ResponseWriter, r *http.Request) {
 				CronTab:	fn.Event.CronTab,
 				MwareId:	fn.Event.MwareId,
 				MQueue:		fn.Event.MQueue,
+			},
+			Stats:		swyapi.FunctionStats {
+				Called:		stats.Called,
 			},
 		})
 	if err != nil {
@@ -1183,6 +1194,11 @@ func main() {
 	err = eventsInit(&conf)
 	if err != nil {
 		log.Fatalf("Can't setup events: %s", err.Error())
+	}
+
+	err = statsInit(&conf)
+	if err != nil {
+		log.Fatalf("Can't setup stats: %s", err.Error())
 	}
 
 	err = swk8sInit(&conf)

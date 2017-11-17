@@ -15,6 +15,7 @@ const (
 	DBColFunc	= "Function"
 	DBColMware	= "Mware"
 	DBColLogs	= "Logs"
+	DBColFnStats	= "FnStats"
 	DBColBalancer	= "Balancer"
 	DBColBalancerRS = "BalancerRS"
 )
@@ -268,6 +269,10 @@ func dbFuncListByProjCond(id *SwoId, cond bson.M) ([]FunctionDesc, error) {
 
 func dbFuncListAll(id *SwoId, states []int) ([]FunctionDesc, error) {
 	return dbFuncListByProjCond(id, bson.M{"$in": states})
+}
+
+func dbFuncList() ([]FunctionDesc, error) {
+	return dbFuncFindAll(bson.M{})
 }
 
 func dbFuncListByMwEvent(id *SwoId, mqueue string) ([]FunctionDesc, error) {

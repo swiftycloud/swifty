@@ -147,6 +147,7 @@ func info_function(project, name string) {
 	if ifo.URL != "" {
 		fmt.Printf("URL:    http://%s\n", ifo.URL)
 	}
+	fmt.Printf("Called: %d\n", ifo.Stats.Called)
 }
 
 func detect_language(repo string) string {
