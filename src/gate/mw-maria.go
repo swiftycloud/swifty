@@ -16,7 +16,7 @@ type DBSettings struct {
 func mariaConn(conf *YAMLConf) (*sql.DB, error) {
 	return sql.Open("mysql",
 			fmt.Sprintf("%s:%s@tcp(%s)/?charset=utf8",
-				conf.Mware.SQL.User,
+				conf.Mware.SQL.Admin,
 				conf.Mware.SQL.Pass,
 				conf.Mware.SQL.Addr))
 }

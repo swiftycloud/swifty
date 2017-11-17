@@ -16,7 +16,7 @@ type MQSettings struct {
 
 func rabbitConn(conf *YAMLConf) (*rabbithole.Client, error) {
 	addr := strings.Split(conf.Mware.MQ.Addr, ":")[0] + ":" + conf.Mware.MQ.AdminPort
-	return rabbithole.NewClient("http://" + addr, conf.Mware.MQ.User, conf.Mware.MQ.Pass)
+	return rabbithole.NewClient("http://" + addr, conf.Mware.MQ.Admin, conf.Mware.MQ.Pass)
 }
 
 func rabbitErr(resp *http.Response, err error) error {
@@ -63,7 +63,7 @@ func InitRabbitMQ(conf *YAMLConf, mwd *MwareDesc, mware *swyapi.MwareItem) ([]by
 	}
 
 	/* Add permissions for us as well, just in case event listening is required */
-	err = rabbitErr(rmqc.UpdatePermissionsIn(rmq.Vhost, conf.Mware.MQ.User,
+	err = rabbitErr(rmqc.UpdatePermissionsIn(rmq.Vhost, conf.Mware.MQ.Admin,
 			rabbithole.Permissions{Configure: ".*", Write: ".*", Read: ".*"}))
 	if err != nil {
 		return nil, fmt.Errorf("Can't set permissions %s: %s", mwd.Client, err.Error())

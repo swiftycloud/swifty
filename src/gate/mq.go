@@ -68,7 +68,7 @@ func startListener(conf *YAMLConf, vhost, queue string) error {
 
 	log.Debugf("mq: Starting mq listener @%s.%s", vhost, queue)
 
-	login := conf.Mware.MQ.User
+	login := conf.Mware.MQ.Admin
 	pass := conf.Mware.MQ.Pass
 	addr := conf.Mware.MQ.Addr
 

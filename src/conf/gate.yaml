@@ -23,11 +23,11 @@ balancer:
 middleware:
         sql:
                 address: "192.168.122.197:3306"
-                user: "root"
+                admin: "root"
                 password: "aiNe1sah9ichu1re"
         mq:
                 address: "192.168.122.197:5672"
-                user: "root"
+                admin: "root"
                 password: "airooV1Echah4wei"
                 admport: "15672"
 runtime:

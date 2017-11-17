@@ -165,7 +165,7 @@ type YAMLConfKeystone struct {
 
 type YAMLConfMWCreds struct {
 	Addr		string			`yaml:"address"`
-	User		string			`yaml:"user"`
+	Admin		string			`yaml:"admin"`
 	Pass		string			`yaml:"password"`
 }
 
