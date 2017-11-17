@@ -267,7 +267,7 @@ func dbFuncListByProjCond(id *SwoId, cond bson.M) ([]FunctionDesc, error) {
 	return vs, err
 }
 
-func dbFuncListAll(id *SwoId, states []int) ([]FunctionDesc, error) {
+func dbFuncListStates(id *SwoId, states []int) ([]FunctionDesc, error) {
 	return dbFuncListByProjCond(id, bson.M{"$in": states})
 }
 
@@ -275,7 +275,7 @@ func dbFuncList() ([]FunctionDesc, error) {
 	return dbFuncFindAll(bson.M{})
 }
 
-func dbFuncListByMwEvent(id *SwoId, mqueue string) ([]FunctionDesc, error) {
+func dbFuncListMwEvent(id *SwoId, mqueue string) ([]FunctionDesc, error) {
 	return dbFuncFindAll(bson.M{"tennant": id.Tennant, "project": id.Project,
 		"event.source": "mware", "event.mwid": id.Name, "event.mqueue": mqueue})
 }

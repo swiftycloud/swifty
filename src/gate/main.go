@@ -845,7 +845,7 @@ func handleFunctionList(w http.ResponseWriter, r *http.Request) {
 	id = makeSwoId(tennant, params.Project, "")
 
 	// List all but terminating
-	recs, err = dbFuncListAll(id, []int{
+	recs, err = dbFuncListStates(id, []int{
 				swy.DBFuncStateQue,
 				swy.DBFuncStateBld,
 				swy.DBFuncStateStl,
