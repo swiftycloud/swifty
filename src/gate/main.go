@@ -89,12 +89,12 @@ func swyMapName(name string) string {
 var noCommit = "00000000"
 
 func (fi *FnInst)DepName() string {
-	dn := "swd-" + fi.fn.Cookie[:40] + "-" + fi.Commit[:8]
+	dn := "swd-" + fi.fn.Cookie[:40]
 	if fi.Build {
 		dn += "-bld"
 	}
 
-	return swyMapName(dn)
+	return dn
 }
 
 func (fi *FnInst)Replicas() int32 {
