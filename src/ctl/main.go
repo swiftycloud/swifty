@@ -69,14 +69,11 @@ func make_faas_req(url string, in interface{}, out interface{}) {
 again:
 	resp, err := make_faas_req_x(url, in)
 	if err != nil {
-		if resp == nil || (resp != nil &&
-			resp.StatusCode != http.StatusUnauthorized) {
+		if resp == nil {
 			panic(err)
 		}
-	}
 
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
+		resp.Body.Close()
 		if (resp.StatusCode == http.StatusUnauthorized) && first_attempt {
 			first_attempt = false
 			refresh_token("")
@@ -85,6 +82,9 @@ again:
 
 		panic(fmt.Errorf("Bad responce from server: " + string(resp.Status)))
 	}
+
+	/* Here we have http.StatusOK */
+	defer resp.Body.Close()
 
 	if out != nil {
 		body, err := ioutil.ReadAll(resp.Body)
