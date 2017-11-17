@@ -12,8 +12,10 @@ import (
 	"syscall"
 	"flag"
 	"fmt"
+	"time"
 	"os"
 	"io/ioutil"
+	"sync/atomic"
 
 	"../common"
 	"../apis/apps"
@@ -29,6 +31,7 @@ type YAMLConf struct {
 
 var conf YAMLConf
 var function swyapi.SwdFunctionDesc
+var wdogStatsSyncPeriod = 5 * time.Second /* FIXME: should be configured */
 
 var zcfg zap.Config = zap.Config {
 	Level:            zap.NewAtomicLevelAt(zap.DebugLevel),
@@ -234,6 +237,55 @@ func getSwdAddr(env_name string, defaul_value string) string {
 	return envVal
 }
 
+type wdogStatsOpaque struct {
+}
+
+var stats = swyapi.SwdStats{}
+
+func wdogStatsStart() *wdogStatsOpaque {
+	atomic.AddUint64(&stats.Called, 1)
+	return &wdogStatsOpaque{}
+}
+
+func wdogStatsStop(st *wdogStatsOpaque) {
+}
+
+func wdogStatsRead() *swyapi.SwdStats {
+	ret := &swyapi.SwdStats{}
+	ret.Called = atomic.LoadUint64(&stats.Called)
+	return ret
+}
+
+func wdogStatsMw(fn http.HandlerFunc) http.Handler {
+	next := http.HandlerFunc(fn)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		opaque := wdogStatsStart()
+		next.ServeHTTP(w, r)
+		wdogStatsStop(opaque)
+	})
+}
+
+func wdogStatsSync(params *swyapi.SwdFunctionDesc) {
+	statsFname := os.Getenv("SWD_POD_NAME")
+	statsFile := params.Stats + "/" + statsFname
+	statsTFile := params.Stats + "/." + statsFname + ".upd"
+	var last uint64
+
+	for {
+		time.Sleep(wdogStatsSyncPeriod)
+		st := wdogStatsRead()
+		if st.Called == last {
+			/* No need to update */
+			continue
+		}
+
+		last = st.Called
+		data, _ := json.Marshal(st)
+		ioutil.WriteFile(statsTFile, data, 0644)
+		os.Rename(statsTFile, statsFile)
+	}
+}
+
 func main() {
 	var params swyapi.SwdFunctionDesc
 	var conf_path string
@@ -273,10 +325,11 @@ func main() {
 		log.Fatalf("Can't setup function, abort: %s", err.Error())
 	}
 
-	http.HandleFunc("/",				handleRoot)
+	http.HandleFunc("/", handleRoot)
 	if params.URLCall {
-		http.HandleFunc("/" + params.PodToken,	handleDirectCall)
+		http.Handle("/" + params.PodToken, wdogStatsMw(handleDirectCall))
 	}
-	http.HandleFunc("/v1/function/run",		handleGateCall)
+	http.Handle("/v1/function/run", wdogStatsMw(handleGateCall))
+	go wdogStatsSync(&params)
 	log.Fatal(http.ListenAndServe(conf.Daemon.Addr, nil))
 }
