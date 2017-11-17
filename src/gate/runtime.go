@@ -25,10 +25,16 @@ var swift_info = rt_info {
 	Run:	func(fn *FunctionDesc) []string { return []string{"./.build/debug/" + fn.Script.Run} },
 }
 
+var nodejs_info = rt_info {
+	WPath:	"/function",
+	Run:	func(fn *FunctionDesc) []string { return []string{"node", fn.Script.Run} },
+}
+
 var rt_handlers = map[string]*rt_info {
 	"python":	&py_info,
 	"golang":	&golang_info,
 	"swift":	&swift_info,
+	"nodejs":	&nodejs_info,
 }
 
 func RtBuilding(lang string) bool {

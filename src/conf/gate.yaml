@@ -41,6 +41,8 @@ runtime:
                 image: "swifty/python"
         swift:
                 image: "swifty/swift"
+        nodejs:
+                image: "swifty/nodejs"
 wdog:
         ct-path: "/usr/bin/swy-wdog"
         address: ":8687"
