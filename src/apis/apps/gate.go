@@ -43,6 +43,11 @@ type FunctionSources struct {
 	Code		string			`json:"code,omitempty"`
 }
 
+type FunctionSize struct {
+	Replicas	int			`json:"replicas"`
+	Memory		string			`json:"memory"`
+}
+
 type FunctionEvent struct {
 	Source		string			`json:"source"`
 	CronTab		string			`json:"crontab"`
@@ -87,11 +92,11 @@ type MwareList struct {
 type FunctionAdd struct {
 	Project		string			`json:"project"`
 	FuncName	string			`json:"name"`
-	Replicas	int			`json:"replicas"`
 	Sources		FunctionSources		`json:"sources"`
 	Script		FunctionScript		`json:"script"`
 	Mware		[]MwareItem		`json:"mware"`
 	Event		FunctionEvent		`json:"event"`
+	Size		FunctionSize		`json:"size"`
 }
 
 type FunctionUpdate struct {

@@ -42,3 +42,4 @@ wdog:
         address: ":8687"
 kubernetes:
         config-path: src/conf/kubeconfig
+        max-replicas: 32

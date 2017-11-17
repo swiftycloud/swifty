@@ -42,6 +42,11 @@ type FnEventDesc struct {
 	MQueue		string		`bson:"mqueue"`
 }
 
+type FnSizeDesc struct {
+	Replicas	int		`bson:"replicas"`
+	Mem		string		`bson:"mem"`
+}
+
 type SwoId struct {
 	Tennant		string		`bson:"tennant"`
 	Project		string		`bson:"project"`
@@ -71,7 +76,7 @@ type FunctionDesc struct {
 	Mware		[]string	`bson:"mware"`
 	Script		FnScriptDesc	`bson:"script"`
 	Src		FnSrcDesc	`bson:"src"`
-	Replicas	int		`bson:"replicas"`
+	Size		FnSizeDesc	`bson:"size"`
 	OneShot		bool		`bson:"oneshot"`
 }
 
@@ -96,7 +101,7 @@ func (fi *FnInst)Replicas() int32 {
 	if fi.Build {
 		return 1
 	} else {
-		return int32(fi.fn.Replicas)
+		return int32(fi.fn.Size.Replicas)
 	}
 }
 
@@ -184,6 +189,7 @@ type YAMLConfRt struct {
 
 type YAMLConfKuber struct {
 	ConfigPath	string			`yaml:"config-path"`
+	MaxReplicas	int			`yaml:"max-replicas"`
 }
 
 type YAMLConf struct {
@@ -445,7 +451,10 @@ func getFunctionDesc(tennant string, p_add *swyapi.FunctionAdd) *FunctionDesc {
 			Repo:		p_add.Sources.Repo,
 			Code:		p_add.Sources.Code,
 		},
-		Replicas:	p_add.Replicas,
+		Size:		FnSizeDesc {
+			Replicas:	p_add.Size.Replicas,
+			Mem:		p_add.Size.Memory,
+		},
 		Script:		FnScriptDesc {
 			Lang:		p_add.Script.Lang,
 			Run:		p_add.Script.Run,
@@ -471,10 +480,11 @@ func handleFunctionAdd(w http.ResponseWriter, r *http.Request) {
 	code = http.StatusBadRequest
 	log.Debugf("function/add for %s params %v", tennant, params)
 
-	if params.Replicas < 1 {
-		params.Replicas = 1
-	} else if params.Replicas > 32 {
-		params.Replicas = 32
+	if params.Size.Replicas < 1 {
+		params.Size.Replicas = 1
+	} else if params.Size.Replicas > conf.Kuber.MaxReplicas {
+		err = errors.New("Too big replicas value")
+		goto out
 	}
 
 	if params.Project == "" || params.FuncName == "" ||

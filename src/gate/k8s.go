@@ -314,16 +314,18 @@ func swk8sRun(conf *YAMLConf, fn *FunctionDesc, fi *FnInst) error {
 				})
 	}
 
+	resources := RtGetFnResources(fn)
+
 	// FIXME: Obtain them from settings and
 	// account in backend database
 	resspec := v1.ResourceRequirements {
 		Limits: v1.ResourceList {
-			v1.ResourceMemory:	resource.MustParse("128Mi"),
-			v1.ResourceCPU:		resource.MustParse("1000m"),
+			v1.ResourceMemory:	resource.MustParse(resources["mem.max"]),
+			v1.ResourceCPU:		resource.MustParse(resources["cpu.max"]),
 		},
 		Requests: v1.ResourceList {
-			v1.ResourceMemory:	resource.MustParse("64Mi"),
-			v1.ResourceCPU:		resource.MustParse("500m"),
+			v1.ResourceMemory:	resource.MustParse(resources["mem.min"]),
+			v1.ResourceCPU:		resource.MustParse(resources["cpu.min"]),
 		},
 	}
 
