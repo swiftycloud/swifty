@@ -49,6 +49,7 @@ go-gate-y	+= src/gate/mw-rabbit.go
 go-gate-y	+= src/gate/mw-mongo.go
 go-gate-y	+= src/gate/balancer.go
 go-gate-y	+= src/gate/main.go
+go-gate-y	+= src/gate/runner.go
 go-gate-y	+= src/gate/mq.go
 go-gate-y	+= src/gate/event.go
 go-gate-y	+= src/gate/runtime.go
