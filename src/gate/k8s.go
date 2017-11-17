@@ -415,6 +415,14 @@ func swk8sRun(conf *YAMLConf, fn *FunctionDesc, fi *FnInst) error {
 	return err
 }
 
+var podStates = map[int]string {
+	swy.DBPodStateNak: "Nak",
+	swy.DBPodStateQue: "Que",
+	swy.DBPodStateRdy: "Rdy",
+	swy.DBPodStateTrm: "Trm",
+	swy.DBPodStateBsy: "Bsy",
+}
+
 func genBalancerPod(pod *v1.Pod) (BalancerPod) {
 	var r  BalancerPod = BalancerPod {
 		DepName:	pod.ObjectMeta.Labels["deployment"],
@@ -488,7 +496,9 @@ func swk8sPodUpd(obj_old, obj_new interface{}) {
 
 	if pod_old.State != swy.DBPodStateRdy {
 		if pod_new.State == swy.DBPodStateRdy {
-			log.Debugf("POD %s (%s) up deploy %s", pod_new.UID, pod_new.WdogAddr, pod_new.DepName)
+			log.Debugf("POD %s (%s) up (%s->%s) deploy %s", pod_new.UID, pod_new.WdogAddr,
+					podStates[pod_old.State], podStates[pod_new.State],
+					pod_new.DepName)
 
 			err = BalancerPodAdd(pod_new.DepName, pod_new.UID, pod_new.WdogAddr)
 			if err != nil {
@@ -501,7 +511,9 @@ func swk8sPodUpd(obj_old, obj_new interface{}) {
 		}
 	} else {
 		if pod_new.State != swy.DBPodStateRdy {
-			log.Debugf("POD %s down deploy %s", pod_new.UID, pod_new.DepName)
+			log.Debugf("POD %s down (%s->%s) deploy %s", pod_new.UID,
+					podStates[pod_old.State], podStates[pod_new.State],
+					pod_new.DepName)
 
 			err = BalancerPodDel(pod_new.DepName, pod_new.UID)
 			if err != nil  && err != mgo.ErrNotFound {
