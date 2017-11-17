@@ -72,7 +72,7 @@ func CheckName(name string, limit int) error {
 	return nil
 }
 
-func CheckNameUsr(name string) error {
+func CheckFunName(name string) error {
 	return CheckName(name, MaxNameLengthUsr)
 }
 
@@ -102,7 +102,7 @@ func ValidateProjectAndFuncName(project string, funcname string) error {
 
 	err = CheckProjectId(project)
 	if err == nil {
-		err = CheckNameUsr(funcname)
+		err = CheckFunName(funcname)
 	}
 
 	return err

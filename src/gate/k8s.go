@@ -356,7 +356,7 @@ func swk8sRun(conf *YAMLConf, fn *FunctionDesc, fi *FnInst) error {
 			HostNetwork:	hostnw,
 			Containers:	[]v1.Container{
 				{
-					Name:		fn.SwoId.Str(),
+					Name:		fn.Name,
 					Image:		rt.Image,
 					Command:	[]string{conf.Wdog.CtPath},
 					Ports:		ctPorts,

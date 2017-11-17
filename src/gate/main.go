@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"crypto/sha256"
 	"encoding/hex"
-	"regexp"
 	"io/ioutil"
 	"net/http"
 	"strings"
@@ -58,7 +57,14 @@ func makeSwoId(tennant, project, name string) *SwoId {
 }
 
 func (id *SwoId) Str () string {
-	return swyMapName(id.Tennant + "_" + id.Project + "_" + id.Name)
+	rv := id.Tennant
+	if id.Project != "" {
+		rv += "/" + id.Project
+		if id.Name != "" {
+			rv += "/" + id.Name
+		}
+	}
+	return rv
 }
 
 type FunctionDesc struct {
@@ -80,12 +86,6 @@ type FunctionDesc struct {
 	OneShot		bool		`bson:"oneshot"`
 }
 
-var swyre = regexp.MustCompile("[._]")
-
-func swyMapName(name string) string {
-	return swyre.ReplaceAllString(name, "-")
-}
-
 var noCommit = "00000000"
 
 func (fi *FnInst)DepName() string {
@@ -93,7 +93,6 @@ func (fi *FnInst)DepName() string {
 	if fi.Build {
 		dn += "-bld"
 	}
-
 	return dn
 }
 
