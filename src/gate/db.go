@@ -11,7 +11,6 @@ import (
 )
 
 const (
-	DBName		= "swifty"
 	DBColFunc	= "Function"
 	DBColMware	= "Mware"
 	DBColLogs	= "Logs"
@@ -29,7 +28,7 @@ type DBLogRec struct {
 }
 
 var dbSession *mgo.Session
-var dbDBName string = DBName
+var dbDBName string
 
 type dbMwareStateArgs struct {
 	Col	*mgo.Collection
@@ -647,5 +646,4 @@ func dbConnect(conf *YAMLConf) error {
 func dbDisconnect() {
 	dbSession.Close()
 	dbSession = nil
-	dbDBName = DBName
 }
