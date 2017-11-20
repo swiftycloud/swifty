@@ -1,6 +1,6 @@
 ---
 db:
-        name: "swifty"
+        state: "swifty"
         address: "127.0.0.1:27017"
         user: "swifty"
         password: "1q2w3e"

@@ -28,7 +28,7 @@ type DBLogRec struct {
 }
 
 var dbSession *mgo.Session
-var dbDBName string
+var dbState string
 
 type dbMwareStateArgs struct {
 	Col	*mgo.Collection
@@ -44,7 +44,7 @@ func dbMwareSetStateCb(data interface{}) error {
 func dbMwareSetState(id *SwoId, state int) error {
 	err := swy.Retry10(dbMwareSetStateCb,
 			&dbMwareStateArgs{
-				Col:	dbSession.DB(dbDBName).C(DBColMware),
+				Col:	dbSession.DB(dbState).C(DBColMware),
 				Q:	bson.M{"tennant": id.Tennant, "project": id.Project, "name": id.Name,
 						"state": bson.M{"$ne": state}},
 				Ch:	bson.M{"$set": bson.M{"state": state}},
@@ -65,7 +65,7 @@ func dbMwareUnlock(id *SwoId) error {
 }
 
 func dbMwareAddRefOrInsertLocked(id *SwoId) (bool, MwareDesc, error) {
-	c := dbSession.DB(dbDBName).C(DBColMware)
+	c := dbSession.DB(dbState).C(DBColMware)
 	v := MwareDesc{}
 
 	// It locks the record if new added
@@ -100,12 +100,12 @@ func dbMwareAddRefOrInsertLocked(id *SwoId) (bool, MwareDesc, error) {
 }
 
 func dbMwareRemove(mwd MwareDesc) error {
-	c := dbSession.DB(dbDBName).C(DBColMware)
+	c := dbSession.DB(dbState).C(DBColMware)
 	return c.Remove(bson.M{"_id": mwd.ObjID})
 }
 
 func dbMwareDecRefLocked(id *SwoId) (bool, MwareDesc, error) {
-	c := dbSession.DB(dbDBName).C(DBColMware)
+	c := dbSession.DB(dbState).C(DBColMware)
 	v := MwareDesc{}
 
 	change := mgo.Change{
@@ -135,7 +135,7 @@ func dbMwareDecRefLocked(id *SwoId) (bool, MwareDesc, error) {
 }
 
 func dbMwareRemoveLocked(mwd MwareDesc) error {
-	c := dbSession.DB(dbDBName).C(DBColMware)
+	c := dbSession.DB(dbState).C(DBColMware)
 	querier := bson.M{	"tennant": mwd.Tennant,
 				"project": mwd.Project,
 				"name":    mwd.Name,
@@ -150,7 +150,7 @@ func dbMwareRemoveLocked(mwd MwareDesc) error {
 }
 
 func dbMwareAddSettingsUnlock(mwd MwareDesc, settings []byte) error {
-	c := dbSession.DB(dbDBName).C(DBColMware)
+	c := dbSession.DB(dbState).C(DBColMware)
 	v := MwareDesc{}
 
 	// It unlocks the record
@@ -183,7 +183,7 @@ func dbMwareAddSettingsUnlock(mwd MwareDesc, settings []byte) error {
 }
 
 func dbMwareGetItem(id *SwoId) (MwareDesc, error) {
-	c := dbSession.DB(dbDBName).C(DBColMware)
+	c := dbSession.DB(dbState).C(DBColMware)
 	v := MwareDesc{}
 	err := c.Find(bson.M{"tennant": id.Tennant, "project": id.Project, "name": id.Name}).One(&v)
 	return v, err
@@ -191,13 +191,13 @@ func dbMwareGetItem(id *SwoId) (MwareDesc, error) {
 
 func dbMwareGetAll(id *SwoId) ([]MwareDesc, error) {
 	var recs []MwareDesc
-	c := dbSession.DB(dbDBName).C(DBColMware)
+	c := dbSession.DB(dbState).C(DBColMware)
 	err := c.Find(bson.M{"tennant": id.Tennant, "project": id.Project}).All(&recs)
 	return recs, err
 }
 
 func dbMwareResolveClient(client string) (MwareDesc, error) {
-	c := dbSession.DB(dbDBName).C(DBColMware)
+	c := dbSession.DB(dbState).C(DBColMware)
 	rec := MwareDesc{}
 	err := c.Find(bson.M{"client": client}).One(&rec)
 	return rec, err
@@ -236,19 +236,19 @@ func dbGetPodStateString(status int) string {
 }
 
 func dbFuncFindOne(q bson.M) (v FunctionDesc, err error) {
-	c := dbSession.DB(dbDBName).C(DBColFunc)
+	c := dbSession.DB(dbState).C(DBColFunc)
 	err = c.Find(q).One(&v)
 	return
 }
 
 func dbFuncFindAll(q bson.M) (vs []FunctionDesc, err error) {
-	c := dbSession.DB(dbDBName).C(DBColFunc)
+	c := dbSession.DB(dbState).C(DBColFunc)
 	err = c.Find(q).All(&vs)
 	return
 }
 
 func dbFuncUpdate(q, ch bson.M) (error) {
-	c := dbSession.DB(dbDBName).C(DBColFunc)
+	c := dbSession.DB(dbState).C(DBColFunc)
 	return c.Update(q, ch)
 }
 
@@ -340,7 +340,7 @@ func dbFuncUpdatePulled(fn *FunctionDesc) error {
 
 func dbFuncAdd(desc *FunctionDesc) error {
 	desc.Index = desc.Cookie
-	c := dbSession.DB(dbDBName).C(DBColFunc)
+	c := dbSession.DB(dbState).C(DBColFunc)
 	err := c.Insert(desc)
 	if err != nil {
 		log.Errorf("dbFuncAdd: Can't add function %v: %s",
@@ -351,12 +351,12 @@ func dbFuncAdd(desc *FunctionDesc) error {
 }
 
 func dbFuncRemove(fn *FunctionDesc) {
-	c := dbSession.DB(dbDBName).C(DBColFunc)
+	c := dbSession.DB(dbState).C(DBColFunc)
 	c.Remove(bson.M{"index": fn.Cookie});
 }
 
 func logSaveResult(fn *FunctionDesc, event, stdout, stderr string) {
-	c := dbSession.DB(dbDBName).C(DBColLogs)
+	c := dbSession.DB(dbState).C(DBColLogs)
 	text := fmt.Sprintf("out: [%s], err: [%s]", stdout, stderr)
 	c.Insert(DBLogRec{
 		SwoId:		fn.SwoId,
@@ -368,7 +368,7 @@ func logSaveResult(fn *FunctionDesc, event, stdout, stderr string) {
 }
 
 func logSaveEvent(fn *FunctionDesc, event, text string) {
-	c := dbSession.DB(dbDBName).C(DBColLogs)
+	c := dbSession.DB(dbState).C(DBColLogs)
 	c.Insert(DBLogRec{
 		SwoId:		fn.SwoId,
 		Commit:		fn.Src.Commit,
@@ -380,13 +380,13 @@ func logSaveEvent(fn *FunctionDesc, event, text string) {
 
 func logGetFor(id *SwoId) ([]DBLogRec, error) {
 	var logs []DBLogRec
-	c := dbSession.DB(dbDBName).C(DBColLogs)
+	c := dbSession.DB(dbState).C(DBColLogs)
 	err := c.Find(bson.M{"tennant": id.Tennant, "project": id.Project, "function": id.Name}).All(&logs)
 	return logs, err
 }
 
 func logRemove(fn *FunctionDesc) {
-	c := dbSession.DB(dbDBName).C(DBColLogs)
+	c := dbSession.DB(dbState).C(DBColLogs)
 	_, err := c.RemoveAll(bson.M{"tennant": fn.Tennant, "project": fn.Project, "function": fn.Name})
 	if err != nil {
 		log.Errorf("logs %s.%s remove error: %s", fn.Project, fn.Name, err.Error())
@@ -396,7 +396,7 @@ func logRemove(fn *FunctionDesc) {
 func dbBalancerPodFind(link *BalancerLink, uid string) (*BalancerRS) {
 	var v BalancerRS
 
-	c := dbSession.DB(dbDBName).C(DBColBalancerRS)
+	c := dbSession.DB(dbState).C(DBColBalancerRS)
 	err := c.Find(bson.M{
 			"balancerid":	link.ObjID,
 			"uid":		uid,
@@ -416,7 +416,7 @@ func dbBalancerPodFind(link *BalancerLink, uid string) (*BalancerRS) {
 func dbBalancerPodFindAll(link *BalancerLink) ([]BalancerRS) {
 	var v []BalancerRS
 
-	c := dbSession.DB(dbDBName).C(DBColBalancerRS)
+	c := dbSession.DB(dbState).C(DBColBalancerRS)
 	err := c.Find(bson.M{
 			"balancerid": link.ObjID,
 		}).All(&v)
@@ -433,7 +433,7 @@ func dbBalancerPodFindAll(link *BalancerLink) ([]BalancerRS) {
 }
 
 func dbBalancerPodAdd(link *BalancerLink, uid, wdogaddr string) (error) {
-	c := dbSession.DB(dbDBName).C(DBColBalancerRS)
+	c := dbSession.DB(dbState).C(DBColBalancerRS)
 	err := c.Insert(bson.M{
 			"balancerid":	link.ObjID,
 			"uid":		uid,
@@ -453,7 +453,7 @@ func dbBalancerPodAdd(link *BalancerLink, uid, wdogaddr string) (error) {
 }
 
 func dbBalancerPodDel(link *BalancerLink, uid string) (error) {
-	c := dbSession.DB(dbDBName).C(DBColBalancerRS)
+	c := dbSession.DB(dbState).C(DBColBalancerRS)
 	err := c.Remove(bson.M{
 			"balancerid":	link.ObjID,
 			"uid":	uid,
@@ -475,7 +475,7 @@ func dbBalancerPodDel(link *BalancerLink, uid string) (error) {
 }
 
 func dbBalancerPodDelAll(link *BalancerLink) (error) {
-	c := dbSession.DB(dbDBName).C(DBColBalancerRS)
+	c := dbSession.DB(dbState).C(DBColBalancerRS)
 	err := c.Remove(bson.M{
 			"balancerid":	link.ObjID,
 		})
@@ -493,7 +493,7 @@ func dbBalancerPodDelAll(link *BalancerLink) (error) {
 
 func dbBalancerOpRS(link *BalancerLink, update bson.M) (error) {
 	var v BalancerLink
-	c := dbSession.DB(dbDBName).C(DBColBalancer)
+	c := dbSession.DB(dbState).C(DBColBalancer)
 	change := mgo.Change{
 		Upsert:		false,
 		Remove:		false,
@@ -530,7 +530,7 @@ func dbBalancerRefDecRS(link *BalancerLink) (error) {
 func dbBalancerLinkFind(depname string) (*BalancerLink) {
 	var link BalancerLink
 
-	c := dbSession.DB(dbDBName).C(DBColBalancer)
+	c := dbSession.DB(dbState).C(DBColBalancer)
 	err := c.Find(bson.M{"depname": depname}).One(&link)
 	if err != nil {
 		if err == mgo.ErrNotFound {
@@ -547,7 +547,7 @@ func dbBalancerLinkFind(depname string) (*BalancerLink) {
 func dbBalancerLinkFindAll() ([]BalancerLink, error) {
 	var links []BalancerLink
 
-	c := dbSession.DB(dbDBName).C(DBColBalancer)
+	c := dbSession.DB(dbState).C(DBColBalancer)
 	err := c.Find(bson.M{}).All(&links)
 	if err != nil {
 		if err != mgo.ErrNotFound {
@@ -560,7 +560,7 @@ func dbBalancerLinkFindAll() ([]BalancerLink, error) {
 }
 
 func dbBalancerLinkAdd(link *BalancerLink) (error) {
-	c := dbSession.DB(dbDBName).C(DBColBalancer)
+	c := dbSession.DB(dbState).C(DBColBalancer)
 	err := c.Insert(bson.M{
 			"depname":	link.DepName,
 			"addr":		link.Addr,
@@ -576,7 +576,7 @@ func dbBalancerLinkAdd(link *BalancerLink) (error) {
 }
 
 func dbBalancerLinkDel(link *BalancerLink) (error) {
-	c := dbSession.DB(dbDBName).C(DBColBalancer)
+	c := dbSession.DB(dbState).C(DBColBalancer)
 	err := c.Remove(bson.M{
 			"depname":	link.DepName,
 		})
@@ -591,13 +591,13 @@ func dbBalancerLinkDel(link *BalancerLink) (error) {
 }
 
 func dbProjectListAll(id *SwoId) (fn []string, mw []string, err error) {
-	c := dbSession.DB(dbDBName).C(DBColFunc)
+	c := dbSession.DB(dbState).C(DBColFunc)
 	err = c.Find(bson.M{"tennant": id.Tennant}).Distinct("project", &fn)
 	if err != nil {
 		return
 	}
 
-	c = dbSession.DB(dbDBName).C(DBColMware)
+	c = dbSession.DB(dbState).C(DBColMware)
 	err = c.Find(bson.M{"tennant": id.Tennant}).Distinct("project", &mw)
 	return
 }
@@ -605,7 +605,7 @@ func dbProjectListAll(id *SwoId) (fn []string, mw []string, err error) {
 func dbConnect(conf *YAMLConf) error {
 	info := mgo.DialInfo{
 		Addrs:		[]string{conf.DB.Addr},
-		Database:	conf.DB.Name,
+		Database:	conf.DB.StateDB,
 		Timeout:	60 * time.Second,
 		Username:	conf.DB.User,
 		Password:	conf.DB.Pass}
@@ -613,7 +613,7 @@ func dbConnect(conf *YAMLConf) error {
 	session, err := mgo.DialWithInfo(&info);
 	if err != nil {
 		log.Errorf("dbConnect: Can't dial to %s with db %s (%s)",
-				conf.DB.Addr, conf.DB.Name, err.Error())
+				conf.DB.Addr, conf.DB.StateDB, err.Error())
 		return err
 	}
 
@@ -621,7 +621,7 @@ func dbConnect(conf *YAMLConf) error {
 	session.SetMode(mgo.Monotonic, true)
 
 	dbSession = session.Copy()
-	dbDBName = conf.DB.Name
+	dbState = conf.DB.StateDB
 
 	// Make sure the indices are present
 	index := mgo.Index{
@@ -631,13 +631,13 @@ func dbConnect(conf *YAMLConf) error {
 			Sparse:		true}
 
 	index.Key = []string{"index"}
-	dbSession.DB(dbDBName).C(DBColFunc).EnsureIndex(index)
+	dbSession.DB(dbState).C(DBColFunc).EnsureIndex(index)
 
 	index.Key = []string{"addr", "depname"}
-	dbSession.DB(dbDBName).C(DBColBalancer).EnsureIndex(index)
+	dbSession.DB(dbState).C(DBColBalancer).EnsureIndex(index)
 
 	index.Key = []string{"uid"}
-	dbSession.DB(dbDBName).C(DBColBalancerRS).EnsureIndex(index)
+	dbSession.DB(dbState).C(DBColBalancerRS).EnsureIndex(index)
 
 	return nil
 

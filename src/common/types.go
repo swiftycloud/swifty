@@ -1,7 +1,7 @@
 package swy
 
 type YAMLConfDB struct {
-	Name		string		`yaml:"name"`
+	StateDB		string		`yaml:"state"`
 	Addr		string		`yaml:"address"`
 	User		string		`yaml:"user"`
 	Pass		string		`yaml:"password"`
