@@ -6,7 +6,7 @@ db:
         password: "1q2w3e"
 keystone:
         address: "192.168.122.197:5000"
-        domain: "default"
+        domain: "swifty"
 daemon:
         address: "192.168.122.211:8686"
         view: "/home/swifty/src/gate/view"

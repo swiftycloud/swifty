@@ -9,7 +9,7 @@ import (
 )
 
 type KeystoneDomain struct {
-	Id		string			`json:"id"`
+	Id		string			`json:"id,omitempty"`
 	Name		string			`json:"name,omitempty"`
 }
 
@@ -112,7 +112,7 @@ func KeystoneAuthWithPass(conf *YAMLConfKeystone, username, password string) (st
 				Password: &KeystonePassword{
 					User: KeystoneUser{
 						Domain: KeystoneDomain {
-							Id: conf.Domain,
+							Name: conf.Domain,
 						},
 						Name: username,
 						Password: password,
@@ -123,6 +123,16 @@ func KeystoneAuthWithPass(conf *YAMLConfKeystone, username, password string) (st
 	}
 
 	return token, err
+}
+
+func ksRoleHas(resp *KeystoneAuthResp, name string) bool {
+	for _, role := range resp.Token.Roles {
+		if role.Name == name {
+			return true
+		}
+	}
+
+	return false
 }
 
 func KeystoneVerify(conf *YAMLConfKeystone, token string) (string, int) {
@@ -156,7 +166,7 @@ func KeystoneVerify(conf *YAMLConfKeystone, token string) (string, int) {
 	 * to do anything with everything.
 	 */
 
-	if len(out.Token.Roles) != 1 || out.Token.Roles[0].Name != "swifty.owner" {
+	if !ksRoleHas(&out, "swifty.owner") {
 		log.Error("Error in roles -- need a swifty.owner one")
 		return "", http.StatusForbidden
 	}
