@@ -184,3 +184,27 @@ func KeystoneVerify(addr, token, role string) (string, int) {
 
 	return out.Token.Project.Name, 0
 }
+
+func KeystoneAuthWithPass(addr, domain, user, pass string) (string, error) {
+	req := KeystoneReq {
+		Type:		"POST",
+		Addr:		addr,
+		URL:		"auth/tokens",
+		Succ:		201,
+	}
+
+	err := KeystoneMakeReq(&req, &KeystoneAuthReq {
+		Auth: KeystoneAuth{
+			Identity: KeystoneIdentity{
+				Methods: []string{"password"},
+				Password: &KeystonePassword{
+					User: KeystoneUser{
+						Domain: &KeystoneDomain {
+							Name: domain,
+						},
+						Name: user,
+						Password: pass,
+					}, }, }, },
+				}, nil)
+	return req.Token, err
+}
