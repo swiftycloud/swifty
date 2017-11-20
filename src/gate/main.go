@@ -287,7 +287,8 @@ func handleUserLogin(w http.ResponseWriter, r *http.Request) {
 
 	log.Debugf("Try to login user %s", params.UserName)
 
-	token, err = KeystoneAuthWithPass(&conf.Keystone, params.UserName, params.Password)
+	token, err = swy.KeystoneAuthWithPass(conf.Keystone.Addr, conf.Keystone.Domain,
+				params.UserName, params.Password)
 	if err != nil {
 		resp = http.StatusUnauthorized
 		goto out
@@ -314,7 +315,7 @@ func handleGenericReq(r *http.Request, params interface{}) (string, int, error) 
 		return "", http.StatusUnauthorized, fmt.Errorf("Auth token not provided")
 	}
 
-	tennant, code := KeystoneVerify(&conf.Keystone, token)
+	tennant, code := swy.KeystoneVerify(conf.Keystone.Addr, token, "swifty.owner")
 	if tennant == "" {
 		return "", code, fmt.Errorf("Keystone authentication error")
 	}
