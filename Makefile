@@ -55,13 +55,20 @@ go-gate-y	+= src/gate/event.go
 go-gate-y	+= src/gate/runtime.go
 go-gate-y	+= src/gate/repo.go
 go-gate-y	+= src/gate/funcurl.go
-go-gate-y	+= src/gate/auth.go
 go-gate-y	+= src/gate/stats.go
 
 swy-gate: $(go-gate-y) .FORCE
 	$(call msg-gen,$@)
 	$(Q) $(GO) $(GO-BUILD-OPTS) -o $@ $(go-gate-y)
 all-y += swy-gate
+
+go-admd-y	+= src/admd/main.go
+go-admd-y	+= src/admd/ks.go
+
+swy-admd: $(go-admd-y) .FORCE
+	$(call msg-gen,$@)
+	$(Q) $(GO) $(GO-BUILD-OPTS) -o $@ $(go-admd-y)
+all-y += swy-admd
 
 go-wdog-y	+= src/wdog/main.go
 
@@ -117,6 +124,7 @@ help:
 	@echo '      docs            - Build documentation'
 	@echo '    * swy-gate        - Build gate'
 	@echo '    * swy-wdog        - Build watchdog'
+	@echo '    * swy-admd        - Build adm daemon
 	@echo '      swifty/python   - Build swifty/python docker image'
 	@echo '      swifty/golang   - Build swifty/golang docker image'
 	@echo '      swifty/swift    - Build swifty/swift docker image'
@@ -203,6 +211,8 @@ clean:
 	$(Q) $(RM) swy-gate
 	$(call msg-clean,swy-wdog)
 	$(Q) $(RM) swy-wdog
+	$(call msg-clean,swy-admd)
+	$(Q) $(RM) swy-admd
 	$(Q) $(MAKE) -C docs clean
 .PHONY: clean
 
