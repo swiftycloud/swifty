@@ -124,7 +124,7 @@ help:
 	@echo '      docs            - Build documentation'
 	@echo '    * swy-gate        - Build gate'
 	@echo '    * swy-wdog        - Build watchdog'
-	@echo '    * swy-admd        - Build adm daemon
+	@echo '    * swy-admd        - Build adm daemon'
 	@echo '      swifty/python   - Build swifty/python docker image'
 	@echo '      swifty/golang   - Build swifty/golang docker image'
 	@echo '      swifty/swift    - Build swifty/swift docker image'
