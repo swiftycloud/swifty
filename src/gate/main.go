@@ -673,10 +673,7 @@ func handleFunctionInfo(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if (fn.URLCall) {
-		link := dbBalancerLinkFind(fn.Inst().DepName())
-		if link != nil {
-			url = link.VIP() + "/" + fn.Cookie
-		}
+		url = "/call/" + fn.Cookie
 	}
 
 	stats = statsGet(&fn)
@@ -753,6 +750,61 @@ func handleFunctionLogs(w http.ResponseWriter, r *http.Request) {
 out:
 	http.Error(w, err.Error(), code)
 	log.Errorf("logs error %s", err.Error())
+}
+
+func fnCallable(fn *FunctionDesc) bool {
+	return fn.URLCall && (fn.State == swy.DBFuncStateRdy || fn.State == swy.DBFuncStateUpd)
+}
+
+func makeArgMap(r *http.Request) string {
+	ret := "{"
+
+	for k, v := range r.URL.Query() {
+		if len(v) < 1 {
+			continue
+		}
+
+		ret += "\"" + k + "\"=\"" + v[0] + "\""
+	}
+
+	return ret + "}"
+}
+
+func handleFunctionCall(w http.ResponseWriter, r *http.Request) {
+	var stdout, stderr string
+	var fn_code int
+	var arg_map string
+
+	vars := mux.Vars(r)
+	fnId := vars["fnid"]
+
+	fn, err := dbFuncFindByCookie(fnId)
+	if err != nil {
+		goto out
+	}
+
+	if !fnCallable(&fn) {
+		goto out
+	}
+
+	arg_map = makeArgMap(r)
+
+	fn_code, stdout, stderr, err = doRun(fn.Inst(), "run", append(RtRunCmd(&fn.Code), arg_map))
+	if err != nil {
+		goto out
+	}
+
+	err = swy.HTTPMarshalAndWrite(w, swyapi.FunctionRunResult{
+		Code:		fn_code,
+		Stdout:		stdout,
+		Stderr:		stderr,
+	})
+
+	if err == nil {
+		return
+	}
+out:
+	http.Error(w, err.Error(), http.StatusBadRequest)
 }
 
 func handleFunctionRun(w http.ResponseWriter, r *http.Request) {
@@ -1086,6 +1138,7 @@ func main() {
 	r.HandleFunc("/v1/function/list",		handleFunctionList)
 	r.HandleFunc("/v1/function/info",		handleFunctionInfo)
 	r.HandleFunc("/v1/function/logs",		handleFunctionLogs)
+	r.HandleFunc("/call/{fnid}",			handleFunctionCall)
 
 	r.HandleFunc("/v1/mware/add",			handleMwareAdd)
 	r.HandleFunc("/v1/mware/list",			handleMwareList)

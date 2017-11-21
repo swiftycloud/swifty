@@ -256,6 +256,10 @@ func dbFuncFind(id *SwoId) (FunctionDesc, error) {
 	return dbFuncFindOne(bson.M{"tennant": id.Tennant, "project": id.Project, "name": id.Name})
 }
 
+func dbFuncFindByCookie(cookie string) (FunctionDesc, error) {
+	return dbFuncFindOne(bson.M{"index": cookie})
+}
+
 func dbFuncFindStates(id *SwoId, states []int) (FunctionDesc, error) {
 	return dbFuncFindOne(bson.M{"tennant": id.Tennant, "project": id.Project, "name": id.Name,
 		"state": bson.M{"$in": states}})
