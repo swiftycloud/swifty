@@ -22,6 +22,7 @@ import (
 type FnCodeDesc struct {
 	Lang		string		`bson:"lang"`
 	Script		string		`bson:"script"`
+	Function	string		`bson:"function"`
 	Env		[]string	`bson:"env"`
 }
 
@@ -75,7 +76,7 @@ type FunctionDesc struct {
 	Cookie		string		`bson:"cookie"`		// Some "unique" identifier
 	State		int		`bson:"state"`		// Function state
 	CronID		int		`bson:"cronid"`		// ID of cron trigger (if present)
-	URLCall		bool		`bson:"urlcall"`	// Funciton is callable via direct URL
+	URLCall		bool		`bson:"urlcall"`	// Function is callable via direct URL
 	Event		FnEventDesc	`bson:"event"`
 	Mware		[]string	`bson:"mware"`
 	Code		FnCodeDesc	`bson:"code"`
@@ -211,7 +212,7 @@ func genFunctionDescJSON(conf *YAMLConf, fn *FunctionDesc, fi *FnInst) string {
 	var err error
 
 	jdata, err = json.Marshal(&swyapi.SwdFunctionDesc{
-				Dir:		RtGetWdogPath(&fn.Code),
+				Dir:		RtWdir(&fn.Code),
 				Stats:		statsPodPath,
 				PodToken:	fn.Cookie,
 				URLCall:	fn.URLCall,
@@ -408,6 +409,7 @@ func getFunctionDesc(tennant string, p_add *swyapi.FunctionAdd) *FunctionDesc {
 		Code:		FnCodeDesc {
 			Lang:		p_add.Code.Lang,
 			Script:		p_add.Code.Script,
+			Function:	p_add.Code.Function,
 			Env:		p_add.Code.Env,
 		},
 	}
@@ -688,6 +690,7 @@ func handleFunctionInfo(w http.ResponseWriter, r *http.Request) {
 			Code:		swyapi.FunctionCode{
 				Lang:		fn.Code.Lang,
 				Script:		fn.Code.Script,
+				Function:	fn.Code.Function,
 				Env:		fn.Code.Env,
 			},
 			Event:		swyapi.FunctionEvent{

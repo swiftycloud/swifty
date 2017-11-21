@@ -154,10 +154,6 @@ func detect_language(repo string) string {
 	panic("can't detect function language")
 }
 
-func detect_script(repo string) string {
-	panic("can't detect function script")
-}
-
 func add_function(name, lang, src, run, mwares, event string) {
 	sources := swyapi.FunctionSources{}
 	code := swyapi.FunctionCode{}
@@ -176,6 +172,7 @@ func add_function(name, lang, src, run, mwares, event string) {
 		fmt.Printf("Will add git repo %s\n", repo)
 		sources.Type = "git"
 		sources.Repo = repo
+		code.Script = run
 	} else {
 		data, err := ioutil.ReadFile(src)
 		if err != nil {
@@ -187,7 +184,7 @@ func add_function(name, lang, src, run, mwares, event string) {
 		fmt.Printf("Will add file %s\n", src)
 		sources.Type = "code"
 		sources.Code = enc
-		run = ""
+		code.Function = run
 	}
 
 	if lang == "auto" {
@@ -196,11 +193,6 @@ func add_function(name, lang, src, run, mwares, event string) {
 
 	code.Lang = lang
 
-	if run == "auto" {
-		run = detect_script(src)
-	}
-
-	code.Script = run
 
 	mw := []swyapi.MwareItem{}
 	if mwares != "" {

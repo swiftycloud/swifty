@@ -365,7 +365,7 @@ func swk8sRun(conf *YAMLConf, fn *FunctionDesc, fi *FnInst) error {
 						{
 							Name:		"code",
 							ReadOnly:	false,
-							MountPath:	RtGetWdogPath(&fn.Code),
+							MountPath:	RtCodePath(&fn.Code),
 						},
 						{
 							Name:		"stats",

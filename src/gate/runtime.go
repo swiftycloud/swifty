@@ -1,38 +1,80 @@
 package main
 
+import (
+	"os"
+)
+
 type getRunCmd func(*FnCodeDesc) []string
+type prepSources func(*FnCodeDesc, string) error
+type getPath func(*FnCodeDesc) string
 
 type rt_info struct {
-	WPath	string
-	Ext	string
-	Build	[]string
-	Run	getRunCmd
+	Wdir		getPath
+	CodePath	string
+	Ext		string
+	Build		[]string
+	Run		getRunCmd
+	Prep		prepSources
+}
+
+func pyPrepSources(scr *FnCodeDesc, dir string) error {
+	if scr.Function == "" {
+		return nil
+	}
+
+	/* For scripts with sources need to prepare them for import */
+	nf, err := os.Create(dir + "/__init__.py")
+	if err != nil {
+		return err
+	}
+
+	scr.Script = "main.py"
+	nf.Close()
+	return nil
+}
+
+func pyWdir(scr *FnCodeDesc) string {
+	if scr.Function == "" {
+		return "/function/code"
+	} else {
+		return "/function"
+	}
+}
+
+func pyRun(scr *FnCodeDesc) []string {
+	if scr.Function == "" {
+		return []string{"python", scr.Script}
+	} else {
+		return []string{"python", "main.py", scr.Function}
+	}
 }
 
 var py_info = rt_info {
-	WPath: "/function",
-	Ext:	"py",
-	Run:	func(scr *FnCodeDesc) []string { return []string{"python", scr.Script} },
+	Ext:		"py",
+	CodePath:	"/function/code",
+	Run:		pyRun,
+	Prep:		pyPrepSources,
+	Wdir:		pyWdir,
 }
 
 var golang_info = rt_info {
-	WPath:	"/go/src/function",
-	Ext:	"go",
-	Build:	[]string{"go", "build"},
-	Run:	func(*FnCodeDesc) []string { return []string{"function"} },
+	Ext:		"go",
+	CodePath:	"/go/src/function",
+	Build:		[]string{"go", "build"},
+	Run:		func(*FnCodeDesc) []string { return []string{"function"} },
 }
 
 var swift_info = rt_info {
-	WPath:	"/function",
-	Ext:	"swift",
-	Build:	[]string{"swift", "build"},
-	Run:	func(scr *FnCodeDesc) []string { return []string{"./.build/debug/" + scr.Script} },
+	Ext:		"swift",
+	CodePath:	"/function",
+	Build:		[]string{"swift", "build"},
+	Run:		func(scr *FnCodeDesc) []string { return []string{"./.build/debug/" + scr.Script} },
 }
 
 var nodejs_info = rt_info {
-	WPath:	"/function",
-	Ext:	"js",
-	Run:	func(scr *FnCodeDesc) []string { return []string{"node", scr.Script} },
+	Ext:		"js",
+	CodePath:	"/function",
+	Run:		func(scr *FnCodeDesc) []string { return []string{"node", scr.Script} },
 }
 
 var rt_handlers = map[string]*rt_info {
@@ -50,8 +92,19 @@ func RtBuildCmd(scr *FnCodeDesc) []string {
 	return rt_handlers[scr.Lang].Build
 }
 
-func RtGetWdogPath(scr *FnCodeDesc) string {
-	return rt_handlers[scr.Lang].WPath
+/* Path where the watchdog will cd to */
+func RtWdir(scr *FnCodeDesc) string {
+	h := rt_handlers[scr.Lang]
+	if h.Wdir == nil {
+		return h.CodePath
+	} else {
+		return h.Wdir(scr)
+	}
+}
+
+/* Path where the sources would appear in container */
+func RtCodePath(scr *FnCodeDesc) string {
+	return rt_handlers[scr.Lang].CodePath
 }
 
 func RtRunCmd(scr *FnCodeDesc) []string {
@@ -60,6 +113,15 @@ func RtRunCmd(scr *FnCodeDesc) []string {
 
 func RtDefaultScriptName(scr *FnCodeDesc) string {
 	return "script." + rt_handlers[scr.Lang].Ext
+}
+
+func RtPrepareSources(scr *FnCodeDesc, dir string) error {
+	var err error
+	fn := rt_handlers[scr.Lang].Prep
+	if fn != nil {
+		err = fn(scr, dir)
+	}
+	return err
 }
 
 func RtGetFnResources(fn *FunctionDesc) map[string]string {

@@ -34,6 +34,7 @@ type RunCmd struct {
 type FunctionCode struct {
 	Lang		string			`json:"lang"`
 	Script		string			`json:"script,omitempty"`
+	Function	string			`json:"function,omitempty"`
 	Env		[]string		`json:"env"`
 }
 
