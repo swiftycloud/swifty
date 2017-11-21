@@ -127,7 +127,9 @@ func getFileFromReq(fn *FunctionDesc) error {
 		return fmt.Errorf("Error decoding sources")
 	}
 
-	err = ioutil.WriteFile(to + "/" + fn.Code.Run, data, 0600)
+	fn.Code.Script = RtDefaultScriptName(&fn.Code)
+
+	err = ioutil.WriteFile(to + "/" + fn.Code.Script, data, 0600)
 	if err != nil {
 		return fmt.Errorf("Can't write source file")
 	}

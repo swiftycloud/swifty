@@ -21,7 +21,7 @@ import (
 
 type FnCodeDesc struct {
 	Lang		string		`bson:"lang"`
-	Run		string		`bson:"run"`
+	Script		string		`bson:"script"`
 	Env		[]string	`bson:"env"`
 }
 
@@ -407,7 +407,7 @@ func getFunctionDesc(tennant string, p_add *swyapi.FunctionAdd) *FunctionDesc {
 		},
 		Code:		FnCodeDesc {
 			Lang:		p_add.Code.Lang,
-			Run:		p_add.Code.Run,
+			Script:		p_add.Code.Script,
 			Env:		p_add.Code.Env,
 		},
 	}
@@ -687,7 +687,7 @@ func handleFunctionInfo(w http.ResponseWriter, r *http.Request) {
 			URL:		url,
 			Code:		swyapi.FunctionCode{
 				Lang:		fn.Code.Lang,
-				Run:		fn.Code.Run,
+				Script:		fn.Code.Script,
 				Env:		fn.Code.Env,
 			},
 			Event:		swyapi.FunctionEvent{

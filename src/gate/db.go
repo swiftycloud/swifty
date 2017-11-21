@@ -315,6 +315,7 @@ func dbFuncUpdateAdded(fn *FunctionDesc) error {
 		bson.M{"tennant": fn.Tennant, "project": fn.Project, "name": fn.Name},
 		bson.M{"$set": bson.M{
 				"src.commit": fn.Src.Commit,
+				"code.script": fn.Code.Script,
 				"cronid": fn.CronID,
 				"mware": fn.Mware,
 				"oneshot": fn.OneShot,

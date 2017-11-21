@@ -160,6 +160,7 @@ func detect_script(repo string) string {
 
 func add_function(name, lang, src, run, mwares, event string) {
 	sources := swyapi.FunctionSources{}
+	code := swyapi.FunctionCode{}
 
 	st, err := os.Stat(src)
 	if err != nil {
@@ -186,16 +187,20 @@ func add_function(name, lang, src, run, mwares, event string) {
 		fmt.Printf("Will add file %s\n", src)
 		sources.Type = "code"
 		sources.Code = enc
-		run = filepath.Base(src)
+		run = ""
 	}
 
 	if lang == "auto" {
 		lang = detect_language(src)
 	}
 
+	code.Lang = lang
+
 	if run == "auto" {
 		run = detect_script(src)
 	}
+
+	code.Script = run
 
 	mw := []swyapi.MwareItem{}
 	if mwares != "" {
@@ -225,10 +230,7 @@ func add_function(name, lang, src, run, mwares, event string) {
 			Project: conf.Login.Proj,
 			FuncName: name,
 			Sources: sources,
-			Code: swyapi.FunctionCode {
-				Lang: lang,
-				Run: run,
-			},
+			Code: code,
 			Mware: mw,
 			Event: evt,
 		}, nil)

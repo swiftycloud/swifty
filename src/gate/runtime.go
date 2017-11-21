@@ -4,30 +4,35 @@ type getRunCmd func(*FnCodeDesc) []string
 
 type rt_info struct {
 	WPath	string
+	Ext	string
 	Build	[]string
 	Run	getRunCmd
 }
 
 var py_info = rt_info {
 	WPath: "/function",
-	Run:	func(scr *FnCodeDesc) []string { return []string{"python", scr.Run} },
+	Ext:	"py",
+	Run:	func(scr *FnCodeDesc) []string { return []string{"python", scr.Script} },
 }
 
 var golang_info = rt_info {
 	WPath:	"/go/src/function",
+	Ext:	"go",
 	Build:	[]string{"go", "build"},
 	Run:	func(*FnCodeDesc) []string { return []string{"function"} },
 }
 
 var swift_info = rt_info {
 	WPath:	"/function",
+	Ext:	"swift",
 	Build:	[]string{"swift", "build"},
-	Run:	func(scr *FnCodeDesc) []string { return []string{"./.build/debug/" + scr.Run} },
+	Run:	func(scr *FnCodeDesc) []string { return []string{"./.build/debug/" + scr.Script} },
 }
 
 var nodejs_info = rt_info {
 	WPath:	"/function",
-	Run:	func(scr *FnCodeDesc) []string { return []string{"node", scr.Run} },
+	Ext:	"js",
+	Run:	func(scr *FnCodeDesc) []string { return []string{"node", scr.Script} },
 }
 
 var rt_handlers = map[string]*rt_info {
@@ -51,6 +56,10 @@ func RtGetWdogPath(scr *FnCodeDesc) string {
 
 func RtRunCmd(scr *FnCodeDesc) []string {
 	return rt_handlers[scr.Lang].Run(scr)
+}
+
+func RtDefaultScriptName(scr *FnCodeDesc) string {
+	return "script." + rt_handlers[scr.Lang].Ext
 }
 
 func RtGetFnResources(fn *FunctionDesc) map[string]string {
