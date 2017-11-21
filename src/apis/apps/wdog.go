@@ -4,7 +4,6 @@ type SwdFunctionDesc struct {
 	PodToken	string		`json:"podtoken"`
 	Dir		string		`json:"dir"`
 	Stats		string		`json:"stats"`
-	URLCall		bool		`json:"urlcall"`
 }
 
 type SwdStats struct {

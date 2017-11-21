@@ -215,7 +215,6 @@ func genFunctionDescJSON(conf *YAMLConf, fn *FunctionDesc, fi *FnInst) string {
 				Dir:		RtWdir(&fn.Code, fi.Build),
 				Stats:		statsPodPath,
 				PodToken:	fn.Cookie,
-				URLCall:	fn.URLCall,
 			})
 	if err != nil {
 		log.Errorf("marshal error: %s", err.Error())
