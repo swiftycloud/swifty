@@ -310,14 +310,33 @@ func handleGenericReq(r *http.Request, params interface{}) (string, int, error) 
 	if err != nil {
 		return "", http.StatusBadRequest, err
 	}
-	token := r.Header.Get("X-Subject-Token")
+	token := r.Header.Get("X-Auth-Token")
 	if token == "" {
 		return "", http.StatusUnauthorized, fmt.Errorf("Auth token not provided")
 	}
 
-	tennant, code := swy.KeystoneVerify(conf.Keystone.Addr, token, "swifty.owner")
+	var role string
+
+	/*
+	 * Setting X-Relay-Tennant means that it's an admin
+	 * coming to modify the user's setup. In this case we
+	 * need the swifty.admin role. Otherwise it's the
+	 * swifty.owner guy that can only work on his tennant.
+	 */
+	tennant := r.Header.Get("X-Relay-Tennant")
 	if tennant == "" {
+		role = "swifty.owner"
+	} else {
+		role = "swifty.admin"
+	}
+
+	reqTen, code := swy.KeystoneVerify(conf.Keystone.Addr, token, role)
+	if reqTen == "" {
 		return "", code, fmt.Errorf("Keystone authentication error")
+	}
+
+	if tennant == "" {
+		tennant = reqTen
 	}
 
 	return tennant, 0, nil

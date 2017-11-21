@@ -139,7 +139,7 @@ class client:
 	def _req(self, req, body):
 		conn = http.client.HTTPConnection(self._addr)
 		body['project'] = self._project
-		hdrs = { 'X-Subject-Token': self._auth_token, 'Content-Type': 'application/json' }
+		hdrs = { 'X-Auth-Token': self._auth_token, 'Content-Type': 'application/json' }
 		# print('B[%s]' % json.dumps(body))
 		conn.request('POST', req, json.dumps(body), hdrs)
 		return conn.getresponse()

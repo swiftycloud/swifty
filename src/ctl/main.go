@@ -35,7 +35,7 @@ func make_faas_req_x(url string, in interface{}) (*http.Response, error) {
 	var address string = "http://" + conf.Login.Host + ":" + conf.Login.Port + "/v1/" + url
 	var cb swy.HTTPMarshalAndPostCB = func(r *http.Request) error {
 			if conf.Login.Token != "" {
-				r.Header.Set("X-Subject-Token",
+				r.Header.Set("X-Auth-Token",
 						conf.Login.Token)
 			}
 			return nil
