@@ -212,7 +212,7 @@ func genFunctionDescJSON(conf *YAMLConf, fn *FunctionDesc, fi *FnInst) string {
 	var err error
 
 	jdata, err = json.Marshal(&swyapi.SwdFunctionDesc{
-				Dir:		RtWdir(&fn.Code),
+				Dir:		RtWdir(&fn.Code, fi.Build),
 				Stats:		statsPodPath,
 				PodToken:	fn.Cookie,
 				URLCall:	fn.URLCall,

@@ -2,11 +2,13 @@ package main
 
 import (
 	"os"
+	"fmt"
+	"io/ioutil"
 )
 
 type getRunCmd func(*FnCodeDesc) []string
 type prepSources func(*FnCodeDesc, string) error
-type getPath func(*FnCodeDesc) string
+type getPath func(*FnCodeDesc, bool) string
 
 type rt_info struct {
 	Wdir		getPath
@@ -33,7 +35,7 @@ func pyPrepSources(scr *FnCodeDesc, dir string) error {
 	return nil
 }
 
-func pyWdir(scr *FnCodeDesc) string {
+func pyWdir(scr *FnCodeDesc, build bool) string {
 	if scr.Function == "" {
 		return "/function/code"
 	} else {
@@ -57,11 +59,34 @@ var py_info = rt_info {
 	Wdir:		pyWdir,
 }
 
+func goPrepSources(scr *FnCodeDesc, dir string) error {
+	if scr.Function == "" {
+		return nil
+	}
+
+	code := fmt.Sprintf("package swyfn\nfunc Function(args map[string]string) { %s(args) }\n", scr.Function)
+	return ioutil.WriteFile(dir + "/swymain.go", []byte(code), 0444)
+}
+
+func goRun(scr *FnCodeDesc) []string {
+	return []string{"swycode"}
+}
+
+func goWdir(scr *FnCodeDesc, build bool) string {
+	if scr.Function == "" || !build {
+		return "/go/src/swycode"
+	} else {
+		return "/go/src/main"
+	}
+}
+
 var golang_info = rt_info {
 	Ext:		"go",
-	CodePath:	"/go/src/function",
-	Build:		[]string{"go", "build"},
-	Run:		func(*FnCodeDesc) []string { return []string{"function"} },
+	CodePath:	"/go/src/swycode",
+	Build:		[]string{"go", "build", "-o", "../swycode/swycode"},
+	Run:		goRun,
+	Prep:		goPrepSources,
+	Wdir:		goWdir,
 }
 
 var swift_info = rt_info {
@@ -93,12 +118,12 @@ func RtBuildCmd(scr *FnCodeDesc) []string {
 }
 
 /* Path where the watchdog will cd to */
-func RtWdir(scr *FnCodeDesc) string {
+func RtWdir(scr *FnCodeDesc, build bool) string {
 	h := rt_handlers[scr.Lang]
 	if h.Wdir == nil {
 		return h.CodePath
 	} else {
-		return h.Wdir(scr)
+		return h.Wdir(scr, build)
 	}
 }
 
