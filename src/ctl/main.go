@@ -122,7 +122,7 @@ func info_function(project, name string) {
 	var ifo swyapi.FunctionInfo
 	make_faas_req("function/info", swyapi.FunctionID{ Project: project, FuncName: name}, &ifo)
 
-	fmt.Printf("Lang:   %s\n", ifo.Script.Lang)
+	fmt.Printf("Lang:   %s\n", ifo.Code.Lang)
 	fmt.Printf("Commit: %s\n", ifo.Commit[:8])
 	fmt.Printf("State:  %s\n", ifo.State)
 	if len(ifo.Mware) > 0 {
@@ -225,7 +225,7 @@ func add_function(name, lang, src, run, mwares, event string) {
 			Project: conf.Login.Proj,
 			FuncName: name,
 			Sources: sources,
-			Script: swyapi.FunctionScript {
+			Code: swyapi.FunctionCode {
 				Lang: lang,
 				Run: run,
 			},

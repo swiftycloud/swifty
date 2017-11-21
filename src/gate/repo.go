@@ -36,7 +36,7 @@ func checkoutSources(fn *FunctionDesc) error {
 	fn.Src.Commit = stdout.String()
 
 	// Bring the necessary deps
-	err = update_deps(fn.Script.Lang, cloned_to)
+	err = update_deps(cloned_to)
 	if err != nil {
 		goto co_err
 	}
@@ -127,7 +127,7 @@ func getFileFromReq(fn *FunctionDesc) error {
 		return fmt.Errorf("Error decoding sources")
 	}
 
-	err = ioutil.WriteFile(to + "/" + fn.Script.Run, data, 0600)
+	err = ioutil.WriteFile(to + "/" + fn.Code.Run, data, 0600)
 	if err != nil {
 		return fmt.Errorf("Can't write source file")
 	}
@@ -180,7 +180,7 @@ func cleanRepo(fn *FunctionDesc) {
 	swy.DropDir(share_to, sd)
 }
 
-func update_deps(lang, repo_path string) error {
+func update_deps(repo_path string) error {
 	// First -- check git submodules
 	_, err := os.Stat(repo_path + "/.gitmodules")
 	if err == nil {

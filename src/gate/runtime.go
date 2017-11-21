@@ -1,6 +1,6 @@
 package main
 
-type getRunCmd func(*FnScriptDesc) []string
+type getRunCmd func(*FnCodeDesc) []string
 
 type rt_info struct {
 	WPath	string
@@ -10,24 +10,24 @@ type rt_info struct {
 
 var py_info = rt_info {
 	WPath: "/function",
-	Run:	func(scr *FnScriptDesc) []string { return []string{"python", scr.Run} },
+	Run:	func(scr *FnCodeDesc) []string { return []string{"python", scr.Run} },
 }
 
 var golang_info = rt_info {
 	WPath:	"/go/src/function",
 	Build:	[]string{"go", "build"},
-	Run:	func(*FnScriptDesc) []string { return []string{"function"} },
+	Run:	func(*FnCodeDesc) []string { return []string{"function"} },
 }
 
 var swift_info = rt_info {
 	WPath:	"/function",
 	Build:	[]string{"swift", "build"},
-	Run:	func(scr *FnScriptDesc) []string { return []string{"./.build/debug/" + scr.Run} },
+	Run:	func(scr *FnCodeDesc) []string { return []string{"./.build/debug/" + scr.Run} },
 }
 
 var nodejs_info = rt_info {
 	WPath:	"/function",
-	Run:	func(scr *FnScriptDesc) []string { return []string{"node", scr.Run} },
+	Run:	func(scr *FnCodeDesc) []string { return []string{"node", scr.Run} },
 }
 
 var rt_handlers = map[string]*rt_info {
@@ -37,19 +37,19 @@ var rt_handlers = map[string]*rt_info {
 	"nodejs":	&nodejs_info,
 }
 
-func RtBuilding(lang string) bool {
-	return RtBuildCmd(lang) != nil
+func RtBuilding(scr *FnCodeDesc) bool {
+	return RtBuildCmd(scr) != nil
 }
 
-func RtBuildCmd(lang string) []string {
-	return rt_handlers[lang].Build
+func RtBuildCmd(scr *FnCodeDesc) []string {
+	return rt_handlers[scr.Lang].Build
 }
 
-func RtGetWdogPath(fn *FunctionDesc) string {
-	return rt_handlers[fn.Script.Lang].WPath
+func RtGetWdogPath(scr *FnCodeDesc) string {
+	return rt_handlers[scr.Lang].WPath
 }
 
-func RtRunCmd(scr *FnScriptDesc) []string {
+func RtRunCmd(scr *FnCodeDesc) []string {
 	return rt_handlers[scr.Lang].Run(scr)
 }
 

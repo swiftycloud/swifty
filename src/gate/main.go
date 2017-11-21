@@ -19,7 +19,7 @@ import (
 	"../common"
 )
 
-type FnScriptDesc struct {
+type FnCodeDesc struct {
 	Lang		string		`bson:"lang"`
 	Run		string		`bson:"run"`
 	Env		[]string	`bson:"env"`
@@ -78,7 +78,7 @@ type FunctionDesc struct {
 	URLCall		bool		`bson:"urlcall"`	// Funciton is callable via direct URL
 	Event		FnEventDesc	`bson:"event"`
 	Mware		[]string	`bson:"mware"`
-	Script		FnScriptDesc	`bson:"script"`
+	Code		FnCodeDesc	`bson:"code"`
 	Src		FnSrcDesc	`bson:"src"`
 	Size		FnSizeDesc	`bson:"size"`
 	OneShot		bool		`bson:"oneshot"`
@@ -211,7 +211,7 @@ func genFunctionDescJSON(conf *YAMLConf, fn *FunctionDesc, fi *FnInst) string {
 	var err error
 
 	jdata, err = json.Marshal(&swyapi.SwdFunctionDesc{
-				Dir:		RtGetWdogPath(fn),
+				Dir:		RtGetWdogPath(&fn.Code),
 				Stats:		statsPodPath,
 				PodToken:	fn.Cookie,
 				URLCall:	fn.URLCall,
@@ -226,7 +226,7 @@ func genFunctionDescJSON(conf *YAMLConf, fn *FunctionDesc, fi *FnInst) string {
 
 func runFunctionOnce(fn *FunctionDesc) {
 	log.Debugf("oneshot RUN for %s", fn.SwoId.Str())
-	doRun(fn.Inst(), "oneshot", RtRunCmd(&fn.Script))
+	doRun(fn.Inst(), "oneshot", RtRunCmd(&fn.Code))
 	log.Debugf("oneshor %s finished", fn.SwoId.Str())
 
 	swk8sRemove(&conf, fn, fn.Inst())
@@ -405,10 +405,10 @@ func getFunctionDesc(tennant string, p_add *swyapi.FunctionAdd) *FunctionDesc {
 			Replicas:	p_add.Size.Replicas,
 			Mem:		p_add.Size.Memory,
 		},
-		Script:		FnScriptDesc {
-			Lang:		p_add.Script.Lang,
-			Run:		p_add.Script.Run,
-			Env:		p_add.Script.Env,
+		Code:		FnCodeDesc {
+			Lang:		p_add.Code.Lang,
+			Run:		p_add.Code.Run,
+			Env:		p_add.Code.Env,
 		},
 	}
 
@@ -437,7 +437,7 @@ func handleFunctionAdd(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if params.Project == "" || params.FuncName == "" ||
-			params.Script.Lang == "" {
+			params.Code.Lang == "" {
 		err = errors.New("Parameters are missed")
 		goto out
 	}
@@ -448,7 +448,7 @@ func handleFunctionAdd(w http.ResponseWriter, r *http.Request) {
 	}
 
 	fn = getFunctionDesc(tennant, &params)
-	if RtBuilding(fn.Script.Lang) {
+	if RtBuilding(&fn.Code) {
 		fn.State = swy.DBFuncStateBld
 	} else {
 		fn.State = swy.DBFuncStateQue
@@ -488,7 +488,7 @@ func handleFunctionAdd(w http.ResponseWriter, r *http.Request) {
 		goto out_clean_repo
 	}
 
-	if RtBuilding(fn.Script.Lang) {
+	if RtBuilding(&fn.Code) {
 		fi = fn.InstBuild()
 	} else {
 		fi = fn.Inst()
@@ -546,7 +546,7 @@ func handleFunctionUpdate(w http.ResponseWriter, r *http.Request) {
 		goto out
 	}
 
-	if RtBuilding(fn.Script.Lang) {
+	if RtBuilding(&fn.Code) {
 		if fn.State == swy.DBFuncStateRdy {
 			fn.State = swy.DBFuncStateUpd
 		} else {
@@ -559,7 +559,7 @@ func handleFunctionUpdate(w http.ResponseWriter, r *http.Request) {
 		goto out
 	}
 
-	if RtBuilding(fn.Script.Lang) {
+	if RtBuilding(&fn.Code) {
 		log.Debugf("Starting build dep")
 		err = swk8sRun(&conf, &fn, fn.InstBuild())
 	} else {
@@ -685,10 +685,10 @@ func handleFunctionInfo(w http.ResponseWriter, r *http.Request) {
 			Mware:          fn.Mware,
 			Commit:         fn.Src.Commit,
 			URL:		url,
-			Script:		swyapi.FunctionScript{
-				Lang:		fn.Script.Lang,
-				Run:		fn.Script.Run,
-				Env:		fn.Script.Env,
+			Code:		swyapi.FunctionCode{
+				Lang:		fn.Code.Lang,
+				Run:		fn.Code.Run,
+				Env:		fn.Code.Env,
 			},
 			Event:		swyapi.FunctionEvent{
 				Source:		fn.Event.Source,
@@ -776,7 +776,7 @@ func handleFunctionRun(w http.ResponseWriter, r *http.Request) {
 		goto out
 	}
 
-	fn_code, stdout, stderr, err = doRun(fn.Inst(), "run", append(RtRunCmd(&fn.Script), params.Args...))
+	fn_code, stdout, stderr, err = doRun(fn.Inst(), "run", append(RtRunCmd(&fn.Code), params.Args...))
 	if err != nil {
 		goto out
 	}

@@ -69,7 +69,7 @@ func buildFunction(fn *FunctionDesc) error {
 	var orig_state int
 
 	log.Debugf("build RUN %s", fn.SwoId.Str())
-	code, _, stderr, err := doRun(fn.InstBuild(), "build", RtBuildCmd(fn.Script.Lang))
+	code, _, stderr, err := doRun(fn.InstBuild(), "build", RtBuildCmd(&fn.Code))
 	log.Debugf("build %s finished", fn.SwoId.Str())
 	logSaveEvent(fn, "built", "")
 	if err != nil {

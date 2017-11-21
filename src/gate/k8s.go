@@ -116,7 +116,7 @@ func swk8sRemove(conf *YAMLConf, fn *FunctionDesc, fi *FnInst) error {
 func swk8sGenEnvVar(conf *YAMLConf, fn *FunctionDesc, fi *FnInst, wdaddr string, wd_port int32, secret *v1.Secret) []v1.EnvVar {
 	var s []v1.EnvVar
 
-	for _, v := range fn.Script.Env {
+	for _, v := range fn.Code.Env {
 		vs := strings.SplitN(v, "=", 2)
 		if strings.HasPrefix(vs[0], "SWD_") {
 			// FIXME -- check earlier and abort adding
@@ -283,7 +283,7 @@ func swk8sRun(conf *YAMLConf, fn *FunctionDesc, fi *FnInst) error {
 	depname := fi.DepName()
 	log.Debugf("Start %s deployment for %s", depname, fn.SwoId.Str())
 
-	rt, ok := conf.Runtime[fn.Script.Lang]
+	rt, ok := conf.Runtime[fn.Code.Lang]
 	if !ok {
 		err := errors.New("Wrong language selected")
 		log.Error("Wrong language")
@@ -365,7 +365,7 @@ func swk8sRun(conf *YAMLConf, fn *FunctionDesc, fi *FnInst) error {
 						{
 							Name:		"code",
 							ReadOnly:	false,
-							MountPath:	RtGetWdogPath(fn),
+							MountPath:	RtGetWdogPath(&fn.Code),
 						},
 						{
 							Name:		"stats",

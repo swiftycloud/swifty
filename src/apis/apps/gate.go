@@ -20,7 +20,7 @@ type FunctionInfo struct {
 	Mware		[]string		`json:"mware"`
 	State		string			`json:"state"`
 	Commit		string			`json:"commit"`
-	Script		FunctionScript		`json:"script"`
+	Code		FunctionCode		`json:"code"`
 	Event		FunctionEvent		`json:"event"`
 	URL		string			`json:"url"`
 	Stats		FunctionStats		`json:"stats"`
@@ -31,7 +31,7 @@ type RunCmd struct {
 	Args		[]string		`json:"args,omitempty"`
 }
 
-type FunctionScript struct {
+type FunctionCode struct {
 	Lang		string			`json:"lang"`
 	Run		string			`json:"run"`
 	Env		[]string		`json:"env"`
@@ -93,7 +93,7 @@ type FunctionAdd struct {
 	Project		string			`json:"project"`
 	FuncName	string			`json:"name"`
 	Sources		FunctionSources		`json:"sources"`
-	Script		FunctionScript		`json:"script"`
+	Code		FunctionCode		`json:"code"`
 	Mware		[]MwareItem		`json:"mware"`
 	Event		FunctionEvent		`json:"event"`
 	Size		FunctionSize		`json:"size"`
