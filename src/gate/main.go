@@ -9,7 +9,6 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"net/http"
-	"strings"
 	"errors"
 	"flag"
 	"time"
@@ -208,21 +207,10 @@ var conf YAMLConf
 var gatesrv *http.Server
 
 func genFunctionDescJSON(conf *YAMLConf, fn *FunctionDesc, fi *FnInst) string {
-	var run []string
 	var jdata []byte
 	var err error
 
-	if fi.Build {
-		// Build run.The rest of the fn.Build will be passed
-		// as arguments for doRun further.
-		run = strings.Split(RtBuildCmd(fn.Script.Lang), " ")[:1]
-	} else {
-		// Classical run or after-the-build run.
-		run = RtRunCmd(fn)
-	}
-
 	jdata, err = json.Marshal(&swyapi.SwdFunctionDesc{
-				Run:		run,
 				Dir:		RtGetWdogPath(fn),
 				Stats:		statsPodPath,
 				PodToken:	fn.Cookie,
@@ -238,7 +226,7 @@ func genFunctionDescJSON(conf *YAMLConf, fn *FunctionDesc, fi *FnInst) string {
 
 func runFunctionOnce(fn *FunctionDesc) {
 	log.Debugf("oneshot RUN for %s", fn.SwoId.Str())
-	doRun(fn.Inst(), "oneshot", []string{})
+	doRun(fn.Inst(), "oneshot", RtRunCmd(&fn.Script))
 	log.Debugf("oneshor %s finished", fn.SwoId.Str())
 
 	swk8sRemove(&conf, fn, fn.Inst())
@@ -788,7 +776,7 @@ func handleFunctionRun(w http.ResponseWriter, r *http.Request) {
 		goto out
 	}
 
-	fn_code, stdout, stderr, err = doRun(fn.Inst(), "run", params.Args)
+	fn_code, stdout, stderr, err = doRun(fn.Inst(), "run", append(RtRunCmd(&fn.Script), params.Args...))
 	if err != nil {
 		goto out
 	}

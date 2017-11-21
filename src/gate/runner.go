@@ -32,7 +32,7 @@ func doRun(fi *FnInst, event string, args []string) (int, string, string, error)
 		goto out
 	}
 
-	resp, err = swy.HTTPMarshalAndPostTimeout("http://" + link.VIP() + "/v1/function/run",
+	resp, err = swy.HTTPMarshalAndPostTimeout("http://" + link.VIP() + "/v1/run",
 				120,
 				&swyapi.SwdFunctionRun{
 					PodToken:	fi.fn.Cookie,
@@ -68,9 +68,8 @@ func buildFunction(fn *FunctionDesc) error {
 	var err error
 	var orig_state int
 
-	build_cmd := strings.Split(RtBuildCmd(fn.Script.Lang), " ")
-	log.Debugf("build RUN %s args %v", fn.SwoId.Str(), build_cmd[1:])
-	code, _, stderr, err := doRun(fn.InstBuild(), "build", build_cmd[1:])
+	log.Debugf("build RUN %s", fn.SwoId.Str())
+	code, _, stderr, err := doRun(fn.InstBuild(), "build", RtBuildCmd(fn.Script.Lang))
 	log.Debugf("build %s finished", fn.SwoId.Str())
 	logSaveEvent(fn, "built", "")
 	if err != nil {

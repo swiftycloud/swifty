@@ -2,7 +2,6 @@ package swyapi
 
 type SwdFunctionDesc struct {
 	PodToken	string		`json:"podtoken"`
-	Run		[]string	`json:"run"`
 	Dir		string		`json:"dir"`
 	Stats		string		`json:"stats"`
 	URLCall		bool		`json:"urlcall"`

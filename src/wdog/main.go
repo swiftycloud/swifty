@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"os/exec"
-	"strings"
 	"errors"
 	"bytes"
 	"syscall"
@@ -29,8 +28,7 @@ type YAMLConf struct {
 	Daemon		YAMLConfDaemon		`yaml:"daemon"`
 }
 
-var conf YAMLConf
-var function swyapi.SwdFunctionDesc
+var function *swyapi.SwdFunctionDesc
 var wdogStatsSyncPeriod = 5 * time.Second /* FIXME: should be configured */
 
 var zcfg zap.Config = zap.Config {
@@ -45,21 +43,6 @@ var zcfg zap.Config = zap.Config {
 var logger, _ = zcfg.Build()
 var log = logger.Sugar()
 
-func handleRoot(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusBadRequest)
-}
-
-func checkPodToken(t string) error {
-	if t == "" {
-		return errors.New("Empty pod token detected")
-	} else if strings.Compare(t, function.PodToken) != 0 {
-		return errors.New("Pod token mismatch")
-
-	}
-
-	return nil
-}
-
 func get_exit_code(err error) int {
 	if exitError, ok := err.(*exec.ExitError); ok {
 		ws := exitError.Sys().(syscall.WaitStatus)
@@ -69,57 +52,7 @@ func get_exit_code(err error) int {
 	}
 }
 
-func uploaded() bool {
-	return len(function.Run) > 0
-}
-
-func handleDirectCall(w http.ResponseWriter, r *http.Request) {
-	defer r.Body.Close()
-
-	var stdout bytes.Buffer
-	var stderr bytes.Buffer
-	var cmd *exec.Cmd
-	var args []string
-	var run string
-	var err error
-	var body []byte
-
-	if !uploaded() {
-		err = errors.New("Function not ready")
-		goto out
-	}
-
-	body, err = ioutil.ReadAll(r.Body)
-	if err != nil {
-		goto out
-	}
-
-	run = function.Run[0]
-	args = append(function.Run[1:], string(body))
-
-	cmd = exec.Command(run, args...)
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-	err = cmd.Run()
-	if err != nil {
-		log.Errorf("Run failed with %s", err.Error())
-		goto out
-	}
-
-	/* XXX -- responce type should be configurable */
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.WriteHeader(http.StatusOK)
-	/* XXX -- what to do with Stderr? */
-	w.Write(stdout.Bytes())
-
-	return
-
-out:
-	http.Error(w, err.Error(), http.StatusBadRequest)
-	log.Errorf("%s", err.Error())
-}
-
-func handleGateCall(w http.ResponseWriter, r *http.Request) {
+func handleRun(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
 	var params swyapi.SwdFunctionRun
@@ -132,28 +65,20 @@ func handleGateCall(w http.ResponseWriter, r *http.Request) {
 	var run string
 	var err error
 
-	if !uploaded() {
-		err = errors.New("Upload function first")
-		goto out
-	}
-
 	err = swy.HTTPReadAndUnmarshal(r, &params)
 	if err != nil {
 		goto out
 	}
 
-	err = checkPodToken(params.PodToken)
-	if err != nil {
+	if params.PodToken != function.PodToken {
+		err = errors.New("Pod Token mismatch")
 		goto out
 	}
 
 	/* FIXME -- need to check that the caller is gate? */
 
-	run = function.Run[0]
-	args = function.Run[1:]
-	for _, v := range params.Args {
-		args = append(args, v)
-	}
+	run = params.Args[0]
+	args = params.Args[1:]
 
 	log.Debugf("Exec %s args %v", run, args)
 
@@ -188,33 +113,26 @@ func setupFunction(params *swyapi.SwdFunctionDesc) error {
 	var err error
 
 	log.Debugf("setupFunction: %v", params)
+	path := os.Getenv("PATH")
 
-	if len(params.Run) < 1 {
-		err = errors.New("Empty run passed")
+	err = os.Chdir(params.Dir)
+	if err != nil {
+		err = fmt.Errorf("Can't change dir to %s: %s",
+				params.Dir, err.Error())
 		goto out
+	} else {
+		log.Debugf("setupFunction: Chdir to %s", params.Dir)
 	}
 
-	if params.Dir != "" {
-		err = os.Chdir(params.Dir)
-		if err != nil {
-			err = fmt.Errorf("Can't change dir to %s: %s",
-					params.Dir, err.Error())
-			goto out
-		} else {
-			log.Debugf("setupFunction: Chdir to %s", params.Dir)
-		}
-
-		path := os.Getenv("PATH")
-		err = os.Setenv("PATH", path + ":" + params.Dir)
-		if err != nil {
-			err = fmt.Errorf("can't set PATH: %s", err.Error())
-			goto out
-		}
+	err = os.Setenv("PATH", path + ":" + params.Dir)
+	if err != nil {
+		err = fmt.Errorf("can't set PATH: %s", err.Error())
+		goto out
 	}
 
 	log.Debugf("PATH=%s", os.Getenv("PATH"))
 
-	function = *params
+	function = params
 	log.Debugf("setupFunction: OK")
 	return nil
 
@@ -291,6 +209,7 @@ func main() {
 	var conf_path string
 	var desc_raw string
 	var err error
+	var conf YAMLConf
 
 	swy.InitLogger(log)
 
@@ -325,11 +244,8 @@ func main() {
 		log.Fatalf("Can't setup function, abort: %s", err.Error())
 	}
 
-	http.HandleFunc("/", handleRoot)
-	if params.URLCall {
-		http.Handle("/" + params.PodToken, wdogStatsMw(handleDirectCall))
-	}
-	http.Handle("/v1/function/run", wdogStatsMw(handleGateCall))
+	http.Handle("/v1/run", wdogStatsMw(handleRun))
 	go wdogStatsSync(&params)
+
 	log.Fatal(http.ListenAndServe(conf.Daemon.Addr, nil))
 }
