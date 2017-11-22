@@ -50,7 +50,7 @@ func keystoneGetOwnerRoleId(conf *YAMLConfKeystone) (string, error) {
 
 	log.Debugf("Looking for role %s", "swifty.owner")
 	for _, role := range roles.Roles {
-		if role.Name == "swifty.owner" {
+		if role.Name == swy.SwyUserRole {
 			log.Debugf("Found role: %s", role.Id)
 			return role.Id, nil
 		}

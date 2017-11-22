@@ -68,7 +68,7 @@ out:
 	http.Error(w, err.Error(), resp)
 }
 
-func handleGenericReq(r *http.Request, params interface{}) (int, error) {
+func handleAdminReq(r *http.Request, params interface{}, roles []string) (int, error) {
 	err := swy.HTTPReadAndUnmarshal(r, params)
 	if err != nil {
 		return http.StatusBadRequest, err
@@ -78,7 +78,7 @@ func handleGenericReq(r *http.Request, params interface{}) (int, error) {
 		return http.StatusUnauthorized, fmt.Errorf("Auth token not provided")
 	}
 
-	prj, code := swy.KeystoneVerify(conf.Keystone.Addr, token, "swifty.admin")
+	prj, code := swy.KeystoneVerify(conf.Keystone.Addr, token, roles)
 	if prj == "" {
 		return code, fmt.Errorf("Keystone authentication error")
 	}
@@ -92,7 +92,7 @@ func handleListUsers(w http.ResponseWriter, r *http.Request) {
 	var code = http.StatusBadRequest
 	var projects []string
 
-	code, err := handleGenericReq(r, &params)
+	code, err := handleAdminReq(r, &params, []string{swy.SwyAdminRole})
 	if code != http.StatusOK {
 		goto out
 	}
@@ -122,7 +122,7 @@ func handleAddUser(w http.ResponseWriter, r *http.Request) {
 	var params swyapi.AddUser
 	var code = http.StatusBadRequest
 
-	code, err := handleGenericReq(r, &params)
+	code, err := handleAdminReq(r, &params, []string{swy.SwyAdminRole, swy.SwyUIRole})
 	if code != http.StatusOK {
 		goto out
 	}

@@ -289,12 +289,12 @@ func handleGenericReq(r *http.Request, params interface{}) (string, int, error) 
 	 */
 	tennant := r.Header.Get("X-Relay-Tennant")
 	if tennant == "" {
-		role = "swifty.owner"
+		role = swy.SwyUserRole
 	} else {
-		role = "swifty.admin"
+		role = swy.SwyAdminRole
 	}
 
-	reqTen, code := swy.KeystoneVerify(conf.Keystone.Addr, token, role)
+	reqTen, code := swy.KeystoneVerify(conf.Keystone.Addr, token, []string{role})
 	if reqTen == "" {
 		return "", code, fmt.Errorf("Keystone authentication error")
 	}

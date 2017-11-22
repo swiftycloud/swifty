@@ -9,6 +9,12 @@ import (
 	"io"
 )
 
+const (
+	SwyAdminRole	string	= "swifty.admin"
+	SwyUserRole	string	= "swifty.owner"
+	SwyUIRole	string	= "swifty.ui"
+)
+
 type KeystoneDomain struct {
 	Id		string			`json:"id,omitempty"`
 	Name		string			`json:"name,omitempty"`
@@ -83,10 +89,12 @@ type KeystoneProjectsResp struct {
 	Projects	[]KeystoneProject	`json:"projects"`
 }
 
-func KeystoneRoleHas(resp *KeystoneAuthResp, name string) bool {
+func KeystoneRoleHas(resp *KeystoneAuthResp, roles []string) bool {
 	for _, role := range resp.Token.Roles {
-		if role.Name == name {
-			return true
+		for _, wrole := range roles {
+			if role.Name == wrole {
+				return true
+			}
 		}
 	}
 
@@ -157,7 +165,7 @@ func KeystoneMakeReq(ksreq *KeystoneReq, in interface{}, out interface{}) error 
 }
 
 
-func KeystoneVerify(addr, token, role string) (string, int) {
+func KeystoneVerify(addr, token string, roles []string) (string, int) {
 	var out KeystoneAuthResp
 
 	req := KeystoneReq {
@@ -179,7 +187,7 @@ func KeystoneVerify(addr, token, role string) (string, int) {
 		return "", http.StatusUnauthorized /* FIXME -- get status from keystone too */
 	}
 
-	if !KeystoneRoleHas(&out, role) {
+	if !KeystoneRoleHas(&out, roles) {
 		return "", http.StatusForbidden
 	}
 
