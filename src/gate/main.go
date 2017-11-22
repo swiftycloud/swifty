@@ -251,8 +251,7 @@ func handleUserLogin(w http.ResponseWriter, r *http.Request) {
 
 	log.Debugf("Try to login user %s", params.UserName)
 
-	token, err = swy.KeystoneAuthWithPass(conf.Keystone.Addr, conf.Keystone.Domain,
-				params.UserName, params.Password)
+	token, err = swy.KeystoneAuthWithPass(conf.Keystone.Addr, conf.Keystone.Domain, &params)
 	if err != nil {
 		resp = http.StatusUnauthorized
 		goto out

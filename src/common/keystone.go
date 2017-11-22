@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"io/ioutil"
 	"io"
+	"../apis/apps"
 )
 
 const (
@@ -194,7 +195,7 @@ func KeystoneVerify(addr, token string, roles []string) (string, int) {
 	return out.Token.Project.Name, 0
 }
 
-func KeystoneAuthWithPass(addr, domain, user, pass string) (string, error) {
+func KeystoneAuthWithPass(addr, domain string, up *swyapi.UserLogin) (string, error) {
 	req := KeystoneReq {
 		Type:		"POST",
 		Addr:		addr,
@@ -211,8 +212,8 @@ func KeystoneAuthWithPass(addr, domain, user, pass string) (string, error) {
 						Domain: &KeystoneDomain {
 							Name: domain,
 						},
-						Name: user,
-						Password: pass,
+						Name: up.UserName,
+						Password: up.Password,
 					}, }, }, },
 				}, nil)
 	return req.Token, err

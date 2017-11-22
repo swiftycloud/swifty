@@ -148,7 +148,8 @@ func ksInit(conf *YAMLConfKeystone) error {
 	var err error
 
 	log.Debugf("Logging in")
-	ksToken, err = swy.KeystoneAuthWithPass(conf.Addr, "default", conf.Admin, conf.Pass)
+	ksToken, err = swy.KeystoneAuthWithPass(conf.Addr, "default",
+				&swyapi.UserLogin{UserName: conf.Admin, Password: conf.Pass})
 	if err != nil {
 		return err
 	}
