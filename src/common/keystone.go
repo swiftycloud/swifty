@@ -90,12 +90,10 @@ type KeystoneProjectsResp struct {
 	Projects	[]KeystoneProject	`json:"projects"`
 }
 
-func KeystoneRoleHas(resp *KeystoneAuthResp, roles []string) bool {
-	for _, role := range resp.Token.Roles {
-		for _, wrole := range roles {
-			if role.Name == wrole {
-				return true
-			}
+func KeystoneRoleHas(td *KeystoneTokenData, wrole string) bool {
+	for _, role := range td.Roles {
+		if role.Name == wrole {
+			return true
 		}
 	}
 
@@ -165,8 +163,7 @@ func KeystoneMakeReq(ksreq *KeystoneReq, in interface{}, out interface{}) error 
 	return nil
 }
 
-
-func KeystoneVerify(addr, token string, roles []string) (string, int) {
+func KeystoneGetTokenData(addr, token string) (*KeystoneTokenData, int) {
 	var out KeystoneAuthResp
 
 	req := KeystoneReq {
@@ -185,14 +182,10 @@ func KeystoneVerify(addr, token string, roles []string) (string, int) {
 				},
 			},},}, &out)
 	if err != nil {
-		return "", http.StatusUnauthorized /* FIXME -- get status from keystone too */
+		return nil, http.StatusUnauthorized /* FIXME -- get status from keystone too */
 	}
 
-	if !KeystoneRoleHas(&out, roles) {
-		return "", http.StatusForbidden
-	}
-
-	return out.Token.Project.Name, 0
+	return &out.Token, 0
 }
 
 func KeystoneAuthWithPass(addr, domain string, up *swyapi.UserLogin) (string, error) {

@@ -67,22 +67,22 @@ out:
 	http.Error(w, err.Error(), resp)
 }
 
-func handleAdminReq(r *http.Request, params interface{}, roles []string) (int, error) {
+func handleAdminReq(r *http.Request, params interface{}) (*swy.KeystoneTokenData, int, error) {
 	err := swy.HTTPReadAndUnmarshal(r, params)
 	if err != nil {
-		return http.StatusBadRequest, err
+		return nil, http.StatusBadRequest, err
 	}
 	token := r.Header.Get("X-Auth-Token")
 	if token == "" {
-		return http.StatusUnauthorized, fmt.Errorf("Auth token not provided")
+		return nil, http.StatusUnauthorized, fmt.Errorf("Auth token not provided")
 	}
 
-	prj, code := swy.KeystoneVerify(conf.Keystone.Addr, token, roles)
-	if prj == "" {
-		return code, fmt.Errorf("Keystone authentication error")
+	td, code := swy.KeystoneGetTokenData(conf.Keystone.Addr, token)
+	if code != 0 {
+		return nil, code, fmt.Errorf("Keystone auth error")
 	}
 
-	return http.StatusOK, nil
+	return td, 0, nil
 }
 
 func handleListUsers(w http.ResponseWriter, r *http.Request) {
@@ -91,8 +91,14 @@ func handleListUsers(w http.ResponseWriter, r *http.Request) {
 	var code = http.StatusBadRequest
 	var projects []string
 
-	code, err := handleAdminReq(r, &params, []string{swy.SwyAdminRole})
-	if code != http.StatusOK {
+	td, code, err := handleAdminReq(r, &params)
+	if err != nil {
+		goto out
+	}
+
+	/* Listing users is only possible for admin */
+	code = http.StatusForbidden
+	if !swy.KeystoneRoleHas(td, swy.SwyAdminRole) {
 		goto out
 	}
 
@@ -121,8 +127,14 @@ func handleAddUser(w http.ResponseWriter, r *http.Request) {
 	var params swyapi.AddUser
 	var code = http.StatusBadRequest
 
-	code, err := handleAdminReq(r, &params, []string{swy.SwyAdminRole, swy.SwyUIRole})
+	td, code, err := handleAdminReq(r, &params)
 	if code != http.StatusOK {
+		goto out
+	}
+
+	/* User can be added by admin or UI */
+	code = http.StatusForbidden
+	if !swy.KeystoneRoleHas(td, swy.SwyAdminRole) && !swy.KeystoneRoleHas(td, swy.SwyUserRole) {
 		goto out
 	}
 
