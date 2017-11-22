@@ -128,7 +128,7 @@ func handleAddUser(w http.ResponseWriter, r *http.Request) {
 	var code = http.StatusBadRequest
 
 	td, code, err := handleAdminReq(r, &params)
-	if code != http.StatusOK {
+	if err != nil {
 		goto out
 	}
 
@@ -141,6 +141,56 @@ func handleAddUser(w http.ResponseWriter, r *http.Request) {
 	log.Debugf("Add user %v", params)
 	code = http.StatusBadRequest
 	err = ksAddUserAndProject(&conf.Keystone, &params)
+	if err != nil {
+		goto out
+	}
+
+	w.WriteHeader(http.StatusCreated)
+
+	return
+
+out:
+	http.Error(w, err.Error(), code)
+}
+
+func handleSetPassword(w http.ResponseWriter, r *http.Request) {
+	var params swyapi.UserLogin
+	var code = http.StatusBadRequest
+	var requestor string
+
+	td, code, err := handleAdminReq(r, &params)
+	if err != nil {
+		goto out
+	}
+
+	code = http.StatusBadRequest
+	if params.Password == "" {
+		err = fmt.Errorf("Empty password")
+		goto out
+	}
+
+	requestor = td.Project.Name
+	/*
+	 * Admin can change password for anyone,
+	 * user -- only for himself.
+	 */
+	code = http.StatusForbidden
+	if params.UserName == "" || params.UserName == requestor {
+		if !swy.KeystoneRoleHas(td, swy.SwyUserRole) {
+			err = fmt.Errorf("Not logged in")
+			goto out
+		}
+
+		params.UserName = requestor
+	} else {
+		if !swy.KeystoneRoleHas(td, swy.SwyAdminRole) {
+			err = fmt.Errorf("Not an admin")
+			goto out
+		}
+	}
+
+	log.Debugf("Change pass to %s", params.UserName)
+	err = ksChangeUserPass(&conf.Keystone, &params)
 	if err != nil {
 		goto out
 	}
@@ -204,6 +254,7 @@ func main() {
 	r.HandleFunc("/v1/login", handleUserLogin)
 	r.HandleFunc("/v1/users", handleListUsers)
 	r.HandleFunc("/v1/adduser", handleAddUser)
+	r.HandleFunc("/v1/setpass", handleSetPassword)
 
 	gatesrv = &http.Server{
 			Handler:      r,

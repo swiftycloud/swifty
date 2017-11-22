@@ -23,8 +23,8 @@ type KeystoneDomain struct {
 
 type KeystoneUser struct {
 	Id		string			`json:"id,omitempty"`
-	Name		string			`json:"name"`
-	Password	string			`json:"password"`
+	Name		string			`json:"name,omitempty"`
+	Password	string			`json:"password,omitempty"`
 	Domain		*KeystoneDomain		`json:"domain,omitempty"`
 	DomainId	string			`json:"domain_id,omitempty"`
 	DefProject	string			`json:"default_project_id,omitempty"`
@@ -88,6 +88,10 @@ type KeystoneRolesResp struct {
 
 type KeystoneProjectsResp struct {
 	Projects	[]KeystoneProject	`json:"projects"`
+}
+
+type KeystoneUsersResp struct {
+	Users		[]KeystoneUser		`json:"users"`
 }
 
 func KeystoneRoleHas(td *KeystoneTokenData, wrole string) bool {

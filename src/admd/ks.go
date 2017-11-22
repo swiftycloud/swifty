@@ -144,6 +144,44 @@ func ksAddUserAndProject(conf *YAMLConfKeystone, user *swyapi.AddUser) error {
 	return nil
 }
 
+func ksChangeUserPass(conf *YAMLConfKeystone, up *swyapi.UserLogin) error {
+	var uresp swy.KeystoneUsersResp
+
+	err := swy.KeystoneMakeReq(
+		&swy.KeystoneReq {
+			Type:	"GET",
+			Addr:	conf.Addr,
+			URL:	"users?name=" + up.UserName,
+			Token:	ksToken,
+			Succ:	http.StatusOK, },
+		nil, &uresp)
+	if err != nil {
+		return err
+	}
+	if len(uresp.Users) != 1 {
+		return fmt.Errorf("No such user: %s", up.UserName)
+	}
+
+	log.Debugf("Change pass for %s/%s", up.UserName, uresp.Users[0].Id)
+	err = swy.KeystoneMakeReq(
+		&swy.KeystoneReq {
+			Type:	"PATCH",
+			Addr:	conf.Addr,
+			URL:	"users/" + uresp.Users[0].Id,
+			Token:	ksToken,
+			Succ:	http.StatusOK, },
+		&swy.KeystonePassword {
+			User: swy.KeystoneUser {
+				Password: up.Password,
+			},
+		}, nil)
+	if err != nil {
+		return fmt.Errorf("Can't change password: %s", err.Error())
+	}
+
+	return nil
+}
+
 func ksInit(conf *YAMLConfKeystone) error {
 	var err error
 
