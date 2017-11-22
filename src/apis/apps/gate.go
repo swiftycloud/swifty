@@ -7,11 +7,6 @@ type FunctionList struct {
 type ProjectList struct {
 }
 
-type UserLogin struct {
-	UserName	string			`json:"username"`
-	Password	string			`json:"password"`
-}
-
 type FunctionStats struct {
 	Called		uint64			`json:"called"`
 }
