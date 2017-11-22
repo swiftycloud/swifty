@@ -82,7 +82,6 @@ type MwareCinfoResp struct {
 
 type MwareGetItem struct {
 	MwareItem
-	Counter		int			`json:"counter"`
 	JSettings	string			`json:"jsettings"`
 }
 
@@ -95,9 +94,9 @@ type FunctionAdd struct {
 	FuncName	string			`json:"name"`
 	Sources		FunctionSources		`json:"sources"`
 	Code		FunctionCode		`json:"code"`
-	Mware		[]MwareItem		`json:"mware"`
 	Event		FunctionEvent		`json:"event"`
 	Size		FunctionSize		`json:"size"`
+	Mware		[]string		`json:"mware"`
 }
 
 type FunctionUpdate struct {

@@ -19,14 +19,13 @@ type MwareDesc struct {
 	MwareType	string		`bson:"mwaretype"`	// Middleware type
 	Client		string		`bson:"client"`		// Middleware client
 	Pass		string		`bson:"pass"`		// Client password
-	Counter		int		`bson:"counter"`	// Middleware instance counter
 	State		int		`bson:"state"`		// Mware state
 
 	JSettings	string		`bson:"jsettings"`	// Middleware settings in json format
 }
 
 type MwareOps struct {
-	Init	func(conf *YAMLConf, mwd *MwareDesc, mware *swyapi.MwareItem) ([]byte, error)
+	Init	func(conf *YAMLConf, mwd *MwareDesc, mware *swyapi.MwareItem) (error)
 	Fini	func(conf *YAMLConf, mwd *MwareDesc) (error)
 	Event	func(conf *YAMLConf, source *FnEventDesc, mwd *MwareDesc, on bool) (error)
 	GetEnv	func(conf *YAMLConf, mwd *MwareDesc) ([]string)
@@ -70,7 +69,7 @@ func mwareGetEnv(conf *YAMLConf, id *SwoId) ([]string, error) {
 	// No mware lock needed here since it's a pure
 	// read with mware counter increased already so
 	// can't disappear
-	item, err := dbMwareGetItem(id)
+	item, err := dbMwareGetReady(id)
 	if err != nil {
 		return nil, fmt.Errorf("Can't fetch settings for mware %s", id.Str())
 	}
@@ -98,21 +97,30 @@ func mwareGetFnEnv(conf *YAMLConf, fn *FunctionDesc) ([]string, error) {
 	return envs, nil
 }
 
+func forgetMware(conf *YAMLConf, handler *MwareOps, desc *MwareDesc) error {
+	err := handler.Fini(conf, desc)
+	if err != nil {
+		log.Errorf("Failed cleanup for mware %s: %s", desc.SwoId.Str(), err.Error())
+		return err
+	}
+
+	err = dbMwareRemove(desc)
+	if err != nil {
+		log.Errorf("Can't remove mware %s: %s", desc.SwoId.Str(), err.Error())
+		return err
+	}
+
+	return nil
+}
+
 func mwareRemove(conf *YAMLConf, id SwoId, mwIds []string) error {
 	var ret error = nil
 
 	for _, mwId := range mwIds {
 		id.Name = mwId
-
-		log.Debugf("remove wmare %s", id.Str())
-		if dbMwareLock(&id) != nil {
-			log.Errorf("Can't lock mware %s", id.Str())
-			continue
-		}
-
-		removed, item, _ := dbMwareDecRefLocked(&id)
-		if removed == false {
-			dbMwareUnlock(&id)
+		item, err := dbMwareGetReady(&id)
+		if err != nil {
+			log.Errorf("Can't find mware %s", id.Str())
 			continue
 		}
 
@@ -122,18 +130,9 @@ func mwareRemove(conf *YAMLConf, id SwoId, mwIds []string) error {
 			continue
 		}
 
-		err := handler.Fini(conf, &item)
+		err = forgetMware(conf, &handler, &item)
 		if err != nil {
 			ret = err
-			dbMwareUnlock(&id)
-			log.Errorf("Failed cleanup for mware %s", id.Str())
-			continue
-		}
-
-		err = dbMwareRemoveLocked(item)
-		if err != nil {
-			ret = err
-			log.Errorf("Can't remove mware %s", err.Error())
 			continue
 		}
 	}
@@ -145,53 +144,55 @@ func mwareRemove(conf *YAMLConf, id SwoId, mwIds []string) error {
 	return nil
 }
 
-func mwareSetup(conf *YAMLConf, id SwoId, mwares []swyapi.MwareItem, fn *FunctionDesc) error {
+func getMwareDesc(id *SwoId, mw *swyapi.MwareItem) *MwareDesc {
+	ret := &MwareDesc {
+		SwoId: SwoId {
+			Tennant:	id.Tennant,
+			Project:	id.Project,
+			Name:		mw.ID,
+		},
+		MwareType:	mw.Type,
+		State:		swy.DBMwareStateBsy,
+	}
+
+	ret.Cookie = ret.SwoId.Cookie()
+	return ret
+}
+
+func mwareSetup(conf *YAMLConf, id SwoId, mwares []swyapi.MwareItem) error {
 	var mwares_complete []string
-	var jsettings []byte
-	var found bool
 	var err error
 
 	for _, mware := range mwares {
-		var mwd MwareDesc
+		mwd := getMwareDesc(&id, &mware)
+		log.Debugf("set up wmare %s:%s", mwd.SwoId.Str(), mware.Type)
 
-		id.Name = mware.ID
-
-		log.Debugf("set up wmare %s:%s", id.Str(), mware.Type)
-		found, mwd, err = dbMwareAddRefOrInsertLocked(&id)
-		if err == nil && found == false {
-			if mware.Type == "" {
-				err = fmt.Errorf("no type for new mware %s", id.Str())
-				goto out
-			}
-
-			handler, ok := mwareHandlers[mware.Type]
-			if !ok {
-				err = fmt.Errorf("no handler for %s:%s", id.Str(), mware.Type)
-				dbMwareRemove(mwd)
-				goto out
-			}
-
-			//
-			// If mware not found either plain mware IDs are
-			// provided so we had to fetch it or need to
-			// setup new ones.
-			jsettings, err = handler.Init(conf, &mwd, &mware)
-			if err == nil {
-				mwd.MwareType = mware.Type
-				err = dbMwareAddSettingsUnlock(mwd, jsettings)
-			}
-		}
-
+		err = dbMwareAdd(mwd)
 		if err != nil {
-			err = fmt.Errorf("mwareSetup: Can't setup mwareid %s: %s", id.Str(), err.Error())
 			goto out
 		}
 
-		mwares_complete = append(mwares_complete, mware.ID)
-	}
+		handler, ok := mwareHandlers[mware.Type]
+		if !ok {
+			err = fmt.Errorf("no handler for %s:%s", id.Str(), mware.Type)
+			dbMwareRemove(mwd)
+			goto out
+		}
 
-	if fn != nil {
-		fn.Mware = mwares_complete
+		err = handler.Init(conf, mwd, &mware)
+		if err != nil {
+			forgetMware(conf, &handler, mwd)
+			goto out
+		}
+
+		mwd.State = swy.DBMwareStateRdy
+		err = dbMwareUpdateAdded(mwd)
+		if err != nil {
+			forgetMware(conf, &handler, mwd)
+			goto out
+		}
+
+		mwares_complete = append(mwares_complete, mwd.SwoId.Name)
 	}
 
 	return nil

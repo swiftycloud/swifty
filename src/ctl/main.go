@@ -194,13 +194,7 @@ func add_function(name, lang, src, run, mwares, event string) {
 	code.Lang = lang
 
 
-	mw := []swyapi.MwareItem{}
-	if mwares != "" {
-		for _, mware := range strings.Split(mwares, ",") {
-			mws := strings.SplitN(mware, ":", 2)
-			mw = append(mw, swyapi.MwareItem{ Type: mws[0], ID: mws[1], })
-		}
-	}
+	mw := strings.Split(mwares, ",")
 
 	evt := swyapi.FunctionEvent {}
 	if event != "" {

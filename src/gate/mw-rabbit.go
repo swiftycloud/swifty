@@ -31,45 +31,52 @@ func rabbitErr(resp *http.Response, err error) error {
 	}
 }
 
-func InitRabbitMQ(conf *YAMLConf, mwd *MwareDesc, mware *swyapi.MwareItem) ([]byte, error) {
+func InitRabbitMQ(conf *YAMLConf, mwd *MwareDesc, mware *swyapi.MwareItem) (error) {
 	rmq := MQSettings{ }
 
 	err := mwareGenerateClient(mwd)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	rmq.Vhost = mwd.Client
 
 	rmqc, err := rabbitConn(conf)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	err = rabbitErr(rmqc.PutUser(mwd.Client, rabbithole.UserSettings{Password: mwd.Pass}))
 	if err != nil {
-		return nil, fmt.Errorf("Can't create user %s: %s", mwd.Client, err.Error())
+		return fmt.Errorf("Can't create user %s: %s", mwd.Client, err.Error())
 	}
 
 	err = rabbitErr(rmqc.PutVhost(rmq.Vhost, rabbithole.VhostSettings{Tracing: false}))
 	if err != nil {
-		return nil, fmt.Errorf("Can't create vhost %s: %s", mwd.Client, err.Error())
+		return fmt.Errorf("Can't create vhost %s: %s", mwd.Client, err.Error())
 	}
 
 	err = rabbitErr(rmqc.UpdatePermissionsIn(rmq.Vhost, mwd.Client,
 			rabbithole.Permissions{Configure: ".*", Write: ".*", Read: ".*"}))
 	if err != nil {
-		return nil, fmt.Errorf("Can't set permissions %s: %s", mwd.Client, err.Error())
+		return fmt.Errorf("Can't set permissions %s: %s", mwd.Client, err.Error())
 	}
 
 	/* Add permissions for us as well, just in case event listening is required */
 	err = rabbitErr(rmqc.UpdatePermissionsIn(rmq.Vhost, conf.Mware.MQ.Admin,
 			rabbithole.Permissions{Configure: ".*", Write: ".*", Read: ".*"}))
 	if err != nil {
-		return nil, fmt.Errorf("Can't set permissions %s: %s", mwd.Client, err.Error())
+		return fmt.Errorf("Can't set permissions %s: %s", mwd.Client, err.Error())
 	}
 
-	return json.Marshal(&rmq)
+	js, err := json.Marshal(&rmq)
+	if err != nil {
+		return err
+	}
+
+	mwd.JSettings = string(js)
+
+	return nil
 }
 
 func FiniRabbitMQ(conf *YAMLConf, mwd *MwareDesc) error {

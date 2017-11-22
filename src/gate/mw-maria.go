@@ -35,38 +35,45 @@ func mariaReq(db *sql.DB, req string) error {
 // DROP USER IF EXISTS '8257fbff9618952fbd2b83b4794eb694'@'%';
 // DROP DATABASE IF EXISTS 8257fbff9618952fbd2b83b4794eb694;
 
-func InitMariaDB(conf *YAMLConf, mwd *MwareDesc, mware *swyapi.MwareItem) ([]byte, error) {
+func InitMariaDB(conf *YAMLConf, mwd *MwareDesc, mware *swyapi.MwareItem) (error) {
 	dbs := DBSettings{ }
 
 	err := mwareGenerateClient(mwd)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	dbs.DBName = mwd.Client
 
 	db, err := mariaConn(conf)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	defer db.Close()
 
 	err = mariaReq(db, "CREATE USER '" + mwd.Client + "'@'%' IDENTIFIED BY '" + mwd.Pass + "';")
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	err = mariaReq(db, "CREATE DATABASE " + dbs.DBName + " CHARACTER SET utf8 COLLATE utf8_general_ci;")
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	err = mariaReq(db, "GRANT ALL PRIVILEGES ON " + dbs.DBName + ".* TO '" + mwd.Client + "'@'%' IDENTIFIED BY '" + mwd.Pass + "';")
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return json.Marshal(&dbs)
+	js, err := json.Marshal(&dbs)
+	if err != nil {
+		return err
+	}
+
+	mwd.JSettings = string(js)
+
+	return nil
 }
 
 func FiniMariaDB(conf *YAMLConf, mwd *MwareDesc) error {

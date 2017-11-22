@@ -30,167 +30,57 @@ type DBLogRec struct {
 var dbSession *mgo.Session
 var dbState string
 
-type dbMwareStateArgs struct {
-	Col	*mgo.Collection
-	Q	interface{}
-	Ch	interface{}
-}
-
-func dbMwareSetStateCb(data interface{}) error {
-	var args *dbMwareStateArgs = data.(*dbMwareStateArgs)
-	return args.Col.Update(args.Q, args.Ch)
-}
-
-func dbMwareSetState(id *SwoId, state int) error {
-	err := swy.Retry10(dbMwareSetStateCb,
-			&dbMwareStateArgs{
-				Col:	dbSession.DB(dbState).C(DBColMware),
-				Q:	bson.M{"tennant": id.Tennant, "project": id.Project, "name": id.Name,
-						"state": bson.M{"$ne": state}},
-				Ch:	bson.M{"$set": bson.M{"state": state}},
-			})
-	if err != nil {
-		return fmt.Errorf("dbMwareSetState: Can't set state %d mwareid %s: %s",
-					state, id.Str(), err.Error())
-	}
-	return nil
-}
-
-func dbMwareLock(id *SwoId) error {
-	return dbMwareSetState(id, swy.DBMwareStateBsy)
-}
-
-func dbMwareUnlock(id *SwoId) error {
-	return dbMwareSetState(id, swy.DBMwareStateRdy)
-}
-
-func dbMwareAddRefOrInsertLocked(id *SwoId) (bool, MwareDesc, error) {
+func dbMwareAdd(desc *MwareDesc) error {
 	c := dbSession.DB(dbState).C(DBColMware)
-	v := MwareDesc{}
-
-	cookie := id.Cookie()
-
-	// It locks the record if new added
-	change := mgo.Change{
-		Upsert:		true,
-		Remove:		false,
-		Update:		bson.M{"$inc": bson.M{"counter": 1},
-					"$setOnInsert":
-						bson.M{"state": swy.DBMwareStateBsy,
-							"cookie": cookie,
-							"tennant": id.Tennant,
-							"project": id.Project,
-							"name":	   id.Name}},
-		ReturnNew:	true,
-	}
-
-	querier := bson.M{	"cookie": cookie,
-				"tennant": id.Tennant,
-				"project": id.Project,
-				"name":    id.Name,
-				"state": bson.M{"$eq": swy.DBMwareStateRdy}}
-
-	info, err := c.Find(querier).Apply(change, &v)
+	err := c.Insert(desc)
 	if err != nil {
-		return false, v, err
+		log.Errorf("Can't add mware %s: %s", desc.SwoId.Str(), err.Error())
 	}
 
-	if info.Updated == 0 {
-		v.ObjID = info.UpsertedId.(bson.ObjectId)
-		return false, v, nil
-	}
-
-	return true, v, nil
+	return err
 }
 
-func dbMwareRemove(mwd MwareDesc) error {
+func dbMwareUpdateAdded(desc *MwareDesc) error {
+	c := dbSession.DB(dbState).C(DBColMware)
+	err := c.Update(bson.M{"_id": desc.ObjID},
+		bson.M{"$set": bson.M{
+				"client":	desc.Client,
+				"pass":		desc.Pass,
+				"jsettings":	desc.JSettings,
+				"state":	desc.State,
+			}})
+	if err != nil {
+		log.Errorf("Can't update added %s: %s", desc.SwoId.Str(), err.Error())
+	}
+
+	return err
+}
+
+func dbMwareRemove(mwd *MwareDesc) error {
 	c := dbSession.DB(dbState).C(DBColMware)
 	return c.Remove(bson.M{"_id": mwd.ObjID})
 }
 
-func dbMwareDecRefLocked(id *SwoId) (bool, MwareDesc, error) {
+func dbMwareGetOne(q bson.M) (MwareDesc, error) {
 	c := dbSession.DB(dbState).C(DBColMware)
 	v := MwareDesc{}
-
-	change := mgo.Change{
-		Upsert:		false,
-		Remove:		false,
-		Update:		bson.M{"$inc": bson.M{"counter": -1}},
-		ReturnNew:	true,
-	}
-
-	querier := bson.M{	"tennant": id.Tennant,
-				"project": id.Project,
-				"name": id.Name,
-				"state": bson.M{"$eq": swy.DBMwareStateBsy}}
-
-	info, err := c.Find(querier).Apply(change, &v)
-	if err != nil {
-		return false, v, err
-	}
-
-	if info.Updated > 0 {
-		if v.Counter == 0 {
-			return true, v, nil
-		}
-	}
-
-	return false, v, nil
-}
-
-func dbMwareRemoveLocked(mwd MwareDesc) error {
-	c := dbSession.DB(dbState).C(DBColMware)
-	querier := bson.M{	"tennant": mwd.Tennant,
-				"project": mwd.Project,
-				"name":    mwd.Name,
-				"state": bson.M{"$eq": swy.DBMwareStateBsy}}
-
-	err := c.Remove(querier);
-	if err != nil {
-		return fmt.Errorf("dbMwareRemove: Can't remove mwareid %s: %s",
-						mwd.SwoId.Str(), err.Error())
-	}
-	return nil
-}
-
-func dbMwareAddSettingsUnlock(mwd MwareDesc, settings []byte) error {
-	c := dbSession.DB(dbState).C(DBColMware)
-	v := MwareDesc{}
-
-	// It unlocks the record
-	change := mgo.Change{
-		Upsert:		false,
-		Remove:		false,
-		Update:
-			bson.M{	"tennant":	mwd.Tennant,
-				"project":	mwd.Project,
-				"name":		mwd.Name,
-				"mwaretype":	mwd.MwareType,
-				"client":	mwd.Client,
-				"pass":		mwd.Pass,
-				"counter":	1,
-				"jsettings":	string(settings),
-				"state":	swy.DBMwareStateRdy,
-			},
-		ReturnNew:	true,
-	}
-
-	querier := bson.M{	"_id": mwd.ObjID,
-				"state": bson.M{"$eq": swy.DBMwareStateBsy}}
-	_, err := c.Find(querier).Apply(change, &v)
-	if err != nil {
-		c.Remove(bson.M{"_id": mwd.ObjID})
-		return fmt.Errorf("dbMwareAdd: Can't add mware %s, removing: %s",
-					mwd.SwoId.Str(), err.Error())
-	}
-	return nil
+	err := c.Find(q).One(&v)
+	return v, err
 }
 
 func dbMwareGetItem(id *SwoId) (MwareDesc, error) {
-	c := dbSession.DB(dbState).C(DBColMware)
-	v := MwareDesc{}
-	err := c.Find(bson.M{"tennant": id.Tennant, "project": id.Project, "name": id.Name}).One(&v)
-	return v, err
+	return dbMwareGetOne(bson.M{"tennant": id.Tennant,
+			"project": id.Project, "name": id.Name})
+}
+
+func dbMwareGetReady(id *SwoId) (MwareDesc, error) {
+	return dbMwareGetOne(bson.M{"tennant": id.Tennant,
+			"project": id.Project, "name": id.Name,
+			"state": swy.DBMwareStateRdy})
+}
+
+func dbMwareResolveClient(client string) (MwareDesc, error) {
+	return dbMwareGetOne(bson.M{"client": client})
 }
 
 func dbMwareGetAll(id *SwoId) ([]MwareDesc, error) {
@@ -200,12 +90,6 @@ func dbMwareGetAll(id *SwoId) ([]MwareDesc, error) {
 	return recs, err
 }
 
-func dbMwareResolveClient(client string) (MwareDesc, error) {
-	c := dbSession.DB(dbState).C(DBColMware)
-	rec := MwareDesc{}
-	err := c.Find(bson.M{"client": client}).One(&rec)
-	return rec, err
-}
 
 func dbGetFuncStatusString(status int) string {
 	status_str := map[int]string {

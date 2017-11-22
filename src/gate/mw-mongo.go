@@ -24,19 +24,19 @@ func mgoDial(conf *YAMLConf) (*mgo.Session, error) {
 	return mgo.DialWithInfo(&ifo)
 }
 
-func InitMongo(conf *YAMLConf, mwd *MwareDesc, mware *swyapi.MwareItem) ([]byte, error) {
+func InitMongo(conf *YAMLConf, mwd *MwareDesc, mware *swyapi.MwareItem) (error) {
 	mgs := MGOSetting{}
 
 	err := mwareGenerateClient(mwd)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	mgs.DBName = mwd.Client
 
 	sess, err := mgoDial(conf)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	defer sess.Close()
@@ -48,10 +48,17 @@ func InitMongo(conf *YAMLConf, mwd *MwareDesc, mware *swyapi.MwareItem) ([]byte,
 	})
 
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return json.Marshal(&mgs)
+	js, err := json.Marshal(&mgs)
+	if err != nil {
+		return err
+	}
+
+	mwd.JSettings = string(js)
+
+	return nil
 }
 
 func FiniMongo(conf *YAMLConf, mwd *MwareDesc) error {

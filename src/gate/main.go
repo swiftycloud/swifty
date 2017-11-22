@@ -380,6 +380,7 @@ func getFunctionDesc(tennant string, p_add *swyapi.FunctionAdd) *FunctionDesc {
 			Function:	p_add.Code.Function,
 			Env:		p_add.Code.Env,
 		},
+		Mware:	p_add.Mware,
 	}
 
 	fn.Cookie = fn.SwoId.Cookie()
@@ -431,13 +432,6 @@ func handleFunctionAdd(w http.ResponseWriter, r *http.Request) {
 		goto out
 	}
 
-	// FIXME -- move to /built handler
-	err = mwareSetup(&conf, fn.SwoId, params.Mware, fn)
-	if err != nil {
-		err = fmt.Errorf("Unable to setup middleware: %s", err.Error())
-		goto out_clean_func
-	}
-
 	if fn.Event.Source != "" {
 		err = eventSetup(&conf, fn, true)
 		if err != nil {
@@ -448,7 +442,7 @@ func handleFunctionAdd(w http.ResponseWriter, r *http.Request) {
 
 	err = getSources(fn)
 	if err != nil {
-		goto out_clean_mware
+		goto out_clean_evt
 	}
 
 	statsStartCollect(&conf, fn)
@@ -475,8 +469,10 @@ func handleFunctionAdd(w http.ResponseWriter, r *http.Request) {
 
 out_clean_repo:
 	cleanRepo(fn)
-out_clean_mware:
-	mwareRemove(&conf, fn.SwoId, fn.Mware)
+out_clean_evt:
+	if fn.Event.Source != "" {
+		eventSetup(&conf, fn, false)
+	}
 out_clean_func:
 	dbFuncRemove(fn)
 out:
@@ -605,11 +601,6 @@ func forgetFunction(fn *FunctionDesc) {
 		if err != nil {
 			log.Errorf("remove event %s error: %s", fn.Event, err.Error())
 		}
-	}
-
-	err = mwareRemove(&conf, fn.SwoId, fn.Mware)
-	if err != nil {
-		log.Errorf("remove mware error: %s", err.Error())
 	}
 
 	statsStopCollect(&conf, fn)
@@ -922,7 +913,7 @@ func handleMwareAdd(w http.ResponseWriter, r *http.Request) {
 
 	log.Debugf("mware/add: %s params %v", tennant, params)
 
-	err = mwareSetup(&conf, *id, params.Mware, nil)
+	err = mwareSetup(&conf, *id, params.Mware)
 	if err != nil {
 		err = fmt.Errorf("Unable to setup middleware: %s", err.Error())
 		goto out
@@ -965,7 +956,6 @@ func handleMwareList(w http.ResponseWriter, r *http.Request) {
 					ID:	mware.Name,
 					Type:	mware.MwareType,
 				},
-				Counter: mware.Counter,
 				JSettings: mware.JSettings,
 			})
 	}
