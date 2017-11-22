@@ -122,6 +122,7 @@ func ksAddUserAndProject(conf *YAMLConfKeystone, user *swyapi.AddUser) error {
 				Password: user.Pass,
 				DefProject: presp.Project.Id,
 				DomainId: ksSwyDomainId,
+				Description: user.Name,
 			},
 		}, &uresp)
 	if err != nil {
