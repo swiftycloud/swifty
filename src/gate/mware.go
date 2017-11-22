@@ -15,6 +15,7 @@ type MwareDesc struct {
 	ObjID		bson.ObjectId	`bson:"_id,omitempty"`
 
 	SwoId				`bson:",inline"`
+	Cookie		string		`bson:"cookie"`
 	MwareType	string		`bson:"mwaretype"`	// Middleware type
 	Client		string		`bson:"client"`		// Middleware client
 	Pass		string		`bson:"pass"`		// Client password

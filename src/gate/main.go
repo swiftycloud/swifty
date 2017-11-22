@@ -6,8 +6,6 @@ import (
 	"github.com/gorilla/mux"
 
 	"encoding/json"
-	"crypto/sha256"
-	"encoding/hex"
 	"net/http"
 	"errors"
 	"flag"
@@ -45,32 +43,10 @@ type FnSizeDesc struct {
 	Mem		string		`bson:"mem"`
 }
 
-type SwoId struct {
-	Tennant		string		`bson:"tennant"`
-	Project		string		`bson:"project"`
-	Name		string		`bson:"name"`
-}
-
-func makeSwoId(tennant, project, name string) *SwoId {
-	return &SwoId{Tennant: tennant, Project: project, Name: name}
-}
-
-func (id *SwoId) Str () string {
-	rv := id.Tennant
-	if id.Project != "" {
-		rv += "/" + id.Project
-		if id.Name != "" {
-			rv += "/" + id.Name
-		}
-	}
-	return rv
-}
-
 type FunctionDesc struct {
 	// These objects are kept in Mongo, which requires the below two
 	// fields to be present...
 	ObjID		bson.ObjectId	`bson:"_id,omitempty"`
-	Index		string		`bson:"index"`		// Project + FuncName
 
 	SwoId				`bson:",inline"`
 	Cookie		string		`bson:"cookie"`		// Some "unique" identifier
@@ -376,13 +352,6 @@ out:
 	http.Error(w, err.Error(), code)
 }
 
-func genCookie(fn *FunctionDesc) string {
-	h := sha256.New()
-	h.Write([]byte(fn.Tennant + "/" + fn.Project + "/" + fn.Name))
-
-	return hex.EncodeToString(h.Sum(nil))
-}
-
 func getFunctionDesc(tennant string, p_add *swyapi.FunctionAdd) *FunctionDesc {
 	fn := &FunctionDesc {
 		SwoId: SwoId {
@@ -413,7 +382,7 @@ func getFunctionDesc(tennant string, p_add *swyapi.FunctionAdd) *FunctionDesc {
 		},
 	}
 
-	fn.Cookie = genCookie(fn)
+	fn.Cookie = fn.SwoId.Cookie()
 	return fn
 }
 

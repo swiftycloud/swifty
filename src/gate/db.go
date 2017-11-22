@@ -68,6 +68,8 @@ func dbMwareAddRefOrInsertLocked(id *SwoId) (bool, MwareDesc, error) {
 	c := dbSession.DB(dbState).C(DBColMware)
 	v := MwareDesc{}
 
+	cookie := id.Cookie()
+
 	// It locks the record if new added
 	change := mgo.Change{
 		Upsert:		true,
@@ -75,13 +77,15 @@ func dbMwareAddRefOrInsertLocked(id *SwoId) (bool, MwareDesc, error) {
 		Update:		bson.M{"$inc": bson.M{"counter": 1},
 					"$setOnInsert":
 						bson.M{"state": swy.DBMwareStateBsy,
+							"cookie": cookie,
 							"tennant": id.Tennant,
 							"project": id.Project,
 							"name":	   id.Name}},
 		ReturnNew:	true,
 	}
 
-	querier := bson.M{	"tennant": id.Tennant,
+	querier := bson.M{	"cookie": cookie,
+				"tennant": id.Tennant,
 				"project": id.Project,
 				"name":    id.Name,
 				"state": bson.M{"$eq": swy.DBMwareStateRdy}}
@@ -344,7 +348,6 @@ func dbFuncUpdatePulled(fn *FunctionDesc) error {
 }
 
 func dbFuncAdd(desc *FunctionDesc) error {
-	desc.Index = desc.Cookie
 	c := dbSession.DB(dbState).C(DBColFunc)
 	err := c.Insert(desc)
 	if err != nil {
@@ -357,7 +360,7 @@ func dbFuncAdd(desc *FunctionDesc) error {
 
 func dbFuncRemove(fn *FunctionDesc) {
 	c := dbSession.DB(dbState).C(DBColFunc)
-	c.Remove(bson.M{"index": fn.Cookie});
+	c.Remove(bson.M{"_id": fn.ObjID});
 }
 
 func logSaveResult(fn *FunctionDesc, event, stdout, stderr string) {
@@ -634,9 +637,6 @@ func dbConnect(conf *YAMLConf) error {
 			DropDups:	true,
 			Background:	true,
 			Sparse:		true}
-
-	index.Key = []string{"index"}
-	dbSession.DB(dbState).C(DBColFunc).EnsureIndex(index)
 
 	index.Key = []string{"addr", "depname"}
 	dbSession.DB(dbState).C(DBColBalancer).EnsureIndex(index)
