@@ -52,20 +52,54 @@ func get_exit_code(err error) int {
 	}
 }
 
+type runReq struct {
+	Params *swyapi.SwdFunctionRun
+	Result chan *swyapi.SwdFunctionRunResult
+}
+
+var runQueue chan *runReq
+
+func doRun() {
+	for {
+		req := <-runQueue
+
+		stdout := new(bytes.Buffer)
+		stderr := new(bytes.Buffer)
+
+		run := req.Params.Args[0]
+		args := req.Params.Args[1:]
+
+		log.Debugf("Exec %s args %v", run, args)
+
+		cmd := exec.Command(run, args...)
+		cmd.Stdout = stdout
+		cmd.Stderr = stderr
+		err := cmd.Run()
+
+		result := &swyapi.SwdFunctionRunResult{}
+		if err != nil {
+			result.Code = get_exit_code(err)
+			log.Errorf("Run exited with %d (%s)", result.Code, err.Error())
+		} else {
+			result.Code = 0
+			log.Errorf("OK");
+		}
+
+		result.Stdout = stdout.String()
+		result.Stderr = stderr.String()
+
+		req.Result <- result
+	}
+}
+
 func handleRun(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
+	var req runReq
 	var params swyapi.SwdFunctionRun
-	var result swyapi.SwdFunctionRunResult
+	var result *swyapi.SwdFunctionRunResult
 
-	var stdout bytes.Buffer
-	var stderr bytes.Buffer
-	var cmd *exec.Cmd
-	var args []string
-	var run string
-	var err error
-
-	err = swy.HTTPReadAndUnmarshal(r, &params)
+	err := swy.HTTPReadAndUnmarshal(r, &params)
 	if err != nil {
 		goto out
 	}
@@ -75,29 +109,11 @@ func handleRun(w http.ResponseWriter, r *http.Request) {
 		goto out
 	}
 
-	/* FIXME -- need to check that the caller is gate? */
+	req = runReq{Params: &params, Result: make(chan *swyapi.SwdFunctionRunResult)}
+	runQueue <- &req
+	result = <-req.Result
 
-	run = params.Args[0]
-	args = params.Args[1:]
-
-	log.Debugf("Exec %s args %v", run, args)
-
-	cmd = exec.Command(run, args...)
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-	err = cmd.Run()
-	if err != nil {
-		result.Code = get_exit_code(err)
-		log.Errorf("Run exited with %d (%s)", result.Code, err.Error())
-	} else {
-		result.Code = 0
-		log.Errorf("OK");
-	}
-
-	result.Stdout = stdout.String()
-	result.Stderr = stderr.String()
-
-	err = swy.HTTPMarshalAndWrite(w, &result)
+	err = swy.HTTPMarshalAndWrite(w, result)
 	if err != nil {
 		goto out
 	}
@@ -246,6 +262,8 @@ func main() {
 
 	http.Handle("/v1/run", wdogStatsMw(handleRun))
 	go wdogStatsSync(&params)
+	runQueue = make(chan *runReq)
+	go doRun()
 
 	log.Fatal(http.ListenAndServe(conf.Daemon.Addr, nil))
 }
