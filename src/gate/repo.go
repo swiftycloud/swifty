@@ -91,6 +91,10 @@ func cloneGitRepo(fn *FunctionDesc) error {
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 
+	if !SwyModeDevel {
+		return fmt.Errorf("Disabled sources type git")
+	}
+
 	clone_to := fnRepoClone(fn, conf.Daemon.Sources.Clone)
 	log.Debugf("Git clone %s -> %s", fn.Src.Repo, clone_to)
 

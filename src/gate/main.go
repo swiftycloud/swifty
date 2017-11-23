@@ -17,6 +17,8 @@ import (
 	"../common"
 )
 
+var SwyModeDevel bool
+
 const (
 	SwyDefaultProject string	= "default"
 )
@@ -1082,13 +1084,12 @@ func setupLogger(conf *YAMLConf) {
 
 func main() {
 	var config_path string
-	var devel bool
 
 	flag.StringVar(&config_path,
 			"conf",
 				"",
 				"path to a config file")
-	flag.BoolVar(&devel, "devel", false, "launch in development mode")
+	flag.BoolVar(&SwyModeDevel, "devel", false, "launch in development mode")
 	flag.Parse()
 
 	if config_path != "" {
@@ -1118,7 +1119,7 @@ func main() {
 	r.HandleFunc("/v1/mware/add",			handleMwareAdd)
 	r.HandleFunc("/v1/mware/list",			handleMwareList)
 	r.HandleFunc("/v1/mware/remove",		handleMwareRemove)
-	if devel {
+	if SwyModeDevel {
 		r.HandleFunc("/v1/mware/cinfo",		handleMwareCinfo)
 	}
 
