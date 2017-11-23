@@ -127,6 +127,12 @@ func set_password(id, pass string) {
 		nil, http.StatusCreated)
 }
 
+func show_user_info(id string) {
+	var ui swyapi.UserInfo
+	make_faas_req("userinfo", swyapi.UserInfo{Id: id}, &ui)
+	fmt.Printf("Name: %s\n", ui.Name)
+}
+
 func list_projects() {
 	var ps []swyapi.ProjectItem
 	make_faas_req("project/list", swyapi.ProjectList{}, &ps)
@@ -401,6 +407,7 @@ const (
 	CMD_LUSR string		= "uls"
 	CMD_UADD string		= "uadd"
 	CMD_PASS string		= "pass"
+	CMD_UINF string		= "uinf"
 )
 
 var cmdOrder = []string {
@@ -420,6 +427,7 @@ var cmdOrder = []string {
 	CMD_LUSR,
 	CMD_UADD,
 	CMD_PASS,
+	CMD_UINF,
 }
 
 var cmdMap = map[string]*flag.FlagSet {
@@ -439,6 +447,7 @@ var cmdMap = map[string]*flag.FlagSet {
 	CMD_LUSR:	flag.NewFlagSet(CMD_LUSR, flag.ExitOnError),
 	CMD_UADD:	flag.NewFlagSet(CMD_UADD, flag.ExitOnError),
 	CMD_PASS:	flag.NewFlagSet(CMD_PASS, flag.ExitOnError),
+	CMD_UINF:	flag.NewFlagSet(CMD_UINF, flag.ExitOnError),
 }
 
 func bindCmdUsage(cmd, args, help string) {
@@ -486,6 +495,9 @@ func main() {
 	cmdMap[CMD_PASS].StringVar(&uid, "id", "", "User ID (e-mail)")
 	cmdMap[CMD_PASS].StringVar(&pass, "pass", "", "New password")
 	bindCmdUsage(CMD_PASS, "", "Set password")
+
+	cmdMap[CMD_UINF].StringVar(&uid, "id", "", "User ID (e-mail")
+	bindCmdUsage(CMD_UINF, "", "Get user info")
 
 	flag.Usage = func() {
 		for _, v := range cmdOrder {
@@ -606,6 +618,11 @@ func main() {
 
 	if cmdMap[CMD_PASS].Parsed() {
 		set_password(uid, pass)
+		return
+	}
+
+	if cmdMap[CMD_UINF].Parsed() {
+		show_user_info(uid)
 		return
 	}
 

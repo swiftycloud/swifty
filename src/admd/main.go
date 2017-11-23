@@ -85,6 +85,53 @@ func handleAdminReq(r *http.Request, params interface{}) (*swy.KeystoneTokenData
 	return td, 0, nil
 }
 
+func handleUserInfo(w http.ResponseWriter, r *http.Request) {
+	var ui swyapi.UserInfo
+	var kui *swy.KeystoneUser
+	var requestor string
+
+	td, code, err := handleAdminReq(r, &ui)
+	if err != nil {
+		goto out
+	}
+
+	requestor = td.Project.Name
+	code = http.StatusForbidden
+	if ui.Id == "" || ui.Id == requestor {
+		if !swy.KeystoneRoleHas(td, swy.SwyUserRole) {
+			err = fmt.Errorf("Not logged in")
+			goto out
+		}
+
+		ui.Id = requestor
+	} else {
+		if !swy.KeystoneRoleHas(td, swy.SwyAdminRole) {
+			err = fmt.Errorf("Not an admin")
+			goto out
+		}
+	}
+
+	code = http.StatusBadRequest
+	kui, err = ksGetUserInfo(&conf.Keystone, ui.Id)
+	if err != nil {
+		goto out
+	}
+
+	log.Debugf("USER: %s/%s/%s", kui.Id, kui.Name, kui.Description)
+	err = swy.HTTPMarshalAndWrite(w, swyapi.UserInfo{
+				Id: requestor,
+				Name: kui.Description,
+			})
+	if err != nil {
+		goto out
+	}
+
+	return
+
+out:
+	http.Error(w, err.Error(), code)
+}
+
 func handleListUsers(w http.ResponseWriter, r *http.Request) {
 	var params swyapi.ListUsers
 	var result *[]swyapi.UserInfo
@@ -248,6 +295,7 @@ func main() {
 	r := mux.NewRouter()
 	r.HandleFunc("/v1/login", handleUserLogin)
 	r.HandleFunc("/v1/users", handleListUsers)
+	r.HandleFunc("/v1/userinfo", handleUserInfo)
 	r.HandleFunc("/v1/adduser", handleAddUser)
 	r.HandleFunc("/v1/setpass", handleSetPassword)
 

@@ -144,30 +144,39 @@ func ksAddUserAndProject(conf *YAMLConfKeystone, user *swyapi.AddUser) error {
 	return nil
 }
 
-func ksChangeUserPass(conf *YAMLConfKeystone, up *swyapi.UserLogin) error {
+func ksGetUserInfo(conf *YAMLConfKeystone, user string) (*swy.KeystoneUser, error) {
 	var uresp swy.KeystoneUsersResp
 
 	err := swy.KeystoneMakeReq(
 		&swy.KeystoneReq {
 			Type:	"GET",
 			Addr:	conf.Addr,
-			URL:	"users?name=" + up.UserName,
+			URL:	"users?name=" + user,
 			Token:	ksToken,
 			Succ:	http.StatusOK, },
 		nil, &uresp)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if len(uresp.Users) != 1 {
-		return fmt.Errorf("No such user: %s", up.UserName)
+		return nil, fmt.Errorf("No such user: %s", user)
 	}
 
-	log.Debugf("Change pass for %s/%s", up.UserName, uresp.Users[0].Id)
+	return &uresp.Users[0], nil
+}
+
+func ksChangeUserPass(conf *YAMLConfKeystone, up *swyapi.UserLogin) error {
+	uinf, err := ksGetUserInfo(conf, up.UserName)
+	if err != nil {
+		return err
+	}
+
+	log.Debugf("Change pass for %s/%s", up.UserName, uinf.Id)
 	err = swy.KeystoneMakeReq(
 		&swy.KeystoneReq {
 			Type:	"PATCH",
 			Addr:	conf.Addr,
-			URL:	"users/" + uresp.Users[0].Id,
+			URL:	"users/" + uinf.Id,
 			Token:	ksToken,
 			Succ:	http.StatusOK, },
 		&swy.KeystonePassword {
