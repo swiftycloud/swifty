@@ -17,6 +17,10 @@ import (
 	"../common"
 )
 
+const (
+	SwyDefaultProject string = "default"
+)
+
 type FnCodeDesc struct {
 	Lang		string		`bson:"lang"`
 	Script		string		`bson:"script"`
@@ -308,7 +312,6 @@ func handleGenericReq(r *http.Request, params interface{}) (string, int, error) 
 }
 
 func handleProjectList(w http.ResponseWriter, r *http.Request) {
-	var id *SwoId
 	var result []swyapi.ProjectItem
 	var params swyapi.ProjectList
 	var fns, mws []string
@@ -322,11 +325,8 @@ func handleProjectList(w http.ResponseWriter, r *http.Request) {
 	}
 
 	code = http.StatusBadRequest
-	id = makeSwoId(tennant, "", "")
-
-	log.Debugf("List projects for %s", id.Str())
-
-	fns, mws, err = dbProjectListAll(id)
+	log.Debugf("List projects for %s", tennant)
+	fns, mws, err = dbProjectListAll(tennant)
 	if err != nil {
 		goto out
 	}
@@ -408,8 +408,11 @@ func handleFunctionAdd(w http.ResponseWriter, r *http.Request) {
 		goto out
 	}
 
-	if params.Project == "" || params.FuncName == "" ||
-			params.Code.Lang == "" {
+	if params.Project == "" {
+		params.Project = SwyDefaultProject
+	}
+
+	if params.FuncName == "" || params.Code.Lang == "" {
 		err = errors.New("Parameters are missed")
 		goto out
 	}

@@ -482,15 +482,15 @@ func dbBalancerLinkDel(link *BalancerLink) (error) {
 	return err
 }
 
-func dbProjectListAll(id *SwoId) (fn []string, mw []string, err error) {
+func dbProjectListAll(ten string) (fn []string, mw []string, err error) {
 	c := dbSession.DB(dbState).C(DBColFunc)
-	err = c.Find(bson.M{"tennant": id.Tennant}).Distinct("project", &fn)
+	err = c.Find(bson.M{"tennant": ten}).Distinct("project", &fn)
 	if err != nil {
 		return
 	}
 
 	c = dbSession.DB(dbState).C(DBColMware)
-	err = c.Find(bson.M{"tennant": id.Tennant}).Distinct("project", &mw)
+	err = c.Find(bson.M{"tennant": ten}).Distinct("project", &mw)
 	return
 }
 
