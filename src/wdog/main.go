@@ -53,6 +53,7 @@ func get_exit_code(err error) int {
 }
 
 type runReq struct {
+	Timeout uint64
 	Params *swyapi.SwdFunctionRun
 	Result chan *swyapi.SwdFunctionRunResult
 }
@@ -62,6 +63,7 @@ var runQueue chan *runReq
 func doRun() {
 	for {
 		req := <-runQueue
+		tmos := make(chan bool)
 
 		stdout := new(bytes.Buffer)
 		stderr := new(bytes.Buffer)
@@ -69,12 +71,32 @@ func doRun() {
 		run := req.Params.Args[0]
 		args := req.Params.Args[1:]
 
-		log.Debugf("Exec %s args %v", run, args)
+		log.Debugf("Exec %s args %v (tmo %d)", run, args, req.Timeout)
 
 		cmd := exec.Command(run, args...)
 		cmd.Stdout = stdout
 		cmd.Stderr = stderr
-		err := cmd.Run()
+		err := cmd.Start()
+
+		if err == nil {
+			if req.Timeout != 0 {
+				go func() {
+					select {
+					case <-time.After(time.Duration(req.Timeout) * time.Millisecond):
+						cmd.Process.Signal(os.Kill)
+						log.Debugf("Timeout")
+					case <-tmos:
+						/* nothing */
+					}
+				}()
+			}
+
+			err = cmd.Wait()
+
+			if req.Timeout != 0 {
+				tmos <-true
+			}
+		}
 
 		result := &swyapi.SwdFunctionRunResult{}
 		if err != nil {
@@ -109,7 +131,8 @@ func handleRun(w http.ResponseWriter, r *http.Request) {
 		goto out
 	}
 
-	req = runReq{Params: &params, Result: make(chan *swyapi.SwdFunctionRunResult)}
+	req = runReq{Timeout: function.Timeout, Params: &params,
+			Result: make(chan *swyapi.SwdFunctionRunResult)}
 	runQueue <- &req
 	result = <-req.Result
 
