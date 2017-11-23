@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	SwyDefaultProject string = "default"
+	SwyDefaultProject string	= "default"
 )
 
 type FnCodeDesc struct {
@@ -45,6 +45,7 @@ type FnEventDesc struct {
 type FnSizeDesc struct {
 	Replicas	int		`bson:"replicas"`
 	Mem		string		`bson:"mem"`
+	Tmo		uint64		`bson:"timeout"`
 }
 
 type FunctionDesc struct {
@@ -165,7 +166,9 @@ type YAMLConfMw struct {
 }
 
 type YAMLConfRt struct {
-	Image		string			`yaml:"image"`
+	MaxTimeout	uint64			`yaml:"max-timeout"`
+	DefTimeout	uint64			`yaml:"def-timeout"`
+	Images		map[string]string	`yaml:"images"`
 }
 
 type YAMLConfKuber struct {
@@ -179,7 +182,7 @@ type YAMLConf struct {
 	Keystone	YAMLConfKeystone	`yaml:"keystone"`
 	Balancer	YAMLConfBalancer	`yaml:"balancer"`
 	Mware		YAMLConfMw		`yaml:"middleware"`
-	Runtime		map[string]YAMLConfRt	`yaml:"runtime"`
+	Runtime		YAMLConfRt		`yaml:"runtime"`
 	Wdog		YAMLConfSwd		`yaml:"wdog"`
 	Kuber		YAMLConfKuber		`yaml:"kubernetes"`
 }
@@ -195,6 +198,7 @@ func genFunctionDescJSON(conf *YAMLConf, fn *FunctionDesc, fi *FnInst) string {
 				Dir:		RtWdir(&fn.Code, fi.Build),
 				Stats:		statsPodPath,
 				PodToken:	fn.Cookie,
+				Timeout:	fn.Size.Tmo,
 			})
 	if err != nil {
 		log.Errorf("marshal error: %s", err.Error())
@@ -374,6 +378,7 @@ func getFunctionDesc(tennant string, p_add *swyapi.FunctionAdd) *FunctionDesc {
 		Size:		FnSizeDesc {
 			Replicas:	p_add.Size.Replicas,
 			Mem:		p_add.Size.Memory,
+			Tmo:		p_add.Size.Timeout,
 		},
 		Code:		FnCodeDesc {
 			Lang:		p_add.Code.Lang,
@@ -410,6 +415,13 @@ func handleFunctionAdd(w http.ResponseWriter, r *http.Request) {
 
 	if params.Project == "" {
 		params.Project = SwyDefaultProject
+	}
+
+	if params.Size.Timeout == 0 {
+		params.Size.Timeout = conf.Runtime.DefTimeout * 1000
+	} else if params.Size.Timeout > conf.Runtime.MaxTimeout * 1000 {
+		err = errors.New("Too big timeout")
+		goto out
 	}
 
 	if params.FuncName == "" || params.Code.Lang == "" {

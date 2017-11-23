@@ -283,7 +283,7 @@ func swk8sRun(conf *YAMLConf, fn *FunctionDesc, fi *FnInst) error {
 	depname := fi.DepName()
 	log.Debugf("Start %s deployment for %s", depname, fn.SwoId.Str())
 
-	rt, ok := conf.Runtime[fn.Code.Lang]
+	img, ok := conf.Runtime.Images[fn.Code.Lang]
 	if !ok {
 		err := errors.New("Wrong language selected")
 		log.Error("Wrong language")
@@ -357,7 +357,7 @@ func swk8sRun(conf *YAMLConf, fn *FunctionDesc, fi *FnInst) error {
 			Containers:	[]v1.Container{
 				{
 					Name:		fn.Name,
-					Image:		rt.Image,
+					Image:		img,
 					Command:	[]string{conf.Wdog.CtPath},
 					Ports:		ctPorts,
 					Env:		swk8sGenEnvVar(conf, fn, fi, wdaddr, wd_port, secret),

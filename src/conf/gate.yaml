@@ -35,14 +35,13 @@ middleware:
                 admin: "admin"
                 password: "abc123"
 runtime:
-        golang:
-                image: "swifty/golang"
-        python:
-                image: "swifty/python"
-        swift:
-                image: "swifty/swift"
-        nodejs:
-                image: "swifty/nodejs"
+        max-timeout: 60
+        def-timeout: 1
+        images:
+                golang: "swifty/golang"
+                python: "swifty/python"
+                swift:  "swifty/swift"
+                nodejs: "swifty/nodejs"
 wdog:
         ct-path: "/usr/bin/swy-wdog"
         address: ":8687"
