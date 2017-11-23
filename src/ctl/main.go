@@ -31,7 +31,7 @@ type YAMLConf struct {
 
 var conf YAMLConf
 
-func make_faas_req_x(url string, in interface{}) (*http.Response, error) {
+func make_faas_req_x(url string, in interface{}, succ_code int) (*http.Response, error) {
 	var address string = "http://" + conf.Login.Host + ":" + conf.Login.Port + "/v1/" + url
 	var cb swy.HTTPMarshalAndPostCB = func(r *http.Request) error {
 			if conf.Login.Token != "" {
@@ -40,13 +40,18 @@ func make_faas_req_x(url string, in interface{}) (*http.Response, error) {
 			}
 			return nil
 	}
-	return swy.HTTPMarshalAndPost(address, in, cb)
+	return swy.HTTPMarshalAndPost2(address, in, cb, succ_code)
 }
 
 func faas_login() string {
-	resp, err := make_faas_req_x("user/login", swyapi.UserLogin {
+	url := "user/login"
+	if conf.Login.Proj == "admin" {
+		url = "login"
+	}
+
+	resp, err := make_faas_req_x(url, swyapi.UserLogin {
 			UserName: conf.Login.User, Password: conf.Login.Pass,
-		})
+		}, http.StatusOK)
 	if err != nil {
 		panic(err)
 	}
@@ -65,9 +70,13 @@ func faas_login() string {
 }
 
 func make_faas_req(url string, in interface{}, out interface{}) {
+	make_faas_req2(url, in, out, http.StatusOK)
+}
+
+func make_faas_req2(url string, in interface{}, out interface{}, succ_code int) {
 	first_attempt := true
 again:
-	resp, err := make_faas_req_x(url, in)
+	resp, err := make_faas_req_x(url, in, succ_code)
 	if err != nil {
 		if resp == nil {
 			panic(err)
@@ -97,6 +106,25 @@ again:
 			panic(err)
 		}
 	}
+}
+
+func list_users() {
+	var uss []swyapi.UserInfo
+	make_faas_req("users", swyapi.ListUsers{}, &uss)
+
+	for _, u := range uss {
+		fmt.Printf("%s (%s)\n", u.Id, u.Name)
+	}
+}
+
+func add_user(id, name, pass string) {
+	make_faas_req2("adduser", swyapi.AddUser{Id: id, Pass:pass, Name: name},
+		nil, http.StatusCreated)
+}
+
+func set_password(id, pass string) {
+	make_faas_req2("setpass", swyapi.UserLogin{UserName: id, Password: pass},
+		nil, http.StatusCreated)
 }
 
 func list_projects() {
@@ -371,6 +399,9 @@ const (
 	CMD_MADD string		= "madd"
 	CMD_MDEL string		= "mdel"
 	CMD_MENV string		= "menv"
+	CMD_LUSR string		= "uls"
+	CMD_UADD string		= "uadd"
+	CMD_PASS string		= "pass"
 )
 
 var cmdOrder = []string {
@@ -387,6 +418,9 @@ var cmdOrder = []string {
 	CMD_MADD,
 	CMD_MDEL,
 	CMD_MENV,
+	CMD_LUSR,
+	CMD_UADD,
+	CMD_PASS,
 }
 
 var cmdMap = map[string]*flag.FlagSet {
@@ -403,6 +437,9 @@ var cmdMap = map[string]*flag.FlagSet {
 	CMD_MADD:	flag.NewFlagSet(CMD_MADD, flag.ExitOnError),
 	CMD_MDEL:	flag.NewFlagSet(CMD_MDEL, flag.ExitOnError),
 	CMD_MENV:	flag.NewFlagSet(CMD_MENV, flag.ExitOnError),
+	CMD_LUSR:	flag.NewFlagSet(CMD_LUSR, flag.ExitOnError),
+	CMD_UADD:	flag.NewFlagSet(CMD_UADD, flag.ExitOnError),
+	CMD_PASS:	flag.NewFlagSet(CMD_PASS, flag.ExitOnError),
 }
 
 func bindCmdUsage(cmd, args, help string) {
@@ -413,7 +450,7 @@ func bindCmdUsage(cmd, args, help string) {
 }
 
 func main() {
-	var lang, src, run, mware, event string
+	var lang, src, run, mware, event, uid, name, pass string
 
 	bindCmdUsage(CMD_LOGIN, "USER:PASS@HOST:PORT/PROJECT", "Login into the system")
 
@@ -440,6 +477,17 @@ func main() {
 	bindCmdUsage(CMD_MADD, "TYPE:ID [TYPE:ID]", "Add middleware")
 	bindCmdUsage(CMD_MDEL, "ID [ID]", "Delete middleware")
 	bindCmdUsage(CMD_MENV, "ID", "Show middleware environment variables")
+
+	bindCmdUsage(CMD_LUSR, "", "List users")
+
+	cmdMap[CMD_UADD].StringVar(&uid, "id", "", "User ID (e-mail)")
+	cmdMap[CMD_UADD].StringVar(&name, "name", "", "User name")
+	cmdMap[CMD_UADD].StringVar(&pass, "pass", "", "User password")
+	bindCmdUsage(CMD_UADD, "", "Add user")
+
+	cmdMap[CMD_PASS].StringVar(&uid, "id", "", "User ID (e-mail)")
+	cmdMap[CMD_PASS].StringVar(&pass, "pass", "", "New password")
+	bindCmdUsage(CMD_PASS, "", "Set password")
 
 	flag.Usage = func() {
 		for _, v := range cmdOrder {
@@ -545,6 +593,21 @@ func main() {
 
 	if cmdMap[CMD_MENV].Parsed() {
 		show_mware_env(os.Args[2])
+		return
+	}
+
+	if cmdMap[CMD_LUSR].Parsed() {
+		list_users()
+		return
+	}
+
+	if cmdMap[CMD_UADD].Parsed() {
+		add_user(uid, name, pass)
+		return
+	}
+
+	if cmdMap[CMD_PASS].Parsed() {
+		set_password(uid, pass)
 		return
 	}
 
