@@ -87,9 +87,8 @@ func handleAdminReq(r *http.Request, params interface{}) (*swy.KeystoneTokenData
 
 func handleListUsers(w http.ResponseWriter, r *http.Request) {
 	var params swyapi.ListUsers
-	var result []swyapi.UserInfo
+	var result *[]swyapi.UserInfo
 	var code = http.StatusBadRequest
-	var projects []string
 
 	td, code, err := handleAdminReq(r, &params)
 	if err != nil {
@@ -103,13 +102,9 @@ func handleListUsers(w http.ResponseWriter, r *http.Request) {
 	}
 
 	code = http.StatusBadRequest
-	projects, err = ksListProjects(&conf.Keystone)
+	result, err = ksListUsers(&conf.Keystone)
 	if err != nil {
 		goto out
-	}
-
-	for _, prj := range projects {
-		result = append(result, swyapi.UserInfo{Id: prj})
 	}
 
 	err = swy.HTTPMarshalAndWrite(w, &result)

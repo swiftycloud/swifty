@@ -59,29 +59,29 @@ func keystoneGetOwnerRoleId(conf *YAMLConfKeystone) (string, error) {
 	return "", fmt.Errorf("Can't find swifty.owner role")
 }
 
-func ksListProjects(conf *YAMLConfKeystone) ([]string, error) {
-	var projects swy.KeystoneProjectsResp
-	var res []string
+func ksListUsers(conf *YAMLConfKeystone) (*[]swyapi.UserInfo, error) {
+	var users swy.KeystoneUsersResp
+	var res []swyapi.UserInfo
 
 	err := swy.KeystoneMakeReq(&swy.KeystoneReq {
 			Type:	"GET",
 			Addr:	conf.Addr,
-			URL:	"projects",
+			URL:	"users",
 			Token:	ksToken,
-			Succ:	http.StatusOK, }, nil, &projects)
+			Succ:	http.StatusOK, }, nil, &users)
 	if err != nil {
-		return res, err
+		return nil, err
 	}
 
-	for _, prj := range projects.Projects {
-		if prj.DomainId != ksSwyDomainId {
+	for _, usr := range users.Users {
+		if usr.DomainId != ksSwyDomainId {
 			continue
 		}
 
-		res = append(res, prj.Name)
+		res = append(res, swyapi.UserInfo{Id: usr.Name, Name: usr.Description})
 	}
 
-	return res, nil
+	return &res, nil
 }
 
 func ksAddUserAndProject(conf *YAMLConfKeystone, user *swyapi.AddUser) error {
