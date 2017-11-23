@@ -182,7 +182,7 @@ func detect_language(repo string) string {
 	panic("can't detect function language")
 }
 
-func add_function(name, lang, src, run, mwares, event string) {
+func add_function(name, lang, src, mwares, event string) {
 	sources := swyapi.FunctionSources{}
 	code := swyapi.FunctionCode{}
 
@@ -200,7 +200,6 @@ func add_function(name, lang, src, run, mwares, event string) {
 		fmt.Printf("Will add git repo %s\n", repo)
 		sources.Type = "git"
 		sources.Repo = repo
-		code.Script = run
 	} else {
 		data, err := ioutil.ReadFile(src)
 		if err != nil {
@@ -212,7 +211,6 @@ func add_function(name, lang, src, run, mwares, event string) {
 		fmt.Printf("Will add file %s\n", src)
 		sources.Type = "code"
 		sources.Code = enc
-		code.Function = run
 	}
 
 	if lang == "auto" {
@@ -256,7 +254,8 @@ func run_function(name string, args []string) {
 	make_faas_req("function/run",
 		swyapi.FunctionRun{ Project: conf.Login.Proj, FuncName: name, Args: args, }, &rres)
 
-	fmt.Printf("code: %d\n", rres.Code);
+	fmt.Printf("code: %d\n", rres.Code)
+	fmt.Printf("returned: %s\n", rres.Return)
 	fmt.Printf("%s", rres.Stdout)
 	fmt.Fprintf(os.Stderr, "%s", rres.Stderr)
 }
@@ -450,7 +449,7 @@ func bindCmdUsage(cmd, args, help string) {
 }
 
 func main() {
-	var lang, src, run, mware, event, uid, name, pass string
+	var lang, src, mware, event, uid, name, pass string
 
 	bindCmdUsage(CMD_LOGIN, "USER:PASS@HOST:PORT/PROJECT", "Login into the system")
 
@@ -462,7 +461,6 @@ func main() {
 
 	cmdMap[CMD_ADD].StringVar(&lang, "lang", "auto", "Language")
 	cmdMap[CMD_ADD].StringVar(&src, "src", ".", "Repository")
-	cmdMap[CMD_ADD].StringVar(&run, "run", "", "Script to run")
 	cmdMap[CMD_ADD].StringVar(&mware, "mw", "", "Mware to use, comma-separated")
 	cmdMap[CMD_ADD].StringVar(&event, "event", "", "Event this fn is to start")
 	bindCmdUsage(CMD_ADD, "FUNCNAME", "Add a function")
@@ -548,7 +546,7 @@ func main() {
 	}
 
 	if cmdMap[CMD_ADD].Parsed() {
-		add_function(os.Args[2], lang, src, run, mware, event)
+		add_function(os.Args[2], lang, src, mware, event)
 		return
 	}
 

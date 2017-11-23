@@ -12,7 +12,7 @@ import (
 	"../common"
 )
 
-func doRun(fi *FnInst, event string, args []string) (int, string, string, error) {
+func doRun(fi *FnInst, event string, args []string) (int, string, error) {
 	log.Debugf("RUN %s(%s)", fi.fn.SwoId.Str(), strings.Join(args, ","))
 
 	var wd_result swyapi.SwdFunctionRunResult
@@ -58,10 +58,10 @@ func doRun(fi *FnInst, event string, args []string) (int, string, string, error)
 	logSaveResult(fi.fn, event, wd_result.Stdout, wd_result.Stderr)
 	log.Debugf("RETurn %s: %d out[%s] err[%s]", fi.fn.SwoId.Str(),
 			wd_result.Code, wd_result.Stdout, wd_result.Stderr)
-	return wd_result.Code, wd_result.Stdout, wd_result.Stderr, nil
+	return wd_result.Code, wd_result.Return, nil
 
 out:
-	return 0, "", "", fmt.Errorf("RUN error %s", err.Error())
+	return -1, "", fmt.Errorf("RUN error %s", err.Error())
 }
 
 func buildFunction(fn *FunctionDesc) error {
@@ -69,15 +69,15 @@ func buildFunction(fn *FunctionDesc) error {
 	var orig_state int
 
 	log.Debugf("build RUN %s", fn.SwoId.Str())
-	code, _, stderr, err := doRun(fn.InstBuild(), "build", RtBuildCmd(&fn.Code))
+	code, _, err := doRun(fn.InstBuild(), "build", RtBuildCmd(&fn.Code))
 	log.Debugf("build %s finished", fn.SwoId.Str())
 	logSaveEvent(fn, "built", "")
 	if err != nil {
 		goto out
 	}
 
-	if code != 0 || stderr != "" {
-		err = fmt.Errorf("stderr: %s", stderr)
+	if code != 0 {
+		err = fmt.Errorf("Build finished with %d", code)
 		goto out
 	}
 

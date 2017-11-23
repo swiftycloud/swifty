@@ -25,8 +25,6 @@ const (
 
 type FnCodeDesc struct {
 	Lang		string		`bson:"lang"`
-	Script		string		`bson:"script"`
-	Function	string		`bson:"function"`
 	Env		[]string	`bson:"env"`
 }
 
@@ -384,8 +382,6 @@ func getFunctionDesc(tennant string, p_add *swyapi.FunctionAdd) *FunctionDesc {
 		},
 		Code:		FnCodeDesc {
 			Lang:		p_add.Code.Lang,
-			Script:		p_add.Code.Script,
-			Function:	p_add.Code.Function,
 			Env:		p_add.Code.Env,
 		},
 		Mware:	p_add.Mware,
@@ -663,8 +659,6 @@ func handleFunctionInfo(w http.ResponseWriter, r *http.Request) {
 			URL:		url,
 			Code:		swyapi.FunctionCode{
 				Lang:		fn.Code.Lang,
-				Script:		fn.Code.Script,
-				Function:	fn.Code.Function,
 				Env:		fn.Code.Env,
 			},
 			Event:		swyapi.FunctionEvent{
@@ -735,23 +729,23 @@ func fnCallable(fn *FunctionDesc) bool {
 }
 
 func makeArgMap(r *http.Request) string {
-	ret := "{"
+	args := make(map[string]string)
 
 	for k, v := range r.URL.Query() {
 		if len(v) < 1 {
 			continue
 		}
 
-		ret += "\"" + k + "\"=\"" + v[0] + "\""
+		args[k] = v[0]
 	}
 
-	return ret + "}"
+	ret, _ := json.Marshal(args)
+	return string(ret)
 }
 
 func handleFunctionCall(w http.ResponseWriter, r *http.Request) {
-	var stdout, stderr string
-	var fn_code int
 	var arg_map string
+	var retjson string
 
 	vars := mux.Vars(r)
 	fnId := vars["fnid"]
@@ -767,20 +761,16 @@ func handleFunctionCall(w http.ResponseWriter, r *http.Request) {
 
 	arg_map = makeArgMap(r)
 
-	fn_code, stdout, stderr, err = doRun(fn.Inst(), "run", append(RtRunCmd(&fn.Code), arg_map))
+	_, retjson, err = doRun(fn.Inst(), "run", append(RtRunCmd(&fn.Code), arg_map))
 	if err != nil {
 		goto out
 	}
 
-	err = swy.HTTPMarshalAndWrite(w, swyapi.FunctionRunResult{
-		Code:		fn_code,
-		Stdout:		stdout,
-		Stderr:		stderr,
-	})
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(retjson))
+	return
 
-	if err == nil {
-		return
-	}
 out:
 	http.Error(w, err.Error(), http.StatusBadRequest)
 }
@@ -789,7 +779,7 @@ func handleFunctionRun(w http.ResponseWriter, r *http.Request) {
 	var id *SwoId
 	var params swyapi.FunctionRun
 	var fn FunctionDesc
-	var stdout, stderr string
+	var stdout, stderr, retjson string
 	var code, fn_code int
 
 	tennant, code, err := handleGenericReq(r, &params)
@@ -808,12 +798,13 @@ func handleFunctionRun(w http.ResponseWriter, r *http.Request) {
 		goto out
 	}
 
-	fn_code, stdout, stderr, err = doRun(fn.Inst(), "run", append(RtRunCmd(&fn.Code), params.Args...))
+	fn_code, retjson, err = doRun(fn.Inst(), "run", append(RtRunCmd(&fn.Code), params.Args...))
 	if err != nil {
 		goto out
 	}
 
 	err = swy.HTTPMarshalAndWrite(w, swyapi.FunctionRunResult{
+		Return:		retjson,
 		Code:		fn_code,
 		Stdout:		stdout,
 		Stderr:		stderr,

@@ -50,11 +50,6 @@ func checkoutSources(fn *FunctionDesc) error {
 		goto co_err
 	}
 
-	if fn.Code.Function != "" {
-		err = fmt.Errorf("Can't call function from git repo")
-		goto co_err
-	}
-
 	return nil
 
 co_err:
@@ -137,9 +132,9 @@ func getFileFromReq(fn *FunctionDesc) error {
 		return fmt.Errorf("Error decoding sources")
 	}
 
-	fn.Code.Script = RtDefaultScriptName(&fn.Code)
+	script := RtDefaultScriptName(&fn.Code)
 
-	err = ioutil.WriteFile(to + "/" + fn.Code.Script, data, 0600)
+	err = ioutil.WriteFile(to + "/" + script, data, 0600)
 	if err != nil {
 		return fmt.Errorf("Can't write source file")
 	}

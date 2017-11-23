@@ -64,6 +64,7 @@ func doRun() {
 	for {
 		req := <-runQueue
 		tmos := make(chan bool)
+		var resjson string
 
 		stdout := new(bytes.Buffer)
 		stderr := new(bytes.Buffer)
@@ -96,6 +97,14 @@ func doRun() {
 			if req.Timeout != 0 {
 				tmos <-true
 			}
+
+			if err == nil {
+				var retval []byte
+				retval, err = ioutil.ReadFile("/dev/shm/swyresult.json")
+				if err == nil {
+					resjson = string(retval)
+				}
+			}
 		}
 
 		result := &swyapi.SwdFunctionRunResult{}
@@ -104,6 +113,7 @@ func doRun() {
 			log.Errorf("Run exited with %d (%s)", result.Code, err.Error())
 		} else {
 			result.Code = 0
+			result.Return = resjson
 			log.Errorf("OK");
 		}
 

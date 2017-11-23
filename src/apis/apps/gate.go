@@ -28,8 +28,6 @@ type RunCmd struct {
 
 type FunctionCode struct {
 	Lang		string			`json:"lang"`
-	Script		string			`json:"script,omitempty"`
-	Function	string			`json:"function,omitempty"`
 	Env		[]string		`json:"env"`
 }
 
@@ -112,6 +110,7 @@ type FunctionRun struct {
 }
 
 type FunctionRunResult struct {
+	Return		string			`json:"return"`
 	Code		int			`json:"code"`
 	Stdout		string			`json:"stdout"`
 	Stderr		string			`json:"stderr"`

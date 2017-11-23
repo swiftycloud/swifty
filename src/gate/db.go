@@ -145,7 +145,7 @@ func dbFuncFind(id *SwoId) (FunctionDesc, error) {
 }
 
 func dbFuncFindByCookie(cookie string) (FunctionDesc, error) {
-	return dbFuncFindOne(bson.M{"index": cookie})
+	return dbFuncFindOne(bson.M{"cookie": cookie})
 }
 
 func dbFuncFindStates(id *SwoId, states []int) (FunctionDesc, error) {
@@ -207,7 +207,6 @@ func dbFuncUpdateAdded(fn *FunctionDesc) error {
 		bson.M{"tennant": fn.Tennant, "project": fn.Project, "name": fn.Name},
 		bson.M{"$set": bson.M{
 				"src.commit": fn.Src.Commit,
-				"code.script": fn.Code.Script,
 				"cronid": fn.CronID,
 				"mware": fn.Mware,
 				"oneshot": fn.OneShot,
