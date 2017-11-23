@@ -35,8 +35,9 @@ middleware:
                 admin: "admin"
                 password: "abc123"
 runtime:
-        max-timeout: 60
-        def-timeout: 1
+        timeout:
+                max: 60
+                def: 1
         images:
                 golang: "swifty/golang"
                 python: "swifty/python"

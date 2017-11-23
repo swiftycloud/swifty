@@ -165,9 +165,14 @@ type YAMLConfMw struct {
 	MGO		YAMLConfMongo		`yaml:"mongo"`
 }
 
+type YAMLConfRange struct {
+	Min		uint64			`yaml:"min"`
+	Max		uint64			`yaml:"max"`
+	Def		uint64			`yaml:"def"`
+}
+
 type YAMLConfRt struct {
-	MaxTimeout	uint64			`yaml:"max-timeout"`
-	DefTimeout	uint64			`yaml:"def-timeout"`
+	Timeout		YAMLConfRange		`yaml:"timeout"`
 	Images		map[string]string	`yaml:"images"`
 }
 
@@ -416,8 +421,8 @@ func handleFunctionAdd(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if params.Size.Timeout == 0 {
-		params.Size.Timeout = conf.Runtime.DefTimeout * 1000
-	} else if params.Size.Timeout > conf.Runtime.MaxTimeout * 1000 {
+		params.Size.Timeout = conf.Runtime.Timeout.Def * 1000
+	} else if params.Size.Timeout > conf.Runtime.Timeout.Max * 1000 {
 		err = errors.New("Too big timeout")
 		goto out
 	}
