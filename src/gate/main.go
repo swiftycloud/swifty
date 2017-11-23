@@ -902,6 +902,7 @@ func handleFunctionList(w http.ResponseWriter, r *http.Request) {
 			swyapi.FunctionItem{
 				FuncName:	v.Name,
 				State:		fnStates[v.State],
+				Timeout:	v.Size.Tmo,
 		})
 	}
 

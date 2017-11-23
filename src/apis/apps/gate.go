@@ -125,6 +125,7 @@ type FunctionID struct {
 type FunctionItem struct {
 	FuncName	string			`json:"name"`
 	State		string			`json:"state"`
+	Timeout		uint64			`json:"timeout"`
 }
 
 type ProjectItem struct {
