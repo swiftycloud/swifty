@@ -37,7 +37,7 @@ func doRun(fi *FnInst, event string, args []string) (int, string, string, error)
 				&swyapi.SwdFunctionRun{
 					PodToken:	fi.fn.Cookie,
 					Args:		args,
-				}, nil)
+				}, nil, http.StatusOK)
 	if err != nil {
 		goto out
 	}

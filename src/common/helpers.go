@@ -205,7 +205,7 @@ func HTTPMarshalAndWrite(w http.ResponseWriter, data interface{}) error {
 type HTTPMarshalAndPostCB func(r *http.Request) error
 
 func HTTPMarshalAndPostTimeout(address string, timeout time.Duration,
-			data interface{}, cb HTTPMarshalAndPostCB) (*http.Response, error) {
+			data interface{}, cb HTTPMarshalAndPostCB, succ_status int) (*http.Response, error) {
 	var c = &http.Client{
 		Timeout: time.Second * timeout,
 	}
@@ -237,7 +237,7 @@ func HTTPMarshalAndPostTimeout(address string, timeout time.Duration,
 		return nil, err
 	}
 
-	if rsp.StatusCode != http.StatusOK {
+	if rsp.StatusCode != succ_status {
 		err = fmt.Errorf("\tResponse is not OK: %d", rsp.StatusCode)
 		return rsp, err
 	}
@@ -245,9 +245,14 @@ func HTTPMarshalAndPostTimeout(address string, timeout time.Duration,
 	return rsp, nil
 }
 
+func HTTPMarshalAndPost2(address string, data interface{},
+		cb HTTPMarshalAndPostCB, succ_status int) (*http.Response, error) {
+	return HTTPMarshalAndPostTimeout(address, 15, data, cb, succ_status)
+}
+
 func HTTPMarshalAndPost(address string, data interface{},
 		cb HTTPMarshalAndPostCB) (*http.Response, error) {
-	return HTTPMarshalAndPostTimeout(address, 15, data, cb)
+	return HTTPMarshalAndPostTimeout(address, 15, data, cb, http.StatusOK)
 }
 
 func Exec(exe string, args []string) (bytes.Buffer, bytes.Buffer, error) {
