@@ -44,7 +44,7 @@ type FnEventDesc struct {
 
 type FnSizeDesc struct {
 	Replicas	int		`bson:"replicas"`
-	Mem		string		`bson:"mem"`
+	Mem		uint64		`bson:"mem"`
 	Tmo		uint64		`bson:"timeout"`
 }
 
@@ -173,6 +173,7 @@ type YAMLConfRange struct {
 
 type YAMLConfRt struct {
 	Timeout		YAMLConfRange		`yaml:"timeout"`
+	Memory		YAMLConfRange		`yaml:"memory"`
 	Images		map[string]string	`yaml:"images"`
 }
 
@@ -381,7 +382,7 @@ func getFunctionDesc(tennant string, p_add *swyapi.FunctionAdd) *FunctionDesc {
 			Code:		p_add.Sources.Code,
 		},
 		Size:		FnSizeDesc {
-			Replicas:	p_add.Size.Replicas,
+			Replicas:	1,
 			Mem:		p_add.Size.Memory,
 			Tmo:		p_add.Size.Timeout,
 		},
@@ -409,13 +410,6 @@ func handleFunctionAdd(w http.ResponseWriter, r *http.Request) {
 
 	code = http.StatusBadRequest
 
-	if params.Size.Replicas < 1 {
-		params.Size.Replicas = 1
-	} else if params.Size.Replicas > conf.Kuber.MaxReplicas {
-		err = errors.New("Too big replicas value")
-		goto out
-	}
-
 	if params.Project == "" {
 		params.Project = SwyDefaultProject
 	}
@@ -424,6 +418,14 @@ func handleFunctionAdd(w http.ResponseWriter, r *http.Request) {
 		params.Size.Timeout = conf.Runtime.Timeout.Def * 1000
 	} else if params.Size.Timeout > conf.Runtime.Timeout.Max * 1000 {
 		err = errors.New("Too big timeout")
+		goto out
+	}
+
+	if params.Size.Memory == 0 {
+		params.Size.Memory = conf.Runtime.Memory.Def
+	} else if params.Size.Memory > conf.Runtime.Memory.Max ||
+			params.Size.Memory < conf.Runtime.Memory.Min {
+		err = errors.New("Too small/big memory size")
 		goto out
 	}
 

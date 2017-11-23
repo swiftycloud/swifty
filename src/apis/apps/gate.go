@@ -38,8 +38,7 @@ type FunctionSources struct {
 }
 
 type FunctionSize struct {
-	Replicas	int			`json:"replicas"`
-	Memory		string			`json:"memory"`
+	Memory		uint64			`json:"memory"`
 	Timeout		uint64			`json:"timeout"`
 }
 

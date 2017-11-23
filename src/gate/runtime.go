@@ -108,17 +108,3 @@ func RtPrepareSources(scr *FnCodeDesc, dir string) error {
 	}
 	return err
 }
-
-func RtGetFnResources(fn *FunctionDesc) map[string]string {
-	ret := make(map[string]string)
-	ret["cpu.max"] = "1"
-	ret["cpu.min"] = "500m"
-	if fn.Size.Mem == "" {
-		ret["mem.max"] = "128Mi"
-		ret["mem.min"] = "64Mi"
-	} else {
-		ret["mem.max"] = fn.Size.Mem
-		ret["mem.min"] = fn.Size.Mem
-	}
-	return ret
-}

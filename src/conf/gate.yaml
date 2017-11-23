@@ -38,6 +38,10 @@ runtime:
         timeout:
                 max: 60
                 def: 1
+        memory:
+                max: 1024
+                min: 64
+                def: 128
         images:
                 golang: "swifty/golang"
                 python: "swifty/python"
