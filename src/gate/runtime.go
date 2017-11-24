@@ -14,6 +14,7 @@ type rt_info struct {
 	Build		[]string
 	Run		[]string
 	Prep		prepSources
+	Devel		bool
 }
 
 func pyPrepSources(scr *FnCodeDesc, dir string) error {
@@ -47,6 +48,7 @@ var golang_info = rt_info {
 	Build:		[]string{"go", "build", "-o", "../swycode/swycode"},
 	Run:		[]string{"swycode"},
 	Prep:		goPrepSources,
+	Devel:		true,
 }
 
 var swift_info = rt_info {
@@ -54,12 +56,14 @@ var swift_info = rt_info {
 	CodePath:	"/function",
 	Build:		[]string{"swift", "build"},
 	Run:		[]string{"./.build/debug/"},
+	Devel:		true,
 }
 
 var nodejs_info = rt_info {
 	Ext:		"js",
 	CodePath:	"/function",
 	Run:		[]string{"node", "main.js"},
+	Devel:		true,
 }
 
 var rt_handlers = map[string]*rt_info {
@@ -67,6 +71,11 @@ var rt_handlers = map[string]*rt_info {
 	"golang":	&golang_info,
 	"swift":	&swift_info,
 	"nodejs":	&nodejs_info,
+}
+
+func RtLangEnabled(lang string) bool {
+	h, ok := rt_handlers[lang]
+	return ok && (SwyModeDevel || !h.Devel)
 }
 
 func RtBuilding(scr *FnCodeDesc) bool {

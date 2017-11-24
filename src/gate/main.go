@@ -439,6 +439,11 @@ func handleFunctionAdd(w http.ResponseWriter, r *http.Request) {
 		goto out
 	}
 
+	if !RtLangEnabled(params.Code.Lang) {
+		err = errors.New("Unsupported language")
+		goto out
+	}
+
 	fn = getFunctionDesc(tennant, &params)
 	if RtBuilding(&fn.Code) {
 		fn.State = swy.DBFuncStateBld
