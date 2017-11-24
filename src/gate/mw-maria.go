@@ -17,7 +17,7 @@ func mariaConn(conf *YAMLConfMw) (*sql.DB, error) {
 	return sql.Open("mysql",
 			fmt.Sprintf("%s:%s@tcp(%s)/?charset=utf8",
 				conf.Maria.Admin,
-				conf.Maria.Pass,
+				gateSecrets[conf.Maria.Pass],
 				conf.Maria.Addr))
 }
 

@@ -14,6 +14,8 @@ import (
 	"../common"
 )
 
+var admdSecrets map[string]string
+
 type YAMLConfKeystone struct {
 	Addr		string			`yaml:"address"`
 	Domain		string			`yaml:"domain"`
@@ -259,6 +261,7 @@ func setupLogger(conf *YAMLConf) {
 func main() {
 	var config_path string
 	var devel bool
+	var err error
 
 	flag.StringVar(&config_path,
 			"conf",
@@ -276,9 +279,15 @@ func main() {
 		return
 	}
 
+	admdSecrets, err = swy.ReadSecrets("admd")
+	if err != nil {
+		log.Errorf("Can't read gate secrets")
+		return
+	}
+
 	log.Debugf("config: %v", &conf)
 
-	err := ksInit(&conf.Keystone)
+	err = ksInit(&conf.Keystone)
 	if err != nil {
 		log.Errorf("Can't init ks: %s", err.Error())
 		return

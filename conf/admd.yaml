@@ -4,4 +4,4 @@ keystone:
         address: "192.168.122.197:5000"
         domain: "swifty"
         admin: "admin"
-        pass: "1q2w3e"
+        pass: "KSPASS"

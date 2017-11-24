@@ -499,7 +499,7 @@ func dbConnect(conf *YAMLConf) error {
 		Database:	conf.DB.StateDB,
 		Timeout:	60 * time.Second,
 		Username:	conf.DB.User,
-		Password:	conf.DB.Pass}
+		Password:	gateSecrets[conf.DB.Pass]}
 
 	session, err := mgo.DialWithInfo(&info);
 	if err != nil {

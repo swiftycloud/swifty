@@ -30,7 +30,7 @@ func InitPostgres(conf *YAMLConfMw, mwd *MwareDesc, mware *swyapi.MwareItem) (er
 
 	addr := strings.Split(conf.Postgres.Addr, ":")[0] + ":" + conf.Postgres.AdminPort
 	_, err = swy.HTTPMarshalAndPostTimeout("http://" + addr + "/create", 120,
-			&swyapi.PgRequest{Token: conf.Postgres.Token,
+			&swyapi.PgRequest{Token: gateSecrets[conf.Postgres.Token],
 				User: mwd.Client, Pass: mwd.Pass, DbName: pgs.DBName}, nil, http.StatusOK)
 	if err != nil {
 		return err
@@ -51,7 +51,7 @@ func FiniPostgres(conf *YAMLConfMw, mwd *MwareDesc) error {
 
 	addr := strings.Split(conf.Postgres.Addr, ":")[0] + ":" + conf.Postgres.AdminPort
 	_, err = swy.HTTPMarshalAndPostTimeout("http://" + addr + "/drop", 120,
-			&swyapi.PgRequest{Token: conf.Postgres.Token,
+			&swyapi.PgRequest{Token: gateSecrets[conf.Postgres.Token],
 				User: mwd.Client, DbName: pgs.DBName}, nil, http.StatusOK)
 
 	return err

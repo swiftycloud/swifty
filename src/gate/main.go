@@ -17,6 +17,7 @@ import (
 )
 
 var SwyModeDevel bool
+var gateSecrets map[string]string
 
 const (
 	SwyDefaultProject string	= "default"
@@ -103,8 +104,15 @@ type YAMLConfKuber struct {
 	MaxReplicas	int			`yaml:"max-replicas"`
 }
 
+type YAMLConfDB struct {
+	StateDB		string		`yaml:"state"`
+	Addr		string		`yaml:"address"`
+	User		string		`yaml:"user"`
+	Pass		string		`yaml:"password"`
+}
+
 type YAMLConf struct {
-	DB		swy.YAMLConfDB		`yaml:"db"`
+	DB		YAMLConfDB		`yaml:"db"`
 	Daemon		YAMLConfDaemon		`yaml:"daemon"`
 	Keystone	YAMLConfKeystone	`yaml:"keystone"`
 	Balancer	YAMLConfBalancer	`yaml:"balancer"`
@@ -665,6 +673,7 @@ func setupLogger(conf *YAMLConf) {
 
 func main() {
 	var config_path string
+	var err error
 
 	flag.StringVar(&config_path,
 			"conf",
@@ -679,6 +688,12 @@ func main() {
 	} else {
 		setupLogger(nil)
 		log.Errorf("Provide config path")
+		return
+	}
+
+	gateSecrets, err = swy.ReadSecrets("gate")
+	if err != nil {
+		log.Errorf("Can't read gate secrets")
 		return
 	}
 
@@ -703,7 +718,7 @@ func main() {
 
 	r.HandleFunc("/call/{fnid}",			handleFunctionCall)
 
-	err := dbConnect(&conf)
+	err = dbConnect(&conf)
 	if err != nil {
 		log.Fatalf("Can't setup connection to backend: %s",
 				err.Error())

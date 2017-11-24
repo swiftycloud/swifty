@@ -11,6 +11,8 @@ import (
 	"../common"
 )
 
+var pgrSecrets map[string]string
+
 type YAMLConf struct {
 	Addr	string		`yaml:"address"`
 	Token	string		`yaml:"token"`
@@ -118,7 +120,7 @@ func handleRequest(w http.ResponseWriter, r *http.Request,
 	}
 
 	code = http.StatusUnauthorized
-	if params.Token != conf.Token {
+	if params.Token != pgrSecrets[conf.Token] {
 		err = errors.New("Not authorized")
 		goto out
 	}
@@ -145,6 +147,7 @@ var conf YAMLConf
 
 func main() {
 	var conf_path string
+	var err error
 
 	swy.InitLogger(log)
 
@@ -154,6 +157,12 @@ func main() {
 				"path to the configuration file")
 	flag.Parse()
 	swy.ReadYamlConfig(conf_path, &conf)
+
+	pgrSecrets, err = swy.ReadSecrets("pgrest")
+	if err != nil {
+		log.Errorf("Can't read gate secrets")
+		return
+	}
 
 	http.HandleFunc("/create", handleCreate)
 	http.HandleFunc("/drop", handleDrop)

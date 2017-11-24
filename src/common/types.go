@@ -1,12 +1,5 @@
 package swy
 
-type YAMLConfDB struct {
-	StateDB		string		`yaml:"state"`
-	Addr		string		`yaml:"address"`
-	User		string		`yaml:"user"`
-	Pass		string		`yaml:"password"`
-}
-
 const (
 	DBMwareStateRdy	int = 1		// Ready
 	DBMwareStateBsy	int = 2		// Busy

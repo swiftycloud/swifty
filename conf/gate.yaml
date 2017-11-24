@@ -3,7 +3,7 @@ db:
         state: "swifty"
         address: "127.0.0.1:27017"
         user: "swifty"
-        password: "1q2w3e"
+        password: "DBPASS"
 keystone:
         address: "192.168.122.197:5000"
         domain: "swifty"
@@ -23,20 +23,20 @@ middleware:
         maria:
                 address: "192.168.122.197:3306"
                 admin: "root"
-                password: "aiNe1sah9ichu1re"
+                password: "MARIAPASS"
         rabbit:
                 address: "192.168.122.197:5672"
                 admin: "root"
-                password: "airooV1Echah4wei"
+                password: "RABBITPASS"
                 admport: "15672"
         mongo:
                 address: "192.168.122.197:27017"
                 admin: "admin"
-                password: "abc123"
+                password: "MONGOPASS"
         postgres:
                 address: "192.168.122.197:5432"
                 admport: "3872"
-                token: "Kg8AADHelo8QhlIGaV9ozASl"
+                token: "PGRTOKEN"
 runtime:
         timeout:
                 max: 60

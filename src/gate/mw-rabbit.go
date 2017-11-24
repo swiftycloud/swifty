@@ -16,7 +16,7 @@ type MQSettings struct {
 
 func rabbitConn(conf *YAMLConfMw) (*rabbithole.Client, error) {
 	addr := strings.Split(conf.Rabbit.Addr, ":")[0] + ":" + conf.Rabbit.AdminPort
-	return rabbithole.NewClient("http://" + addr, conf.Rabbit.Admin, conf.Rabbit.Pass)
+	return rabbithole.NewClient("http://" + addr, conf.Rabbit.Admin, gateSecrets[conf.Rabbit.Pass])
 }
 
 func rabbitErr(resp *http.Response, err error) error {

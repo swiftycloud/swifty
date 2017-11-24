@@ -18,7 +18,7 @@ func mgoDial(conf *YAMLConfMw) (*mgo.Session, error) {
 		Database:	"admin",
 		Timeout:	60*time.Second,
 		Username:	conf.Mongo.Admin,
-		Password:	conf.Mongo.Pass,
+		Password:	gateSecrets[conf.Mongo.Pass],
 	}
 
 	return mgo.DialWithInfo(&ifo)
