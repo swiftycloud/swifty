@@ -25,10 +25,10 @@ type MwareDesc struct {
 }
 
 type MwareOps struct {
-	Init	func(conf *YAMLConf, mwd *MwareDesc, mware *swyapi.MwareItem) (error)
-	Fini	func(conf *YAMLConf, mwd *MwareDesc) (error)
-	Event	func(conf *YAMLConf, source *FnEventDesc, mwd *MwareDesc, on bool) (error)
-	GetEnv	func(conf *YAMLConf, mwd *MwareDesc) ([]string)
+	Init	func(conf *YAMLConfMw, mwd *MwareDesc, mware *swyapi.MwareItem) (error)
+	Fini	func(conf *YAMLConfMw, mwd *MwareDesc) (error)
+	Event	func(conf *YAMLConfMw, source *FnEventDesc, mwd *MwareDesc, on bool) (error)
+	GetEnv	func(conf *YAMLConfMw, mwd *MwareDesc) ([]string)
 	Devel	bool
 }
 
@@ -81,7 +81,7 @@ func mwareGetEnv(conf *YAMLConf, id *SwoId) ([]string, error) {
 		return nil, fmt.Errorf("No handler for %s mware", id.Str())
 	}
 
-	return handler.GetEnv(conf, &item), nil
+	return handler.GetEnv(&conf.Mware, &item), nil
 }
 
 func mwareGetFnEnv(conf *YAMLConf, fn *FunctionDesc) ([]string, error) {
@@ -100,7 +100,7 @@ func mwareGetFnEnv(conf *YAMLConf, fn *FunctionDesc) ([]string, error) {
 }
 
 func forgetMware(conf *YAMLConf, handler *MwareOps, desc *MwareDesc) error {
-	err := handler.Fini(conf, desc)
+	err := handler.Fini(&conf.Mware, desc)
 	if err != nil {
 		log.Errorf("Failed cleanup for mware %s: %s", desc.SwoId.Str(), err.Error())
 		return err
@@ -187,7 +187,7 @@ func mwareSetup(conf *YAMLConf, id SwoId, mwares []swyapi.MwareItem) error {
 			goto out
 		}
 
-		err = handler.Init(conf, mwd, &mware)
+		err = handler.Init(&conf.Mware, mwd, &mware)
 		if err != nil {
 			forgetMware(conf, &handler, mwd)
 			goto out
@@ -222,7 +222,7 @@ func mwareEventSetup(conf *YAMLConf, fn *FunctionDesc, on bool) error {
 
 	iface, ok := mwareHandlers[item.MwareType]
 	if ok && (iface.Event != nil) {
-		return iface.Event(conf, &fn.Event, &item, on)
+		return iface.Event(&conf.Mware, &fn.Event, &item, on)
 	}
 
 	return fmt.Errorf("No mware for event")

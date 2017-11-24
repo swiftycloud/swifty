@@ -13,12 +13,12 @@ type DBSettings struct {
 	DBName		string			`json:"dbname"`
 }
 
-func mariaConn(conf *YAMLConf) (*sql.DB, error) {
+func mariaConn(conf *YAMLConfMw) (*sql.DB, error) {
 	return sql.Open("mysql",
 			fmt.Sprintf("%s:%s@tcp(%s)/?charset=utf8",
-				conf.Mware.Maria.Admin,
-				conf.Mware.Maria.Pass,
-				conf.Mware.Maria.Addr))
+				conf.Maria.Admin,
+				conf.Maria.Pass,
+				conf.Maria.Addr))
 }
 
 func mariaReq(db *sql.DB, req string) error {
@@ -35,7 +35,7 @@ func mariaReq(db *sql.DB, req string) error {
 // DROP USER IF EXISTS '8257fbff9618952fbd2b83b4794eb694'@'%';
 // DROP DATABASE IF EXISTS 8257fbff9618952fbd2b83b4794eb694;
 
-func InitMariaDB(conf *YAMLConf, mwd *MwareDesc, mware *swyapi.MwareItem) (error) {
+func InitMariaDB(conf *YAMLConfMw, mwd *MwareDesc, mware *swyapi.MwareItem) (error) {
 	dbs := DBSettings{ }
 
 	err := mwareGenerateClient(mwd)
@@ -76,7 +76,7 @@ func InitMariaDB(conf *YAMLConf, mwd *MwareDesc, mware *swyapi.MwareItem) (error
 	return nil
 }
 
-func FiniMariaDB(conf *YAMLConf, mwd *MwareDesc) error {
+func FiniMariaDB(conf *YAMLConfMw, mwd *MwareDesc) error {
 	var dbs DBSettings
 
 	err := json.Unmarshal([]byte(mwd.JSettings), &dbs)
@@ -104,14 +104,14 @@ func FiniMariaDB(conf *YAMLConf, mwd *MwareDesc) error {
 	return nil
 }
 
-func GetEnvMariaDB(conf *YAMLConf, mwd *MwareDesc) ([]string) {
+func GetEnvMariaDB(conf *YAMLConfMw, mwd *MwareDesc) ([]string) {
 	var dbs DBSettings
 	var envs []string
 	var err error
 
 	err = json.Unmarshal([]byte(mwd.JSettings), &dbs)
 	if err == nil {
-		envs = append(mwGenEnvs(mwd, conf.Mware.Maria.Addr), mkEnv(mwd, "DBNAME", dbs.DBName))
+		envs = append(mwGenEnvs(mwd, conf.Maria.Addr), mkEnv(mwd, "DBNAME", dbs.DBName))
 	} else {
 		log.Fatal("rabbit: Can't unmarshal DB entry %s", mwd.JSettings)
 	}

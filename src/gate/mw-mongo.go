@@ -12,19 +12,19 @@ type MGOSetting struct {
 	DBName	string	`json:"database"`
 }
 
-func mgoDial(conf *YAMLConf) (*mgo.Session, error) {
+func mgoDial(conf *YAMLConfMw) (*mgo.Session, error) {
 	ifo := mgo.DialInfo {
-		Addrs:		[]string{conf.Mware.Mongo.Addr},
+		Addrs:		[]string{conf.Mongo.Addr},
 		Database:	"admin",
 		Timeout:	60*time.Second,
-		Username:	conf.Mware.Mongo.Admin,
-		Password:	conf.Mware.Mongo.Pass,
+		Username:	conf.Mongo.Admin,
+		Password:	conf.Mongo.Pass,
 	}
 
 	return mgo.DialWithInfo(&ifo)
 }
 
-func InitMongo(conf *YAMLConf, mwd *MwareDesc, mware *swyapi.MwareItem) (error) {
+func InitMongo(conf *YAMLConfMw, mwd *MwareDesc, mware *swyapi.MwareItem) (error) {
 	mgs := MGOSetting{}
 
 	err := mwareGenerateClient(mwd)
@@ -61,7 +61,7 @@ func InitMongo(conf *YAMLConf, mwd *MwareDesc, mware *swyapi.MwareItem) (error) 
 	return nil
 }
 
-func FiniMongo(conf *YAMLConf, mwd *MwareDesc) error {
+func FiniMongo(conf *YAMLConfMw, mwd *MwareDesc) error {
 	var mgs MGOSetting
 
 	err := json.Unmarshal([]byte(mwd.JSettings), &mgs)
@@ -84,14 +84,14 @@ func FiniMongo(conf *YAMLConf, mwd *MwareDesc) error {
 	return nil
 }
 
-func GetEnvMongo(conf *YAMLConf, mwd *MwareDesc) ([]string) {
+func GetEnvMongo(conf *YAMLConfMw, mwd *MwareDesc) ([]string) {
 	var mgs DBSettings
 	var envs []string
 	var err error
 
 	err = json.Unmarshal([]byte(mwd.JSettings), &mgs)
 	if err == nil {
-		envs = append(mwGenEnvs(mwd, conf.Mware.Mongo.Addr), mkEnv(mwd, "DBNAME", mgs.DBName))
+		envs = append(mwGenEnvs(mwd, conf.Mongo.Addr), mkEnv(mwd, "DBNAME", mgs.DBName))
 	} else {
 		log.Fatal("rabbit: Can't unmarshal DB entry %s", mwd.JSettings)
 	}

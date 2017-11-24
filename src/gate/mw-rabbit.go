@@ -14,9 +14,9 @@ type MQSettings struct {
 	Vhost		string			`json:"vhost"`
 }
 
-func rabbitConn(conf *YAMLConf) (*rabbithole.Client, error) {
-	addr := strings.Split(conf.Mware.Rabbit.Addr, ":")[0] + ":" + conf.Mware.Rabbit.AdminPort
-	return rabbithole.NewClient("http://" + addr, conf.Mware.Rabbit.Admin, conf.Mware.Rabbit.Pass)
+func rabbitConn(conf *YAMLConfMw) (*rabbithole.Client, error) {
+	addr := strings.Split(conf.Rabbit.Addr, ":")[0] + ":" + conf.Rabbit.AdminPort
+	return rabbithole.NewClient("http://" + addr, conf.Rabbit.Admin, conf.Rabbit.Pass)
 }
 
 func rabbitErr(resp *http.Response, err error) error {
@@ -31,7 +31,7 @@ func rabbitErr(resp *http.Response, err error) error {
 	}
 }
 
-func InitRabbitMQ(conf *YAMLConf, mwd *MwareDesc, mware *swyapi.MwareItem) (error) {
+func InitRabbitMQ(conf *YAMLConfMw, mwd *MwareDesc, mware *swyapi.MwareItem) (error) {
 	rmq := MQSettings{ }
 
 	err := mwareGenerateClient(mwd)
@@ -63,7 +63,7 @@ func InitRabbitMQ(conf *YAMLConf, mwd *MwareDesc, mware *swyapi.MwareItem) (erro
 	}
 
 	/* Add permissions for us as well, just in case event listening is required */
-	err = rabbitErr(rmqc.UpdatePermissionsIn(rmq.Vhost, conf.Mware.Rabbit.Admin,
+	err = rabbitErr(rmqc.UpdatePermissionsIn(rmq.Vhost, conf.Rabbit.Admin,
 			rabbithole.Permissions{Configure: ".*", Write: ".*", Read: ".*"}))
 	if err != nil {
 		return fmt.Errorf("Can't set permissions %s: %s", mwd.Client, err.Error())
@@ -79,7 +79,7 @@ func InitRabbitMQ(conf *YAMLConf, mwd *MwareDesc, mware *swyapi.MwareItem) (erro
 	return nil
 }
 
-func FiniRabbitMQ(conf *YAMLConf, mwd *MwareDesc) error {
+func FiniRabbitMQ(conf *YAMLConfMw, mwd *MwareDesc) error {
 	var rmq MQSettings
 
 	err := json.Unmarshal([]byte(mwd.JSettings), &rmq)
@@ -106,7 +106,7 @@ func FiniRabbitMQ(conf *YAMLConf, mwd *MwareDesc) error {
 	return nil
 }
 
-func EventRabbitMQ(conf *YAMLConf, source *FnEventDesc, mwd *MwareDesc, on bool) (error) {
+func EventRabbitMQ(conf *YAMLConfMw, source *FnEventDesc, mwd *MwareDesc, on bool) (error) {
 	var rmq MQSettings
 
 	_ = json.Unmarshal([]byte(mwd.JSettings), &rmq)
@@ -118,14 +118,14 @@ func EventRabbitMQ(conf *YAMLConf, source *FnEventDesc, mwd *MwareDesc, on bool)
 	}
 }
 
-func GetEnvRabbitMQ(conf *YAMLConf, mwd *MwareDesc) ([]string) {
+func GetEnvRabbitMQ(conf *YAMLConfMw, mwd *MwareDesc) ([]string) {
 	var rmq MQSettings
 	var envs []string
 	var err error
 
 	err = json.Unmarshal([]byte(mwd.JSettings), &rmq)
 	if err == nil {
-		envs = append(mwGenEnvs(mwd, conf.Mware.Rabbit.Addr), mkEnv(mwd, "VHOST", rmq.Vhost))
+		envs = append(mwGenEnvs(mwd, conf.Rabbit.Addr), mkEnv(mwd, "VHOST", rmq.Vhost))
 	} else {
 		log.Fatal("rabbit: Can't unmarshal DB entry %s", mwd.JSettings)
 	}

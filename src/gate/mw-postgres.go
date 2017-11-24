@@ -13,7 +13,7 @@ type PGSetting struct {
 	DBName	string	`json:"database"`
 }
 
-func InitPostgres(conf *YAMLConf, mwd *MwareDesc, mware *swyapi.MwareItem) (error) {
+func InitPostgres(conf *YAMLConfMw, mwd *MwareDesc, mware *swyapi.MwareItem) (error) {
 	pgs := PGSetting{}
 
 	err := mwareGenerateClient(mwd)
@@ -28,9 +28,9 @@ func InitPostgres(conf *YAMLConf, mwd *MwareDesc, mware *swyapi.MwareItem) (erro
 		return err
 	}
 
-	addr := strings.Split(conf.Mware.Postgres.Addr, ":")[0] + ":" + conf.Mware.Postgres.AdminPort
+	addr := strings.Split(conf.Postgres.Addr, ":")[0] + ":" + conf.Postgres.AdminPort
 	_, err = swy.HTTPMarshalAndPostTimeout("http://" + addr + "/create", 120,
-			&swyapi.PgRequest{Token: conf.Mware.Postgres.Token,
+			&swyapi.PgRequest{Token: conf.Postgres.Token,
 				User: mwd.Client, Pass: mwd.Pass, DbName: pgs.DBName}, nil, http.StatusOK)
 	if err != nil {
 		return err
@@ -40,7 +40,7 @@ func InitPostgres(conf *YAMLConf, mwd *MwareDesc, mware *swyapi.MwareItem) (erro
 	return nil
 }
 
-func FiniPostgres(conf *YAMLConf, mwd *MwareDesc) error {
+func FiniPostgres(conf *YAMLConfMw, mwd *MwareDesc) error {
 	var pgs PGSetting
 
 	err := json.Unmarshal([]byte(mwd.JSettings), &pgs)
@@ -49,22 +49,22 @@ func FiniPostgres(conf *YAMLConf, mwd *MwareDesc) error {
 					mwd.JSettings, err.Error())
 	}
 
-	addr := strings.Split(conf.Mware.Postgres.Addr, ":")[0] + ":" + conf.Mware.Postgres.AdminPort
+	addr := strings.Split(conf.Postgres.Addr, ":")[0] + ":" + conf.Postgres.AdminPort
 	_, err = swy.HTTPMarshalAndPostTimeout("http://" + addr + "/drop", 120,
-			&swyapi.PgRequest{Token: conf.Mware.Postgres.Token,
+			&swyapi.PgRequest{Token: conf.Postgres.Token,
 				User: mwd.Client, DbName: pgs.DBName}, nil, http.StatusOK)
 
 	return err
 }
 
-func GetEnvPostgres(conf *YAMLConf, mwd *MwareDesc) ([]string) {
+func GetEnvPostgres(conf *YAMLConfMw, mwd *MwareDesc) ([]string) {
 	var pgs PGSetting
 	var envs []string
 	var err error
 
 	err = json.Unmarshal([]byte(mwd.JSettings), &pgs)
 	if err == nil {
-		envs = append(mwGenEnvs(mwd, conf.Mware.Postgres.Addr), mkEnv(mwd, "DBNAME", pgs.DBName))
+		envs = append(mwGenEnvs(mwd, conf.Postgres.Addr), mkEnv(mwd, "DBNAME", pgs.DBName))
 	} else {
 		log.Fatal("Can't unmarshal DB entry %s", mwd.JSettings)
 	}

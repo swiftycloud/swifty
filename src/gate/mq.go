@@ -33,7 +33,7 @@ func init() {
 		for req := range factory_ch {
 			var err error
 			if req.add {
-				err = startListener(&conf, req.vhost, req.queue)
+				err = startListener(&conf.Mware, req.vhost, req.queue)
 			} else {
 				stopListener(req.vhost, req.queue)
 			}
@@ -57,7 +57,7 @@ func stopListener(vhost, queue string) {
 	}
 }
 
-func startListener(conf *YAMLConf, vhost, queue string) error {
+func startListener(conf *YAMLConfMw, vhost, queue string) error {
 	cons := consumers[vhost + ":" + queue]
 	if cons != nil {
 		cons.counter++
@@ -68,9 +68,9 @@ func startListener(conf *YAMLConf, vhost, queue string) error {
 
 	log.Debugf("mq: Starting mq listener @%s.%s", vhost, queue)
 
-	login := conf.Mware.Rabbit.Admin
-	pass := conf.Mware.Rabbit.Pass
-	addr := conf.Mware.Rabbit.Addr
+	login := conf.Rabbit.Admin
+	pass := conf.Rabbit.Pass
+	addr := conf.Rabbit.Addr
 
 	/* FIXME -- there should be one connection */
 	conn, err := amqp.Dial("amqp://" + login + ":" + pass + "@" + addr +"/" + vhost)
@@ -140,7 +140,7 @@ func startListener(conf *YAMLConf, vhost, queue string) error {
 	return nil
 }
 
-func mqStartListener(conf *YAMLConf, vhost, queue string) error {
+func mqStartListener(conf *YAMLConfMw, vhost, queue string) error {
 	return factoryMakeReq(&factory_req{vhost: vhost, queue: queue, add: true})
 }
 
