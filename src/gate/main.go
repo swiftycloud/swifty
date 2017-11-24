@@ -370,44 +370,8 @@ out:
 	http.Error(w, err.Error(), code)
 }
 
-func getFunctionDesc(tennant string, p_add *swyapi.FunctionAdd) *FunctionDesc {
-	fn := &FunctionDesc {
-		SwoId: SwoId {
-			Tennant: tennant,
-			Project: p_add.Project,
-			Name:	 p_add.FuncName,
-		},
-		Event:		FnEventDesc {
-			Source:		p_add.Event.Source,
-			CronTab:	p_add.Event.CronTab,
-			MwareId:	p_add.Event.MwareId,
-			MQueue:		p_add.Event.MQueue,
-		},
-		Src:		FnSrcDesc {
-			Type:		p_add.Sources.Type,
-			Repo:		p_add.Sources.Repo,
-			Code:		p_add.Sources.Code,
-		},
-		Size:		FnSizeDesc {
-			Replicas:	1,
-			Mem:		p_add.Size.Memory,
-			Tmo:		p_add.Size.Timeout,
-		},
-		Code:		FnCodeDesc {
-			Lang:		p_add.Code.Lang,
-			Env:		p_add.Code.Env,
-		},
-		Mware:	p_add.Mware,
-	}
-
-	fn.Cookie = fn.SwoId.Cookie()
-	return fn
-}
-
 func handleFunctionAdd(w http.ResponseWriter, r *http.Request) {
 	var params swyapi.FunctionAdd
-	var fn *FunctionDesc
-	var fi *FnInst
 	var code int
 
 	tennant, code, err := handleGenericReq(r, &params)
@@ -441,73 +405,14 @@ func handleFunctionAdd(w http.ResponseWriter, r *http.Request) {
 		goto out
 	}
 
-	err = swy.ValidateProjectAndFuncName(params.Project, params.FuncName)
+	err = addFunction(&conf, tennant, &params)
 	if err != nil {
 		goto out
 	}
 
-	if !RtLangEnabled(params.Code.Lang) {
-		err = errors.New("Unsupported language")
-		goto out
-	}
-
-	fn = getFunctionDesc(tennant, &params)
-	if RtBuilding(&fn.Code) {
-		fn.State = swy.DBFuncStateBld
-	} else {
-		fn.State = swy.DBFuncStateQue
-	}
-
-	log.Debugf("function/add %s (cookie %s)", fn.SwoId.Str(), fn.Cookie[:32])
-
-	err = dbFuncAdd(fn)
-	if err != nil {
-		goto out
-	}
-
-	if fn.Event.Source != "" {
-		err = eventSetup(&conf, fn, true)
-		if err != nil {
-			err = fmt.Errorf("Unable to setup even %s: %s", fn.Event, err.Error())
-			goto out_clean_func
-		}
-	}
-
-	err = getSources(fn)
-	if err != nil {
-		goto out_clean_evt
-	}
-
-	statsStartCollect(&conf, fn)
-
-	err = dbFuncUpdateAdded(fn)
-	if err != nil {
-		goto out_clean_repo
-	}
-
-	if RtBuilding(&fn.Code) {
-		fi = fn.InstBuild()
-	} else {
-		fi = fn.Inst()
-	}
-
-	err = swk8sRun(&conf, fn, fi)
-	if err != nil {
-		goto out_clean_repo
-	}
-
-	logSaveEvent(fn, "registered", "")
 	w.WriteHeader(http.StatusOK)
 	return
 
-out_clean_repo:
-	cleanRepo(fn)
-out_clean_evt:
-	if fn.Event.Source != "" {
-		eventSetup(&conf, fn, false)
-	}
-out_clean_func:
-	dbFuncRemove(fn)
 out:
 	http.Error(w, err.Error(), code)
 	log.Errorf("function/add error %s", err.Error())
@@ -515,7 +420,6 @@ out:
 
 func handleFunctionUpdate(w http.ResponseWriter, r *http.Request) {
 	var id *SwoId
-	var fn FunctionDesc
 	var params swyapi.FunctionUpdate
 	var code int
 
@@ -526,51 +430,13 @@ func handleFunctionUpdate(w http.ResponseWriter, r *http.Request) {
 
 	code = http.StatusBadRequest
 	id = makeSwoId(tennant, params.Project, params.FuncName)
-
 	log.Debugf("function/update %s", id.Str())
 
-	fn, err = dbFuncFind(id)
+	err = updateFunction(&conf, id)
 	if err != nil {
 		goto out
 	}
 
-	// FIXME -- lock other requests :\
-	if fn.State != swy.DBFuncStateRdy && fn.State != swy.DBFuncStateStl {
-		err = fmt.Errorf("function %s is not running", fn.SwoId.Str())
-		goto out
-	}
-
-	err = updateSources(&fn)
-	if err != nil {
-		goto out
-	}
-
-	if RtBuilding(&fn.Code) {
-		if fn.State == swy.DBFuncStateRdy {
-			fn.State = swy.DBFuncStateUpd
-		} else {
-			fn.State = swy.DBFuncStateBld
-		}
-	}
-
-	err = dbFuncUpdatePulled(&fn)
-	if err != nil {
-		goto out
-	}
-
-	if RtBuilding(&fn.Code) {
-		log.Debugf("Starting build dep")
-		err = swk8sRun(&conf, &fn, fn.InstBuild())
-	} else {
-		log.Debugf("Updating deploy")
-		err = swk8sUpdate(&conf, &fn)
-	}
-
-	if err != nil {
-		goto out
-	}
-
-	logSaveEvent(&fn, "updated", fmt.Sprintf("to: %s", fn.Src.Commit))
 	w.WriteHeader(http.StatusOK)
 	return
 
@@ -581,7 +447,6 @@ out:
 
 func handleFunctionRemove(w http.ResponseWriter, r *http.Request) {
 	var id *SwoId
-	var fn FunctionDesc
 	var params swyapi.FunctionRemove
 	var code int
 
@@ -595,28 +460,10 @@ func handleFunctionRemove(w http.ResponseWriter, r *http.Request) {
 
 	log.Debugf("function/remove %s", id.Str())
 
-	// Allow to remove function if only we're in known state,
-	// otherwise wait for function building to complete
-	err = dbFuncSetStateCond(id, swy.DBFuncStateTrm,
-					[]int{swy.DBFuncStateRdy, swy.DBFuncStateStl})
+	err = removeFunction(&conf, id)
 	if err != nil {
 		goto out
 	}
-
-	fn, err = dbFuncFind(id)
-	if err != nil {
-		goto out
-	}
-
-	if !fn.OneShot {
-		err = swk8sRemove(&conf, &fn, fn.Inst())
-		if err != nil {
-			log.Errorf("remove deploy error: %s", err.Error())
-			goto out
-		}
-	}
-
-	forgetFunction(&fn)
 
 	w.WriteHeader(http.StatusOK)
 	return
@@ -624,22 +471,6 @@ func handleFunctionRemove(w http.ResponseWriter, r *http.Request) {
 out:
 	http.Error(w, err.Error(), code)
 	log.Errorf("function/remove error %s", err.Error())
-}
-
-func forgetFunction(fn *FunctionDesc) {
-	var err error
-
-	if fn.Event.Source != "" {
-		err = eventSetup(&conf, fn, false)
-		if err != nil {
-			log.Errorf("remove event %s error: %s", fn.Event, err.Error())
-		}
-	}
-
-	statsStopCollect(&conf, fn)
-	cleanRepo(fn)
-	logRemove(fn)
-	dbFuncRemove(fn)
 }
 
 func handleFunctionInfo(w http.ResponseWriter, r *http.Request) {
