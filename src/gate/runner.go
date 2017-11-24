@@ -117,3 +117,12 @@ out_nok8s:
 	}
 	return fmt.Errorf("buildFunction: %s", err.Error())
 }
+
+func runFunctionOnce(fn *FunctionDesc) {
+	log.Debugf("oneshot RUN for %s", fn.SwoId.Str())
+	doRun(fn.Inst(), "oneshot", RtRunCmd(&fn.Code))
+	log.Debugf("oneshor %s finished", fn.SwoId.Str())
+
+	swk8sRemove(&conf, fn, fn.Inst())
+	dbFuncSetState(fn, swy.DBFuncStateStl);
+}

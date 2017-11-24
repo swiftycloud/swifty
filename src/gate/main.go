@@ -11,7 +11,6 @@ import (
 	"flag"
 	"time"
 	"fmt"
-	"gopkg.in/mgo.v2/bson"
 
 	"../apis/apps"
 	"../common"
@@ -22,90 +21,6 @@ var SwyModeDevel bool
 const (
 	SwyDefaultProject string	= "default"
 )
-
-type FnCodeDesc struct {
-	Lang		string		`bson:"lang"`
-	Env		[]string	`bson:"env"`
-}
-
-type FnSrcDesc struct {
-	Type		string		`bson:"type"`
-	Repo		string		`bson:"repo,omitempty"`
-	Commit		string		`bson:"commit"`		// Top commit in the repo
-	Code		string		`bson:"-"`
-}
-
-type FnEventDesc struct {
-	Source		string		`bson:"source"`
-	CronTab		string		`bson:"crontab"`
-	MwareId		string		`bson:"mwid"`
-	MQueue		string		`bson:"mqueue"`
-}
-
-type FnSizeDesc struct {
-	Replicas	int		`bson:"replicas"`
-	Mem		uint64		`bson:"mem"`
-	Tmo		uint64		`bson:"timeout"`
-}
-
-type FunctionDesc struct {
-	// These objects are kept in Mongo, which requires the below two
-	// fields to be present...
-	ObjID		bson.ObjectId	`bson:"_id,omitempty"`
-
-	SwoId				`bson:",inline"`
-	Cookie		string		`bson:"cookie"`		// Some "unique" identifier
-	State		int		`bson:"state"`		// Function state
-	CronID		int		`bson:"cronid"`		// ID of cron trigger (if present)
-	URLCall		bool		`bson:"urlcall"`	// Function is callable via direct URL
-	Event		FnEventDesc	`bson:"event"`
-	Mware		[]string	`bson:"mware"`
-	Code		FnCodeDesc	`bson:"code"`
-	Src		FnSrcDesc	`bson:"src"`
-	Size		FnSizeDesc	`bson:"size"`
-	OneShot		bool		`bson:"oneshot"`
-}
-
-var noCommit = "00000000"
-
-func (fi *FnInst)DepName() string {
-	dn := "swd-" + fi.fn.Cookie[:32]
-	if fi.Build {
-		dn += "-bld"
-	}
-	return dn
-}
-
-func (fi *FnInst)Replicas() int32 {
-	if fi.Build {
-		return 1
-	} else {
-		return int32(fi.fn.Size.Replicas)
-	}
-}
-
-/*
- * We may have several instances of Fn running
- * Regular -- this one is up-n-running with the fn ready to run
- * Build -- this is a single replica deployment building the fn
- * Old -- this is Regular, but with the sources of previous version.
- *        In parallel to the Old one we may have one Build instance
- *        running building an Fn from new sources.
- * At some point in time the Old instance gets replaced with the
- * new Regular one.
- */
-type FnInst struct {
-	Build		bool
-	fn		*FunctionDesc
-}
-
-func (fn *FunctionDesc) Inst() *FnInst {
-	return &FnInst { Build: false, fn: fn }
-}
-
-func (fn *FunctionDesc) InstBuild() *FnInst {
-	return &FnInst { Build: true, fn: fn }
-}
 
 var log *zap.SugaredLogger
 
@@ -202,45 +117,6 @@ type YAMLConf struct {
 
 var conf YAMLConf
 var gatesrv *http.Server
-
-func runFunctionOnce(fn *FunctionDesc) {
-	log.Debugf("oneshot RUN for %s", fn.SwoId.Str())
-	doRun(fn.Inst(), "oneshot", RtRunCmd(&fn.Code))
-	log.Debugf("oneshor %s finished", fn.SwoId.Str())
-
-	swk8sRemove(&conf, fn, fn.Inst())
-	dbFuncSetState(fn, swy.DBFuncStateStl);
-}
-
-func notifyPodUpdate(pod *BalancerPod) {
-	var err error = nil
-
-	if pod.State == swy.DBPodStateRdy {
-		fn, err2 := dbFuncFind(&pod.SwoId)
-		if err2 != nil {
-			err = err2
-			goto out
-		}
-
-		logSaveEvent(&fn, "POD", fmt.Sprintf("state: %s", fnStates[fn.State]))
-		if fn.State == swy.DBFuncStateBld || fn.State == swy.DBFuncStateUpd {
-			err = buildFunction(&fn)
-			if err != nil {
-				goto out
-			}
-		} else if fn.State == swy.DBFuncStateBlt || fn.State == swy.DBFuncStateQue {
-			dbFuncSetState(&fn, swy.DBFuncStateRdy)
-			if fn.OneShot {
-				runFunctionOnce(&fn)
-			}
-		}
-	}
-
-	return
-
-out:
-	log.Errorf("POD update notify: %s", err.Error())
-}
 
 func handleUserLogin(w http.ResponseWriter, r *http.Request) {
 	var params swyapi.UserLogin
@@ -649,48 +525,6 @@ func handleFunctionRun(w http.ResponseWriter, r *http.Request) {
 out:
 	http.Error(w, err.Error(), code)
 	log.Errorf("handleFunctionRun: error: %s", err.Error())
-}
-
-/*
- * On function states:
- *
- * Que: PODs are on their way
- * Bld: building is in progress (POD is starting or build cmd is running)
- * Blt: build completed, PODs are on their way
- * Rdy: ready to run (including rolling update in progress)
- * Upd: ready, but new build is coming (Rdy + Bld)
- * Stl: stalled -- first build failed. Only update or remove is possible
- *
- * handleFunctionAdd:
- *      if build -> Bld
- *      else     -> Que
- *      start PODs
- *
- * handleFunctionUpdate:
- *      if build -> Upd
- *               start PODs
- *      else     updatePods
- *
- * notifyPodUpdate:
- *      if Bld   doRun(build)
- *               if err   -> Stl
- *               else     -> Blt
- *                           restartPods
- *      elif Upd doRun(build)
- *               if OK    updatePODs
- *               -> Rdy
- *      else     -> Rdy
- *
- */
-var fnStates = map[int]string {
-	swy.DBFuncStateQue: "preparing",
-	swy.DBFuncStateStl: "stalled",
-	swy.DBFuncStateBld: "building",
-	swy.DBFuncStateBlt: "built", // FIXME -- WTF?
-	swy.DBFuncStatePrt: "partial",
-	swy.DBFuncStateRdy: "ready",
-	swy.DBFuncStateUpd: "updating",
-	swy.DBFuncStateTrm: "terminating",
 }
 
 func handleFunctionList(w http.ResponseWriter, r *http.Request) {
