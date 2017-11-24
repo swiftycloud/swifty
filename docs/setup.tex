@@ -154,23 +154,26 @@ export OS_AUTH_URL=http://controller:5000/v3
 export OS_IDENTITY_API_VERSION=3
 \end{lstlisting}
 
-Now setup a role, a user and a project
+Now setup a role, a user and a project. There are three roles
+used by swifty. The swifty.admin is allowed to manage users,
+swifty.owner is allowed to work with gate on his project and
+manage himself, and swifty.ui is allowed to create new users.
+
+All users and projects should (but not must) live in a separate
+domain, as swy-admd lists all users in it.
 
 \begin{lstlisting}
-openstack project create swifty.proj
-openstack user create --project swifty.proj swifty.user
-openstack user set --password swifty swifty.user
+openstack role create swifty.admin
 openstack role create swifty.owner
-openstack role add --user swifty.user --project swifty.proj swifty.owner
+openstack role create swifty.ui
+openstack domain create swifty
+openstack project create --domain swifty swyadmin
+openstack user create --project swyadmin --domain swifty --password 1q2w3e swyadmin
+openstack role add --user-domain swifty --user swyadmin --project-domain swifty --project swyadmin swifty.admin
+openstack role add --user-domain swifty --user swyadmin --project-domain swifty --project swyadmin swifty.owner
 \end{lstlisting}
 
-To run tests add a separate user
-
-\begin{lstlisting}
-openstack user create --project swifty.proj xemul.user
-openstack user set --password 123456 xemul.user
-openstack role add --user xemul.user --project swifty.proj swifty.owner
-\end{lstlisting}
+Now the swyadmin is registered as both, admin and owner.
 
 The \code{keystone} section in gate config must match the values
 provided here (see \fullref{subsec:setup-swifty-conf}).
@@ -652,7 +655,7 @@ keystone:
 	address: "192.168.122.68:5000"
 	user: "admin"
 	password: "Cae6ThiekuShiece"
-	domain: "default"
+	domain: "swifty"
 daemon:
         address: "192.168.122.68:8686"
         view: "/home/swifty/src/gate/view"
@@ -664,27 +667,21 @@ daemon:
                 iprange: "10.8.0.0/24"
                 device: "flannel.1"
 middleware:
-        sql:
+        maria:
                 implementation: "mariadb"
                 address: "192.168.122.102:3306"
                 user: "root"
                 password: "aiNe1sah9ichu1re"
-        mq:
+        rabbit:
                 implementation: "rabbitmq"
                 address: "192.168.122.102:5672"
                 user: "root"
                 password: "airooV1Echah4wei"
                 admport: "15672"
 runtime:
-        golang:
-                image: "swifty/golang"
-                run: "go run"
-        python:
-                image: "swifty/python"
-                run: "python"
-        swift:
-                image: "swifty/swift"
-                run: "swift"
+        images:
+                golang: "swifty/golang"
+                python: "swifty/python"
 wdog:
         ct-path: "/usr/bin/swy-wdog"
         address: ":8687"
