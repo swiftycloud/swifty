@@ -31,7 +31,7 @@ CP		?= cp -f
 GO		?= go
 GO-BUILD-OPTS	?= build
 GOTAGS		?= gotags
-MONGO		?= mongo --quiet localhost:27017/swifty
+MONGO		?= mongo --quiet localhost:27017
 KUBECTL		?= kubectl
 IPVSADM		?= ipvsadm
 
@@ -94,6 +94,19 @@ swy-pgrest: $(go-pgrest-y) .FORCE
 	$(Q) $(GO) $(GO-BUILD-OPTS) -o $@ $(go-pgrest-y)
 all-y += swy-pgrest
 
+go-s3-y	+= src/s3/main.go
+go-s3-y	+= src/s3/db.go
+go-s3-y	+= src/s3/s3.go
+go-s3-y	+= src/s3/resp.go
+go-s3-y	+= src/s3/keys.go
+go-s3-y	+= src/s3/rados.go
+go-s3-y	+= src/s3/helpers.go
+
+swy-s3: $(go-s3-y) .FORCE
+	$(call msg-gen,$@)
+	$(Q) $(GO) $(GO-BUILD-OPTS) -o $@ $(go-s3-y)
+all-y += swy-s3
+
 # Default target
 all: $(all-y)
 
@@ -135,6 +148,7 @@ help:
 	@echo '    * swy-gate        - Build gate'
 	@echo '    * swy-wdog        - Build watchdog'
 	@echo '    * swy-admd        - Build adm daemon'
+	@echo '    * swy-s3          - Build s3 daemon'
 	@echo '      swifty/python   - Build swifty/python docker image'
 	@echo '      swifty/golang   - Build swifty/golang docker image'
 	@echo '      swifty/swift    - Build swifty/swift docker image'
@@ -190,7 +204,28 @@ ifneq ($(sql-dbases),)
 endif
 .PHONY: sqlclean
 
-rsclean:
+DB-SWIFTY	:= swifty
+DB-S3		:= swifty-s3
+
+clean-db-swifty:
+	$(call msg-gen,"Cleaning up main MongoDB")
+	$(Q) $(MONGO)/$(DB-SWIFTY) --eval 'db.Function.remove({});'
+	$(Q) $(MONGO)/$(DB-SWIFTY) --eval 'db.Mware.remove({});'
+	$(Q) $(MONGO)/$(DB-SWIFTY) --eval 'db.Pods.remove({});'
+	$(Q) $(MONGO)/$(DB-SWIFTY) --eval 'db.Balancer.remove({});'
+	$(Q) $(MONGO)/$(DB-SWIFTY) --eval 'db.BalancerRS.remove({});'
+	#$(Q) $(MONGO)/$(DB-SWIFTY) --eval 'db.Logs.remove({});'
+.PHONY: clean-db-swifty
+
+clean-db-s3:
+	$(call msg-gen,"Cleaning up s3 MongoDB")
+	$(Q) $(MONGO)/$(DB-S3) --eval 'db.S3Buckets.remove({});'
+	$(Q) $(MONGO)/$(DB-S3) --eval 'db.S3Objects.remove({});'
+	#$(Q) $(MONGO)/$(DB-S3) --eval 'db.S3Keys.remove({});'
+	#$(Q) $(MONGO)/$(DB-S3) --eval 'db.S3AccessKeys.remove({});'
+.PHONY: clean-db-s3
+
+rsclean: clean-db-swifty clean-db-s3
 	$(call msg-gen,"Cleaning up kubernetes")
 	$(Q) $(KUBECTL) delete deployment --all
 	$(Q) $(KUBECTL) delete secret --all
@@ -198,13 +233,6 @@ rsclean:
 	$(Q) $(KUBECTL) delete pod --all
 	$(call msg-gen,"Cleaning up IPVS")
 	$(Q) $(IPVSADM) -C
-	$(call msg-gen,"Cleaning up MongoDB")
-	$(Q) $(MONGO) --eval 'db.Function.remove({});'
-	$(Q) $(MONGO) --eval 'db.Mware.remove({});'
-	$(Q) $(MONGO) --eval 'db.Pods.remove({});'
-	$(Q) $(MONGO) --eval 'db.Balancer.remove({});'
-	$(Q) $(MONGO) --eval 'db.BalancerRS.remove({});'
-	#$(Q) $(MONGO) --eval 'db.Logs.remove({});'
 	$(call msg-gen,"Cleaning up FS")
 ifneq ($(wildcard $(LOCAL_SOURCES)/.*),)
 	$(Q) $(RM) -r $(LOCAL_SOURCES)/*
@@ -223,6 +251,8 @@ clean:
 	$(Q) $(RM) swy-wdog
 	$(call msg-clean,swy-admd)
 	$(Q) $(RM) swy-admd
+	$(call msg-clean,swy-s3)
+	$(Q) $(RM) swy-s3
 	$(Q) $(MAKE) -C docs clean
 .PHONY: clean
 

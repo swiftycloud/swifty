@@ -1,0 +1,11 @@
+---
+db:
+        state: "swifty-s3"
+        address: "127.0.0.1:27017"
+        user: "swifty"
+        password: "1q2w3e"
+daemon:
+        address: "127.0.0.1:8787"
+        loglevel: "debug"
+ceph:
+        config-path: src/conf/ceph.conf
