@@ -104,10 +104,6 @@ func FiniMariaDB(conf *YAMLConf, mwd *MwareDesc) error {
 	return nil
 }
 
-func EventMariaDB(conf *YAMLConf, source *FnEventDesc, mwd *MwareDesc, on bool) (error) {
-	return fmt.Errorf("No events for mariadb")
-}
-
 func GetEnvMariaDB(conf *YAMLConf, mwd *MwareDesc) ([]string) {
 	var dbs DBSettings
 	var envs []string
@@ -126,7 +122,6 @@ func GetEnvMariaDB(conf *YAMLConf, mwd *MwareDesc) ([]string) {
 var MwareMariaDB = MwareOps {
 	Init:	InitMariaDB,
 	Fini:	FiniMariaDB,
-	Event:	EventMariaDB,
 	GetEnv:	GetEnvMariaDB,
 	Devel:	true,
 }

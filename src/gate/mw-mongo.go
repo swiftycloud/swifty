@@ -84,10 +84,6 @@ func FiniMongo(conf *YAMLConf, mwd *MwareDesc) error {
 	return nil
 }
 
-func EventMongo(conf *YAMLConf, source *FnEventDesc, mwd *MwareDesc, on bool) (error) {
-	return fmt.Errorf("No events for mongo")
-}
-
 func GetEnvMongo(conf *YAMLConf, mwd *MwareDesc) ([]string) {
 	var mgs DBSettings
 	var envs []string
@@ -106,6 +102,5 @@ func GetEnvMongo(conf *YAMLConf, mwd *MwareDesc) ([]string) {
 var MwareMongo = MwareOps {
 	Init:	InitMongo,
 	Fini:	FiniMongo,
-	Event:	EventMongo,
 	GetEnv:	GetEnvMongo,
 }

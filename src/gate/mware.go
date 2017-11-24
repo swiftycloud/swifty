@@ -221,7 +221,7 @@ func mwareEventSetup(conf *YAMLConf, fn *FunctionDesc, on bool) error {
 	log.Debugf("set up event for %s.%s mware", fn.Event.MwareId, item.MwareType)
 
 	iface, ok := mwareHandlers[item.MwareType]
-	if ok {
+	if ok && (iface.Event != nil) {
 		return iface.Event(conf, &fn.Event, &item, on)
 	}
 

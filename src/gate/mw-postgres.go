@@ -57,10 +57,6 @@ func FiniPostgres(conf *YAMLConf, mwd *MwareDesc) error {
 	return err
 }
 
-func EventPostgres(conf *YAMLConf, source *FnEventDesc, mwd *MwareDesc, on bool) (error) {
-	return fmt.Errorf("No events for postgres")
-}
-
 func GetEnvPostgres(conf *YAMLConf, mwd *MwareDesc) ([]string) {
 	var pgs PGSetting
 	var envs []string
@@ -79,6 +75,5 @@ func GetEnvPostgres(conf *YAMLConf, mwd *MwareDesc) ([]string) {
 var MwarePostgres = MwareOps {
 	Init:	InitPostgres,
 	Fini:	FiniPostgres,
-	Event:	EventPostgres,
 	GetEnv:	GetEnvPostgres,
 }
