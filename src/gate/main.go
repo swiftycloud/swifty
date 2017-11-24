@@ -146,12 +146,12 @@ type YAMLConfMWCreds struct {
 	Pass		string			`yaml:"password"`
 }
 
-type YAMLConfMQ struct {
+type YAMLConfRabbit struct {
 	YAMLConfMWCreds				`yaml:",inline"`
 	AdminPort	string			`yaml:"admport"`
 }
 
-type YAMLConfSQL struct {
+type YAMLConfMaria struct {
 	YAMLConfMWCreds				`yaml:",inline"`
 }
 
@@ -160,9 +160,9 @@ type YAMLConfMongo struct {
 }
 
 type YAMLConfMw struct {
-	MQ		YAMLConfMQ		`yaml:"mq"`
-	SQL		YAMLConfSQL		`yaml:"sql"`
-	MGO		YAMLConfMongo		`yaml:"mongo"`
+	Rabbit		YAMLConfRabbit		`yaml:"rabbit"`
+	Maria		YAMLConfMaria		`yaml:"maria"`
+	Mongo		YAMLConfMongo		`yaml:"mongo"`
 }
 
 type YAMLConfRange struct {

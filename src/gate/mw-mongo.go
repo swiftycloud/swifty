@@ -14,11 +14,11 @@ type MGOSetting struct {
 
 func mgoDial(conf *YAMLConf) (*mgo.Session, error) {
 	ifo := mgo.DialInfo {
-		Addrs:		[]string{conf.Mware.MGO.Addr},
+		Addrs:		[]string{conf.Mware.Mongo.Addr},
 		Database:	"admin",
 		Timeout:	60*time.Second,
-		Username:	conf.Mware.MGO.Admin,
-		Password:	conf.Mware.MGO.Pass,
+		Username:	conf.Mware.Mongo.Admin,
+		Password:	conf.Mware.Mongo.Pass,
 	}
 
 	return mgo.DialWithInfo(&ifo)
@@ -95,7 +95,7 @@ func GetEnvMongo(conf *YAMLConf, mwd *MwareDesc) ([]string) {
 
 	err = json.Unmarshal([]byte(mwd.JSettings), &mgs)
 	if err == nil {
-		envs = append(mwGenEnvs(mwd, conf.Mware.MGO.Addr), mkEnv(mwd, "DBNAME", mgs.DBName))
+		envs = append(mwGenEnvs(mwd, conf.Mware.Mongo.Addr), mkEnv(mwd, "DBNAME", mgs.DBName))
 	} else {
 		log.Fatal("rabbit: Can't unmarshal DB entry %s", mwd.JSettings)
 	}

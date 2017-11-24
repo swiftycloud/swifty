@@ -21,11 +21,11 @@ balancer:
                 - ip: "10.8.0.2"
                   ports: "8780:8980"
 middleware:
-        sql:
+        maria:
                 address: "192.168.122.197:3306"
                 admin: "root"
                 password: "aiNe1sah9ichu1re"
-        mq:
+        rabbit:
                 address: "192.168.122.197:5672"
                 admin: "root"
                 password: "airooV1Echah4wei"

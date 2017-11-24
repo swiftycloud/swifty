@@ -16,9 +16,9 @@ type DBSettings struct {
 func mariaConn(conf *YAMLConf) (*sql.DB, error) {
 	return sql.Open("mysql",
 			fmt.Sprintf("%s:%s@tcp(%s)/?charset=utf8",
-				conf.Mware.SQL.Admin,
-				conf.Mware.SQL.Pass,
-				conf.Mware.SQL.Addr))
+				conf.Mware.Maria.Admin,
+				conf.Mware.Maria.Pass,
+				conf.Mware.Maria.Addr))
 }
 
 func mariaReq(db *sql.DB, req string) error {
@@ -115,7 +115,7 @@ func GetEnvMariaDB(conf *YAMLConf, mwd *MwareDesc) ([]string) {
 
 	err = json.Unmarshal([]byte(mwd.JSettings), &dbs)
 	if err == nil {
-		envs = append(mwGenEnvs(mwd, conf.Mware.SQL.Addr), mkEnv(mwd, "DBNAME", dbs.DBName))
+		envs = append(mwGenEnvs(mwd, conf.Mware.Maria.Addr), mkEnv(mwd, "DBNAME", dbs.DBName))
 	} else {
 		log.Fatal("rabbit: Can't unmarshal DB entry %s", mwd.JSettings)
 	}
@@ -128,5 +128,6 @@ var MwareMariaDB = MwareOps {
 	Fini:	FiniMariaDB,
 	Event:	EventMariaDB,
 	GetEnv:	GetEnvMariaDB,
+	Devel:	true,
 }
 

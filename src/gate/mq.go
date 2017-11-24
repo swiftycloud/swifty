@@ -68,9 +68,9 @@ func startListener(conf *YAMLConf, vhost, queue string) error {
 
 	log.Debugf("mq: Starting mq listener @%s.%s", vhost, queue)
 
-	login := conf.Mware.MQ.Admin
-	pass := conf.Mware.MQ.Pass
-	addr := conf.Mware.MQ.Addr
+	login := conf.Mware.Rabbit.Admin
+	pass := conf.Mware.Rabbit.Pass
+	addr := conf.Mware.Rabbit.Addr
 
 	/* FIXME -- there should be one connection */
 	conn, err := amqp.Dial("amqp://" + login + ":" + pass + "@" + addr +"/" + vhost)

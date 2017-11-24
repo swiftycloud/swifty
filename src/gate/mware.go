@@ -29,6 +29,7 @@ type MwareOps struct {
 	Fini	func(conf *YAMLConf, mwd *MwareDesc) (error)
 	Event	func(conf *YAMLConf, source *FnEventDesc, mwd *MwareDesc, on bool) (error)
 	GetEnv	func(conf *YAMLConf, mwd *MwareDesc) ([]string)
+	Devel	bool
 }
 
 func mkEnv(mwd *MwareDesc, envName, value string) string {
@@ -60,8 +61,8 @@ func mwareGenerateClient(mwd *MwareDesc) (error) {
 }
 
 var mwareHandlers = map[string]MwareOps {
-	"sql":		MwareMariaDB,
-	"mq":		MwareRabbitMQ,
+	"maria":	MwareMariaDB,
+	"rabbit":	MwareRabbitMQ,
 	"mongo":	MwareMongo,
 }
 
@@ -175,6 +176,12 @@ func mwareSetup(conf *YAMLConf, id SwoId, mwares []swyapi.MwareItem) error {
 		handler, ok := mwareHandlers[mware.Type]
 		if !ok {
 			err = fmt.Errorf("no handler for %s:%s", id.Str(), mware.Type)
+			dbMwareRemove(mwd)
+			goto out
+		}
+
+		if handler.Devel && !SwyModeDevel {
+			err = fmt.Errorf("middleware %s not enabled", mware.Type)
 			dbMwareRemove(mwd)
 			goto out
 		}
