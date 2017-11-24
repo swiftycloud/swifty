@@ -51,5 +51,5 @@ wdog:
         ct-path: "/usr/bin/swy-wdog"
         address: ":8687"
 kubernetes:
-        config-path: src/conf/kubeconfig
+        config-path: conf/kubeconfig
         max-replicas: 32
