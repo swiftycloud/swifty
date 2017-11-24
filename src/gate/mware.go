@@ -62,6 +62,7 @@ func mwareGenerateClient(mwd *MwareDesc) (error) {
 
 var mwareHandlers = map[string]MwareOps {
 	"maria":	MwareMariaDB,
+	"postgres":	MwarePostgres,
 	"rabbit":	MwareRabbitMQ,
 	"mongo":	MwareMongo,
 }

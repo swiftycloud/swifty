@@ -34,6 +34,10 @@ middleware:
                 address: "192.168.122.197:27017"
                 admin: "admin"
                 password: "abc123"
+        postgres:
+                address: "192.168.122.197:5432"
+                admport: "3872"
+                token: "Kg8AADHelo8QhlIGaV9ozASl"
 runtime:
         timeout:
                 max: 60

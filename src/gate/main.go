@@ -159,10 +159,17 @@ type YAMLConfMongo struct {
 	YAMLConfMWCreds				`yaml:",inline"`
 }
 
+type YAMLConfPostgres struct {
+	Addr		string			`yaml:"address"`
+	AdminPort	string			`yaml:"admport"`
+	Token		string			`yaml:"token"`
+}
+
 type YAMLConfMw struct {
 	Rabbit		YAMLConfRabbit		`yaml:"rabbit"`
 	Maria		YAMLConfMaria		`yaml:"maria"`
 	Mongo		YAMLConfMongo		`yaml:"mongo"`
+	Postgres	YAMLConfPostgres	`yaml:"postgres"`
 }
 
 type YAMLConfRange struct {
