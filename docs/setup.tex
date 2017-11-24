@@ -106,6 +106,26 @@ connection = mysql+pymysql://keystone:Ja7hey6keiThoyoi@controller/keystone
 provider = fernet
 \end{lstlisting}
 
+Prepare postgres
+First install it from any yum repo, then init one
+\begin{lstlisting}
+yum install -y postgresql-server postgresql
+postgresql-setup --initdb
+systemctl enable postgresql
+\end{lstlisting}
+
+Then make postgres accept connections from the outer world
+\begin{lstlisting}
+/var/lib/pgsql/data/postgresql.conf:
+	listen_addresses = '*'
+/var/lib/pgsql/data/pg_hba.conf:
+	host    all             all             0.0.0.0/0               md5
+	host    all             all             ::/0                    md5
+\end{lstlisting}
+
+Generate a random string, put it into swy-pgrest.conf and start
+postgres and swy-pgrest service.
+
 Prepare keystone
 
 \begin{lstlisting}

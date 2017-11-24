@@ -86,6 +86,13 @@ swyctl: $(go-ctl-y) .FORCE
 	$(Q) $(GO) $(GO-BUILD-OPTS) -o $@ $(go-ctl-y)
 all-y += swyctl
 
+go-pgrest-y	+= src/pgrest/main.go
+
+swy-pgrest: $(go-pgrest-y) .FORCE
+	$(call msg-gen,$@)
+	$(Q) $(GO) $(GO-BUILD-OPTS) -o $@ $(go-pgrest-y)
+all-y += swy-pgrest
+
 # Default target
 all: $(all-y)
 
