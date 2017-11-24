@@ -3,10 +3,22 @@ package main
 import (
 	"errors"
 	"fmt"
+	"encoding/json"
 
 	"../apis/apps"
 	"../common"
 )
+
+func genFunctionDescJSON(fn *FunctionDesc, fi *FnInst) string {
+	jdata, _ := json.Marshal(&swyapi.SwdFunctionDesc{
+				Dir:		RtWdir(&fn.Code, fi.Build),
+				Stats:		statsPodPath,
+				PodToken:	fn.Cookie,
+				Timeout:	fn.Size.Tmo,
+			})
+
+	return string(jdata[:])
+}
 
 func getFunctionDesc(tennant string, p_add *swyapi.FunctionAdd) *FunctionDesc {
 	fn := &FunctionDesc {

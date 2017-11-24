@@ -203,24 +203,6 @@ type YAMLConf struct {
 var conf YAMLConf
 var gatesrv *http.Server
 
-func genFunctionDescJSON(conf *YAMLConf, fn *FunctionDesc, fi *FnInst) string {
-	var jdata []byte
-	var err error
-
-	jdata, err = json.Marshal(&swyapi.SwdFunctionDesc{
-				Dir:		RtWdir(&fn.Code, fi.Build),
-				Stats:		statsPodPath,
-				PodToken:	fn.Cookie,
-				Timeout:	fn.Size.Tmo,
-			})
-	if err != nil {
-		log.Errorf("marshal error: %s", err.Error())
-		return ""
-	}
-
-	return string(jdata[:])
-}
-
 func runFunctionOnce(fn *FunctionDesc) {
 	log.Debugf("oneshot RUN for %s", fn.SwoId.Str())
 	doRun(fn.Inst(), "oneshot", RtRunCmd(&fn.Code))

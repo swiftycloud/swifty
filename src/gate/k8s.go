@@ -113,7 +113,7 @@ func swk8sRemove(conf *YAMLConf, fn *FunctionDesc, fi *FnInst) error {
 	return nil
 }
 
-func swk8sGenEnvVar(conf *YAMLConf, fn *FunctionDesc, fi *FnInst, wdaddr string, wd_port int32, secret *v1.Secret) []v1.EnvVar {
+func swk8sGenEnvVar(fn *FunctionDesc, fi *FnInst, wdaddr string, wd_port int32, secret *v1.Secret) []v1.EnvVar {
 	var s []v1.EnvVar
 
 	for _, v := range fn.Code.Env {
@@ -128,7 +128,7 @@ func swk8sGenEnvVar(conf *YAMLConf, fn *FunctionDesc, fi *FnInst, wdaddr string,
 
 	s = append(s,  v1.EnvVar{
 			Name:	"SWD_FUNCTION_DESC",
-			Value:	genFunctionDescJSON(conf, fn, fi), })
+			Value:	genFunctionDescJSON(fn, fi), })
 
 	if wdaddr != "" {
 		s = append(s, v1.EnvVar{
@@ -328,6 +328,8 @@ func swk8sRun(conf *YAMLConf, fn *FunctionDesc, fi *FnInst) error {
 		},
 	}
 
+	envs := swk8sGenEnvVar(fn, fi, wdaddr, wd_port, secret)
+
 	podspec := v1.PodTemplateSpec{
 		ObjectMeta:	v1.ObjectMeta {
 			Name:	depname,
@@ -359,7 +361,7 @@ func swk8sRun(conf *YAMLConf, fn *FunctionDesc, fi *FnInst) error {
 					Image:		img,
 					Command:	[]string{conf.Wdog.CtPath},
 					Ports:		ctPorts,
-					Env:		swk8sGenEnvVar(conf, fn, fi, wdaddr, wd_port, secret),
+					Env:		envs,
 					VolumeMounts:	[]v1.VolumeMount{
 						{
 							Name:		"code",
