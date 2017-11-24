@@ -768,6 +768,7 @@ func handleFunctionCall(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if !fnCallable(&fn) {
+		err = errors.New("Function is not ready")
 		goto out
 	}
 
