@@ -14,13 +14,6 @@ import (
 	"../common"
 )
 
-type YAMLConfDB struct {
-	StateDB		string		`yaml:"state"`
-	Addr		string		`yaml:"address"`
-	User		string		`yaml:"user"`
-	Pass		string		`yaml:"password"`
-}
-
 type YAMLConfKeystone struct {
 	Addr		string			`yaml:"address"`
 	Domain		string			`yaml:"domain"`
@@ -30,7 +23,6 @@ type YAMLConfKeystone struct {
 
 type YAMLConf struct {
 	Listen		string			`yaml:"listen"`
-	DB		YAMLConfDB		`yaml:"db"`
 	Keystone	YAMLConfKeystone	`yaml:"keystone"`
 }
 

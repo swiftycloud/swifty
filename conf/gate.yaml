@@ -9,7 +9,6 @@ keystone:
         domain: "swifty"
 daemon:
         address: "192.168.122.211:8686"
-        view: "/home/swifty/src/gate/view"
         sources:
                 share: "/home/swifty-volume"
                 clone: "/home/swifty/local-sources"

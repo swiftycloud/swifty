@@ -45,7 +45,6 @@ type YAMLConfBalancer struct {
 
 type YAMLConfDaemon struct {
 	Addr		string			`yaml:"address"`
-	ViewDir		string			`yaml:"view"`
 	Sources		YAMLConfSources		`yaml:"sources"`
 	LogLevel	string			`yaml:"loglevel"`
 }
