@@ -1,6 +1,7 @@
 import boto3
 import random
 import string
+import os
 
 def genRandomData(len):
     return ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits) for _ in range(len))
@@ -26,7 +27,7 @@ s3.create_bucket(Bucket = bucket_name)
 #response = s3.list_buckets(Bucket = bucket_name)
 #print(response)
 
-with open('/home/cyrill/projects/swifty/test/s3.py', 'rb') as data:
+with open(os.getcwd() + '/test/s3.py', 'rb') as data:
     s3.put_object(Bucket = bucket_name, Key = 's3-1.py', Body = data)
     response = s3.get_object(Bucket = bucket_name, Key = 's3-1.py')
     print(response)
