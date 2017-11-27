@@ -48,17 +48,9 @@ type S3Object struct {
 	Size				int64		`json:"size" bson:"size"`
 }
 
-func (objd *S3ObjectData)dbCollection() (string) {
-	return DBColS3ObjectData
-}
-
-func (objd *S3ObjectData)dbInsert() (error) {
-	return dbS3Insert(objd.dbCollection(), objd)
-}
-
 func (objd *S3ObjectData)dbRemove() (error) {
 	return dbS3Remove(
-			objd.dbCollection(),
+			objd,
 			bson.M{"_id": objd.ObjID},
 		)
 }
@@ -67,7 +59,6 @@ func (objd *S3ObjectData)dbFind(object *S3Object) (*S3ObjectData, error) {
 	var res S3ObjectData
 
 	err := dbS3FindOne(
-			objd.dbCollection(),
 			bson.M{"object-id": object.ObjID},
 			&res)
 	if err != nil {
@@ -87,19 +78,10 @@ func (object *S3Object)GetName(akey *S3AccessKey, bucket *S3Bucket) string {
 	return object.Name[index:]
 }
 
-func (object *S3Object)dbCollection() (string) {
-	return DBColS3Objects
-}
-
-func (object *S3Object)dbInsert() (error) {
-	return dbS3Insert(object.dbCollection(), object)
-}
-
 func (object *S3Object)dbRemove() (error) {
 	var res S3Object
 
 	return dbS3RemoveCond(
-			object.dbCollection(),
 			bson.M{	"_id": object.ObjID,
 				"state": S3StateInactive},
 			&res,
@@ -110,7 +92,6 @@ func (object *S3Object)dbSetState(state uint32) (error) {
 	var res S3Object
 
 	return dbS3Update(
-			object.dbCollection(),
 			bson.M{"_id": object.ObjID,
 				"state": bson.M{"$in": s3StateTransition[state]}},
 			bson.M{"$set": bson.M{"state": state}},
@@ -122,7 +103,6 @@ func (object *S3Object)dbFindOID(akey *S3AccessKey, bucket *S3Bucket) (*S3Object
 	var res S3Object
 
 	err := dbS3FindOne(
-			object.dbCollection(),
 			bson.M{"oid": object.GenOID(akey, bucket)},
 			&res)
 	if err != nil {
@@ -151,7 +131,7 @@ func s3InsertObject(akey *S3AccessKey, bucket *S3Bucket, object *S3Object) error
 	object.OID		= object.GenOID(akey, bucketFound)
 	object.State		= S3StateNone
 
-	err = object.dbInsert()
+	err = dbS3Insert(object)
 	if err != nil {
 		log.Errorf("s3: Can't insert object %s: %s",
 				object.OID, err.Error())
@@ -190,7 +170,7 @@ func s3CommitObject(bucket *S3Bucket, object *S3Object, data []byte) error {
 			goto out
 		}
 
-		err = objd.dbInsert()
+		err = dbS3Insert(objd)
 		if err != nil {
 			goto out
 		}

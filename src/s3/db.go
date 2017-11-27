@@ -4,9 +4,11 @@ import (
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 
+	"reflect"
 	"time"
 )
 
+var dbColMap map[reflect.Type]string
 var dbSession *mgo.Session
 var dbName string
 
@@ -56,6 +58,20 @@ func dbConnect(conf *YAMLConf) error {
 	index.Key = []string{"_id", "access-key-id"}
 	dbSession.DB(dbName).C(DBColS3AccessKeys).EnsureIndex(index)
 
+	dbColMap = make(map[reflect.Type]string)
+	dbColMap[reflect.TypeOf(S3Bucket{})] = DBColS3Buckets
+	dbColMap[reflect.TypeOf(&S3Bucket{})] = DBColS3Buckets
+	dbColMap[reflect.TypeOf([]S3Bucket{})] = DBColS3Buckets
+	dbColMap[reflect.TypeOf(&[]S3Bucket{})] = DBColS3Buckets
+	dbColMap[reflect.TypeOf(S3Object{})] = DBColS3Objects
+	dbColMap[reflect.TypeOf(&S3Object{})] = DBColS3Objects
+	dbColMap[reflect.TypeOf([]S3Object{})] = DBColS3Objects
+	dbColMap[reflect.TypeOf(&[]S3Object{})] = DBColS3Objects
+	dbColMap[reflect.TypeOf(S3ObjectData{})] = DBColS3ObjectData
+	dbColMap[reflect.TypeOf(&S3ObjectData{})] = DBColS3ObjectData
+	dbColMap[reflect.TypeOf([]S3ObjectData{})] = DBColS3ObjectData
+	dbColMap[reflect.TypeOf(&[]S3ObjectData{})] = DBColS3ObjectData
+
 	return nil
 }
 
@@ -65,16 +81,24 @@ func dbDisconnect() {
 	dbName = ""
 }
 
-func dbS3Insert(collection string, o interface{}) (error) {
-	return dbSession.DB(dbName).C(collection).Insert(o)
+func dbColl(object interface{}) (string) {
+	if name, ok := dbColMap[reflect.TypeOf(object)]; ok {
+		return name
+	}
+	log.Fatalf("Unmapped object %v", object)
+	return ""
 }
 
-func dbS3Remove(collection string, query bson.M) (error) {
-	return dbSession.DB(dbName).C(collection).Remove(query)
+func dbS3Insert(o interface{}) (error) {
+	return dbSession.DB(dbName).C(dbColl(o)).Insert(o)
 }
 
-func dbS3Update(collection string, query bson.M, update bson.M, o interface{}) (error) {
-	c := dbSession.DB(dbName).C(collection)
+func dbS3Remove(o interface{}, query bson.M) (error) {
+	return dbSession.DB(dbName).C(dbColl(o)).Remove(query)
+}
+
+func dbS3Update(query bson.M, update bson.M, o interface{}) (error) {
+	c := dbSession.DB(dbName).C(dbColl(o))
 	change := mgo.Change{
 		Upsert:		false,
 		Remove:		false,
@@ -85,8 +109,8 @@ func dbS3Update(collection string, query bson.M, update bson.M, o interface{}) (
 	return err
 }
 
-func dbS3RemoveCond(collection string, query bson.M, o interface{}) (error) {
-	c := dbSession.DB(dbName).C(collection)
+func dbS3RemoveCond(query bson.M, o interface{}) (error) {
+	c := dbSession.DB(dbName).C(dbColl(o))
 	change := mgo.Change{
 		Upsert:		false,
 		Remove:		true,
@@ -96,10 +120,10 @@ func dbS3RemoveCond(collection string, query bson.M, o interface{}) (error) {
 	return err
 }
 
-func dbS3FindOne(collection string, query bson.M, o interface{}) (error) {
-	return dbSession.DB(dbName).C(collection).Find(query).One(o)
+func dbS3FindOne(query bson.M, o interface{}) (error) {
+	return dbSession.DB(dbName).C(dbColl(o)).Find(query).One(o)
 }
 
-func dbS3FindAll(collection string, query bson.M, o interface{}) (error) {
-	return dbSession.DB(dbName).C(collection).Find(query).All(o)
+func dbS3FindAll(query bson.M, o interface{}) (error) {
+	return dbSession.DB(dbName).C(dbColl(o)).Find(query).All(o)
 }

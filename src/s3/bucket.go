@@ -41,19 +41,10 @@ func (bucket *S3Bucket)GetName(akey *S3AccessKey) string {
 	return bucket.Name[index:]
 }
 
-func (bucket *S3Bucket)dbCollection() (string) {
-	return DBColS3Buckets
-}
-
-func (bucket *S3Bucket)dbInsert() (error) {
-	return dbS3Insert(bucket.dbCollection(), bucket)
-}
-
 func (bucket *S3Bucket)dbRemove() (error) {
 	var res S3Bucket
 
 	return dbS3RemoveCond(
-			bucket.dbCollection(),
 			bson.M{	"_id": bucket.ObjID,
 				"state": S3StateInactive,
 				"cnt-objects": 0},
@@ -65,7 +56,6 @@ func (bucket *S3Bucket)dbSetState(state uint32) (error) {
 	var res S3Bucket
 
 	return dbS3Update(
-			bucket.dbCollection(),
 			bson.M{"_id": bucket.ObjID,
 				"state": bson.M{"$in": s3StateTransition[state]},
 				"cnt-objects": 0},
@@ -78,7 +68,6 @@ func (bucket *S3Bucket)dbAddObj(size int64) (error) {
 	var res S3Bucket
 
 	return dbS3Update(
-			bucket.dbCollection(),
 			bson.M{"_id": bucket.ObjID,
 				"state": S3StateActive,
 			},
@@ -95,7 +84,6 @@ func (bucket *S3Bucket)dbDelObj(size int64) (error) {
 	var res S3Bucket
 
 	return dbS3Update(
-			bucket.dbCollection(),
 			bson.M{"_id": bucket.ObjID,
 				"state": S3StateActive,
 			},
@@ -115,7 +103,6 @@ func (bucket *S3Bucket)dbFindByKey(akey *S3AccessKey) (*S3Bucket, error) {
 	query := bson.M{"oid": bson.M{"$regex": bson.RegEx{regex, ""}}}
 
 	err := dbS3FindOne(
-			bucket.dbCollection(),
 			query,
 			&res)
 	if err != nil {
@@ -129,7 +116,6 @@ func (bucket *S3Bucket)dbFindOID(akey *S3AccessKey) (*S3Bucket, error) {
 	var res S3Bucket
 
 	err := dbS3FindOne(
-			bucket.dbCollection(),
 			bson.M{"oid": bucket.GenOID(akey)},
 			&res)
 	if err != nil {
@@ -150,7 +136,7 @@ func s3InsertBucket(akey *S3AccessKey, bucket *S3Bucket) error {
 	bucket.MaxObjects	= S3StogateMaxObjects
 	bucket.MaxBytes		= S3StogateMaxBytes
 
-	err = bucket.dbInsert()
+	err = dbS3Insert(bucket)
 	if err != nil {
 		log.Errorf("s3: Can't insert bucket %s: %s",
 				bucket.OID, err.Error())
@@ -221,10 +207,8 @@ func s3DeleteBucket(akey *S3AccessKey, bucket *S3Bucket) error {
 
 func (bucket *S3Bucket)dbFindAll() ([]S3Object, error) {
 	var res []S3Object
-	var t S3Object
 
 	err := dbS3FindOne(
-			t.dbCollection(),
 			bson.M{"bucket-id": bucket.ObjID},
 			&res)
 	if err != nil {

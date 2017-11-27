@@ -30,11 +30,11 @@ with open('/home/cyrill/projects/swifty/test/s3.py', 'rb') as data:
     s3.put_object(Bucket = bucket_name, Key = 's3-1.py', Body = data)
     response = s3.get_object(Bucket = bucket_name, Key = 's3-1.py')
     print(response)
-    respose = s3.delete_object(Bucket = bucket_name, Key = 's3-1.py')
-    print(response)
     if response['ContentLength'] > 0:
         body = response['Body']
         print(body.read())
+    #respose = s3.delete_object(Bucket = bucket_name, Key = 's3-1.py')
+    #print(response)
 
 #with open('test/s3.py', 'rb') as data:
 #    s3.put_object(Bucket = bucket_name, Key = 's3-2.py', Body = data)
