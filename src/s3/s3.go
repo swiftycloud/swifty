@@ -87,45 +87,6 @@ const (
 	S3StogateMaxBytes		= int64(100 << 20)
 )
 
-func dbS3Insert(collection string, o interface{}) (error) {
-	return dbSession.DB(dbName).C(collection).Insert(o)
-}
-
-func dbS3Remove(collection string, query bson.M) (error) {
-	return dbSession.DB(dbName).C(collection).Remove(query)
-}
-
-func dbS3Update(collection string, query bson.M, update bson.M, o interface{}) (error) {
-	c := dbSession.DB(dbName).C(collection)
-	change := mgo.Change{
-		Upsert:		false,
-		Remove:		false,
-		Update:		update,
-		ReturnNew:	false,
-	}
-	_, err := c.Find(query).Apply(change, o)
-	return err
-}
-
-func dbS3RemoveCond(collection string, query bson.M, o interface{}) (error) {
-	c := dbSession.DB(dbName).C(collection)
-	change := mgo.Change{
-		Upsert:		false,
-		Remove:		true,
-		ReturnNew:	false,
-	}
-	_, err := c.Find(query).Apply(change, o)
-	return err
-}
-
-func dbS3FindOne(collection string, query bson.M, o interface{}) (error) {
-	return dbSession.DB(dbName).C(collection).Find(query).One(o)
-}
-
-func dbS3FindAll(collection string, query bson.M, o interface{}) (error) {
-	return dbSession.DB(dbName).C(collection).Find(query).All(o)
-}
-
 func (bucket *S3Bucket)GenOID(akey *S3AccessKey) string {
 	return akey.Namespace() + "-" + bucket.Name
 }

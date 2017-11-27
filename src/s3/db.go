@@ -2,6 +2,7 @@ package main
 
 import (
 	"gopkg.in/mgo.v2"
+	"gopkg.in/mgo.v2/bson"
 
 	"time"
 )
@@ -58,4 +59,43 @@ func dbDisconnect() {
 	dbSession.Close()
 	dbSession = nil
 	dbName = ""
+}
+
+func dbS3Insert(collection string, o interface{}) (error) {
+	return dbSession.DB(dbName).C(collection).Insert(o)
+}
+
+func dbS3Remove(collection string, query bson.M) (error) {
+	return dbSession.DB(dbName).C(collection).Remove(query)
+}
+
+func dbS3Update(collection string, query bson.M, update bson.M, o interface{}) (error) {
+	c := dbSession.DB(dbName).C(collection)
+	change := mgo.Change{
+		Upsert:		false,
+		Remove:		false,
+		Update:		update,
+		ReturnNew:	false,
+	}
+	_, err := c.Find(query).Apply(change, o)
+	return err
+}
+
+func dbS3RemoveCond(collection string, query bson.M, o interface{}) (error) {
+	c := dbSession.DB(dbName).C(collection)
+	change := mgo.Change{
+		Upsert:		false,
+		Remove:		true,
+		ReturnNew:	false,
+	}
+	_, err := c.Find(query).Apply(change, o)
+	return err
+}
+
+func dbS3FindOne(collection string, query bson.M, o interface{}) (error) {
+	return dbSession.DB(dbName).C(collection).Find(query).One(o)
+}
+
+func dbS3FindAll(collection string, query bson.M, o interface{}) (error) {
+	return dbSession.DB(dbName).C(collection).Find(query).All(o)
 }
