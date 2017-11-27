@@ -118,9 +118,6 @@ func s3InsertObject(akey *S3AccessKey, bucket *S3Bucket, object *S3Object) error
 
 	bucketFound, err = bucket.dbFindOID(akey)
 	if err != nil {
-		if err == mgo.ErrNotFound {
-			return nil
-		}
 		log.Errorf("s3: Can't find bucket %s: %s",
 				bucket.GenOID(akey), err.Error())
 		return err
