@@ -4,6 +4,7 @@ import (
 	"go.uber.org/zap"
 	"net/http"
 	"errors"
+	"bytes"
 	"os/exec"
 	"flag"
 	"syscall"
@@ -37,9 +38,19 @@ func pgCheckString(str string) bool {
 }
 
 func pgRun(cmd *exec.Cmd) error {
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	var err error
+
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
 	cmd.SysProcAttr = &syscall.SysProcAttr{}
 	cmd.SysProcAttr.Credential = &syscall.Credential{Uid: conf.Uid, Gid: conf.Gid}
-	return cmd.Run()
+	err = cmd.Run()
+	if err != nil {
+		log.Errorf("Error running cmd: %s/%s", stdout.String(), stderr.String())
+	}
+	return err
 }
 
 func pgCreate(inf *swyapi.PgRequest) error {
@@ -68,6 +79,7 @@ func pgCreate(inf *swyapi.PgRequest) error {
 		goto out
 	}
 
+	log.Debugf("`- added OK")
 	return nil
 
 out:
@@ -102,7 +114,9 @@ func pgDrop(inf *swyapi.PgRequest) error {
 		}
 	}
 
-
+	if err == nil {
+		log.Debugf("`- dropped OK")
+	}
 	return err
 }
 
