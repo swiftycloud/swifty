@@ -288,7 +288,7 @@ func handleObject(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		// Create new object
-		err = s3InsertObject(akey, bucket, object)
+		bucket, object, err = s3InsertObject(akey, bucket, object)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return

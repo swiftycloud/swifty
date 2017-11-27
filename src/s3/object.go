@@ -112,7 +112,7 @@ func (object *S3Object)dbFindOID(akey *S3AccessKey, bucket *S3Bucket) (*S3Object
 	return &res,nil
 }
 
-func s3InsertObject(akey *S3AccessKey, bucket *S3Bucket, object *S3Object) error {
+func s3InsertObject(akey *S3AccessKey, bucket *S3Bucket, object *S3Object) (*S3Bucket, *S3Object, error) {
 	var bucketFound *S3Bucket
 	var err error
 
@@ -120,7 +120,7 @@ func s3InsertObject(akey *S3AccessKey, bucket *S3Bucket, object *S3Object) error
 	if err != nil {
 		log.Errorf("s3: Can't find bucket %s: %s",
 				bucket.GenOID(akey), err.Error())
-		return err
+		return nil, nil, err
 	}
 
 	object.ObjID		= bson.NewObjectId()
@@ -132,7 +132,7 @@ func s3InsertObject(akey *S3AccessKey, bucket *S3Bucket, object *S3Object) error
 	if err != nil {
 		log.Errorf("s3: Can't insert object %s: %s",
 				object.OID, err.Error())
-		return err
+		return nil, nil, err
 	}
 
 	err = bucketFound.dbAddObj(object.Size)
@@ -140,10 +140,11 @@ func s3InsertObject(akey *S3AccessKey, bucket *S3Bucket, object *S3Object) error
 		log.Errorf("s3: Can't +account object %s: %s",
 				object.OID, err.Error())
 		object.dbRemove()
+		return nil, nil, err
 	}
 
 	log.Debugf("s3: Inserted object %s", object.OID)
-	return nil
+	return bucketFound, object, nil
 }
 
 func s3CommitObject(bucket *S3Bucket, object *S3Object, data []byte) error {
@@ -251,7 +252,7 @@ func s3DeleteObject(akey *S3AccessKey, bucket *S3Bucket, object *S3Object) error
 			return err
 		}
 	} else {
-		err = radosDeleteObject(bucketFound.OID, objectFound.OID)
+		err = radosDeleteObject(bucketFound.OID, objectFound.Name)
 		if err != nil {
 			return err
 		}
@@ -314,7 +315,7 @@ func s3ReadObject(akey *S3AccessKey, bucket *S3Bucket, object *S3Object) ([]byte
 		}
 		res = objdFound.Data
 	} else {
-		res, err = radosReadObject(bucketFound.OID, objectFound.OID,
+		res, err = radosReadObject(bucketFound.OID, objectFound.Name,
 						uint64(objectFound.Size))
 		if err != nil {
 			return nil, err
