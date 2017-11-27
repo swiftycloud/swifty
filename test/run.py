@@ -4,6 +4,11 @@ import subprocess
 import http.client
 import json
 import time
+import random
+import string
+
+def randstr():
+	return ''.join(random.choice(string.ascii_letters) for _ in range(0,8))
 
 lext = { 'python' : '.py' }
 swyctl = "./swyctl"
@@ -23,10 +28,19 @@ def list_fn():
 	fns = swyrun2([ 'ls' ])
 	return [ i.split()[0].strip() for i in fns[1:] ]
 
-def add_fn(name, lang):
-	swyrun([ "add", name, "-lang", lang,
+def add_fn(name, lang, mw = []):
+	cmd = [ "add", name, "-lang", lang,
 		"-src", "test/functions/" + lang + "/" + name + lext[lang],
-		"-event", "url" ])
+		"-event", "url" ]
+	if mw:
+		cmd += [ "-mw", ",".join(mw) ]
+	swyrun(cmd)
+
+def add_mw(typ, name):
+	swyrun([ "madd", "%s:%s" % (typ, name) ])
+
+def del_mw(name):
+	swyrun([ "mdel", name ])
 
 def get_inf_fn(name):
 	inf = swyrun2([ "inf", name ])
@@ -66,11 +80,32 @@ def helloworld():
 	print(ret)
 	return ret['message'] == 'hw:python:foo'
 
+def pgsql():
+	ok = False
+	add_mw("postgres", "pgtst")
+	add_fn("pgsql", "python", mw = [ "pgtst" ])
+	inf = wait_fn("pgsql")
+	ret = run_fn(inf, {'dbname': 'pgtst', 'action': 'create'})
+	print(ret)
+	if ret.get('res', '') == 'done':
+		cookie = randstr()
+		ret = run_fn(inf, {'dbname': 'pgtst', 'action': 'insert', 'key': 'foo', 'val': cookie })
+		print(ret)
+		if ret.get('res', '') == 'done':
+			ret = run_fn(inf, {'dbname': 'pgtst', 'action': 'select', 'key': 'foo'} )
+			print(ret)
+			if ret.get('res', [['']])[0][0].strip() == cookie:
+				ok = True
+	del_fn("pgsql")
+	del_mw("pgtst")
+	return ok
+
 def checkempty():
 	fns = list_fn()
 	print(fns)
 	return len(fns) == 0
 
 
-run_test(helloworld)
+#run_test(helloworld)
+#run_test(pgsql)
 run_test(checkempty)
