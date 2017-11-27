@@ -154,6 +154,58 @@ out:
 	http.Error(w, err.Error(), resp)
 }
 
+func handleProjectDel(w http.ResponseWriter, r *http.Request, tennant string) error {
+	var par swyapi.ProjectDel
+	var fns []FunctionDesc
+	var mws []MwareDesc
+	var id *SwoId
+	var ferr error
+
+	err := swy.HTTPReadAndUnmarshal(r, &par)
+	if err != nil {
+		goto out
+	}
+
+	id = makeSwoId(tennant, par.Project, "")
+
+	fns, err = dbFuncListProj(id)
+	if err != nil {
+		ferr = err
+		goto out
+	}
+	for _, fn := range fns {
+		id.Name = fn.SwoId.Name
+		err = removeFunction(&conf, id)
+		if err != nil {
+			log.Error("Funciton removal failed: %s", err.Error())
+			ferr = err
+		}
+	}
+
+	mws, err = dbMwareGetAll(id)
+	if err != nil {
+		ferr = err
+		goto out
+	}
+
+	for _, mw := range mws {
+		id.Name = mw.SwoId.Name
+		err = mwareRemove(&conf, id)
+		if err != nil {
+			log.Error("Mware removal failed: %s", err.Error())
+			ferr = err
+		}
+	}
+
+	if ferr != nil {
+		goto out
+	}
+
+	w.WriteHeader(http.StatusOK)
+out:
+	return ferr
+}
+
 func handleProjectList(w http.ResponseWriter, r *http.Request, tennant string) error {
 	var result []swyapi.ProjectItem
 	var params swyapi.ProjectList
@@ -699,6 +751,7 @@ func main() {
 	r := mux.NewRouter()
 	r.HandleFunc("/v1/user/login",		handleUserLogin)
 	r.Handle("/v1/project/list",		genReqHandler(handleProjectList))
+	r.Handle("/v1/project/del",		genReqHandler(handleProjectDel))
 	r.Handle("/v1/function/add",		genReqHandler(handleFunctionAdd))
 	r.Handle("/v1/function/update",		genReqHandler(handleFunctionUpdate))
 	r.Handle("/v1/function/remove",		genReqHandler(handleFunctionRemove))

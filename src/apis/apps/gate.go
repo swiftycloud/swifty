@@ -7,6 +7,10 @@ type FunctionList struct {
 type ProjectList struct {
 }
 
+type ProjectDel struct {
+	Project		string			`json:"project"`
+}
+
 type FunctionStats struct {
 	Called		uint64			`json:"called"`
 }

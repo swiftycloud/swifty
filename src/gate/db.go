@@ -166,6 +166,10 @@ func dbFuncList() ([]FunctionDesc, error) {
 	return dbFuncFindAll(bson.M{})
 }
 
+func dbFuncListProj(id *SwoId) ([]FunctionDesc, error) {
+	return dbFuncFindAll(bson.M{"tennant": id.Tennant, "project": id.Project})
+}
+
 func dbFuncListMwEvent(id *SwoId, mqueue string) ([]FunctionDesc, error) {
 	return dbFuncFindAll(bson.M{"tennant": id.Tennant, "project": id.Project,
 		"event.source": "mware", "event.mwid": id.Name, "event.mqueue": mqueue})
