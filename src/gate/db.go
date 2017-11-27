@@ -20,7 +20,7 @@ const (
 )
 
 type DBLogRec struct {
-	SwoId
+	SwoId				`bson:",inline"`
 	Commit		string		`bson:"commit"`
 	Event		string		`bson:"event"`
 	Time		time.Time	`bson:"ts"`
@@ -272,13 +272,13 @@ func logSaveEvent(fn *FunctionDesc, event, text string) {
 func logGetFor(id *SwoId) ([]DBLogRec, error) {
 	var logs []DBLogRec
 	c := dbSession.DB(dbState).C(DBColLogs)
-	err := c.Find(bson.M{"tennant": id.Tennant, "project": id.Project, "function": id.Name}).All(&logs)
+	err := c.Find(bson.M{"tennant": id.Tennant, "project": id.Project, "name": id.Name}).All(&logs)
 	return logs, err
 }
 
 func logRemove(fn *FunctionDesc) {
 	c := dbSession.DB(dbState).C(DBColLogs)
-	_, err := c.RemoveAll(bson.M{"tennant": fn.Tennant, "project": fn.Project, "function": fn.Name})
+	_, err := c.RemoveAll(bson.M{"tennant": fn.Tennant, "project": fn.Project, "name": fn.Name})
 	if err != nil {
 		log.Errorf("logs %s.%s remove error: %s", fn.Project, fn.Name, err.Error())
 	}
