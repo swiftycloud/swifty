@@ -491,10 +491,10 @@ func handleMwareAdd(w http.ResponseWriter, r *http.Request, tennant string) erro
 		goto out
 	}
 
-	id = makeSwoId(tennant, params.Project, "")
+	id = makeSwoId(tennant, params.Project, params.ID)
 	log.Debugf("mware/add: %s params %v", tennant, params)
 
-	err = mwareSetup(&conf, *id, params.Mware)
+	err = mwareSetup(&conf, id, params.Type)
 	if err != nil {
 		err = fmt.Errorf("Unable to setup middleware: %s", err.Error())
 		goto out
@@ -507,7 +507,7 @@ out:
 
 func handleMwareList(w http.ResponseWriter, r *http.Request, tennant string) error {
 	var id *SwoId
-	var result []swyapi.MwareGetItem
+	var result []swyapi.MwareItem
 	var params swyapi.MwareList
 	var mwares []MwareDesc
 
@@ -526,11 +526,9 @@ func handleMwareList(w http.ResponseWriter, r *http.Request, tennant string) err
 
 	for _, mware := range mwares {
 		result = append(result,
-			swyapi.MwareGetItem{
-				MwareItem: swyapi.MwareItem {
-					ID:	mware.Name,
-					Type:	mware.MwareType,
-				},
+			swyapi.MwareItem{
+				ID:	   mware.Name,
+				Type:	   mware.MwareType,
 				JSettings: mware.JSettings,
 			})
 	}
@@ -549,10 +547,10 @@ func handleMwareRemove(w http.ResponseWriter, r *http.Request, tennant string) e
 		goto out
 	}
 
-	id = makeSwoId(tennant, params.Project, "")
+	id = makeSwoId(tennant, params.Project, params.ID)
 	log.Debugf("mware/remove: %s params %v", tennant, params)
 
-	err = mwareRemove(&conf, *id, params.MwareIDs)
+	err = mwareRemove(&conf, id)
 	if err != nil {
 		err = fmt.Errorf("Unable to setup middleware: %s", err.Error())
 		goto out

@@ -5,7 +5,6 @@ import (
 	"strings"
 	"fmt"
 
-	"../apis/apps"
 	"../common"
 )
 
@@ -25,7 +24,7 @@ type MwareDesc struct {
 }
 
 type MwareOps struct {
-	Init	func(conf *YAMLConfMw, mwd *MwareDesc, mware *swyapi.MwareItem) (error)
+	Init	func(conf *YAMLConfMw, mwd *MwareDesc) (error)
 	Fini	func(conf *YAMLConfMw, mwd *MwareDesc) (error)
 	Event	func(conf *YAMLConfMw, source *FnEventDesc, mwd *MwareDesc, on bool) (error)
 	GetEnv	func(conf *YAMLConfMw, mwd *MwareDesc) ([][2]string)
@@ -60,11 +59,11 @@ func mwareGenerateClient(mwd *MwareDesc) (error) {
 	return nil
 }
 
-var mwareHandlers = map[string]MwareOps {
-	"maria":	MwareMariaDB,
-	"postgres":	MwarePostgres,
-	"rabbit":	MwareRabbitMQ,
-	"mongo":	MwareMongo,
+var mwareHandlers = map[string]*MwareOps {
+	"maria":	&MwareMariaDB,
+	"postgres":	&MwarePostgres,
+	"rabbit":	&MwareRabbitMQ,
+	"mongo":	&MwareMongo,
 }
 
 func mwareGetEnv(conf *YAMLConf, id *SwoId) ([][2]string, error) {
@@ -115,45 +114,34 @@ func forgetMware(conf *YAMLConf, handler *MwareOps, desc *MwareDesc) error {
 	return nil
 }
 
-func mwareRemove(conf *YAMLConf, id SwoId, mwIds []string) error {
-	var ret error = nil
-
-	for _, mwId := range mwIds {
-		id.Name = mwId
-		item, err := dbMwareGetReady(&id)
-		if err != nil {
-			log.Errorf("Can't find mware %s", id.Str())
-			continue
-		}
-
-		handler, ok := mwareHandlers[item.MwareType]
-		if !ok {
-			log.Errorf("no handler for %s", id.Str())
-			continue
-		}
-
-		err = forgetMware(conf, &handler, &item)
-		if err != nil {
-			ret = err
-			continue
-		}
+func mwareRemove(conf *YAMLConf, id *SwoId) error {
+	item, err := dbMwareGetReady(id)
+	if err != nil {
+		log.Errorf("Can't find mware %s", id.Str())
+		return err
 	}
 
-	if ret != nil {
-		return fmt.Errorf("%s", ret.Error())
+	handler, ok := mwareHandlers[item.MwareType]
+	if !ok {
+		return fmt.Errorf("no handler for %s", id.Str())
+	}
+
+	err = forgetMware(conf, handler, &item)
+	if err != nil {
+		return err
 	}
 
 	return nil
 }
 
-func getMwareDesc(id *SwoId, mw *swyapi.MwareItem) *MwareDesc {
+func getMwareDesc(id *SwoId, mwType string) *MwareDesc {
 	ret := &MwareDesc {
 		SwoId: SwoId {
 			Tennant:	id.Tennant,
 			Project:	id.Project,
-			Name:		mw.ID,
+			Name:		id.Name,
 		},
-		MwareType:	mw.Type,
+		MwareType:	mwType,
 		State:		swy.DBMwareStateBsy,
 	}
 
@@ -161,54 +149,49 @@ func getMwareDesc(id *SwoId, mw *swyapi.MwareItem) *MwareDesc {
 	return ret
 }
 
-func mwareSetup(conf *YAMLConf, id SwoId, mwares []swyapi.MwareItem) error {
-	var mwares_complete []string
-	var err error
+func mwareSetup(conf *YAMLConf, id *SwoId, mwType string) error {
+	var handler *MwareOps
+	var ok bool
 
-	for _, mware := range mwares {
-		mwd := getMwareDesc(&id, &mware)
-		log.Debugf("set up wmare %s:%s", mwd.SwoId.Str(), mware.Type)
+	mwd := getMwareDesc(id, mwType)
+	log.Debugf("set up wmare %s:%s", mwd.SwoId.Str(), mwType)
 
-		err = dbMwareAdd(mwd)
-		if err != nil {
-			goto out
-		}
+	err := dbMwareAdd(mwd)
+	if err != nil {
+		goto out
+	}
 
-		handler, ok := mwareHandlers[mware.Type]
-		if !ok {
-			err = fmt.Errorf("no handler for %s:%s", id.Str(), mware.Type)
-			dbMwareRemove(mwd)
-			goto out
-		}
+	handler, ok = mwareHandlers[mwType]
+	if !ok {
+		err = fmt.Errorf("no handler for %s:%s", id.Str(), mwType)
+		dbMwareRemove(mwd)
+		goto out
+	}
 
-		if handler.Devel && !SwyModeDevel {
-			err = fmt.Errorf("middleware %s not enabled", mware.Type)
-			dbMwareRemove(mwd)
-			goto out
-		}
+	if handler.Devel && !SwyModeDevel {
+		err = fmt.Errorf("middleware %s not enabled", mwType)
+		dbMwareRemove(mwd)
+		goto out
+	}
 
-		err = handler.Init(&conf.Mware, mwd, &mware)
-		if err != nil {
-			err = fmt.Errorf("mware init error: %s", err.Error())
-			dbMwareRemove(mwd)
-			goto out
-		}
+	err = handler.Init(&conf.Mware, mwd)
+	if err != nil {
+		err = fmt.Errorf("mware init error: %s", err.Error())
+		dbMwareRemove(mwd)
+		goto out
+	}
 
-		mwd.State = swy.DBMwareStateRdy
-		err = dbMwareUpdateAdded(mwd)
-		if err != nil {
-			forgetMware(conf, &handler, mwd)
-			goto out
-		}
-
-		mwares_complete = append(mwares_complete, mwd.SwoId.Name)
+	mwd.State = swy.DBMwareStateRdy
+	err = dbMwareUpdateAdded(mwd)
+	if err != nil {
+		forgetMware(conf, handler, mwd)
+		goto out
 	}
 
 	return nil
 
 out:
 	log.Errorf("mwareSetup: %s", err.Error())
-	mwareRemove(conf, id, mwares_complete)
 	return err
 }
 

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 	"encoding/json"
-	"../apis/apps"
 )
 
 type MGOSetting struct {
@@ -24,7 +23,7 @@ func mgoDial(conf *YAMLConfMw) (*mgo.Session, error) {
 	return mgo.DialWithInfo(&ifo)
 }
 
-func InitMongo(conf *YAMLConfMw, mwd *MwareDesc, mware *swyapi.MwareItem) (error) {
+func InitMongo(conf *YAMLConfMw, mwd *MwareDesc) (error) {
 	mgs := MGOSetting{}
 
 	err := mwareGenerateClient(mwd)

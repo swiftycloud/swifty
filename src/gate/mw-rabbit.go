@@ -6,8 +6,6 @@ import (
 	"github.com/michaelklishin/rabbit-hole"
 	"fmt"
 	"strings"
-
-	"../apis/apps"
 )
 
 type MQSettings struct {
@@ -31,7 +29,7 @@ func rabbitErr(resp *http.Response, err error) error {
 	}
 }
 
-func InitRabbitMQ(conf *YAMLConfMw, mwd *MwareDesc, mware *swyapi.MwareItem) (error) {
+func InitRabbitMQ(conf *YAMLConfMw, mwd *MwareDesc) (error) {
 	rmq := MQSettings{ }
 
 	err := mwareGenerateClient(mwd)

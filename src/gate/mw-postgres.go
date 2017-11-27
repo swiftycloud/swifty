@@ -5,15 +5,15 @@ import (
 	"strings"
 	"encoding/json"
 	"net/http"
-	"../apis/apps"
 	"../common"
+	"../apis/apps"
 )
 
 type PGSetting struct {
 	DBName	string	`json:"database"`
 }
 
-func InitPostgres(conf *YAMLConfMw, mwd *MwareDesc, mware *swyapi.MwareItem) (error) {
+func InitPostgres(conf *YAMLConfMw, mwd *MwareDesc) (error) {
 	pgs := PGSetting{}
 
 	err := mwareGenerateClient(mwd)

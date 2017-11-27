@@ -292,7 +292,7 @@ func show_logs(name string) {
 }
 
 func list_mware(project string) {
-	var mws []swyapi.MwareGetItem
+	var mws []swyapi.MwareItem
 	make_faas_req("mware/list", swyapi.MwareList{ Project: project, }, &mws)
 
 	fmt.Printf("%-20s%-10s%s\n", "NAME", "ID", "OPTIONS")
@@ -301,24 +301,14 @@ func list_mware(project string) {
 	}
 }
 
-func add_mware(mwares []string) {
-	req := swyapi.MwareAdd { Project: conf.Login.Proj }
-
-	for _, mw := range mwares {
-		mws := strings.SplitN(mw, ":", 2)
-		fmt.Printf("Will add %s (%s) mware\n", mws[1], mws[0])
-		req.Mware = append(req.Mware, swyapi.MwareItem {
-					Type: mws[0],
-					ID: mws[1],
-				})
-	}
-
+func add_mware(id, typ string) {
+	req := swyapi.MwareAdd { Project: conf.Login.Proj, ID: id, Type: typ }
 	make_faas_req("mware/add", req, nil)
 }
 
-func del_mware(mwares []string) {
+func del_mware(id string) {
 	make_faas_req("mware/remove",
-		swyapi.MwareRemove{ Project: conf.Login.Proj, MwareIDs: mwares, }, nil)
+		swyapi.MwareRemove{ Project: conf.Login.Proj, ID: id, }, nil)
 }
 
 func show_mware_env(mwid string) {
@@ -465,7 +455,7 @@ func bindCmdUsage(cmd, args, help string) {
 }
 
 func main() {
-	var lang, src, mware, event, uid, name, pass string
+	var lang, src, mware, event, uid, name, typ, pass string
 
 	bindCmdUsage(CMD_LOGIN, "USER:PASS@HOST:PORT/PROJECT", "Login into the system")
 
@@ -488,8 +478,13 @@ func main() {
 
 	bindCmdUsage(CMD_MLS, "[PROJECT]", "List middleware")
 
-	bindCmdUsage(CMD_MADD, "TYPE:ID [TYPE:ID]", "Add middleware")
-	bindCmdUsage(CMD_MDEL, "ID [ID]", "Delete middleware")
+	cmdMap[CMD_MADD].StringVar(&name, "id", "", "Middleware ID")
+	cmdMap[CMD_MADD].StringVar(&typ, "type", "", "Middleware type")
+	bindCmdUsage(CMD_MADD, "", "Add middleware")
+
+	cmdMap[CMD_MDEL].StringVar(&name, "id", "", "Middleware ID")
+	bindCmdUsage(CMD_MDEL, "", "Delete middleware")
+
 	bindCmdUsage(CMD_MENV, "ID", "Show middleware environment variables")
 
 	bindCmdUsage(CMD_LUSR, "", "List users")
@@ -602,12 +597,12 @@ func main() {
 	}
 
 	if cmdMap[CMD_MADD].Parsed() {
-		add_mware(os.Args[2:])
+		add_mware(name, typ)
 		return
 	}
 
 	if cmdMap[CMD_MDEL].Parsed() {
-		del_mware(os.Args[2:])
+		del_mware(name)
 		return
 	}
 

@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"database/sql"
 	_ "github.com/go-sql-driver/mysql"
-
-	"../apis/apps"
 )
 
 type DBSettings struct {
@@ -35,7 +33,7 @@ func mariaReq(db *sql.DB, req string) error {
 // DROP USER IF EXISTS '8257fbff9618952fbd2b83b4794eb694'@'%';
 // DROP DATABASE IF EXISTS 8257fbff9618952fbd2b83b4794eb694;
 
-func InitMariaDB(conf *YAMLConfMw, mwd *MwareDesc, mware *swyapi.MwareItem) (error) {
+func InitMariaDB(conf *YAMLConfMw, mwd *MwareDesc) (error) {
 	dbs := DBSettings{ }
 
 	err := mwareGenerateClient(mwd)

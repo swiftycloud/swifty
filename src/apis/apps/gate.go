@@ -49,32 +49,29 @@ type FunctionEvent struct {
 	MQueue		string			`json:"mqueue"`
 }
 
-type MwareItem struct {
+type MwareAdd struct {
+	Project		string			`json:"project"`
 	ID		string			`json:"id"`
 	Type		string			`json:"type"`
 }
 
-type MwareAdd struct {
-	Project		string			`json:"project"`
-	Mware		[]MwareItem		`json:"mware"`
-}
-
 type MwareRemove struct {
 	Project		string			`json:"project"`
-	MwareIDs	[]string		`json:"mware"`
+	ID		string			`json:"id"`
 }
 
 type MwareCinfo struct {
 	Project		string			`json:"project"`
-	MwId		string			`json:"mwid"`
+	MwId		string			`json:"id"`
 }
 
 type MwareCinfoResp struct {
 	Envs		[][2]string		`json:"envs"`
 }
 
-type MwareGetItem struct {
-	MwareItem
+type MwareItem struct {
+	ID		string			`json:"id"`
+	Type		string			`json:"type"`
 	JSettings	string			`json:"jsettings"`
 }
 
