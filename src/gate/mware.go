@@ -189,7 +189,8 @@ func mwareSetup(conf *YAMLConf, id SwoId, mwares []swyapi.MwareItem) error {
 
 		err = handler.Init(&conf.Mware, mwd, &mware)
 		if err != nil {
-			forgetMware(conf, &handler, mwd)
+			err = fmt.Errorf("mware init error: %s", err.Error())
+			dbMwareRemove(mwd)
 			goto out
 		}
 

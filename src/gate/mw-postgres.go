@@ -31,6 +31,8 @@ func InitPostgres(conf *YAMLConfMw, mwd *MwareDesc, mware *swyapi.MwareItem) (er
 		return err
 	}
 
+	mwd.JSettings = string(js)
+
 	addr := strings.Split(conf.Postgres.Addr, ":")[0] + ":" + conf.Postgres.AdminPort
 	_, err = swy.HTTPMarshalAndPostTimeout("http://" + addr + "/create", 120,
 			&swyapi.PgRequest{Token: gateSecrets[conf.Postgres.Token],
