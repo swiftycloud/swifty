@@ -623,11 +623,12 @@ func handleGenericReq(r *http.Request) (string, int, error) {
 func genReqHandler(cb func(w http.ResponseWriter, r *http.Request, tennant string) error) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		tennant, code, err := handleGenericReq(r)
-		if err != nil {
+		if err == nil {
 			code = http.StatusBadRequest
 			err = cb(w, r, tennant)
 		}
 		if err != nil {
+			log.Errorf("Error in callback: %s", err.Error())
 			http.Error(w, err.Error(), code)
 		}
 	})
