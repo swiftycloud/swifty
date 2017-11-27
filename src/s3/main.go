@@ -251,7 +251,7 @@ func handleObject(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Empty bucket name provided", http.StatusBadRequest)
 		return
 	} else if object_name == "" {
-		http.Error(w, "Empty bucket name provided", http.StatusBadRequest)
+		http.Error(w, "Empty object name provided", http.StatusBadRequest)
 		return
 	}
 
