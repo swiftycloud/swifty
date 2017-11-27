@@ -14,6 +14,7 @@ var ksSwyOwnerRole string
 func keystoneGetDomainId(conf *YAMLConfKeystone) (string, error) {
 	var doms swy.KeystoneDomainsResp
 
+	log.Debugf("Domains w/ token %s", ksToken)
 	err := swy.KeystoneMakeReq(&swy.KeystoneReq {
 			Type:	"GET",
 			Addr:	conf.Addr,
@@ -165,6 +166,27 @@ func ksGetUserInfo(conf *YAMLConfKeystone, user string) (*swy.KeystoneUser, erro
 	return &uresp.Users[0], nil
 }
 
+func ksGetProjectInfo(conf *YAMLConfKeystone, project string) (*swy.KeystoneProject, error) {
+	var presp swy.KeystoneProjectsResp
+
+	err := swy.KeystoneMakeReq(
+		&swy.KeystoneReq {
+			Type:	"GET",
+			Addr:	conf.Addr,
+			URL:	"projects?name=" + project,
+			Token:	ksToken,
+			Succ:	http.StatusOK, },
+		nil, &presp)
+	if err != nil {
+		return nil, err
+	}
+	if len(presp.Projects) != 1 {
+		return nil, fmt.Errorf("No such project: %s", project)
+	}
+
+	return &presp.Projects[0], nil
+}
+
 func ksChangeUserPass(conf *YAMLConfKeystone, up *swyapi.UserLogin) error {
 	uinf, err := ksGetUserInfo(conf, up.UserName)
 	if err != nil {
@@ -191,6 +213,44 @@ func ksChangeUserPass(conf *YAMLConfKeystone, up *swyapi.UserLogin) error {
 	return nil
 }
 
+func ksDelUserAndProject(conf *YAMLConfKeystone, ui *swyapi.UserInfo) error {
+	var err error
+
+	uinf, err := ksGetUserInfo(conf, ui.Id)
+	if err != nil {
+		return err
+	}
+
+	err = swy.KeystoneMakeReq(
+		&swy.KeystoneReq {
+			Type:	"DELETE",
+			Addr:	conf.Addr,
+			URL:	"users/" + uinf.Id,
+			Token:	ksToken,
+			Succ:	http.StatusNoContent, }, nil, nil)
+	if err != nil {
+		return err
+	}
+
+	pinf, err := ksGetProjectInfo(conf, ui.Id)
+	if err != nil {
+		return err
+	}
+
+	err = swy.KeystoneMakeReq(
+		&swy.KeystoneReq {
+			Type:	"DELETE",
+			Addr:	conf.Addr,
+			URL:	"projects/" + pinf.Id,
+			Token:	ksToken,
+			Succ:	http.StatusNoContent, }, nil, nil)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func ksInit(conf *YAMLConfKeystone) error {
 	var err error
 
@@ -204,12 +264,12 @@ func ksInit(conf *YAMLConfKeystone) error {
 	log.Debugf("Logged in as admin")
 	ksSwyDomainId, err = keystoneGetDomainId(conf)
 	if err != nil {
-		return err
+		return fmt.Errorf("Can't get domain: %s", err.Error())
 	}
 
 	ksSwyOwnerRole, err = keystoneGetOwnerRoleId(conf)
 	if err != nil {
-		return err
+		return fmt.Errorf("Can't get role: %s", err.Error())
 	}
 
 	return nil

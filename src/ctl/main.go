@@ -122,6 +122,10 @@ func add_user(id, name, pass string) {
 		nil, http.StatusCreated)
 }
 
+func del_user(id string) {
+	make_faas_req2("deluser", swyapi.UserInfo{Id: id}, nil, http.StatusNoContent)
+}
+
 func set_password(id, pass string) {
 	make_faas_req2("setpass", swyapi.UserLogin{UserName: id, Password: pass},
 		nil, http.StatusCreated)
@@ -406,6 +410,7 @@ const (
 	CMD_MENV string		= "menv"
 	CMD_LUSR string		= "uls"
 	CMD_UADD string		= "uadd"
+	CMD_UDEL string		= "udel"
 	CMD_PASS string		= "pass"
 	CMD_UINF string		= "uinf"
 )
@@ -426,6 +431,7 @@ var cmdOrder = []string {
 	CMD_MENV,
 	CMD_LUSR,
 	CMD_UADD,
+	CMD_UDEL,
 	CMD_PASS,
 	CMD_UINF,
 }
@@ -446,6 +452,7 @@ var cmdMap = map[string]*flag.FlagSet {
 	CMD_MENV:	flag.NewFlagSet(CMD_MENV, flag.ExitOnError),
 	CMD_LUSR:	flag.NewFlagSet(CMD_LUSR, flag.ExitOnError),
 	CMD_UADD:	flag.NewFlagSet(CMD_UADD, flag.ExitOnError),
+	CMD_UDEL:	flag.NewFlagSet(CMD_UDEL, flag.ExitOnError),
 	CMD_PASS:	flag.NewFlagSet(CMD_PASS, flag.ExitOnError),
 	CMD_UINF:	flag.NewFlagSet(CMD_UINF, flag.ExitOnError),
 }
@@ -491,6 +498,9 @@ func main() {
 	cmdMap[CMD_UADD].StringVar(&name, "name", "", "User name")
 	cmdMap[CMD_UADD].StringVar(&pass, "pass", "", "User password")
 	bindCmdUsage(CMD_UADD, "", "Add user")
+
+	cmdMap[CMD_UDEL].StringVar(&uid, "id", "", "user ID (e-mail")
+	bindCmdUsage(CMD_UDEL, "", "Del user")
 
 	cmdMap[CMD_PASS].StringVar(&uid, "id", "", "User ID (e-mail)")
 	cmdMap[CMD_PASS].StringVar(&pass, "pass", "", "New password")
@@ -613,6 +623,11 @@ func main() {
 
 	if cmdMap[CMD_UADD].Parsed() {
 		add_user(uid, name, pass)
+		return
+	}
+
+	if cmdMap[CMD_UDEL].Parsed() {
+		del_user(uid)
 		return
 	}
 

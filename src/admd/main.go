@@ -9,6 +9,7 @@ import (
 	"flag"
 	"time"
 	"fmt"
+	"errors"
 
 	"../apis/apps"
 	"../common"
@@ -25,6 +26,7 @@ type YAMLConfKeystone struct {
 
 type YAMLConf struct {
 	Listen		string			`yaml:"listen"`
+	Gate		string			`yaml:"gate"`
 	Keystone	YAMLConfKeystone	`yaml:"keystone"`
 }
 
@@ -79,30 +81,35 @@ func handleAdminReq(r *http.Request, params interface{}) (*swy.KeystoneTokenData
 	return td, 0, nil
 }
 
+func checkAdminOrOwner(user, target string, td *swy.KeystoneTokenData) (string, error) {
+	if target == "" || target == user {
+		if !swy.KeystoneRoleHas(td, swy.SwyUserRole) && !swy.KeystoneRoleHas(td, swy.SwyAdminRole) {
+			return "", errors.New("Not logged in")
+		}
+
+		return user, nil
+	} else {
+		if !swy.KeystoneRoleHas(td, swy.SwyAdminRole) {
+			return "", errors.New("Not an admin")
+		}
+
+		return target, nil
+	}
+}
+
 func handleUserInfo(w http.ResponseWriter, r *http.Request) {
 	var ui swyapi.UserInfo
 	var kui *swy.KeystoneUser
-	var requestor string
 
 	td, code, err := handleAdminReq(r, &ui)
 	if err != nil {
 		goto out
 	}
 
-	requestor = td.Project.Name
 	code = http.StatusForbidden
-	if ui.Id == "" || ui.Id == requestor {
-		if !swy.KeystoneRoleHas(td, swy.SwyUserRole) {
-			err = fmt.Errorf("Not logged in")
-			goto out
-		}
-
-		ui.Id = requestor
-	} else {
-		if !swy.KeystoneRoleHas(td, swy.SwyAdminRole) {
-			err = fmt.Errorf("Not an admin")
-			goto out
-		}
+	ui.Id, err = checkAdminOrOwner(td.Project.Name, ui.Id, td)
+	if err != nil {
+		goto out
 	}
 
 	code = http.StatusBadRequest
@@ -113,7 +120,7 @@ func handleUserInfo(w http.ResponseWriter, r *http.Request) {
 
 	log.Debugf("USER: %s/%s/%s", kui.Id, kui.Name, kui.Description)
 	err = swy.HTTPMarshalAndWrite(w, swyapi.UserInfo{
-				Id: requestor,
+				Id: ui.Id,
 				Name: kui.Description,
 			})
 	if err != nil {
@@ -159,6 +166,47 @@ out:
 	http.Error(w, err.Error(), code)
 }
 
+func handleDelUser(w http.ResponseWriter, r *http.Request) {
+	var params swyapi.UserInfo
+	var code = http.StatusBadRequest
+
+	td, code, err := handleAdminReq(r, &params)
+	if err != nil {
+		goto out
+	}
+
+	/* User can be deleted by admin or self only. Admin
+	 * cannot delete self */
+	code = http.StatusForbidden
+	if params.Id == "" || params.Id == td.Project.Name {
+		if !swy.KeystoneRoleHas(td, swy.SwyUserRole) {
+			err = errors.New("Not authorized")
+			goto out
+		}
+
+		params.Id = td.Project.Name
+	} else {
+		if !swy.KeystoneRoleHas(td, swy.SwyAdminRole) {
+			err = errors.New("Not an admin")
+			goto out
+		}
+	}
+
+	log.Debugf("Del user %v", params)
+	code = http.StatusBadRequest
+	err = ksDelUserAndProject(&conf.Keystone, &params)
+	if err != nil {
+		goto out
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+
+	return
+
+out:
+	http.Error(w, err.Error(), code)
+}
+
 func handleAddUser(w http.ResponseWriter, r *http.Request) {
 	var params swyapi.AddUser
 	var code = http.StatusBadRequest
@@ -192,7 +240,6 @@ out:
 func handleSetPassword(w http.ResponseWriter, r *http.Request) {
 	var params swyapi.UserLogin
 	var code = http.StatusBadRequest
-	var requestor string
 
 	td, code, err := handleAdminReq(r, &params)
 	if err != nil {
@@ -205,24 +252,10 @@ func handleSetPassword(w http.ResponseWriter, r *http.Request) {
 		goto out
 	}
 
-	requestor = td.Project.Name
-	/*
-	 * Admin can change password for anyone,
-	 * user -- only for himself.
-	 */
 	code = http.StatusForbidden
-	if params.UserName == "" || params.UserName == requestor {
-		if !swy.KeystoneRoleHas(td, swy.SwyUserRole) {
-			err = fmt.Errorf("Not logged in")
-			goto out
-		}
-
-		params.UserName = requestor
-	} else {
-		if !swy.KeystoneRoleHas(td, swy.SwyAdminRole) {
-			err = fmt.Errorf("Not an admin")
-			goto out
-		}
+	params.UserName, err = checkAdminOrOwner(td.Project.Name, params.UserName, td)
+	if err != nil {
+		goto out
 	}
 
 	log.Debugf("Change pass to %s", params.UserName)
@@ -298,6 +331,7 @@ func main() {
 	r.HandleFunc("/v1/users", handleListUsers)
 	r.HandleFunc("/v1/userinfo", handleUserInfo)
 	r.HandleFunc("/v1/adduser", handleAddUser)
+	r.HandleFunc("/v1/deluser", handleDelUser)
 	r.HandleFunc("/v1/setpass", handleSetPassword)
 
 	gatesrv = &http.Server{
