@@ -566,7 +566,7 @@ out:
 func handleMwareCinfo(w http.ResponseWriter, r *http.Request, tennant string) error {
 	var id *SwoId
 	var params swyapi.MwareCinfo
-	var envs []string
+	var envs [][2]string
 
 	err := swy.HTTPReadAndUnmarshal(r, &params)
 	if err != nil {

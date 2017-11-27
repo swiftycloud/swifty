@@ -70,7 +70,7 @@ type MwareCinfo struct {
 }
 
 type MwareCinfoResp struct {
-	Envs		[]string		`json:"envs"`
+	Envs		[][2]string		`json:"envs"`
 }
 
 type MwareGetItem struct {

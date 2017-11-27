@@ -118,9 +118,9 @@ func EventRabbitMQ(conf *YAMLConfMw, source *FnEventDesc, mwd *MwareDesc, on boo
 	}
 }
 
-func GetEnvRabbitMQ(conf *YAMLConfMw, mwd *MwareDesc) ([]string) {
+func GetEnvRabbitMQ(conf *YAMLConfMw, mwd *MwareDesc) ([][2]string) {
 	var rmq MQSettings
-	var envs []string
+	var envs [][2]string
 	var err error
 
 	err = json.Unmarshal([]byte(mwd.JSettings), &rmq)

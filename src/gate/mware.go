@@ -28,16 +28,16 @@ type MwareOps struct {
 	Init	func(conf *YAMLConfMw, mwd *MwareDesc, mware *swyapi.MwareItem) (error)
 	Fini	func(conf *YAMLConfMw, mwd *MwareDesc) (error)
 	Event	func(conf *YAMLConfMw, source *FnEventDesc, mwd *MwareDesc, on bool) (error)
-	GetEnv	func(conf *YAMLConfMw, mwd *MwareDesc) ([]string)
+	GetEnv	func(conf *YAMLConfMw, mwd *MwareDesc) ([][2]string)
 	Devel	bool
 }
 
-func mkEnv(mwd *MwareDesc, envName, value string) string {
-	return "MWARE_" + strings.ToUpper(mwd.Name) + "_" + envName + "=" + value
+func mkEnv(mwd *MwareDesc, envName, value string) [2]string {
+	return [2]string{"MWARE_" + strings.ToUpper(mwd.Name) + "_" + envName, value}
 }
 
-func mwGenEnvs(mwd *MwareDesc, mwaddr string) ([]string) {
-	return []string{
+func mwGenEnvs(mwd *MwareDesc, mwaddr string) ([][2]string) {
+	return [][2]string{
 		mkEnv(mwd, "ADDR", mwaddr),
 		mkEnv(mwd, "USER", mwd.Client),
 		mkEnv(mwd, "PASS", mwd.Pass),
@@ -67,7 +67,7 @@ var mwareHandlers = map[string]MwareOps {
 	"mongo":	MwareMongo,
 }
 
-func mwareGetEnv(conf *YAMLConf, id *SwoId) ([]string, error) {
+func mwareGetEnv(conf *YAMLConf, id *SwoId) ([][2]string, error) {
 	// No mware lock needed here since it's a pure
 	// read with mware counter increased already so
 	// can't disappear
@@ -84,8 +84,8 @@ func mwareGetEnv(conf *YAMLConf, id *SwoId) ([]string, error) {
 	return handler.GetEnv(&conf.Mware, &item), nil
 }
 
-func mwareGetFnEnv(conf *YAMLConf, fn *FunctionDesc) ([]string, error) {
-	var envs []string
+func mwareGetFnEnv(conf *YAMLConf, fn *FunctionDesc) ([][2]string, error) {
+	var envs [][2]string
 
 	for _, mwId := range fn.Mware {
 		env, err := mwareGetEnv(conf, makeSwoId(fn.Tennant, fn.Project, mwId))

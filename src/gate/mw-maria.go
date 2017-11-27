@@ -104,9 +104,9 @@ func FiniMariaDB(conf *YAMLConfMw, mwd *MwareDesc) error {
 	return nil
 }
 
-func GetEnvMariaDB(conf *YAMLConfMw, mwd *MwareDesc) ([]string) {
+func GetEnvMariaDB(conf *YAMLConfMw, mwd *MwareDesc) ([][2]string) {
 	var dbs DBSettings
-	var envs []string
+	var envs [][2]string
 	var err error
 
 	err = json.Unmarshal([]byte(mwd.JSettings), &dbs)

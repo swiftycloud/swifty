@@ -62,9 +62,9 @@ func FiniPostgres(conf *YAMLConfMw, mwd *MwareDesc) error {
 	return err
 }
 
-func GetEnvPostgres(conf *YAMLConfMw, mwd *MwareDesc) ([]string) {
+func GetEnvPostgres(conf *YAMLConfMw, mwd *MwareDesc) ([][2]string) {
 	var pgs PGSetting
-	var envs []string
+	var envs [][2]string
 	var err error
 
 	err = json.Unmarshal([]byte(mwd.JSettings), &pgs)

@@ -194,18 +194,14 @@ func swk8sGenEnvVar(fn *FunctionDesc, fi *FnInst, wdaddr string, wd_port int32, 
 }
 
 func swk8sGenSecretData(conf *YAMLConf, fn *FunctionDesc) map[string][]byte {
+	var err error
+	var mwarevars [][2]string
 	secret := make(map[string][]byte)
 
-	mwarevars, err := mwareGetFnEnv(conf, fn)
-	if err == nil && mwarevars != nil {
-		for _, i := range mwarevars {
-			j := strings.Split(i, ";")
-			for _, k := range j {
-				m := strings.Split(k, "=")
-				if len(m) > 1 {
-					secret[m[0]] = []byte(m[1])
-				}
-			}
+	mwarevars, err = mwareGetFnEnv(conf, fn)
+	if err == nil {
+		for _, v := range mwarevars {
+			secret[v[0]] = []byte(v[1])
 		}
 	}
 
