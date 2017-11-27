@@ -34,7 +34,8 @@ with open(os.getcwd() + '/test/s3.py', 'rb') as data:
     if response['ContentLength'] > 0:
         body = response['Body']
         print(body.read())
-    #respose = s3.delete_object(Bucket = bucket_name, Key = 's3-1.py')
+    respose = s3.delete_object(Bucket = bucket_name, Key = 's3-1.py')
+    s3.delete_bucket(Bucket = bucket_name)
     #print(response)
 
 #with open('test/s3.py', 'rb') as data:
