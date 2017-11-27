@@ -412,7 +412,7 @@ func handleFunctionRun(w http.ResponseWriter, r *http.Request, tennant string) e
 	var id *SwoId
 	var params swyapi.FunctionRun
 	var fn FunctionDesc
-	var stdout, stderr, retjson string
+	var retjson string
 	var fn_code int
 
 	err := swy.HTTPReadAndUnmarshal(r, &params)
@@ -437,8 +437,6 @@ func handleFunctionRun(w http.ResponseWriter, r *http.Request, tennant string) e
 	err = swy.HTTPMarshalAndWrite(w, swyapi.FunctionRunResult{
 		Return:		retjson,
 		Code:		fn_code,
-		Stdout:		stdout,
-		Stderr:		stderr,
 	})
 out:
 	return err
