@@ -21,6 +21,9 @@ func InitPostgres(conf *YAMLConfMw, mwd *MwareDesc, mware *swyapi.MwareItem) (er
 		return err
 	}
 
+	/* Postgres needs lower case in all user/db names and
+	 * should start with letter */
+	mwd.Client = "p" + strings.ToLower(mwd.Client[:30])
 	pgs.DBName = mwd.Client
 
 	js, err := json.Marshal(&pgs)
