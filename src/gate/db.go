@@ -42,7 +42,7 @@ func dbMwareAdd(desc *MwareDesc) error {
 
 func dbMwareUpdateAdded(desc *MwareDesc) error {
 	c := dbSession.DB(dbState).C(DBColMware)
-	err := c.Update(bson.M{"_id": desc.ObjID},
+	err := c.Update(bson.M{"cookie": desc.Cookie},
 		bson.M{"$set": bson.M{
 				"client":	desc.Client,
 				"pass":		desc.Pass,
@@ -58,7 +58,7 @@ func dbMwareUpdateAdded(desc *MwareDesc) error {
 
 func dbMwareRemove(mwd *MwareDesc) error {
 	c := dbSession.DB(dbState).C(DBColMware)
-	return c.Remove(bson.M{"_id": mwd.ObjID})
+	return c.Remove(bson.M{"cookie": mwd.Cookie})
 }
 
 func dbMwareGetOne(q bson.M) (MwareDesc, error) {
