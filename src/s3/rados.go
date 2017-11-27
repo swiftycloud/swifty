@@ -140,7 +140,7 @@ func radosWriteObject(pool, key string, data []byte) error {
 		return err
 	}
 
-	log.Debug("rados: Wrote pool %s object %s size %d",
+	log.Debugf("rados: Wrote pool %s object %s size %d",
 			pool, key, len(data))
 
 	ioctx.Destroy()
@@ -174,7 +174,7 @@ func radosReadObject(pool, key string, size uint64) ([]byte, error) {
 		return nil, err
 	}
 
-	log.Debug("rados: Read pool %s object %s size %d",
+	log.Debugf("rados: Read pool %s object %s size %d",
 			pool, key, n)
 
 	ioctx.Destroy()
@@ -203,7 +203,7 @@ func radosDeleteObject(pool, key string) error {
 		return err
 	}
 
-	log.Debug("rados: Delete pool %s object %s",
+	log.Debugf("rados: Delete pool %s object %s",
 			pool, key)
 
 	ioctx.Destroy()
