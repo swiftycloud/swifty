@@ -23,17 +23,24 @@ s3 = boto3.session.Session().client(service_name = 's3',
 
 s3.create_bucket(Bucket = bucket_name)
 #s3.delete_bucket(Bucket = bucket_name)
-response = s3.list_buckets(Bucket = bucket_name)
-print(response)
+#response = s3.list_buckets(Bucket = bucket_name)
+#print(response)
 
-#with open('test/s3.py', 'rb') as data:
-#    s3.put_object(Bucket = bucket_name, Key = 's3-1.py', Body = data)
-#
+with open('/home/cyrill/projects/swifty/test/s3.py', 'rb') as data:
+    s3.put_object(Bucket = bucket_name, Key = 's3-1.py', Body = data)
+    response = s3.get_object(Bucket = bucket_name, Key = 's3-1.py')
+    print(response)
+    respose = s3.delete_object(Bucket = bucket_name, Key = 's3-1.py')
+    print(response)
+    if response['ContentLength'] > 0:
+        body = response['Body']
+        print(body.read())
+
 #with open('test/s3.py', 'rb') as data:
 #    s3.put_object(Bucket = bucket_name, Key = 's3-2.py', Body = data)
 
 #s3.delete_object(Bucket = bucket_name, Key = key1)
 #s3.delete_object(Bucket = bucket_name, Key = key2)
 
-response = s3.list_objects(Bucket = bucket_name)
-print(response)
+#response = s3.list_objects(Bucket = bucket_name)
+#print(response)

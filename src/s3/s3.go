@@ -82,9 +82,20 @@ type S3Object struct {
 	Size				int64		`json:"size" bson:"size"`
 }
 
+type S3ObjectData struct {
+	ObjID				bson.ObjectId	`bson:"_id,omitempty"`
+	NextObjID			bson.ObjectId	`bson:"next-id,omitempty"`
+	BucketObjID			bson.ObjectId	`bson:"bucket-id,omitempty"`	// S3Bucket
+	ObjectObjID			bson.ObjectId	`bson:"object-id,omitempty"`	// S3Object
+	State				uint32		`json:"state" bson:"state"`
+	Size				int64		`json:"size" bson:"size"`
+	Data				[]byte		`bson:"data,omitempty"`
+}
+
 const (
 	S3StogateMaxObjects		= int64(10000)
 	S3StogateMaxBytes		= int64(100 << 20)
+	S3StorageSizePerObj		= int64(8 << 20)
 )
 
 func (bucket *S3Bucket)GenOID(akey *S3AccessKey) string {
@@ -338,6 +349,35 @@ func s3ListBucket(akey *S3AccessKey, bucket *S3Bucket) (*S3BucketList, error) {
 	return &bucketList, nil
 }
 
+func (objd *S3ObjectData)dbCollection() (string) {
+	return DBColS3ObjectData
+}
+
+func (objd *S3ObjectData)dbInsert() (error) {
+	return dbS3Insert(objd.dbCollection(), objd)
+}
+
+func (objd *S3ObjectData)dbRemove() (error) {
+	return dbS3Remove(
+			objd.dbCollection(),
+			bson.M{"_id": objd.ObjID},
+		)
+}
+
+func (objd *S3ObjectData)dbFind(object *S3Object) (*S3ObjectData, error) {
+	var res S3ObjectData
+
+	err := dbS3FindOne(
+			objd.dbCollection(),
+			bson.M{"object-id": object.ObjID},
+			&res)
+	if err != nil {
+		return nil, err
+	}
+
+	return &res, nil
+}
+
 func (object *S3Object)dbCollection() (string) {
 	return DBColS3Objects
 }
@@ -422,10 +462,34 @@ func s3InsertObject(akey *S3AccessKey, bucket *S3Bucket, object *S3Object) error
 
 func s3CommitObject(bucket *S3Bucket, object *S3Object, data []byte) error {
 	var err error
+	var size int64
 
-	err = radosWriteObject(bucket.OID, object.Name, data)
-	if err != nil {
-		goto out
+	size = int64(len(data))
+
+	if radosDisabled || size <= S3StorageSizePerObj {
+		objd := S3ObjectData{
+			ObjID:		bson.NewObjectId(),
+			BucketObjID:	bucket.ObjID,
+			ObjectObjID:	object.ObjID,
+			Size:		size,
+			Data:		data,
+		}
+
+		if objd.Size > S3StorageSizePerObj {
+			log.Errorf("s3: Too big object to store %d", objd.Size)
+			err = fmt.Errorf("s3: Object is too big")
+			goto out
+		}
+
+		err = objd.dbInsert()
+		if err != nil {
+			goto out
+		}
+	} else {
+		err = radosWriteObject(bucket.OID, object.Name, data)
+		if err != nil {
+			goto out
+		}
 	}
 
 	err = object.dbSetState(S3StateActive)
@@ -449,6 +513,7 @@ out:
 }
 
 func s3DeleteObject(akey *S3AccessKey, bucket *S3Bucket, object *S3Object) error {
+	var objdFound *S3ObjectData
 	var bucketFound *S3Bucket
 	var objectFound *S3Object
 	var err error
@@ -483,9 +548,27 @@ func s3DeleteObject(akey *S3AccessKey, bucket *S3Bucket, object *S3Object) error
 		return err
 	}
 
-	err = radosDeleteObject(bucketFound.OID, objectFound.OID)
-	if err != nil {
-		return err
+	if radosDisabled || objectFound.Size <= S3StorageSizePerObj {
+		objdFound, err = objdFound.dbFind(objectFound)
+		if err != nil {
+			if err == mgo.ErrNotFound {
+				return nil
+			}
+			log.Errorf("s3: Can't find object stored %s: %s",
+					objectFound.OID, err.Error())
+			return err
+		}
+		err = objdFound.dbRemove()
+		if err != nil {
+			log.Errorf("s3: Can't delete object stored %s: %s",
+					objectFound.OID, err.Error())
+			return err
+		}
+	} else {
+		err = radosDeleteObject(bucketFound.OID, objectFound.OID)
+		if err != nil {
+			return err
+		}
 	}
 
 	err = bucketFound.dbDelObj(objectFound.Size)
@@ -506,8 +589,54 @@ func s3DeleteObject(akey *S3AccessKey, bucket *S3Bucket, object *S3Object) error
 	return nil
 }
 
-func s3ReadObject(akey *S3AccessKey, bucket *S3Bucket, object *S3Object) error {
-	return nil
+func s3ReadObject(akey *S3AccessKey, bucket *S3Bucket, object *S3Object) ([]byte, error) {
+	var objdFound *S3ObjectData
+	var bucketFound *S3Bucket
+	var objectFound *S3Object
+	var res []byte
+	var err error
+
+	bucketFound, err = bucket.dbFindOID(akey)
+	if err != nil {
+		if err == mgo.ErrNotFound {
+			return nil, err
+		}
+		log.Errorf("s3: Can't find bucket %s: %s",
+				bucket.GenOID(akey), err.Error())
+		return nil, err
+	}
+
+	objectFound, err = object.dbFindOID(akey, bucketFound)
+	if err != nil {
+		if err == mgo.ErrNotFound {
+			return nil, err
+		}
+		log.Errorf("s3: Can't find object %s: %s",
+				object.GenOID(akey, bucket), err.Error())
+		return nil, err
+	}
+
+	if radosDisabled || objectFound.Size <= S3StorageSizePerObj {
+		objdFound, err = objdFound.dbFind(objectFound)
+		if err != nil {
+			if err == mgo.ErrNotFound {
+				return nil, err
+			}
+			log.Errorf("s3: Can't find object stored %s: %s",
+					objectFound.OID, err.Error())
+			return nil, err
+		}
+		res = objdFound.Data
+	} else {
+		res, err = radosReadObject(bucketFound.OID, objectFound.OID,
+						uint64(objectFound.Size))
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	log.Debugf("s3: Read object %s", objectFound.OID)
+	return res, err
 }
 
 func s3CheckAccess(akey *S3AccessKey, bucket_name, object_name string) error {

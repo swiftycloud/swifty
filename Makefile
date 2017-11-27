@@ -221,6 +221,7 @@ clean-db-s3:
 	$(call msg-gen,"Cleaning up s3 MongoDB")
 	$(Q) $(MONGO)/$(DB-S3) --eval 'db.S3Buckets.remove({});'
 	$(Q) $(MONGO)/$(DB-S3) --eval 'db.S3Objects.remove({});'
+	$(Q) $(MONGO)/$(DB-S3) --eval 'db.S3ObjectData.remove({});'
 	#$(Q) $(MONGO)/$(DB-S3) --eval 'db.S3Keys.remove({});'
 	#$(Q) $(MONGO)/$(DB-S3) --eval 'db.S3AccessKeys.remove({});'
 .PHONY: clean-db-s3

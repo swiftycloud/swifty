@@ -13,6 +13,7 @@ var dbName string
 const (
 	DBColS3Buckets				= "S3Buckets"
 	DBColS3Objects				= "S3Objects"
+	DBColS3ObjectData			= "S3ObjectData"
 	DBColS3Keys				= "S3Keys"
 	DBColS3AccessKeys			= "S3AccessKeys"
 )
@@ -45,11 +46,14 @@ func dbConnect(conf *YAMLConf) error {
 			Background:	true,
 			Sparse:		true}
 
-	index.Key = []string{"oid"}
+	index.Key = []string{"_id", "oid"}
 	dbSession.DB(dbName).C(DBColS3Buckets).EnsureIndex(index)
+	index.Key = []string{"_id", "oid"}
 	dbSession.DB(dbName).C(DBColS3Objects).EnsureIndex(index)
+	index.Key = []string{"_id", "next-id"}
+	dbSession.DB(dbName).C(DBColS3ObjectData).EnsureIndex(index)
 
-	index.Key = []string{"access-key-id"}
+	index.Key = []string{"_id", "access-key-id"}
 	dbSession.DB(dbName).C(DBColS3AccessKeys).EnsureIndex(index)
 
 	return nil

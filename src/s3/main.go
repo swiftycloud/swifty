@@ -10,12 +10,14 @@ import (
 
 	_ "crypto/hmac"
 	_ "crypto/sha1"
+	_ "crypto/md5"
 	_ "encoding/base64"
 	_ "encoding/hex"
 
 	_ "encoding/json"
 
 	_ "encoding/xml"
+	"io/ioutil"
 	"net/http"
 	"strings"
 	"strconv"
@@ -216,7 +218,10 @@ func handleObject(w http.ResponseWriter, r *http.Request) {
 	var akey *S3AccessKey
 	var bucket *S3Bucket
 	var object *S3Object
+	var body []byte
 	var err error
+
+	defer r.Body.Close()
 
 	log.Debug(formatRequest(fmt.Sprintf("handleObject: bucket %v object %v",
 						bucket_name, object_name), r))
@@ -276,13 +281,19 @@ func handleObject(w http.ResponseWriter, r *http.Request) {
 		return
 		break
 	case http.MethodPut:
+		body, err = ioutil.ReadAll(r.Body)
+		if err != nil {
+			log.Errorf("Can't read data: %s", err.Error())
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
 		// Create new object
 		err = s3InsertObject(akey, bucket, object)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		err = s3CommitObject(bucket, object, nil)
+		err = s3CommitObject(bucket, object, body)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
@@ -290,11 +301,12 @@ func handleObject(w http.ResponseWriter, r *http.Request) {
 		break
 	case http.MethodGet:
 		// List all objects
-		err = s3ReadObject(akey, bucket, object)
+		body, err = s3ReadObject(akey, bucket, object)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
+		w.Write(body)
 		break
 	case http.MethodDelete:
 		// Delete a bucket
