@@ -75,7 +75,7 @@ func (akey *S3AccessKey)Namespace() string {
 	// a namespace for S3 backend.
 	//
 	// For a while return some predefined value
-	return "rootns"
+	return "swifty"
 }
 
 func dbLookupAccessKey(AccessKeyId string) (*S3AccessKey, *S3Key, error) {
