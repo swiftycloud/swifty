@@ -130,7 +130,7 @@ func handleUserLogin(w http.ResponseWriter, r *http.Request) {
 	var token string
 	var resp = http.StatusBadRequest
 
-	err := swy.HTTPReadAndUnmarshal(r, &params)
+	err := swy.HTTPReadAndUnmarshalReq(r, &params)
 	if err != nil {
 		goto out
 	}
@@ -161,7 +161,7 @@ func handleProjectDel(w http.ResponseWriter, r *http.Request, tennant string) er
 	var id *SwoId
 	var ferr error
 
-	err := swy.HTTPReadAndUnmarshal(r, &par)
+	err := swy.HTTPReadAndUnmarshalReq(r, &par)
 	if err != nil {
 		goto out
 	}
@@ -213,7 +213,7 @@ func handleProjectList(w http.ResponseWriter, r *http.Request, tennant string) e
 
 	projects := make(map[string]struct{})
 
-	err := swy.HTTPReadAndUnmarshal(r, &params)
+	err := swy.HTTPReadAndUnmarshalReq(r, &params)
 	if err != nil {
 		goto out
 	}
@@ -243,7 +243,7 @@ out:
 func handleFunctionAdd(w http.ResponseWriter, r *http.Request, tennant string) error {
 	var params swyapi.FunctionAdd
 
-	err := swy.HTTPReadAndUnmarshal(r, &params)
+	err := swy.HTTPReadAndUnmarshalReq(r, &params)
 	if err != nil {
 		goto out
 	}
@@ -286,7 +286,7 @@ func handleFunctionUpdate(w http.ResponseWriter, r *http.Request, tennant string
 	var id *SwoId
 	var params swyapi.FunctionUpdate
 
-	err := swy.HTTPReadAndUnmarshal(r, &params)
+	err := swy.HTTPReadAndUnmarshalReq(r, &params)
 	if err != nil {
 		goto out
 	}
@@ -308,7 +308,7 @@ func handleFunctionRemove(w http.ResponseWriter, r *http.Request, tennant string
 	var id *SwoId
 	var params swyapi.FunctionRemove
 
-	err := swy.HTTPReadAndUnmarshal(r, &params)
+	err := swy.HTTPReadAndUnmarshalReq(r, &params)
 	if err != nil {
 		goto out
 	}
@@ -333,7 +333,7 @@ func handleFunctionInfo(w http.ResponseWriter, r *http.Request, tennant string) 
 	var url = ""
 	var stats *FnStats
 
-	err := swy.HTTPReadAndUnmarshal(r, &params)
+	err := swy.HTTPReadAndUnmarshalReq(r, &params)
 	if err != nil {
 		goto out
 	}
@@ -381,7 +381,7 @@ func handleFunctionLogs(w http.ResponseWriter, r *http.Request, tennant string) 
 	var resp []swyapi.FunctionLogEntry
 	var logs []DBLogRec
 
-	err := swy.HTTPReadAndUnmarshal(r, &params)
+	err := swy.HTTPReadAndUnmarshalReq(r, &params)
 	if err != nil {
 		goto out
 	}
@@ -467,7 +467,7 @@ func handleFunctionRun(w http.ResponseWriter, r *http.Request, tennant string) e
 	var retjson string
 	var fn_code int
 
-	err := swy.HTTPReadAndUnmarshal(r, &params)
+	err := swy.HTTPReadAndUnmarshalReq(r, &params)
 	if err != nil {
 		goto out
 	}
@@ -500,7 +500,7 @@ func handleFunctionList(w http.ResponseWriter, r *http.Request, tennant string) 
 	var result []swyapi.FunctionItem
 	var params swyapi.FunctionList
 
-	err := swy.HTTPReadAndUnmarshal(r, &params)
+	err := swy.HTTPReadAndUnmarshalReq(r, &params)
 	if err != nil {
 		goto out
 	}
@@ -538,7 +538,7 @@ func handleMwareAdd(w http.ResponseWriter, r *http.Request, tennant string) erro
 	var id *SwoId
 	var params swyapi.MwareAdd
 
-	err := swy.HTTPReadAndUnmarshal(r, &params)
+	err := swy.HTTPReadAndUnmarshalReq(r, &params)
 	if err != nil {
 		goto out
 	}
@@ -563,7 +563,7 @@ func handleMwareList(w http.ResponseWriter, r *http.Request, tennant string) err
 	var params swyapi.MwareList
 	var mwares []MwareDesc
 
-	err := swy.HTTPReadAndUnmarshal(r, &params)
+	err := swy.HTTPReadAndUnmarshalReq(r, &params)
 	if err != nil {
 		goto out
 	}
@@ -594,7 +594,7 @@ func handleMwareRemove(w http.ResponseWriter, r *http.Request, tennant string) e
 	var id *SwoId
 	var params swyapi.MwareRemove
 
-	err := swy.HTTPReadAndUnmarshal(r, &params)
+	err := swy.HTTPReadAndUnmarshalReq(r, &params)
 	if err != nil {
 		goto out
 	}
@@ -618,7 +618,7 @@ func handleMwareCinfo(w http.ResponseWriter, r *http.Request, tennant string) er
 	var params swyapi.MwareCinfo
 	var envs [][2]string
 
-	err := swy.HTTPReadAndUnmarshal(r, &params)
+	err := swy.HTTPReadAndUnmarshalReq(r, &params)
 	if err != nil {
 		goto out
 	}

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"encoding/base64"
 	"path/filepath"
 	"io/ioutil"
@@ -89,12 +88,7 @@ again:
 	defer resp.Body.Close()
 
 	if out != nil {
-		body, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			panic(err)
-		}
-
-		err = json.Unmarshal(body, out)
+		err = swy.HTTPReadAndUnmarshalResp(resp, out)
 		if err != nil {
 			panic(err)
 		}

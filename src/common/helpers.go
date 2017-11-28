@@ -170,7 +170,25 @@ func MakeIPPort(ip string, port int32) string {
 	return ip + ":" + str
 }
 
-func HTTPReadAndUnmarshal(r *http.Request, data interface{}) error {
+func HTTPReadAndUnmarshalReq(r *http.Request, data interface{}) error {
+	defer r.Body.Close()
+
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		swylog.Errorf("\tCan't parse request: %s", err.Error())
+		return err
+	}
+
+	err = json.Unmarshal(body, data)
+	if err != nil {
+		swylog.Errorf("\tUnmarshal error: %s", err.Error())
+		return err
+	}
+
+	return nil
+}
+
+func HTTPReadAndUnmarshalResp(r *http.Response, data interface{}) error {
 	defer r.Body.Close()
 
 	body, err := ioutil.ReadAll(r.Body)

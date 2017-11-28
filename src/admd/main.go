@@ -39,7 +39,7 @@ func handleUserLogin(w http.ResponseWriter, r *http.Request) {
 	var token string
 	var resp = http.StatusBadRequest
 
-	err := swy.HTTPReadAndUnmarshal(r, &params)
+	err := swy.HTTPReadAndUnmarshalReq(r, &params)
 	if err != nil {
 		goto out
 	}
@@ -64,7 +64,7 @@ out:
 }
 
 func handleAdminReq(r *http.Request, params interface{}) (*swy.KeystoneTokenData, int, error) {
-	err := swy.HTTPReadAndUnmarshal(r, params)
+	err := swy.HTTPReadAndUnmarshalReq(r, params)
 	if err != nil {
 		return nil, http.StatusBadRequest, err
 	}
@@ -166,6 +166,51 @@ out:
 	http.Error(w, err.Error(), code)
 }
 
+func makeGateReq(gate, tennant, addr string, in interface{}, out interface{}, authToken string) error {
+	resp, err := swy.HTTPMarshalAndPost("http://" + gate + "/v1/" + addr, in,
+				func(req *http.Request) error {
+					req.Header.Set("X-Auth-Token", authToken)
+					req.Header.Set("X-Relay-Tennant", tennant)
+					return nil
+				})
+
+	if err != nil {
+		return err
+	}
+
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("Bad responce from server: %s", string(resp.Status))
+	}
+
+	if out != nil {
+		err = swy.HTTPReadAndUnmarshalResp(resp, out)
+		if err != nil {
+			return fmt.Errorf("Bad responce body: %s", err.Error())
+		}
+	}
+
+	return nil
+}
+
+func tryRemoveAllProjects(uid string, authToken string) error {
+	var projects []swyapi.ProjectItem
+	err := makeGateReq(conf.Gate, uid, "project/list", &swyapi.ProjectList{}, &projects, authToken)
+	if err != nil {
+		return fmt.Errorf("Can't list projects: %s", err.Error())
+	}
+
+	for _, prj := range projects {
+		derr := makeGateReq(conf.Gate, uid, "project/del", &swyapi.ProjectDel{Project: prj.Project}, nil, authToken)
+		if derr != nil {
+			err = fmt.Errorf("Can't delete project %s: %s", prj.Project, derr.Error())
+		}
+	}
+
+	return err
+}
+
 func handleDelUser(w http.ResponseWriter, r *http.Request) {
 	var params swyapi.UserInfo
 	var code = http.StatusBadRequest
@@ -190,6 +235,12 @@ func handleDelUser(w http.ResponseWriter, r *http.Request) {
 			err = errors.New("Not an admin")
 			goto out
 		}
+	}
+
+	code = http.StatusServiceUnavailable
+	err = tryRemoveAllProjects(params.Id, r.Header.Get("X-Auth-Token"))
+	if err != nil {
+		goto out
 	}
 
 	log.Debugf("Del user %v", params)

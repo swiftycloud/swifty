@@ -131,7 +131,7 @@ func handleRun(w http.ResponseWriter, r *http.Request) {
 	var params swyapi.SwdFunctionRun
 	var result *swyapi.SwdFunctionRunResult
 
-	err := swy.HTTPReadAndUnmarshal(r, &params)
+	err := swy.HTTPReadAndUnmarshalReq(r, &params)
 	if err != nil {
 		goto out
 	}
