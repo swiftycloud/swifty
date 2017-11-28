@@ -83,37 +83,47 @@ def helloworld():
 
 def pgsql():
 	ok = False
-	add_mw("postgres", "pgtst")
-	inf = add_fn("pgsql", "python", mw = [ "pgtst" ])
-	ret = run_fn(inf, {'dbname': 'pgtst', 'action': 'create'})
+	dbname = 'pgtst'
+	cookie = randstr()
+	args_c = { 'dbname': dbname, 'action': 'create' }
+	args_i = { 'dbname': dbname, 'action': 'insert', 'key': 'foo', 'val': cookie }
+	args_s = { 'dbname': dbname, 'action': 'select', 'key': 'foo' }
+
+
+	add_mw("postgres", dbname)
+	inf = add_fn("pgsql", "python", mw = [ dbname ])
+	ret = run_fn(inf, args_c)
 	print(ret)
 	if ret.get('res', '') == 'done':
-		cookie = randstr()
-		ret = run_fn(inf, {'dbname': 'pgtst', 'action': 'insert', 'key': 'foo', 'val': cookie })
+		ret = run_fn(inf, args_i)
 		print(ret)
 		if ret.get('res', '') == 'done':
-			ret = run_fn(inf, {'dbname': 'pgtst', 'action': 'select', 'key': 'foo'} )
+			ret = run_fn(inf, args_s)
 			print(ret)
 			if ret.get('res', [['']])[0][0].strip() == cookie:
 				ok = True
 	del_fn("pgsql")
-	del_mw("pgtst")
+	del_mw(dbname)
 	return ok
 
 def mongo():
 	ok = False
-	add_mw("mongo", "mgotst")
-	inf = add_fn("mongo", "python", mw = [ "mgotst" ])
+	dbname = 'mgotst'
 	cookie = randstr()
-	ret = run_fn(inf, {'dbname': 'mgotst', 'collection': 'tstcol', 'action': 'insert', 'key': 'foo', 'val': cookie })
+	args_i = { 'dbname': dbname, 'collection': 'tcol', 'action': 'insert', 'key': 'foo', 'val': cookie }
+	args_s = { 'dbname': dbname, 'collection': 'tcol', 'action': 'select', 'key': 'foo' }
+
+	add_mw("mongo", dbname)
+	inf = add_fn("mongo", "python", mw = [ dbname ])
+	ret = run_fn(inf, args_i)
 	print(ret)
 	if ret.get('res', '') == 'done':
-		ret = run_fn(inf, {'dbname': 'mgotst', 'collection': 'tstcol', 'action': 'select', 'key': 'foo' })
+		ret = run_fn(inf, args_s)
 		print(ret)
 		if ret.get('res', '') == cookie:
 			ok = True
 	del_fn("mongo")
-	del_mw("mgotst")
+	del_mw(dbname)
 	return ok
 
 def checkempty():
