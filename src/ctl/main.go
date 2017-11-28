@@ -7,7 +7,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strings"
-	"regexp"
 	"flag"
 	"fmt"
 	"os"
@@ -17,7 +16,6 @@ import (
 )
 
 type LoginInfo struct {
-	Proj		string		`yaml:"proj"`
 	Host		string		`yaml:"host"`
 	Port		string		`yaml:"port"`
 	Token		string		`yaml:"token"`
@@ -44,12 +42,7 @@ func make_faas_req_x(url string, in interface{}, succ_code int) (*http.Response,
 }
 
 func faas_login() string {
-	url := "user/login"
-	if conf.Login.Proj == "admin" {
-		url = "login"
-	}
-
-	resp, err := make_faas_req_x(url, swyapi.UserLogin {
+	resp, err := make_faas_req_x("login", swyapi.UserLogin {
 			UserName: conf.Login.User, Password: conf.Login.Pass,
 		}, http.StatusOK)
 	if err != nil {
@@ -192,7 +185,7 @@ func detect_language(repo string) string {
 	panic("can't detect function language")
 }
 
-func add_function(name, lang, src, mwares, event string) {
+func add_function(project, name, lang, src, mwares, event string) {
 	sources := swyapi.FunctionSources{}
 	code := swyapi.FunctionCode{}
 
@@ -249,7 +242,7 @@ func add_function(name, lang, src, mwares, event string) {
 
 	make_faas_req("function/add",
 		swyapi.FunctionAdd{
-			Project: conf.Login.Proj,
+			Project: project,
 			FuncName: name,
 			Sources: sources,
 			Code: code,
@@ -259,10 +252,10 @@ func add_function(name, lang, src, mwares, event string) {
 
 }
 
-func run_function(name string, args []string) {
+func run_function(project, name string, args []string) {
 	var rres swyapi.FunctionRunResult
 	make_faas_req("function/run",
-		swyapi.FunctionRun{ Project: conf.Login.Proj, FuncName: name, Args: args, }, &rres)
+		swyapi.FunctionRun{ Project: project, FuncName: name, Args: args, }, &rres)
 
 	fmt.Printf("code: %d\n", rres.Code)
 	fmt.Printf("returned: %s\n", rres.Return)
@@ -270,21 +263,21 @@ func run_function(name string, args []string) {
 	fmt.Fprintf(os.Stderr, "%s", rres.Stderr)
 }
 
-func update_function(name string) {
+func update_function(project, name string) {
 	make_faas_req("function/update",
-		swyapi.FunctionUpdate{ Project: conf.Login.Proj, FuncName: name, }, nil)
+		swyapi.FunctionUpdate{ Project: project, FuncName: name, }, nil)
 
 }
 
-func del_function(name string) {
+func del_function(project, name string) {
 	make_faas_req("function/remove",
-		swyapi.FunctionRemove{ Project: conf.Login.Proj, FuncName: name }, nil)
+		swyapi.FunctionRemove{ Project: project, FuncName: name }, nil)
 }
 
-func show_logs(name string) {
+func show_logs(project, name string) {
 	var res []swyapi.FunctionLogEntry
 	make_faas_req("function/logs",
-		swyapi.FunctionID{ Project: conf.Login.Proj, FuncName: name, }, &res)
+		swyapi.FunctionID{ Project: project, FuncName: name, }, &res)
 
 	for _, le := range res {
 		fmt.Printf("%s %s/%s: %s\n", le.Ts, le.Commit[:8], le.Event, le.Text)
@@ -301,20 +294,20 @@ func list_mware(project string) {
 	}
 }
 
-func add_mware(id, typ string) {
-	req := swyapi.MwareAdd { Project: conf.Login.Proj, ID: id, Type: typ }
+func add_mware(project, id, typ string) {
+	req := swyapi.MwareAdd { Project: project, ID: id, Type: typ }
 	make_faas_req("mware/add", req, nil)
 }
 
-func del_mware(id string) {
+func del_mware(project, id string) {
 	make_faas_req("mware/remove",
-		swyapi.MwareRemove{ Project: conf.Login.Proj, ID: id, }, nil)
+		swyapi.MwareRemove{ Project: project, ID: id, }, nil)
 }
 
-func show_mware_env(mwid string) {
+func show_mware_env(project, mwid string) {
 	var r swyapi.MwareCinfoResp
 
-	make_faas_req("mware/cinfo", swyapi.MwareCinfo { Project: conf.Login.Proj, MwId: mwid }, &r)
+	make_faas_req("mware/cinfo", swyapi.MwareCinfo { Project: project, MwId: mwid }, &r)
 	for _, e := range r.Envs {
 		fmt.Printf("%s\n", e)
 	}
@@ -335,36 +328,24 @@ func login() {
 
 func make_login(creds string) {
 	//
-	// Login string is user:pass@host:port/project
+	// Login string is user:pass@host:port
 	//
-	// swifty.user:swifty@10.94.96.216:8686/swifty.proj
+	// swifty.user:swifty@10.94.96.216:8686
 	//
-	var match string = `([(a-z)(A-Z)(0-9)\.\-\_]+)` + `:` +
-			`([(a-z)(A-Z)(0-9)]+)` + `@` +
-			`([(0-9)\.])+` + `:` +
-			`([0-9])+` + `/` +
-			`([(a-z)(A-Z)(0-9)\.\-\_]+)`
-
 	home, found := os.LookupEnv("HOME")
 	if !found {
 		panic("No HOME dir set")
 	}
 
-	matched, err := regexp.MatchString(match, creds)
-	if err != nil || matched == false {
-		return
-	}
+	x := strings.SplitN(creds, ":", 2)
+	conf.Login.User = x[0]
+	x = strings.SplitN(x[1], "@", 2)
+	conf.Login.Pass = x[0]
+	x = strings.SplitN(x[1], ":", 2)
+	conf.Login.Host = x[0]
+	conf.Login.Port = x[1]
 
-	data := regexp.MustCompile(":|/|@").Split(creds, -1)
-	if len(data) >= 5 {
-		conf.Login.User = data[0]
-		conf.Login.Pass = data[1]
-		conf.Login.Host = data[2]
-		conf.Login.Port = data[3]
-		conf.Login.Proj = data[4]
-
-		refresh_token(home)
-	}
+	refresh_token(home)
 }
 
 func refresh_token(home string) {
@@ -426,218 +407,192 @@ var cmdOrder = []string {
 	CMD_UINF,
 }
 
-var cmdMap = map[string]*flag.FlagSet {
-	CMD_LOGIN:	flag.NewFlagSet(CMD_LOGIN, flag.ExitOnError),
-	CMD_PS:		flag.NewFlagSet(CMD_PS, flag.ExitOnError),
-	CMD_LS:		flag.NewFlagSet(CMD_LS, flag.ExitOnError),
-	CMD_INF:	flag.NewFlagSet(CMD_INF, flag.ExitOnError),
-	CMD_ADD:	flag.NewFlagSet(CMD_ADD, flag.ExitOnError),
-	CMD_RUN:	flag.NewFlagSet(CMD_RUN, flag.ExitOnError),
-	CMD_UPD:	flag.NewFlagSet(CMD_UPD, flag.ExitOnError),
-	CMD_DEL:	flag.NewFlagSet(CMD_DEL, flag.ExitOnError),
-	CMD_LOGS:	flag.NewFlagSet(CMD_LOGS, flag.ExitOnError),
-	CMD_MLS:	flag.NewFlagSet(CMD_MLS, flag.ExitOnError),
-	CMD_MADD:	flag.NewFlagSet(CMD_MADD, flag.ExitOnError),
-	CMD_MDEL:	flag.NewFlagSet(CMD_MDEL, flag.ExitOnError),
-	CMD_MENV:	flag.NewFlagSet(CMD_MENV, flag.ExitOnError),
-	CMD_LUSR:	flag.NewFlagSet(CMD_LUSR, flag.ExitOnError),
-	CMD_UADD:	flag.NewFlagSet(CMD_UADD, flag.ExitOnError),
-	CMD_UDEL:	flag.NewFlagSet(CMD_UDEL, flag.ExitOnError),
-	CMD_PASS:	flag.NewFlagSet(CMD_PASS, flag.ExitOnError),
-	CMD_UINF:	flag.NewFlagSet(CMD_UINF, flag.ExitOnError),
+type cmdDesc struct {
+	opts	*flag.FlagSet
+	pargs	[]string
+	project	string
 }
 
-func bindCmdUsage(cmd, args, help string) {
-	cmdMap[cmd].Usage = func() {
-		fmt.Fprintf(os.Stderr, "%s %s\n  %s\n", cmd, args, help)
-		cmdMap[cmd].PrintDefaults()
+var cmdMap = map[string]*cmdDesc {
+	CMD_LOGIN:	&cmdDesc{ opts: flag.NewFlagSet(CMD_LOGIN, flag.ExitOnError) },
+	CMD_PS:		&cmdDesc{ opts: flag.NewFlagSet(CMD_PS, flag.ExitOnError) },
+	CMD_LS:		&cmdDesc{ opts: flag.NewFlagSet(CMD_LS, flag.ExitOnError) },
+	CMD_INF:	&cmdDesc{ opts: flag.NewFlagSet(CMD_INF, flag.ExitOnError) },
+	CMD_ADD:	&cmdDesc{ opts: flag.NewFlagSet(CMD_ADD, flag.ExitOnError) },
+	CMD_RUN:	&cmdDesc{ opts: flag.NewFlagSet(CMD_RUN, flag.ExitOnError) },
+	CMD_UPD:	&cmdDesc{ opts: flag.NewFlagSet(CMD_UPD, flag.ExitOnError) },
+	CMD_DEL:	&cmdDesc{ opts: flag.NewFlagSet(CMD_DEL, flag.ExitOnError) },
+	CMD_LOGS:	&cmdDesc{ opts: flag.NewFlagSet(CMD_LOGS, flag.ExitOnError) },
+	CMD_MLS:	&cmdDesc{ opts: flag.NewFlagSet(CMD_MLS, flag.ExitOnError) },
+	CMD_MADD:	&cmdDesc{ opts: flag.NewFlagSet(CMD_MADD, flag.ExitOnError) },
+	CMD_MDEL:	&cmdDesc{ opts: flag.NewFlagSet(CMD_MDEL, flag.ExitOnError) },
+	CMD_MENV:	&cmdDesc{ opts: flag.NewFlagSet(CMD_MENV, flag.ExitOnError) },
+	CMD_LUSR:	&cmdDesc{ opts: flag.NewFlagSet(CMD_LUSR, flag.ExitOnError) },
+	CMD_UADD:	&cmdDesc{ opts: flag.NewFlagSet(CMD_UADD, flag.ExitOnError) },
+	CMD_UDEL:	&cmdDesc{ opts: flag.NewFlagSet(CMD_UDEL, flag.ExitOnError) },
+	CMD_PASS:	&cmdDesc{ opts: flag.NewFlagSet(CMD_PASS, flag.ExitOnError) },
+	CMD_UINF:	&cmdDesc{ opts: flag.NewFlagSet(CMD_UINF, flag.ExitOnError) },
+}
+
+func bindCmdUsage(cmd string, args []string, help string, wp bool) {
+	cd := cmdMap[cmd]
+	if wp {
+		cd.opts.StringVar(&cd.project, "proj", "", "Project to work on")
+	}
+
+	cd.pargs = args
+	cd.opts.Usage = func() {
+		var astr string
+		if len(args) != 0 {
+			astr = " <" + strings.Join(args, "> <") + ">"
+		}
+		fmt.Fprintf(os.Stderr, "%s%s\n\t%s\n", cmd, astr, help)
+		cd.opts.PrintDefaults()
 	}
 }
 
 func main() {
-	var lang, src, mware, event, uid, name, typ, pass string
+	var lang, src, mware, event, name, pass string
 
-	bindCmdUsage(CMD_LOGIN, "USER:PASS@HOST:PORT/PROJECT", "Login into the system")
+	bindCmdUsage(CMD_LOGIN,	[]string{"USER:PASS@HOST:PORT"}, "Login into the system", false)
 
-	bindCmdUsage(CMD_PS, "", "List projects")
+	bindCmdUsage(CMD_PS,	[]string{}, "List projects", false)
 
-	bindCmdUsage(CMD_LS, "[PROJECT]", "List functions of a project")
+	bindCmdUsage(CMD_LS,	[]string{}, "List functions", true)
+	bindCmdUsage(CMD_INF,	[]string{"NAME"}, "Function info", true)
+	cmdMap[CMD_ADD].opts.StringVar(&lang, "lang", "auto", "Language")
+	cmdMap[CMD_ADD].opts.StringVar(&src, "src", ".", "Repository")
+	cmdMap[CMD_ADD].opts.StringVar(&mware, "mw", "", "Mware to use, comma-separated")
+	cmdMap[CMD_ADD].opts.StringVar(&event, "event", "", "Event this fn is to start")
+	bindCmdUsage(CMD_ADD,	[]string{"NAME"}, "Add a function", true)
+	bindCmdUsage(CMD_RUN,	[]string{"NAME", "ARGUMENTS..."}, "Run a function", true)
+	bindCmdUsage(CMD_UPD,	[]string{"NAME"}, "Update a function", true)
+	bindCmdUsage(CMD_DEL,	[]string{"NAME"}, "Delete a function", true)
+	bindCmdUsage(CMD_LOGS,	[]string{"NAME"}, "Show function logs", true)
 
-	bindCmdUsage(CMD_INF, "[PROJECT] FUNCNAME", "Function info")
+	bindCmdUsage(CMD_MLS,	[]string{}, "List middleware", true)
+	bindCmdUsage(CMD_MADD,	[]string{"ID", "TYPE"}, "Add middleware", true)
+	bindCmdUsage(CMD_MDEL,	[]string{"ID"}, "Delete middleware", true)
+	bindCmdUsage(CMD_MENV,	[]string{"ID"}, "Show middleware environment variables", true)
 
-	cmdMap[CMD_ADD].StringVar(&lang, "lang", "auto", "Language")
-	cmdMap[CMD_ADD].StringVar(&src, "src", ".", "Repository")
-	cmdMap[CMD_ADD].StringVar(&mware, "mw", "", "Mware to use, comma-separated")
-	cmdMap[CMD_ADD].StringVar(&event, "event", "", "Event this fn is to start")
-	bindCmdUsage(CMD_ADD, "FUNCNAME", "Add a function")
-
-	bindCmdUsage(CMD_RUN, "FUNCNAME [ARGS]", "Run a function")
-	bindCmdUsage(CMD_UPD, "FUNCNAME", "Update a function")
-	bindCmdUsage(CMD_DEL, "FUNCNAME", "Delete a function")
-	bindCmdUsage(CMD_LOGS, "FUNCNAME", "Show function logs")
-
-	bindCmdUsage(CMD_MLS, "[PROJECT]", "List middleware")
-
-	cmdMap[CMD_MADD].StringVar(&name, "id", "", "Middleware ID")
-	cmdMap[CMD_MADD].StringVar(&typ, "type", "", "Middleware type")
-	bindCmdUsage(CMD_MADD, "", "Add middleware")
-
-	cmdMap[CMD_MDEL].StringVar(&name, "id", "", "Middleware ID")
-	bindCmdUsage(CMD_MDEL, "", "Delete middleware")
-
-	bindCmdUsage(CMD_MENV, "ID", "Show middleware environment variables")
-
-	bindCmdUsage(CMD_LUSR, "", "List users")
-
-	cmdMap[CMD_UADD].StringVar(&uid, "id", "", "User ID (e-mail)")
-	cmdMap[CMD_UADD].StringVar(&name, "name", "", "User name")
-	cmdMap[CMD_UADD].StringVar(&pass, "pass", "", "User password")
-	bindCmdUsage(CMD_UADD, "", "Add user")
-
-	cmdMap[CMD_UDEL].StringVar(&uid, "id", "", "user ID (e-mail")
-	bindCmdUsage(CMD_UDEL, "", "Del user")
-
-	cmdMap[CMD_PASS].StringVar(&uid, "id", "", "User ID (e-mail)")
-	cmdMap[CMD_PASS].StringVar(&pass, "pass", "", "New password")
-	bindCmdUsage(CMD_PASS, "", "Set password")
-
-	cmdMap[CMD_UINF].StringVar(&uid, "id", "", "User ID (e-mail")
-	bindCmdUsage(CMD_UINF, "", "Get user info")
+	bindCmdUsage(CMD_LUSR,	[]string{}, "List users", false)
+	cmdMap[CMD_UADD].opts.StringVar(&name, "name", "", "User name")
+	cmdMap[CMD_UADD].opts.StringVar(&pass, "pass", "", "User password")
+	bindCmdUsage(CMD_UADD,	[]string{"UID"}, "Add user", false)
+	bindCmdUsage(CMD_UDEL,	[]string{"UID"}, "Del user", false)
+	cmdMap[CMD_PASS].opts.StringVar(&pass, "pass", "", "New password")
+	bindCmdUsage(CMD_PASS,	[]string{"UID"}, "Set password", false)
+	bindCmdUsage(CMD_UINF,	[]string{"UID"}, "Get user info", false)
 
 	flag.Usage = func() {
 		for _, v := range cmdOrder {
-			cmdMap[v].Usage()
+			cmdMap[v].opts.Usage()
 		}
 	}
 
 	if len(os.Args) < 2 {
-		goto usage
+		flag.Usage()
+		os.Exit(1)
 	}
 
-	if val, ok := cmdMap[os.Args[1]]; ok {
-		if os.Args[1] == CMD_ADD {
-			val.Parse(os.Args[3:])
-		} else {
-			val.Parse(os.Args[2:])
-		}
-	} else {
-		goto usage
+	cd, ok := cmdMap[os.Args[1]]
+	if !ok {
+		flag.Usage()
+		os.Exit(1)
 	}
 
-	if cmdMap[CMD_LOGIN].Parsed() {
+	npa := len(cd.pargs) + 2
+	cd.opts.Parse(os.Args[npa:])
+
+	if cmdMap[CMD_LOGIN].opts.Parsed() {
 		make_login(os.Args[2])
 		return
 	}
 
 	login()
 
-	if cmdMap[CMD_PS].Parsed() {
+	if cmdMap[CMD_PS].opts.Parsed() {
 		list_projects()
 		return
 	}
 
-	if cmdMap[CMD_LS].Parsed() {
-		proj := conf.Login.Proj
-		if len(os.Args) > 2 {
-			proj = os.Args[2]
-		}
-		list_functions(proj)
+	if cmdMap[CMD_LS].opts.Parsed() {
+		list_functions(cd.project)
 		return
 	}
 
-	if cmdMap[CMD_INF].Parsed() {
-		var proj, fnam string
-
-		if len(os.Args) > 3 {
-			proj = os.Args[2]
-			fnam = os.Args[3]
-		} else if len(os.Args) > 2 {
-			proj = conf.Login.Proj
-			fnam = os.Args[2]
-		} else {
-			goto usage
-		}
-
-		info_function(proj, fnam)
+	if cmdMap[CMD_INF].opts.Parsed() {
+		info_function(cd.project, os.Args[2])
 		return
 	}
 
-	if cmdMap[CMD_ADD].Parsed() {
-		add_function(os.Args[2], lang, src, mware, event)
+	if cmdMap[CMD_ADD].opts.Parsed() {
+		add_function(cd.project, os.Args[2], lang, src, mware, event)
 		return
 	}
 
-	if cmdMap[CMD_RUN].Parsed() {
-		run_function(os.Args[2], os.Args[3:])
+	if cmdMap[CMD_RUN].opts.Parsed() {
+		run_function(cd.project, os.Args[2], os.Args[3:])
 		return
 	}
 
-	if cmdMap[CMD_UPD].Parsed() {
-		update_function(os.Args[2])
+	if cmdMap[CMD_UPD].opts.Parsed() {
+		update_function(cd.project, os.Args[2])
 		return
 	}
 
-	if cmdMap[CMD_DEL].Parsed() {
-		del_function(os.Args[2])
+	if cmdMap[CMD_DEL].opts.Parsed() {
+		del_function(cd.project, os.Args[2])
 		return
 	}
 
-	if cmdMap[CMD_LOGS].Parsed() {
-		show_logs(os.Args[2])
+	if cmdMap[CMD_LOGS].opts.Parsed() {
+		show_logs(cd.project, os.Args[2])
 		return
 	}
 
-	if cmdMap[CMD_MLS].Parsed() {
-		proj := conf.Login.Proj
-		if len(os.Args) > 2 {
-			proj = os.Args[2]
-		}
-		list_mware(proj)
+	if cmdMap[CMD_MLS].opts.Parsed() {
+		list_mware(cd.project)
 		return
 	}
 
-	if cmdMap[CMD_MADD].Parsed() {
-		add_mware(name, typ)
+	if cmdMap[CMD_MADD].opts.Parsed() {
+		add_mware(cd.project, os.Args[2], os.Args[3])
 		return
 	}
 
-	if cmdMap[CMD_MDEL].Parsed() {
-		del_mware(name)
+	if cmdMap[CMD_MDEL].opts.Parsed() {
+		del_mware(cd.project, os.Args[2])
 		return
 	}
 
-	if cmdMap[CMD_MENV].Parsed() {
-		show_mware_env(os.Args[2])
+	if cmdMap[CMD_MENV].opts.Parsed() {
+		show_mware_env(cd.project, os.Args[2])
 		return
 	}
 
-	if cmdMap[CMD_LUSR].Parsed() {
+	if cmdMap[CMD_LUSR].opts.Parsed() {
 		list_users()
 		return
 	}
 
-	if cmdMap[CMD_UADD].Parsed() {
-		add_user(uid, name, pass)
+	if cmdMap[CMD_UADD].opts.Parsed() {
+		add_user(os.Args[2], name, pass)
 		return
 	}
 
-	if cmdMap[CMD_UDEL].Parsed() {
-		del_user(uid)
+	if cmdMap[CMD_UDEL].opts.Parsed() {
+		del_user(os.Args[2])
 		return
 	}
 
-	if cmdMap[CMD_PASS].Parsed() {
-		set_password(uid, pass)
+	if cmdMap[CMD_PASS].opts.Parsed() {
+		set_password(os.Args[2], pass)
 		return
 	}
 
-	if cmdMap[CMD_UINF].Parsed() {
-		show_user_info(uid)
+	if cmdMap[CMD_UINF].opts.Parsed() {
+		show_user_info(os.Args[2])
 		return
 	}
-
-	return
-usage:
-	flag.Usage()
-	os.Exit(1)
 }

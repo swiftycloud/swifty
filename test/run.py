@@ -37,7 +37,7 @@ def add_fn(name, lang, mw = []):
 	swyrun(cmd)
 
 def add_mw(typ, name):
-	swyrun([ "madd", "%s:%s" % (typ, name) ])
+	swyrun([ "madd", name, typ ])
 
 def del_mw(name):
 	swyrun([ "mdel", name ])
@@ -106,6 +106,6 @@ def checkempty():
 	return len(fns) == 0
 
 
-#run_test(helloworld)
+run_test(helloworld)
 #run_test(pgsql)
 run_test(checkempty)
