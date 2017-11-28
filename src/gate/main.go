@@ -749,7 +749,7 @@ func main() {
 	log.Debugf("config: %v", &conf)
 
 	r := mux.NewRouter()
-	r.HandleFunc("/v1/user/login",		handleUserLogin)
+	r.HandleFunc("/v1/login",		handleUserLogin)
 	r.Handle("/v1/project/list",		genReqHandler(handleProjectList))
 	r.Handle("/v1/project/del",		genReqHandler(handleProjectDel))
 	r.Handle("/v1/function/add",		genReqHandler(handleFunctionAdd))
