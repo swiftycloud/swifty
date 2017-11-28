@@ -9,7 +9,6 @@ import (
 	"errors"
 	"bytes"
 	"syscall"
-	"flag"
 	"fmt"
 	"time"
 	"os"
@@ -19,14 +18,6 @@ import (
 	"../common"
 	"../apis/apps"
 )
-
-type YAMLConfDaemon struct {
-	Addr		string			`yaml:"addr"`
-}
-
-type YAMLConf struct {
-	Daemon		YAMLConfDaemon		`yaml:"daemon"`
-}
 
 var function *swyapi.SwdFunctionDesc
 var wdogStatsSyncPeriod = 5 * time.Second /* FIXME: should be configured */
@@ -189,19 +180,20 @@ out:
 	return fmt.Errorf("setupFunction: %s", err.Error())
 }
 
-func getSwdAddr(env_name string, defaul_value string) string {
-	envVal := swy.SafeEnv("SWD_ADDR", "")
-	if envVal == "" {
-		//
-		// Kubernetes should provide us IP used
-		// for the port, and we ship port as well.
-		podIP := swy.SafeEnv("SWD_POD_IP", "")
-		if podIP == "" {
-			return defaul_value
-		}
-		return podIP + ":" + swy.SafeEnv("SWD_PORT", "8687")
+func getSwdAddr() string {
+	podIP := swy.SafeEnv("SWD_POD_IP", "")
+	if podIP == "" {
+		log.Debugf("NO POD_IP")
+		return ""
 	}
-	return envVal
+
+	podPort := swy.SafeEnv("SWD_PORT", "")
+	if podPort == "" {
+		log.Debugf("NO PORT")
+		return ""
+	}
+
+	return podIP + ":" + podPort
 }
 
 type wdogStatsOpaque struct {
@@ -255,28 +247,15 @@ func wdogStatsSync(params *swyapi.SwdFunctionDesc) {
 
 func main() {
 	var params swyapi.SwdFunctionDesc
-	var conf_path string
 	var desc_raw string
 	var err error
-	var conf YAMLConf
 
 	swy.InitLogger(log)
 
-	flag.StringVar(&conf_path,
-			"conf",
-				"",
-				"path to the configuration file")
-	flag.StringVar(&conf.Daemon.Addr,
-			"watchdog-addr",
-				getSwdAddr("SWD_ADDR", "0.0.0.0:8687"),
-				"address:port to listen requests on")
-	flag.Parse()
-
-	if conf_path != "" {
-		swy.ReadYamlConfig(conf_path, &conf)
+	addr := getSwdAddr()
+	if addr == "" {
+		log.Fatal("No address specified")
 	}
-
-	log.Debugf("config: %v", &conf)
 
 	desc_raw = swy.SafeEnv("SWD_FUNCTION_DESC", "")
 	if desc_raw == "" {
@@ -298,5 +277,5 @@ func main() {
 	runQueue = make(chan *runReq)
 	go doRun()
 
-	log.Fatal(http.ListenAndServe(conf.Daemon.Addr, nil))
+	log.Fatal(http.ListenAndServe(addr, nil))
 }
