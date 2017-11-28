@@ -17,6 +17,7 @@ import (
 	"time"
 	"fmt"
 	"os"
+	"io"
 )
 
 var swylog = zap.NewNop().Sugar()
@@ -221,6 +222,7 @@ func HTTPMarshalAndWrite(w http.ResponseWriter, data interface{}) error {
 }
 
 type RestReq struct {
+	Method		string
 	Address		string
 	Timeout		time.Duration
 	Headers		map[string]string
@@ -236,13 +238,23 @@ func HTTPMarshalAndPost(req *RestReq, data interface{}) (*http.Response, error) 
 		Timeout: time.Second * req.Timeout,
 	}
 
-	jdata, err := json.Marshal(data)
-	if err != nil {
-		swylog.Errorf("\tMarshal error: %s", err.Error())
-		return nil, err
+	var req_body io.Reader
+
+	if data != nil {
+		jdata, err := json.Marshal(data)
+		if err != nil {
+			swylog.Errorf("\tMarshal error: %s", err.Error())
+			return nil, err
+		}
+
+		req_body = bytes.NewBuffer(jdata)
 	}
 
-	r, err := http.NewRequest("POST", req.Address, bytes.NewBuffer(jdata))
+	if req.Method == "" {
+		req.Method = "POST"
+	}
+
+	r, err := http.NewRequest(req.Method, req.Address, req_body)
 	if err != nil {
 		swylog.Errorf("\thttp.NewRequest error: %s", err.Error())
 		return nil, err

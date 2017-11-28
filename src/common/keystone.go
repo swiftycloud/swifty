@@ -1,12 +1,7 @@
 package swy
 
 import (
-	"fmt"
-	"bytes"
-	"encoding/json"
 	"net/http"
-	"io/ioutil"
-	"io"
 	"../apis/apps"
 )
 
@@ -113,52 +108,27 @@ type KeystoneReq struct {
 }
 
 func KeystoneMakeReq(ksreq *KeystoneReq, in interface{}, out interface{}) error {
-	var req_body io.Reader
-
-	clnt := &http.Client{}
-
-	if in != nil {
-		bj, err := json.Marshal(in)
-		if err != nil {
-			return err
-		}
-
-		req_body = bytes.NewBuffer(bj)
-	}
-
-	req, err := http.NewRequest(ksreq.Type, "http://" + ksreq.Addr + "/v3/" + ksreq.URL, req_body)
-	if err != nil {
-		return err
-	}
-
-	if req_body != nil {
-		req.Header.Set("Content-Type", "application/json")
-	}
-
+	headers := make(map[string]string)
 	if ksreq.Token != "" {
-		req.Header.Set("X-Auth-Token", ksreq.Token)
+		headers["X-Auth-Token"] = ksreq.Token
 	}
 
-	resp, err := clnt.Do(req)
+	resp, err := HTTPMarshalAndPost(
+			&RestReq{
+				Method:  ksreq.Type,
+				Address: "http://" + ksreq.Addr + "/v3/" + ksreq.URL,
+				Headers: headers,
+				Success: ksreq.Succ,
+			}, in)
 	if err != nil {
 		return err
 	}
 
 	defer resp.Body.Close()
-
-	if resp.StatusCode != ksreq.Succ {
-		return fmt.Errorf("Bad responce from server: " + string(resp.Status))
-	}
-
 	ksreq.Token = resp.Header.Get("X-Subject-Token")
 
 	if out != nil {
-		resp_body, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			return err
-		}
-
-		err = json.Unmarshal(resp_body, out)
+		err = HTTPReadAndUnmarshalResp(resp, out)
 		if err != nil {
 			return err
 		}
