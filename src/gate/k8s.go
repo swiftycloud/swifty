@@ -316,14 +316,6 @@ func swk8sRun(conf *YAMLConf, fn *FunctionDesc, fi *FnInst) error {
 							},
 					},
 				},
-				{
-					Name:		"stats",
-					VolumeSource:	v1.VolumeSource {
-						HostPath: &v1.HostPathVolumeSource{
-								Path: fnStatsDir(conf, fn),
-							},
-					},
-				},
 			},
 			HostNetwork:	false,
 			Containers:	[]v1.Container{
@@ -336,11 +328,6 @@ func swk8sRun(conf *YAMLConf, fn *FunctionDesc, fi *FnInst) error {
 							Name:		"code",
 							ReadOnly:	false,
 							MountPath:	RtCodePath(&fn.Code),
-						},
-						{
-							Name:		"stats",
-							ReadOnly:	false,
-							MountPath:	statsPodPath,
 						},
 					},
 					ImagePullPolicy: v1.PullNever,

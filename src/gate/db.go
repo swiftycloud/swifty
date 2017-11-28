@@ -280,6 +280,11 @@ func logGetFor(id *SwoId) ([]DBLogRec, error) {
 	return logs, err
 }
 
+func logGetCalls(id *SwoId) (int, error) {
+	c := dbSession.DB(dbState).C(DBColLogs)
+	return c.Find(bson.M{"tennant": id.Tennant, "project": id.Project, "name": id.Name, "event": "run"}).Count()
+}
+
 func logRemove(fn *FunctionDesc) {
 	c := dbSession.DB(dbState).C(DBColLogs)
 	_, err := c.RemoveAll(bson.M{"tennant": fn.Tennant, "project": fn.Project, "name": fn.Name})

@@ -429,6 +429,7 @@ func makeArgMap(r *http.Request) string {
 func handleFunctionCall(w http.ResponseWriter, r *http.Request) {
 	var arg_map string
 	var retjson string
+	var sopq *statsOpaque
 
 	vars := mux.Vars(r)
 	fnId := vars["fnid"]
@@ -445,10 +446,14 @@ func handleFunctionCall(w http.ResponseWriter, r *http.Request) {
 
 	arg_map = makeArgMap(r)
 
+	sopq = statsStart(fnId)
+
 	_, retjson, err = doRun(fn.Inst(), "run", append(RtRunCmd(&fn.Code), arg_map))
 	if err != nil {
 		goto out
 	}
+
+	statsUpdate(sopq)
 
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
@@ -465,6 +470,7 @@ func handleFunctionRun(w http.ResponseWriter, r *http.Request, tennant string) e
 	var fn FunctionDesc
 	var retjson string
 	var fn_code int
+	var sopq *statsOpaque
 
 	err := swy.HTTPReadAndUnmarshalReq(r, &params)
 	if err != nil {
@@ -480,10 +486,14 @@ func handleFunctionRun(w http.ResponseWriter, r *http.Request, tennant string) e
 		goto out
 	}
 
+	sopq = statsStart(fn.Cookie)
+
 	fn_code, retjson, err = doRun(fn.Inst(), "run", append(RtRunCmd(&fn.Code), params.Args...))
 	if err != nil {
 		goto out
 	}
+
+	statsUpdate(sopq)
 
 	err = swy.HTTPMarshalAndWrite(w, swyapi.FunctionRunResult{
 		Return:		retjson,
