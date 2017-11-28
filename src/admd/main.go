@@ -168,11 +168,7 @@ out:
 
 func makeGateReq(gate, tennant, addr string, in interface{}, out interface{}, authToken string) error {
 	resp, err := swy.HTTPMarshalAndPost("http://" + gate + "/v1/" + addr, in,
-				func(req *http.Request) error {
-					req.Header.Set("X-Auth-Token", authToken)
-					req.Header.Set("X-Relay-Tennant", tennant)
-					return nil
-				})
+			map[string]string { "X-Auth-Token": authToken, "X-Relay-Tennant": tennant })
 
 	if err != nil {
 		return err

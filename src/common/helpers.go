@@ -220,10 +220,8 @@ func HTTPMarshalAndWrite(w http.ResponseWriter, data interface{}) error {
 	return nil
 }
 
-type HTTPMarshalAndPostCB func(r *http.Request) error
-
-func HTTPMarshalAndPostTimeout(address string, timeout time.Duration,
-			data interface{}, cb HTTPMarshalAndPostCB, succ_status int) (*http.Response, error) {
+func HTTPMarshalAndPostTimeout(address string, timeout time.Duration, data interface{},
+		headers map[string]string, succ_status int) (*http.Response, error) {
 	var c = &http.Client{
 		Timeout: time.Second * timeout,
 	}
@@ -241,12 +239,8 @@ func HTTPMarshalAndPostTimeout(address string, timeout time.Duration,
 	}
 
 	r.Header.Set("Content-Type", "application/json; charset=utf-8")
-	if cb != nil {
-		err := cb(r)
-		if err != nil {
-			swylog.Errorf("\tcallback error: %s", err.Error())
-			return nil, err
-		}
+	for hk, hv := range headers {
+		r.Header.Set(hk, hv)
 	}
 
 	rsp, err := c.Do(r)
@@ -264,13 +258,13 @@ func HTTPMarshalAndPostTimeout(address string, timeout time.Duration,
 }
 
 func HTTPMarshalAndPost2(address string, data interface{},
-		cb HTTPMarshalAndPostCB, succ_status int) (*http.Response, error) {
-	return HTTPMarshalAndPostTimeout(address, 15, data, cb, succ_status)
+		headers map[string]string, succ_status int) (*http.Response, error) {
+	return HTTPMarshalAndPostTimeout(address, 15, data, headers, succ_status)
 }
 
 func HTTPMarshalAndPost(address string, data interface{},
-		cb HTTPMarshalAndPostCB) (*http.Response, error) {
-	return HTTPMarshalAndPostTimeout(address, 15, data, cb, http.StatusOK)
+		headers map[string]string) (*http.Response, error) {
+	return HTTPMarshalAndPostTimeout(address, 15, data, headers, http.StatusOK)
 }
 
 func Exec(exe string, args []string) (bytes.Buffer, bytes.Buffer, error) {

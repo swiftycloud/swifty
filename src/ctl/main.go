@@ -30,14 +30,13 @@ var conf YAMLConf
 
 func make_faas_req_x(url string, in interface{}, succ_code int) (*http.Response, error) {
 	var address string = "http://" + conf.Login.Host + ":" + conf.Login.Port + "/v1/" + url
-	var cb swy.HTTPMarshalAndPostCB = func(r *http.Request) error {
-			if conf.Login.Token != "" {
-				r.Header.Set("X-Auth-Token",
-						conf.Login.Token)
-			}
-			return nil
+
+	h := make(map[string]string)
+	if conf.Login.Token != "" {
+		h["X-Auth-Token"] = conf.Login.Token
 	}
-	return swy.HTTPMarshalAndPost2(address, in, cb, succ_code)
+
+	return swy.HTTPMarshalAndPost2(address, in, h, succ_code)
 }
 
 func faas_login() string {
