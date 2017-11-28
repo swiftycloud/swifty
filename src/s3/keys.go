@@ -1,7 +1,6 @@
 package main
 
 import (
-	_ "gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 
 	"crypto/rand"

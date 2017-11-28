@@ -6,26 +6,13 @@ import (
 	"github.com/gorilla/mux"
 
 	"gopkg.in/mgo.v2"
-	_ "gopkg.in/mgo.v2/bson"
-
-	_ "crypto/hmac"
-	_ "crypto/sha1"
-	_ "crypto/md5"
-	_ "encoding/base64"
-	_ "encoding/hex"
-
-	_ "encoding/json"
-
-	_ "encoding/xml"
 	"io/ioutil"
 	"net/http"
-	"strings"
 	"strconv"
 	"time"
 	"flag"
 	"fmt"
 
-	_"../apis/apps"
 	"../common"
 )
 
@@ -94,19 +81,20 @@ func setupLogger(conf *YAMLConf) {
 }
 
 func formatRequest(prefix string, r *http.Request) string {
-	var request []string
-
-	url := fmt.Sprintf("%v %v %v", r.Method, r.URL, r.Proto)
-	request = append(request, prefix)
-	request = append(request, url)
-	request = append(request, fmt.Sprintf("Host: %v", r.Host))
-
-	for name, headers := range r.Header {
-		for _, h := range headers {
-			request = append(request, fmt.Sprintf("%v: %v", name, h))
-		}
-	}
-	return strings.Join(request, "\n")
+//	var request []string
+//
+//	url := fmt.Sprintf("%v %v %v", r.Method, r.URL, r.Proto)
+//	request = append(request, prefix)
+//	request = append(request, url)
+//	request = append(request, fmt.Sprintf("Host: %v", r.Host))
+//
+//	for name, headers := range r.Header {
+//		for _, h := range headers {
+//			request = append(request, fmt.Sprintf("%v:%v", name, h))
+//		}
+//	}
+//	return strings.Join(request, "\n")
+	return prefix
 }
 
 func handleBucket(w http.ResponseWriter, r *http.Request) {
@@ -308,7 +296,9 @@ func handleObject(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
+		w.WriteHeader(http.StatusOK)
 		w.Write(body)
+		return
 		break
 	case http.MethodDelete:
 		// Delete a bucket

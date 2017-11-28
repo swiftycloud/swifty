@@ -6,16 +6,16 @@ import (
 	"strings"
 )
 
-func member(auth, start_with, end_with string) string {
+func member(source, start_with, end_with string) string {
 	var start, stop int
 
-	start = strings.Index(auth, start_with)
-	if start > 0 {
-		start += 11
-		stop = strings.Index(auth[start:], end_with)
+	start = strings.Index(source, start_with)
+	if start >= 0 {
+		start += len(start_with)
+		stop = strings.Index(source[start:], end_with)
 		if stop > 0 {
 			stop += start
-			return auth[start:stop]
+			return source[start:stop]
 		}
 	}
 
