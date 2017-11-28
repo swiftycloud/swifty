@@ -167,8 +167,14 @@ out:
 }
 
 func makeGateReq(gate, tennant, addr string, in interface{}, out interface{}, authToken string) error {
-	resp, err := swy.HTTPMarshalAndPost("http://" + gate + "/v1/" + addr, in,
-			map[string]string { "X-Auth-Token": authToken, "X-Relay-Tennant": tennant })
+	resp, err := swy.HTTPMarshalAndPost(
+			&swy.RestReq{
+				Address: "http://" + gate + "/v1/" + addr,
+				Headers: map[string]string {
+					"X-Auth-Token": authToken,
+					"X-Relay-Tennant": tennant,
+				},
+			}, in)
 
 	if err != nil {
 		return err

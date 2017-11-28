@@ -36,7 +36,12 @@ func make_faas_req_x(url string, in interface{}, succ_code int) (*http.Response,
 		h["X-Auth-Token"] = conf.Login.Token
 	}
 
-	return swy.HTTPMarshalAndPost2(address, in, h, succ_code)
+	return swy.HTTPMarshalAndPost(
+			&swy.RestReq{
+				Address:	address,
+				Headers:	h,
+				Success:	succ_code,
+			}, in)
 }
 
 func faas_login() string {

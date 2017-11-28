@@ -32,12 +32,15 @@ func doRun(fi *FnInst, event string, args []string) (int, string, error) {
 		goto out
 	}
 
-	resp, err = swy.HTTPMarshalAndPostTimeout("http://" + link.VIP() + "/v1/run",
-				120,
-				&swyapi.SwdFunctionRun{
-					PodToken:	fi.fn.Cookie,
-					Args:		args,
-				}, nil, http.StatusOK)
+	resp, err = swy.HTTPMarshalAndPost(
+			&swy.RestReq{
+				Address: "http://" + link.VIP() + "/v1/run",
+				Timeout: 120,
+			},
+			&swyapi.SwdFunctionRun{
+				PodToken:	fi.fn.Cookie,
+				Args:		args,
+			})
 	if err != nil {
 		goto out
 	}

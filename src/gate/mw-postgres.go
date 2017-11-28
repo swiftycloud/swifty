@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strings"
 	"encoding/json"
-	"net/http"
 	"../common"
 	"../apis/apps"
 )
@@ -34,9 +33,15 @@ func InitPostgres(conf *YAMLConfMw, mwd *MwareDesc) (error) {
 	mwd.JSettings = string(js)
 
 	addr := strings.Split(conf.Postgres.Addr, ":")[0] + ":" + conf.Postgres.AdminPort
-	_, err = swy.HTTPMarshalAndPostTimeout("http://" + addr + "/create", 120,
-			&swyapi.PgRequest{Token: gateSecrets[conf.Postgres.Token],
-				User: mwd.Client, Pass: mwd.Pass, DbName: pgs.DBName}, nil, http.StatusOK)
+	_, err = swy.HTTPMarshalAndPost(
+			&swy.RestReq{
+				Address: "http://" + addr + "/create",
+				Timeout: 120,
+			},
+			&swyapi.PgRequest{
+				Token: gateSecrets[conf.Postgres.Token],
+				User: mwd.Client, Pass: mwd.Pass, DbName: pgs.DBName,
+			})
 	if err != nil {
 		return err
 	}
@@ -55,9 +60,15 @@ func FiniPostgres(conf *YAMLConfMw, mwd *MwareDesc) error {
 	}
 
 	addr := strings.Split(conf.Postgres.Addr, ":")[0] + ":" + conf.Postgres.AdminPort
-	_, err = swy.HTTPMarshalAndPostTimeout("http://" + addr + "/drop", 120,
-			&swyapi.PgRequest{Token: gateSecrets[conf.Postgres.Token],
-				User: mwd.Client, DbName: pgs.DBName}, nil, http.StatusOK)
+	_, err = swy.HTTPMarshalAndPost(
+			&swy.RestReq{
+				Address: "http://" + addr + "/drop",
+				Timeout: 120,
+			},
+			&swyapi.PgRequest{
+				Token: gateSecrets[conf.Postgres.Token],
+				User: mwd.Client, DbName: pgs.DBName,
+			})
 
 	return err
 }

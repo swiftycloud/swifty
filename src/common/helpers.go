@@ -220,10 +220,20 @@ func HTTPMarshalAndWrite(w http.ResponseWriter, data interface{}) error {
 	return nil
 }
 
-func HTTPMarshalAndPostTimeout(address string, timeout time.Duration, data interface{},
-		headers map[string]string, succ_status int) (*http.Response, error) {
+type RestReq struct {
+	Address		string
+	Timeout		time.Duration
+	Headers		map[string]string
+	Success		int
+}
+
+func HTTPMarshalAndPost(req *RestReq, data interface{}) (*http.Response, error) {
+	if req.Timeout == 0 {
+		req.Timeout = 15
+	}
+
 	var c = &http.Client{
-		Timeout: time.Second * timeout,
+		Timeout: time.Second * req.Timeout,
 	}
 
 	jdata, err := json.Marshal(data)
@@ -232,14 +242,14 @@ func HTTPMarshalAndPostTimeout(address string, timeout time.Duration, data inter
 		return nil, err
 	}
 
-	r, err := http.NewRequest("POST", address, bytes.NewBuffer(jdata))
+	r, err := http.NewRequest("POST", req.Address, bytes.NewBuffer(jdata))
 	if err != nil {
 		swylog.Errorf("\thttp.NewRequest error: %s", err.Error())
 		return nil, err
 	}
 
 	r.Header.Set("Content-Type", "application/json; charset=utf-8")
-	for hk, hv := range headers {
+	for hk, hv := range req.Headers {
 		r.Header.Set(hk, hv)
 	}
 
@@ -249,22 +259,16 @@ func HTTPMarshalAndPostTimeout(address string, timeout time.Duration, data inter
 		return nil, err
 	}
 
-	if rsp.StatusCode != succ_status {
+	if req.Success == 0 {
+		req.Success = http.StatusOK
+	}
+
+	if rsp.StatusCode != req.Success {
 		err = fmt.Errorf("\tResponse is not OK: %d", rsp.StatusCode)
 		return rsp, err
 	}
 
 	return rsp, nil
-}
-
-func HTTPMarshalAndPost2(address string, data interface{},
-		headers map[string]string, succ_status int) (*http.Response, error) {
-	return HTTPMarshalAndPostTimeout(address, 15, data, headers, succ_status)
-}
-
-func HTTPMarshalAndPost(address string, data interface{},
-		headers map[string]string) (*http.Response, error) {
-	return HTTPMarshalAndPostTimeout(address, 15, data, headers, http.StatusOK)
 }
 
 func Exec(exe string, args []string) (bytes.Buffer, bytes.Buffer, error) {
