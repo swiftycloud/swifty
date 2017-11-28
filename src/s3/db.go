@@ -26,7 +26,7 @@ func dbConnect(conf *YAMLConf) error {
 		Database:	conf.DB.Name,
 		Timeout:	60 * time.Second,
 		Username:	conf.DB.User,
-		Password:	conf.DB.Pass}
+		Password:	s3Secrets[conf.DB.Pass]}
 
 	session, err := mgo.DialWithInfo(&info);
 	if err != nil {

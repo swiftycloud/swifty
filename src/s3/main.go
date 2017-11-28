@@ -29,6 +29,8 @@ import (
 	"../common"
 )
 
+var s3Secrets map[string]string
+
 type YAMLConfCeph struct {
 	ConfigPath	string			`yaml:"config-path"`
 }
@@ -361,6 +363,12 @@ func main() {
 	}
 
 	log.Debugf("config: %v", &conf)
+
+	s3Secrets, err = swy.ReadSecrets("s3")
+	if err != nil {
+		log.Errorf("Can't read gate secrets")
+		return
+	}
 
 	r := mux.NewRouter()
 
