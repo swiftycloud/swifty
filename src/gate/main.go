@@ -26,8 +26,7 @@ const (
 var log *zap.SugaredLogger
 
 type YAMLConfSwd struct {
-	CtPath		string			`yaml:"ct-path"`
-	Addr		string			`yaml:"address"`
+	Port		int			`yaml:"port"`
 }
 
 type YAMLConfSources struct {

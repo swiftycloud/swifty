@@ -113,7 +113,7 @@ func swk8sRemove(conf *YAMLConf, fn *FunctionDesc, fi *FnInst) error {
 	return nil
 }
 
-func swk8sGenEnvVar(fn *FunctionDesc, fi *FnInst, wdaddr string, wd_port int32, secret *v1.Secret) []v1.EnvVar {
+func swk8sGenEnvVar(fn *FunctionDesc, fi *FnInst, wd_port int, secret *v1.Secret) []v1.EnvVar {
 	var s []v1.EnvVar
 
 	for _, v := range fn.Code.Env {
@@ -130,11 +130,6 @@ func swk8sGenEnvVar(fn *FunctionDesc, fi *FnInst, wdaddr string, wd_port int32, 
 			Name:	"SWD_FUNCTION_DESC",
 			Value:	genFunctionDescJSON(fn, fi), })
 
-	if wdaddr != "" {
-		s = append(s, v1.EnvVar{
-				Name:	"SWD_ADDR",
-				Value:	wdaddr, })
-	}
 	s = append(s, v1.EnvVar{
 			Name:	"SWD_PORT",
 			Value:	strconv.Itoa(int(wd_port)), })
@@ -271,10 +266,7 @@ func swk8sUpdate(conf *YAMLConf, fn *FunctionDesc) error {
 }
 
 func swk8sRun(conf *YAMLConf, fn *FunctionDesc, fi *FnInst) error {
-	var hostnw bool = false
 	var err error
-
-	var ctPorts []v1.ContainerPort
 
 	depname := fi.DepName()
 	log.Debugf("Start %s deployment for %s", depname, fn.SwoId.Str())
@@ -293,23 +285,6 @@ func swk8sRun(conf *YAMLConf, fn *FunctionDesc, fi *FnInst) error {
 		return err
 	}
 
-	wdaddr := conf.Wdog.Addr
-	wd_host, wd_port := swy.GetIPPort(conf.Wdog.Addr)
-	if wd_host != "" {
-		conf.Wdog.Addr = swy.MakeIPPort(wd_host, wd_port + 1)
-		log.Debugf("conf.Wdog.Addr %s -> %s", wdaddr, conf.Wdog.Addr)
-		hostnw = true
-	} else {
-		wdaddr = ""
-	}
-
-	if hostnw == true {
-		ctPorts = append(ctPorts,
-				v1.ContainerPort{
-					ContainerPort: wd_port,
-				})
-	}
-
 	mem_max := fmt.Sprintf("%dMi", fn.Size.Mem)
 	mem_min := fmt.Sprintf("%dMi", fn.Size.Mem / 2)
 
@@ -324,7 +299,7 @@ func swk8sRun(conf *YAMLConf, fn *FunctionDesc, fi *FnInst) error {
 		},
 	}
 
-	envs := swk8sGenEnvVar(fn, fi, wdaddr, wd_port, secret)
+	envs := swk8sGenEnvVar(fn, fi, conf.Wdog.Port, secret)
 
 	podspec := v1.PodTemplateSpec{
 		ObjectMeta:	v1.ObjectMeta {
@@ -350,13 +325,11 @@ func swk8sRun(conf *YAMLConf, fn *FunctionDesc, fi *FnInst) error {
 					},
 				},
 			},
-			HostNetwork:	hostnw,
+			HostNetwork:	false,
 			Containers:	[]v1.Container{
 				{
 					Name:		fn.Name,
 					Image:		img,
-					Command:	[]string{conf.Wdog.CtPath},
-					Ports:		ctPorts,
 					Env:		envs,
 					VolumeMounts:	[]v1.VolumeMount{
 						{

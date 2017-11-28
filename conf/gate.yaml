@@ -52,7 +52,7 @@ runtime:
                 nodejs: "swifty/nodejs"
 wdog:
         ct-path: "/usr/bin/swy-wdog"
-        address: ":8687"
+        port: 8687
 kubernetes:
         config-path: conf/kubeconfig
         max-replicas: 32
