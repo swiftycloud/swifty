@@ -36,6 +36,8 @@ def add_fn(name, lang, mw = []):
 		cmd += [ "-mw", ",".join(mw) ]
 	swyrun(cmd)
 
+        return wait_fn(name)
+
 def add_mw(typ, name):
 	swyrun([ "madd", name, typ ])
 
@@ -73,8 +75,7 @@ def run_test(fname):
 		print("====== FAIL")
 
 def helloworld():
-	add_fn("helloworld", "python")
-	inf = wait_fn("helloworld")
+	inf = add_fn("helloworld", "python")
 	ret = run_fn(inf, {'name': 'foo'})
 	del_fn("helloworld")
 	print(ret)
@@ -83,8 +84,7 @@ def helloworld():
 def pgsql():
 	ok = False
 	add_mw("postgres", "pgtst")
-	add_fn("pgsql", "python", mw = [ "pgtst" ])
-	inf = wait_fn("pgsql")
+	inf = add_fn("pgsql", "python", mw = [ "pgtst" ])
 	ret = run_fn(inf, {'dbname': 'pgtst', 'action': 'create'})
 	print(ret)
 	if ret.get('res', '') == 'done':
@@ -100,12 +100,29 @@ def pgsql():
 	del_mw("pgtst")
 	return ok
 
+def mongo():
+	ok = False
+	add_mw("mongo", "mgotst")
+	inf = add_fn("mongo", "python", mw = [ "mgotst" ])
+	cookie = randstr()
+	ret = run_fn(inf, {'dbname': 'mgotst', 'collection': 'tstcol', 'action': 'insert', 'key': 'foo', 'val': cookie })
+	print(ret)
+	if ret.get('res', '') == 'done':
+		ret = run_fn(inf, {'dbname': 'mgotst', 'collection': 'tstcol', 'action': 'select', 'key': 'foo' })
+		print(ret)
+		if ret.get('res', '') == cookie:
+			ok = True
+	del_fn("mongo")
+	del_mw("mgotst")
+	return ok
+
 def checkempty():
 	fns = list_fn()
 	print(fns)
 	return len(fns) == 0
 
 
-run_test(helloworld)
+#run_test(helloworld)
 #run_test(pgsql)
+#run_test(mongo)
 run_test(checkempty)

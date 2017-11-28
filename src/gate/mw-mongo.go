@@ -84,7 +84,7 @@ func FiniMongo(conf *YAMLConfMw, mwd *MwareDesc) error {
 }
 
 func GetEnvMongo(conf *YAMLConfMw, mwd *MwareDesc) ([][2]string) {
-	var mgs DBSettings
+	var mgs MGOSetting
 	var envs [][2]string
 	var err error
 
