@@ -27,7 +27,7 @@ func doRun(fi *FnInst, event string, args []string) (int, string, error) {
 		goto out
 	}
 
-	if link.NumRS == 0 {
+	if link.CntRS == 0 {
 		err = fmt.Errorf("No available pods found")
 		goto out
 	}
