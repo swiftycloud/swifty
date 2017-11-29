@@ -80,7 +80,7 @@ swy-wdog: $(go-wdog-y) .FORCE
 	$(Q) $(GO) $(GO-BUILD-OPTS) -o $@ $(go-wdog-y)
 all-y += swy-wdog
 
-go-ctl-y	+= src/ctl/main.go
+go-ctl-y	+= src/tools/ctl.go
 
 swyctl: $(go-ctl-y) .FORCE
 	$(call msg-gen,$@)
