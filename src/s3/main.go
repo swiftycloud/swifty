@@ -347,6 +347,10 @@ func main() {
 			"no-secrets",
 				false,
 				"disable secrets engine")
+	flag.Int64Var(&cachedObjSize,
+			"cached-obj-size",
+				S3StorageSizePerObj,
+				"object size in bytes to put into cache")
 	flag.StringVar(&dbPass,
 			"db-pass",
 				"",
@@ -363,6 +367,12 @@ func main() {
 	}
 
 	log.Debugf("config: %v", &conf)
+
+	if cachedObjSize > S3StorageSizePerObj {
+		log.Errorf("Caching more than %d bytes is not allowed",
+				S3StorageSizePerObj)
+		return
+	}
 
 	if secretsDisabled {
 		if dbPass == "" {

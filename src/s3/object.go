@@ -27,6 +27,8 @@ var ObjectAcls = []string {
 	S3ObjectAclBucketOwnerFullControl,
 }
 
+var cachedObjSize int64
+
 type S3ObjectData struct {
 	ObjID				bson.ObjectId	`bson:"_id,omitempty"`
 	NextObjID			bson.ObjectId	`bson:"next-id,omitempty"`
@@ -153,7 +155,7 @@ func s3CommitObject(bucket *S3Bucket, object *S3Object, data []byte) error {
 
 	size = int64(len(data))
 
-	if radosDisabled || size <= S3StorageSizePerObj {
+	if radosDisabled || size <= cachedObjSize {
 		objd := S3ObjectData{
 			ObjID:		bson.NewObjectId(),
 			BucketObjID:	bucket.ObjID,
@@ -162,7 +164,7 @@ func s3CommitObject(bucket *S3Bucket, object *S3Object, data []byte) error {
 			Data:		data,
 		}
 
-		if objd.Size > S3StorageSizePerObj {
+		if objd.Size > cachedObjSize {
 			log.Errorf("s3: Too big object to store %d", objd.Size)
 			err = fmt.Errorf("s3: Object is too big")
 			goto out
@@ -235,7 +237,7 @@ func s3DeleteObject(akey *S3AccessKey, bucket *S3Bucket, object *S3Object) error
 		return err
 	}
 
-	if radosDisabled || objectFound.Size <= S3StorageSizePerObj {
+	if radosDisabled || objectFound.Size <= cachedObjSize {
 		objdFound, err = objdFound.dbFind(objectFound)
 		if err != nil {
 			if err == mgo.ErrNotFound {
@@ -303,7 +305,7 @@ func s3ReadObject(akey *S3AccessKey, bucket *S3Bucket, object *S3Object) ([]byte
 		return nil, err
 	}
 
-	if radosDisabled || objectFound.Size <= S3StorageSizePerObj {
+	if radosDisabled || objectFound.Size <= cachedObjSize {
 		objdFound, err = objdFound.dbFind(objectFound)
 		if err != nil {
 			if err == mgo.ErrNotFound {
