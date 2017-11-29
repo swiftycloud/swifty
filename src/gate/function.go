@@ -137,10 +137,18 @@ func (fn *FunctionDesc) InstBuild() *FnInst {
 }
 
 func genFunctionDescJSON(fn *FunctionDesc, fi *FnInst) string {
+	var cmd []string
+	if fi.Build {
+		cmd = RtBuildCmd(&fn.Code)
+	} else {
+		cmd = RtRunCmd(&fn.Code)
+	}
+
 	jdata, _ := json.Marshal(&swyapi.SwdFunctionDesc{
 				Dir:		RtWdir(&fn.Code, fi.Build),
 				PodToken:	fn.Cookie,
 				Timeout:	fn.Size.Tmo,
+				Command:	cmd,
 			})
 
 	return string(jdata[:])

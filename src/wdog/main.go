@@ -59,8 +59,9 @@ func doRun() {
 		stdout := new(bytes.Buffer)
 		stderr := new(bytes.Buffer)
 
-		run := req.Params.Args[0]
-		args := req.Params.Args[1:]
+		command := append(function.Command, req.Params.Args...)
+		run := command[0]
+		args := command[1:]
 
 		log.Debugf("Exec %s args %v (tmo %d)", run, args, req.Timeout)
 

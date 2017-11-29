@@ -80,7 +80,7 @@ func buildFunction(fn *FunctionDesc) error {
 		goto out
 	}
 
-	code, _, err = talkToLink(link, fn.Cookie, "build", RtBuildCmd(&fn.Code))
+	code, _, err = talkToLink(link, fn.Cookie, "build", []string{})
 	log.Debugf("build %s finished", fn.SwoId.Str())
 	logSaveEvent(fn, "built", "")
 	if err != nil {

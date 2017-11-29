@@ -114,6 +114,7 @@ type BalancerLink struct {
 	Port		uint		`bson:"port"`
 	NumRS		uint		`bson:"numrs"`
 	CntRS		uint		`bson:"cntrs"`
+	Public		bool		`bson:"public"`
 }
 
 func (link *BalancerLink) VIP() string {
@@ -277,7 +278,7 @@ func BalancerDelete(depname string) (error) {
 	return nil
 }
 
-func BalancerCreate(cookie, depname string, numrs uint) (error) {
+func BalancerCreate(cookie, depname string, numrs uint, public bool) (error) {
 	var err error
 
 	resp := make(chan *LocalIp)
@@ -294,6 +295,7 @@ func BalancerCreate(cookie, depname string, numrs uint) (error) {
 		DepName: depname,
 		FnId:	 cookie,
 		NumRS:	 numrs,
+		Public:	 public,
 	}
 
 	err = balancerServiceAdd(lip)

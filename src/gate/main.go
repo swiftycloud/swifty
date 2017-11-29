@@ -429,25 +429,26 @@ func handleFunctionCall(w http.ResponseWriter, r *http.Request) {
 	var arg_map string
 	var retjson string
 	var sopq *statsOpaque
+	var err error
 
-	vars := mux.Vars(r)
-	fnId := vars["fnid"]
+	fnId := mux.Vars(r)["fnid"]
 
-	fn, err := dbFuncFindByCookie(fnId)
-	if err != nil {
+	code := http.StatusServiceUnavailable
+	link := dbBalancerLinkFindByCookie(fnId)
+	if link == nil {
+		err = errors.New("No such function")
 		goto out
 	}
-
-	if !fnCallable(&fn) {
-		err = errors.New("Function is not ready")
+	if !link.Public {
+		err = errors.New("No API for function")
 		goto out
 	}
 
 	arg_map = makeArgMap(r)
-
 	sopq = statsStart(fnId)
 
-	_, retjson, err = doRun(fn.Cookie, "run", append(RtRunCmd(&fn.Code), arg_map))
+	code = http.StatusInternalServerError
+	_, retjson, err = talkToLink(link, fnId, "run", []string{arg_map})
 	if err != nil {
 		goto out
 	}
@@ -460,7 +461,7 @@ func handleFunctionCall(w http.ResponseWriter, r *http.Request) {
 	return
 
 out:
-	http.Error(w, err.Error(), http.StatusBadRequest)
+	http.Error(w, err.Error(), code)
 }
 
 func handleFunctionRun(w http.ResponseWriter, r *http.Request, tennant string) error {
@@ -487,7 +488,7 @@ func handleFunctionRun(w http.ResponseWriter, r *http.Request, tennant string) e
 
 	sopq = statsStart(fn.Cookie)
 
-	fn_code, retjson, err = doRun(fn.Cookie, "run", append(RtRunCmd(&fn.Code), params.Args...))
+	fn_code, retjson, err = doRun(fn.Cookie, "run", params.Args)
 	if err != nil {
 		goto out
 	}
