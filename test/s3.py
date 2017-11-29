@@ -39,5 +39,5 @@ if response['ContentLength'] > 0:
     else:
         print("FAIL: expected %s but got %s" % (object_body, body))
 
-#s3.delete_object(Bucket = bucket_name, Key = object_name)
-#s3.delete_object(Bucket = bucket_name, Key = object_name)
+s3.delete_object(Bucket = bucket_name, Key = object_name)
+s3.delete_bucket(Bucket = bucket_name)
