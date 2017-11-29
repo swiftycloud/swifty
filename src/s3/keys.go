@@ -14,7 +14,8 @@ type S3AccessKey struct {
 }
 
 const (
-	S3KeyKindAccessKey		= 1
+	S3KeyKindUserAccessKey		= 1
+	S3KeyKindAdminAccessKey		= 2
 
 	S3KeyStatusInActive		= 0
 	S3KeyStatusActive		= 1
@@ -104,13 +105,13 @@ func dbLookupAccessKey(AccessKeyId string) (*S3AccessKey, *S3Key, error) {
 	return nil, nil, nil
 }
 
-func dbInsertAccessKey(AccessKeyID, AccessKeySecret string) (*S3AccessKey, *S3Key, error) {
+func dbInsertAccessKey(AccessKeyID, AccessKeySecret string, Kind uint32) (*S3AccessKey, *S3Key, error) {
 	var err error
 
 	key := S3Key {
 		ObjID:			bson.NewObjectId(),
 		KeyObjID:		bson.NewObjectId(),
-		Kind:			S3KeyKindAccessKey,
+		Kind:			Kind,
 		Status:			S3KeyStatusActive,
 	}
 
