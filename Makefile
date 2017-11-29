@@ -85,7 +85,14 @@ go-ctl-y	+= src/tools/ctl.go
 swyctl: $(go-ctl-y) .FORCE
 	$(call msg-gen,$@)
 	$(Q) $(GO) $(GO-BUILD-OPTS) -o $@ $(go-ctl-y)
-all-y += swyctl
+
+go-sg-y		+= src/tools/sg.go
+
+swysg: $(go-sg-y) .FORCE
+	$(call msg-gen,$@)
+	$(Q) $(GO) $(GO-BUILD-OPTS) -o $@ $(go-sg-y)
+
+all-y += swyctl swysg
 
 go-pgrest-y	+= src/pgrest/main.go
 
