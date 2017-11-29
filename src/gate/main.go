@@ -395,7 +395,6 @@ func handleFunctionLogs(w http.ResponseWriter, r *http.Request, tennant string) 
 
 	for _, log := range logs {
 		resp = append(resp, swyapi.FunctionLogEntry{
-				Commit: log.Commit,
 				Event: log.Event,
 				Ts: log.Time.String(),
 				Text: log.Text,

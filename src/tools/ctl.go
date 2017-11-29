@@ -278,7 +278,7 @@ func show_logs(project string, args []string, opts [8]string) {
 		swyapi.FunctionID{ Project: project, FuncName: args[0], }, &res)
 
 	for _, le := range res {
-		fmt.Printf("%s %s/%s: %s\n", le.Ts, le.Commit[:8], le.Event, le.Text)
+		fmt.Printf("%36s%8s: %s\n", le.Ts, le.Event, le.Text)
 	}
 }
 

@@ -20,8 +20,7 @@ const (
 )
 
 type DBLogRec struct {
-	SwoId				`bson:",inline"`
-	Commit		string		`bson:"commit"`
+	FnId		string		`bson:"fnid"`
 	Event		string		`bson:"event"`
 	Time		time.Time	`bson:"ts"`
 	Text		string		`bson:"text"`
@@ -254,8 +253,7 @@ func logSaveResult(fn *FunctionDesc, event, stdout, stderr string) {
 	c := dbSession.DB(dbState).C(DBColLogs)
 	text := fmt.Sprintf("out: [%s], err: [%s]", stdout, stderr)
 	c.Insert(DBLogRec{
-		SwoId:		fn.SwoId,
-		Commit:		fn.Src.Commit,
+		FnId:		fn.Cookie,
 		Event:		event,
 		Time:		time.Now(),
 		Text:		text,
@@ -265,8 +263,7 @@ func logSaveResult(fn *FunctionDesc, event, stdout, stderr string) {
 func logSaveEvent(fn *FunctionDesc, event, text string) {
 	c := dbSession.DB(dbState).C(DBColLogs)
 	c.Insert(DBLogRec{
-		SwoId:		fn.SwoId,
-		Commit:		fn.Src.Commit,
+		FnId:		fn.Cookie,
 		Event:		event,
 		Time:		time.Now(),
 		Text:		text,
@@ -276,20 +273,20 @@ func logSaveEvent(fn *FunctionDesc, event, text string) {
 func logGetFor(id *SwoId) ([]DBLogRec, error) {
 	var logs []DBLogRec
 	c := dbSession.DB(dbState).C(DBColLogs)
-	err := c.Find(bson.M{"tennant": id.Tennant, "project": id.Project, "name": id.Name}).All(&logs)
+	err := c.Find(bson.M{"fnid": id.Cookie()}).All(&logs)
 	return logs, err
 }
 
 func logGetCalls(id *SwoId) (int, error) {
 	c := dbSession.DB(dbState).C(DBColLogs)
-	return c.Find(bson.M{"tennant": id.Tennant, "project": id.Project, "name": id.Name, "event": "run"}).Count()
+	return c.Find(bson.M{"fnid": id.Cookie, "event": "run"}).Count()
 }
 
 func logRemove(fn *FunctionDesc) {
 	c := dbSession.DB(dbState).C(DBColLogs)
-	_, err := c.RemoveAll(bson.M{"tennant": fn.Tennant, "project": fn.Project, "name": fn.Name})
+	_, err := c.RemoveAll(bson.M{"fnid": fn.Cookie})
 	if err != nil {
-		log.Errorf("logs %s.%s remove error: %s", fn.Project, fn.Name, err.Error())
+		log.Errorf("logs %s remove error: %s", fn.SwoId.Str(), err.Error())
 	}
 }
 

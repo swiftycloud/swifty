@@ -132,7 +132,6 @@ type ProjectItem struct {
 }
 
 type FunctionLogEntry struct {
-	Commit		string			`json:"commit"`
 	Event		string			`json:"event"`
 	Ts		string			`json:"ts"`
 	Text		string			`json:"text"`
