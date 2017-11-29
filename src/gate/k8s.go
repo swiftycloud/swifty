@@ -339,7 +339,7 @@ func swk8sRun(conf *YAMLConf, fn *FunctionDesc, fi *FnInst) error {
 
 	nr_replicas := fi.Replicas()
 
-	err = BalancerCreate(depname, uint(nr_replicas))
+	err = BalancerCreate(fn.Cookie, depname, uint(nr_replicas))
 	if err != nil {
 		log.Errorf("Can't create balancer %s for %s: %s",
 				depname, fn.SwoId.Str(), err.Error())

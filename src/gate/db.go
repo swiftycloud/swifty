@@ -424,21 +424,28 @@ func dbBalancerRefDecRS(link *BalancerLink) (error) {
 		bson.M{"$inc": bson.M{"cntrs": -1}})
 }
 
-func dbBalancerLinkFind(depname string) (*BalancerLink) {
+func dbBalancerLinkFind(q bson.M) (*BalancerLink) {
 	var link BalancerLink
 
 	c := dbSession.DB(dbState).C(DBColBalancer)
-	err := c.Find(bson.M{"depname": depname}).One(&link)
+	err := c.Find(q).One(&link)
 	if err != nil {
 		if err == mgo.ErrNotFound {
 			return nil
 		}
-		log.Errorf("balancer-db: Can't find link %s: %s",
-				depname, err.Error())
+		log.Errorf("balancer-db: Can't find link: %s", err.Error())
 		return nil
 	}
 
 	return &link
+}
+
+func dbBalancerLinkFindByDepname(depname string) (*BalancerLink) {
+	return dbBalancerLinkFind(bson.M{"depname": depname})
+}
+
+func dbBalancerLinkFindByCookie(cookie string) (*BalancerLink) {
+	return dbBalancerLinkFind(bson.M{"fnid": cookie})
 }
 
 func dbBalancerLinkFindAll() ([]BalancerLink, error) {
@@ -458,13 +465,7 @@ func dbBalancerLinkFindAll() ([]BalancerLink, error) {
 
 func dbBalancerLinkAdd(link *BalancerLink) (error) {
 	c := dbSession.DB(dbState).C(DBColBalancer)
-	err := c.Insert(bson.M{
-			"depname":	link.DepName,
-			"addr":		link.Addr,
-			"port":		link.Port,
-			"numrs":	link.NumRS,
-			"cntrs":	link.CntRS,
-		})
+	err := c.Insert(link)
 	if err != nil {
 		log.Errorf("balancer-db: Can't insert link %v: %s",
 				link, err.Error())

@@ -21,7 +21,7 @@ func doRun(fi *FnInst, event string, args []string) (int, string, error) {
 	var resp_body []byte
 	var err error
 
-	link = dbBalancerLinkFind(fi.DepName())
+	link = dbBalancerLinkFindByCookie(fi.fn.Cookie)
 	if link == nil {
 		err = fmt.Errorf("Can't find balancer link %s", fi.DepName())
 		goto out

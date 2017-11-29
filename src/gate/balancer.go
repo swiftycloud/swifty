@@ -108,6 +108,7 @@ type BalancerRS struct {
 
 type BalancerLink struct {
 	ObjID		bson.ObjectId	`bson:"_id,omitempty"`
+	FnId		string		`bson:"fnid"`
 	DepName		string		`bson:"depname"`
 	Addr		string		`bson:"addr"`
 	Port		uint		`bson:"port"`
@@ -180,7 +181,7 @@ func BalancerPodDelAll(depname string) (error) {
 	var rs []BalancerRS
 	var err error
 
-	link = dbBalancerLinkFind(depname)
+	link = dbBalancerLinkFindByDepname(depname)
 	if link != nil {
 		rs = dbBalancerPodFindAll(link)
 		if rs != nil {
@@ -206,7 +207,7 @@ func BalancerPodDel(depname, uid string) (error) {
 	var rs *BalancerRS
 	var err error
 
-	link = dbBalancerLinkFind(depname)
+	link = dbBalancerLinkFindByDepname(depname)
 	if link != nil {
 		rs = dbBalancerPodFind(link, uid)
 		if rs != nil {
@@ -228,7 +229,7 @@ func BalancerPodAdd(depname, uid, wdogaddr string) (error) {
 	var link *BalancerLink
 	var err error
 
-	link = dbBalancerLinkFind(depname)
+	link = dbBalancerLinkFindByDepname(depname)
 	if link != nil {
 		err = dbBalancerPodAdd(link, uid, wdogaddr)
 		if err != nil {
@@ -253,7 +254,7 @@ func BalancerDelete(depname string) (error) {
 	var link *BalancerLink
 	var err error
 
-	link = dbBalancerLinkFind(depname)
+	link = dbBalancerLinkFindByDepname(depname)
 	if link != nil {
 		lip := link.lip()
 
@@ -276,7 +277,7 @@ func BalancerDelete(depname string) (error) {
 	return nil
 }
 
-func BalancerCreate(depname string, numrs uint) (error) {
+func BalancerCreate(cookie, depname string, numrs uint) (error) {
 	var err error
 
 	resp := make(chan *LocalIp)
@@ -291,6 +292,7 @@ func BalancerCreate(depname string, numrs uint) (error) {
 		Addr:	 lip.Addr,
 		Port:	 lip.Port,
 		DepName: depname,
+		FnId:	 cookie,
 		NumRS:	 numrs,
 	}
 
