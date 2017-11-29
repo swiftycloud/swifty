@@ -330,6 +330,8 @@ func handleObject(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	var secretsDisabled bool
+	var dbPass string
 	var config_path string
 	var err error
 
@@ -341,6 +343,14 @@ func main() {
 			"no-rados",
 				false,
 				"disable rados")
+	flag.BoolVar(&secretsDisabled,
+			"no-secrets",
+				false,
+				"disable secrets engine")
+	flag.StringVar(&dbPass,
+			"db-pass",
+				"",
+				"database password")
 	flag.Parse()
 
 	if config_path != "" {
@@ -354,10 +364,20 @@ func main() {
 
 	log.Debugf("config: %v", &conf)
 
-	s3Secrets, err = swy.ReadSecrets("s3")
-	if err != nil {
-		log.Errorf("Can't read gate secrets")
-		return
+	if secretsDisabled {
+		if dbPass == "" {
+			log.Errorf("Provide db pass")
+			return
+		}
+		s3Secrets = map[string]string {
+			conf.DB.Pass: dbPass,
+		}
+	} else {
+		s3Secrets, err = swy.ReadSecrets("s3")
+		if err != nil {
+			log.Errorf("Can't read gate secrets")
+			return
+		}
 	}
 
 	r := mux.NewRouter()
