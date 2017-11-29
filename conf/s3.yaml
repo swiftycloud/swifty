@@ -8,4 +8,4 @@ daemon:
         address: "127.0.0.1:8787"
         loglevel: "debug"
 ceph:
-        config-path: src/conf/ceph.conf
+        config-path: src/ceph.conf
