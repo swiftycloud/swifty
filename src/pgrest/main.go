@@ -4,6 +4,7 @@ import (
 	"go.uber.org/zap"
 	"net/http"
 	"errors"
+	"strings"
 	"bytes"
 	"os/exec"
 	"flag"
@@ -12,7 +13,7 @@ import (
 	"../common"
 )
 
-var pgrSecrets map[string]string
+var pgrTokens []string
 
 type YAMLConf struct {
 	Addr	string		`yaml:"address"`
@@ -120,6 +121,15 @@ func pgDrop(inf *swyapi.PgRequest) error {
 	return err
 }
 
+func checkToken(token string) bool {
+	for _, vt := range pgrTokens {
+		if token == vt {
+			return true
+		}
+	}
+	return false
+}
+
 func handleRequest(w http.ResponseWriter, r *http.Request,
 		handler func (*swyapi.PgRequest) error) {
 	defer r.Body.Close()
@@ -134,7 +144,7 @@ func handleRequest(w http.ResponseWriter, r *http.Request,
 	}
 
 	code = http.StatusUnauthorized
-	if params.Token != pgrSecrets[conf.Token] {
+	if !checkToken(params.Token) {
 		err = errors.New("Not authorized")
 		goto out
 	}
@@ -162,6 +172,7 @@ var conf YAMLConf
 func main() {
 	var conf_path string
 	var err error
+	var pgrSecrets map[string]string
 
 	swy.InitLogger(log)
 
@@ -177,6 +188,8 @@ func main() {
 		log.Errorf("Can't read gate secrets")
 		return
 	}
+
+	pgrTokens = strings.Split(pgrSecrets[conf.Token], ":")
 
 	http.HandleFunc("/create", handleCreate)
 	http.HandleFunc("/drop", handleDrop)
