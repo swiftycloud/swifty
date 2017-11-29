@@ -12,20 +12,22 @@ import (
 	"../common"
 )
 
-func doRun(fi *FnInst, event string, args []string) (int, string, error) {
-	log.Debugf("RUN %s(%s)", fi.fn.SwoId.Str(), strings.Join(args, ","))
+func doRun(cookie, event string, args []string) (int, string, error) {
+	link := dbBalancerLinkFindByCookie(cookie)
+	if link == nil {
+		return -1, "", fmt.Errorf("Can't find balancer for %s", cookie)
+	}
+
+	return talkToLink(link, cookie, event, args)
+}
+
+func talkToLink(link *BalancerLink, cookie, event string, args []string) (int, string, error) {
+	log.Debugf("RUN %s(%s)", cookie, strings.Join(args, ","))
 
 	var wd_result swyapi.SwdFunctionRunResult
 	var resp *http.Response
-	var link *BalancerLink
 	var resp_body []byte
 	var err error
-
-	link = dbBalancerLinkFindByCookie(fi.fn.Cookie)
-	if link == nil {
-		err = fmt.Errorf("Can't find balancer link %s", fi.DepName())
-		goto out
-	}
 
 	if link.CntRS == 0 {
 		err = fmt.Errorf("No available pods found")
@@ -38,7 +40,7 @@ func doRun(fi *FnInst, event string, args []string) (int, string, error) {
 				Timeout: 120,
 			},
 			&swyapi.SwdFunctionRun{
-				PodToken:	fi.fn.Cookie,
+				PodToken:	cookie,
 				Args:		args,
 			})
 	if err != nil {
@@ -58,8 +60,8 @@ func doRun(fi *FnInst, event string, args []string) (int, string, error) {
 		goto out
 	}
 
-	logSaveResult(fi.fn, event, wd_result.Stdout, wd_result.Stderr)
-	log.Debugf("RETurn %s: %d out[%s] err[%s]", fi.fn.SwoId.Str(),
+	logSaveResult(cookie, event, wd_result.Stdout, wd_result.Stderr)
+	log.Debugf("RETurn %s: %d out[%s] err[%s]", cookie,
 			wd_result.Code, wd_result.Stdout, wd_result.Stderr)
 	return wd_result.Code, wd_result.Return, nil
 
@@ -69,10 +71,16 @@ out:
 
 func buildFunction(fn *FunctionDesc) error {
 	var err error
-	var orig_state int
+	var code, orig_state int
 
 	log.Debugf("build RUN %s", fn.SwoId.Str())
-	code, _, err := doRun(fn.InstBuild(), "build", RtBuildCmd(&fn.Code))
+	link := dbBalancerLinkFindByDepname(fn.InstBuild().DepName())
+	if link == nil {
+		err = fmt.Errorf("Can't find build balancer for %s", fn.SwoId.Str())
+		goto out
+	}
+
+	code, _, err = talkToLink(link, fn.Cookie, "build", RtBuildCmd(&fn.Code))
 	log.Debugf("build %s finished", fn.SwoId.Str())
 	logSaveEvent(fn, "built", "")
 	if err != nil {
@@ -123,7 +131,7 @@ out_nok8s:
 
 func runFunctionOnce(fn *FunctionDesc) {
 	log.Debugf("oneshot RUN for %s", fn.SwoId.Str())
-	doRun(fn.Inst(), "oneshot", RtRunCmd(&fn.Code))
+	doRun(fn.Cookie, "oneshot", RtRunCmd(&fn.Code))
 	log.Debugf("oneshor %s finished", fn.SwoId.Str())
 
 	swk8sRemove(&conf, fn, fn.Inst())

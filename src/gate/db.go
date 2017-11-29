@@ -249,11 +249,11 @@ func dbFuncRemove(fn *FunctionDesc) {
 	c.Remove(bson.M{"_id": fn.ObjID});
 }
 
-func logSaveResult(fn *FunctionDesc, event, stdout, stderr string) {
+func logSaveResult(fnCookie, event, stdout, stderr string) {
 	c := dbSession.DB(dbState).C(DBColLogs)
 	text := fmt.Sprintf("out: [%s], err: [%s]", stdout, stderr)
 	c.Insert(DBLogRec{
-		FnId:		fn.Cookie,
+		FnId:		fnCookie,
 		Event:		event,
 		Time:		time.Now(),
 		Text:		text,

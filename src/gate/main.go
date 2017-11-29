@@ -447,7 +447,7 @@ func handleFunctionCall(w http.ResponseWriter, r *http.Request) {
 
 	sopq = statsStart(fnId)
 
-	_, retjson, err = doRun(fn.Inst(), "run", append(RtRunCmd(&fn.Code), arg_map))
+	_, retjson, err = doRun(fn.Cookie, "run", append(RtRunCmd(&fn.Code), arg_map))
 	if err != nil {
 		goto out
 	}
@@ -487,7 +487,7 @@ func handleFunctionRun(w http.ResponseWriter, r *http.Request, tennant string) e
 
 	sopq = statsStart(fn.Cookie)
 
-	fn_code, retjson, err = doRun(fn.Inst(), "run", append(RtRunCmd(&fn.Code), params.Args...))
+	fn_code, retjson, err = doRun(fn.Cookie, "run", append(RtRunCmd(&fn.Code), params.Args...))
 	if err != nil {
 		goto out
 	}
