@@ -329,6 +329,15 @@ func handleObject(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+func handleAdmin(w http.ResponseWriter, r *http.Request) {
+	if s3VerifyAdmin(r) != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
 func main() {
 	var secretsDisabled bool
 	var dbPass string
@@ -395,8 +404,12 @@ func main() {
 	match_bucket := "/{BucketName:[a-zA-Z0-9-.]*}"
 	match_object := "/{BucketName:[a-zA-Z0-9-.]+}/{ObjName:[a-zA-Z0-9-.]+}"
 
+	// Servise operations
 	r.HandleFunc(match_bucket,	handleBucket)
 	r.HandleFunc(match_object,	handleObject)
+
+	// Admin operations
+	r.HandleFunc("/v1/api/admin",	handleAdmin)
 
 	err = dbConnect(&conf)
 	if err != nil {
