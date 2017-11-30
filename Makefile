@@ -106,6 +106,7 @@ go-s3-y	+= src/s3/db.go
 go-s3-y	+= src/s3/bucket.go
 go-s3-y	+= src/s3/object.go
 go-s3-y	+= src/s3/s3.go
+go-s3-y	+= src/s3/error.go
 go-s3-y	+= src/s3/sign.go
 go-s3-y	+= src/s3/resp.go
 go-s3-y	+= src/s3/keys.go
