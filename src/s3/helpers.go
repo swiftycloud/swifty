@@ -22,15 +22,17 @@ func member(source, start_with, end_with string) string {
 	return ""
 }
 
-func HTTPMarshalXMLAndWrite(w http.ResponseWriter, data interface{}) error {
+func HTTPMarshalXMLAndWrite(w http.ResponseWriter, status int, data interface{}) error {
 	xdata, err := xml.Marshal(data)
 	if err != nil {
 		return err
 	}
 	w.Header().Set("Content-Type", "application/xml; charset=utf-8")
-	//w.Header().Set("X-Amz-Date", "20171124T152411Z")
-	//w.Header().Set("date", "20171124T152411Z")
-	w.WriteHeader(http.StatusOK)
+	w.WriteHeader(status)
 	w.Write(xdata)
 	return nil
+}
+
+func HTTPMarshalXMLAndWriteOK(w http.ResponseWriter, data interface{}) error {
+	return HTTPMarshalXMLAndWrite(w, http.StatusOK, data)
 }

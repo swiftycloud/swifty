@@ -165,7 +165,7 @@ func handleBucket(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		err = HTTPMarshalXMLAndWrite(w, objects)
+		err = HTTPMarshalXMLAndWriteOK(w, objects)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
