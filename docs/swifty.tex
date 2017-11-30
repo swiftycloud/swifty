@@ -44,17 +44,25 @@
 
 %
 % Setup document fonts
-\setmainfont{Open Sans}
-\setmonofont{Inconsolata}
+\setmainfont{Source Sans Pro}
+\setmonofont{Source Code Pro}
 
 % Listings font and settings
-\newfontfamily{\lstsansserif}{Inconsolata}
+\newfontfamily{\lstsansserif}{Source Code Pro}
 \lstset{
 	keepspaces=true,
 	backgroundcolor=\color{light-gray},
 	basicstyle=\lstsansserif,
 	breaklines=true,
 	breakatwhitespace=true,
+        framesep=10pt,
+        framexleftmargin=10pt,
+        frame=tb,
+        framerule=0pt,
+        xleftmargin=10pt,
+        xrightmargin=10pt,
+        aboveskip=10pt,
+        belowskip=5pt,
 }
 
 %
