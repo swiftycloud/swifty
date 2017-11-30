@@ -742,6 +742,66 @@ preferences: {}
 When running from \code{swifty} source code, all settings are present
 in \code{src/conf} directory.
 
+\section{Setting up \code{swy-s3} daemon}
+\label{sec:setup-swy-s3}
+
+%FIXME Describe complete setup
+
+Build \code{swy-s3}
+
+\begin{lstlisting}
+dnf -y install gcc librados2-devel librbd-devel
+go get "github.com/ceph/go-ceph/rados"
+make swy-s3
+\end{lstlisting}
+
+Provide config file \code{conf/s3.yaml}
+
+\begin{lstlisting}
+---
+db:
+        state: "swifty-s3"
+        address: "127.0.0.1:27017"
+        user: "swifty"
+        password: "MGOS3PASS"
+daemon:
+        address: "127.0.0.1:8787"
+        loglevel: "debug"
+ceph:
+        config-path: src/ceph.conf
+\end{lstlisting}
+
+Prepare backend database
+
+\begin{lstlisting}
+use swifty-s3
+db.createUser({user:"swifty", pwd:"1q2w3e", roles:[{role:"dbOwner",db:"swifty"}]})
+db.createCollection("S3Buckets")
+db.createCollection("S3Objects")
+db.createCollection("S3ObjectData")
+db.createCollection("S3Keys")
+db.createCollection("S3AccessKeys")
+db.S3AccessKeys.insert({"_id":ObjectId("5a16ccdbb3e8ee4bdf83da35"),
+	"key-id" : ObjectId("5a16ccd7b3e8ee4bdf83da34"),
+	"access-key-id" : "6DLA43X797XL2I42IJ33",
+	"access-key-secret" : "AJwz9vZpdnz6T5TqEDQOEFos6wxxCnW0qwLQeDcB"})
+db.S3Keys.insert({"_id":ObjectId("5a16ccd7b3e8ee4bdf83da34"),
+	"key-id" : ObjectId("5a16ccdbb3e8ee4bdf83da35"),
+	"kind" : 1, "status" : 1})
+\end{lstlisting}
+
+Run test (without Ceph rados support and without secrets)
+
+\begin{lstlisting}
+swy-s3 --conf conf/s3.yaml --no-rados --no-secrets --db-pass "1q2w3e"
+\end{lstlisting}
+
+and in another terminal
+
+\begin{lstlisting}
+python3 test/s3.py
+\end{lstlisting}
+
 \section{Create Docker images}
 \label{sec:setup-images}
 
