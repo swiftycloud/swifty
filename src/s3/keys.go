@@ -30,32 +30,50 @@ const (
 var AccessKeyLetters = []byte("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
 var SecretKeyLetters = []byte("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789")
 
-func genKey(length int, dict []byte) (string, error) {
+func genKey(length int, dict []byte) (string) {
 	idx := make([]byte, length)
 	pass:= make([]byte, length)
 	_, err := rand.Read(idx)
 	if err != nil {
-		return "", err
+		return ""
 	}
 
 	for i, j := range idx {
 		pass[i] = dict[int(j) % len(dict)]
 	}
 
-	return string(pass), nil
-}
-
-func genAccessKeyPair() (string, string) {
-	akey, _ := genKey(20, AccessKeyLetters)
-	skey, _ := genKey(40, SecretKeyLetters)
-
-	return akey, skey
+	return string(pass)
 }
 
 //
 // Keys operation should not report any errors,
 // for security reason.
 //
+
+func genNewAccessKey() (*S3AccessKey, error) {
+	akey := S3AccessKey {
+		ObjID:			bson.NewObjectId(),
+		AccessKeyID:		genKey(20, AccessKeyLetters),
+		AccessKeySecret:	genKey(40, SecretKeyLetters),
+		Status:			S3KeyStatusActive,
+		Namespace:		genKey(10, AccessKeyLetters),
+	}
+
+	if akey.AccessKeyID == "" ||
+		akey.AccessKeySecret == "" ||
+		akey.Namespace == "" {
+		return nil, fmt.Errorf("s3: Can't generate keys")
+	}
+
+	// The secret key will be encoded here
+	err := dbInsertAccessKey(&akey)
+	if err != nil {
+		return nil, err
+	}
+
+	log.Debugf("genNewAccessKey: akey %v", akey)
+	return &akey, nil
+}
 
 func (akey *S3AccessKey)BucketBID(bucket_name string) string {
 	/*
@@ -112,30 +130,24 @@ func dbLookupAccessKey(AccessKeyId string) (*S3AccessKey, error) {
 	return nil, fmt.Errorf("Access key %s is not active", AccessKeyId)
 }
 
-func dbInsertAccessKey(AccessKeyID, AccessKeySecret string) (*S3AccessKey, error) {
-	var err error
-
-	AccessKeySecret, err = swycrypt.EncryptString([]byte(s3Secrets[conf.SecKey]), AccessKeySecret)
+func dbInsertAccessKey(akey *S3AccessKey) (error) {
+	AccessKeySecret, err := swycrypt.EncryptString([]byte(s3Secrets[conf.SecKey]), akey.AccessKeySecret)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	akey := S3AccessKey {
-		ObjID:			bson.NewObjectId(),
-		AccessKeyID:		AccessKeyID,
-		AccessKeySecret:	AccessKeySecret,
-		Status:			S3KeyStatusActive,
-	}
+	akey_encoded := *akey
+	akey_encoded.AccessKeySecret = AccessKeySecret
 
-	err = dbSession.DB(dbName).C(DBColS3AccessKeys).Insert(&akey)
+	err = dbSession.DB(dbName).C(DBColS3AccessKeys).Insert(&akey_encoded)
 	if err != nil {
 		log.Errorf("dbInsertAccessKey: Can't insert akey %v: %s",
 				akey, err.Error())
-		return nil, err
+		return err
 	}
 
 	log.Debugf("dbInsertAccessKey: akey %v", akey)
-	return &akey, nil
+	return nil
 }
 
 func dbRemoveAccessKey(AccessKeyID string) (error) {
