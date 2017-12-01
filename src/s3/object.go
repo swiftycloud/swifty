@@ -42,7 +42,7 @@ type S3ObjectData struct {
 type S3Object struct {
 	ObjID				bson.ObjectId	`bson:"_id,omitempty"`
 	BucketObjID			bson.ObjectId	`bson:"bucket-id,omitempty"`
-	OID				string		`json:"oid" bson:"oid"`
+	BackendID			string		`json:"bid" bson:"bid"`
 	State				uint32		`json:"state" bson:"state"`
 	Name				string		`json:"name" bson:"name"`
 	Acl				string		`json:"acl" bson:"acl"`
@@ -70,8 +70,8 @@ func (objd *S3ObjectData)dbFind(object *S3Object) (*S3ObjectData, error) {
 	return &res, nil
 }
 
-func (object *S3Object)GenOID(akey *S3AccessKey, bucket *S3Bucket) string {
-	return bucket.GenOID(akey) + "-" + fmt.Sprintf("%d", object.Version) + "-" + object.Name
+func (object *S3Object)GenBackendId(akey *S3AccessKey, bucket *S3Bucket) string {
+	return bucket.GenBackendId(akey) + "-" + fmt.Sprintf("%d", object.Version) + "-" + object.Name
 }
 
 func (object *S3Object)GetName(akey *S3AccessKey, bucket *S3Bucket) string {
@@ -101,11 +101,11 @@ func (object *S3Object)dbSetState(state uint32) (error) {
 		)
 }
 
-func (object *S3Object)dbFindOID(akey *S3AccessKey, bucket *S3Bucket) (*S3Object, error) {
+func (object *S3Object)dbFindByBackendID(akey *S3AccessKey, bucket *S3Bucket) (*S3Object, error) {
 	var res S3Object
 
 	err := dbS3FindOne(
-			bson.M{"oid": object.GenOID(akey, bucket)},
+			bson.M{"bid": object.GenBackendId(akey, bucket)},
 			&res)
 	if err != nil {
 		return nil, err
@@ -118,34 +118,34 @@ func s3InsertObject(akey *S3AccessKey, bucket *S3Bucket, object *S3Object) (*S3B
 	var bucketFound *S3Bucket
 	var err error
 
-	bucketFound, err = bucket.dbFindOID(akey)
+	bucketFound, err = bucket.dbFindByBackendID(akey)
 	if err != nil {
 		log.Errorf("s3: Can't find bucket %s: %s",
-				bucket.GenOID(akey), err.Error())
+				bucket.GenBackendId(akey), err.Error())
 		return nil, nil, err
 	}
 
 	object.ObjID		= bson.NewObjectId()
 	object.BucketObjID	= bucketFound.ObjID
-	object.OID		= object.GenOID(akey, bucketFound)
+	object.BackendID	= object.GenBackendId(akey, bucketFound)
 	object.State		= S3StateNone
 
 	err = dbS3Insert(object)
 	if err != nil {
 		log.Errorf("s3: Can't insert object %s: %s",
-				object.OID, err.Error())
+				object.BackendID, err.Error())
 		return nil, nil, err
 	}
 
 	err = bucketFound.dbAddObj(object.Size)
 	if err != nil {
 		log.Errorf("s3: Can't +account object %s: %s",
-				object.OID, err.Error())
+				object.BackendID, err.Error())
 		object.dbRemove()
 		return nil, nil, err
 	}
 
-	log.Debugf("s3: Inserted object %s", object.OID)
+	log.Debugf("s3: Inserted object %s", object.BackendID)
 	return bucketFound, object, nil
 }
 
@@ -175,7 +175,7 @@ func s3CommitObject(bucket *S3Bucket, object *S3Object, data []byte) error {
 			goto out
 		}
 	} else {
-		err = radosWriteObject(bucket.OID, object.Name, data)
+		err = radosWriteObject(bucket.BackendID, object.Name, data)
 		if err != nil {
 			goto out
 		}
@@ -184,18 +184,18 @@ func s3CommitObject(bucket *S3Bucket, object *S3Object, data []byte) error {
 	err = object.dbSetState(S3StateActive)
 	if err != nil {
 		log.Errorf("s3: Can't activate object %s: %s",
-				object.OID, err.Error())
+				object.BackendID, err.Error())
 		goto out
 	}
 
-	log.Debugf("s3: Committed object %s", object.OID)
+	log.Debugf("s3: Committed object %s", object.BackendID)
 	return nil
 
 out:
 	err1 := bucket.dbDelObj(object.Size)
 	if err1 != nil {
 		log.Errorf("s3: Can't -account object %s: %s",
-				object.OID, err1.Error())
+				object.BackendID, err1.Error())
 	}
 	object.dbRemove()
 	return err
@@ -207,23 +207,23 @@ func s3DeleteObject(akey *S3AccessKey, bucket *S3Bucket, object *S3Object) error
 	var objectFound *S3Object
 	var err error
 
-	bucketFound, err = bucket.dbFindOID(akey)
+	bucketFound, err = bucket.dbFindByBackendID(akey)
 	if err != nil {
 		if err == mgo.ErrNotFound {
 			return nil
 		}
 		log.Errorf("s3: Can't find bucket %s: %s",
-				bucket.GenOID(akey), err.Error())
+				bucket.GenBackendId(akey), err.Error())
 		return err
 	}
 
-	objectFound, err = object.dbFindOID(akey, bucketFound)
+	objectFound, err = object.dbFindByBackendID(akey, bucketFound)
 	if err != nil {
 		if err == mgo.ErrNotFound {
 			return nil
 		}
 		log.Errorf("s3: Can't find object %s: %s",
-				object.GenOID(akey, bucket), err.Error())
+				object.GenBackendId(akey, bucket), err.Error())
 		return err
 	}
 
@@ -233,7 +233,7 @@ func s3DeleteObject(akey *S3AccessKey, bucket *S3Bucket, object *S3Object) error
 			return nil
 		}
 		log.Errorf("s3: Can't disable object %s: %s",
-				objectFound.OID, err.Error())
+				objectFound.BackendID, err.Error())
 		return err
 	}
 
@@ -244,17 +244,17 @@ func s3DeleteObject(akey *S3AccessKey, bucket *S3Bucket, object *S3Object) error
 				return nil
 			}
 			log.Errorf("s3: Can't find object stored %s: %s",
-					objectFound.OID, err.Error())
+					objectFound.BackendID, err.Error())
 			return err
 		}
 		err = objdFound.dbRemove()
 		if err != nil {
 			log.Errorf("s3: Can't delete object stored %s: %s",
-					objectFound.OID, err.Error())
+					objectFound.BackendID, err.Error())
 			return err
 		}
 	} else {
-		err = radosDeleteObject(bucketFound.OID, objectFound.Name)
+		err = radosDeleteObject(bucketFound.BackendID, objectFound.Name)
 		if err != nil {
 			return err
 		}
@@ -263,18 +263,18 @@ func s3DeleteObject(akey *S3AccessKey, bucket *S3Bucket, object *S3Object) error
 	err = bucketFound.dbDelObj(objectFound.Size)
 	if err != nil {
 		log.Errorf("s3: Can't -account object %s: %s",
-				objectFound.OID, err.Error())
+				objectFound.BackendID, err.Error())
 		return err
 	}
 
 	err = objectFound.dbRemove()
 	if err != nil {
 		log.Errorf("s3: Can't delete object %s: %s",
-				objectFound.OID, err.Error())
+				objectFound.BackendID, err.Error())
 		return err
 	}
 
-	log.Debugf("s3: Deleted object %s", objectFound.OID)
+	log.Debugf("s3: Deleted object %s", objectFound.BackendID)
 	return nil
 }
 
@@ -285,23 +285,23 @@ func s3ReadObject(akey *S3AccessKey, bucket *S3Bucket, object *S3Object) ([]byte
 	var res []byte
 	var err error
 
-	bucketFound, err = bucket.dbFindOID(akey)
+	bucketFound, err = bucket.dbFindByBackendID(akey)
 	if err != nil {
 		if err == mgo.ErrNotFound {
 			return nil, err
 		}
 		log.Errorf("s3: Can't find bucket %s: %s",
-				bucket.GenOID(akey), err.Error())
+				bucket.GenBackendId(akey), err.Error())
 		return nil, err
 	}
 
-	objectFound, err = object.dbFindOID(akey, bucketFound)
+	objectFound, err = object.dbFindByBackendID(akey, bucketFound)
 	if err != nil {
 		if err == mgo.ErrNotFound {
 			return nil, err
 		}
 		log.Errorf("s3: Can't find object %s: %s",
-				object.GenOID(akey, bucket), err.Error())
+				object.GenBackendId(akey, bucket), err.Error())
 		return nil, err
 	}
 
@@ -312,18 +312,18 @@ func s3ReadObject(akey *S3AccessKey, bucket *S3Bucket, object *S3Object) ([]byte
 				return nil, err
 			}
 			log.Errorf("s3: Can't find object stored %s: %s",
-					objectFound.OID, err.Error())
+					objectFound.BackendID, err.Error())
 			return nil, err
 		}
 		res = objdFound.Data
 	} else {
-		res, err = radosReadObject(bucketFound.OID, objectFound.Name,
+		res, err = radosReadObject(bucketFound.BackendID, objectFound.Name,
 						uint64(objectFound.Size))
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	log.Debugf("s3: Read object %s", objectFound.OID)
+	log.Debugf("s3: Read object %s", objectFound.BackendID)
 	return res, err
 }

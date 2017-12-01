@@ -21,7 +21,7 @@ var BucketAcls = []string {
 
 type S3Bucket struct {
 	ObjID				bson.ObjectId	`bson:"_id,omitempty"`
-	OID				string		`json:"oid,omitempty" bson:"oid,omitempty"`
+	BackendID			string		`json:"bid,omitempty" bson:"bid,omitempty"`
 	State				uint32		`json:"state" bson:"state"`
 	CntObjects			int64		`json:"cnt-objects" bson:"cnt-objects"`
 	CntBytes			int64		`json:"cnt-bytes" bson:"cnt-bytes"`
@@ -32,7 +32,7 @@ type S3Bucket struct {
 	MaxBytes			int64		`json:"max-bytes" bson:"max-bytes"`
 }
 
-func (bucket *S3Bucket)GenOID(akey *S3AccessKey) string {
+func (bucket *S3Bucket)GenBackendId(akey *S3AccessKey) string {
 	return akey.Namespace() + "-" + bucket.Name
 }
 
@@ -100,7 +100,7 @@ func (bucket *S3Bucket)dbFindByKey(akey *S3AccessKey) (*S3Bucket, error) {
 	var res S3Bucket
 
 	regex := "^" + akey.Namespace() + ".+"
-	query := bson.M{"oid": bson.M{"$regex": bson.RegEx{regex, ""}}}
+	query := bson.M{"bid": bson.M{"$regex": bson.RegEx{regex, ""}}}
 
 	err := dbS3FindOne(
 			query,
@@ -112,11 +112,11 @@ func (bucket *S3Bucket)dbFindByKey(akey *S3AccessKey) (*S3Bucket, error) {
 	return &res,nil
 }
 
-func (bucket *S3Bucket)dbFindOID(akey *S3AccessKey) (*S3Bucket, error) {
+func (bucket *S3Bucket)dbFindByBackendID(akey *S3AccessKey) (*S3Bucket, error) {
 	var res S3Bucket
 
 	err := dbS3FindOne(
-			bson.M{"oid": bucket.GenOID(akey)},
+			bson.M{"bid": bucket.GenBackendId(akey)},
 			&res)
 	if err != nil {
 		return nil, err
@@ -129,7 +129,7 @@ func s3InsertBucket(akey *S3AccessKey, bucket *S3Bucket) error {
 	var err error
 
 	bucket.ObjID		= bson.NewObjectId()
-	bucket.OID		= bucket.GenOID(akey)
+	bucket.BackendID	= bucket.GenBackendId(akey)
 	bucket.State		= S3StateNone
 	bucket.CntObjects	= 0
 	bucket.CntBytes		= 0
@@ -139,11 +139,11 @@ func s3InsertBucket(akey *S3AccessKey, bucket *S3Bucket) error {
 	err = dbS3Insert(bucket)
 	if err != nil {
 		log.Errorf("s3: Can't insert bucket %s: %s",
-				bucket.OID, err.Error())
+				bucket.BackendID, err.Error())
 		return err
 	}
 
-	err = radosCreatePool(bucket.OID, uint64(bucket.MaxObjects), uint64(bucket.MaxBytes))
+	err = radosCreatePool(bucket.BackendID, uint64(bucket.MaxObjects), uint64(bucket.MaxBytes))
 	if err != nil {
 		goto out_nopool
 	}
@@ -151,15 +151,15 @@ func s3InsertBucket(akey *S3AccessKey, bucket *S3Bucket) error {
 	err = bucket.dbSetState(S3StateActive)
 	if err != nil {
 		log.Errorf("s3: Can't activate bucket %s: %s",
-				bucket.OID, err.Error())
+				bucket.BackendID, err.Error())
 		goto out
 	}
 
-	log.Debugf("s3: Inserted bucket %s", bucket.OID)
+	log.Debugf("s3: Inserted bucket %s", bucket.BackendID)
 	return nil
 
 out:
-	radosDeletePool(bucket.OID)
+	radosDeletePool(bucket.BackendID)
 out_nopool:
 	bucket.dbRemove()
 	return err
@@ -169,13 +169,13 @@ func s3DeleteBucket(akey *S3AccessKey, bucket *S3Bucket) error {
 	var bucketFound *S3Bucket
 	var err error
 
-	bucketFound, err = bucket.dbFindOID(akey)
+	bucketFound, err = bucket.dbFindByBackendID(akey)
 	if err != nil {
 		if err == mgo.ErrNotFound {
 			return nil
 		}
 		log.Errorf("s3: Can't find bucket %s: %s",
-				bucket.GenOID(akey), err.Error())
+				bucket.GenBackendId(akey), err.Error())
 		return err
 	}
 
@@ -185,11 +185,11 @@ func s3DeleteBucket(akey *S3AccessKey, bucket *S3Bucket) error {
 			return nil
 		}
 		log.Errorf("s3: Can't disable bucket %s: %s",
-				bucketFound.OID, err.Error())
+				bucketFound.BackendID, err.Error())
 		return err
 	}
 
-	err = radosDeletePool(bucketFound.OID)
+	err = radosDeletePool(bucketFound.BackendID)
 	if err != nil {
 		return err
 	}
@@ -197,11 +197,11 @@ func s3DeleteBucket(akey *S3AccessKey, bucket *S3Bucket) error {
 	err = bucketFound.dbRemove()
 	if err != nil {
 		log.Errorf("s3: Can't delete bucket %s: %s",
-				bucketFound.OID, err.Error())
+				bucketFound.BackendID, err.Error())
 		return err
 	}
 
-	log.Debugf("s3: Deleted bucket %s", bucketFound.OID)
+	log.Debugf("s3: Deleted bucket %s", bucketFound.BackendID)
 	return nil
 }
 
@@ -224,10 +224,10 @@ func s3ListBucket(akey *S3AccessKey, bucket *S3Bucket) (*S3BucketList, error) {
 	var r []S3ObjectEntry
 	var err error
 
-	bucketFound, err = bucket.dbFindOID(akey)
+	bucketFound, err = bucket.dbFindByBackendID(akey)
 	if err != nil {
 		log.Errorf("s3: Can't find bucket %s: %s",
-				bucket.GenOID(akey), err.Error())
+				bucket.GenBackendId(akey), err.Error())
 		return nil, err
 	}
 
