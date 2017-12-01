@@ -13,15 +13,11 @@ type S3AccessKey struct {
 	ObjID				bson.ObjectId	`json:"_id,omitempty" bson:"_id,omitempty"`
 	AccessKeyID			string		`json:"access-key-id" bson:"access-key-id"`
 	AccessKeySecret			string		`json:"access-key-secret" bson:"access-key-secret"`
-	Kind				uint32		`json:"kind,omitempty" bson:"kind,omitempty"`
 	Status				uint32		`json:"status,omitempty" bson:"status,omitempty"`
 	Namespace			string		`json:"namespace,omitempty" bson:"namespace,omitempty"`
 }
 
 const (
-	S3KeyKindUserAccessKey		= 1
-	S3KeyKindAdminAccessKey		= 2
-
 	S3KeyStatusInActive		= 0
 	S3KeyStatusActivePlain		= 1
 	S3KeyStatusActive		= 2
@@ -116,7 +112,7 @@ func dbLookupAccessKey(AccessKeyId string) (*S3AccessKey, error) {
 	return nil, fmt.Errorf("Access key %s is not active", AccessKeyId)
 }
 
-func dbInsertAccessKey(AccessKeyID, AccessKeySecret string, Kind uint32) (*S3AccessKey, error) {
+func dbInsertAccessKey(AccessKeyID, AccessKeySecret string) (*S3AccessKey, error) {
 	var err error
 
 	AccessKeySecret, err = swycrypt.EncryptString([]byte(s3Secrets[conf.SecKey]), AccessKeySecret)
@@ -129,7 +125,6 @@ func dbInsertAccessKey(AccessKeyID, AccessKeySecret string, Kind uint32) (*S3Acc
 		AccessKeyID:		AccessKeyID,
 		AccessKeySecret:	AccessKeySecret,
 		Status:			S3KeyStatusActive,
-		Kind:			Kind,
 	}
 
 	err = dbSession.DB(dbName).C(DBColS3AccessKeys).Insert(&akey)
