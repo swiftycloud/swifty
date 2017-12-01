@@ -260,7 +260,7 @@ func s3VerifyAuthorization(r *http.Request) (*S3AccessKey, error) {
 		return nil, err
 	}
 
-	akey, _, err = dbLookupAccessKey(ctx.AccessKey)
+	akey, err = dbLookupAccessKey(ctx.AccessKey)
 	if err != nil {
 		return nil, err
 	}

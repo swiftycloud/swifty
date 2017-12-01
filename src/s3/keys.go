@@ -2,15 +2,16 @@ package main
 
 import (
 	"gopkg.in/mgo.v2/bson"
-
+	"fmt"
 	"crypto/rand"
 )
 
 type S3AccessKey struct {
 	ObjID				bson.ObjectId	`json:"_id,omitempty" bson:"_id,omitempty"`
-	KeyObjID			bson.ObjectId	`json:"key-id,omitempty" bson:"key-id,omitempty"`
 	AccessKeyID			string		`json:"access-key-id" bson:"access-key-id"`
 	AccessKeySecret			string		`json:"access-key-secret" bson:"access-key-secret"`
+	Kind				uint32		`json:"kind" bson:"kind"`
+	Status				uint32		`json:"status" bson:"status"`
 }
 
 const (
@@ -20,13 +21,6 @@ const (
 	S3KeyStatusInActive		= 0
 	S3KeyStatusActive		= 1
 )
-
-type S3Key struct {
-	ObjID				bson.ObjectId	`json:"_id,omitempty" bson:"_id,omitempty"`
-	KeyObjID			bson.ObjectId	`json:"key-id,omitempty" bson:"key-id,omitempty"`
-	Kind				uint32		`json:"kind" bson:"kind"`
-	Status				uint32		`json:"status" bson:"status"`
-}
 
 //
 // Predefined keys for testing purposes
@@ -78,74 +72,50 @@ func (akey *S3AccessKey)Namespace() string {
 	return "swifty"
 }
 
-func dbLookupAccessKey(AccessKeyId string) (*S3AccessKey, *S3Key, error) {
+func dbLookupAccessKey(AccessKeyId string) (*S3AccessKey, error) {
 	var akey S3AccessKey
-	var key S3Key
 	var err error
 
 	c := dbSession.DB(dbName).C(DBColS3AccessKeys)
 	err = c.Find(bson.M{"access-key-id": AccessKeyId}).One(&akey)
-	if err == nil {
-		c = dbSession.DB(dbName).C(DBColS3Keys)
-		err = c.Find(bson.M{"_id": akey.KeyObjID}).One(&key)
-		if err == nil {
-			if (key.Status == S3KeyStatusActive) {
-				return &akey, &key, nil
-			}
-			log.Debugf("Access key '%s' is not active", AccessKeyId)
-		} else {
-			log.Debugf("Can't find key for access key '%s': %s",
-					AccessKeyId, err.Error())
-		}
-	} else {
-		log.Debugf("Can't find access key '%s': %s",
-				AccessKeyId, err.Error())
+	if err != nil {
+		return nil, fmt.Errorf("Can't find access key '%s': %s", AccessKeyId, err.Error())
 	}
 
-	return nil, nil, nil
+	if akey.Status != S3KeyStatusActive {
+		return nil, fmt.Errorf("Access key %s is not active", AccessKeyId)
+	}
+
+	return &akey, nil
 }
 
-func dbInsertAccessKey(AccessKeyID, AccessKeySecret string, Kind uint32) (*S3AccessKey, *S3Key, error) {
+func dbInsertAccessKey(AccessKeyID, AccessKeySecret string, Kind uint32) (*S3AccessKey, error) {
 	var err error
 
-	key := S3Key {
-		ObjID:			bson.NewObjectId(),
-		KeyObjID:		bson.NewObjectId(),
-		Kind:			Kind,
-		Status:			S3KeyStatusActive,
-	}
-
 	akey := S3AccessKey {
-		ObjID:			key.KeyObjID,
-		KeyObjID:		key.ObjID,
+		ObjID:			bson.NewObjectId(),
 		AccessKeyID:		AccessKeyID,
 		AccessKeySecret:	AccessKeySecret,
+		Status:			S3KeyStatusActive,
+		Kind:			Kind,
 	}
 
 	err = dbSession.DB(dbName).C(DBColS3AccessKeys).Insert(&akey)
 	if err != nil {
 		log.Errorf("dbInsertAccessKey: Can't insert akey %v: %s",
 				akey, err.Error())
-		return nil, nil, err
+		return nil, err
 	}
 
-	err = dbSession.DB(dbName).C(DBColS3Keys).Insert(&key)
-	if err != nil {
-		log.Errorf("dbInsertAccessKey: Can't insert key %v: %s",
-				key, err.Error())
-
-		return nil, nil, err
-	}
-
-	log.Debugf("dbInsertAccessKey: akey %v key %v", akey, key)
-	return &akey, &key, nil
+	log.Debugf("dbInsertAccessKey: akey %v", akey)
+	return &akey, nil
 }
 
 func dbRemoveAccessKey(AccessKeyID string) (error) {
 	var err error
 
-	akey, key, err := dbLookupAccessKey(AccessKeyID)
-	if akey == nil || key == nil || err != nil {
+	akey, err := dbLookupAccessKey(AccessKeyID)
+	if akey == nil || err != nil {
 		log.Debugf("dbRemoveAccessKey: Can't find for %v", AccessKeyID)
 		return nil
 	}
@@ -157,13 +127,6 @@ func dbRemoveAccessKey(AccessKeyID string) (error) {
 		return err
 	}
 
-	err = dbSession.DB(dbName).C(DBColS3Keys).Remove(key)
-	if err != nil {
-		log.Debugf("dbRemoveAccessKey: Can't remove key %v: %s",
-				key, err.Error())
-		return err
-	}
-
-	log.Debugf("dbRemoveAccessKey: akey %v key %v", akey, key)
+	log.Debugf("dbRemoveAccessKey: akey %v", akey)
 	return nil
 }

@@ -45,7 +45,7 @@ func s3VerifyAdmin(r *http.Request) error {
 	}
 
 	// FIXME Check for Kind
-	akey, _, err := dbLookupAccessKey(access_key)
+	akey, err := dbLookupAccessKey(access_key)
 	if err != nil {
 		return fmt.Errorf("Invalid key")
 	}
