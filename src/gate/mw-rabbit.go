@@ -2,15 +2,10 @@ package main
 
 import (
 	"net/http"
-	"encoding/json"
 	"github.com/michaelklishin/rabbit-hole"
 	"fmt"
 	"strings"
 )
-
-type MQSettings struct {
-	Vhost		string			`json:"vhost"`
-}
 
 func rabbitConn(conf *YAMLConfMw) (*rabbithole.Client, error) {
 	addr := strings.Split(conf.Rabbit.Addr, ":")[0] + ":" + conf.Rabbit.AdminPort
@@ -30,68 +25,51 @@ func rabbitErr(resp *http.Response, err error) error {
 }
 
 func InitRabbitMQ(conf *YAMLConfMw, mwd *MwareDesc) (error) {
-	rmq := MQSettings{ }
-
-	err := mwareGenerateClient(mwd)
+	err := mwareGenerateUserPassClient(mwd)
 	if err != nil {
 		return err
 	}
 
-	rmq.Vhost = mwd.Client
+	mwd.Namespace = mwd.Client
 
 	rmqc, err := rabbitConn(conf)
 	if err != nil {
 		return err
 	}
 
-	err = rabbitErr(rmqc.PutUser(mwd.Client, rabbithole.UserSettings{Password: mwd.Pass}))
+	err = rabbitErr(rmqc.PutUser(mwd.Client, rabbithole.UserSettings{Password: mwd.Secret}))
 	if err != nil {
 		return fmt.Errorf("Can't create user %s: %s", mwd.Client, err.Error())
 	}
 
-	err = rabbitErr(rmqc.PutVhost(rmq.Vhost, rabbithole.VhostSettings{Tracing: false}))
+	err = rabbitErr(rmqc.PutVhost(mwd.Namespace, rabbithole.VhostSettings{Tracing: false}))
 	if err != nil {
 		return fmt.Errorf("Can't create vhost %s: %s", mwd.Client, err.Error())
 	}
 
-	err = rabbitErr(rmqc.UpdatePermissionsIn(rmq.Vhost, mwd.Client,
+	err = rabbitErr(rmqc.UpdatePermissionsIn(mwd.Namespace, mwd.Client,
 			rabbithole.Permissions{Configure: ".*", Write: ".*", Read: ".*"}))
 	if err != nil {
 		return fmt.Errorf("Can't set permissions %s: %s", mwd.Client, err.Error())
 	}
 
 	/* Add permissions for us as well, just in case event listening is required */
-	err = rabbitErr(rmqc.UpdatePermissionsIn(rmq.Vhost, conf.Rabbit.Admin,
+	err = rabbitErr(rmqc.UpdatePermissionsIn(mwd.Namespace, conf.Rabbit.Admin,
 			rabbithole.Permissions{Configure: ".*", Write: ".*", Read: ".*"}))
 	if err != nil {
 		return fmt.Errorf("Can't set permissions %s: %s", mwd.Client, err.Error())
 	}
 
-	js, err := json.Marshal(&rmq)
-	if err != nil {
-		return err
-	}
-
-	mwd.JSettings = string(js)
-
 	return nil
 }
 
 func FiniRabbitMQ(conf *YAMLConfMw, mwd *MwareDesc) error {
-	var rmq MQSettings
-
-	err := json.Unmarshal([]byte(mwd.JSettings), &rmq)
-	if err != nil {
-		return fmt.Errorf("rabbit: Can't unmarshal data %s: %s",
-					mwd.JSettings, err.Error())
-	}
-
 	rmqc, err := rabbitConn(conf)
 	if err != nil {
 		return err
 	}
 
-	err = rabbitErr(rmqc.DeleteVhost(rmq.Vhost))
+	err = rabbitErr(rmqc.DeleteVhost(mwd.Namespace))
 	if err != nil {
 		log.Errorf("rabbit: can't delete vhost %s: %s", mwd.Client, err.Error())
 	}
@@ -105,30 +83,16 @@ func FiniRabbitMQ(conf *YAMLConfMw, mwd *MwareDesc) error {
 }
 
 func EventRabbitMQ(conf *YAMLConfMw, source *FnEventDesc, mwd *MwareDesc, on bool) (error) {
-	var rmq MQSettings
-
-	_ = json.Unmarshal([]byte(mwd.JSettings), &rmq)
 	if on {
-		return mqStartListener(conf, rmq.Vhost, source.MQueue)
+		return mqStartListener(conf, mwd.Namespace, source.MQueue)
 	} else {
-		mqStopListener(rmq.Vhost, source.MQueue)
+		mqStopListener(mwd.Namespace, source.MQueue)
 		return nil
 	}
 }
 
 func GetEnvRabbitMQ(conf *YAMLConfMw, mwd *MwareDesc) ([][2]string) {
-	var rmq MQSettings
-	var envs [][2]string
-	var err error
-
-	err = json.Unmarshal([]byte(mwd.JSettings), &rmq)
-	if err == nil {
-		envs = append(mwGenEnvs(mwd, conf.Rabbit.Addr), mkEnv(mwd, "VHOST", rmq.Vhost))
-	} else {
-		log.Fatal("rabbit: Can't unmarshal DB entry %s", mwd.JSettings)
-	}
-
-	return envs
+	return append(mwGenUserPassEnvs(mwd, conf.Rabbit.Addr), mkEnv(mwd, "VHOST", mwd.Namespace))
 }
 
 var MwareRabbitMQ = MwareOps {

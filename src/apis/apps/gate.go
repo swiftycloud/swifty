@@ -76,7 +76,6 @@ type MwareCinfoResp struct {
 type MwareItem struct {
 	ID		string			`json:"id"`
 	Type		string			`json:"type"`
-	JSettings	string			`json:"jsettings"`
 }
 
 type MwareList struct {

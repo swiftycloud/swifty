@@ -2,14 +2,8 @@ package main
 
 import (
 	"gopkg.in/mgo.v2"
-	"fmt"
 	"time"
-	"encoding/json"
 )
-
-type MGOSetting struct {
-	DBName	string	`json:"database"`
-}
 
 func mgoDial(conf *YAMLConfMw) (*mgo.Session, error) {
 	ifo := mgo.DialInfo {
@@ -24,14 +18,12 @@ func mgoDial(conf *YAMLConfMw) (*mgo.Session, error) {
 }
 
 func InitMongo(conf *YAMLConfMw, mwd *MwareDesc) (error) {
-	mgs := MGOSetting{}
-
-	err := mwareGenerateClient(mwd)
+	err := mwareGenerateUserPassClient(mwd)
 	if err != nil {
 		return err
 	}
 
-	mgs.DBName = mwd.Client
+	mwd.Namespace = mwd.Client
 
 	sess, err := mgoDial(conf)
 	if err != nil {
@@ -40,62 +32,32 @@ func InitMongo(conf *YAMLConfMw, mwd *MwareDesc) (error) {
 
 	defer sess.Close()
 
-	err = sess.DB(mgs.DBName).UpsertUser(&mgo.User{
+	err = sess.DB(mwd.Namespace).UpsertUser(&mgo.User{
 		Username: mwd.Client,
-		Password: mwd.Pass,
+		Password: mwd.Secret,
 		Roles: []mgo.Role{ "dbOwner" },
 	})
 
-	if err != nil {
-		return err
-	}
-
-	js, err := json.Marshal(&mgs)
-	if err != nil {
-		return err
-	}
-
-	mwd.JSettings = string(js)
-
-	return nil
+	return err
 }
 
 func FiniMongo(conf *YAMLConfMw, mwd *MwareDesc) error {
-	var mgs MGOSetting
-
-	err := json.Unmarshal([]byte(mwd.JSettings), &mgs)
-	if err != nil {
-		return fmt.Errorf("Can't unmarshal data %s: %s",
-					mwd.JSettings, err.Error())
-	}
-
 	sess, err := mgoDial(conf)
 	if err != nil {
 		return err
 	}
 	defer sess.Close()
 
-	err = sess.DB(mgs.DBName).DropDatabase()
+	err = sess.DB(mwd.Namespace).DropDatabase()
 	if err != nil {
-		log.Errorf("can't drop database %s: %s", mgs.DBName, err.Error())
+		log.Errorf("can't drop database %s: %s", mwd.Namespace, err.Error())
 	}
 
 	return nil
 }
 
 func GetEnvMongo(conf *YAMLConfMw, mwd *MwareDesc) ([][2]string) {
-	var mgs MGOSetting
-	var envs [][2]string
-	var err error
-
-	err = json.Unmarshal([]byte(mwd.JSettings), &mgs)
-	if err == nil {
-		envs = append(mwGenEnvs(mwd, conf.Mongo.Addr), mkEnv(mwd, "DBNAME", mgs.DBName))
-	} else {
-		log.Fatal("rabbit: Can't unmarshal DB entry %s", mwd.JSettings)
-	}
-
-	return envs
+	return append(mwGenUserPassEnvs(mwd, conf.Mongo.Addr), mkEnv(mwd, "DBNAME", mwd.Namespace))
 }
 
 var MwareMongo = MwareOps {

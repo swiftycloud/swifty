@@ -44,8 +44,8 @@ func dbMwareUpdateAdded(desc *MwareDesc) error {
 	err := c.Update(bson.M{"cookie": desc.Cookie},
 		bson.M{"$set": bson.M{
 				"client":	desc.Client,
-				"pass":		desc.Pass,
-				"jsettings":	desc.JSettings,
+				"secret":	desc.Secret,
+				"namespace":	desc.Namespace,
 				"state":	desc.State,
 			}})
 	if err != nil {

@@ -1,15 +1,10 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"database/sql"
 	_ "github.com/go-sql-driver/mysql"
 )
-
-type DBSettings struct {
-	DBName		string			`json:"dbname"`
-}
 
 func mariaConn(conf *YAMLConfMw) (*sql.DB, error) {
 	return sql.Open("mysql",
@@ -34,14 +29,12 @@ func mariaReq(db *sql.DB, req string) error {
 // DROP DATABASE IF EXISTS 8257fbff9618952fbd2b83b4794eb694;
 
 func InitMariaDB(conf *YAMLConfMw, mwd *MwareDesc) (error) {
-	dbs := DBSettings{ }
-
-	err := mwareGenerateClient(mwd)
+	err := mwareGenerateUserPassClient(mwd)
 	if err != nil {
 		return err
 	}
 
-	dbs.DBName = mwd.Client
+	mwd.Namespace = mwd.Client
 
 	db, err := mariaConn(conf)
 	if err != nil {
@@ -49,40 +42,21 @@ func InitMariaDB(conf *YAMLConfMw, mwd *MwareDesc) (error) {
 	}
 	defer db.Close()
 
-	err = mariaReq(db, "CREATE USER '" + mwd.Client + "'@'%' IDENTIFIED BY '" + mwd.Pass + "';")
+	err = mariaReq(db, "CREATE USER '" + mwd.Client + "'@'%' IDENTIFIED BY '" + mwd.Secret + "';")
 	if err != nil {
 		return err
 	}
 
-	err = mariaReq(db, "CREATE DATABASE " + dbs.DBName + " CHARACTER SET utf8 COLLATE utf8_general_ci;")
+	err = mariaReq(db, "CREATE DATABASE " + mwd.Namespace + " CHARACTER SET utf8 COLLATE utf8_general_ci;")
 	if err != nil {
 		return err
 	}
 
-	err = mariaReq(db, "GRANT ALL PRIVILEGES ON " + dbs.DBName + ".* TO '" + mwd.Client + "'@'%' IDENTIFIED BY '" + mwd.Pass + "';")
-	if err != nil {
-		return err
-	}
-
-	js, err := json.Marshal(&dbs)
-	if err != nil {
-		return err
-	}
-
-	mwd.JSettings = string(js)
-
-	return nil
+	err = mariaReq(db, "GRANT ALL PRIVILEGES ON " + mwd.Namespace + ".* TO '" + mwd.Client + "'@'%' IDENTIFIED BY '" + mwd.Secret + "';")
+	return err
 }
 
 func FiniMariaDB(conf *YAMLConfMw, mwd *MwareDesc) error {
-	var dbs DBSettings
-
-	err := json.Unmarshal([]byte(mwd.JSettings), &dbs)
-	if err != nil {
-		return fmt.Errorf("MariaDBSettings.Fini: Can't unmarshal data %s: %s",
-					mwd.JSettings, err.Error())
-	}
-
 	db, err := mariaConn(conf)
 	if err != nil {
 		return err
@@ -94,27 +68,16 @@ func FiniMariaDB(conf *YAMLConfMw, mwd *MwareDesc) error {
 		log.Errorf("maria: can't drop user %s: %s", mwd.Client, err.Error())
 	}
 
-	err = mariaReq(db, "DROP DATABASE IF EXISTS " + dbs.DBName + ";")
+	err = mariaReq(db, "DROP DATABASE IF EXISTS " + mwd.Namespace + ";")
 	if err != nil {
-		log.Errorf("maria: can't drop database %s: %s", dbs.DBName, err.Error())
+		log.Errorf("maria: can't drop database %s: %s", mwd.Namespace, err.Error())
 	}
 
 	return nil
 }
 
 func GetEnvMariaDB(conf *YAMLConfMw, mwd *MwareDesc) ([][2]string) {
-	var dbs DBSettings
-	var envs [][2]string
-	var err error
-
-	err = json.Unmarshal([]byte(mwd.JSettings), &dbs)
-	if err == nil {
-		envs = append(mwGenEnvs(mwd, conf.Maria.Addr), mkEnv(mwd, "DBNAME", dbs.DBName))
-	} else {
-		log.Fatal("rabbit: Can't unmarshal DB entry %s", mwd.JSettings)
-	}
-
-	return envs
+	return append(mwGenUserPassEnvs(mwd, conf.Maria.Addr), mkEnv(mwd, "DBNAME", mwd.Namespace))
 }
 
 var MwareMariaDB = MwareOps {

@@ -16,11 +16,10 @@ type MwareDesc struct {
 	SwoId				`bson:",inline"`
 	Cookie		string		`bson:"cookie"`
 	MwareType	string		`bson:"mwaretype"`	// Middleware type
-	Client		string		`bson:"client"`		// Middleware client
-	Pass		string		`bson:"pass"`		// Client password
+	Client		string		`bson:"client"`		// Middleware client (db user)
+	Secret		string		`bson:"secret"`		// Client secret (e.g. password)
+	Namespace	string		`bson:"namespace"`	// Client namespace (e.g. dbname, mq domain)
 	State		int		`bson:"state"`		// Mware state
-
-	JSettings	string		`bson:"jsettings"`	// Middleware settings in json format
 }
 
 type MwareOps struct {
@@ -35,15 +34,15 @@ func mkEnv(mwd *MwareDesc, envName, value string) [2]string {
 	return [2]string{"MWARE_" + strings.ToUpper(mwd.Name) + "_" + envName, value}
 }
 
-func mwGenEnvs(mwd *MwareDesc, mwaddr string) ([][2]string) {
+func mwGenUserPassEnvs(mwd *MwareDesc, mwaddr string) ([][2]string) {
 	return [][2]string{
 		mkEnv(mwd, "ADDR", mwaddr),
 		mkEnv(mwd, "USER", mwd.Client),
-		mkEnv(mwd, "PASS", mwd.Pass),
+		mkEnv(mwd, "PASS", mwd.Secret),
 	}
 }
 
-func mwareGenerateClient(mwd *MwareDesc) (error) {
+func mwareGenerateUserPassClient(mwd *MwareDesc) (error) {
 	var err error
 
 	mwd.Client, err = swy.GenRandId(32)
@@ -51,7 +50,7 @@ func mwareGenerateClient(mwd *MwareDesc) (error) {
 		return err
 	}
 
-	mwd.Pass, err = swy.GenRandId(64)
+	mwd.Secret, err = swy.GenRandId(64)
 	if err != nil {
 		return err
 	}

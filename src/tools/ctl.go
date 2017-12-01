@@ -288,7 +288,7 @@ func list_mware(project string, args []string, opts [8]string) {
 
 	fmt.Printf("%-20s%-10s%s\n", "NAME", "ID", "OPTIONS")
 	for _, mw := range mws {
-		fmt.Printf("%-20s%-10s%s\n", mw.ID, mw.Type, mw.JSettings)
+		fmt.Printf("%-20s%-10s%s\n", mw.ID, mw.Type, "")
 	}
 }
 

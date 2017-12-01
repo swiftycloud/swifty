@@ -592,7 +592,6 @@ func handleMwareList(w http.ResponseWriter, r *http.Request, tennant string) err
 			swyapi.MwareItem{
 				ID:	   mware.Name,
 				Type:	   mware.MwareType,
-				JSettings: mware.JSettings,
 			})
 	}
 
