@@ -1,11 +1,11 @@
 ---
 db:
         state: "swifty-s3"
-        address: "127.0.0.1:27017"
+        address: "192.168.122.211:27017"
         user: "swifty"
         password: "MGOS3PASS"
 daemon:
-        address: "127.0.0.1:8787"
+        address: "192.168.122.197:8787"
         loglevel: "debug"
 ceph:
         config-path: src/ceph.conf

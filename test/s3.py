@@ -14,7 +14,8 @@ def genObjectName():
 
 access_key = '6DLA43X797XL2I42IJ33'
 secret_key = 'AJwz9vZpdnz6T5TqEDQOEFos6wxxCnW0qwLQeDcB'
-endpoint_url = 'http://localhost:8787/'
+#endpoint_url = 'http://localhost:8787/'
+endpoint_url = 'http://192.168.122.197:8787/'
 
 print("Connecting to endpoint %s with keys %s / %s" %
       (endpoint_url, access_key, secret_key))
@@ -39,5 +40,5 @@ if response['ContentLength'] > 0:
     else:
         print("FAIL: expected %s but got %s" % (object_body, body))
 
-s3.delete_object(Bucket = bucket_name, Key = object_name)
-s3.delete_bucket(Bucket = bucket_name)
+#s3.delete_object(Bucket = bucket_name, Key = object_name)
+#s3.delete_bucket(Bucket = bucket_name)
