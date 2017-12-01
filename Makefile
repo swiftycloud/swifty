@@ -41,6 +41,22 @@ TEST_REPO	?= test/.repo
 
 export RM MAKE GIT CP GO GO-BUILD-OPTS GOTAGS MONGO KUBECTL IPVSADM
 
+# Build daemon
+define gen-gobuild
+swy-$(1): $$(go-$(1)-y) .FORCE
+	$$(call msg-gen,$$@)
+	$$(Q) $$(GO) $$(GO-BUILD-OPTS) -o $$@ $$(go-$(1)-y)
+all-y += swy-$(1)
+endef
+
+# Build tool
+define gen-gobuild-t
+swy$(1): $$(go-$(1)-y) .FORCE
+	$$(call msg-gen,$$@)
+	$$(Q) $$(GO) $$(GO-BUILD-OPTS) -o $$@ $$(go-$(1)-y)
+all-y += swy$(1)
+endef
+
 go-gate-y	+= src/gate/db.go
 go-gate-y	+= src/gate/k8s.go
 go-gate-y	+= src/gate/function.go
@@ -60,46 +76,12 @@ go-gate-y	+= src/gate/funcurl.go
 go-gate-y	+= src/gate/stats.go
 go-gate-y	+= src/gate/swoid.go
 
-swy-gate: $(go-gate-y) .FORCE
-	$(call msg-gen,$@)
-	$(Q) $(GO) $(GO-BUILD-OPTS) -o $@ $(go-gate-y)
-all-y += swy-gate
-
 go-admd-y	+= src/admd/main.go
 go-admd-y	+= src/admd/ks.go
 
-swy-admd: $(go-admd-y) .FORCE
-	$(call msg-gen,$@)
-	$(Q) $(GO) $(GO-BUILD-OPTS) -o $@ $(go-admd-y)
-all-y += swy-admd
-
 go-wdog-y	+= src/wdog/main.go
 
-swy-wdog: $(go-wdog-y) .FORCE
-	$(call msg-gen,$@)
-	$(Q) $(GO) $(GO-BUILD-OPTS) -o $@ $(go-wdog-y)
-all-y += swy-wdog
-
-go-ctl-y	+= src/tools/ctl.go
-
-swyctl: $(go-ctl-y) .FORCE
-	$(call msg-gen,$@)
-	$(Q) $(GO) $(GO-BUILD-OPTS) -o $@ $(go-ctl-y)
-
-go-sg-y		+= src/tools/sg.go
-
-swysg: $(go-sg-y) .FORCE
-	$(call msg-gen,$@)
-	$(Q) $(GO) $(GO-BUILD-OPTS) -o $@ $(go-sg-y)
-
-all-y += swyctl swysg
-
 go-pgrest-y	+= src/pgrest/main.go
-
-swy-pgrest: $(go-pgrest-y) .FORCE
-	$(call msg-gen,$@)
-	$(Q) $(GO) $(GO-BUILD-OPTS) -o $@ $(go-pgrest-y)
-all-y += swy-pgrest
 
 go-s3-y	+= src/s3/main.go
 go-s3-y	+= src/s3/db.go
@@ -113,10 +95,16 @@ go-s3-y	+= src/s3/keys.go
 go-s3-y	+= src/s3/rados.go
 go-s3-y	+= src/s3/helpers.go
 
-swy-s3: $(go-s3-y) .FORCE
-	$(call msg-gen,$@)
-	$(Q) $(GO) $(GO-BUILD-OPTS) -o $@ $(go-s3-y)
-all-y += swy-s3
+go-ctl-y	+= src/tools/ctl.go
+go-sg-y		+= src/tools/sg.go
+
+$(eval $(call gen-gobuild,gate))
+$(eval $(call gen-gobuild,admd))
+$(eval $(call gen-gobuild,wdog))
+$(eval $(call gen-gobuild,pgrest))
+$(eval $(call gen-gobuild,s3))
+$(eval $(call gen-gobuild-t,ctl))
+$(eval $(call gen-gobuild-t,sg))
 
 # Default target
 all: $(all-y)
