@@ -159,7 +159,8 @@ func dbRemoveAccessKey(AccessKeyID string) (error) {
 		return err
 	}
 
-	err = dbSession.DB(dbName).C(DBColS3AccessKeys).Remove(akey)
+	id := bson.M{"_id": akey.ObjID}
+	err = dbSession.DB(dbName).C(DBColS3AccessKeys).Remove(id)
 	if err != nil {
 		log.Debugf("dbRemoveAccessKey: Can't remove akey %v: %s",
 				akey, err.Error())

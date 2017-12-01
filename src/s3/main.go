@@ -14,6 +14,7 @@ import (
 	"fmt"
 
 	"../common"
+	"../common/http"
 	"../common/secrets"
 	"../apis/apps/s3"
 )
@@ -344,7 +345,7 @@ func handleAdminOp(w http.ResponseWriter, r *http.Request) {
 
 	switch op {
 	case "keygen":
-		err = swy.HTTPReadAndUnmarshalReq(r, &params_keygen)
+		err = swyhttp.ReadAndUnmarshalReq(r, &params_keygen)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
@@ -360,7 +361,7 @@ func handleAdminOp(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		err = swy.HTTPMarshalAndWrite(w, &swys3ctl.S3CtlKeyGenResult{
+		err = swyhttp.MarshalAndWrite(w, &swys3ctl.S3CtlKeyGenResult{
 				AccessKeyID:	akey.AccessKeyID,
 				AccessKeySecret:akey.AccessKeySecret, })
 		if err != nil {
@@ -369,7 +370,7 @@ func handleAdminOp(w http.ResponseWriter, r *http.Request) {
 		return
 		break
 	case "keydel":
-		err = swy.HTTPReadAndUnmarshalReq(r, &params_keydel)
+		err = swyhttp.ReadAndUnmarshalReq(r, &params_keydel)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
