@@ -1,4 +1,4 @@
-package swy
+package swysec
 
 import (
 	"gopkg.in/yaml.v2"

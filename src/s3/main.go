@@ -14,6 +14,7 @@ import (
 	"fmt"
 
 	"../common"
+	"../common/secrets"
 )
 
 var s3Secrets map[string]string
@@ -393,7 +394,7 @@ func main() {
 			conf.DB.Pass: dbPass,
 		}
 	} else {
-		s3Secrets, err = swy.ReadSecrets("s3")
+		s3Secrets, err = swysec.ReadSecrets("s3")
 		if err != nil {
 			log.Errorf("Can't read gate secrets: %s", err.Error())
 			return

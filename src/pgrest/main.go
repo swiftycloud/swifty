@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"../apis/apps"
 	"../common"
+	"../common/secrets"
 )
 
 var pgrTokens []string
@@ -183,7 +184,7 @@ func main() {
 	flag.Parse()
 	swy.ReadYamlConfig(conf_path, &conf)
 
-	pgrSecrets, err = swy.ReadSecrets("pgrest")
+	pgrSecrets, err = swysec.ReadSecrets("pgrest")
 	if err != nil {
 		log.Errorf("Can't read gate secrets")
 		return

@@ -14,6 +14,7 @@ import (
 	"../apis/apps"
 	"../common"
 	"../common/keystone"
+	"../common/secrets"
 )
 
 var admdSecrets map[string]string
@@ -366,7 +367,7 @@ func main() {
 		return
 	}
 
-	admdSecrets, err = swy.ReadSecrets("admd")
+	admdSecrets, err = swysec.ReadSecrets("admd")
 	if err != nil {
 		log.Errorf("Can't read gate secrets")
 		return

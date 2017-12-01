@@ -15,6 +15,7 @@ import (
 	"../apis/apps"
 	"../common"
 	"../common/keystone"
+	"../common/secrets"
 )
 
 var SwyModeDevel bool
@@ -750,7 +751,7 @@ func main() {
 		return
 	}
 
-	gateSecrets, err = swy.ReadSecrets("gate")
+	gateSecrets, err = swysec.ReadSecrets("gate")
 	if err != nil {
 		log.Errorf("Can't read gate secrets")
 		return
