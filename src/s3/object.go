@@ -31,7 +31,6 @@ var cachedObjSize int64
 
 type S3ObjectData struct {
 	ObjID				bson.ObjectId	`bson:"_id,omitempty"`
-	NextObjID			bson.ObjectId	`bson:"next-id,omitempty"`
 	BucketObjID			bson.ObjectId	`bson:"bucket-id,omitempty"`	// S3Bucket
 	ObjectObjID			bson.ObjectId	`bson:"object-id,omitempty"`	// S3Object
 	State				uint32		`json:"state" bson:"state"`
