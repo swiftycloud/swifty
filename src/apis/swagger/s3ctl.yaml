@@ -1,0 +1,75 @@
+swagger: '2.0'
+info:
+  version: 1.0.0
+  title: s3ctl api
+host: 'localhost:8687'
+basePath: /v1/api
+schemes:
+  - https
+consumes:
+  - application/json
+produces:
+  - application/json
+paths:
+  /admin/keygen:
+    post:
+      summary: Generate key
+      parameters:
+        - name: data
+          in: body
+          description: Key generation options
+          required: true
+          schema:
+            $ref: '#/definitions/S3CtlKeyGen'
+      responses:
+        200:
+          description: Key generated
+          schema:
+            $ref: '#/definitions/S3CtlKeyGenResult'
+        400:
+          description: Bad request
+  /admin/keydel:
+    post:
+      summary: Delete key
+      parameters:
+        - name: data
+          in: body
+          description: Key detetion options
+          required: true
+          schema:
+            $ref: '#/definitions/S3CtlKeyDel'
+      responses:
+        200:
+          description: Key deleted
+        400:
+          description: Bad request
+definitions:
+  S3CtlKeyGen:
+    required:
+      - namespace
+    properties:
+      namespace:
+        type: string
+        description: Unique namespace name
+        example: 'unique-namespace'
+  S3CtlKeyGenResult:
+    required:
+      - access-key-id
+      - access-key-secret
+    properties:
+      access-key-id:
+        type: string
+        description: Access key to be sent into requests
+        example: 6DLA43X797XL2I42IJ33
+      access-key-secret:
+        type: string
+        description: Secret key to sign requests
+        example: AJwz9vZpdnz6T5TqEDQOEFos6wxxCnW0qwLQeDcB
+  S3CtlKeyDel:
+    required:
+      - access-key-id
+    properties:
+      access-key-id:
+        type: string
+        description: Access key to be sent into requests
+        example: 6DLA43X797XL2I42IJ33
