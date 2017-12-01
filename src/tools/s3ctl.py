@@ -4,10 +4,6 @@ import urllib
 import json
 import sys
 
-def hmac_sha256(key, msg):
-    hash_obj = HMAC.new(key=key, msg=msg, digestmod=SHA256)
-    return hash_obj.hexdigest()
-
 parser = argparse.ArgumentParser(prog='s3ctl.py')
 parser.add_argument('--admin-secret', dest = 'admin_secret',
                     default = '',
