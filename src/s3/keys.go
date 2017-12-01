@@ -118,21 +118,16 @@ func dbLookupAccessKey(AccessKeyId string) (*S3AccessKey, error) {
 func dbInsertAccessKey(AccessKeyID, AccessKeySecret string, Kind uint32) (*S3AccessKey, error) {
 	var err error
 
-	status := uint32(S3KeyStatusActive)
-	if S3ModeDevel {
-		status = S3KeyStatusActivePlain
-	} else {
-		AccessKeySecret, err = EncryptString([]byte(s3Secrets[conf.SecKey]), AccessKeySecret)
-		if err != nil {
-			return nil, err
-		}
+	AccessKeySecret, err = EncryptString([]byte(s3Secrets[conf.SecKey]), AccessKeySecret)
+	if err != nil {
+		return nil, err
 	}
 
 	akey := S3AccessKey {
 		ObjID:			bson.NewObjectId(),
 		AccessKeyID:		AccessKeyID,
 		AccessKeySecret:	AccessKeySecret,
-		Status:			status,
+		Status:			S3KeyStatusActive,
 		Kind:			Kind,
 	}
 
