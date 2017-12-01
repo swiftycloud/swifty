@@ -72,12 +72,6 @@ func (object *S3Object)GenBackendId(akey *S3AccessKey, bucket *S3Bucket) string 
 	return bucket.GenBackendId(akey) + "-" + fmt.Sprintf("%d", object.Version) + "-" + object.Name
 }
 
-func (object *S3Object)GetName(akey *S3AccessKey, bucket *S3Bucket) string {
-	index := len(akey.Namespace()) + len(object.Name) + 2
-	index += len(fmt.Sprintf("%d", object.Version))
-	return object.Name[index:]
-}
-
 func (object *S3Object)dbRemove() (error) {
 	var res S3Object
 

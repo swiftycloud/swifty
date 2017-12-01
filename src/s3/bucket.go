@@ -36,11 +36,6 @@ func (bucket *S3Bucket)GenBackendId(akey *S3AccessKey) string {
 	return akey.Namespace() + "-" + bucket.Name
 }
 
-func (bucket *S3Bucket)GetName(akey *S3AccessKey) string {
-	index := len(akey.Namespace()) + 1
-	return bucket.Name[index:]
-}
-
 func (bucket *S3Bucket)dbRemove() (error) {
 	var res S3Bucket
 
