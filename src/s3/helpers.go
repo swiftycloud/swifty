@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/xml"
 	"net/http"
-	"strings"
 )
 
 func HTTPMarshalXMLAndWrite(w http.ResponseWriter, status int, data interface{}) error {
