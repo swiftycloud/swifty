@@ -56,6 +56,9 @@ func dbConnect(conf *YAMLConf) error {
 	index.Key = []string{"_id", "access-key-id"}
 	dbSession.DB(dbName).C(DBColS3AccessKeys).EnsureIndex(index)
 
+	index.Key = []string{"_id"}
+	dbSession.DB(dbName).C(DBColS3ObjectData).EnsureIndex(index)
+
 	dbColMap = make(map[reflect.Type]string)
 	dbColMap[reflect.TypeOf(S3Bucket{})] = DBColS3Buckets
 	dbColMap[reflect.TypeOf(&S3Bucket{})] = DBColS3Buckets
