@@ -10,6 +10,7 @@ import (
 
 	"../apis/apps"
 	"../common"
+	"../common/http"
 )
 
 func doRun(cookie, event string, args []string) (int, string, error) {
@@ -34,8 +35,8 @@ func talkToLink(link *BalancerLink, cookie, event string, args []string) (int, s
 		goto out
 	}
 
-	resp, err = swy.HTTPMarshalAndPost(
-			&swy.RestReq{
+	resp, err = swyhttp.MarshalAndPost(
+			&swyhttp.RestReq{
 				Address: "http://" + link.VIP() + "/v1/run",
 				Timeout: 120,
 			},

@@ -13,6 +13,7 @@ import (
 
 	"../apis/apps"
 	"../common"
+	"../common/http"
 	"../common/keystone"
 	"../common/secrets"
 )
@@ -41,7 +42,7 @@ func handleUserLogin(w http.ResponseWriter, r *http.Request) {
 	var token string
 	var resp = http.StatusBadRequest
 
-	err := swy.HTTPReadAndUnmarshalReq(r, &params)
+	err := swyhttp.ReadAndUnmarshalReq(r, &params)
 	if err != nil {
 		goto out
 	}
@@ -66,7 +67,7 @@ out:
 }
 
 func handleAdminReq(r *http.Request, params interface{}) (*swyks.KeystoneTokenData, int, error) {
-	err := swy.HTTPReadAndUnmarshalReq(r, params)
+	err := swyhttp.ReadAndUnmarshalReq(r, params)
 	if err != nil {
 		return nil, http.StatusBadRequest, err
 	}
@@ -121,7 +122,7 @@ func handleUserInfo(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Debugf("USER: %s/%s/%s", kui.Id, kui.Name, kui.Description)
-	err = swy.HTTPMarshalAndWrite(w, swyapi.UserInfo{
+	err = swyhttp.MarshalAndWrite(w, swyapi.UserInfo{
 				Id: ui.Id,
 				Name: kui.Description,
 			})
@@ -157,7 +158,7 @@ func handleListUsers(w http.ResponseWriter, r *http.Request) {
 		goto out
 	}
 
-	err = swy.HTTPMarshalAndWrite(w, &result)
+	err = swyhttp.MarshalAndWrite(w, &result)
 	if err != nil {
 		goto out
 	}
@@ -169,8 +170,8 @@ out:
 }
 
 func makeGateReq(gate, tennant, addr string, in interface{}, out interface{}, authToken string) error {
-	resp, err := swy.HTTPMarshalAndPost(
-			&swy.RestReq{
+	resp, err := swyhttp.MarshalAndPost(
+			&swyhttp.RestReq{
 				Address: "http://" + gate + "/v1/" + addr,
 				Headers: map[string]string {
 					"X-Auth-Token": authToken,
@@ -189,7 +190,7 @@ func makeGateReq(gate, tennant, addr string, in interface{}, out interface{}, au
 	}
 
 	if out != nil {
-		err = swy.HTTPReadAndUnmarshalResp(resp, out)
+		err = swyhttp.ReadAndUnmarshalResp(resp, out)
 		if err != nil {
 			return fmt.Errorf("Bad responce body: %s", err.Error())
 		}

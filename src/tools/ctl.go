@@ -11,6 +11,7 @@ import (
 	"os"
 
 	"../common"
+	"../common/http"
 	"../apis/apps"
 )
 
@@ -36,8 +37,8 @@ func make_faas_req_x(url string, in interface{}, succ_code int) (*http.Response,
 		h["X-Auth-Token"] = conf.Login.Token
 	}
 
-	return swy.HTTPMarshalAndPost(
-			&swy.RestReq{
+	return swyhttp.MarshalAndPost(
+			&swyhttp.RestReq{
 				Address:	address,
 				Headers:	h,
 				Success:	succ_code,
@@ -92,7 +93,7 @@ again:
 	defer resp.Body.Close()
 
 	if out != nil {
-		err = swy.HTTPReadAndUnmarshalResp(resp, out)
+		err = swyhttp.ReadAndUnmarshalResp(resp, out)
 		if err != nil {
 			panic(err)
 		}

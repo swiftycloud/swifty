@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"../apis/apps"
 	"../common"
+	"../common/http"
 	"../common/secrets"
 )
 
@@ -139,7 +140,7 @@ func handleRequest(w http.ResponseWriter, r *http.Request,
 	var params swyapi.PgRequest
 
 	code = http.StatusBadRequest
-	err := swy.HTTPReadAndUnmarshalReq(r, &params)
+	err := swyhttp.ReadAndUnmarshalReq(r, &params)
 	if err != nil {
 		goto out
 	}

@@ -15,6 +15,7 @@ import (
 	"io/ioutil"
 
 	"../common"
+	"../common/http"
 	"../apis/apps"
 )
 
@@ -122,7 +123,7 @@ func handleRun(w http.ResponseWriter, r *http.Request) {
 	var params swyapi.SwdFunctionRun
 	var result *swyapi.SwdFunctionRunResult
 
-	err := swy.HTTPReadAndUnmarshalReq(r, &params)
+	err := swyhttp.ReadAndUnmarshalReq(r, &params)
 	if err != nil {
 		goto out
 	}
@@ -137,7 +138,7 @@ func handleRun(w http.ResponseWriter, r *http.Request) {
 	runQueue <- &req
 	result = <-req.Result
 
-	err = swy.HTTPMarshalAndWrite(w, result)
+	err = swyhttp.MarshalAndWrite(w, result)
 	if err != nil {
 		goto out
 	}
