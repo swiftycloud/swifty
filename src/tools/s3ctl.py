@@ -9,7 +9,7 @@ default_admin_token = "44b56e701117c2ef5f116e6b8d6df7bb070e9068bd06d794cac3ae8d6
 
 parser = argparse.ArgumentParser(prog='s3ctl.py')
 parser.add_argument('--admin-secret', dest = 'admin_secret',
-                    default = '44b56e701117c2ef5f116e6b8d6df7bb070e9068bd06d794cac3ae8d672bf345',
+                    default = default_admin_token,
                     help = 'access token to ented admin interface')
 parser.add_argument('--endpoint-url', dest = 'endpoint_url',
                     default = '192.168.122.197:8787',
@@ -30,7 +30,7 @@ if args.cmd == None:
     sys.exit(1)
 
 def resp_error(cmd, resp):
-    print("Command '%s' failed %d with body %s" % \
+    print("Command '%s' failed %d with: %s" % \
           (cmd, resp.status, resp.read().decode('utf-8')))
     sys.exit(1)
 

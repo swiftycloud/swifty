@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/hex"
 	"net/http"
 	"fmt"
 )
@@ -36,28 +35,10 @@ var s3StateTransition = map[uint32][]uint32 {
 }
 
 func s3VerifyAdmin(r *http.Request) error {
-	access_key := r.Header.Get("x-swy-key")
-	access_sig := r.Header.Get("x-swy-sig")
-	access_msg := r.Header.Get("x-swy-msg")
+	access_token := r.Header.Get("x-swy-secret")
 
-	if access_key == "" || access_sig == "" || access_msg == "" {
+	if access_token != s3Secrets[conf.Daemon.TokenAdmin] {
 		return fmt.Errorf("No required headers found")
-	}
-
-	// FIXME Check for Kind
-	akey, err := dbLookupAccessKey(access_key)
-	if err != nil {
-		return fmt.Errorf("Invalid key")
-	}
-
-	digest := makeHmac([]byte(akey.AccessKeySecret), []byte(access_msg))
-	digesthex := hex.EncodeToString(digest)
-
-	// -H "x-swy-key:6DLA43X797XL2I42IJ33"
-	// -H "x-swy-msg:pleaseletmein"
-	// -H "x-swy-sig:ac95ab4b16ebdb70fd96e49e44c97141dab43bfcc208f2145bb891bcdadedcb9"
-	if digesthex != access_sig {
-		return fmt.Errorf("Invalid signature")
 	}
 
 	return nil

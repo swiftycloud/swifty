@@ -26,6 +26,7 @@ type YAMLConfCeph struct {
 type YAMLConfDaemon struct {
 	Addr		string			`yaml:"address"`
 	AddrAdmin	string			`yaml:"address-admin"`
+	TokenAdmin	string			`yaml:"token-admin"`
 	LogLevel	string			`yaml:"loglevel"`
 }
 
@@ -334,7 +335,26 @@ func handleAdmin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
+	log.Debug(r.URL.Query())
+	if cmd, ok := r.URL.Query()["cmd"]; ok {
+		switch cmd[0] {
+		case "akey-gen":
+			akey, err := genNewAccessKey()
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+			err = swy.HTTPMarshalAndWrite(w, &S3AccessKey{
+				AccessKeyID:		akey.AccessKeyID,
+				AccessKeySecret:	akey.AccessKeySecret,
+			})
+			if err == nil {
+				return
+			}
+			break;
+		}
+	}
+	w.WriteHeader(http.StatusBadRequest)
 }
 
 var S3ModeDevel bool
