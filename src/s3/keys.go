@@ -6,6 +6,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
+	"../common/crypto"
 )
 
 type S3AccessKey struct {
@@ -99,7 +100,7 @@ func dbLookupAccessKey(AccessKeyId string) (*S3AccessKey, error) {
 	if akey.Status == S3KeyStatusActive {
 		var sec string
 
-		sec, err = DecryptString([]byte(s3Secrets[conf.SecKey]), akey.AccessKeySecret)
+		sec, err = swycrypt.DecryptString([]byte(s3Secrets[conf.SecKey]), akey.AccessKeySecret)
 		if err != nil {
 			return nil, err
 		}
@@ -118,7 +119,7 @@ func dbLookupAccessKey(AccessKeyId string) (*S3AccessKey, error) {
 func dbInsertAccessKey(AccessKeyID, AccessKeySecret string, Kind uint32) (*S3AccessKey, error) {
 	var err error
 
-	AccessKeySecret, err = EncryptString([]byte(s3Secrets[conf.SecKey]), AccessKeySecret)
+	AccessKeySecret, err = swycrypt.EncryptString([]byte(s3Secrets[conf.SecKey]), AccessKeySecret)
 	if err != nil {
 		return nil, err
 	}
