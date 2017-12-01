@@ -51,6 +51,10 @@ func EncryptString(key []byte, text string) (string, error) {
 }
 
 func DecryptString(key []byte, ciphertext string) (string, error) {
+	if len(key) > 16 {
+		key = key[:16]
+	}
+
 	ciphermsg, err := hex.DecodeString(ciphertext)
 	if err != nil {
 		return "", fmt.Errorf("Can't decode cipher text: %s", err.Error())
