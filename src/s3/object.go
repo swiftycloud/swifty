@@ -31,7 +31,6 @@ var cachedObjSize int64
 
 type S3ObjectData struct {
 	ObjID				bson.ObjectId	`bson:"_id,omitempty"`
-	BucketObjID			bson.ObjectId	`bson:"bucket-id,omitempty"`	// S3Bucket
 	ObjectObjID			bson.ObjectId	`bson:"object-id,omitempty"`	// S3Object
 	State				uint32		`json:"state" bson:"state"`
 	Size				int64		`json:"size" bson:"size"`
@@ -157,7 +156,6 @@ func s3CommitObject(bucket *S3Bucket, object *S3Object, data []byte) error {
 	if radosDisabled || size <= cachedObjSize {
 		objd := S3ObjectData{
 			ObjID:		bson.NewObjectId(),
-			BucketObjID:	bucket.ObjID,
 			ObjectObjID:	object.ObjID,
 			Size:		size,
 			Data:		data,
