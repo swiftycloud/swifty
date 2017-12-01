@@ -20,6 +20,7 @@ balancer:
                 - ip: "10.8.0.2"
                   ports: "8780:8980"
 middleware:
+        mwseckey: "MWSECPASS"
         maria:
                 address: "192.168.122.197:3306"
                 admin: "root"

@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"../common"
+	"../common/crypto"
 )
 
 type MwareDesc struct {
@@ -77,6 +78,11 @@ func mwareGetEnv(conf *YAMLConf, id *SwoId) ([][2]string, error) {
 	handler, ok := mwareHandlers[item.MwareType]
 	if !ok {
 		return nil, fmt.Errorf("No handler for %s mware", id.Str())
+	}
+
+	item.Secret, err = swycrypt.DecryptString([]byte(gateSecrets[conf.Mware.SecKey]), item.Secret)
+	if err != nil {
+		return nil, err
 	}
 
 	return handler.GetEnv(&conf.Mware, &item), nil
@@ -177,6 +183,12 @@ func mwareSetup(conf *YAMLConf, id *SwoId, mwType string) error {
 	if err != nil {
 		err = fmt.Errorf("mware init error: %s", err.Error())
 		dbMwareRemove(mwd)
+		goto out
+	}
+
+	mwd.Secret, err = swycrypt.EncryptString([]byte(gateSecrets[conf.Mware.SecKey]), mwd.Secret)
+	if err != nil {
+		forgetMware(conf, handler, mwd)
 		goto out
 	}
 

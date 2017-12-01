@@ -82,6 +82,7 @@ type YAMLConfPostgres struct {
 }
 
 type YAMLConfMw struct {
+	SecKey		string			`yaml:"mwseckey"`
 	Rabbit		YAMLConfRabbit		`yaml:"rabbit"`
 	Maria		YAMLConfMaria		`yaml:"maria"`
 	Mongo		YAMLConfMongo		`yaml:"mongo"`
