@@ -39,6 +39,7 @@ type YAMLConf struct {
 	DB		YAMLConfDB		`yaml:"db"`
 	Daemon		YAMLConfDaemon		`yaml:"daemon"`
 	Ceph		YAMLConfCeph		`yaml:"ceph"`
+	SecKey		string			`yaml:"secretskey"`
 }
 
 var conf YAMLConf
@@ -335,12 +336,15 @@ func handleAdmin(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+var S3ModeDevel bool
+
 func main() {
 	var secretsDisabled bool
 	var dbPass string
 	var config_path string
 	var err error
 
+	flag.BoolVar(&S3ModeDevel, "devel", false, "launch in development mode")
 	flag.StringVar(&config_path,
 			"conf",
 				"",

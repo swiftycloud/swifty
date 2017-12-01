@@ -8,5 +8,6 @@ daemon:
         address: "192.168.122.197:8787"
         address-admin: "127.0.0.1:8787"
         loglevel: "debug"
+secretskey: "S3SECRETSKEY"
 ceph:
         config-path: src/ceph.conf

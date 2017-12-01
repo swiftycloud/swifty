@@ -22,14 +22,9 @@ const (
 	S3KeyKindAdminAccessKey		= 2
 
 	S3KeyStatusInActive		= 0
-	S3KeyStatusActive		= 1
+	S3KeyStatusActivePlain		= 1
+	S3KeyStatusActive		= 2
 )
-
-//
-// Predefined keys for testing purposes
-//
-const KEY_TEST_AccessKeyID string = "6DLA43X797XL2I42IJ33"
-const KEY_TEST_AccessKeySecret string = "AJwz9vZpdnz6T5TqEDQOEFos6wxxCnW0qwLQeDcB"
 
 // use swifty-s3
 // db.S3Keys.insert({"_id":ObjectId("5a16ccd7b3e8ee4bdf83da34"),"key-id":ObjectId("5a16ccdbb3e8ee4bdf83da35"),"kind":1,"status":1})
@@ -101,21 +96,43 @@ func dbLookupAccessKey(AccessKeyId string) (*S3AccessKey, error) {
 		return nil, fmt.Errorf("Can't find access key '%s': %s", AccessKeyId, err.Error())
 	}
 
-	if akey.Status != S3KeyStatusActive {
-		return nil, fmt.Errorf("Access key %s is not active", AccessKeyId)
+	if akey.Status == S3KeyStatusActive {
+		var sec string
+
+		sec, err = DecryptString([]byte(s3Secrets[conf.SecKey]), akey.AccessKeySecret)
+		if err != nil {
+			return nil, err
+		}
+
+		akey.AccessKeySecret = sec
+		return &akey, nil
 	}
 
-	return &akey, nil
+	if S3ModeDevel && (akey.Status == S3KeyStatusActivePlain) {
+		return &akey, nil
+	}
+
+	return nil, fmt.Errorf("Access key %s is not active", AccessKeyId)
 }
 
 func dbInsertAccessKey(AccessKeyID, AccessKeySecret string, Kind uint32) (*S3AccessKey, error) {
 	var err error
 
+	status := uint32(S3KeyStatusActive)
+	if S3ModeDevel {
+		status = S3KeyStatusActivePlain
+	} else {
+		AccessKeySecret, err = EncryptString([]byte(s3Secrets[conf.SecKey]), AccessKeySecret)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	akey := S3AccessKey {
 		ObjID:			bson.NewObjectId(),
 		AccessKeyID:		AccessKeyID,
 		AccessKeySecret:	AccessKeySecret,
-		Status:			S3KeyStatusActive,
+		Status:			status,
 		Kind:			Kind,
 	}
 
