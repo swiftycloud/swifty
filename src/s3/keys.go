@@ -50,13 +50,13 @@ func genKey(length int, dict []byte) (string) {
 // for security reason.
 //
 
-func genNewAccessKey() (*S3AccessKey, error) {
+func genNewAccessKey(namespace string) (*S3AccessKey, error) {
 	akey := S3AccessKey {
 		ObjID:			bson.NewObjectId(),
 		AccessKeyID:		genKey(20, AccessKeyLetters),
 		AccessKeySecret:	genKey(40, SecretKeyLetters),
 		Status:			S3KeyStatusActive,
-		Namespace:		genKey(10, AccessKeyLetters),
+		Namespace:		namespace,
 	}
 
 	if akey.AccessKeyID == "" ||
@@ -154,9 +154,9 @@ func dbRemoveAccessKey(AccessKeyID string) (error) {
 	var err error
 
 	akey, err := dbLookupAccessKey(AccessKeyID)
-	if akey == nil || err != nil {
+	if err != nil {
 		log.Debugf("dbRemoveAccessKey: Can't find for %v", AccessKeyID)
-		return nil
+		return err
 	}
 
 	err = dbSession.DB(dbName).C(DBColS3AccessKeys).Remove(akey)

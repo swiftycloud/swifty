@@ -16,12 +16,13 @@ parser.add_argument('--endpoint-url', dest = 'endpoint_url',
                     help = 'S3 service address')
 
 sp = parser.add_subparsers(dest = 'cmd')
-for cmd in ['akey-gen', 'bucket-gen']:
-    sp.add_parser(cmd)
-
-for cmd in ['akey-del', 'bucket-del']:
+for cmd in ['keygen']:
     spp = sp.add_parser(cmd)
-    spp.add_argument('name')
+    spp.add_argument('--namespace', dest = 'namespace', required = True)
+
+for cmd in ['keydel']:
+    spp = sp.add_parser(cmd)
+    spp.add_argument('--access-key-id', dest = 'access_key_id', required = True)
 
 args = parser.parse_args()
 
@@ -34,15 +35,25 @@ def resp_error(cmd, resp):
           (cmd, resp.status, resp.read().decode('utf-8')))
     sys.exit(1)
 
-if args.cmd == 'akey-gen':
+def request(cmd, data):
     params = urllib.parse.urlencode({'cmd': args.cmd})
-    headers = {"x-swy-secret": args.admin_secret}
+    headers = {"x-swy-secret": args.admin_secret,
+               'Content-type': 'application/json'}
     conn = http.client.HTTPConnection(args.endpoint_url)
-    conn.request('GET','/v1/api/admin?' + params, None, headers)
-    resp = conn.getresponse()
+    conn.request('POST','/v1/api/admin/' + args.cmd, json.dumps(data), headers)
+    return conn.getresponse()
+
+if args.cmd == 'keygen':
+    resp = request(args.cmd, {"namespace": args.namespace})
     if resp.status == 200:
         akey = json.loads(resp.read().decode('utf-8'))
         print("Access Key %s\nSecret Key %s" % \
               (akey['access-key-id'], akey['access-key-secret']))
+    else:
+        resp_error(args.cmd, resp)
+elif args.cmd == 'keydel':
+    resp = request(args.cmd, {"access-key-id": args.access_key_id})
+    if resp.status == 200:
+        print("Access Key %s deleted" % (args.access_key_id))
     else:
         resp_error(args.cmd, resp)

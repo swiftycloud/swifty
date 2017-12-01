@@ -15,6 +15,7 @@ import (
 
 	"../common"
 	"../common/secrets"
+	"../apis/apps/s3"
 )
 
 var s3Secrets map[string]string
@@ -329,32 +330,66 @@ func handleObject(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func handleAdmin(w http.ResponseWriter, r *http.Request) {
+func handleAdminOp(w http.ResponseWriter, r *http.Request) {
+	var params_keygen swys3ctl.S3CtlKeyGen
+	var params_keydel swys3ctl.S3CtlKeyDel
+	var op string = mux.Vars(r)["op"]
+	var akey *S3AccessKey
+	var err error
+
 	if s3VerifyAdmin(r) != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	log.Debug(r.URL.Query())
-	if cmd, ok := r.URL.Query()["cmd"]; ok {
-		switch cmd[0] {
-		case "akey-gen":
-			akey, err := genNewAccessKey()
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusBadRequest)
-				return
-			}
-			err = swy.HTTPMarshalAndWrite(w, &S3AccessKey{
-				AccessKeyID:		akey.AccessKeyID,
-				AccessKeySecret:	akey.AccessKeySecret,
-			})
-			if err == nil {
-				return
-			}
-			break;
+	switch op {
+	case "keygen":
+		err = swy.HTTPReadAndUnmarshalReq(r, &params_keygen)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
 		}
+		// FIXME Check for allowed values
+		if params_keygen.Namespace == "" {
+			http.Error(w, fmt.Sprintf("Missing namespace name"),
+					http.StatusBadRequest)
+			return
+		}
+		akey, err = genNewAccessKey(params_keygen.Namespace)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		err = swy.HTTPMarshalAndWrite(w, &swys3ctl.S3CtlKeyGenResult{
+				AccessKeyID:	akey.AccessKeyID,
+				AccessKeySecret:akey.AccessKeySecret, })
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+		}
+		return
+		break
+	case "keydel":
+		err = swy.HTTPReadAndUnmarshalReq(r, &params_keydel)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		if params_keydel.AccessKeyID == "" {
+			http.Error(w, fmt.Sprintf("Missing key"),
+					http.StatusBadRequest)
+			return
+		}
+		err = dbRemoveAccessKey(params_keydel.AccessKeyID)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+		} else {
+			w.WriteHeader(http.StatusOK)
+		}
+		return
+		break
 	}
-	w.WriteHeader(http.StatusBadRequest)
+
+	http.Error(w, fmt.Sprintf("Unknown operation"), http.StatusBadRequest)
 }
 
 var S3ModeDevel bool
@@ -417,7 +452,8 @@ func main() {
 
 	// Admin operations
 	radminsrv := mux.NewRouter()
-	radminsrv.HandleFunc("/v1/api/admin",	handleAdmin)
+	radminsrv.HandleFunc("/v1/api/admin/{op:[a-zA-Z0-9-.]+}",
+						handleAdminOp)
 
 	err = dbConnect(&conf)
 	if err != nil {
