@@ -360,7 +360,6 @@ func handleAdmin(w http.ResponseWriter, r *http.Request) {
 var S3ModeDevel bool
 
 func main() {
-	var secretsDisabled bool
 	var dbPass string
 	var config_path string
 	var err error
@@ -374,10 +373,6 @@ func main() {
 			"no-rados",
 				false,
 				"disable rados")
-	flag.BoolVar(&secretsDisabled,
-			"no-secrets",
-				false,
-				"disable secrets engine")
 	flag.Int64Var(&cachedObjSize,
 			"cached-obj-size",
 				S3StorageSizePerObj,
@@ -405,20 +400,10 @@ func main() {
 		return
 	}
 
-	if secretsDisabled {
-		if dbPass == "" {
-			log.Errorf("Provide db pass")
-			return
-		}
-		s3Secrets = map[string]string {
-			conf.DB.Pass: dbPass,
-		}
-	} else {
-		s3Secrets, err = swysec.ReadSecrets("s3")
-		if err != nil {
-			log.Errorf("Can't read gate secrets: %s", err.Error())
-			return
-		}
+	s3Secrets, err = swysec.ReadSecrets("s3")
+	if err != nil {
+		log.Errorf("Can't read gate secrets: %s", err.Error())
+		return
 	}
 
 	// Service operations
