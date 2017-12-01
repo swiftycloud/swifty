@@ -6,6 +6,7 @@ db:
         password: "MGOS3PASS"
 daemon:
         address: "192.168.122.197:8787"
+        address-admin: "127.0.0.1:8787"
         loglevel: "debug"
 ceph:
         config-path: src/ceph.conf

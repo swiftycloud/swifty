@@ -24,6 +24,7 @@ type YAMLConfCeph struct {
 
 type YAMLConfDaemon struct {
 	Addr		string			`yaml:"address"`
+	AddrAdmin	string			`yaml:"address-admin"`
 	LogLevel	string			`yaml:"loglevel"`
 }
 
@@ -42,6 +43,7 @@ type YAMLConf struct {
 
 var conf YAMLConf
 var log *zap.SugaredLogger
+var adminsrv *http.Server
 var gatesrv *http.Server
 
 func setupLogger(conf *YAMLConf) {
@@ -399,17 +401,18 @@ func main() {
 		}
 	}
 
-	r := mux.NewRouter()
+	// Service operations
+	rgatesrv := mux.NewRouter()
 
 	match_bucket := "/{BucketName:[a-zA-Z0-9-.]*}"
 	match_object := "/{BucketName:[a-zA-Z0-9-.]+}/{ObjName:[a-zA-Z0-9-.]+}"
 
-	// Servise operations
-	r.HandleFunc(match_bucket,	handleBucket)
-	r.HandleFunc(match_object,	handleObject)
+	rgatesrv.HandleFunc(match_bucket,	handleBucket)
+	rgatesrv.HandleFunc(match_object,	handleObject)
 
 	// Admin operations
-	r.HandleFunc("/v1/api/admin",	handleAdmin)
+	radminsrv := mux.NewRouter()
+	radminsrv.HandleFunc("/v1/api/admin",	handleAdmin)
 
 	err = dbConnect(&conf)
 	if err != nil {
@@ -423,8 +426,22 @@ func main() {
 				err.Error())
 	}
 
+	go func() {
+		adminsrv = &http.Server{
+			Handler:      radminsrv,
+			Addr:         conf.Daemon.AddrAdmin,
+			WriteTimeout: 60 * time.Second,
+			ReadTimeout:  60 * time.Second,
+		}
+
+		err = adminsrv.ListenAndServe()
+		if err != nil {
+			log.Errorf("ListenAndServe: adminsrv %s", err.Error())
+		}
+	}()
+
 	gatesrv = &http.Server{
-			Handler:      r,
+			Handler:      rgatesrv,
 			Addr:         conf.Daemon.Addr,
 			WriteTimeout: 60 * time.Second,
 			ReadTimeout:  60 * time.Second,
@@ -432,7 +449,7 @@ func main() {
 
 	err = gatesrv.ListenAndServe()
 	if err != nil {
-		log.Errorf("ListenAndServe: %s", err.Error())
+		log.Errorf("ListenAndServe: gatesrv %s", err.Error())
 	}
 
 	radosFini()
