@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"fmt"
 	"../apis/apps"
-	"../common"
+	"../common/keystone"
 )
 
 var ksToken string
@@ -12,10 +12,10 @@ var ksSwyDomainId string
 var ksSwyOwnerRole string
 
 func keystoneGetDomainId(conf *YAMLConfKeystone) (string, error) {
-	var doms swy.KeystoneDomainsResp
+	var doms swyks.KeystoneDomainsResp
 
 	log.Debugf("Domains w/ token %s", ksToken)
-	err := swy.KeystoneMakeReq(&swy.KeystoneReq {
+	err := swyks.KeystoneMakeReq(&swyks.KeystoneReq {
 			Type:	"GET",
 			Addr:	conf.Addr,
 			URL:	"domains",
@@ -37,9 +37,9 @@ func keystoneGetDomainId(conf *YAMLConfKeystone) (string, error) {
 }
 
 func keystoneGetOwnerRoleId(conf *YAMLConfKeystone) (string, error) {
-	var roles swy.KeystoneRolesResp
+	var roles swyks.KeystoneRolesResp
 
-	err := swy.KeystoneMakeReq(&swy.KeystoneReq {
+	err := swyks.KeystoneMakeReq(&swyks.KeystoneReq {
 			Type:	"GET",
 			Addr:	conf.Addr,
 			URL:	"roles",
@@ -51,7 +51,7 @@ func keystoneGetOwnerRoleId(conf *YAMLConfKeystone) (string, error) {
 
 	log.Debugf("Looking for role %s", "swifty.owner")
 	for _, role := range roles.Roles {
-		if role.Name == swy.SwyUserRole {
+		if role.Name == swyks.SwyUserRole {
 			log.Debugf("Found role: %s", role.Id)
 			return role.Id, nil
 		}
@@ -61,10 +61,10 @@ func keystoneGetOwnerRoleId(conf *YAMLConfKeystone) (string, error) {
 }
 
 func ksListUsers(conf *YAMLConfKeystone) (*[]swyapi.UserInfo, error) {
-	var users swy.KeystoneUsersResp
+	var users swyks.KeystoneUsersResp
 	var res []swyapi.UserInfo
 
-	err := swy.KeystoneMakeReq(&swy.KeystoneReq {
+	err := swyks.KeystoneMakeReq(&swyks.KeystoneReq {
 			Type:	"GET",
 			Addr:	conf.Addr,
 			URL:	"users",
@@ -86,17 +86,17 @@ func ksListUsers(conf *YAMLConfKeystone) (*[]swyapi.UserInfo, error) {
 }
 
 func ksAddUserAndProject(conf *YAMLConfKeystone, user *swyapi.AddUser) error {
-	var presp swy.KeystoneProjectAdd
+	var presp swyks.KeystoneProjectAdd
 
-	err := swy.KeystoneMakeReq(
-		&swy.KeystoneReq {
+	err := swyks.KeystoneMakeReq(
+		&swyks.KeystoneReq {
 			Type:	"POST",
 			Addr:	conf.Addr,
 			URL:	"projects",
 			Token:	ksToken,
 			Succ:	http.StatusCreated, },
-		&swy.KeystoneProjectAdd {
-			Project: swy.KeystoneProject {
+		&swyks.KeystoneProjectAdd {
+			Project: swyks.KeystoneProject {
 				Name: user.Id,
 				DomainId: ksSwyDomainId,
 			},
@@ -108,17 +108,17 @@ func ksAddUserAndProject(conf *YAMLConfKeystone, user *swyapi.AddUser) error {
 
 	log.Debugf("Added project %s (id %s)", presp.Project.Name, presp.Project.Id[:8])
 
-	var uresp swy.KeystonePassword
+	var uresp swyks.KeystonePassword
 
-	err = swy.KeystoneMakeReq(
-		&swy.KeystoneReq {
+	err = swyks.KeystoneMakeReq(
+		&swyks.KeystoneReq {
 			Type:	"POST",
 			Addr:	conf.Addr,
 			URL:	"users",
 			Token:	ksToken,
 			Succ:	http.StatusCreated, },
-		&swy.KeystonePassword {
-			User: swy.KeystoneUser {
+		&swyks.KeystonePassword {
+			User: swyks.KeystoneUser {
 				Name: user.Id,
 				Password: user.Pass,
 				DefProject: presp.Project.Id,
@@ -132,7 +132,7 @@ func ksAddUserAndProject(conf *YAMLConfKeystone, user *swyapi.AddUser) error {
 
 	log.Debugf("Added user %s (id %s)", uresp.User.Name, uresp.User.Id[:8])
 
-	err = swy.KeystoneMakeReq(&swy.KeystoneReq {
+	err = swyks.KeystoneMakeReq(&swyks.KeystoneReq {
 			Type:	"PUT",
 			Addr:	conf.Addr,
 			URL:	"projects/" + presp.Project.Id + "/users/" + uresp.User.Id + "/roles/" + ksSwyOwnerRole,
@@ -145,11 +145,11 @@ func ksAddUserAndProject(conf *YAMLConfKeystone, user *swyapi.AddUser) error {
 	return nil
 }
 
-func ksGetUserInfo(conf *YAMLConfKeystone, user string) (*swy.KeystoneUser, error) {
-	var uresp swy.KeystoneUsersResp
+func ksGetUserInfo(conf *YAMLConfKeystone, user string) (*swyks.KeystoneUser, error) {
+	var uresp swyks.KeystoneUsersResp
 
-	err := swy.KeystoneMakeReq(
-		&swy.KeystoneReq {
+	err := swyks.KeystoneMakeReq(
+		&swyks.KeystoneReq {
 			Type:	"GET",
 			Addr:	conf.Addr,
 			URL:	"users?name=" + user,
@@ -166,11 +166,11 @@ func ksGetUserInfo(conf *YAMLConfKeystone, user string) (*swy.KeystoneUser, erro
 	return &uresp.Users[0], nil
 }
 
-func ksGetProjectInfo(conf *YAMLConfKeystone, project string) (*swy.KeystoneProject, error) {
-	var presp swy.KeystoneProjectsResp
+func ksGetProjectInfo(conf *YAMLConfKeystone, project string) (*swyks.KeystoneProject, error) {
+	var presp swyks.KeystoneProjectsResp
 
-	err := swy.KeystoneMakeReq(
-		&swy.KeystoneReq {
+	err := swyks.KeystoneMakeReq(
+		&swyks.KeystoneReq {
 			Type:	"GET",
 			Addr:	conf.Addr,
 			URL:	"projects?name=" + project,
@@ -194,15 +194,15 @@ func ksChangeUserPass(conf *YAMLConfKeystone, up *swyapi.UserLogin) error {
 	}
 
 	log.Debugf("Change pass for %s/%s", up.UserName, uinf.Id)
-	err = swy.KeystoneMakeReq(
-		&swy.KeystoneReq {
+	err = swyks.KeystoneMakeReq(
+		&swyks.KeystoneReq {
 			Type:	"PATCH",
 			Addr:	conf.Addr,
 			URL:	"users/" + uinf.Id,
 			Token:	ksToken,
 			Succ:	http.StatusOK, },
-		&swy.KeystonePassword {
-			User: swy.KeystoneUser {
+		&swyks.KeystonePassword {
+			User: swyks.KeystoneUser {
 				Password: up.Password,
 			},
 		}, nil)
@@ -221,8 +221,8 @@ func ksDelUserAndProject(conf *YAMLConfKeystone, ui *swyapi.UserInfo) error {
 		return err
 	}
 
-	err = swy.KeystoneMakeReq(
-		&swy.KeystoneReq {
+	err = swyks.KeystoneMakeReq(
+		&swyks.KeystoneReq {
 			Type:	"DELETE",
 			Addr:	conf.Addr,
 			URL:	"users/" + uinf.Id,
@@ -237,8 +237,8 @@ func ksDelUserAndProject(conf *YAMLConfKeystone, ui *swyapi.UserInfo) error {
 		return err
 	}
 
-	err = swy.KeystoneMakeReq(
-		&swy.KeystoneReq {
+	err = swyks.KeystoneMakeReq(
+		&swyks.KeystoneReq {
 			Type:	"DELETE",
 			Addr:	conf.Addr,
 			URL:	"projects/" + pinf.Id,
@@ -255,7 +255,7 @@ func ksInit(conf *YAMLConfKeystone) error {
 	var err error
 
 	log.Debugf("Logging in")
-	ksToken, err = swy.KeystoneAuthWithPass(conf.Addr, "default",
+	ksToken, err = swyks.KeystoneAuthWithPass(conf.Addr, "default",
 				&swyapi.UserLogin{UserName: conf.Admin, Password: admdSecrets[conf.Pass]})
 	if err != nil {
 		return err

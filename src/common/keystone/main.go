@@ -1,8 +1,9 @@
-package swy
+package swyks
 
 import (
 	"net/http"
-	"../apis/apps"
+	"../../common"
+	"../../apis/apps"
 )
 
 const (
@@ -113,8 +114,8 @@ func KeystoneMakeReq(ksreq *KeystoneReq, in interface{}, out interface{}) error 
 		headers["X-Auth-Token"] = ksreq.Token
 	}
 
-	resp, err := HTTPMarshalAndPost(
-			&RestReq{
+	resp, err := swy.HTTPMarshalAndPost(
+			&swy.RestReq{
 				Method:  ksreq.Type,
 				Address: "http://" + ksreq.Addr + "/v3/" + ksreq.URL,
 				Headers: headers,
@@ -128,7 +129,7 @@ func KeystoneMakeReq(ksreq *KeystoneReq, in interface{}, out interface{}) error 
 	ksreq.Token = resp.Header.Get("X-Subject-Token")
 
 	if out != nil {
-		err = HTTPReadAndUnmarshalResp(resp, out)
+		err = swy.HTTPReadAndUnmarshalResp(resp, out)
 		if err != nil {
 			return err
 		}

@@ -13,6 +13,7 @@ import (
 
 	"../apis/apps"
 	"../common"
+	"../common/keystone"
 )
 
 var admdSecrets map[string]string
@@ -46,7 +47,7 @@ func handleUserLogin(w http.ResponseWriter, r *http.Request) {
 
 	log.Debugf("Try to login user %s", params.UserName)
 
-	token, err = swy.KeystoneAuthWithPass(conf.Keystone.Addr, conf.Keystone.Domain, &params)
+	token, err = swyks.KeystoneAuthWithPass(conf.Keystone.Addr, conf.Keystone.Domain, &params)
 	if err != nil {
 		resp = http.StatusUnauthorized
 		goto out
@@ -63,7 +64,7 @@ out:
 	http.Error(w, err.Error(), resp)
 }
 
-func handleAdminReq(r *http.Request, params interface{}) (*swy.KeystoneTokenData, int, error) {
+func handleAdminReq(r *http.Request, params interface{}) (*swyks.KeystoneTokenData, int, error) {
 	err := swy.HTTPReadAndUnmarshalReq(r, params)
 	if err != nil {
 		return nil, http.StatusBadRequest, err
@@ -73,7 +74,7 @@ func handleAdminReq(r *http.Request, params interface{}) (*swy.KeystoneTokenData
 		return nil, http.StatusUnauthorized, fmt.Errorf("Auth token not provided")
 	}
 
-	td, code := swy.KeystoneGetTokenData(conf.Keystone.Addr, token)
+	td, code := swyks.KeystoneGetTokenData(conf.Keystone.Addr, token)
 	if code != 0 {
 		return nil, code, fmt.Errorf("Keystone auth error")
 	}
@@ -81,15 +82,15 @@ func handleAdminReq(r *http.Request, params interface{}) (*swy.KeystoneTokenData
 	return td, 0, nil
 }
 
-func checkAdminOrOwner(user, target string, td *swy.KeystoneTokenData) (string, error) {
+func checkAdminOrOwner(user, target string, td *swyks.KeystoneTokenData) (string, error) {
 	if target == "" || target == user {
-		if !swy.KeystoneRoleHas(td, swy.SwyUserRole) && !swy.KeystoneRoleHas(td, swy.SwyAdminRole) {
+		if !swyks.KeystoneRoleHas(td, swyks.SwyUserRole) && !swyks.KeystoneRoleHas(td, swyks.SwyAdminRole) {
 			return "", errors.New("Not logged in")
 		}
 
 		return user, nil
 	} else {
-		if !swy.KeystoneRoleHas(td, swy.SwyAdminRole) {
+		if !swyks.KeystoneRoleHas(td, swyks.SwyAdminRole) {
 			return "", errors.New("Not an admin")
 		}
 
@@ -99,7 +100,7 @@ func checkAdminOrOwner(user, target string, td *swy.KeystoneTokenData) (string, 
 
 func handleUserInfo(w http.ResponseWriter, r *http.Request) {
 	var ui swyapi.UserInfo
-	var kui *swy.KeystoneUser
+	var kui *swyks.KeystoneUser
 
 	td, code, err := handleAdminReq(r, &ui)
 	if err != nil {
@@ -145,7 +146,7 @@ func handleListUsers(w http.ResponseWriter, r *http.Request) {
 
 	/* Listing users is only possible for admin */
 	code = http.StatusForbidden
-	if !swy.KeystoneRoleHas(td, swy.SwyAdminRole) {
+	if !swyks.KeystoneRoleHas(td, swyks.SwyAdminRole) {
 		goto out
 	}
 
@@ -226,14 +227,14 @@ func handleDelUser(w http.ResponseWriter, r *http.Request) {
 	 * cannot delete self */
 	code = http.StatusForbidden
 	if params.Id == "" || params.Id == td.Project.Name {
-		if !swy.KeystoneRoleHas(td, swy.SwyUserRole) {
+		if !swyks.KeystoneRoleHas(td, swyks.SwyUserRole) {
 			err = errors.New("Not authorized")
 			goto out
 		}
 
 		params.Id = td.Project.Name
 	} else {
-		if !swy.KeystoneRoleHas(td, swy.SwyAdminRole) {
+		if !swyks.KeystoneRoleHas(td, swyks.SwyAdminRole) {
 			err = errors.New("Not an admin")
 			goto out
 		}
@@ -271,7 +272,7 @@ func handleAddUser(w http.ResponseWriter, r *http.Request) {
 
 	/* User can be added by admin or UI */
 	code = http.StatusForbidden
-	if !swy.KeystoneRoleHas(td, swy.SwyAdminRole) && !swy.KeystoneRoleHas(td, swy.SwyUserRole) {
+	if !swyks.KeystoneRoleHas(td, swyks.SwyAdminRole) && !swyks.KeystoneRoleHas(td, swyks.SwyUserRole) {
 		goto out
 	}
 

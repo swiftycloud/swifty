@@ -14,6 +14,7 @@ import (
 
 	"../apis/apps"
 	"../common"
+	"../common/keystone"
 )
 
 var SwyModeDevel bool
@@ -136,7 +137,7 @@ func handleUserLogin(w http.ResponseWriter, r *http.Request) {
 
 	log.Debugf("Try to login user %s", params.UserName)
 
-	token, err = swy.KeystoneAuthWithPass(conf.Keystone.Addr, conf.Keystone.Domain, &params)
+	token, err = swyks.KeystoneAuthWithPass(conf.Keystone.Addr, conf.Keystone.Domain, &params)
 	if err != nil {
 		resp = http.StatusUnauthorized
 		goto out
@@ -650,7 +651,7 @@ func handleGenericReq(r *http.Request) (string, int, error) {
 		return "", http.StatusUnauthorized, fmt.Errorf("Auth token not provided")
 	}
 
-	td, code := swy.KeystoneGetTokenData(conf.Keystone.Addr, token)
+	td, code := swyks.KeystoneGetTokenData(conf.Keystone.Addr, token)
 	if code != 0 {
 		return "", code, fmt.Errorf("Keystone authentication error")
 	}
@@ -666,13 +667,13 @@ func handleGenericReq(r *http.Request) (string, int, error) {
 
 	tennant := r.Header.Get("X-Relay-Tennant")
 	if tennant == "" {
-		role = swy.SwyUserRole
+		role = swyks.SwyUserRole
 		tennant = td.Project.Name
 	} else {
-		role = swy.SwyAdminRole
+		role = swyks.SwyAdminRole
 	}
 
-	if !swy.KeystoneRoleHas(td, role) {
+	if !swyks.KeystoneRoleHas(td, role) {
 		return "", http.StatusForbidden, fmt.Errorf("Keystone authentication error")
 	}
 
