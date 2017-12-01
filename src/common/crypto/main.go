@@ -28,6 +28,10 @@ func aesUnpad(buf []byte) []byte {
 func EncryptString(key []byte, text string) (string, error) {
 	msg := aesPad([]byte(text))
 
+	if len(key) > 16 {
+		key = key[:16]
+	}
+
 	ciphermsg := make([]byte, aes.BlockSize + len(msg))
 	nonce := ciphermsg[:aes.BlockSize]
 	_, err := io.ReadFull(rand.Reader, nonce)
