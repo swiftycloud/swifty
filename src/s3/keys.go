@@ -12,9 +12,9 @@ type S3AccessKey struct {
 	ObjID				bson.ObjectId	`json:"_id,omitempty" bson:"_id,omitempty"`
 	AccessKeyID			string		`json:"access-key-id" bson:"access-key-id"`
 	AccessKeySecret			string		`json:"access-key-secret" bson:"access-key-secret"`
-	Kind				uint32		`json:"kind" bson:"kind"`
-	Status				uint32		`json:"status" bson:"status"`
-	Namespace			string		`json:"namespace" bson:"namespace"`
+	Kind				uint32		`json:"kind,omitempty" bson:"kind,omitempty"`
+	Status				uint32		`json:"status,omitempty" bson:"status,omitempty"`
+	Namespace			string		`json:"namespace,omitempty" bson:"namespace,omitempty"`
 }
 
 const (
