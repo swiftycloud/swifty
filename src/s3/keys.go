@@ -4,6 +4,8 @@ import (
 	"gopkg.in/mgo.v2/bson"
 	"fmt"
 	"crypto/rand"
+	"crypto/sha256"
+	"encoding/hex"
 )
 
 type S3AccessKey struct {
@@ -12,6 +14,7 @@ type S3AccessKey struct {
 	AccessKeySecret			string		`json:"access-key-secret" bson:"access-key-secret"`
 	Kind				uint32		`json:"kind" bson:"kind"`
 	Status				uint32		`json:"status" bson:"status"`
+	Namespace			string		`json:"namespace" bson:"namespace"`
 }
 
 const (
@@ -62,24 +65,22 @@ func genAccessKeyPair() (string, string) {
 // for security reason.
 //
 
-func (akey *S3AccessKey)Namespace() string {
-	// FIXME Every key must be associated with
-	// a user, which in turn should be associated
-	// with a project. And the project name become
-	// a namespace for S3 backend.
-	//
-	// For a while return some predefined value
-	return "swifty"
-}
-
 func (akey *S3AccessKey)BucketBID(bucket_name string) string {
-	return akey.Namespace() + "-" + bucket_name
+	/*
+	 * BID stands for backend-id and is a unique identifier
+	 * in the storage. For CEPH case this is pool ID and
+	 * since all users live in a plain pool namespace, it
+	 * should be unique across users and their buckets.
+	 */
+	h := sha256.New()
+	h.Write([]byte(akey.Namespace + "::" + bucket_name))
+	return hex.EncodeToString(h.Sum(nil))
 }
 
 func (akey *S3AccessKey)FindDefaultBucket() (string, error) {
 	var res S3Bucket
 
-	regex := "^" + akey.Namespace() + ".+"
+	regex := "^" + akey.Namespace + ".+"
 	query := bson.M{"bid": bson.M{"$regex": bson.RegEx{regex, ""}}}
 
 	err := dbS3FindOne(query, &res)
