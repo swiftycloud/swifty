@@ -101,8 +101,8 @@ func formatRequest(prefix string, r *http.Request) string {
 
 func handleBucket(w http.ResponseWriter, r *http.Request) {
 	var bucket_name string = mux.Vars(r)["BucketName"]
+	var acl string
 	var akey *S3AccessKey
-	var bucket *S3Bucket
 	var err error
 
 	log.Debug(formatRequest(fmt.Sprintf("handleBucket: bucket %v",
@@ -131,19 +131,15 @@ func handleBucket(w http.ResponseWriter, r *http.Request) {
 		r.Header.Set("x-amz-acl", S3BucketAclPrivate)
 	}
 
-	bucket = &S3Bucket{
-		Name:			bucket_name,
-		Acl:			r.Header.Get("x-amz-acl"),
-	}
+	acl = r.Header.Get("x-amz-acl")
 
 	if bucket_name == "" {
 		if r.Method == http.MethodGet {
-			bucketFound, err := bucket.dbFindByKey(akey)
+			bucket_name, err = akey.FindDefaultBucket()
 			if err != nil {
 				http.Error(w, "Can't find buckets", http.StatusBadRequest)
 				return
 			}
-			bucket.Name = bucketFound.Name
 		} else {
 			http.Error(w, "Empty bucket name provided", http.StatusBadRequest)
 			return
@@ -153,7 +149,7 @@ func handleBucket(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodPut:
 		// Create a new bucket
-		err = s3InsertBucket(akey, bucket)
+		err = s3InsertBucket(akey, bucket_name, acl)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
@@ -161,7 +157,7 @@ func handleBucket(w http.ResponseWriter, r *http.Request) {
 		break
 	case http.MethodGet:
 		// List all objects
-		objects, err := s3ListBucket(akey, bucket)
+		objects, err := s3ListBucket(akey, bucket_name, acl)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
@@ -176,7 +172,7 @@ func handleBucket(w http.ResponseWriter, r *http.Request) {
 		break
 	case http.MethodDelete:
 		// Delete a bucket
-		err = s3DeleteBucket(akey, bucket)
+		err = s3DeleteBucket(akey, bucket_name, acl)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
@@ -184,7 +180,7 @@ func handleBucket(w http.ResponseWriter, r *http.Request) {
 		break
 	case http.MethodHead:
 		// Check if we can access a bucket
-		err = s3CheckAccess(akey, bucket.Name, "")
+		err = s3CheckAccess(akey, bucket_name, "")
 		if err != nil {
 			if err == mgo.ErrNotFound {
 				http.Error(w, "No bucket found", http.StatusBadRequest)
@@ -206,10 +202,10 @@ func handleBucket(w http.ResponseWriter, r *http.Request) {
 func handleObject(w http.ResponseWriter, r *http.Request) {
 	var bucket_name string = mux.Vars(r)["BucketName"]
 	var object_name string = mux.Vars(r)["ObjName"]
+	var acl string
 	var object_size int64
 	var akey *S3AccessKey
 	var bucket *S3Bucket
-	var object *S3Object
 	var body []byte
 	var err error
 
@@ -250,8 +246,10 @@ func handleObject(w http.ResponseWriter, r *http.Request) {
 		r.Header.Set("x-amz-acl", S3ObjectAclPrivate)
 	}
 
-	bucket = &S3Bucket{
-		Name:			bucket_name,
+	bucket, err = akey.FindBucket(bucket_name)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
 	}
 
 	object_size, err = strconv.ParseInt(r.Header.Get("Content-Length"), 10, 64)
@@ -259,12 +257,7 @@ func handleObject(w http.ResponseWriter, r *http.Request) {
 		object_size = 0
 	}
 
-	object = &S3Object{
-		Name:			object_name,
-		Acl:			r.Header.Get("x-amz-acl"),
-		Version:		1,
-		Size:			object_size,
-	}
+	acl = r.Header.Get("x-amz-acl")
 
 	switch r.Method {
 	case http.MethodPost:
@@ -279,8 +272,10 @@ func handleObject(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
+
+		var object *S3Object
 		// Create new object
-		bucket, object, err = s3InsertObject(akey, bucket, object)
+		object, err = s3InsertObject(bucket, object_name, 1, object_size, acl)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
@@ -293,7 +288,7 @@ func handleObject(w http.ResponseWriter, r *http.Request) {
 		break
 	case http.MethodGet:
 		// List all objects
-		body, err = s3ReadObject(akey, bucket, object)
+		body, err = s3ReadObject(bucket, object_name, 1)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
@@ -304,7 +299,7 @@ func handleObject(w http.ResponseWriter, r *http.Request) {
 		break
 	case http.MethodDelete:
 		// Delete a bucket
-		err = s3DeleteObject(akey, bucket, object)
+		err = s3DeleteObject(bucket, object_name, 1)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return

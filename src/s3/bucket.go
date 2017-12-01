@@ -3,6 +3,7 @@ package main
 import (
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
+	"fmt"
 )
 
 const (
@@ -32,8 +33,8 @@ type S3Bucket struct {
 	MaxBytes			int64		`json:"max-bytes" bson:"max-bytes"`
 }
 
-func (bucket *S3Bucket)GenBackendId(akey *S3AccessKey) string {
-	return akey.Namespace() + "-" + bucket.Name
+func (bucket *S3Bucket)ObjectBID(object_name string, version int) string {
+	return bucket.BackendID + "-" + fmt.Sprintf("%d", version) + "-" + object_name
 }
 
 func (bucket *S3Bucket)dbRemove() (error) {
@@ -91,15 +92,10 @@ func (bucket *S3Bucket)dbDelObj(size int64) (error) {
 		)
 }
 
-func (bucket *S3Bucket)dbFindByKey(akey *S3AccessKey) (*S3Bucket, error) {
+func (akey *S3AccessKey)FindBucket(bucket_name string) (*S3Bucket, error) {
 	var res S3Bucket
 
-	regex := "^" + akey.Namespace() + ".+"
-	query := bson.M{"bid": bson.M{"$regex": bson.RegEx{regex, ""}}}
-
-	err := dbS3FindOne(
-			query,
-			&res)
+	err := dbS3FindOne(bson.M{"bid": akey.BucketBID(bucket_name)}, &res)
 	if err != nil {
 		return nil, err
 	}
@@ -107,29 +103,18 @@ func (bucket *S3Bucket)dbFindByKey(akey *S3AccessKey) (*S3Bucket, error) {
 	return &res,nil
 }
 
-func (bucket *S3Bucket)dbFindByBackendID(akey *S3AccessKey) (*S3Bucket, error) {
-	var res S3Bucket
-
-	err := dbS3FindOne(
-			bson.M{"bid": bucket.GenBackendId(akey)},
-			&res)
-	if err != nil {
-		return nil, err
-	}
-
-	return &res,nil
-}
-
-func s3InsertBucket(akey *S3AccessKey, bucket *S3Bucket) error {
+func s3InsertBucket(akey *S3AccessKey, bucket_name, acl string) error {
 	var err error
 
-	bucket.ObjID		= bson.NewObjectId()
-	bucket.BackendID	= bucket.GenBackendId(akey)
-	bucket.State		= S3StateNone
-	bucket.CntObjects	= 0
-	bucket.CntBytes		= 0
-	bucket.MaxObjects	= S3StogateMaxObjects
-	bucket.MaxBytes		= S3StogateMaxBytes
+	bucket := &S3Bucket{
+		Name:		bucket_name,
+		Acl:		acl,
+		ObjID:		bson.NewObjectId(),
+		BackendID:	akey.BucketBID(bucket_name),
+		State:		S3StateNone,
+		MaxObjects:	S3StogateMaxObjects,
+		MaxBytes:	S3StogateMaxBytes,
+	}
 
 	err = dbS3Insert(bucket)
 	if err != nil {
@@ -160,17 +145,16 @@ out_nopool:
 	return err
 }
 
-func s3DeleteBucket(akey *S3AccessKey, bucket *S3Bucket) error {
+func s3DeleteBucket(akey *S3AccessKey, bucket_name, acl string) error {
 	var bucketFound *S3Bucket
 	var err error
 
-	bucketFound, err = bucket.dbFindByBackendID(akey)
+	bucketFound, err = akey.FindBucket(bucket_name)
 	if err != nil {
 		if err == mgo.ErrNotFound {
 			return nil
 		}
-		log.Errorf("s3: Can't find bucket %s: %s",
-				bucket.GenBackendId(akey), err.Error())
+		log.Errorf("s3: Can't find bucket %s: %s", bucket_name, err.Error())
 		return err
 	}
 
@@ -213,16 +197,15 @@ func (bucket *S3Bucket)dbFindAll() ([]S3Object, error) {
 	return res,nil
 }
 
-func s3ListBucket(akey *S3AccessKey, bucket *S3Bucket) (*S3BucketList, error) {
+func s3ListBucket(akey *S3AccessKey, bucket_name, acl string) (*S3BucketList, error) {
 	var bucketList S3BucketList
 	var bucketFound *S3Bucket
 	var r []S3ObjectEntry
 	var err error
 
-	bucketFound, err = bucket.dbFindByBackendID(akey)
+	bucketFound, err = akey.FindBucket(bucket_name)
 	if err != nil {
-		log.Errorf("s3: Can't find bucket %s: %s",
-				bucket.GenBackendId(akey), err.Error())
+		log.Errorf("s3: Can't find bucket %s: %s", bucket_name, err.Error())
 		return nil, err
 	}
 

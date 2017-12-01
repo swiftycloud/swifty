@@ -72,6 +72,24 @@ func (akey *S3AccessKey)Namespace() string {
 	return "swifty"
 }
 
+func (akey *S3AccessKey)BucketBID(bucket_name string) string {
+	return akey.Namespace() + "-" + bucket_name
+}
+
+func (akey *S3AccessKey)FindDefaultBucket() (string, error) {
+	var res S3Bucket
+
+	regex := "^" + akey.Namespace() + ".+"
+	query := bson.M{"bid": bson.M{"$regex": bson.RegEx{regex, ""}}}
+
+	err := dbS3FindOne(query, &res)
+	if err != nil {
+		return "", err
+	}
+
+	return res.Name, nil
+}
+
 func dbLookupAccessKey(AccessKeyId string) (*S3AccessKey, error) {
 	var akey S3AccessKey
 	var err error
