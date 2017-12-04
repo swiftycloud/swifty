@@ -48,16 +48,13 @@ func dbConnect(conf *YAMLConf) error {
 			Background:	true,
 			Sparse:		true}
 
-	index.Key = []string{"_id", "bid"}
+	index.Key = []string{"bid"}
 	dbSession.DB(dbName).C(DBColS3Buckets).EnsureIndex(index)
-	index.Key = []string{"_id", "bid"}
+	index.Key = []string{"bid"}
 	dbSession.DB(dbName).C(DBColS3Objects).EnsureIndex(index)
 
-	index.Key = []string{"_id", "access-key-id"}
+	index.Key = []string{"access-key-id"}
 	dbSession.DB(dbName).C(DBColS3AccessKeys).EnsureIndex(index)
-
-	index.Key = []string{"_id"}
-	dbSession.DB(dbName).C(DBColS3ObjectData).EnsureIndex(index)
 
 	dbColMap = make(map[reflect.Type]string)
 	dbColMap[reflect.TypeOf(S3Bucket{})] = DBColS3Buckets
