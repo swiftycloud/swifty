@@ -36,7 +36,7 @@ def add_fn(name, lang, mw = []):
 		cmd += [ "-mw", ",".join(mw) ]
 	swyrun(cmd)
 
-        return wait_fn(name)
+	return wait_fn(name)
 
 def add_mw(typ, name):
 	swyrun([ "madd", name, typ ])
@@ -126,6 +126,30 @@ def mongo():
 	del_mw(dbname)
 	return ok
 
+def s3():
+	ok = False
+	s3name = 's3tns'
+	cookie = randstr()
+	args_c = { 's3name': s3name, 'action': 'create', 'bucket': 'tbuck' }
+	args_p = { 's3name': s3name, 'action': 'put',    'bucket': 'tbuck' , 'name': 'tobj', 'data': cookie }
+	args_g = { 's3name': s3name, 'action': 'get',    'bucket': 'tbuck' , 'name': 'tobj' }
+
+	add_mw("s3", s3name)
+	inf = add_fn("s3", "python", mw = [ s3name ])
+	ret = run_fn(inf, args_c)
+	print(ret)
+	if ret.get('res', '') == 'done':
+		ret = run_fn(inf, args_p)
+		print(ret)
+		if ret.get('res', '') == 'done':
+			ret = run_fn(inf, args_g)
+			print(ret)
+			if ret.get('res', '') == cookie:
+				ok = True
+	del_fn("s3")
+	del_mw(s3name)
+	return ok
+
 def checkempty():
 	fns = list_fn()
 	print(fns)
@@ -135,4 +159,5 @@ def checkempty():
 #run_test(helloworld)
 #run_test(pgsql)
 #run_test(mongo)
+#run_test(s3)
 run_test(checkempty)
