@@ -5,7 +5,8 @@ import (
 	"fmt"
 	"math/rand"
 	"time"
-	"strconv"
+	"encoding/hex"
+	"flag"
 )
 
 func init() {
@@ -14,6 +15,16 @@ func init() {
 
 var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 var symbols = []rune("0123456789_.-=+!@#$%^&*?:;")
+
+func randBytes(n int) (string, error) {
+	idx := make([]byte, n)
+	_, err := rand.Read(idx)
+	if err != nil {
+		return "", err
+	}
+
+	return hex.EncodeToString(idx), nil
+}
 
 func randString(n int) (string, error) {
 	idx := make([]byte, n)
@@ -35,22 +46,26 @@ func randString(n int) (string, error) {
 }
 
 func main() {
-	if len(os.Args) < 3 {
-		fmt.Printf("Usage: %s KEY LEN\n", os.Args[0])
-		os.Exit(1)
+	var bytes bool
+	var length int
+	var name, str string
+	var err error
+
+	flag.BoolVar(&bytes, "b", false, "gen bytes secret")
+	flag.IntVar(&length, "l", 16, "len of the key")
+	flag.StringVar(&name, "n", "SECRET", "name of the key")
+	flag.Parse()
+
+	if bytes {
+		str, err = randBytes(length)
+	} else {
+		str, err = randString(length)
 	}
 
-	ln, err := strconv.Atoi(os.Args[2])
-	if err != nil {
-		fmt.Printf("Can't get secret length: %s\n", err.Error())
-		os.Exit(1)
-	}
-
-	str, err := randString(ln)
 	if str == "" {
 		fmt.Printf("Can't generate string: %s\n", err.Error())
 		os.Exit(1)
 	}
 
-	fmt.Printf("\"%s\": \"%s\"\n", os.Args[1], str)
+	fmt.Printf("\"%s\": \"%s\"\n", name, str)
 }
