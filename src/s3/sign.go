@@ -166,15 +166,6 @@ func getHeader(r *http.Request, name string) string {
 	return strings.TrimSpace(r.Header.Get(name))
 }
 
-func getCanonicalHeader(r *http.Request, name string) string {
-	hname := uriEncode(name)
-	value := strings.TrimSpace(r.Header.Get(name))
-	if value == "" || hname == "" {
-		return ""
-	}
-	return hname + ":" + value
-}
-
 func (ctx *AuthContext) BuildCanonicalString(r *http.Request) {
 	var members []string
 	var keys []string
