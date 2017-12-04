@@ -144,6 +144,11 @@ func removeDotSegments(url string) string {
 }
 
 func uriEncode(uri string) string {
+	uri = strings.Replace(uri, " ", "%20", -1)
+	return strings.TrimSpace(uri)
+}
+
+func uriQEncode(uri string) string {
 	uri = strings.Replace(uri, "+", "%20", -1)
 	return strings.TrimSpace(uri)
 }
@@ -190,9 +195,9 @@ func (ctx *AuthContext) BuildCanonicalString(r *http.Request) {
 		var query string = ""
 		sort.Strings(keys)
 		for i, k := range keys {
-			query += uriEncode(k) + "="
+			query += uriQEncode(k) + "="
 			if len(q[k]) > 0 {
-				query += uriEncode(q[k][0])
+				query += uriQEncode(q[k][0])
 			}
 			if i < len(keys) {
 				query += "&"
