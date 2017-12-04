@@ -134,28 +134,14 @@ func (ctx *AuthContext) BuildBodyDigest(r *http.Request) (error) {
 	return nil
 }
 
-func removeDotSegments(url string) string {
-	if url != "" {
-		re := regexp.MustCompile("/+")
-		url = strings.Replace(url, "..", "", -1)
-		url = string((re.ReplaceAll([]byte(url), []byte("/")))[:])
-	}
-	return url
-}
-
-func uriEncode(uri string) string {
-	uri = strings.Replace(uri, " ", "%20", -1)
-	return strings.TrimSpace(uri)
-}
-
-func uriQEncode(uri string) string {
+func queryEncode(uri string) string {
 	uri = strings.Replace(uri, "+", "%20", -1)
 	return strings.TrimSpace(uri)
 }
 
 func genCanonicalHeader(r *http.Request, key string) string {
-	name := uriEncode(strings.ToLower(key))
-	value := uriEncode(r.Header.Get(http.CanonicalHeaderKey(key)))
+	name := strings.TrimSpace(strings.ToLower(key))
+	value := strings.TrimSpace(r.Header.Get(http.CanonicalHeaderKey(key)))
 	if value == "" || name == "" {
 		return ""
 	}
@@ -174,7 +160,7 @@ func (ctx *AuthContext) BuildCanonicalString(r *http.Request) {
 	members = append(members, r.Method)
 
 	// CanonicalURI
-	members = append(members, removeDotSegments(r.URL.Path))
+	members = append(members, r.URL.Path)
 
 	// CanonicalQueryString
 	q := r.URL.Query()
@@ -186,9 +172,9 @@ func (ctx *AuthContext) BuildCanonicalString(r *http.Request) {
 		var query string = ""
 		sort.Strings(keys)
 		for i, k := range keys {
-			query += uriQEncode(k) + "="
+			query += queryEncode(k) + "="
 			if len(q[k]) > 0 {
-				query += uriQEncode(q[k][0])
+				query += queryEncode(q[k][0])
 			}
 			if i < len(keys) {
 				query += "&"
@@ -202,7 +188,7 @@ func (ctx *AuthContext) BuildCanonicalString(r *http.Request) {
 	// Canonical headers
 	for _, k := range ctx.SignedHeaders {
 		if k == "host" {
-			members = append(members, "host:" + uriEncode(r.Host))
+			members = append(members, "host:" + strings.TrimSpace(r.Host))
 			continue
 		}
 		members = append(members, genCanonicalHeader(r, k))
