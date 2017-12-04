@@ -6,6 +6,7 @@ import (
 	"github.com/gorilla/mux"
 
 	"encoding/json"
+	"encoding/hex"
 	"net/http"
 	"errors"
 	"flag"
@@ -21,6 +22,7 @@ import (
 
 var SwyModeDevel bool
 var gateSecrets map[string]string
+var gateSecPas []byte
 
 const (
 	SwyDefaultProject string	= "default"
@@ -755,6 +757,12 @@ func main() {
 	gateSecrets, err = swysec.ReadSecrets("gate")
 	if err != nil {
 		log.Errorf("Can't read gate secrets")
+		return
+	}
+
+	gateSecPas, err = hex.DecodeString(gateSecrets[conf.Mware.SecKey])
+	if err != nil || len(gateSecPas) < 16 {
+		log.Errorf("Secrets pass should be decodable and at least 16 bytes long")
 		return
 	}
 

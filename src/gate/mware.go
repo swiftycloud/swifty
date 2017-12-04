@@ -80,7 +80,7 @@ func mwareGetEnv(conf *YAMLConf, id *SwoId) ([][2]string, error) {
 		return nil, fmt.Errorf("No handler for %s mware", id.Str())
 	}
 
-	item.Secret, err = swycrypt.DecryptString([]byte(gateSecrets[conf.Mware.SecKey]), item.Secret)
+	item.Secret, err = swycrypt.DecryptString(gateSecPas, item.Secret)
 	if err != nil {
 		return nil, err
 	}
@@ -186,7 +186,7 @@ func mwareSetup(conf *YAMLConf, id *SwoId, mwType string) error {
 		goto out
 	}
 
-	mwd.Secret, err = swycrypt.EncryptString([]byte(gateSecrets[conf.Mware.SecKey]), mwd.Secret)
+	mwd.Secret, err = swycrypt.EncryptString(gateSecPas, mwd.Secret)
 	if err != nil {
 		forgetMware(conf, handler, mwd)
 		goto out
