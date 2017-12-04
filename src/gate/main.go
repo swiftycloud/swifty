@@ -84,12 +84,19 @@ type YAMLConfPostgres struct {
 	Token		string			`yaml:"token"`
 }
 
+type YAMLConfS3 struct {
+	Addr		string			`yaml:"address"`
+	AdminPort	string			`yaml:"admport"`
+	Token		string			`yaml:"token"`
+}
+
 type YAMLConfMw struct {
 	SecKey		string			`yaml:"mwseckey"`
 	Rabbit		YAMLConfRabbit		`yaml:"rabbit"`
 	Maria		YAMLConfMaria		`yaml:"maria"`
 	Mongo		YAMLConfMongo		`yaml:"mongo"`
 	Postgres	YAMLConfPostgres	`yaml:"postgres"`
+	S3		YAMLConfS3		`yaml:"s3"`
 }
 
 type YAMLConfRange struct {

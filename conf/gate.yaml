@@ -38,6 +38,10 @@ middleware:
                 address: "192.168.122.197:5432"
                 admport: "3872"
                 token: "PGRTOKEN"
+        s3:
+                address: "192.168.122.197:8787"
+                admport: "8789"
+                token: "S3TOKEN"
 runtime:
         timeout:
                 max: 60

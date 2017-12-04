@@ -65,6 +65,7 @@ go-gate-y	+= src/gate/mw-maria.go
 go-gate-y	+= src/gate/mw-postgres.go
 go-gate-y	+= src/gate/mw-rabbit.go
 go-gate-y	+= src/gate/mw-mongo.go
+go-gate-y	+= src/gate/mw-s3.go
 go-gate-y	+= src/gate/balancer.go
 go-gate-y	+= src/gate/main.go
 go-gate-y	+= src/gate/runner.go

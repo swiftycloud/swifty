@@ -64,6 +64,7 @@ var mwareHandlers = map[string]*MwareOps {
 	"postgres":	&MwarePostgres,
 	"rabbit":	&MwareRabbitMQ,
 	"mongo":	&MwareMongo,
+	"s3":		&MwareS3,
 }
 
 func mwareGetEnv(conf *YAMLConf, id *SwoId) ([][2]string, error) {
