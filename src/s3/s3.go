@@ -35,7 +35,7 @@ var s3StateTransition = map[uint32][]uint32 {
 }
 
 func s3VerifyAdmin(r *http.Request) error {
-	access_token := r.Header.Get("x-swy-secret")
+	access_token := r.Header.Get("X-SwyS3-Token")
 
 	if access_token != s3Secrets[conf.Daemon.TokenAdmin] {
 		return fmt.Errorf("No required headers found")
