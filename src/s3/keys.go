@@ -114,7 +114,7 @@ func dbLookupAccessKey(AccessKeyId string) (*S3AccessKey, error) {
 	if akey.Status == S3KeyStatusActive {
 		var sec string
 
-		sec, err = swycrypt.DecryptString([]byte(s3Secrets[conf.SecKey]), akey.AccessKeySecret)
+		sec, err = swycrypt.DecryptString(s3SecKey, akey.AccessKeySecret)
 		if err != nil {
 			return nil, err
 		}
@@ -131,7 +131,7 @@ func dbLookupAccessKey(AccessKeyId string) (*S3AccessKey, error) {
 }
 
 func dbInsertAccessKey(akey *S3AccessKey) (error) {
-	AccessKeySecret, err := swycrypt.EncryptString([]byte(s3Secrets[conf.SecKey]), akey.AccessKeySecret)
+	AccessKeySecret, err := swycrypt.EncryptString(s3SecKey, akey.AccessKeySecret)
 	if err != nil {
 		return err
 	}

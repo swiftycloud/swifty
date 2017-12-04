@@ -7,6 +7,7 @@ import (
 
 	"gopkg.in/mgo.v2"
 	"io/ioutil"
+	"encoding/hex"
 	"net/http"
 	"strconv"
 	"time"
@@ -20,6 +21,7 @@ import (
 )
 
 var s3Secrets map[string]string
+var s3SecKey []byte
 
 type YAMLConfCeph struct {
 	ConfigPath	string			`yaml:"config-path"`
@@ -439,6 +441,12 @@ func main() {
 	s3Secrets, err = swysec.ReadSecrets("s3")
 	if err != nil {
 		log.Errorf("Can't read gate secrets: %s", err.Error())
+		return
+	}
+
+	s3SecKey, err = hex.DecodeString(s3Secrets[conf.SecKey])
+	if err != nil || len(s3SecKey) < 16 {
+		log.Error("Secret key should be decodable and be 16 bytes long at least")
 		return
 	}
 
