@@ -12,8 +12,16 @@ spec = importlib.util.spec_from_file_location('code', '/function/code/script.py'
 swycode = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(swycode)
 
-def runMain(res, args):
-    res.put(swycode.main(args))
+def runner(runq, resq):
+    while True:
+        args = runq.get()
+        res = swycode.main(args)
+        resq.put(res)
+
+runq = Queue()
+resq = Queue()
+runp = Process(target = runner, args = (runq, resq))
+runp.start()
 
 class SwyHandler(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -22,8 +30,12 @@ class SwyHandler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_POST(self):
-        print(self.path)
+        global runq
+        global resq
+        global runp
+
         if self.path != '/v1/run':
+            print(self.path)
             self.send_response(404)
             self.end_headers()
             return
@@ -36,30 +48,30 @@ class SwyHandler(BaseHTTPRequestHandler):
             if req['podtoken'] != swyfunc['podtoken']:
                 raise Exception("POD token mismatch")
 
-            result = Queue()
-
             print("Call with args: %r" % req['args'])
-            tsk = Process(target = runMain, args = (result, req['args']))
-            tsk.start()
-            tsk.join(float(swyfunc['timeout']))
-            if tsk.is_alive():
-                os.kill(tsk.pid, signal.SIGKILL)
-                tsk.join()
-                raise Exception("Timeout!")
+            runq.put(req['args'])
+            try:
+                res = resq.get(timeout = float(swyfunc['timeout']))
+                print("Result: %r" % res)
+            except queue.Empty as ex:
+                print("Timeout running FN")
+                os.kill(runp.pid, signal.SIGKILL)
+                runp.join()
+                # Restart everything, including queues, don't want them
+                # to contain dangling trash from previous runs
+                runq = Queue()
+                resq = Queue()
+                runp = Process(target = runner, args = (runq, resq))
+                runp.start()
+                raise Exception("Function run timeout!")
 
-            if result.empty():
-                raise Exception("No object returned")
-            if tsk.exitcode != 0:
-                raise Exception("Function didn't terminate smoothly")
-
-            res = result.get()
             resb = json.dumps(res)
-
             ret = { 'return': resb, 'code': 0, 'stdout': "", 'stderr': "" }
             retb = json.dumps(ret).encode('utf-8')
         except Exception as e:
-            print("Error processing request")
+            print("*** Error processing request ***")
             traceback.print_exc()
+            print("********************************")
             self.send_response(400)
             self.end_headers()
         else:
