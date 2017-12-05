@@ -187,7 +187,7 @@ func main() {
 
 	pgrSecrets, err = swysec.ReadSecrets("pgrest")
 	if err != nil {
-		log.Errorf("Can't read gate secrets")
+		log.Errorf("Can't read gate secrets: %s", err.Error())
 		return
 	}
 
