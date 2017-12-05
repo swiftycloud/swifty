@@ -341,8 +341,9 @@ func handleAdminOp(w http.ResponseWriter, r *http.Request) {
 	var akey *S3AccessKey
 	var err error
 
-	if s3VerifyAdmin(r) != nil {
-		w.WriteHeader(http.StatusBadRequest)
+	err = s3VerifyAdmin(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
