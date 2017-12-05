@@ -139,11 +139,6 @@ func getFileFromReq(fn *FunctionDesc) error {
 		return fmt.Errorf("Can't write source file")
 	}
 
-	err = RtPrepareSources(&fn.Code, to)
-	if err != nil {
-		return err
-	}
-
 	return nil
 }
 

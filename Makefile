@@ -80,8 +80,6 @@ go-gate-y	+= src/gate/swoid.go
 go-admd-y	+= src/admd/main.go
 go-admd-y	+= src/admd/ks.go
 
-go-wdog-y	+= src/wdog/main.go
-
 go-pgrest-y	+= src/pgrest/main.go
 
 go-s3-y	+= src/s3/main.go
@@ -101,7 +99,6 @@ go-sg-y		+= src/tools/sg.go
 
 $(eval $(call gen-gobuild,gate))
 $(eval $(call gen-gobuild,admd))
-$(eval $(call gen-gobuild,wdog))
 $(eval $(call gen-gobuild,pgrest))
 $(eval $(call gen-gobuild,s3))
 $(eval $(call gen-gobuild-t,ctl))

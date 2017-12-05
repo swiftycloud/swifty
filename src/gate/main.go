@@ -5,7 +5,6 @@ import (
 
 	"github.com/gorilla/mux"
 
-	"encoding/json"
 	"encoding/hex"
 	"net/http"
 	"errors"
@@ -423,7 +422,7 @@ func fnCallable(fn *FunctionDesc) bool {
 	return fn.URLCall && (fn.State == swy.DBFuncStateRdy || fn.State == swy.DBFuncStateUpd)
 }
 
-func makeArgMap(r *http.Request) string {
+func makeArgMap(r *http.Request) map[string]string {
 	args := make(map[string]string)
 
 	for k, v := range r.URL.Query() {
@@ -434,12 +433,11 @@ func makeArgMap(r *http.Request) string {
 		args[k] = v[0]
 	}
 
-	ret, _ := json.Marshal(args)
-	return string(ret)
+	return args
 }
 
 func handleFunctionCall(w http.ResponseWriter, r *http.Request) {
-	var arg_map string
+	var arg_map map[string]string
 	var retjson string
 	var sopq *statsOpaque
 	var err error
@@ -461,7 +459,7 @@ func handleFunctionCall(w http.ResponseWriter, r *http.Request) {
 	sopq = statsStart(fnId)
 
 	code = http.StatusInternalServerError
-	_, retjson, err = talkToLink(link, fnId, "run", []string{arg_map})
+	_, retjson, err = talkToLink(link, fnId, "run", arg_map)
 	if err != nil {
 		goto out
 	}

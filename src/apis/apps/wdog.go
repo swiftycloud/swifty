@@ -6,8 +6,8 @@ type SwdFunctionDesc struct {
 }
 
 type SwdFunctionRun struct {
-	PodToken	string		`json:"podtoken"`
-	Args		[]string	`json:"args"`
+	PodToken	string			`json:"podtoken"`
+	Args		map[string]string	`json:"args"`
 }
 
 type SwdFunctionRunResult struct {

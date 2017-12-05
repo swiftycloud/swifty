@@ -253,8 +253,15 @@ func add_function(project string, args []string, opts [8]string) {
 
 func run_function(project string, args []string, opts [8]string) {
 	var rres swyapi.FunctionRunResult
+	var argmap = make(map[string]string)
+
+	for _, arg := range args[1:] {
+		a := strings.SplitN(arg, "=", 2)
+		argmap[a[0]] = a[1]
+	}
+
 	make_faas_req("function/run",
-		swyapi.FunctionRun{ Project: project, FuncName: args[0], Args: args[1:], }, &rres)
+		swyapi.FunctionRun{ Project: project, FuncName: args[0], Args: argmap, }, &rres)
 
 	fmt.Printf("code: %d\n", rres.Code)
 	fmt.Printf("returned: %s\n", rres.Return)

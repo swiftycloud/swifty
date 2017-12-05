@@ -105,7 +105,7 @@ type FunctionRemove struct {
 type FunctionRun struct {
 	Project		string			`json:"project"`
 	FuncName	string			`json:"name"`
-	Args		[]string		`json:"args,omitempty"`
+	Args		map[string]string	`json:"args,omitempty"`
 }
 
 type FunctionRunResult struct {

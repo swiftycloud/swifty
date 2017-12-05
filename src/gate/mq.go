@@ -123,7 +123,7 @@ func startListener(conf *YAMLConfMw, vhost, queue string) error {
 
 				/* FIXME -- this is synchronous */
 				_, _, err := doRun(fn.Cookie, "mware:" + mware.Name + ":" + queue,
-							[]string{string(d.Body)})
+						map[string]string{"body": string(d.Body)})
 
 				if err != nil {
 					log.Errorf("mq: Error running FN %s", err.Error())

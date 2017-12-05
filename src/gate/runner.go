@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
-	"strings"
 	"errors"
 	"fmt"
 
@@ -13,7 +12,7 @@ import (
 	"../common/http"
 )
 
-func doRun(cookie, event string, args []string) (int, string, error) {
+func doRun(cookie, event string, args map[string]string) (int, string, error) {
 	link := dbBalancerLinkFindByCookie(cookie)
 	if link == nil {
 		return -1, "", fmt.Errorf("Can't find balancer for %s", cookie)
@@ -22,8 +21,8 @@ func doRun(cookie, event string, args []string) (int, string, error) {
 	return talkToLink(link, cookie, event, args)
 }
 
-func talkToLink(link *BalancerLink, cookie, event string, args []string) (int, string, error) {
-	log.Debugf("RUN %s(%s)", cookie, strings.Join(args, ","))
+func talkToLink(link *BalancerLink, cookie, event string, args map[string]string) (int, string, error) {
+	log.Debugf("RUN %s(%v)", cookie, args)
 
 	var wd_result swyapi.SwdFunctionRunResult
 	var resp *http.Response
@@ -81,7 +80,7 @@ func buildFunction(fn *FunctionDesc) error {
 		goto out
 	}
 
-	code, _, err = talkToLink(link, fn.Cookie, "build", []string{})
+	code, _, err = talkToLink(link, fn.Cookie, "build", map[string]string{})
 	log.Debugf("build %s finished", fn.SwoId.Str())
 	logSaveEvent(fn, "built", "")
 	if err != nil {
@@ -132,7 +131,7 @@ out_nok8s:
 
 func runFunctionOnce(fn *FunctionDesc) {
 	log.Debugf("oneshot RUN for %s", fn.SwoId.Str())
-	doRun(fn.Cookie, "oneshot", RtRunCmd(&fn.Code))
+	doRun(fn.Cookie, "oneshot", map[string]string{})
 	log.Debugf("oneshor %s finished", fn.SwoId.Str())
 
 	swk8sRemove(&conf, fn, fn.Inst())
