@@ -29,6 +29,11 @@ type YAMLConf struct {
 
 var conf YAMLConf
 
+func fatal(err error) {
+	fmt.Printf("ERROR: %s\n", err.Error())
+	os.Exit(1)
+}
+
 func make_faas_req_x(url string, in interface{}, succ_code int) (*http.Response, error) {
 	var address string = "http://" + conf.Login.Host + ":" + conf.Login.Port + "/v1/" + url
 
@@ -50,17 +55,17 @@ func faas_login() string {
 			UserName: conf.Login.User, Password: conf.Login.Pass,
 		}, http.StatusOK)
 	if err != nil {
-		panic(err)
+		fatal(err)
 	}
 
 	resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		panic(fmt.Errorf("Bad responce from server: " + string(resp.Status)))
+		fatal(fmt.Errorf("Bad responce from server: " + string(resp.Status)))
 	}
 
 	token := resp.Header.Get("X-Subject-Token")
 	if token == "" {
-		panic("No auth token from server")
+		fatal(fmt.Errorf("No auth token from server"))
 	}
 
 	return token
@@ -76,7 +81,7 @@ again:
 	resp, err := make_faas_req_x(url, in, succ_code)
 	if err != nil {
 		if resp == nil {
-			panic(err)
+			fatal(err)
 		}
 
 		resp.Body.Close()
@@ -86,7 +91,7 @@ again:
 			goto again
 		}
 
-		panic(fmt.Errorf("Bad responce from server: " + string(resp.Status)))
+		fatal(fmt.Errorf("Bad responce from server: " + string(resp.Status)))
 	}
 
 	/* Here we have http.StatusOK */
@@ -95,7 +100,7 @@ again:
 	if out != nil {
 		err = swyhttp.ReadAndUnmarshalResp(resp, out)
 		if err != nil {
-			panic(err)
+			fatal(err)
 		}
 	}
 }
@@ -181,7 +186,8 @@ func info_function(project string, args []string, opts [8]string) {
 }
 
 func detect_language(repo string) string {
-	panic("can't detect function language")
+	fatal(fmt.Errorf("can't detect function language"))
+	return ""
 }
 
 func add_function(project string, args []string, opts [8]string) {
@@ -190,13 +196,13 @@ func add_function(project string, args []string, opts [8]string) {
 
 	st, err := os.Stat(opts[1])
 	if err != nil {
-		panic("Can't stat sources path")
+		fatal(fmt.Errorf("Can't stat sources path"))
 	}
 
 	if st.IsDir() {
 		repo, err := filepath.Abs(opts[1])
 		if err != nil {
-			panic("Can't get abs path for repo")
+			fatal(fmt.Errorf("Can't get abs path for repo"))
 		}
 
 		fmt.Printf("Will add git repo %s\n", repo)
@@ -205,7 +211,7 @@ func add_function(project string, args []string, opts [8]string) {
 	} else {
 		data, err := ioutil.ReadFile(opts[1])
 		if err != nil {
-			panic("Can't read file sources")
+			fatal(fmt.Errorf("Can't read file sources"))
 		}
 
 		enc := base64.StdEncoding.EncodeToString(data)
@@ -235,7 +241,7 @@ func add_function(project string, args []string, opts [8]string) {
 			evt.MQueue = mwe[2]
 		} else {
 			/* FIXME -- CRONTAB */
-			panic("Unknown event string")
+			fatal(fmt.Errorf("Unknown event string"))
 		}
 	}
 
@@ -322,13 +328,12 @@ func show_mware_env(project string, args []string, opts [8]string) {
 func login() {
 	home, found := os.LookupEnv("HOME")
 	if !found {
-		panic("No HOME dir set")
+		fatal(fmt.Errorf("No HOME dir set"))
 	}
 
 	err := swy.ReadYamlConfig(home + "/.swifty.conf", &conf)
 	if err != nil {
-		fmt.Printf("Login first\n")
-		os.Exit(1)
+		fatal(fmt.Errorf("Login first"))
 	}
 }
 
@@ -340,7 +345,7 @@ func make_login(creds string) {
 	//
 	home, found := os.LookupEnv("HOME")
 	if !found {
-		panic("No HOME dir set")
+		fatal(fmt.Errorf("No HOME dir set"))
 	}
 
 	x := strings.SplitN(creds, ":", 2)
@@ -359,7 +364,7 @@ func refresh_token(home string) {
 		var found bool
 		home, found = os.LookupEnv("HOME")
 		if !found {
-			panic("No HOME dir set")
+			fatal(fmt.Errorf("No HOME dir set"))
 		}
 	}
 
@@ -367,7 +372,7 @@ func refresh_token(home string) {
 
 	err := swy.WriteYamlConfig(home + "/.swifty.conf", &conf)
 	if err != nil {
-		panic("Can't write swifty.conf")
+		fatal(fmt.Errorf("Can't write swifty.conf: %s", err.Error()))
 	}
 }
 
@@ -523,6 +528,6 @@ func main() {
 	} else if cd.call != nil {
 		cd.call(os.Args[2:], opts)
 	} else {
-		panic("bad cmd")
+		fatal(fmt.Errorf("Bad cmd"))
 	}
 }
