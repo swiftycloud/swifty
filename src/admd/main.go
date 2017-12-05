@@ -370,7 +370,7 @@ func main() {
 
 	admdSecrets, err = swysec.ReadSecrets("admd")
 	if err != nil {
-		log.Errorf("Can't read gate secrets")
+		log.Errorf("Can't read gate secrets: %s", err.Error())
 		return
 	}
 
