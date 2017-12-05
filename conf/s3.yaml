@@ -6,8 +6,8 @@ db:
         password: "MGOS3PASS"
 daemon:
         address: "192.168.122.197:8787"
-        address-admin: "192.168.122.197:8789"
-        token-admin: "ADMINTOKEN"
+        admport: "8789"
+        token: "S3TOKEN"
         loglevel: "debug"
 secretskey: "S3SECRETSKEY"
 ceph:

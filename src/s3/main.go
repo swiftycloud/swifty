@@ -10,6 +10,7 @@ import (
 	"encoding/hex"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 	"flag"
 	"fmt"
@@ -29,8 +30,8 @@ type YAMLConfCeph struct {
 
 type YAMLConfDaemon struct {
 	Addr		string			`yaml:"address"`
-	AddrAdmin	string			`yaml:"address-admin"`
-	TokenAdmin	string			`yaml:"token-admin"`
+	AdminPort	string			`yaml:"admport"`
+	Token		string			`yaml:"token"`
 	LogLevel	string			`yaml:"loglevel"`
 }
 
@@ -479,7 +480,8 @@ func main() {
 	go func() {
 		adminsrv = &http.Server{
 			Handler:      radminsrv,
-			Addr:         conf.Daemon.AddrAdmin,
+			Addr:         strings.Split(conf.Daemon.Addr, ":")[0] +
+					":" + conf.Daemon.AdminPort,
 			WriteTimeout: 60 * time.Second,
 			ReadTimeout:  60 * time.Second,
 		}
