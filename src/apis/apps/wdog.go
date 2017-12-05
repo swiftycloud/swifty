@@ -2,9 +2,7 @@ package swyapi
 
 type SwdFunctionDesc struct {
 	PodToken	string		`json:"podtoken"`
-	Dir		string		`json:"dir"`
 	Timeout		uint64		`json:"timeout"`
-	Command		[]string	`json:"command"`
 }
 
 type SwdFunctionRun struct {

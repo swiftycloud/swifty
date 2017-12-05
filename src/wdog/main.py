@@ -8,7 +8,7 @@ import importlib.util
 import sys
 import traceback
 
-spec = importlib.util.spec_from_file_location('code', '/function/code/script.py')
+spec = importlib.util.spec_from_file_location('code', '/function/script.py')
 swycode = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(swycode)
 
@@ -85,8 +85,6 @@ if not fdesc:
     raise Exception("No function desc provided")
 
 swyfunc = json.loads(fdesc)
-
-os.chdir(swyfunc['dir'])
 
 addr = os.getenv('SWD_POD_IP')
 port = os.getenv('SWD_PORT')
