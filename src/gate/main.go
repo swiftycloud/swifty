@@ -146,7 +146,7 @@ func handleUserLogin(w http.ResponseWriter, r *http.Request) {
 		goto out
 	}
 
-	log.Debugf("Try to login user %s", params.UserName)
+	log.Debugf("Trying to login user %s", params.UserName)
 
 	token, err = swyks.KeystoneAuthWithPass(conf.Keystone.Addr, conf.Keystone.Domain, &params)
 	if err != nil {
