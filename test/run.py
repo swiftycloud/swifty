@@ -10,7 +10,7 @@ import string
 def randstr():
 	return ''.join(random.choice(string.ascii_letters) for _ in range(0,8))
 
-lext = { 'python' : '.py' }
+lext = { 'python' : '.py', 'golang' : '.go' }
 swyctl = "./swyctl"
 
 def swyrun(cmdl):
@@ -67,21 +67,24 @@ def run_fn(inf, args):
 def del_fn(name):
 	swyrun([ "del", name ])
 
-def run_test(fname):
+def run_test(fname, langs):
 	print("====== Running %s" % fname.__name__)
-	if fname():
-		print("------ PASS")
-	else:
-		print("====== FAIL")
+        for l in langs:
+            print("______ %s" % l)
+            if fname(l):
+                    print("------ PASS")
+            else:
+                    print("====== FAIL")
 
-def helloworld():
-	inf = add_fn("helloworld", "python")
-	ret = run_fn(inf, {'name': 'foo'})
+def helloworld(lang):
+	cookie = randstr()
+	inf = add_fn("helloworld", lang)
+	ret = run_fn(inf, {'name': cookie})
 	del_fn("helloworld")
 	print(ret)
-	return ret['message'] == 'hw:python:foo'
+	return ret['message'] == 'hw:%s:%s' % (lang, cookie)
 
-def pgsql():
+def pgsql(lang):
 	ok = False
 	dbname = 'pgtst'
 	cookie = randstr()
@@ -91,7 +94,7 @@ def pgsql():
 
 
 	add_mw("postgres", dbname)
-	inf = add_fn("pgsql", "python", mw = [ dbname ])
+	inf = add_fn("pgsql", lang, mw = [ dbname ])
 	ret = run_fn(inf, args_c)
 	print(ret)
 	if ret.get('res', '') == 'done':
@@ -106,7 +109,7 @@ def pgsql():
 	del_mw(dbname)
 	return ok
 
-def mongo():
+def mongo(lang):
 	ok = False
 	dbname = 'mgotst'
 	cookie = randstr()
@@ -114,7 +117,7 @@ def mongo():
 	args_s = { 'dbname': dbname, 'collection': 'tcol', 'action': 'select', 'key': 'foo' }
 
 	add_mw("mongo", dbname)
-	inf = add_fn("mongo", "python", mw = [ dbname ])
+	inf = add_fn("mongo", lang, mw = [ dbname ])
 	ret = run_fn(inf, args_i)
 	print(ret)
 	if ret.get('res', '') == 'done':
@@ -126,7 +129,7 @@ def mongo():
 	del_mw(dbname)
 	return ok
 
-def s3():
+def s3(lang):
 	ok = False
 	s3name = 's3tns'
 	cookie = randstr()
@@ -135,7 +138,7 @@ def s3():
 	args_g = { 's3name': s3name, 'action': 'get',    'bucket': 'tbuck' , 'name': 'tobj' }
 
 	add_mw("s3", s3name)
-	inf = add_fn("s3", "python", mw = [ s3name ])
+	inf = add_fn("s3", lang, mw = [ s3name ])
 	ret = run_fn(inf, args_c)
 	print(ret)
 	if ret.get('res', '') == 'done':
@@ -150,14 +153,14 @@ def s3():
 	del_mw(s3name)
 	return ok
 
-def checkempty():
+def checkempty(lang):
 	fns = list_fn()
 	print(fns)
 	return len(fns) == 0
 
 
-#run_test(helloworld)
-#run_test(pgsql)
-#run_test(mongo)
-#run_test(s3)
-run_test(checkempty)
+run_test(helloworld, ["python", "golang"])
+#run_test(pgsql, ["python"])
+#run_test(mongo, ["python"])
+#run_test(s3, ["python"])
+run_test(checkempty, [""])
