@@ -140,6 +140,7 @@ func genFunctionDescJSON(fn *FunctionDesc, fi *FnInst) string {
 	jdata, _ := json.Marshal(&swyapi.SwdFunctionDesc{
 				PodToken:	fn.Cookie,
 				Timeout:	fn.Size.Tmo,
+				Build:		fi.Build,
 			})
 
 	return string(jdata[:])
@@ -324,6 +325,11 @@ func removeFunction(conf *YAMLConf, id *SwoId) error {
 	var err error
 	var fn FunctionDesc
 
+	fn, err = dbFuncFind(id)
+	if err != nil {
+		goto out
+	}
+
 	// Allow to remove function if only we're in known state,
 	// otherwise wait for function building to complete
 	err = dbFuncSetStateCond(id, swy.DBFuncStateTrm,
@@ -332,12 +338,7 @@ func removeFunction(conf *YAMLConf, id *SwoId) error {
 		goto out
 	}
 
-	fn, err = dbFuncFind(id)
-	if err != nil {
-		goto out
-	}
-
-	if !fn.OneShot {
+	if !fn.OneShot && (fn.State != swy.DBFuncStateStl) {
 		err = swk8sRemove(conf, &fn, fn.Inst())
 		if err != nil {
 			log.Errorf("remove deploy error: %s", err.Error())
