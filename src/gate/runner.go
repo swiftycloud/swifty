@@ -73,6 +73,7 @@ func buildFunction(fn *FunctionDesc) error {
 	var err error
 	var code, orig_state int
 
+	orig_state = fn.State
 	log.Debugf("build RUN %s", fn.SwoId.Str())
 	link := dbBalancerLinkFindByDepname(fn.InstBuild().DepName())
 	if link == nil {
@@ -98,7 +99,6 @@ func buildFunction(fn *FunctionDesc) error {
 		goto out
 	}
 
-	orig_state = fn.State
 	if orig_state == swy.DBFuncStateBld {
 		err = dbFuncSetState(fn, swy.DBFuncStateBlt)
 		if err == nil {
@@ -120,8 +120,10 @@ out:
 	swk8sRemove(&conf, fn, fn.InstBuild())
 out_nok8s:
 	if orig_state == swy.DBFuncStateBld {
+		log.Debugf("Setting stalled state")
 		dbFuncSetState(fn, swy.DBFuncStateStl);
 	} else {
+		log.Debugf("Setting ready state")
 		// Keep fn ready with the original commit of
 		// the repo checked out
 		dbFuncSetState(fn, swy.DBFuncStateRdy)
