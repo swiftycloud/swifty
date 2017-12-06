@@ -104,6 +104,9 @@ $(eval $(call gen-gobuild,s3))
 $(eval $(call gen-gobuild-t,ctl))
 $(eval $(call gen-gobuild-t,sg))
 
+go-wdog-go-y += src/wdog/main.go
+$(eval $(call gen-gobuild,wdog-go))
+
 # Default target
 all: $(all-y)
 
@@ -115,9 +118,11 @@ swifty/python: src/wdog/main.py kubectl/docker/images/python/Dockerfile
 	$(Q) $(MAKE) -C kubectl/docker/images/python all
 .PHONY: swifty/python
 
-swifty/golang: swy-wdog kubectl/docker/images/golang/Dockerfile
+swifty/golang: swy-wdog-go kubectl/docker/images/golang/Dockerfile
 	$(call msg-gen,$@)
-	$(Q) $(CP) swy-wdog  kubectl/docker/images/golang/
+	$(Q) $(CP) swy-wdog-go  kubectl/docker/images/golang/swy-wdog
+	$(Q) $(CP) src/wdog/runner.go kubectl/docker/images/golang/
+	$(Q) $(CP) src/common/xqueue/queue.go kubectl/docker/images/golang/
 	$(Q) $(MAKE) -C kubectl/docker/images/golang all
 .PHONY: swifty/golang
 

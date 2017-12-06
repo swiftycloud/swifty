@@ -4,7 +4,8 @@ WORKDIR /home
 
 COPY swy-wdog /usr/bin/
 RUN chmod +x /usr/bin/swy-wdog
-COPY main.go /go/src/main/
+COPY runner.go /go/src/swyrunner/
+COPY queue.go /go/src/xqueue/
 
 EXPOSE 8687
 

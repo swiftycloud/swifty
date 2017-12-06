@@ -8,19 +8,24 @@ import (
 	"os/exec"
 	"errors"
 	"bytes"
+	"time"
+	"sync"
 	"syscall"
 	"fmt"
-	"time"
 	"os"
-	"io/ioutil"
 
 	"../common"
 	"../common/http"
+	"../common/xqueue"
 	"../apis/apps"
 )
 
 var function *swyapi.SwdFunctionDesc
-var wdogStatsSyncPeriod = 5 * time.Second /* FIXME: should be configured */
+
+type Runner struct {
+	cmd	*exec.Cmd
+	q	*xqueue.Queue
+}
 
 var zcfg zap.Config = zap.Config {
 	Level:            zap.NewAtomicLevelAt(zap.DebugLevel),
@@ -34,94 +39,128 @@ var zcfg zap.Config = zap.Config {
 var logger, _ = zcfg.Build()
 var log = logger.Sugar()
 
-func get_exit_code(err error) int {
+func get_exit_code(err error) (bool, int) {
 	if exitError, ok := err.(*exec.ExitError); ok {
 		ws := exitError.Sys().(syscall.WaitStatus)
-		return ws.ExitStatus()
+		return true, ws.ExitStatus()
 	} else {
-		return -1 // XXX -- what else?
+		return false, -1 // XXX -- what else?
 	}
 }
 
-type runReq struct {
-	Timeout uint64
-	Params *swyapi.SwdFunctionRun
-	Result chan *swyapi.SwdFunctionRunResult
+var runner *Runner
+
+func startRunner() error {
+	var err error
+
+	runner = &Runner {}
+
+	runner.q, err = xqueue.MakeQueue()
+	if err != nil {
+		return fmt.Errorf("Can't make queue: %s", err.Error())
+	}
+
+	runner.cmd = exec.Command("/go/src/swycode/function", runner.q.GetId())
+	err = runner.cmd.Start()
+	if err != nil {
+		return fmt.Errorf("Can't start runner: %s", err.Error())
+	}
+
+	log.Debugf("Started runner (queue %s)", runner.q.FDS())
+	runner.q.Started()
+	return nil
 }
 
-var runQueue chan *runReq
+var runlock sync.Mutex
 
-func doRun() {
-	for {
-		req := <-runQueue
-		tmos := make(chan bool)
-		var resjson string
+func doRun(params *swyapi.SwdFunctionRun) (*swyapi.SwdFunctionRunResult, int, error) {
+	var err error
 
-		stdout := new(bytes.Buffer)
-		stderr := new(bytes.Buffer)
+	timeout := false
+	code := http.StatusInternalServerError
 
-		command := append(function.Command, req.Params.Args...)
-		run := command[0]
-		args := command[1:]
+	runlock.Lock()
+	defer runlock.Unlock()
 
-		log.Debugf("Exec %s args %v (tmo %d)", run, args, req.Timeout)
+	log.Debugf("Running FN (%v)", params.Args)
+	err = runner.q.Send(params.Args)
+	if err != nil {
+		return nil, code, fmt.Errorf("Can't send args: %s", err.Error())
+	}
 
-		cmd := exec.Command(run, args...)
-		cmd.Stdout = stdout
-		cmd.Stderr = stderr
-		err := cmd.Start()
-
-		if err == nil {
-			if req.Timeout != 0 {
-				go func() {
-					select {
-					case <-time.After(time.Duration(req.Timeout) * time.Millisecond):
-						cmd.Process.Signal(os.Kill)
-						log.Debugf("Timeout")
-					case <-tmos:
-						/* nothing */
-					}
-				}()
-			}
-
-			err = cmd.Wait()
-
-			if req.Timeout != 0 {
-				tmos <-true
-			}
-
-			if err == nil {
-				var retval []byte
-				retval, err = ioutil.ReadFile("/dev/shm/swyresult.json")
-				if err == nil {
-					resjson = string(retval)
-				}
-			}
+	done := make(chan bool)
+	go func() {
+		select {
+		case <-done:
+			return
+		case <-time.After(time.Duration(function.Timeout) * time.Millisecond):
+			break
 		}
 
-		result := &swyapi.SwdFunctionRunResult{}
-		if err != nil {
-			result.Code = get_exit_code(err)
-			log.Errorf("Run exited with %d (%s)", result.Code, err.Error())
+		log.Debugf("Timeout!")
+
+		timeout = true
+		xerr := runner.cmd.Process.Kill()
+		if xerr != nil {
+			log.Errorf("Can't kill runner: %s", xerr.Error())
+		}
+	}()
+
+	var res string
+	res, err = runner.q.RecvStr()
+	if err != nil {
+		if timeout {
+			runner.cmd.Wait()
+			runner.q.Close()
+			startRunner()
+			code = 524 /* A Timeout Occurred */
+			err = errors.New("Function timed out")
 		} else {
-			result.Code = 0
-			result.Return = resjson
-			log.Errorf("OK");
+			err = fmt.Errorf("Can't get back the result: %s", err.Error())
 		}
 
-		result.Stdout = stdout.String()
-		result.Stderr = stderr.String()
-
-		req.Result <- result
+		return nil, code, err
 	}
+
+	done <-true
+
+	return &swyapi.SwdFunctionRunResult{
+		Return: res,
+		Code: 0,
+	}, 0, nil
+}
+
+func doBuild() (*swyapi.SwdFunctionRunResult, error) {
+	err := os.Chdir("/go/src/swyrunner")
+	if err != nil {
+		return nil, fmt.Errorf("Can't chdir to swywdog: %s", err.Error())
+	}
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+
+	log.Debugf("Run go build in /go/src/swyrunner")
+	cmd := exec.Command("go", "build", "-o", "../swycode/function")
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	err = cmd.Run()
+	if err != nil {
+		if exit, code := get_exit_code(err); exit {
+			return &swyapi.SwdFunctionRunResult{Code: code, Stdout: stdout.String(), Stderr: stderr.String()}, nil
+		}
+
+		return nil, fmt.Errorf("Can't build: %s", err.Error())
+	}
+
+	return &swyapi.SwdFunctionRunResult{Code: 0, Stdout: stdout.String(), Stderr: stderr.String()}, nil
 }
 
 func handleRun(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
-
-	var req runReq
 	var params swyapi.SwdFunctionRun
 	var result *swyapi.SwdFunctionRunResult
+
+	code := http.StatusBadRequest
 
 	err := swyhttp.ReadAndUnmarshalReq(r, &params)
 	if err != nil {
@@ -133,10 +172,14 @@ func handleRun(w http.ResponseWriter, r *http.Request) {
 		goto out
 	}
 
-	req = runReq{Timeout: function.Timeout, Params: &params,
-			Result: make(chan *swyapi.SwdFunctionRunResult)}
-	runQueue <- &req
-	result = <-req.Result
+	if !function.Build {
+		result, code, err = doRun(&params)
+	} else {
+		result, err = doBuild()
+	}
+	if err != nil {
+		goto out
+	}
 
 	err = swyhttp.MarshalAndWrite(w, result)
 	if err != nil {
@@ -146,39 +189,8 @@ func handleRun(w http.ResponseWriter, r *http.Request) {
 	return
 
 out:
-	http.Error(w, err.Error(), http.StatusBadRequest)
+	http.Error(w, err.Error(), code)
 	log.Errorf("%s", err.Error())
-}
-
-func setupFunction(params *swyapi.SwdFunctionDesc) error {
-	var err error
-
-	log.Debugf("setupFunction: %v", params)
-	path := os.Getenv("PATH")
-
-	err = os.Chdir(params.Dir)
-	if err != nil {
-		err = fmt.Errorf("Can't change dir to %s: %s",
-				params.Dir, err.Error())
-		goto out
-	} else {
-		log.Debugf("setupFunction: Chdir to %s", params.Dir)
-	}
-
-	err = os.Setenv("PATH", path + ":" + params.Dir)
-	if err != nil {
-		err = fmt.Errorf("can't set PATH: %s", err.Error())
-		goto out
-	}
-
-	log.Debugf("PATH=%s", os.Getenv("PATH"))
-
-	function = params
-	log.Debugf("setupFunction: OK")
-	return nil
-
-out:
-	return fmt.Errorf("setupFunction: %s", err.Error())
 }
 
 func getSwdAddr() string {
@@ -219,14 +231,15 @@ func main() {
 		log.Fatal("SWD_FUNCTION_DESC unmarshal error: %s, abort", err.Error())
 	}
 
-	err = setupFunction(&params)
-	if err != nil {
-		log.Fatalf("Can't setup function, abort: %s", err.Error())
+	function = &params
+
+	if !function.Build {
+		err = startRunner()
+		if err != nil {
+			log.Fatal("Can't start runner")
+		}
 	}
 
 	http.HandleFunc("/v1/run", handleRun)
-	runQueue = make(chan *runReq)
-	go doRun()
-
 	log.Fatal(http.ListenAndServe(addr, nil))
 }

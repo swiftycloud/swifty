@@ -8,7 +8,7 @@ tags
 TAGS
 .gitid
 swy-gate
-swy-wdog
+swy-wdog-*
 swy-admd
 swy-pgrest
 swy-s3
