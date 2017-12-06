@@ -1,6 +1,7 @@
 #!/usr/local/bin/python3 -u
 from multiprocessing import Process, Queue
 from http.server import BaseHTTPRequestHandler, HTTPServer
+import queue
 import os
 import signal
 import json
@@ -16,12 +17,15 @@ def runner(runq, resq):
     while True:
         args = runq.get()
         res = swycode.main(args)
-        resq.put(res)
+        resq.put(json.dumps(res))
 
 runq = Queue()
 resq = Queue()
 runp = Process(target = runner, args = (runq, resq))
 runp.start()
+
+class FnTmo(Exception):
+    pass
 
 class SwyHandler(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -51,7 +55,7 @@ class SwyHandler(BaseHTTPRequestHandler):
             print("Call with args: %r" % req['args'])
             runq.put(req['args'])
             try:
-                res = resq.get(timeout = float(swyfunc['timeout']))
+                res = resq.get(timeout = float(swyfunc['timeout']) / 1000)
                 print("Result: %r" % res)
             except queue.Empty as ex:
                 print("Timeout running FN")
@@ -63,11 +67,14 @@ class SwyHandler(BaseHTTPRequestHandler):
                 resq = Queue()
                 runp = Process(target = runner, args = (runq, resq))
                 runp.start()
-                raise Exception("Function run timeout!")
+                raise FnTmo()
 
-            resb = json.dumps(res)
-            ret = { 'return': resb, 'code': 0, 'stdout': "", 'stderr': "" }
+            ret = { 'return': res, 'code': 0, 'stdout': "", 'stderr': "" }
             retb = json.dumps(ret).encode('utf-8')
+        except FnTmo as e:
+            self.send_response(524) # A timeout occurred
+            self.end_headers()
+            self.wfile.write("Function timed out".encode('utf-8'))
         except Exception as e:
             print("*** Error processing request ***")
             traceback.print_exc()
