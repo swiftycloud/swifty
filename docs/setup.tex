@@ -106,26 +106,6 @@ connection = mysql+pymysql://keystone:Ja7hey6keiThoyoi@controller/keystone
 provider = fernet
 \end{lstlisting}
 
-Prepare postgres
-First install it from any yum repo, then init one
-\begin{lstlisting}
-yum install -y postgresql-server postgresql
-postgresql-setup --initdb
-systemctl enable postgresql
-\end{lstlisting}
-
-Then make postgres accept connections from the outer world
-\begin{lstlisting}
-/var/lib/pgsql/data/postgresql.conf:
-	listen_addresses = '*'
-/var/lib/pgsql/data/pg_hba.conf:
-	host    all             all             0.0.0.0/0               md5
-	host    all             all             ::/0                    md5
-\end{lstlisting}
-
-Generate a random string, put it into swy-pgrest.conf and start
-postgres and swy-pgrest service.
-
 Prepare keystone
 
 \begin{lstlisting}
@@ -534,13 +514,6 @@ and prepare collections needed.
 
 A convenient way for this is to use \emph{mongo} interactive shell.
 
-Another dababase instance is to be used as middleware. For
-this one enable authentication by setting security.authorization=enabled
-key. Also make sure the DB is accessible via network with the net.bindIp
-option.
-
-There should be a user with the role "root" in the "admin" database.
-
 \begin{lstlisting}
 use swifty
 db.createUser({user:"swifty", pwd:"1q2w3e", roles:[{role:"dbOwner",db:"swifty"}]})
@@ -568,19 +541,50 @@ on "cookie" fields.
 Currently the following middleware is supported:
 \begin{itemize}
 \item{\urlref{https://mariadb.com/}{MariaDB} as sql database;}
-\item{\urlref{https://www.rabbitmq.com/}{RabbitMQ} as message queue engine.}
+\item{\urlref{https://www.rabbitmq.com/}{RabbitMQ} as message queue engine;}
+\item{\urlref{https://www.postgresql.org/}{PostgreSQL} as sql database;}
+\item{\urlref{https://www.mongodb.com/}{MondoDB} as nosql database.}
 \end{itemize}
 
-Both of them should be installed on the \emph{slave} node
+All of them should be installed on the \emph{slave} node or on any
+network reacheable node.
+
+Note the passwords below are for the reference and should be changed
+and reflected in appropriate \code{.conf} files.
+
+\subsection{MariaDB}
+\label{subsec:setup-mware-mariadb}
+
+Setup the components needed
 
 \begin{lstlisting}
 dnf -y install mariadb mariadb-server-utils
 systemctl start mariadb
 systemctl enable mariadb
+\end{lstlisting}
+
+Configure access
+
+\begin{lstlisting}
 mysqladmin -u root password aiNe1sah9ichu1re
 mysql -u root -p
 GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' IDENTIFIED BY 'aiNe1sah9ichu1re' WITH GRANT OPTION;
+\end{lstlisting}
+
+\subsection{RabbitMQ}
+\label{subsec:setup-mware-rabbitmq}
+
+Setup the components needed
+
+\begin{lstlisting}
 dnf -y install rabbitmq-server librabbitmq
+systemctl start rabbitmq-server
+systemctl enable rabbitmq-server
+\end{lstlisting}
+
+Configure access
+
+\begin{lstlisting}
 systemctl start rabbitmq-server
 systemctl enable rabbitmq-server
 rabbitmqctl add_user root airooV1Echah4wei
@@ -589,7 +593,77 @@ rabbitmqctl set_permissions -p / root ".*" ".*" ".*"
 rabbitmq-plugins enable rabbitmq_management
 \end{lstlisting}
 
-The passwords may be different of course.
+\subsection{MondoDB}
+\label{subsec:setup-mware-mondodb}
+
+Setup the components needed
+
+\begin{lstlisting}
+dnf -y install mongodb-server mongo-tools mongodb
+systemctl enable mongod
+systemctl start mongod
+\end{lstlisting}
+
+Configure MondoDB to listen requests on net interface rather
+than local only. For this edit \code{/etc/mongod.conf} and
+comment out \code{bindIP} entry and enable \code{authorization}.
+
+\begin{lstlisting}
+net:
+  port: 27017
+  #bindIp: 127.0.0.1,::1
+...
+security:
+  authorization: 'enabled'
+\end{lstlisting}
+
+Create administrator to manage databases remotely
+
+\begin{lstlisting}
+use admin
+db.createUser({user:"root",
+	pwd:"aebaep6chofuY3sh",
+	roles: [{role: "userAdminAnyDatabase", db: "admin"}]})
+\end{lstlisting}
+
+and finally
+
+\begin{lstlisting}
+systemctl restart mongod
+\end{lstlisting}
+
+\subsection{PostgreSQL}
+\label{subsec:setup-mware-postgresql}
+
+Setup the components needed
+
+\begin{lstlisting}
+dnf -y install postgresql-server postgresql postgresql-contrib
+postgresql-setup --initdb --unit postgresql
+systemctl enable postgresql
+systemctl start postgresql
+\end{lstlisting}
+
+In \code{/var/lib/pgsql/data/postgresql.conf}
+
+\begin{lstlisting}
+listen_addresses = '*'
+\end{lstlisting}
+
+In \code{/var/lib/pgsql/data/pg\_hba.conf}
+
+\begin{lstlisting}
+# TYPE  DATABASE        USER            ADDRESS                 METHOD
+local   all             all                                     peer
+host    all             all             0.0.0.0/0               md5
+host    all             all             ::/0                    md5
+\end{lstlisting}
+
+then
+
+\begin{lstlisting}
+systemctl restart postgresql
+\end{lstlisting}
 
 \section{Setting up \code{swifty} daemon}
 \label{sec:setup-swifty}
