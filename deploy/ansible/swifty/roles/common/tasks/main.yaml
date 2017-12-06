@@ -1,0 +1,23 @@
+---
+- name: install general tools
+  dnf:
+    name: "{{ item }}"
+    state: present
+  with_items:
+    - rsync
+    - wget
+    - mc
+    - git
+    - ipvsadm
+    - vim
+    - libselinux-python
+    - nfs-utils
+
+- name: disable firewalld
+  service: name=firewalld state=stopped enabled=no
+
+- name: disable selinux
+  selinux: state=disabled
+
+- name: enable nfs
+  service: name=nfs state=started enabled=yes

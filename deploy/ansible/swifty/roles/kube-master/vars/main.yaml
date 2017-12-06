@@ -1,0 +1,9 @@
+#
+# There should be in some json pretty formatted file
+# but didn't find how to tech ansible to evaluate
+# templates for second pass.
+etcd_conf_t: '[ { "name": "ETCD_NAME", "value": "default" }, { "name": "ETCD_DATA_DIR", "value": "\"/var/lib/etcd/default.etcd\"" }, { "name": "ETCD_LISTEN_CLIENT_URLS", "value": "\"http://0.0.0.0:{{ etcd_port }}\"" }, { "name": "ETCD_ADVERTISE_CLIENT_URLS", "value": "\"http://0.0.0.0:{{ etcd_port }}\"" } ]'
+flanneld_conf_t: '[ { "name": "FLANNEL_ETCD_ENDPOINTS", "value": "\"http://{{ etcd_master_node }}:{{ etcd_port }}\"" }, { "name": "FLANNEL_ETCD_PREFIX", "value": "\"{{ flannel_etcd_prefix }}\"" } ]'
+kube_master_conf_t: '[ { "name" : "KUBE_MASTER", "value" : "--master=\"http://{{ kube_master_node }}:{{ kube_apiserver_port }}\""}]'
+kube_apiserver_conf_t: '[{"name":"KUBE_API_ADDRESS","value":"\"--insecure-bind-address=0.0.0.0\""},{"name":"KUBE_ETCD_SERVERS","value":"\"--etcd-servers=http://127.0.0.1:{{ etcd_port }}\""},{"name":"KUBE_SERVICE_ADDRESSES","value":"\"--service-cluster-ip-range={{ flannel_network }}\""},{"name":"KUBE_ADMISSION_CONTROL","value":"\"\""},{"name":"KUBE_API_ARGS","value":"\"\""}]'
+kubelet_conf_t: '[{"name":"KUBELET_ADDRESS","value":"\"--address=0.0.0.0\""},{"name":"KUBELET_HOSTNAME","value":"\"--hostname-override={{ this_node }}\""},{"name":"KUBELET_API_SERVER","value":"\"--api-servers=http://{{ kube_master_node }}:{{ kube_apiserver_port }}\""},{"name":"KUBELET_ARGS","value":"\"--cgroup-driver=systemd\""}]'

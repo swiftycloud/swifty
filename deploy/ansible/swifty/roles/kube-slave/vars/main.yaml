@@ -1,0 +1,7 @@
+#
+# There should be in some json pretty formatted file
+# but didn't find how to tech ansible to evaluate
+# templates for second pass.
+flanneld_conf_t: '[ { "name": "FLANNEL_ETCD_ENDPOINTS", "value": "\"http://{{ etcd_master_node }}:{{ etcd_port }}\"" }, { "name": "FLANNEL_ETCD_PREFIX", "value": "\"{{ flannel_etcd_prefix }}\"" } ]'
+kube_master_conf_t: '[ { "name" : "KUBE_MASTER", "value" : "--master=\"http://{{ kube_master_node }}:{{ kube_apiserver_port }}\""}]'
+kubelet_conf_t: '[{"name":"KUBELET_ADDRESS","value":"\"--address=0.0.0.0\""},{"name":"KUBELET_HOSTNAME","value":"\"--hostname-override={{ this_node }}\""},{"name":"KUBELET_API_SERVER","value":"\"--api-servers=http://{{ kube_master_node }}:{{ kube_apiserver_port }}\""},{"name":"KUBELET_ARGS","value":"\"--cgroup-driver=systemd\""}]'

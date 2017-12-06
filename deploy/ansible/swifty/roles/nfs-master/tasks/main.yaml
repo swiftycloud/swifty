@@ -1,0 +1,15 @@
+---
+- name: create export directory
+  file:
+    path: '{{ nfs_volume_dir }}'
+    state: directory
+
+- name: export directory to slaves
+  lineinfile:
+    path: /etc/exports
+    regexp: '{{ item }}\('
+    line: '{{ nfs_volume_dir }} {{ item }}(rw,sync,no_root_squash)'
+  with_items: '{{ nfs_slave_nodes }}'
+
+- name: reread exports
+  shell: exportfs -a

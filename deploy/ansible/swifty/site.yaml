@@ -1,0 +1,28 @@
+#
+# Deploy Swifty stack to the site.
+---
+#- hosts: master slave
+#  roles:
+#  - debug
+
+#
+# Install common components
+- hosts: all
+  roles:
+  - common
+
+#
+# Setup master node
+- hosts: master
+  roles:
+  - nfs-master
+  - kube-master
+  - keystone-master
+
+#
+# Setup slave nodes
+- hosts: slave
+  roles:
+  - nfs-slave
+  - docker-slave
+  - kube-slave

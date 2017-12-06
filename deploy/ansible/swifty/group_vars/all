@@ -1,0 +1,18 @@
+#
+# Flannel network via etcd
+etcd_port: 2379
+etcd_master_node: "{{ groups['master'][0] }}"
+flannel_etcd_prefix: "/swifty.com/network"
+flannel_network: "16.18.0.0/16"
+flannel_subnetlen: 24
+#
+# Kubernetes
+kube_cluster_ip_range: "16.18.0.0/16"
+kube_apiserver_port: 8080
+kube_master_node: "{{ groups['master'][0] }}"
+#
+# NFS sharing directories
+nfs_volume_dir: "/home/swifty-volume"
+nfs_master_node: "{{ groups['master'][0] }}"
+nfs_slave_nodes: "{{ groups['slave'] }}"
+this_node: '{{ ansible_nodename }}'

@@ -27,6 +27,7 @@ XELATEX-OPTS	?= -output-driver="xdvipdfmx -V 3" -8bit
 tex-d		+= version.tex
 tex-d		+= intro.tex
 tex-d		+= setup.tex
+tex-d		+= deploy.tex
 tex-y		+= swifty.tex
 
 $(tex-y): $(tex-d)

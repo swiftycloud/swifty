@@ -1,0 +1,44 @@
+---
+- name: install kuebrnetes, flannel and etcd
+  dnf:
+    name: '{{ item }}'
+    state: present
+  with_items:
+    - kubernetes
+    - flannel
+
+- name: configure flannel
+  lineinfile:
+    path: /etc/sysconfig/flanneld
+    regexp: '^{{ item.name }}'
+    line: '{{ item.name }} = {{ item.value }}'
+    backup: yes
+  with_items: '{{ flanneld_conf_t }}'
+
+- name: restart flanneld
+  service: name=flanneld state=restarted enabled=yes
+
+- name: configure kubernetes master
+  lineinfile:
+    path: /etc/kubernetes/config
+    regexp: '^{{ item.name }}'
+    line: '{{ item.name }} = {{ item.value }}'
+    backup: yes
+  with_items: '{{ kube_master_conf_t }}'
+
+- name: configure kubelet
+  lineinfile:
+    path: /etc/kubernetes/kubelet
+    regexp: '^{{ item.name }}'
+    line: '{{ item.name }} = {{ item.value }}'
+    backup: yes
+  with_items: '{{ kubelet_conf_t }}'
+
+- name: restart kubernetes services
+  service:
+    name: '{{ item }}'
+    state: restarted
+    enabled: yes
+  with_items:
+    - kube-proxy
+    - kubelet

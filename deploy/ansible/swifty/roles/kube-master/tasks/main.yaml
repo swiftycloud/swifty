@@ -1,0 +1,68 @@
+---
+- name: install kuebrnetes, flannel and etcd
+  dnf:
+    name: '{{ item }}'
+    state: present
+  with_items:
+    - kubernetes
+    - flannel
+    - etcd
+
+- name: configure etcd
+  lineinfile:
+    path: /etc/etcd/etcd.conf
+    regexp: '^{{ item.name }}'
+    line: '{{ item.name }} = {{ item.value }}'
+    backup: yes
+  with_items: '{{ etcd_conf_t }}'
+
+- name: restart etcd
+  service: name=etcd state=restarted enabled=yes
+
+- name: configure flannel
+  lineinfile:
+    path: /etc/sysconfig/flanneld
+    regexp: '^{{ item.name }}'
+    line: '{{ item.name }} = {{ item.value }}'
+    backup: yes
+  with_items: '{{ flanneld_conf_t }}'
+
+- name: setup flannel network
+  shell: echo '{"Network":"{{ flannel_network }}","SubnetLen":{{ flannel_subnetlen }},"Backend":{"Type":"vxlan","VNI":1}}' | etcdctl set "{{ flannel_etcd_prefix }}"/config
+
+- name: restart flanneld
+  service: name=flanneld state=restarted enabled=yes
+
+- name: configure kubernetes master
+  lineinfile:
+    path: /etc/kubernetes/config
+    regexp: '^{{ item.name }}'
+    line: '{{ item.name }} = {{ item.value }}'
+    backup: yes
+  with_items: '{{ kube_master_conf_t }}'
+
+- name: configure kubernetes apiserver
+  lineinfile:
+    path: /etc/kubernetes/apiserver
+    regexp: '^{{ item.name }}'
+    line: '{{ item.name }} = {{ item.value }}'
+    backup: yes
+  with_items: '{{ kube_apiserver_conf_t }}'
+
+- name: configure kubelet
+  lineinfile:
+    path: /etc/kubernetes/kubelet
+    regexp: '^{{ item.name }}'
+    line: '{{ item.name }} = {{ item.value }}'
+    backup: yes
+  with_items: '{{ kubelet_conf_t }}'
+
+- name: restart kubernetes services
+  service:
+    name: '{{ item }}'
+    state: restarted
+    enabled: yes
+  with_items:
+    - kube-apiserver
+    - kube-controller-manager
+    - kube-scheduler

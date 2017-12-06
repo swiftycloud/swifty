@@ -1,0 +1,23 @@
+# 10.94.4.206             kt
+# 10.94.96.216            crvm0
+# 10.94.96.217            crvm1
+# 10.94.96.218            crvm2
+# 10.94.96.220            crvm3
+# 10.94.96.219            crvm4
+# 10.94.96.221            crvm5
+[master]
+crvm3
+
+[slave]
+crvm4
+crvm5
+
+[middleware]
+crvm4
+
+[s3master]
+crvm3
+
+[s3slave]
+crvm4
+crvm5

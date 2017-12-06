@@ -1,0 +1,142 @@
+\chapter{Deploying Swifty}
+\label{ch:deploy}
+
+For fast deploying of Swifty components the \urlref{https://www.ansible.com}{Ansible}
+recipes are provided. To be more detailed three virtual machines are provided:
+\emph{crvm3}, \emph{crvm4} and \emph{crvm5} with \code{root:1q2w3e} as login and
+password for administrator.
+
+Make sure they are present on Ansible master node
+(which we refer as \emph{ansible} next) \code{/etc/hostst}
+
+\begin{lstlisting}
+10.94.96.220            crvm3
+10.94.96.219            crvm4
+10.94.96.221            crvm5
+\end{lstlisting}
+
+Recipes are for Fedora 26 based system.
+
+\section{Preparing nodes for deployment}
+\label{sec:deploy-prep}
+
+All nodes should be accessed from Ansible master via ssh keys, thus generate
+key pairs and copy a public key to destination nodes. For example we refer
+\code{crvmx-rsa} as a private key and \code{crvmx-rsa.pub} as a public one.
+
+Copy public key to the destination machines from \emph{ansible} machine.
+
+\begin{lstlisting}
+ssh-copy-id -i ~/.ssh/crvmx-rsa.pub root@crvm3
+ssh-copy-id -i ~/.ssh/crvmx-rsa.pub root@crvm4
+ssh-copy-id -i ~/.ssh/crvmx-rsa.pub root@crvm5
+\end{lstlisting}
+
+Strictly speaking Ansible can operate with ssh passwords but using
+key based access a way more secure.
+
+Be default with minimal Fedora 26 setup the python2-dnf module is not installed
+so probably one have to run
+
+\begin{lstlisting}
+ssh root@crvm3 dnf -y install python2-dnf
+ssh root@crvm4 dnf -y install python2-dnf
+ssh root@crvm5 dnf -y install python2-dnf
+\end{lstlisting}
+
+from the \emph{ansible} (depending if Ansible based on Python 2 or 3).
+
+In \code{/etc/ansible/hosts} write
+
+\begin{lstlisting}
+[all:vars]
+ansible_sudo_pass=1q2w3e
+
+[swy-common]
+crvm3
+crvm4
+crvm5
+
+[swy-kube-master]
+crvm3
+
+[swy-kube-node]
+crvm4
+crvm5
+
+[swy-mware]
+crvm4
+
+[swy-s3-master]
+crvm3
+
+[swy-s3-node]
+crvm4
+crvm5
+\end{lstlisting}
+
+Ping the machines
+
+\begin{lstlisting}
+[root@crvm3 ~]# ansible-3 swy-common -m ping
+crvm4 | SUCCESS => {
+    "changed": false,
+    "failed": false,
+    "ping": "pong"
+}
+crvm3 | SUCCESS => {
+    "changed": false,
+    "failed": false,
+    "ping": "pong"
+}
+crvm5 | SUCCESS => {
+    "changed": false,
+    "failed": false,
+    "ping": "pong"
+}
+\end{lstlisting}
+
+Do not pay attention on crvm3 here we use it as \emph{ansible} node.
+
+First we need to install general components on all \emph{crvmX} node.
+For this sake run \code{mkdir -p /etc/ansible/playbooks}on the \emph{ansible}
+node and put \code{swy-common.yaml} there with the following contents
+
+\begin{lstlisting}
+---
+- hosts: '{{ nodes }}'
+  remote_user: root
+  tasks:
+  - name: install rsync
+    dnf: name=rsync state=present
+  - name: install mc
+    dnf: name=mc state=present
+  - name: install vim
+    dnf: name=vim-enhanced state=present
+  - name: install libselinux-python
+    dnf: name=libselinux-python state=present
+  - name: disable firewall
+    service: name=firewalld state=stopped enabled=no
+  - name: disable selinux
+    selinux: state=disabled
+  - name: install nfs
+    dnf: name=nfs-utils state=present
+  - name: enable nfs
+    service: name=nfs state=started enabled=yes
+\end{lstlisting}
+
+Then just run
+
+\begin{lstlisting}
+ansible-playbook /etc/ansible/playbooks/swy_common.yaml --extra-vars="nodes=swy_common"
+\end{lstlisting}
+
+which should install all general tools. While \emph{ansible} can reboot them
+via recipe better do it manually for a while.
+
+% Didn't debug servers reboot
+%    #  - name: restart the machine
+%    #    command: /sbin/shutdown -r +1
+%    #    async: 0
+%    #    poll: 0
+%    #    ignore_errors: true

@@ -1,0 +1,13 @@
+---
+- name: create export directory
+  file:
+    path: '{{ nfs_volume_dir }}'
+    state: directory
+
+- name: mounting volume
+  mount:
+    path: '{{ nfs_volume_dir }}'
+    src: '{{ nfs_master_node }}:{{ nfs_volume_dir }}'
+    fstype: nfs4
+    opts: user,rw,exec
+    state: mounted

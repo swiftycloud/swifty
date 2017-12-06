@@ -1,0 +1,5 @@
+---
+- name: debug1
+  debug:
+    msg: '{{ item }}'
+  with_items: "{{ nfs_slave_nodes }}"
