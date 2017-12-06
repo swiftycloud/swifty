@@ -7,10 +7,12 @@ import (
 
 	"encoding/hex"
 	"net/http"
+	"strings"
 	"errors"
 	"flag"
 	"time"
 	"fmt"
+	"net"
 
 	"../apis/apps"
 	"../common"
@@ -703,6 +705,30 @@ func genReqHandler(cb func(w http.ResponseWriter, r *http.Request, tennant strin
 	})
 }
 
+func setupMwareAddr(conf *YAMLConf) {
+	// "ip:port"
+	genAddrIP := func(addrip string) string {
+		v := strings.Split(addrip, ":")
+		if len(v) > 0 && net.ParseIP(v[0]) == nil {
+			ips, err := net.LookupIP(v[0])
+			if err == nil && len(ips) > 0 {
+				if len(v) == 2 {
+					return ips[0].String() + ":" + v[1]
+				} else {
+					return ips[0].String()
+				}
+			}
+		}
+		return addrip
+	}
+
+	conf.Mware.Rabbit.Addr	= genAddrIP(conf.Mware.Rabbit.Addr)
+	conf.Mware.Maria.Addr	= genAddrIP(conf.Mware.Maria.Addr)
+	conf.Mware.Mongo.Addr	= genAddrIP(conf.Mware.Mongo.Addr)
+	conf.Mware.Postgres.Addr= genAddrIP(conf.Mware.Postgres.Addr)
+	conf.Mware.S3.Addr	= genAddrIP(conf.Mware.S3.Addr)
+}
+
 func setupLogger(conf *YAMLConf) {
 	lvl := zap.WarnLevel
 
@@ -753,6 +779,7 @@ func main() {
 	if config_path != "" {
 		swy.ReadYamlConfig(config_path, &conf)
 		setupLogger(&conf)
+		setupMwareAddr(&conf)
 	} else {
 		setupLogger(nil)
 		log.Errorf("Provide config path")
