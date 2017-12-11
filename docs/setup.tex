@@ -517,16 +517,12 @@ A convenient way for this is to use \emph{mongo} interactive shell.
 \begin{lstlisting}
 use swifty
 db.createUser({user:"swifty", pwd:"1q2w3e", roles:[{role:"dbOwner",db:"swifty"}]})
-db.createCollection("Users")
 db.createCollection("Function")
 db.createCollection("Mware")
 db.createCollection("Logs")
+db.createCollection("FnStats")
 db.createCollection("Balancer")
 db.createCollection("BalancerRS")
-db.Users.insert({"pass" : "MXEydzNl",
-"email" : "janedoe@gmail.com",
-"userid" : "8257fbff9618952fbd2b83b4794eb694ff170adb5c1748c1110d44e137c8263c",
-"name" : "Jane Doe"})
 \end{lstlisting}
 
 The password should be changed to something strong rather than
