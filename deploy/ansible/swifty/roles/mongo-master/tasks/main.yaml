@@ -12,13 +12,9 @@
   service: name=mongod state=started enabled=yes
 
 - name: check config
-  shell: mongo --quiet localhost:27017/swifty --eval 'db.getMongo().getDBNames().indexOf("{{ db_name }}")'
+  shell: mongo --quiet localhost:27017 --eval 'db.getMongo().getDBNames().indexOf("{{ db_name }}")'
   register: db_name_result
   ignore_errors: True
-- name: show
-  debug:
-    msg: "{{ db_name_result }}"
-  when: db_name_result.stdout == "-1"
 
 - name: create admin
   shell: |

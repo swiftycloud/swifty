@@ -1,0 +1,126 @@
+---
+- name: install mongodb
+  dnf:
+    name: '{{ item }}'
+    state: present
+  with_items:
+    - mongodb-server
+    - mongo-tools
+    - mongodb
+
+- name: enable mongod
+  service: name=mongod state=started enabled=yes
+
+- name: check mongod
+  shell: mongo --quiet localhost:27017/{{ mongo_db_name }} --eval 'db.getUser("{{ mongo_db_user }}");'
+  register: mongod_result
+  ignore_errors: True
+
+- name: configure mongod
+  lineinfile:
+    path: /etc/mongod.conf
+    insertafter: '{{ item.after }}'
+    regexp: '{{ item.re }}'
+    line: '{{ item.val }}'
+    backup: yes
+  with_items:
+    - { after: "^net:", re: "  bindIp", val: "  #bindIp: 127.0.0.1,::1" }
+    - { after: "", re: "^#security:", val: "security:" }
+    - { after: "^security:", re: "  #authorization", val: "  authorization: 'enabled'" }
+  when: mongod_result.stdout == "null"
+
+- name: create mongod admin
+  shell: |
+    mongo --quiet localhost:27017/{{ mongo_db_name }} --eval 'db.createUser({user:"{{ mongo_db_user }}", pwd:"{{ mongo_db_pass }}", roles:[{role:"userAdminAnyDatabase",db:"{{ mongo_db_name }}"}]});'
+  when: mongod_result.stdout == "null"
+
+- name: restart mongod
+  service: name=mongod state=restarted enabled=yes
+  when: mongod_result.stdout == "null"
+
+- name: install mariadb
+  dnf:
+    name: '{{ item }}'
+    state: present
+  with_items:
+    - mariadb
+    - mariadb-server-utils
+
+- name: start mariadb
+  service: name=mariadb state=started enabled=yes
+
+- name: check mariadb
+  shell: mysql -u root --password={{ mariadb_root_pass }} -c mysql -e "SHOW DATABASES;"
+  register: mariadb_result
+  ignore_errors: True
+
+- name: set mariadb root password
+  shell: |
+    mysqladmin -u root password "{{ mariadb_root_pass }}"
+    mysql -u root --password={{ mariadb_root_pass }} -c mysql -e "GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' IDENTIFIED BY '{{ mariadb_root_pass }}' WITH GRANT OPTION;"
+  when: mariadb_result.rc != 0
+
+- name: install rabbitmq
+  dnf:
+    name: '{{ item }}'
+    state: present
+  with_items:
+    - rabbitmq-server
+    - librabbitmq
+
+- name: start rabbitmq-server
+  service: name=rabbitmq-server state=started enabled=yes
+
+- name: check rabbitmq
+  shell: rabbitmqctl list_users | grep root | cut -f1
+  register: rabbit_root_result
+  ignore_errors: True
+
+- name: configure rabbitmq-server
+  shell: |
+    rabbitmqctl add_user root {{ rabbit_root_pass }}
+    rabbitmqctl set_user_tags root administrator
+    rabbitmqctl set_permissions -p / root ".*" ".*" ".*"
+    rabbitmq-plugins enable rabbitmq_management
+  when: rabbit_root_result.stdout == ""
+
+- name: install postgresql
+  dnf:
+    name: '{{ item }}'
+    state: present
+  with_items:
+    - postgresql-server
+    - postgresql
+    - postgresql-contrib
+
+- name: check postgresql
+  stat:
+    path: /var/lib/pgsql/data/base
+  register: postgresql_result
+  ignore_errors: True
+
+- name: run postgresql init
+  shell: postgresql-setup --initdb --unit postgresql
+  when: postgresql_result.stat.exists == False
+
+- name: start postgresql
+  service: name=postgresql state=started enabled=yes
+
+- name: configure postgresql
+  register: postgresql_conf_changed
+  lineinfile:
+    path: '{{ item.path }}'
+    regexp: '{{ item.re }}'
+    line: '{{ item.val }}'
+    state: present
+    backrefs: yes
+    backup: yes
+  with_items:
+    - { path: '/var/lib/pgsql/data/postgresql.conf', re: "(^#)(listen_addresses)(\\s+)=(\\s+\\')(\\w+\\')(.*)", val: "listen_addresses = '*' \\6" }
+    - { path: '/var/lib/pgsql/data/pg_hba.conf', re: "^local(\\s+)all(\\s+)all(\\s+)peer", val: 'local all all peer' }
+    - { path: '/var/lib/pgsql/data/pg_hba.conf', re: "^host(\\s+)all(\\s+)all(\\s+)127.0.0.1/32(\\s+)ident", val: 'host all all 0.0.0.0/0 md5' }
+    - { path: '/var/lib/pgsql/data/pg_hba.conf', re: "^host(\\s+)all(\\s+)all(\\s+)::1/128(\\s+)ident", val: 'host all all ::/0 md5' }
+
+- name: restart postgresql
+  service: name=postgresql state=restarted enabled=yes
+  when: postgresql_conf_changed.changed == True

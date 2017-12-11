@@ -1,0 +1,5 @@
+mongo_db_name: 'admin'
+mongo_db_user: 'root'
+mongo_db_pass: 'aebaep6chofuY3sh'
+mariadb_root_pass: 'aiNe1sah9ichu1re'
+rabbit_root_pass: 'airooV1Echah4wei'

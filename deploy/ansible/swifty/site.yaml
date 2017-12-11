@@ -27,3 +27,9 @@
   - nfs-slave
   - docker-slave
   - kube-slave
+
+
+ Setup middleware
+- hosts: mware
+  roles:
+  - mware
