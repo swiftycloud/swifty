@@ -21,3 +21,31 @@
 
 - name: enable nfs
   service: name=nfs state=started enabled=yes
+
+- name: check if go need to be installed
+  command: go version
+  register: go_version_result
+  ignore_errors: True
+- name: download go-1.9.2
+  get_url:
+    url: https://redirector.gvt1.com/edgedl/go/go1.9.2.linux-amd64.tar.gz
+    checksum: sha256:de874549d9a8d8d8062be05808509c09a88a248e77ec14eb77453530829ac02b
+    dest: /tmp
+  when: go_version_result|failed
+- name: extract go
+  unarchive:
+    src: /tmp/go1.9.2.linux-amd64.tar.gz
+    dest: /usr/local/bin
+    remote_src: yes
+  when: go_version_result|failed
+- name: cleaup downloaded
+  file:
+    path: /tmp/go1.9.2.linux-amd64.tar.gz
+    state: absent
+  when: go_version_result|failed
+- name: copy templates
+  template:
+    src: templates/golang.sh
+    dest: /etc/profile.d/golang.sh
+    backup: yes
+  when: go_version_result|failed
