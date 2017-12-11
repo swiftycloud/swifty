@@ -13,6 +13,8 @@ import (
 	"time"
 	"fmt"
 	"net"
+	"io/ioutil"
+	"encoding/base64"
 
 	"../apis/apps"
 	"../common"
@@ -335,6 +337,49 @@ func handleFunctionRemove(w http.ResponseWriter, r *http.Request, tennant string
 	}
 
 	w.WriteHeader(http.StatusOK)
+out:
+	return err
+}
+
+func handleFunctionCode(w http.ResponseWriter, r *http.Request, tennant string) error {
+	var id *SwoId
+	var params swyapi.FunctionXID
+	var fn FunctionDesc
+	var codeFile string
+	var fnCode []byte
+
+	err := swyhttp.ReadAndUnmarshalReq(r, &params)
+	if err != nil {
+		goto out
+	}
+
+	if params.Commit == "" {
+		params.Commit = fn.Src.Commit
+	}
+
+	id = makeSwoId(tennant, params.Project, params.FuncName)
+	log.Debugf("Get FN code %s:%s", id.Str(), params.Commit)
+
+	fn, err = dbFuncFind(id)
+	if err != nil {
+		goto out
+	}
+
+	codeFile, err = fnCodePath(&conf, &fn, params.Commit)
+	if err != nil {
+		goto out
+	}
+
+	fnCode, err = ioutil.ReadFile(codeFile)
+	if err != nil {
+		err = fmt.Errorf("Can't read file with code: %s", err.Error())
+		goto out
+	}
+
+	err = swyhttp.MarshalAndWrite(w,  swyapi.FunctionSources {
+			Type: "code",
+			Code: base64.StdEncoding.EncodeToString(fnCode),
+		})
 out:
 	return err
 }
@@ -814,6 +859,7 @@ func main() {
 	r.Handle("/v1/function/run",		genReqHandler(handleFunctionRun))
 	r.Handle("/v1/function/list",		genReqHandler(handleFunctionList))
 	r.Handle("/v1/function/info",		genReqHandler(handleFunctionInfo))
+	r.Handle("/v1/function/code",		genReqHandler(handleFunctionCode))
 	r.Handle("/v1/function/logs",		genReqHandler(handleFunctionLogs))
 	r.Handle("/v1/mware/add",		genReqHandler(handleMwareAdd))
 	r.Handle("/v1/mware/list",		genReqHandler(handleMwareList))

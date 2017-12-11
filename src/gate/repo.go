@@ -15,8 +15,20 @@ func fnRepoClone(fn *FunctionDesc, prefix string) string {
 	return prefix + "/" + fn.Tennant + "/" + fn.Project + "/" + fn.Name
 }
 
+func fnRepoCheckoutC(conf *YAMLConf, fn *FunctionDesc, commit string) string {
+	return fnRepoClone(fn, conf.Daemon.Sources.Share) + "/" + commit
+}
+
 func fnRepoCheckout(conf *YAMLConf, fn *FunctionDesc) string {
-	return fnRepoClone(fn, conf.Daemon.Sources.Share) + "/" + fn.Src.Commit
+	return fnRepoCheckoutC(conf, fn, fn.Src.Commit)
+}
+
+func fnCodePath(conf *YAMLConf, fn *FunctionDesc, commit string) (string, error) {
+	if fn.Src.Type != "code" {
+		return "", fmt.Errorf("No single file for %s sources", fn.Src.Type)
+	}
+
+	return fnRepoCheckoutC(conf, fn, commit) + "/" + RtDefaultScriptName(&fn.Code), nil
 }
 
 func checkoutSources(fn *FunctionDesc) error {

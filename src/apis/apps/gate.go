@@ -121,6 +121,12 @@ type FunctionID struct {
 	FuncName	string			`json:"name"`
 }
 
+type FunctionXID struct {
+	Project		string			`json:"project"`
+	FuncName	string			`json:"name"`
+	Commit		string			`json:"commit"`
+}
+
 type FunctionItem struct {
 	FuncName	string			`json:"name"`
 	State		string			`json:"state"`
