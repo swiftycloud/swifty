@@ -18,6 +18,7 @@
   - nfs-master
   - kube-master
   - keystone-master
+  - mongo-master
 
 #
 # Setup slave nodes
