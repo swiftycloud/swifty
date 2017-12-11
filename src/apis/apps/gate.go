@@ -23,6 +23,7 @@ type FunctionInfo struct {
 	Event		FunctionEvent		`json:"event"`
 	URL		string			`json:"url"`
 	Stats		FunctionStats		`json:"stats"`
+	Size		FunctionSize		`json:"size"`
 }
 
 type RunCmd struct {

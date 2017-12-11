@@ -383,6 +383,10 @@ func handleFunctionInfo(w http.ResponseWriter, r *http.Request, tennant string) 
 			Stats:		swyapi.FunctionStats {
 				Called:		stats.Called,
 			},
+			Size:		swyapi.FunctionSize {
+				Memory:		fn.Size.Mem,
+				Timeout:	fn.Size.Tmo,
+			},
 		})
 out:
 	return err
