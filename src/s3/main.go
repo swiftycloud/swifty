@@ -10,6 +10,7 @@ import (
 	"encoding/hex"
 	"net/http"
 	"strconv"
+	"errors"
 	"time"
 	"flag"
 	"fmt"
@@ -333,11 +334,67 @@ func handleObject(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func handleAdminOp(w http.ResponseWriter, r *http.Request) {
-	var params_keygen swys3ctl.S3CtlKeyGen
-	var params_keydel swys3ctl.S3CtlKeyDel
-	var op string = mux.Vars(r)["op"]
+func handleKeygen(w http.ResponseWriter, r *http.Request) {
 	var akey *S3AccessKey
+	var kg swys3ctl.S3CtlKeyGen
+	var err error
+
+	err = swyhttp.ReadAndUnmarshalReq(r, &kg)
+	if err != nil {
+		goto out
+	}
+
+	// FIXME Check for allowed values
+	if kg.Namespace == "" {
+		err = errors.New("Missing namespace name")
+		goto out
+	}
+
+	akey, err = genNewAccessKey(kg.Namespace)
+	if err != nil {
+		goto out
+	}
+
+	err = swyhttp.MarshalAndWrite(w, &swys3ctl.S3CtlKeyGenResult{
+			AccessKeyID:	akey.AccessKeyID,
+			AccessKeySecret:akey.AccessKeySecret,
+		})
+	if err != nil {
+		goto out
+	}
+	return
+
+out:
+	http.Error(w, err.Error(), http.StatusBadRequest)
+}
+
+func handleKeydel(w http.ResponseWriter, r *http.Request) {
+	var kd swys3ctl.S3CtlKeyDel
+	var err error
+
+	err = swyhttp.ReadAndUnmarshalReq(r, &kd)
+	if err != nil {
+		goto out
+	}
+
+	if kd.AccessKeyID == "" {
+		err = errors.New("Missing key")
+		goto out
+	}
+
+	err = dbRemoveAccessKey(kd.AccessKeyID)
+	if err != nil {
+		goto out
+	}
+
+	w.WriteHeader(http.StatusOK)
+	return
+out:
+	http.Error(w, err.Error(), http.StatusBadRequest)
+}
+
+func handleAdminOp(w http.ResponseWriter, r *http.Request) {
+	var op string = mux.Vars(r)["op"]
 	var err error
 
 	err = s3VerifyAdmin(r)
@@ -348,49 +405,11 @@ func handleAdminOp(w http.ResponseWriter, r *http.Request) {
 
 	switch op {
 	case "keygen":
-		err = swyhttp.ReadAndUnmarshalReq(r, &params_keygen)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-		// FIXME Check for allowed values
-		if params_keygen.Namespace == "" {
-			http.Error(w, fmt.Sprintf("Missing namespace name"),
-					http.StatusBadRequest)
-			return
-		}
-		akey, err = genNewAccessKey(params_keygen.Namespace)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-		err = swyhttp.MarshalAndWrite(w, &swys3ctl.S3CtlKeyGenResult{
-				AccessKeyID:	akey.AccessKeyID,
-				AccessKeySecret:akey.AccessKeySecret, })
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-		}
+		handleKeygen(w, r)
 		return
-		break
 	case "keydel":
-		err = swyhttp.ReadAndUnmarshalReq(r, &params_keydel)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-		if params_keydel.AccessKeyID == "" {
-			http.Error(w, fmt.Sprintf("Missing key"),
-					http.StatusBadRequest)
-			return
-		}
-		err = dbRemoveAccessKey(params_keydel.AccessKeyID)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-		} else {
-			w.WriteHeader(http.StatusOK)
-		}
+		handleKeydel(w, r)
 		return
-		break
 	}
 
 	http.Error(w, fmt.Sprintf("Unknown operation"), http.StatusBadRequest)
