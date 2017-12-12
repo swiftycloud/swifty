@@ -279,7 +279,7 @@ func logGetFor(id *SwoId) ([]DBLogRec, error) {
 
 func logGetCalls(id *SwoId) (int, error) {
 	c := dbSession.DB(dbState).C(DBColLogs)
-	return c.Find(bson.M{"fnid": id.Cookie, "event": "run"}).Count()
+	return c.Find(bson.M{"fnid": id.Cookie(), "event": "run"}).Count()
 }
 
 func logRemove(fn *FunctionDesc) {
