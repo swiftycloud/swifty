@@ -18,7 +18,7 @@ type FunctionStats struct {
 type FunctionInfo struct {
 	Mware		[]string		`json:"mware"`
 	State		string			`json:"state"`
-	Commit		string			`json:"commit"`
+	Version		string			`json:"version"`
 	Code		FunctionCode		`json:"code"`
 	Event		FunctionEvent		`json:"event"`
 	URL		string			`json:"url"`
@@ -124,7 +124,7 @@ type FunctionID struct {
 type FunctionXID struct {
 	Project		string			`json:"project"`
 	FuncName	string			`json:"name"`
-	Commit		string			`json:"commit"`
+	Version		string			`json:"version"`
 }
 
 type FunctionItem struct {

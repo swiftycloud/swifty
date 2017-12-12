@@ -156,12 +156,16 @@ func list_functions(project string, args []string, opts [8]string) {
 func info_function(project string, args []string, opts [8]string) {
 	var ifo swyapi.FunctionInfo
 	make_faas_req("function/info", swyapi.FunctionID{ Project: project, FuncName: args[0]}, &ifo)
+	ver := ifo.Version
+	if len(ver) > 8 {
+		ver = ver[:8]
+	}
 
-	fmt.Printf("Lang:   %s\n", ifo.Code.Lang)
-	fmt.Printf("Commit: %s\n", ifo.Commit[:8])
-	fmt.Printf("State:  %s\n", ifo.State)
+	fmt.Printf("Lang:    %s\n", ifo.Code.Lang)
+	fmt.Printf("Version: %s\n", ver)
+	fmt.Printf("State:   %s\n", ifo.State)
 	if len(ifo.Mware) > 0 {
-		fmt.Printf("Mware:  %s\n", strings.Join(ifo.Mware, ", "))
+		fmt.Printf("Mware:   %s\n", strings.Join(ifo.Mware, ", "))
 	}
 	if ifo.Event.Source != "" {
 		estr := ifo.Event.Source
@@ -177,12 +181,12 @@ func info_function(project string, args []string, opts [8]string) {
 		} else {
 			estr += "UNKNOWN"
 		}
-		fmt.Printf("Event:  %s\n", estr)
+		fmt.Printf("Event:   %s\n", estr)
 	}
 	if ifo.URL != "" {
-		fmt.Printf("URL:    http://%s:%s%s\n", conf.Login.Host, conf.Login.Port, ifo.URL)
+		fmt.Printf("URL:     http://%s:%s%s\n", conf.Login.Host, conf.Login.Port, ifo.URL)
 	}
-	fmt.Printf("Called: %d\n", ifo.Stats.Called)
+	fmt.Printf("Called:  %d\n", ifo.Stats.Called)
 }
 
 func detect_language(repo string) string {
@@ -289,7 +293,7 @@ func del_function(project string, args []string, opts [8]string) {
 func show_code(project string, args []string, opts [8]string) {
 	var res swyapi.FunctionSources
 	make_faas_req("function/code",
-		swyapi.FunctionXID{ Project: project, FuncName: args[0], Commit: opts[0], }, &res)
+		swyapi.FunctionXID{ Project: project, FuncName: args[0], Version: opts[0], }, &res)
 
 	data, err := base64.StdEncoding.DecodeString(res.Code)
 	if err != nil {
@@ -497,7 +501,7 @@ func main() {
 	bindCmdUsage(CMD_UPD,	[]string{"NAME"}, "Update a function", true)
 	bindCmdUsage(CMD_DEL,	[]string{"NAME"}, "Delete a function", true)
 	bindCmdUsage(CMD_LOGS,	[]string{"NAME"}, "Show function logs", true)
-	cmdMap[CMD_CODE].opts.StringVar(&opts[0], "commit", "", "Commit ID")
+	cmdMap[CMD_CODE].opts.StringVar(&opts[0], "version", "", "Version")
 	bindCmdUsage(CMD_CODE,  []string{"NAME"}, "Show function code", true)
 
 	bindCmdUsage(CMD_MLS,	[]string{}, "List middleware", true)

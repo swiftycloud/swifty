@@ -353,19 +353,19 @@ func handleFunctionCode(w http.ResponseWriter, r *http.Request, tennant string) 
 		goto out
 	}
 
-	if params.Commit == "" {
-		params.Commit = fn.Src.Commit
+	if params.Version == "" {
+		params.Version = fn.Src.Version
 	}
 
 	id = makeSwoId(tennant, params.Project, params.FuncName)
-	log.Debugf("Get FN code %s:%s", id.Str(), params.Commit)
+	log.Debugf("Get FN code %s:%s", id.Str(), params.Version)
 
 	fn, err = dbFuncFind(id)
 	if err != nil {
 		goto out
 	}
 
-	codeFile, err = fnCodePath(&conf, &fn, params.Commit)
+	codeFile, err = fnCodePath(&conf, &fn, params.Version)
 	if err != nil {
 		goto out
 	}
@@ -413,7 +413,7 @@ func handleFunctionInfo(w http.ResponseWriter, r *http.Request, tennant string) 
 	err = swyhttp.MarshalAndWrite(w,  swyapi.FunctionInfo{
 			State:          fnStates[fn.State],
 			Mware:          fn.Mware,
-			Commit:         fn.Src.Commit,
+			Version:         fn.Src.Version,
 			URL:		url,
 			Code:		swyapi.FunctionCode{
 				Lang:		fn.Code.Lang,

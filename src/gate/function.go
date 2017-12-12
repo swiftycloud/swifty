@@ -60,7 +60,7 @@ type FnCodeDesc struct {
 type FnSrcDesc struct {
 	Type		string		`bson:"type"`
 	Repo		string		`bson:"repo,omitempty"`
-	Commit		string		`bson:"commit"`		// Top commit in the repo
+	Version		string		`bson:"version"`		// Top commit in the repo
 	Code		string		`bson:"-"`
 }
 
@@ -95,7 +95,7 @@ type FunctionDesc struct {
 	OneShot		bool		`bson:"oneshot"`
 }
 
-var noCommit = "00000000"
+var zeroVersion = "0"
 
 func (fi *FnInst)DepName() string {
 	dn := "swd-" + fi.fn.Cookie[:32]
@@ -300,7 +300,7 @@ func updateFunction(conf *YAMLConf, id *SwoId) error {
 		goto out
 	}
 
-	logSaveEvent(&fn, "updated", fmt.Sprintf("to: %s", fn.Src.Commit))
+	logSaveEvent(&fn, "updated", fmt.Sprintf("to: %s", fn.Src.Version))
 out:
 	return err
 }

@@ -209,7 +209,7 @@ func dbFuncUpdateAdded(fn *FunctionDesc) error {
 	err := dbFuncUpdate(
 		bson.M{"tennant": fn.Tennant, "project": fn.Project, "name": fn.Name},
 		bson.M{"$set": bson.M{
-				"src.commit": fn.Src.Commit,
+				"src.version": fn.Src.Version,
 				"cronid": fn.CronID,
 				"mware": fn.Mware,
 				"oneshot": fn.OneShot,
@@ -225,7 +225,7 @@ func dbFuncUpdateAdded(fn *FunctionDesc) error {
 func dbFuncUpdatePulled(fn *FunctionDesc) error {
 	err := dbFuncUpdate(
 		bson.M{"tennant": fn.Tennant, "project": fn.Project, "name": fn.Name},
-		bson.M{"$set": bson.M{"src.commit": fn.Src.Commit, "state": fn.State, }})
+		bson.M{"$set": bson.M{"src.version": fn.Src.Version, "state": fn.State, }})
 	if err != nil {
 		log.Errorf("Can't update pulled %s: %s", fn.Name, err.Error())
 	}

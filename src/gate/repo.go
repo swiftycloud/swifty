@@ -15,20 +15,20 @@ func fnRepoClone(fn *FunctionDesc, prefix string) string {
 	return prefix + "/" + fn.Tennant + "/" + fn.Project + "/" + fn.Name
 }
 
-func fnRepoCheckoutC(conf *YAMLConf, fn *FunctionDesc, commit string) string {
-	return fnRepoClone(fn, conf.Daemon.Sources.Share) + "/" + commit
+func fnRepoCheckoutC(conf *YAMLConf, fn *FunctionDesc, version string) string {
+	return fnRepoClone(fn, conf.Daemon.Sources.Share) + "/" + version
 }
 
 func fnRepoCheckout(conf *YAMLConf, fn *FunctionDesc) string {
-	return fnRepoCheckoutC(conf, fn, fn.Src.Commit)
+	return fnRepoCheckoutC(conf, fn, fn.Src.Version)
 }
 
-func fnCodePath(conf *YAMLConf, fn *FunctionDesc, commit string) (string, error) {
+func fnCodePath(conf *YAMLConf, fn *FunctionDesc, version string) (string, error) {
 	if fn.Src.Type != "code" {
 		return "", fmt.Errorf("No single file for %s sources", fn.Src.Type)
 	}
 
-	return fnRepoCheckoutC(conf, fn, commit) + "/" + RtDefaultScriptName(&fn.Code), nil
+	return fnRepoCheckoutC(conf, fn, version) + "/" + RtDefaultScriptName(&fn.Code), nil
 }
 
 func checkoutSources(fn *FunctionDesc) error {
@@ -45,7 +45,7 @@ func checkoutSources(fn *FunctionDesc) error {
 		goto co_err
 	}
 
-	fn.Src.Commit = stdout.String()
+	fn.Src.Version = stdout.String()
 
 	// Bring the necessary deps
 	err = update_deps(cloned_to)
@@ -56,7 +56,7 @@ func checkoutSources(fn *FunctionDesc) error {
 	// Now put the sources into shared place
 	share_to = fnRepoCheckout(&conf, fn)
 
-	log.Debugf("Checkout %s to %s", fn.Src.Commit[:12], share_to)
+	log.Debugf("Checkout %s to %s", fn.Src.Version[:12], share_to)
 	err = copy_git_files(cloned_to, share_to)
 	if err != nil {
 		goto co_err
@@ -131,7 +131,7 @@ func cloneGitRepo(fn *FunctionDesc) error {
 }
 
 func getFileFromReq(fn *FunctionDesc) error {
-	fn.Src.Commit = noCommit
+	fn.Src.Version = zeroVersion
 
 	to := fnRepoCheckout(&conf, fn)
 	err := os.MkdirAll(to, 0750)
