@@ -28,8 +28,8 @@
   - docker-slave
   - kube-slave
 
-
- Setup middleware
+#
+# Setup middleware
 - hosts: mware
   roles:
   - mware
