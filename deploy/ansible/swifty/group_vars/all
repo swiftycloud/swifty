@@ -15,4 +15,12 @@ kube_master_node: "{{ groups['master'][0] }}"
 nfs_volume_dir: "/home/swifty-volume"
 nfs_master_node: "{{ groups['master'][0] }}"
 nfs_slave_nodes: "{{ groups['slave'] }}"
+#
+# S3 nodes
+s3_admin_node: "{{ groups['s3admin'][0] }}"
+s3_nodes: "{{ groups['s3nodes'] | join(' ') }}"
+s3_disk: "sdc"
+s3_cluster_network: "10.94.0.0/16"
+#
+# This node
 this_node: '{{ ansible_nodename }}'

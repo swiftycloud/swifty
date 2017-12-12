@@ -1,0 +1,43 @@
+---
+- name: copy private key
+  copy:
+    src: '{{ item.src }}'
+    dest: "/home/ceph/.ssh/{{ item.dst }}"
+    mode: 0600
+    owner: ceph
+    group: users
+    force: no
+  with_items:
+    - { src: 'templates/id_rsa.pub', dst: 'id_rsa.pub' }
+    - { src: 'templates/id_rsa', dst: 'id_rsa' }
+
+- name: create new cluster
+  shell: |
+    cd ceph-admin
+    ceph-deploy new {{ s3_nodes }}
+  become: true
+  become_user: ceph
+
+- name: adjust conf settings
+  lineinfile:
+    path: /home/ceph/ceph-admin/ceph.conf
+    regexp: '^cluster_network = '
+    line: 'cluster_network = {{ s3_cluster_network }}'
+
+- name: install apps, create monitors, gather keys
+  shell: |
+    cd ceph-admin
+    ceph-deploy install {{ s3_nodes }} --no-adjust-repos
+    ceph-deploy --overwrite-conf mon create-initial
+    ceph-deploy gatherkeys {{ s3_nodes }}
+  become: true
+  become_user: ceph
+
+- name: zap disks and create osd
+  shell: |
+    cd ceph-admin
+    ceph-deploy disk zap {{ item }}:{{ s3_disk }}
+    ceph-deploy osd create {{ item }}:{{ s3_disk }}
+  with_items: "{{ groups['s3nodes'] }}"
+  become: true
+  become_user: ceph

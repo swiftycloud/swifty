@@ -33,3 +33,9 @@
 - hosts: mware
   roles:
   - mware
+
+#
+# Setup s3
+- hosts: s3admin
+  roles:
+  - ceph

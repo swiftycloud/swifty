@@ -1,0 +1,4 @@
+#
+# python -c 'import crypt,getpass; ceph_user_passwd="Ekeececae1fee6Da"; print(crypt.crypt(ceph_user_passwd, crypt.mksalt(crypt.METHOD_SHA512)))'
+ceph_user_passwd: "Ekeececae1fee6Da"
+ceph_user_hashed_passwd: "$6$qsb9z5TjADI3cNZP$XHEXK99lgG5BfI8vyzcIXjVivELld0RqV6gHV7UamL.Ixh.UlR.cSGWVTrYngN5mkZjFYNdF/zANTMWpEx6TR1"

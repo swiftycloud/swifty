@@ -15,9 +15,10 @@ crvm5
 [mware]
 crvm4
 
-[s3master]
+[s3admin]
 crvm3
 
-[s3slave]
+[s3nodes]
+crvm3
 crvm4
 crvm5
