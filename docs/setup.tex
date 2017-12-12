@@ -310,6 +310,113 @@ and finally run the docker itself
 systemctl start docker
 \end{lstlisting}
 
+\section{Setting up Ceph}
+\label{sec:setup-ceph}
+
+% To add HDD with prlctl
+% {0296fd67-f004-4eb8-9de7-a5997a4e4d98}  running      -               VM crvm0.kt
+% {488b10ac-0280-49be-9856-6ad21a4c6e59}  running      -               VM crvm1.kt
+% {75fa250a-5e02-4222-855a-2ef9f54754a4}  running      -               VM crvm2.kt
+% {ac0bf901-d9b9-4e5e-bb19-a5b4e7a65d18}  running      -               VM crvm3.kt
+% {3f5d6d08-b7d5-42ab-b0d2-b53fe4834d9a}  running      -               VM crvm4.kt
+% {4e893be5-af4c-4503-97c5-d43a62008379}  running      -               VM crvm5.kt
+% prlctl set 0296fd67-f004-4eb8-9de7-a5997a4e4d98 --device-add hdd --size 20000
+% prlctl set 75fa250a-5e02-4222-855a-2ef9f54754a4 --device-add hdd --size 20000
+% prlctl set 488b10ac-0280-49be-9856-6ad21a4c6e59 --device-add hdd --size 20000
+% prlctl set ac0bf901-d9b9-4e5e-bb19-a5b4e7a65d18 --device-add hdd --size 20000
+% prlctl set 3f5d6d08-b7d5-42ab-b0d2-b53fe4834d9a --device-add hdd --size 20000
+% prlctl set 4e893be5-af4c-4503-97c5-d43a62008379 --device-add hdd --size 20000
+
+%[ceph@crvm3 ceph-admin]$ cat /etc/hosts
+%127.0.0.1   localhost localhost.localdomain localhost4 localhost4.localdomain4
+%::1         localhost localhost.localdomain localhost6 localhost6.localdomain6
+%10.94.96.216            crvm0
+%10.94.96.217            crvm1
+%10.94.96.218            crvm2
+%10.94.96.220            crvm3
+%10.94.96.219            crvm4
+%10.94.96.221            crvm5
+
+To store S3 objects the \urlref{http://ceph.com/}{Ceph} backed in used.
+It is managed by \code{crvm3} admin node which governs three slave nodes
+(hosts \code{crvm3}, \code{crvm4}, \code{crmv5}).
+
+Three nodes are the minimum, note we reuse admin node as one of slave node
+for example case. In production it should rather be a separate host as
+ceph documentation implies.
+
+On admin node install
+
+\begin{lstlisting}
+dnf -y install ceph-deploy
+\end{lstlisting}
+
+Run the following preliminary actions on all nodes
+
+\begin{lstlisting}
+useradd -d /home/ceph -m ceph
+passwd ceph
+echo "ceph ALL = (root) NOPASSWD:ALL" > /etc/sudoers.d/ceph
+chmod 0440 /etc/sudoers.d/ceph
+chown -R ceph:users /home/ceph/
+\end{lstlisting}
+
+For password the value \code{Ekeececae1fee6Da} is used. Then
+new keys are generated (without password) on the master node
+
+\begin{lstlisting}
+ssh-keygen -f /home/ceph/.ssh/id_rsa
+\end{lstlisting}
+
+Distribute public key to each node
+
+\begin{lstlisting}
+cat /home/ceph/.ssh/id_rsa.pub >> /home/ceph/.ssh/authorized_keys
+\end{lstlisting}
+
+Copy keys to master node
+
+\begin{lstlisting}
+scp /home/ceph/.ssh/id_rsa* root@crvm3:/home/ceph/.ssh/
+chown -R ceph:users /home/ceph/
+\end{lstlisting}
+
+On admin node initiate cluster deploy
+
+\begin{lstlisting}
+su - ceph
+mkdir ceph-admin
+cd ceph-admin
+ceph-deploy new crvm{3,4,5}
+\end{lstlisting}
+
+The add the following lines into \code{ceph.conf}
+
+\begin{lstlisting}
+cluster_network = 10.94.0.0/16
+\end{lstlisting}
+
+\begin{lstlisting}
+ceph-deploy install crvm{3,4,5} --no-adjust-repos
+ceph-deploy --overwrite-conf mon create-initial
+ceph-deploy gatherkeys crvm{3,4,5}
+ceph-deploy disk zap crvm{3,4,5}:sdc
+ceph-deploy osd create crvm{3,4,5}:sdc
+\end{lstlisting}
+
+Side note: if something gone wrong and need to wipe
+the complete ceph installation on all nodes do the
+following on the admin node
+
+\begin{lstlisting}
+su - ceph
+cd ceph-admin
+ceph-deploy purge crvm{3,4,5}
+ceph-deploy purgedata crvm{3,4,5}
+ceph-deploy forgetkeys
+rm ceph.*
+\end{lstlisting}
+
 \section{Setting up Kubernetes}
 \label{sec:setup-kuber}
 
@@ -814,8 +921,6 @@ in \code{src/conf} directory.
 
 \section{Setting up \code{swy-s3} daemon}
 \label{sec:setup-swy-s3}
-
-%FIXME Describe complete setup
 
 Build \code{swy-s3}
 
