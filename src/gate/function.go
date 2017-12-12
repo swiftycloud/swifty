@@ -255,7 +255,7 @@ out:
 	return err
 }
 
-func updateFunction(conf *YAMLConf, id *SwoId) error {
+func updateFunction(conf *YAMLConf, id *SwoId, params *swyapi.FunctionUpdate) error {
 	var fn FunctionDesc
 	var err error
 
@@ -270,7 +270,7 @@ func updateFunction(conf *YAMLConf, id *SwoId) error {
 		goto out
 	}
 
-	err = updateSources(&fn)
+	err = updateSources(&fn, params)
 	if err != nil {
 		goto out
 	}

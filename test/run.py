@@ -38,6 +38,9 @@ def add_fn(name, lang, mw = []):
 
 	return wait_fn(name)
 
+def upd_fn(name, lang):
+	swyrun([ "upd", name, "-src", "test/functions/" + lang + "/" + name + "2" + lext[lang] ])
+
 def add_mw(typ, name):
 	swyrun([ "madd", name, typ ])
 
@@ -69,12 +72,12 @@ def del_fn(name):
 
 def run_test(fname, langs):
 	print("====== Running %s" % fname.__name__)
-        for l in langs:
-            print("______ %s" % l)
-            if fname(l):
-                    print("------ PASS")
-            else:
-                    print("====== FAIL")
+	for l in langs:
+		print("______ %s" % l)
+		if fname(l):
+			print("------ PASS")
+		else:
+			print("====== FAIL")
 
 def helloworld(lang):
 	cookie = randstr()
@@ -83,6 +86,33 @@ def helloworld(lang):
 	del_fn("helloworld")
 	print(ret)
 	return ret['message'] == 'hw:%s:%s' % (lang, cookie)
+
+def update(lang):
+	ok = False
+	cookie = randstr()
+	inf = add_fn("helloworld", lang)
+	ret = run_fn(inf, {'name': cookie})
+	print(ret)
+	if ret['message'] == 'hw:%s:%s' % (lang, cookie):
+		upd_fn("helloworld", lang)
+		tmo = 0.5
+		while tmo < 12.0:
+			ret = run_fn(inf, {'name': cookie})
+			print(ret)
+			if ret['message'] == 'hw:%s:%s' % (lang, cookie):
+				print("Updating")
+				time.sleep(tmo)
+				tmo *= 2.0
+				continue
+			if ret['message'] == 'hw2:%s:%s' % (lang, cookie):
+				ok = True
+				print("Updated")
+			else:
+				print("Alien message")
+			break
+	del_fn("helloworld")
+	return ok
+
 
 def pgsql(lang):
 	ok = False
@@ -159,7 +189,8 @@ def checkempty(lang):
 	return len(fns) == 0
 
 
-run_test(helloworld, ["python", "golang"])
+#run_test(helloworld, ["python", "golang"])
+run_test(update, ["python"])
 #run_test(pgsql, ["python"])
 #run_test(mongo, ["python"])
 #run_test(s3, ["python"])

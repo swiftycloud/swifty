@@ -96,6 +96,7 @@ type FunctionAdd struct {
 type FunctionUpdate struct {
 	Project		string			`json:"project"`
 	FuncName	string			`json:"name"`
+	Code		string			`json:"code"`
 }
 
 type FunctionRemove struct {

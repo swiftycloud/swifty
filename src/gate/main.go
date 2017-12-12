@@ -309,7 +309,7 @@ func handleFunctionUpdate(w http.ResponseWriter, r *http.Request, tennant string
 	id = makeSwoId(tennant, params.Project, params.FuncName)
 	log.Debugf("function/update %s", id.Str())
 
-	err = updateFunction(&conf, id)
+	err = updateFunction(&conf, id, &params)
 	if err != nil {
 		goto out
 	}

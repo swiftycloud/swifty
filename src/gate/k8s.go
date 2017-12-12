@@ -5,6 +5,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/pkg/api/unversioned"
 	"k8s.io/client-go/pkg/api/v1"
+	"k8s.io/client-go/pkg/util/intstr"
 	//metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1beta1 "k8s.io/client-go/pkg/apis/extensions/v1beta1"
 	"k8s.io/client-go/tools/clientcmd"
@@ -248,6 +249,20 @@ func swk8sUpdate(conf *YAMLConf, fn *FunctionDesc) error {
 		if this.Spec.Template.Spec.Volumes[i].Name == "code" {
 			this.Spec.Template.Spec.Volumes[i].VolumeSource.HostPath.Path = fnRepoCheckout(conf, fn)
 			break;
+		}
+	}
+
+	if fn.Size.Replicas == 1 {
+		/* Don't let pods disappear at all */
+		log.Debugf("Tuning up update strategy")
+		one := intstr.FromInt(1)
+		zero := intstr.FromInt(0)
+
+		this.Spec.Strategy = v1beta1.DeploymentStrategy {
+			RollingUpdate: &v1beta1.RollingUpdateDeployment {
+				MaxUnavailable: &zero,
+				MaxSurge: &one,
+			},
 		}
 	}
 

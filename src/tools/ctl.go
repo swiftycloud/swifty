@@ -194,6 +194,15 @@ func detect_language(repo string) string {
 	return ""
 }
 
+func encodeFile(file string) string {
+	data, err := ioutil.ReadFile(file)
+	if err != nil {
+		fatal(fmt.Errorf("Can't read file sources: %s", err.Error()))
+	}
+
+	return base64.StdEncoding.EncodeToString(data)
+}
+
 func add_function(project string, args []string, opts [8]string) {
 	sources := swyapi.FunctionSources{}
 	code := swyapi.FunctionCode{}
@@ -213,16 +222,9 @@ func add_function(project string, args []string, opts [8]string) {
 		sources.Type = "git"
 		sources.Repo = repo
 	} else {
-		data, err := ioutil.ReadFile(opts[1])
-		if err != nil {
-			fatal(fmt.Errorf("Can't read file sources"))
-		}
-
-		enc := base64.StdEncoding.EncodeToString(data)
-
 		fmt.Printf("Will add file %s\n", opts[1])
 		sources.Type = "code"
-		sources.Code = enc
+		sources.Code = encodeFile(opts[1])
 	}
 
 	if opts[0] == "auto" {
@@ -280,8 +282,12 @@ func run_function(project string, args []string, opts [8]string) {
 }
 
 func update_function(project string, args []string, opts [8]string) {
+	code := ""
+	if opts[0] != "" {
+		code = encodeFile(opts[0])
+	}
 	make_faas_req("function/update",
-		swyapi.FunctionUpdate{ Project: project, FuncName: args[0], }, nil)
+		swyapi.FunctionUpdate{ Project: project, FuncName: args[0], Code: code }, nil)
 
 }
 
@@ -493,11 +499,12 @@ func main() {
 	bindCmdUsage(CMD_LS,	[]string{}, "List functions", true)
 	bindCmdUsage(CMD_INF,	[]string{"NAME"}, "Function info", true)
 	cmdMap[CMD_ADD].opts.StringVar(&opts[0], "lang", "auto", "Language")
-	cmdMap[CMD_ADD].opts.StringVar(&opts[1], "src", ".", "Repository")
+	cmdMap[CMD_ADD].opts.StringVar(&opts[1], "src", ".", "Source file")
 	cmdMap[CMD_ADD].opts.StringVar(&opts[2], "mw", "", "Mware to use, comma-separated")
 	cmdMap[CMD_ADD].opts.StringVar(&opts[3], "event", "", "Event this fn is to start")
 	bindCmdUsage(CMD_ADD,	[]string{"NAME"}, "Add a function", true)
 	bindCmdUsage(CMD_RUN,	[]string{"NAME", "ARGUMENTS..."}, "Run a function", true)
+	cmdMap[CMD_UPD].opts.StringVar(&opts[0], "src", "", "Source file")
 	bindCmdUsage(CMD_UPD,	[]string{"NAME"}, "Update a function", true)
 	bindCmdUsage(CMD_DEL,	[]string{"NAME"}, "Delete a function", true)
 	bindCmdUsage(CMD_LOGS,	[]string{"NAME"}, "Show function logs", true)

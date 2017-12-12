@@ -8,7 +8,9 @@ import (
 	"io"
 	"io/ioutil"
 	"encoding/base64"
+	"strconv"
 	"../common"
+	"../apis/apps"
 )
 
 func fnRepoClone(fn *FunctionDesc, prefix string) string {
@@ -72,7 +74,7 @@ co_err:
 
 var srcHandlers = map[string] struct {
 	get func (*FunctionDesc) error
-	update func (*FunctionDesc) error
+	update func (*FunctionDesc, *swyapi.FunctionUpdate) error
 } {
 	"git": {
 		get:	cloneGitRepo,
@@ -130,16 +132,14 @@ func cloneGitRepo(fn *FunctionDesc) error {
 	return checkoutSources(fn)
 }
 
-func getFileFromReq(fn *FunctionDesc) error {
-	fn.Src.Version = zeroVersion
-
+func writeSource(fn *FunctionDesc, codeb64 string) error {
 	to := fnRepoCheckout(&conf, fn)
 	err := os.MkdirAll(to, 0750)
 	if err != nil {
 		return fmt.Errorf("Can't put sources")
 	}
 
-	data, err := base64.StdEncoding.DecodeString(fn.Src.Code)
+	data, err := base64.StdEncoding.DecodeString(codeb64)
 	if err != nil {
 		return fmt.Errorf("Error decoding sources")
 	}
@@ -154,16 +154,21 @@ func getFileFromReq(fn *FunctionDesc) error {
 	return nil
 }
 
-func updateSources(fn *FunctionDesc) error {
+func getFileFromReq(fn *FunctionDesc) error {
+	fn.Src.Version = zeroVersion
+	return writeSource(fn, fn.Src.Code)
+}
+
+func updateSources(fn *FunctionDesc, params *swyapi.FunctionUpdate) error {
 	srch, ok := srcHandlers[fn.Src.Type]
 	if !ok {
 		return fmt.Errorf("Unknown sources type %s", fn.Src.Type)
 	}
 
-	return srch.update(fn)
+	return srch.update(fn, params)
 }
 
-func updateGitRepo(fn *FunctionDesc) error {
+func updateGitRepo(fn *FunctionDesc, params *swyapi.FunctionUpdate) error {
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 
@@ -184,9 +189,15 @@ func updateGitRepo(fn *FunctionDesc) error {
 	return checkoutSources(fn)
 }
 
-func updateFileFromReq(fn *FunctionDesc) error {
-	log.Errorf("No update of direct code possible (yet)")
-	return fmt.Errorf("Can't update code from req")
+func updateFileFromReq(fn *FunctionDesc, params *swyapi.FunctionUpdate) error {
+	if params.Code == "" {
+		return fmt.Errorf("No code to update")
+	}
+
+	ov, _ := strconv.Atoi(fn.Src.Version)
+	fn.Src.Version = strconv.Itoa(ov + 1)
+
+	return writeSource(fn, params.Code)
 }
 
 func cleanRepo(fn *FunctionDesc) {
