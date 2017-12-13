@@ -258,6 +258,7 @@ out:
 func updateFunction(conf *YAMLConf, id *SwoId, params *swyapi.FunctionUpdate) error {
 	var fn FunctionDesc
 	var err error
+	var rebuild bool
 
 	update := make(bson.M)
 
@@ -279,13 +280,14 @@ func updateFunction(conf *YAMLConf, id *SwoId, params *swyapi.FunctionUpdate) er
 		}
 
 		update["src.version"] = fn.Src.Version
+		rebuild = RtBuilding(&fn.Code)
 	}
 
 	if len(update) == 0 {
 		goto out
 	}
 
-	if RtBuilding(&fn.Code) {
+	if rebuild {
 		if fn.State == swy.DBFuncStateRdy {
 			fn.State = swy.DBFuncStateUpd
 		} else {
@@ -300,7 +302,7 @@ func updateFunction(conf *YAMLConf, id *SwoId, params *swyapi.FunctionUpdate) er
 		goto out
 	}
 
-	if RtBuilding(&fn.Code) {
+	if rebuild {
 		log.Debugf("Starting build dep")
 		err = swk8sRun(conf, &fn, fn.InstBuild())
 	} else {
