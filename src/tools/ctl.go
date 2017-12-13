@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strings"
+	"strconv"
 	"flag"
 	"fmt"
 	"os"
@@ -186,6 +187,8 @@ func info_function(project string, args []string, opts [8]string) {
 	if ifo.URL != "" {
 		fmt.Printf("URL:     http://%s:%s%s\n", conf.Login.Host, conf.Login.Port, ifo.URL)
 	}
+	fmt.Printf("Timeout: %dms\n", ifo.Size.Timeout)
+	fmt.Printf("Memory:  %dMi\n", ifo.Size.Memory)
 	fmt.Printf("Called:  %d\n", ifo.Stats.Called)
 }
 
@@ -233,7 +236,6 @@ func add_function(project string, args []string, opts [8]string) {
 
 	code.Lang = opts[0]
 
-
 	mw := strings.Split(opts[2], ",")
 
 	evt := swyapi.FunctionEvent {}
@@ -251,15 +253,23 @@ func add_function(project string, args []string, opts [8]string) {
 		}
 	}
 
-	make_faas_req("function/add",
-		swyapi.FunctionAdd{
-			Project: project,
-			FuncName: args[0],
-			Sources: sources,
-			Code: code,
-			Mware: mw,
-			Event: evt,
-		}, nil)
+	req := swyapi.FunctionAdd{
+		Project: project,
+		FuncName: args[0],
+		Sources: sources,
+		Code: code,
+		Mware: mw,
+		Event: evt,
+	}
+
+	if opts[4] != "" {
+		req.Size.Timeout, err = strconv.ParseUint(opts[4], 10, 64)
+		if err != nil {
+			fatal(fmt.Errorf("Bad tmo value %s: %s", opts[4], err.Error()))
+		}
+	}
+
+	make_faas_req("function/add", req, nil)
 
 }
 
@@ -282,12 +292,25 @@ func run_function(project string, args []string, opts [8]string) {
 }
 
 func update_function(project string, args []string, opts [8]string) {
-	code := ""
-	if opts[0] != "" {
-		code = encodeFile(opts[0])
+	req := swyapi.FunctionUpdate {
+		Project: project,
+		FuncName: args[0],
 	}
-	make_faas_req("function/update",
-		swyapi.FunctionUpdate{ Project: project, FuncName: args[0], Code: code }, nil)
+
+	if opts[0] != "" {
+		req.Code = encodeFile(opts[0])
+	}
+
+	if opts[1] != "" {
+		var err error
+		req.Size = &swyapi.FunctionSize {}
+		req.Size.Timeout, err = strconv.ParseUint(opts[1], 10, 64)
+		if err != nil {
+			fatal(fmt.Errorf("Bad tmo value %s: %s", opts[4], err.Error()))
+		}
+	}
+
+	make_faas_req("function/update", req, nil)
 
 }
 
@@ -502,9 +525,11 @@ func main() {
 	cmdMap[CMD_ADD].opts.StringVar(&opts[1], "src", ".", "Source file")
 	cmdMap[CMD_ADD].opts.StringVar(&opts[2], "mw", "", "Mware to use, comma-separated")
 	cmdMap[CMD_ADD].opts.StringVar(&opts[3], "event", "", "Event this fn is to start")
+	cmdMap[CMD_ADD].opts.StringVar(&opts[4], "tmo", "", "Timeout")
 	bindCmdUsage(CMD_ADD,	[]string{"NAME"}, "Add a function", true)
 	bindCmdUsage(CMD_RUN,	[]string{"NAME", "ARGUMENTS..."}, "Run a function", true)
 	cmdMap[CMD_UPD].opts.StringVar(&opts[0], "src", "", "Source file")
+	cmdMap[CMD_UPD].opts.StringVar(&opts[1], "tmo", "", "Timeout")
 	bindCmdUsage(CMD_UPD,	[]string{"NAME"}, "Update a function", true)
 	bindCmdUsage(CMD_DEL,	[]string{"NAME"}, "Delete a function", true)
 	bindCmdUsage(CMD_LOGS,	[]string{"NAME"}, "Show function logs", true)
