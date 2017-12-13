@@ -4,11 +4,11 @@ import (
 	"net/http"
 	"github.com/michaelklishin/rabbit-hole"
 	"fmt"
-	"strings"
+	"../common"
 )
 
 func rabbitConn(conf *YAMLConfMw) (*rabbithole.Client, error) {
-	addr := strings.Split(conf.Rabbit.Addr, ":")[0] + ":" + conf.Rabbit.AdminPort
+	addr := swy.MakeAdminURL(conf.Rabbit.Addr, conf.Rabbit.AdminPort)
 	return rabbithole.NewClient("http://" + addr, conf.Rabbit.Admin, gateSecrets[conf.Rabbit.Pass])
 }
 

@@ -17,6 +17,10 @@ import (
 	"os"
 )
 
+func MakeAdminURL(clienturl, admport string) string {
+	return strings.Split(clienturl, ":")[0] + ":" + admport
+}
+
 var swylog = zap.NewNop().Sugar()
 
 func InitLogger(logger *zap.SugaredLogger) {

@@ -2,6 +2,7 @@ package main
 
 import (
 	"strings"
+	"../common"
 	"../common/http"
 	"../apis/apps"
 )
@@ -17,7 +18,7 @@ func InitPostgres(conf *YAMLConfMw, mwd *MwareDesc) (error) {
 	mwd.Client = "p" + strings.ToLower(mwd.Client[:30])
 	mwd.Namespace = mwd.Client
 
-	addr := strings.Split(conf.Postgres.Addr, ":")[0] + ":" + conf.Postgres.AdminPort
+	addr := swy.MakeAdminURL(conf.Postgres.Addr, conf.Postgres.AdminPort)
 	_, err = swyhttp.MarshalAndPost(
 			&swyhttp.RestReq{
 				Address: "http://" + addr + "/create",
@@ -31,7 +32,7 @@ func InitPostgres(conf *YAMLConfMw, mwd *MwareDesc) (error) {
 }
 
 func FiniPostgres(conf *YAMLConfMw, mwd *MwareDesc) error {
-	addr := strings.Split(conf.Postgres.Addr, ":")[0] + ":" + conf.Postgres.AdminPort
+	addr := swy.MakeAdminURL(conf.Postgres.Addr, conf.Postgres.AdminPort)
 	_, err := swyhttp.MarshalAndPost(
 			&swyhttp.RestReq{
 				Address: "http://" + addr + "/drop",

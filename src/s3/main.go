@@ -10,7 +10,6 @@ import (
 	"encoding/hex"
 	"net/http"
 	"strconv"
-	"strings"
 	"time"
 	"flag"
 	"fmt"
@@ -481,8 +480,7 @@ func main() {
 	go func() {
 		adminsrv = &http.Server{
 			Handler:      radminsrv,
-			Addr:         strings.Split(conf.Daemon.Addr, ":")[0] +
-					":" + conf.Daemon.AdminPort,
+			Addr:         swy.MakeAdminURL(conf.Daemon.Addr, conf.Daemon.AdminPort),
 			WriteTimeout: 60 * time.Second,
 			ReadTimeout:  60 * time.Second,
 		}

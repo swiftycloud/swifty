@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"strings"
 	"net/http"
 	"../common"
 	"../common/http"
@@ -15,7 +14,7 @@ func InitS3(conf *YAMLConfMw, mwd *MwareDesc) (error) {
 		return err
 	}
 
-	addr := strings.Split(conf.S3.Addr, ":")[0] + ":" + conf.S3.AdminPort
+	addr := swy.MakeAdminURL(conf.S3.Addr, conf.S3.AdminPort)
 	resp, err := swyhttp.MarshalAndPost(
 		&swyhttp.RestReq{
 			Address: "http://" + addr + "/v1/api/admin/keygen",
@@ -49,7 +48,7 @@ func InitS3(conf *YAMLConfMw, mwd *MwareDesc) (error) {
 }
 
 func FiniS3(conf *YAMLConfMw, mwd *MwareDesc) error {
-	addr := strings.Split(conf.S3.Addr, ":")[0] + ":" + conf.S3.AdminPort
+	addr := swy.MakeAdminURL(conf.S3.Addr, conf.S3.AdminPort)
 	_, err := swyhttp.MarshalAndPost(
 		&swyhttp.RestReq{
 			Address: "http://" + addr + "/v1/api/admin/keydel",
