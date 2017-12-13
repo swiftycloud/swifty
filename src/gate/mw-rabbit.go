@@ -82,11 +82,24 @@ func FiniRabbitMQ(conf *YAMLConfMw, mwd *MwareDesc) error {
 	return nil
 }
 
+func mqEvent(fn *FunctionDesc, mwid, queue, data string) {
+	/* FIXME -- this is synchronous */
+	_, _, err := doRun(fn.Cookie, "mware:" + mwid + ":" + queue, map[string]string{"body": data})
+	if err != nil {
+		log.Errorf("mq: Error running FN %s", err.Error())
+	} else {
+		log.Debugf("mq: Done, stdout")
+	}
+}
+
 func EventRabbitMQ(conf *YAMLConfMw, source *FnEventDesc, mwd *MwareDesc, on bool) (error) {
 	if on {
-		return mqStartListener(conf, mwd.Namespace, source.MQueue)
+		return mqStartListener(conf, mwd.Namespace, source.MQueue,
+			func(fn *FunctionDesc, data []byte) {
+				mqEvent(fn, mwd.SwoId.Name, source.MQueue, string(data))
+			})
 	} else {
-		mqStopListener(mwd.Namespace, source.MQueue)
+		mqStopListener(conf, mwd.Namespace, source.MQueue)
 		return nil
 	}
 }

@@ -10,56 +10,68 @@ type mqConsumer struct {
 	channel		*amqp.Channel
 }
 
+type mqListenerCb func(*FunctionDesc, []byte)
+
 // FIXME -- isn't there out-of-the-box factory engine in go?
-type factory_req struct {
+type mq_listener_req struct {
+	user	string
+	pass	string
+	addr	string
 	vhost	string
 	queue	string
+	cb	mqListenerCb
 	add	bool
 	resp	chan error
 }
 
-var consumers map[string]*mqConsumer
-var factory_ch chan factory_req
+func (req *mq_listener_req)hkey() string {
+	return req.addr + "/" + req.vhost + ":" + req.queue
+}
 
-func factoryMakeReq(req *factory_req) error {
+var consumers map[string]*mqConsumer
+var factory_ch chan *mq_listener_req
+
+func factoryMakeReq(req *mq_listener_req) error {
 	req.resp = make(chan error)
-	factory_ch <- *req
+	factory_ch <- req
 	return <-req.resp
 }
 
 func init() {
 	consumers = make(map[string]*mqConsumer)
-	factory_ch = make(chan factory_req)
+	factory_ch = make(chan *mq_listener_req)
 	go func() {
 		for req := range factory_ch {
 			var err error
 			if req.add {
-				err = startListener(&conf.Mware, req.vhost, req.queue)
+				err = startListener(req)
 			} else {
-				stopListener(req.vhost, req.queue)
+				stopListener(req)
 			}
 			req.resp <- err
 		}
 	}()
 }
 
-func stopListener(vhost, queue string) {
-	cons := consumers[vhost + ":" + queue]
-	if cons == nil {
-		log.Errorf("mq: FATAL: no consumer for %s:%s found", vhost, queue)
+func stopListener(req *mq_listener_req) {
+	key := req.hkey()
+	cons, ok := consumers[key]
+	if !ok {
+		log.Errorf("mq: FATAL: no consumer for %s found", key)
 		return
 	}
 
 	cons.counter--
 	if cons.counter == 0 {
-		log.Debugf("mq: Stopping mq listener @%s.%s", vhost, queue)
-		cons.channel.Cancel(queue, false)
-		delete(consumers, vhost + ":" + queue)
+		log.Debugf("mq: Stopping mq listener @%s", key)
+		cons.channel.Cancel(req.queue, false)
+		delete(consumers, key)
 	}
 }
 
-func startListener(conf *YAMLConfMw, vhost, queue string) error {
-	cons := consumers[vhost + ":" + queue]
+func startListener(req *mq_listener_req) error {
+	key := req.hkey()
+	cons := consumers[key]
 	if cons != nil {
 		cons.counter++
 		return nil
@@ -67,14 +79,10 @@ func startListener(conf *YAMLConfMw, vhost, queue string) error {
 
 	cons = &mqConsumer{counter: 1}
 
-	log.Debugf("mq: Starting mq listener @%s.%s", vhost, queue)
+	log.Debugf("mq: Starting mq listener @%s", key)
 
-	login := conf.Rabbit.Admin
-	pass := conf.Rabbit.Pass
-	addr := conf.Rabbit.Addr
-
-	/* FIXME -- there should be one connection */
-	conn, err := amqp.Dial("amqp://" + login + ":" + pass + "@" + addr +"/" + vhost)
+	/* FIXME -- can there be one connection? */
+	conn, err := amqp.Dial("amqp://" + req.user + ":" + req.pass + "@" + req.addr +"/" + req.vhost)
 	if err != nil {
 		return err
 	}
@@ -86,7 +94,7 @@ func startListener(conf *YAMLConfMw, vhost, queue string) error {
 	}
 
 	log.Debugf("mq:\tqueue")
-	q, err := cons.channel.QueueDeclare(queue, false, false, false, false, nil)
+	q, err := cons.channel.QueueDeclare(req.queue, false, false, false, false, nil)
 	if err != nil {
 		return err
 	}
@@ -98,7 +106,7 @@ func startListener(conf *YAMLConfMw, vhost, queue string) error {
 	}
 
 	go func() {
-		log.Debugf("mq: Getting messages for %s.%s", vhost, queue)
+		log.Debugf("mq: Getting messages for %s", key)
 		for d := range msgs {
 			log.Debugf("mq: Received message [%s] from [%s]", d.Body, d.UserId)
 			if d.UserId == "" {
@@ -115,7 +123,7 @@ func startListener(conf *YAMLConfMw, vhost, queue string) error {
 			funcs, err := dbFuncListMwEvent(&mware.SwoId, bson.M {
 						"event.source": "mware",
 						"event.mwid": mware.SwoId.Name,
-						"event.mqueue": queue,
+						"event.mqueue": req.queue,
 					})
 			if err != nil {
 				/* FIXME -- this should be notified? Or what? */
@@ -125,31 +133,34 @@ func startListener(conf *YAMLConfMw, vhost, queue string) error {
 
 			for _, fn := range funcs {
 				log.Debugf("mq: `- [%s]", fn)
-
-				/* FIXME -- this is synchronous */
-				_, _, err := doRun(fn.Cookie, "mware:" + mware.Name + ":" + queue,
-						map[string]string{"body": string(d.Body)})
-
-				if err != nil {
-					log.Errorf("mq: Error running FN %s", err.Error())
-				} else {
-					log.Debugf("mq: Done, stdout")
-				}
+				req.cb(&fn, d.Body)
 			}
 		}
 		log.Debugf("mq: Bail out")
 	}()
 
-	consumers[vhost + ":" + queue] = cons
+	consumers[key] = cons
 	log.Debugf("mq: ... Done");
 	return nil
 }
 
-func mqStartListener(conf *YAMLConfMw, vhost, queue string) error {
-	return factoryMakeReq(&factory_req{vhost: vhost, queue: queue, add: true})
+func mqStartListener(conf *YAMLConfMw, vhost, queue string, cb mqListenerCb) error {
+	return factoryMakeReq(&mq_listener_req{
+			user: conf.Rabbit.Admin,
+			pass: gateSecrets[conf.Rabbit.Pass],
+			addr: conf.Rabbit.Addr,
+			vhost: vhost,
+			queue: queue,
+			cb: cb,
+			add: true,
+		})
 }
 
-func mqStopListener(vhost, queue string) {
-	factoryMakeReq(&factory_req{vhost: vhost, queue: queue, add: false})
+func mqStopListener(conf *YAMLConfMw, vhost, queue string) {
+	factoryMakeReq(&mq_listener_req{
+			addr: conf.Rabbit.Addr,
+			vhost: vhost,
+			queue: queue,
+			add: false,
+		})
 }
-
