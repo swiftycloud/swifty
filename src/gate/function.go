@@ -66,9 +66,9 @@ type FnSrcDesc struct {
 
 type FnEventDesc struct {
 	Source		string		`bson:"source"`
-	CronTab		string		`bson:"crontab"`
-	MwareId		string		`bson:"mwid"`
-	MQueue		string		`bson:"mqueue"`
+	CronTab		string		`bson:"crontab,omitempty"`
+	MwareId		string		`bson:"mwid,omitempty"`
+	MQueue		string		`bson:"mqueue,omitempty"`
 }
 
 type FnSizeDesc struct {

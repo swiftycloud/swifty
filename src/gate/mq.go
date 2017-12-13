@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/streadway/amqp"
+	"gopkg.in/mgo.v2/bson"
 )
 
 type mqConsumer struct {
@@ -111,7 +112,11 @@ func startListener(conf *YAMLConfMw, vhost, queue string) error {
 
 			log.Debugf("mq: Resolved client to project %s", mware.Project)
 
-			funcs, err := dbFuncListMwEvent(&mware.SwoId, queue)
+			funcs, err := dbFuncListMwEvent(&mware.SwoId, bson.M {
+						"event.source": "mware",
+						"event.mwid": mware.SwoId.Name,
+						"event.mqueue": queue,
+					})
 			if err != nil {
 				/* FIXME -- this should be notified? Or what? */
 				log.Errorf("mq: Can't list functions for event")
