@@ -267,18 +267,8 @@ func handleFunctionAdd(w http.ResponseWriter, r *http.Request, tennant string) e
 		params.Project = SwyDefaultProject
 	}
 
-	if params.Size.Timeout == 0 {
-		params.Size.Timeout = conf.Runtime.Timeout.Def * 1000
-	} else if params.Size.Timeout > conf.Runtime.Timeout.Max * 1000 {
-		err = errors.New("Too big timeout")
-		goto out
-	}
-
-	if params.Size.Memory == 0 {
-		params.Size.Memory = conf.Runtime.Memory.Def
-	} else if params.Size.Memory > conf.Runtime.Memory.Max ||
-			params.Size.Memory < conf.Runtime.Memory.Min {
-		err = errors.New("Too small/big memory size")
+	err = swyFixSize(&params.Size, &conf)
+	if err != nil {
 		goto out
 	}
 

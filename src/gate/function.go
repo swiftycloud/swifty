@@ -255,6 +255,23 @@ out:
 	return err
 }
 
+func swyFixSize(sz *swyapi.FunctionSize, conf *YAMLConf) error {
+	if sz.Timeout == 0 {
+		sz.Timeout = conf.Runtime.Timeout.Def * 1000
+	} else if sz.Timeout > conf.Runtime.Timeout.Max * 1000 {
+		return errors.New("Too big timeout")
+	}
+
+	if sz.Memory == 0 {
+		sz.Memory = conf.Runtime.Memory.Def
+	} else if sz.Memory > conf.Runtime.Memory.Max ||
+			sz.Memory < conf.Runtime.Memory.Min {
+		return errors.New("Too small/big memory size")
+	}
+
+	return nil
+}
+
 func updateFunction(conf *YAMLConf, id *SwoId, params *swyapi.FunctionUpdate) error {
 	var fn FunctionDesc
 	var err error
@@ -285,16 +302,21 @@ func updateFunction(conf *YAMLConf, id *SwoId, params *swyapi.FunctionUpdate) er
 	}
 
 	if params.Size != nil {
-		if fn.Size.Mem != params.Size.Memory {
-			log.Debugf("Will update mem for %s", fn.SwoId.Str())
-			fn.Size.Mem = params.Size.Memory
-			update["size.mem"] = params.Size.Memory
+		err = swyFixSize(params.Size, conf)
+		if err != nil {
+			goto out
 		}
 
 		if fn.Size.Tmo != params.Size.Timeout {
 			log.Debugf("Will update tmo for %s", fn.SwoId.Str())
 			fn.Size.Tmo = params.Size.Timeout
 			update["size.timeout"] = params.Size.Timeout
+		}
+
+		if fn.Size.Mem != params.Size.Memory {
+			log.Debugf("Will update mem for %s", fn.SwoId.Str())
+			fn.Size.Mem = params.Size.Memory
+			update["size.mem"] = params.Size.Memory
 		}
 	}
 
