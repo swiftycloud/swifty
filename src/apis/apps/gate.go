@@ -97,6 +97,7 @@ type FunctionUpdate struct {
 	Project		string			`json:"project"`
 	FuncName	string			`json:"name"`
 	Code		string			`json:"code"`
+	Size		*FunctionSize		`json:"size,omitempty"`
 }
 
 type FunctionRemove struct {

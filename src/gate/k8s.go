@@ -241,16 +241,26 @@ func swk8sUpdate(conf *YAMLConf, fn *FunctionDesc) error {
 	}
 
 	/*
-	 * Function sources are at the new location now, so we only
-	 * need to fix that path and rollout the new version of the
-	 * deployment.
+	 * Function sources may be at the new location now
 	 */
-	for i := 0; i < 2; i++ {
-		if this.Spec.Template.Spec.Volumes[i].Name == "code" {
-			this.Spec.Template.Spec.Volumes[i].VolumeSource.HostPath.Path = fnRepoCheckout(conf, fn)
-			break;
+	vol := &this.Spec.Template.Spec.Volumes[0]
+	vol.VolumeSource.HostPath.Path = fnRepoCheckout(conf, fn)
+
+	/*
+	 * Tune up SWD_FUNCTION_DESC to make wdog keep up with
+	 * updated Tmo value
+	 */
+	envs := this.Spec.Template.Spec.Containers[0].Env
+	for i, _ := range envs {
+		if envs[i].Name != "SWD_FUNCTION_DESC" {
+			continue
 		}
+
+		envs[i].Value = genFunctionDescJSON(fn, fn.Inst())
+		break
 	}
+
+	specSetRes(&this.Spec.Template.Spec.Containers[0].Resources, fn)
 
 	if fn.Size.Replicas == 1 {
 		/* Don't let pods disappear at all */
@@ -280,6 +290,21 @@ func swk8sUpdate(conf *YAMLConf, fn *FunctionDesc) error {
 	return err
 }
 
+func specSetRes(res *v1.ResourceRequirements, fn *FunctionDesc) {
+	// FIXME: Obtain them from settings and
+	// account in backend database
+
+	mem_max := fmt.Sprintf("%dMi", fn.Size.Mem)
+	mem_min := fmt.Sprintf("%dMi", fn.Size.Mem / 2)
+
+	res.Limits = v1.ResourceList {
+		v1.ResourceMemory:	resource.MustParse(mem_max),
+	}
+	res.Requests = v1.ResourceList {
+		v1.ResourceMemory:	resource.MustParse(mem_min),
+	}
+}
+
 func swk8sRun(conf *YAMLConf, fn *FunctionDesc, fi *FnInst) error {
 	var err error
 
@@ -298,20 +323,6 @@ func swk8sRun(conf *YAMLConf, fn *FunctionDesc, fi *FnInst) error {
 		err := fmt.Errorf("Can't add a secret: %s", err.Error())
 		log.Errorf("swk8sRun: %s", err.Error())
 		return err
-	}
-
-	mem_max := fmt.Sprintf("%dMi", fn.Size.Mem)
-	mem_min := fmt.Sprintf("%dMi", fn.Size.Mem / 2)
-
-	// FIXME: Obtain them from settings and
-	// account in backend database
-	resspec := v1.ResourceRequirements {
-		Limits: v1.ResourceList {
-			v1.ResourceMemory:	resource.MustParse(mem_max),
-		},
-		Requests: v1.ResourceList {
-			v1.ResourceMemory:	resource.MustParse(mem_min),
-		},
 	}
 
 	envs := swk8sGenEnvVar(fn, fi, conf.Wdog.Port, secret)
@@ -346,11 +357,12 @@ func swk8sRun(conf *YAMLConf, fn *FunctionDesc, fi *FnInst) error {
 						},
 					},
 					ImagePullPolicy: v1.PullNever,
-					Resources:	resspec,
 				},
 			},
 		},
 	}
+
+	specSetRes(&podspec.Spec.Containers[0].Resources, fn)
 
 	nr_replicas := fi.Replicas()
 
