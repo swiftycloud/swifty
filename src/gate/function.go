@@ -259,6 +259,8 @@ func updateFunction(conf *YAMLConf, id *SwoId, params *swyapi.FunctionUpdate) er
 	var fn FunctionDesc
 	var err error
 
+	update := make(bson.M)
+
 	fn, err = dbFuncFind(id)
 	if err != nil {
 		goto out
@@ -270,8 +272,16 @@ func updateFunction(conf *YAMLConf, id *SwoId, params *swyapi.FunctionUpdate) er
 		goto out
 	}
 
-	err = updateSources(&fn, params)
-	if err != nil {
+	if params.Code != "" {
+		err = updateSources(&fn, params)
+		if err != nil {
+			goto out
+		}
+
+		update["src.version"] = fn.Src.Version
+	}
+
+	if len(update) == 0 {
 		goto out
 	}
 
@@ -283,7 +293,9 @@ func updateFunction(conf *YAMLConf, id *SwoId, params *swyapi.FunctionUpdate) er
 		}
 	}
 
-	err = dbFuncUpdatePulled(&fn)
+	update["state"] = fn.State
+
+	err = dbFuncUpdatePulled(&fn, update)
 	if err != nil {
 		goto out
 	}

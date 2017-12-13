@@ -190,10 +190,6 @@ func updateGitRepo(fn *FunctionDesc, params *swyapi.FunctionUpdate) error {
 }
 
 func updateFileFromReq(fn *FunctionDesc, params *swyapi.FunctionUpdate) error {
-	if params.Code == "" {
-		return fmt.Errorf("No code to update")
-	}
-
 	ov, _ := strconv.Atoi(fn.Src.Version)
 	fn.Src.Version = strconv.Itoa(ov + 1)
 

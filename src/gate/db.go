@@ -222,10 +222,10 @@ func dbFuncUpdateAdded(fn *FunctionDesc) error {
 	return err
 }
 
-func dbFuncUpdatePulled(fn *FunctionDesc) error {
+func dbFuncUpdatePulled(fn *FunctionDesc, update bson.M) error {
 	err := dbFuncUpdate(
 		bson.M{"tennant": fn.Tennant, "project": fn.Project, "name": fn.Name},
-		bson.M{"$set": bson.M{"src.version": fn.Src.Version, "state": fn.State, }})
+		bson.M{"$set": update })
 	if err != nil {
 		log.Errorf("Can't update pulled %s: %s", fn.Name, err.Error())
 	}
