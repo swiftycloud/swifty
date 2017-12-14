@@ -167,9 +167,10 @@ elif args.cmd == 'list-buckets':
         print("Buckets list")
         print("\tOwner: DisplayName '%s' ID '%s'" % \
               (resp['Owner']['DisplayName'], resp['Owner']['ID']))
-        for x in resp['Buckets']:
-            print("\tBucket: Name %s CreationDate %s" % \
-                  (x['Name'], x['CreationDate']))
+        if 'Buckets' in resp:
+            for x in resp['Buckets']:
+                print("\tBucket: Name %s CreationDate %s" % \
+                      (x['Name'], x['CreationDate']))
     except:
         print("ERROR: Can't list bucket")
 elif args.cmd == 'bucket-add':
