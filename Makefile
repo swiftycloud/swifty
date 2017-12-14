@@ -93,6 +93,7 @@ go-s3-y	+= src/s3/resp.go
 go-s3-y	+= src/s3/keys.go
 go-s3-y	+= src/s3/rados.go
 go-s3-y	+= src/s3/helpers.go
+go-s3-y	+= src/s3/notify.go
 
 go-ctl-y	+= src/tools/ctl.go
 go-sg-y		+= src/tools/sg.go

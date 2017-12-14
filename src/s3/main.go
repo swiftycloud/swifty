@@ -42,11 +42,22 @@ type YAMLConfDB struct {
 	Pass		string			`yaml:"password"`
 }
 
+type YAMLConfNotifyRMQ struct {
+	Target		string			`yaml:"target"`
+	User		string			`yaml:"user"`
+	Pass		string			`yaml:"password"`
+}
+
+type YAMLConfNotify struct {
+	Rabbit		*YAMLConfNotifyRMQ	`yaml:"rabbitmq,omitempty"`
+}
+
 type YAMLConf struct {
 	DB		YAMLConfDB		`yaml:"db"`
 	Daemon		YAMLConfDaemon		`yaml:"daemon"`
 	Ceph		YAMLConfCeph		`yaml:"ceph"`
 	SecKey		string			`yaml:"secretskey"`
+	Notify		YAMLConfNotify		`yaml:"notify"`
 }
 
 var conf YAMLConf
@@ -288,7 +299,7 @@ func handleObject(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		err = s3CommitObject(bucket, object, body)
+		err = s3CommitObject(akey.Namespace, bucket, object, body)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
@@ -365,6 +376,7 @@ func handleKeygen(w http.ResponseWriter, r *http.Request) {
 	return
 
 out:
+	log.Errorf("Can't: %s", err.Error())
 	http.Error(w, err.Error(), http.StatusBadRequest)
 }
 
@@ -399,7 +411,7 @@ func handleAdminOp(w http.ResponseWriter, r *http.Request) {
 
 	err = s3VerifyAdmin(r)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
 	}
 
@@ -413,6 +425,46 @@ func handleAdminOp(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.Error(w, fmt.Sprintf("Unknown operation"), http.StatusBadRequest)
+}
+
+func handleNotify(w http.ResponseWriter, r *http.Request, on bool) {
+	var params swys3ctl.S3Subscribe
+
+	/* For now make it admin-only op */
+	err := s3VerifyAdmin(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+
+	err = swyhttp.ReadAndUnmarshalReq(r, &params)
+	if err != nil {
+		goto out
+	}
+
+	if on {
+		err = s3Subscribe(&params)
+	} else {
+		err = s3Unsubscribe(&params)
+	}
+
+	if err != nil {
+		goto out
+	}
+
+	w.WriteHeader(http.StatusAccepted)
+	return
+
+out:
+	http.Error(w, err.Error(), http.StatusBadRequest)
+}
+
+func handleNotifyAdd(w http.ResponseWriter, r *http.Request) {
+	handleNotify(w, r, true)
+}
+
+func handleNotifyDel(w http.ResponseWriter, r *http.Request) {
+	handleNotify(w, r, false)
 }
 
 var S3ModeDevel bool
@@ -481,8 +533,9 @@ func main() {
 
 	// Admin operations
 	radminsrv := mux.NewRouter()
-	radminsrv.HandleFunc("/v1/api/admin/{op:[a-zA-Z0-9-.]+}",
-						handleAdminOp)
+	radminsrv.HandleFunc("/v1/api/admin/{op:[a-zA-Z0-9-.]+}", handleAdminOp)
+	radminsrv.HandleFunc("/v1/api/notify/subscribe", handleNotifyAdd)
+	radminsrv.HandleFunc("/v1/api/notify/unsubscribe", handleNotifyDel)
 
 	err = dbConnect(&conf)
 	if err != nil {
@@ -494,6 +547,11 @@ func main() {
 	if err != nil {
 		log.Fatalf("Can't setup connection to rados: %s",
 				err.Error())
+	}
+
+	err = notifyInit(&conf.Notify)
+	if err != nil {
+		log.Fatalf("Can't setup notifications: %s", err.Error())
 	}
 
 	go func() {

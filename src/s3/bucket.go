@@ -20,6 +20,11 @@ var BucketAcls = []string {
 	S3BucketAclAuthenticatedRead,
 }
 
+type S3BucketNotify struct {
+	Events				uint64		`bson:"events"`
+	Queue				string		`bson:"queue"`
+}
+
 type S3Bucket struct {
 	ObjID				bson.ObjectId	`bson:"_id,omitempty"`
 	BackendID			string		`json:"bid,omitempty" bson:"bid,omitempty"`
@@ -28,6 +33,7 @@ type S3Bucket struct {
 	CntBytes			int64		`json:"cnt-bytes" bson:"cnt-bytes"`
 	Name				string		`json:"name" bson:"name"`
 	Acl				string		`json:"acl" bson:"acl"`
+	BasicNotify			*S3BucketNotify	`bson:"notify,omitempty"`
 
 	MaxObjects			int64		`json:"max-objects" bson:"max-objects"`
 	MaxBytes			int64		`json:"max-bytes" bson:"max-bytes"`

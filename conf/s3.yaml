@@ -9,6 +9,11 @@ daemon:
         admport: "8789"
         token: "S3TOKEN"
         loglevel: "debug"
+notify:
+        rabbitmq:
+                target: "192.168.122.197:5672/s3"
+                user: "s3"
+                password: "RMQS3PASS"
 secretskey: "S3SECRETSKEY"
 ceph:
         config-path: conf/ceph.conf

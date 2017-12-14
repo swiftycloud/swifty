@@ -67,6 +67,12 @@ for cmd in ['object-del']:
     spp.add_argument('--name', dest = 'name', required = True)
     spp.add_argument('--key', dest = 'key', required = True)
 
+for cmd in ['notify']:
+    spp = sp.add_parser(cmd)
+    spp.add_argument('--namespace', dest = 'namespace', required = True)
+    spp.add_argument('--bucket', dest = 'bucket', required = True)
+    spp.add_argument('--queue', dest = 'queue', required = True)
+
 args = parser.parse_args()
 
 if args.cmd == None:
@@ -92,6 +98,20 @@ def request_admin(cmd, data):
     except ConnectionError as e:
         print("ERROR: Can't process request (%s / %s): %s" % \
               (cmd, repr(data), repr(e)))
+        return None
+    except:
+        return None
+
+def request_notify(data):
+    headers = {"X-SwyS3-Token": args.admin_secret,
+               'Content-type': 'application/json'}
+    try:
+        conn = http.client.HTTPConnection(args.endpoint_url)
+        conn.request('POST','/v1/api/notify/subscribe', json.dumps(data), headers)
+        return conn.getresponse()
+    except ConnectionError as e:
+        print("ERROR: Can't set notify (%s): %s" % \
+                (repr(data), repr(e)))
         return None
     except:
         return None
@@ -125,6 +145,12 @@ elif args.cmd == 'keydel':
         print("Access Key %s deleted" % (args.access_key_id))
     else:
         resp_error(args.cmd, resp)
+elif args.cmd == 'notify':
+    resp = request_notify({'namespace': args.namespace, 'bucket': args.bucket, 'ops': 'put', 'queue': args.queue})
+    if resp != None and resp.status == 202:
+        print("Notification set up")
+    else:
+        resp_error("notify", resp)
 elif args.cmd == 'bucket-add':
     s3 = make_s3(args.endpoint_url, args.access_key_id, args.secret_key_id)
     if s3 == None:

@@ -75,7 +75,7 @@ func genNewAccessKey(namespace string) (*S3AccessKey, error) {
 	return &akey, nil
 }
 
-func (akey *S3AccessKey)BucketBID(bucket_name string) string {
+func BIDFromNames(namespace, bucket string) string {
 	/*
 	 * BID stands for backend-id and is a unique identifier
 	 * in the storage. For CEPH case this is pool ID and
@@ -83,8 +83,12 @@ func (akey *S3AccessKey)BucketBID(bucket_name string) string {
 	 * should be unique across users and their buckets.
 	 */
 	h := sha256.New()
-	h.Write([]byte(akey.Namespace + "::" + bucket_name))
+	h.Write([]byte(namespace + "::" + bucket))
 	return hex.EncodeToString(h.Sum(nil))
+}
+
+func (akey *S3AccessKey)BucketBID(bucket_name string) string {
+	return BIDFromNames(akey.Namespace, bucket_name)
 }
 
 func (akey *S3AccessKey)FindDefaultBucket() (string, error) {

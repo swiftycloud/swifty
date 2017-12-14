@@ -132,7 +132,7 @@ func s3InsertObject(bucket *S3Bucket, object_name string, version int,
 	return object, nil
 }
 
-func s3CommitObject(bucket *S3Bucket, object *S3Object, data []byte) error {
+func s3CommitObject(namespace string, bucket *S3Bucket, object *S3Object, data []byte) error {
 	var err error
 	var size int64
 
@@ -161,6 +161,10 @@ func s3CommitObject(bucket *S3Bucket, object *S3Object, data []byte) error {
 		if err != nil {
 			goto out
 		}
+	}
+
+	if bucket.BasicNotify != nil {
+		s3Notify(namespace, bucket, object, S3NotifyPut)
 	}
 
 	err = object.dbSetState(S3StateActive)
