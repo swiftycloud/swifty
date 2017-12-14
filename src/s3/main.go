@@ -470,7 +470,6 @@ func handleNotifyDel(w http.ResponseWriter, r *http.Request) {
 var S3ModeDevel bool
 
 func main() {
-	var dbPass string
 	var config_path string
 	var err error
 
@@ -487,10 +486,6 @@ func main() {
 			"cached-obj-size",
 				S3StorageSizePerObj,
 				"object size in bytes to put into cache")
-	flag.StringVar(&dbPass,
-			"db-pass",
-				"",
-				"database password")
 	flag.Parse()
 
 	if config_path != "" {
