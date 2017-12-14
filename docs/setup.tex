@@ -936,14 +936,32 @@ Provide config file \code{conf/s3.yaml}
 ---
 db:
         state: "swifty-s3"
-        address: "127.0.0.1:27017"
+        address: "localhost:27017"
         user: "swifty"
         password: "MGOS3PASS"
 daemon:
-        address: "127.0.0.1:8787"
+        address: "crvm3:8787"
+        admport: "8789"
+        token: "S3TOKEN"
         loglevel: "debug"
+notify:
+        rabbitmq:
+                target: "crvm4:5672/s3"
+                user: "s3"
+                password: "RMQS3PASS"
+secretskey: "S3SECRETSKEY"
 ceph:
-        config-path: src/ceph.conf
+        config-path: conf/ceph.conf
+\end{lstlisting}
+
+Prepare RabbitMQ notificator (it should be installed
+somewhere, usually together with middleware).
+
+\begin{lstlisting}
+rabbitmqctl add_user s3 PeM4de9ailaur2nu
+rabbitmqctl set_user_tags s3 administrator
+rabbitmqctl add_vhost s3
+rabbitmqctl set_permissions -p s3 s3 ".*" ".*" ".*"
 \end{lstlisting}
 
 Prepare backend database
