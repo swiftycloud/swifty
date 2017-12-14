@@ -90,18 +90,23 @@ func (akey *S3AccessKey)BucketBID(bucket_name string) string {
 	return BIDFromNames(akey.Namespace, bucket_name)
 }
 
-func (akey *S3AccessKey)FindDefaultBucket() (string, error) {
-	var res S3Bucket
+func (akey *S3AccessKey)NamespaceID() string {
+	h := sha256.New()
+	h.Write([]byte(akey.Namespace))
+	return hex.EncodeToString(h.Sum(nil))
+}
 
-	regex := "^" + akey.Namespace + ".+"
-	query := bson.M{"bid": bson.M{"$regex": bson.RegEx{regex, ""}}}
+func (akey *S3AccessKey)FindBuckets() ([]S3Bucket, error) {
+	var res []S3Bucket
 
-	err := dbS3FindOne(query, &res)
+	query := bson.M{"nsid": akey.NamespaceID()}
+
+	err := dbS3FindAll(query, &res)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return res.Name, nil
+	return res, nil
 }
 
 func dbLookupAccessKey(AccessKeyId string) (*S3AccessKey, error) {

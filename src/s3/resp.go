@@ -42,3 +42,18 @@ type S3BucketList struct {
 	NextContinuationToken	string				`xml:"NextContinuationToken,omitempy"`
 	StartAfter		string				`xml:"StartAfter,omitempy"`
 }
+
+type ListAllMyBucketsResultBucket struct {
+	Name			string
+	CreationDate		string
+}
+
+type ListAllMyBucketsResultOwner struct {
+	DisplayName		string
+	ID			string
+}
+
+type ListAllMyBucketsResult struct {
+	Buckets			[]ListAllMyBucketsResultBucket
+	Owner			ListAllMyBucketsResultOwner
+}

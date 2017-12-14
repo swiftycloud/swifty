@@ -28,6 +28,7 @@ type S3BucketNotify struct {
 type S3Bucket struct {
 	ObjID				bson.ObjectId	`bson:"_id,omitempty"`
 	BackendID			string		`json:"bid,omitempty" bson:"bid,omitempty"`
+	NamespaceID			string		`json:"nsid,omitempty" bson:"nsid,omitempty"`
 	State				uint32		`json:"state" bson:"state"`
 	CntObjects			int64		`json:"cnt-objects" bson:"cnt-objects"`
 	CntBytes			int64		`json:"cnt-bytes" bson:"cnt-bytes"`
@@ -117,6 +118,7 @@ func s3InsertBucket(akey *S3AccessKey, bucket_name, acl string) error {
 		Acl:		acl,
 		ObjID:		bson.NewObjectId(),
 		BackendID:	akey.BucketBID(bucket_name),
+		NamespaceID:	akey.NamespaceID(),
 		State:		S3StateNone,
 		MaxObjects:	S3StogateMaxObjects,
 		MaxBytes:	S3StogateMaxBytes,
@@ -233,4 +235,33 @@ func s3ListBucket(akey *S3AccessKey, bucket_name, acl string) (*S3BucketList, er
 	}
 
 	return &bucketList, nil
+}
+
+func s3ListBuckets(akey *S3AccessKey) (*ListAllMyBucketsResult, error) {
+	var list ListAllMyBucketsResult
+	var buckets []S3Bucket
+	var err error
+
+	buckets, err = akey.FindBuckets()
+	if err != nil {
+		if err == mgo.ErrNotFound {
+			err = nil
+		}
+		return nil, err
+	}
+
+	list.Owner.DisplayName	= "Unknown"
+	list.Owner.ID		= "Unknown"
+
+	// Creation date should be in yyyy-mm-ddThh:mm:ss.timezone
+
+	for _, b := range buckets {
+		list.Buckets = append(list.Buckets,
+			ListAllMyBucketsResultBucket{
+				Name:		b.Name,
+				CreationDate:	"2009-02-03T16:45:09.000Z",
+			})
+	}
+
+	return &list, nil
 }
