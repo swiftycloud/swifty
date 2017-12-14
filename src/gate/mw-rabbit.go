@@ -2,6 +2,7 @@ package main
 
 import (
 	"net/http"
+	"gopkg.in/mgo.v2/bson"
 	"github.com/michaelklishin/rabbit-hole"
 	"fmt"
 	"../common"
@@ -82,24 +83,46 @@ func FiniRabbitMQ(conf *YAMLConfMw, mwd *MwareDesc) error {
 	return nil
 }
 
-func mqEvent(fn *FunctionDesc, mwid, queue, data string) {
-	/* FIXME -- this is synchronous */
-	_, _, err := doRun(fn.Cookie, "mware:" + mwid + ":" + queue, map[string]string{"body": data})
+func mqEvent(mwid, queue, userid, data string) {
+	mware, err := dbMwareGetOne(bson.M{"mwaretype": "rabbit", "client": userid})
 	if err != nil {
-		log.Errorf("mq: Error running FN %s", err.Error())
-	} else {
-		log.Debugf("mq: Done, stdout")
+		return
+	}
+
+	log.Debugf("mq: Resolved client to project %s", mware.Project)
+
+	funcs, err := dbFuncListMwEvent(&mware.SwoId, bson.M {
+		"event.source": "mware",
+		"event.mwid": mware.SwoId.Name,
+		"event.mqueue": queue,
+	})
+	if err != nil {
+		/* FIXME -- this should be notified? Or what? */
+		log.Errorf("mq: Can't list functions for event")
+		return
+	}
+
+	for _, fn := range funcs {
+		log.Debugf("mq: `- [%s]", fn)
+		/* FIXME -- this is synchronous */
+		_, _, err := doRun(fn.Cookie, "mware:" + mwid + ":" + queue, map[string]string{"body": data})
+		if err != nil {
+			log.Errorf("mq: Error running FN %s", err.Error())
+		} else {
+			log.Debugf("mq: Done, stdout")
+		}
 	}
 }
 
 func EventRabbitMQ(conf *YAMLConfMw, source *FnEventDesc, mwd *MwareDesc, on bool) (error) {
 	if on {
-		return mqStartListener(conf, mwd.Namespace, source.MQueue,
-			func(fn *FunctionDesc, data []byte) {
-				mqEvent(fn, mwd.SwoId.Name, source.MQueue, string(data))
+		return mqStartListener(conf.Rabbit.Admin, conf.Rabbit.Pass,
+			conf.Rabbit.Addr + "/" + mwd.Namespace, source.MQueue,
+			func(userid string, data []byte) {
+				mqEvent(mwd.SwoId.Name, source.MQueue, userid, string(data))
 			})
 	} else {
-		mqStopListener(conf, mwd.Namespace, source.MQueue)
+		mqStopListener(conf.Rabbit.Addr + "/" + mwd.Namespace, source.MQueue)
 		return nil
 	}
 }

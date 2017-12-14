@@ -2,7 +2,6 @@ package main
 
 import (
 	"github.com/streadway/amqp"
-	"gopkg.in/mgo.v2/bson"
 )
 
 type mqConsumer struct {
@@ -10,14 +9,13 @@ type mqConsumer struct {
 	channel		*amqp.Channel
 }
 
-type mqListenerCb func(*FunctionDesc, []byte)
+type mqListenerCb func(string, []byte)
 
 // FIXME -- isn't there out-of-the-box factory engine in go?
 type mq_listener_req struct {
 	user	string
 	pass	string
-	addr	string
-	vhost	string
+	url	string
 	queue	string
 	cb	mqListenerCb
 	add	bool
@@ -25,7 +23,7 @@ type mq_listener_req struct {
 }
 
 func (req *mq_listener_req)hkey() string {
-	return req.addr + "/" + req.vhost + ":" + req.queue
+	return req.url + ":" + req.queue
 }
 
 var consumers map[string]*mqConsumer
@@ -82,7 +80,7 @@ func startListener(req *mq_listener_req) error {
 	log.Debugf("mq: Starting mq listener @%s", key)
 
 	/* FIXME -- can there be one connection? */
-	conn, err := amqp.Dial("amqp://" + req.user + ":" + req.pass + "@" + req.addr +"/" + req.vhost)
+	conn, err := amqp.Dial("amqp://" + req.user + ":" + req.pass + "@" + req.url)
 	if err != nil {
 		return err
 	}
@@ -113,28 +111,7 @@ func startListener(req *mq_listener_req) error {
 				continue
 			}
 
-			mware, err := dbMwareResolveClient(d.UserId)
-			if err != nil {
-				continue
-			}
-
-			log.Debugf("mq: Resolved client to project %s", mware.Project)
-
-			funcs, err := dbFuncListMwEvent(&mware.SwoId, bson.M {
-						"event.source": "mware",
-						"event.mwid": mware.SwoId.Name,
-						"event.mqueue": req.queue,
-					})
-			if err != nil {
-				/* FIXME -- this should be notified? Or what? */
-				log.Errorf("mq: Can't list functions for event")
-				continue
-			}
-
-			for _, fn := range funcs {
-				log.Debugf("mq: `- [%s]", fn)
-				req.cb(&fn, d.Body)
-			}
+			req.cb(d.UserId, d.Body)
 		}
 		log.Debugf("mq: Bail out")
 	}()
@@ -144,23 +121,20 @@ func startListener(req *mq_listener_req) error {
 	return nil
 }
 
-func mqStartListener(conf *YAMLConfMw, vhost, queue string, cb mqListenerCb) error {
+func mqStartListener(user, pass, url, queue string, cb mqListenerCb) error {
 	return factoryMakeReq(&mq_listener_req{
-			user: conf.Rabbit.Admin,
-			pass: gateSecrets[conf.Rabbit.Pass],
-			addr: conf.Rabbit.Addr,
-			vhost: vhost,
+			user: user,
+			pass: gateSecrets[pass],
+			url: url,
 			queue: queue,
 			cb: cb,
 			add: true,
 		})
 }
 
-func mqStopListener(conf *YAMLConfMw, vhost, queue string) {
+func mqStopListener(url, queue string) {
 	factoryMakeReq(&mq_listener_req{
-			addr: conf.Rabbit.Addr,
-			vhost: vhost,
+			url: url,
 			queue: queue,
-			add: false,
 		})
 }

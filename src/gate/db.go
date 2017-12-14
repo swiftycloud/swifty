@@ -78,10 +78,6 @@ func dbMwareGetReady(id *SwoId) (MwareDesc, error) {
 			"state": swy.DBMwareStateRdy})
 }
 
-func dbMwareResolveClient(client string) (MwareDesc, error) {
-	return dbMwareGetOne(bson.M{"client": client})
-}
-
 func dbMwareGetAll(id *SwoId) ([]MwareDesc, error) {
 	var recs []MwareDesc
 	c := dbSession.DB(dbState).C(DBColMware)
