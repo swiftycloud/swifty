@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+
 import http.client
 import argparse
 import random
