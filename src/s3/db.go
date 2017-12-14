@@ -16,7 +16,6 @@ const (
 	DBColS3Buckets				= "S3Buckets"
 	DBColS3Objects				= "S3Objects"
 	DBColS3ObjectData			= "S3ObjectData"
-	DBColS3Keys				= "S3Keys"
 	DBColS3AccessKeys			= "S3AccessKeys"
 )
 
