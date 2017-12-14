@@ -427,7 +427,7 @@ func handleAdminOp(w http.ResponseWriter, r *http.Request) {
 	http.Error(w, fmt.Sprintf("Unknown operation"), http.StatusBadRequest)
 }
 
-func handleNotify(w http.ResponseWriter, r *http.Request, on bool) {
+func handleNotify(w http.ResponseWriter, r *http.Request, subscribe bool) {
 	var params swys3ctl.S3Subscribe
 
 	/* For now make it admin-only op */
@@ -442,7 +442,7 @@ func handleNotify(w http.ResponseWriter, r *http.Request, on bool) {
 		goto out
 	}
 
-	if on {
+	if subscribe {
 		err = s3Subscribe(&params)
 	} else {
 		err = s3Unsubscribe(&params)
