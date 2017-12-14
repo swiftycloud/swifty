@@ -3,6 +3,7 @@ package main
 import (
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
+	"time"
 	"fmt"
 )
 
@@ -29,6 +30,7 @@ type S3Bucket struct {
 	ObjID				bson.ObjectId	`bson:"_id,omitempty"`
 	BackendID			string		`json:"bid,omitempty" bson:"bid,omitempty"`
 	NamespaceID			string		`json:"nsid,omitempty" bson:"nsid,omitempty"`
+	CreationTime			string		`json:"birth,omitempty" bson:"birth,omitempty"`
 	State				uint32		`json:"state" bson:"state"`
 	CntObjects			int64		`json:"cnt-objects" bson:"cnt-objects"`
 	CntBytes			int64		`json:"cnt-bytes" bson:"cnt-bytes"`
@@ -119,6 +121,7 @@ func s3InsertBucket(akey *S3AccessKey, bucket_name, acl string) error {
 		ObjID:		bson.NewObjectId(),
 		BackendID:	akey.BucketBID(bucket_name),
 		NamespaceID:	akey.NamespaceID(),
+		CreationTime:	time.Now().Format(time.RFC3339),
 		State:		S3StateNone,
 		MaxObjects:	S3StogateMaxObjects,
 		MaxBytes:	S3StogateMaxBytes,
@@ -253,13 +256,11 @@ func s3ListBuckets(akey *S3AccessKey) (*ListAllMyBucketsResult, error) {
 	list.Owner.DisplayName	= "Unknown"
 	list.Owner.ID		= "Unknown"
 
-	// Creation date should be in yyyy-mm-ddThh:mm:ss.timezone
-
 	for _, b := range buckets {
 		list.Buckets = append(list.Buckets,
 			ListAllMyBucketsResultBucket{
 				Name:		b.Name,
-				CreationDate:	"2009-02-03T16:45:09.000Z",
+				CreationDate:	b.CreationTime,
 			})
 	}
 
