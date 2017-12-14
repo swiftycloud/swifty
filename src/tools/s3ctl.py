@@ -42,6 +42,11 @@ for cmd in ['keydel']:
     spp = sp.add_parser(cmd)
     spp.add_argument('--access-key-id', dest = 'access_key_id', required = True)
 
+for cmd in ['list-buckets']:
+    spp = sp.add_parser(cmd)
+    spp.add_argument('--access-key-id', dest = 'access_key_id', required = True)
+    spp.add_argument('--secret-key-id', dest = 'secret_key_id', required = True)
+
 for cmd in ['bucket-add']:
     spp = sp.add_parser(cmd)
     spp.add_argument('--access-key-id', dest = 'access_key_id', required = True)
@@ -153,6 +158,20 @@ elif args.cmd == 'notify':
         print("Notification set up")
     else:
         resp_error("notify", resp)
+elif args.cmd == 'list-buckets':
+    s3 = make_s3(args.endpoint_url, args.access_key_id, args.secret_key_id)
+    if s3 == None:
+         resp_error(args.cmd, None)
+    try:
+        resp = s3.list_buckets()
+        print("Buckets list")
+        print("\tOwner: DisplayName '%s' ID '%s'" % \
+              (resp['Owner']['DisplayName'], resp['Owner']['ID']))
+        for x in resp['Buckets']:
+            print("\tBucket: Name %s CreationDate %s" % \
+                  (x['Name'], x['CreationDate']))
+    except:
+        print("ERROR: Can't list bucket")
 elif args.cmd == 'bucket-add':
     s3 = make_s3(args.endpoint_url, args.access_key_id, args.secret_key_id)
     if s3 == None:
