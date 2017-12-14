@@ -42,6 +42,10 @@ middleware:
                 address: "192.168.122.197:8787"
                 admport: "8789"
                 token: "S3TOKEN"
+                notify:
+                        url: "192.168.122.197:5672/s3"
+                        user: "swifty"
+                        password: "S3IFYPASS"
 runtime:
         timeout:
                 max: 60

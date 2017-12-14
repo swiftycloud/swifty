@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"encoding/json"
+	"gopkg.in/mgo.v2/bson"
 	"../common"
 	"../common/http"
 	"../apis/apps/s3"
@@ -65,6 +67,110 @@ func FiniS3(conf *YAMLConfMw, mwd *MwareDesc) error {
 	return nil
 }
 
+const (
+	gates3queue = "events"
+)
+
+func s3Subscribe(conf *YAMLConfMw, namespace, bucket string) error {
+	addr := swy.MakeAdminURL(conf.S3.Addr, conf.S3.AdminPort)
+	_, err := swyhttp.MarshalAndPost(
+		&swyhttp.RestReq{
+			Address: "http://" + addr + "/v1/api/notify/subscribe",
+			Headers: map[string]string{"X-SwyS3-Token": gateSecrets[conf.S3.Token]},
+			Success: http.StatusAccepted,
+		},
+		&swys3ctl.S3Subscribe{
+			Namespace: namespace,
+			Bucket: bucket,
+			Ops: "put",
+			Queue: gates3queue,
+		})
+	if err != nil {
+		return fmt.Errorf("Error subscibing: %s", err.Error())
+	}
+
+	return nil
+}
+
+func s3Unsubscribe(conf *YAMLConfMw, namespace, bucket string) {
+	addr := swy.MakeAdminURL(conf.S3.Addr, conf.S3.AdminPort)
+	_, err := swyhttp.MarshalAndPost(
+		&swyhttp.RestReq{
+			Address: "http://" + addr + "/v1/api/notify/unsubscribe",
+			Headers: map[string]string{"X-SwyS3-Token": gateSecrets[conf.S3.Token]},
+			Success: http.StatusAccepted,
+		},
+		&swys3ctl.S3Subscribe{
+			Namespace: namespace,
+			Bucket: bucket,
+		})
+	if err != nil {
+		log.Errorf("Error unsubscibing: %s", err.Error())
+	}
+}
+
+func handleS3Event(user string, data []byte) {
+	var evt swys3ctl.S3Event
+
+	err := json.Unmarshal(data, &evt)
+	if err != nil {
+		log.Errorf("Invalid event from S3")
+		return
+	}
+
+	mw, err := dbMwareGetOne(bson.M{"mwaretype": "s3", "namespace": evt.Namespace})
+	if err != nil {
+		log.Errorf("No S3 mware for ns %s", evt.Namespace)
+		return
+	}
+
+	funcs, err := dbFuncListMwEvent(&mw.SwoId, bson.M {
+		"event.source": "mware",
+		"event.mwid": mw.SwoId.Name,
+		"event.s3bucket": evt.Bucket,
+	})
+	if err != nil {
+		/* FIXME -- this should be notified? Or what? */
+		log.Errorf("mq: Can't list functions for s3 event")
+		return
+	}
+
+	for _, fn := range funcs {
+		log.Debugf("mq: `- [%s]", fn)
+		/* FIXME -- this is synchronous */
+		_, _, err := doRun(fn.Cookie, "mware:" + mw.SwoId.Name + ":" + evt.Bucket,
+				map[string]string {
+					"bucket": evt.Bucket,
+					"object": evt.Object,
+					"op": evt.Op,
+				})
+		if err != nil {
+			log.Errorf("mq: Error running FN %s", err.Error())
+		} else {
+			log.Debugf("mq: Done, stdout")
+		}
+	}
+}
+
+func EventS3(conf *YAMLConfMw, source *FnEventDesc, mwd *MwareDesc, on bool) (error) {
+	if on {
+		err := mqStartListener(conf.S3.Notify.User, conf.S3.Notify.Pass,
+				conf.S3.Notify.URL, gates3queue, handleS3Event)
+		if err == nil {
+			err = s3Subscribe(conf, mwd.Namespace, source.S3Bucket)
+			if err != nil {
+				mqStopListener(conf.S3.Notify.URL, gates3queue)
+			}
+		}
+
+		return err
+	} else {
+		s3Unsubscribe(conf, mwd.Namespace, source.S3Bucket)
+		mqStopListener(conf.S3.Notify.URL, "events")
+		return nil
+	}
+}
+
 func GetEnvS3(conf *YAMLConfMw, mwd *MwareDesc) ([][2]string) {
 	var ret [][2]string
 	ret = append(ret, mkEnv(mwd, "ADDR", conf.S3.Addr))
@@ -76,5 +182,6 @@ func GetEnvS3(conf *YAMLConfMw, mwd *MwareDesc) ([][2]string) {
 var MwareS3 = MwareOps {
 	Init:	InitS3,
 	Fini:	FiniS3,
+	Event:	EventS3,
 	GetEnv:	GetEnvS3,
 }

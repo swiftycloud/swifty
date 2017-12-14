@@ -177,7 +177,10 @@ func info_function(project string, args []string, opts [8]string) {
 		} else if ifo.Event.MwareId != "" {
 			estr += ":" + ifo.Event.MwareId
 			if ifo.Event.MQueue != "" {
-				estr += ":" + ifo.Event.MQueue
+				estr += ":q=" + ifo.Event.MQueue
+			}
+			if ifo.Event.S3Bucket != "" {
+				estr += ":b=" + ifo.Event.S3Bucket
 			}
 		} else {
 			estr += "UNKNOWN"
@@ -246,7 +249,15 @@ func add_function(project string, args []string, opts [8]string) {
 			/* nothing */
 		} else if evt.Source == "mware" {
 			evt.MwareId = mwe[1]
-			evt.MQueue = mwe[2]
+			mwi := strings.SplitN(mwe[2], "=", 2)
+			switch mwi[0] {
+			case "q":
+				evt.MQueue = mwe[1]
+			case "b":
+				evt.S3Bucket = mwi[1]
+			default:
+				fatal(fmt.Errorf("Unknown mware event id %s", mwi[0]))
+			}
 		} else {
 			/* FIXME -- CRONTAB */
 			fatal(fmt.Errorf("Unknown event string"))

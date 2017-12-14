@@ -49,9 +49,10 @@ type FunctionSize struct {
 
 type FunctionEvent struct {
 	Source		string			`json:"source"`
-	CronTab		string			`json:"crontab"`
-	MwareId		string			`json:"mwid"`
-	MQueue		string			`json:"mqueue"`
+	CronTab		string			`json:"crontab,omitempty"`
+	MwareId		string			`json:"mwid,omitempty"`
+	MQueue		string			`json:"mqueue,omitempty"`
+	S3Bucket	string			`json:"s3bucket,omitempty"`
 }
 
 type MwareAdd struct {

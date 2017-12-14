@@ -69,6 +69,7 @@ type FnEventDesc struct {
 	CronTab		string		`bson:"crontab,omitempty"`
 	MwareId		string		`bson:"mwid,omitempty"`
 	MQueue		string		`bson:"mqueue,omitempty"`
+	S3Bucket	string		`bson:"s3bucket,omitempty"`
 }
 
 type FnSizeDesc struct {
@@ -158,6 +159,7 @@ func getFunctionDesc(tennant string, p_add *swyapi.FunctionAdd) *FunctionDesc {
 			CronTab:	p_add.Event.CronTab,
 			MwareId:	p_add.Event.MwareId,
 			MQueue:		p_add.Event.MQueue,
+			S3Bucket:	p_add.Event.S3Bucket,
 		},
 		Src:		FnSrcDesc {
 			Type:		p_add.Sources.Type,

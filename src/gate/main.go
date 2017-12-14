@@ -87,10 +87,17 @@ type YAMLConfPostgres struct {
 	Token		string			`yaml:"token"`
 }
 
+type YAMLConfS3Notify struct {
+	URL		string			`yaml:"url"`
+	User		string			`yaml:"user"`
+	Pass		string			`yaml:"password"`
+}
+
 type YAMLConfS3 struct {
 	Addr		string			`yaml:"address"`
 	AdminPort	string			`yaml:"admport"`
 	Token		string			`yaml:"token"`
+	Notify		YAMLConfS3Notify	`yaml:"notify"`
 }
 
 type YAMLConfMw struct {
@@ -414,6 +421,7 @@ func handleFunctionInfo(w http.ResponseWriter, r *http.Request, tennant string) 
 				CronTab:	fn.Event.CronTab,
 				MwareId:	fn.Event.MwareId,
 				MQueue:		fn.Event.MQueue,
+				S3Bucket:	fn.Event.S3Bucket,
 			},
 			Stats:		swyapi.FunctionStats {
 				Called:		stats.Called,
