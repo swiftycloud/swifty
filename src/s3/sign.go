@@ -244,6 +244,7 @@ func s3VerifyAuthorization(r *http.Request) (*S3AccessKey, error) {
 
 	akey, err = dbLookupAccessKey(ctx.AccessKey)
 	if err != nil {
+		log.Error(err.Error())
 		return nil, err
 	}
 
