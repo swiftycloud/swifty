@@ -38,7 +38,9 @@ func s3VerifyAdmin(r *http.Request) error {
 	access_token := r.Header.Get("X-SwyS3-Token")
 
 	if access_token != s3Secrets[conf.Daemon.Token] {
-		return fmt.Errorf("No required headers found (%s!=%s)", access_token, s3Secrets[conf.Daemon.Token])
+		log.Errorf("Access token mismatch (%s!=%s)",
+				access_token, s3Secrets[conf.Daemon.Token])
+		return fmt.Errorf("X-SwyS3-Token header mismatched or missed")
 	}
 
 	return nil
