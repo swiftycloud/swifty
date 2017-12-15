@@ -3,7 +3,7 @@ package main
 import (
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
-
+	"time"
 	"fmt"
 )
 
@@ -41,6 +41,7 @@ type S3Object struct {
 	ObjID				bson.ObjectId	`bson:"_id,omitempty"`
 	BucketObjID			bson.ObjectId	`bson:"bucket-id,omitempty"`
 	BackendID			string		`json:"bid" bson:"bid"`
+	CreationTime			string		`json:"creation-time,omitempty" bson:"creation-time,omitempty"`
 	State				uint32		`json:"state" bson:"state"`
 	Name				string		`json:"name" bson:"name"`
 	Acl				string		`json:"acl" bson:"acl"`
@@ -120,6 +121,7 @@ func s3InsertObject(bucket *S3Bucket, object_name string, version int,
 		ObjID:		bson.NewObjectId(),
 		BucketObjID:	bucket.ObjID,
 		BackendID:	bucket.ObjectBID(object_name, version),
+		CreationTime:	time.Now().Format(time.RFC3339),
 		State:		S3StateNone,
 	}
 
