@@ -46,6 +46,14 @@ type S3Object struct {
 	Acl				string		`json:"acl" bson:"acl"`
 	Version				int32		`json:"version" bson:"version"`
 	Size				int64		`json:"size" bson:"size"`
+
+	// Todo
+	TagSet				[]S3Tag		`json:"tags,omitempty" bson:"tags,omitempty"`
+	Policy				string		`json:"policy,omitempty" bson:"policy,omitempty"`
+
+	// Not supported props
+	// torrent
+	// objects archiving
 }
 
 func (objd *S3ObjectData)dbRemove() (error) {

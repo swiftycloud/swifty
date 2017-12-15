@@ -26,7 +26,7 @@ type S3BucketNotify struct {
 	Queue				string		`bson:"queue"`
 }
 
-type S3BucketTag struct {
+type S3Tag struct {
 	Key				string		`json:"key" bson:"key"`
 	Value				string		`json:"value,omitempty" bson:"value,omitempty"`
 }
@@ -44,7 +44,7 @@ type S3Bucket struct {
 
 	// Todo
 	Versioning			bool		`json:"versioning,omitempty" bson:"versioning,omitempty"`
-	TagSet				[]S3BucketTag	`json:"tags,omitempty" bson:"tags,omitempty"`
+	TagSet				[]S3Tag		`json:"tags,omitempty" bson:"tags,omitempty"`
 	Encrypt				S3BucketEncrypt	`json:"encrypt,omitempty" bson:"encrypt,omitempty"`
 	Location			string		`json:"location,omitempty" bson:"location,omitempty"`
 	Policy				string		`json:"policy,omitempty" bson:"policy,omitempty"`
