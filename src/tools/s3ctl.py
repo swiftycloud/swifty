@@ -73,6 +73,15 @@ for cmd in ['object-add']:
     spp.add_argument('--key', dest = 'key', required = False)
     spp.add_argument('--file', dest = 'file', required = False)
 
+for cmd in ['object-copy']:
+    spp = sp.add_parser(cmd)
+    spp.add_argument('--access-key-id', dest = 'access_key_id', required = True)
+    spp.add_argument('--secret-key-id', dest = 'secret_key_id', required = True)
+    spp.add_argument('--name', dest = 'name', required = True)
+    spp.add_argument('--key', dest = 'key', required = True)
+    spp.add_argument('--dst-name', dest = 'dst_name', required = True)
+    spp.add_argument('--dst-key', dest = 'dst_key', required = True)
+
 for cmd in ['object-del']:
     spp = sp.add_parser(cmd)
     spp.add_argument('--access-key-id', dest = 'access_key_id', required = True)
@@ -228,6 +237,19 @@ elif args.cmd == 'object-add':
         print("\tDone")
     except:
         print("ERROR: Can't create object")
+elif args.cmd == 'object-copy':
+    s3 = make_s3(args.endpoint_url, args.access_key_id, args.secret_key_id)
+    if s3 == None:
+         resp_error(args.cmd, None)
+    print("Copying object %s/%s -> %s/%s" % \
+          (args.name, args.key, args.dst_name, args.dst_key))
+    try:
+        resp = s3.copy_object(Bucket = args.name, Key = args.key,
+                              CopySource = {'Bucket': args.dst_name,
+                                           'Key': args.dst_key})
+        print("\tDone")
+    except:
+        print("ERROR: Can't copy object")
 elif args.cmd == 'object-del':
     s3 = make_s3(args.endpoint_url, args.access_key_id, args.secret_key_id)
     if s3 == None:
