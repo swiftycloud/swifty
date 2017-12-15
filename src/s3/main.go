@@ -152,7 +152,7 @@ func handleBucket(w http.ResponseWriter, r *http.Request) {
 
 	akey, err = s3VerifyAuthorization(r)
 	if err != nil {
-		w.WriteHeader(http.StatusForbidden)
+		HTTPRespError(w, S3ErrAccessDenied, err.Error())
 		return
 	}
 
@@ -255,7 +255,7 @@ func handleObject(w http.ResponseWriter, r *http.Request) {
 
 	akey, err = s3VerifyAuthorization(r)
 	if err != nil {
-		w.WriteHeader(http.StatusForbidden)
+		HTTPRespError(w, S3ErrAccessDenied, err.Error())
 		return
 	}
 
