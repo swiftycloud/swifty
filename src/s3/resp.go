@@ -1,6 +1,11 @@
 package main
 
+import (
+	"encoding/xml"
+)
+
 type S3RespError struct {
+	XMLName			xml.Name			`xml:"Error"`
 	Code			string				`xml:"Code,omitempy"`
 	Message			string				`xml:"Message,omitempy"`
 	Resource		string				`xml:"Resource,omitempy"`
