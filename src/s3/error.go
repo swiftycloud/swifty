@@ -191,6 +191,7 @@ func HTTPRespError(w http.ResponseWriter, errcode int, msg string) {
 		if err != nil {
 			goto out
 		}
+		return
 	}
 out:
 	// Either error is unmapped, or some other internal
