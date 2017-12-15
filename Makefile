@@ -217,7 +217,7 @@ clean-db-swifty:
 	$(Q) $(MONGO)/$(DB-SWIFTY) --eval 'db.Pods.remove({});'
 	$(Q) $(MONGO)/$(DB-SWIFTY) --eval 'db.Balancer.remove({});'
 	$(Q) $(MONGO)/$(DB-SWIFTY) --eval 'db.BalancerRS.remove({});'
-	#$(Q) $(MONGO)/$(DB-SWIFTY) --eval 'db.Logs.remove({});'
+	$(Q) $(MONGO)/$(DB-SWIFTY) --eval 'db.Logs.remove({});'
 .PHONY: clean-db-swifty
 
 clean-db-s3:
@@ -225,7 +225,7 @@ clean-db-s3:
 	$(Q) $(MONGO)/$(DB-S3) --eval 'db.S3Buckets.remove({});'
 	$(Q) $(MONGO)/$(DB-S3) --eval 'db.S3Objects.remove({});'
 	$(Q) $(MONGO)/$(DB-S3) --eval 'db.S3ObjectData.remove({});'
-	#$(Q) $(MONGO)/$(DB-S3) --eval 'db.S3AccessKeys.remove({});'
+	$(Q) $(MONGO)/$(DB-S3) --eval 'db.S3AccessKeys.remove({});'
 .PHONY: clean-db-s3
 
 rsclean: clean-db-swifty clean-db-s3
