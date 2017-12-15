@@ -229,8 +229,6 @@ func addFunction(conf *YAMLConf, tennant string, params *swyapi.FunctionAdd) err
 		goto out_clean_evt
 	}
 
-	statsStartCollect(conf, fn)
-
 	err = dbFuncUpdateAdded(fn)
 	if err != nil {
 		goto out_clean_repo
@@ -402,7 +400,6 @@ func forgetFunction(fn *FunctionDesc) {
 	}
 
 	memdGone(fn)
-	statsStopCollect(&conf, fn)
 	cleanRepo(fn)
 	logRemove(fn)
 	dbFuncRemove(fn)

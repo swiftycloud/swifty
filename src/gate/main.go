@@ -517,7 +517,7 @@ func handleFunctionCall(w http.ResponseWriter, r *http.Request) {
 	}
 
 	arg_map = makeArgMap(r)
-	sopq = statsStart(fnId)
+	sopq = statsStart()
 
 	code = http.StatusInternalServerError
 	res, err = talkToLink(link, fnId, "run", arg_map)
@@ -525,7 +525,7 @@ func handleFunctionCall(w http.ResponseWriter, r *http.Request) {
 		goto out
 	}
 
-	statsUpdate(sopq)
+	statsUpdate(fmd, sopq)
 
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
@@ -541,7 +541,6 @@ func handleFunctionRun(w http.ResponseWriter, r *http.Request, tennant string) e
 	var params swyapi.FunctionRun
 	var fn FunctionDesc
 	var res *swyapi.SwdFunctionRunResult
-	var sopq *statsOpaque
 
 	err := swyhttp.ReadAndUnmarshalReq(r, &params)
 	if err != nil {
@@ -557,14 +556,10 @@ func handleFunctionRun(w http.ResponseWriter, r *http.Request, tennant string) e
 		goto out
 	}
 
-	sopq = statsStart(fn.Cookie)
-
 	res, err = doRun(fn.Cookie, "run", params.Args)
 	if err != nil {
 		goto out
 	}
-
-	statsUpdate(sopq)
 
 	err = swyhttp.MarshalAndWrite(w, swyapi.FunctionRunResult{
 		Return:		res.Return,

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"sync/atomic"
 )
 
 type FnStats struct {
@@ -8,7 +9,6 @@ type FnStats struct {
 }
 
 type statsOpaque struct {
-	Id string
 }
 
 func statsGet(fn *FunctionDesc) *FnStats {
@@ -20,17 +20,12 @@ func statsGet(fn *FunctionDesc) *FnStats {
 	return &FnStats{Called: uint64(n)}
 }
 
-func statsStartCollect(conf *YAMLConf, fn *FunctionDesc) {
+func statsStart() *statsOpaque {
+	return &statsOpaque{}
 }
 
-func statsStopCollect(conf *YAMLConf, fn *FunctionDesc) {
-}
-
-func statsStart(id string) *statsOpaque {
-	return &statsOpaque{Id: id}
-}
-
-func statsUpdate(op *statsOpaque) {
+func statsUpdate(fmd *FnMemData, op *statsOpaque) {
+	atomic.AddUint32(&fmd.calls, 1)
 }
 
 func statsInit(conf *YAMLConf) error {

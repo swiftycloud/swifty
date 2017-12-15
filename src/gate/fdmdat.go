@@ -16,6 +16,7 @@ var fdmd sync.Map
  */
 type FnMemData struct {
 	crl	*xratelimit.RL
+	calls	uint32
 }
 
 func memdGetFn(fn *FunctionDesc) *FnMemData {
