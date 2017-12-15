@@ -26,11 +26,32 @@ type S3BucketNotify struct {
 	Queue				string		`bson:"queue"`
 }
 
+type S3BucketTag struct {
+	Key				string		`json:"key" bson:"key"`
+	Value				string		`json:"value,omitempty" bson:"value,omitempty"`
+}
+
+type S3BucketEncrypt struct {
+	Algo				string		`json:"algo" bson:"algo"`
+	MasterKeyID			string		`json:"algo,omitempty" bson:"algo,omitempty"`
+}
+
 type S3Bucket struct {
 	ObjID				bson.ObjectId	`bson:"_id,omitempty"`
 	BackendID			string		`json:"bid,omitempty" bson:"bid,omitempty"`
 	NamespaceID			string		`json:"nsid,omitempty" bson:"nsid,omitempty"`
 	CreationTime			string		`json:"birth,omitempty" bson:"birth,omitempty"`
+
+	// Todo
+	Versioning			bool		`json:"versioning,omitempty" bson:"versioning,omitempty"`
+	TagSet				[]S3BucketTag	`json:"tags,omitempty" bson:"tags,omitempty"`
+	Encrypt				S3BucketEncrypt	`json:"encrypt,omitempty" bson:"encrypt,omitempty"`
+	Location			string		`json:"location,omitempty" bson:"location,omitempty"`
+	Policy				string		`json:"policy,omitempty" bson:"policy,omitempty"`
+	Logging				bool		`json:"logging,omitempty" bson:"logging,omitempty"`
+	Lifecycle			string		`json:"lifecycle,omitempty" bson:"lifecycle,omitempty"`
+	RequestPayment			string		`json:"request-payment,omitempty" bson:"request-payment,omitempty"`
+
 	State				uint32		`json:"state" bson:"state"`
 	CntObjects			int64		`json:"cnt-objects" bson:"cnt-objects"`
 	CntBytes			int64		`json:"cnt-bytes" bson:"cnt-bytes"`
