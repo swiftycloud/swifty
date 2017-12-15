@@ -114,7 +114,6 @@ type FunctionRun struct {
 
 type FunctionRunResult struct {
 	Return		string			`json:"return"`
-	Code		int			`json:"code"`
 	Stdout		string			`json:"stdout"`
 	Stderr		string			`json:"stderr"`
 }

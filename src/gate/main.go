@@ -487,7 +487,7 @@ func makeArgMap(r *http.Request) map[string]string {
 
 func handleFunctionCall(w http.ResponseWriter, r *http.Request) {
 	var arg_map map[string]string
-	var retjson string
+	var res *swyapi.SwdFunctionRunResult
 	var sopq *statsOpaque
 	var err error
 
@@ -508,7 +508,7 @@ func handleFunctionCall(w http.ResponseWriter, r *http.Request) {
 	sopq = statsStart(fnId)
 
 	code = http.StatusInternalServerError
-	_, retjson, err = talkToLink(link, fnId, "run", arg_map)
+	res, err = talkToLink(link, fnId, "run", arg_map)
 	if err != nil {
 		goto out
 	}
@@ -517,7 +517,7 @@ func handleFunctionCall(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(retjson))
+	w.Write([]byte(res.Return))
 	return
 
 out:
@@ -528,8 +528,7 @@ func handleFunctionRun(w http.ResponseWriter, r *http.Request, tennant string) e
 	var id *SwoId
 	var params swyapi.FunctionRun
 	var fn FunctionDesc
-	var retjson string
-	var fn_code int
+	var res *swyapi.SwdFunctionRunResult
 	var sopq *statsOpaque
 
 	err := swyhttp.ReadAndUnmarshalReq(r, &params)
@@ -548,7 +547,7 @@ func handleFunctionRun(w http.ResponseWriter, r *http.Request, tennant string) e
 
 	sopq = statsStart(fn.Cookie)
 
-	fn_code, retjson, err = doRun(fn.Cookie, "run", params.Args)
+	res, err = doRun(fn.Cookie, "run", params.Args)
 	if err != nil {
 		goto out
 	}
@@ -556,8 +555,9 @@ func handleFunctionRun(w http.ResponseWriter, r *http.Request, tennant string) e
 	statsUpdate(sopq)
 
 	err = swyhttp.MarshalAndWrite(w, swyapi.FunctionRunResult{
-		Return:		retjson,
-		Code:		fn_code,
+		Return:		res.Return,
+		Stdout:		res.Stdout,
+		Stderr:		res.Stderr,
 	})
 out:
 	return err

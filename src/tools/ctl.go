@@ -296,7 +296,6 @@ func run_function(project string, args []string, opts [8]string) {
 	make_faas_req("function/run",
 		swyapi.FunctionRun{ Project: project, FuncName: args[0], Args: argmap, }, &rres)
 
-	fmt.Printf("code: %d\n", rres.Code)
 	fmt.Printf("returned: %s\n", rres.Return)
 	fmt.Printf("%s", rres.Stdout)
 	fmt.Fprintf(os.Stderr, "%s", rres.Stderr)

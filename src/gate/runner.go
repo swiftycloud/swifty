@@ -12,16 +12,16 @@ import (
 	"../common/http"
 )
 
-func doRun(cookie, event string, args map[string]string) (int, string, error) {
+func doRun(cookie, event string, args map[string]string) (*swyapi.SwdFunctionRunResult, error) {
 	link := dbBalancerLinkFindByCookie(cookie)
 	if link == nil {
-		return -1, "", fmt.Errorf("Can't find balancer for %s", cookie)
+		return nil, fmt.Errorf("Can't find balancer for %s", cookie)
 	}
 
 	return talkToLink(link, cookie, event, args)
 }
 
-func talkToLink(link *BalancerLink, cookie, event string, args map[string]string) (int, string, error) {
+func talkToLink(link *BalancerLink, cookie, event string, args map[string]string) (*swyapi.SwdFunctionRunResult, error) {
 	log.Debugf("RUN %s(%v)", cookie, args)
 
 	var wd_result swyapi.SwdFunctionRunResult
@@ -63,15 +63,17 @@ func talkToLink(link *BalancerLink, cookie, event string, args map[string]string
 	logSaveResult(cookie, event, wd_result.Stdout, wd_result.Stderr)
 	log.Debugf("RETurn %s: %d out[%s] err[%s]", cookie,
 			wd_result.Code, wd_result.Stdout, wd_result.Stderr)
-	return wd_result.Code, wd_result.Return, nil
+
+	return &wd_result, nil
 
 out:
-	return -1, "", fmt.Errorf("RUN error %s", err.Error())
+	return nil, fmt.Errorf("RUN error %s", err.Error())
 }
 
 func buildFunction(fn *FunctionDesc) error {
 	var err error
-	var code, orig_state int
+	var orig_state int
+	var res *swyapi.SwdFunctionRunResult
 
 	orig_state = fn.State
 	log.Debugf("build RUN %s", fn.SwoId.Str())
@@ -81,15 +83,15 @@ func buildFunction(fn *FunctionDesc) error {
 		goto out
 	}
 
-	code, _, err = talkToLink(link, fn.Cookie, "build", map[string]string{})
+	res, err = talkToLink(link, fn.Cookie, "build", map[string]string{})
 	log.Debugf("build %s finished", fn.SwoId.Str())
 	logSaveEvent(fn, "built", "")
 	if err != nil {
 		goto out
 	}
 
-	if code != 0 {
-		err = fmt.Errorf("Build finished with %d", code)
+	if res.Code != 0 {
+		err = fmt.Errorf("Build finished with %d", res.Code)
 		goto out
 	}
 

@@ -138,7 +138,7 @@ func handleS3Event(user string, data []byte) {
 	for _, fn := range funcs {
 		log.Debugf("mq: `- [%s]", fn)
 		/* FIXME -- this is synchronous */
-		_, _, err := doRun(fn.Cookie, "mware:" + mw.SwoId.Name + ":" + evt.Bucket,
+		_, err := doRun(fn.Cookie, "mware:" + mw.SwoId.Name + ":" + evt.Bucket,
 				map[string]string {
 					"bucket": evt.Bucket,
 					"object": evt.Object,
@@ -146,8 +146,6 @@ func handleS3Event(user string, data []byte) {
 				})
 		if err != nil {
 			log.Errorf("mq: Error running FN %s", err.Error())
-		} else {
-			log.Debugf("mq: Done, stdout")
 		}
 	}
 }
