@@ -1,6 +1,11 @@
 # Minimal makefile for Sphinx documentation
 #
 
+#
+# Run
+#	dnf -y install python-sphinx python2-recommonmark
+# to be able to build docs
+
 # You can set these variables from the command line.
 SPHINXOPTS    =
 SPHINXBUILD   = sphinx-build
