@@ -121,9 +121,28 @@ func formatRequest(prefix string, r *http.Request) string {
 //	return prefix
 }
 
+func handleListBuckets(w http.ResponseWriter, akey *S3AccessKey) {
+	var list *ListAllMyBucketsResult
+	var err error
+
+	list, err = s3ListBuckets(akey)
+	if err != nil {
+		if err == mgo.ErrNotFound {
+			HTTPRespError(w, S3ErrNoSuchBucket, err.Error())
+		} else {
+			HTTPRespError(w, S3ErrInternalError, err.Error())
+		}
+		return
+	}
+
+	err = HTTPMarshalXMLAndWriteOK(w, list)
+	if err != nil {
+		HTTPRespError(w, S3ErrInternalError, err.Error())
+	}
+}
+
 func handleBucket(w http.ResponseWriter, r *http.Request) {
 	var bucket_name string = mux.Vars(r)["BucketName"]
-	var list_buckets *ListAllMyBucketsResult
 	var acl string
 	var akey *S3AccessKey
 	var err error
@@ -158,15 +177,7 @@ func handleBucket(w http.ResponseWriter, r *http.Request) {
 
 	if bucket_name == "" {
 		if r.Method == http.MethodGet {
-			list_buckets, err = s3ListBuckets(akey)
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusBadRequest)
-				return
-			}
-			err = HTTPMarshalXMLAndWriteOK(w, list_buckets)
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusBadRequest)
-			}
+			handleListBuckets(w, akey)
 			return
 		} else {
 			http.Error(w, "Empty bucket name provided", http.StatusBadRequest)
