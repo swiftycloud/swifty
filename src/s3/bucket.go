@@ -58,6 +58,9 @@ type S3Bucket struct {
 	// metrics
 	// replication
 	// website
+	// accelerate
+	// inventory
+	// notification
 
 	State				uint32		`json:"state" bson:"state"`
 	CntObjects			int64		`json:"cnt-objects" bson:"cnt-objects"`
