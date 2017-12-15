@@ -191,6 +191,9 @@ func info_function(project string, args []string, opts [8]string) {
 		fmt.Printf("URL:     http://%s:%s%s\n", conf.Login.Host, conf.Login.Port, ifo.URL)
 	}
 	fmt.Printf("Timeout: %dms\n", ifo.Size.Timeout)
+	if ifo.Size.Rate != 0 {
+		fmt.Printf("Rate:    %d:%d\n", ifo.Size.Rate, ifo.Size.Burst)
+	}
 	fmt.Printf("Memory:  %dMi\n", ifo.Size.Memory)
 	fmt.Printf("Called:  %d\n", ifo.Stats.Called)
 }
@@ -207,6 +210,25 @@ func encodeFile(file string) string {
 	}
 
 	return base64.StdEncoding.EncodeToString(data)
+}
+
+func parse_rate(val string) (uint, uint) {
+	var rate, burst uint64
+	var err error
+
+	rl := strings.Split(val, ":")
+	rate, err = strconv.ParseUint(rl[0], 10, 32)
+	if err != nil {
+		fatal(fmt.Errorf("Bad rate value %s: %s", rl[0], err.Error()))
+	}
+	if len(rl) > 1 {
+		burst, err = strconv.ParseUint(rl[1], 10, 32)
+		if err != nil {
+			fatal(fmt.Errorf("Bad burst value %s: %s", rl[1], err.Error()))
+		}
+	}
+
+	return uint(rate), uint(burst)
 }
 
 func add_function(project string, args []string, opts [8]string) {
@@ -280,6 +302,10 @@ func add_function(project string, args []string, opts [8]string) {
 		}
 	}
 
+	if opts[5] != "" {
+		req.Size.Rate, req.Size.Burst = parse_rate(opts[5])
+	}
+
 	make_faas_req("function/add", req, nil)
 
 }
@@ -318,6 +344,14 @@ func update_function(project string, args []string, opts [8]string) {
 		if err != nil {
 			fatal(fmt.Errorf("Bad tmo value %s: %s", opts[4], err.Error()))
 		}
+	}
+
+	if opts[2] != "" {
+		if req.Size == nil {
+			req.Size = &swyapi.FunctionSize {}
+		}
+
+		req.Size.Rate, req.Size.Burst = parse_rate(opts[2])
 	}
 
 	make_faas_req("function/update", req, nil)
@@ -536,10 +570,12 @@ func main() {
 	cmdMap[CMD_ADD].opts.StringVar(&opts[2], "mw", "", "Mware to use, comma-separated")
 	cmdMap[CMD_ADD].opts.StringVar(&opts[3], "event", "", "Event this fn is to start")
 	cmdMap[CMD_ADD].opts.StringVar(&opts[4], "tmo", "", "Timeout")
+	cmdMap[CMD_ADD].opts.StringVar(&opts[5], "rl", "", "Rate (rate[:burst])")
 	bindCmdUsage(CMD_ADD,	[]string{"NAME"}, "Add a function", true)
 	bindCmdUsage(CMD_RUN,	[]string{"NAME", "ARGUMENTS..."}, "Run a function", true)
 	cmdMap[CMD_UPD].opts.StringVar(&opts[0], "src", "", "Source file")
 	cmdMap[CMD_UPD].opts.StringVar(&opts[1], "tmo", "", "Timeout")
+	cmdMap[CMD_UPD].opts.StringVar(&opts[2], "rl", "", "Rate (rate[:burst])")
 	bindCmdUsage(CMD_UPD,	[]string{"NAME"}, "Update a function", true)
 	bindCmdUsage(CMD_DEL,	[]string{"NAME"}, "Delete a function", true)
 	bindCmdUsage(CMD_LOGS,	[]string{"NAME"}, "Show function logs", true)

@@ -429,6 +429,8 @@ func handleFunctionInfo(w http.ResponseWriter, r *http.Request, tennant string) 
 			Size:		swyapi.FunctionSize {
 				Memory:		fn.Size.Mem,
 				Timeout:	fn.Size.Tmo,
+				Rate:		fn.Size.Rate,
+				Burst:		fn.Size.Burst,
 			},
 		})
 out:
@@ -490,6 +492,7 @@ func handleFunctionCall(w http.ResponseWriter, r *http.Request) {
 	var res *swyapi.SwdFunctionRunResult
 	var sopq *statsOpaque
 	var err error
+	var fmd *FnMemData
 
 	fnId := mux.Vars(r)["fnid"]
 
@@ -502,6 +505,15 @@ func handleFunctionCall(w http.ResponseWriter, r *http.Request) {
 	if !link.Public {
 		err = errors.New("No API for function")
 		goto out
+	}
+
+	fmd = memdGet(fnId)
+	if fmd.crl != nil {
+		if !fmd.crl.Get() {
+			code = http.StatusTooManyRequests
+			err = errors.New("Ratelimited")
+			goto out
+		}
 	}
 
 	arg_map = makeArgMap(r)

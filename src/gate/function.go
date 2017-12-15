@@ -8,6 +8,7 @@ import (
 
 	"../apis/apps"
 	"../common"
+	"../common/xratelimit"
 )
 
 /*
@@ -76,6 +77,8 @@ type FnSizeDesc struct {
 	Replicas	int		`bson:"replicas"`
 	Mem		uint64		`bson:"mem"`
 	Tmo		uint64		`bson:"timeout"`
+	Burst		uint		`bson:"burst"`
+	Rate		uint		`bson:"rate"`
 }
 
 type FunctionDesc struct {
@@ -170,6 +173,8 @@ func getFunctionDesc(tennant string, p_add *swyapi.FunctionAdd) *FunctionDesc {
 			Replicas:	1,
 			Mem:		p_add.Size.Memory,
 			Tmo:		p_add.Size.Timeout,
+			Rate:		p_add.Size.Rate,
+			Burst:		p_add.Size.Burst,
 		},
 		Code:		FnCodeDesc {
 			Lang:		p_add.Code.Lang,
@@ -278,6 +283,7 @@ func updateFunction(conf *YAMLConf, id *SwoId, params *swyapi.FunctionUpdate) er
 	var fn FunctionDesc
 	var err error
 	var rebuild bool
+	var rlfix bool
 
 	update := make(bson.M)
 
@@ -320,6 +326,16 @@ func updateFunction(conf *YAMLConf, id *SwoId, params *swyapi.FunctionUpdate) er
 			fn.Size.Mem = params.Size.Memory
 			update["size.mem"] = params.Size.Memory
 		}
+
+		if params.Size.Rate != 0 && (params.Size.Rate != fn.Size.Rate ||
+						params.Size.Burst != fn.Size.Burst) {
+			log.Debugf("Will update ratelimit for %s", fn.SwoId.Str())
+			fn.Size.Burst = params.Size.Burst
+			fn.Size.Rate = params.Size.Rate
+			update["size.rate"] = params.Size.Rate
+			update["size.burst"] = params.Size.Burst
+			rlfix = true
+		}
 	}
 
 	if len(update) == 0 {
@@ -340,6 +356,22 @@ func updateFunction(conf *YAMLConf, id *SwoId, params *swyapi.FunctionUpdate) er
 	err = dbFuncUpdatePulled(&fn, update)
 	if err != nil {
 		goto out
+	}
+
+	if rlfix {
+		fdm := memdGetFn(&fn)
+		if fn.Size.Rate != 0 {
+			if fdm.crl != nil {
+				/* Update */
+				fdm.crl.Update(fn.Size.Burst, fn.Size.Rate)
+			} else {
+				/* Create */
+				fdm.crl = xratelimit.MakeRL(fn.Size.Burst, fn.Size.Rate)
+			}
+		} else {
+			/* Remove */
+			fdm.crl = nil
+		}
 	}
 
 	if rebuild {
@@ -369,6 +401,7 @@ func forgetFunction(fn *FunctionDesc) {
 		}
 	}
 
+	memdGone(fn)
 	statsStopCollect(&conf, fn)
 	cleanRepo(fn)
 	logRemove(fn)

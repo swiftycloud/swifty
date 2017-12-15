@@ -76,6 +76,7 @@ go-gate-y	+= src/gate/repo.go
 go-gate-y	+= src/gate/funcurl.go
 go-gate-y	+= src/gate/stats.go
 go-gate-y	+= src/gate/swoid.go
+go-gate-y	+= src/gate/fdmdat.go
 
 go-admd-y	+= src/admd/main.go
 go-admd-y	+= src/admd/ks.go
