@@ -19,3 +19,10 @@ func HTTPMarshalXMLAndWrite(w http.ResponseWriter, status int, data interface{})
 func HTTPMarshalXMLAndWriteOK(w http.ResponseWriter, data interface{}) error {
 	return HTTPMarshalXMLAndWrite(w, http.StatusOK, data)
 }
+
+func HTTPRespXML(w http.ResponseWriter, data interface{}) {
+	err := HTTPMarshalXMLAndWrite(w, http.StatusOK, data)
+	if err != nil {
+		HTTPRespError(w, S3ErrInternalError, err.Error())
+	}
+}

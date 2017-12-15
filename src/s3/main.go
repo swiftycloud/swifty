@@ -135,10 +135,7 @@ func handleListBuckets(w http.ResponseWriter, akey *S3AccessKey) {
 		return
 	}
 
-	err = HTTPMarshalXMLAndWriteOK(w, list)
-	if err != nil {
-		HTTPRespError(w, S3ErrInternalError, err.Error())
-	}
+	err = HTTPRespXML(w, list)
 }
 
 func handleBucket(w http.ResponseWriter, r *http.Request) {
@@ -202,11 +199,7 @@ func handleBucket(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		err = HTTPMarshalXMLAndWriteOK(w, objects)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
+		HTTPRespXML(w, objects)
 		return
 		break
 	case http.MethodDelete:
@@ -222,9 +215,9 @@ func handleBucket(w http.ResponseWriter, r *http.Request) {
 		err = s3CheckAccess(akey, bucket_name, "")
 		if err != nil {
 			if err == mgo.ErrNotFound {
-				http.Error(w, "No bucket found", http.StatusBadRequest)
+				HTTPRespError(w, S3ErrNoSuchBucket, "No bucket found")
 			} else {
-				http.Error(w, err.Error(), http.StatusBadRequest)
+				HTTPRespError(w, S3ErrInternalError, err.Error())
 			}
 			return
 		}
