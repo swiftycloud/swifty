@@ -181,12 +181,19 @@ var s3RespErrorMapData = map[int]s3RespErrorMap {
 	},
 }
 
-func HTTPRespError(w http.ResponseWriter, errcode int, msg string) {
+func HTTPRespError(w http.ResponseWriter, errcode int, params ...string) {
 	if m, ok := s3RespErrorMapData[errcode]; ok {
-		e := S3RespError {
-			Code:		m.ErrorCode,
-			Message:	msg,
+		e := S3RespError { Code: m.ErrorCode, }
+
+		switch len(params) {
+		case 3:
+			e.RequestID = params[2]
+		case 2:
+			e.Resource = params[1]
+		case 1:
+			e.Message = params[0]
 		}
+
 		err := HTTPMarshalXMLAndWrite(w, m.HttpStatus, &e)
 		if err != nil {
 			goto out
