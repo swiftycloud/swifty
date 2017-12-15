@@ -229,20 +229,19 @@ func s3DeleteBucket(akey *S3AccessKey, bucket_name, acl string) error {
 func (bucket *S3Bucket)dbFindAll() ([]S3Object, error) {
 	var res []S3Object
 
-	err := dbS3FindOne(
+	err := dbS3FindAll(
 			bson.M{"bucket-id": bucket.ObjID},
 			&res)
 	if err != nil {
 		return nil, err
 	}
 
-	return res,nil
+	return res, nil
 }
 
 func s3ListBucket(akey *S3AccessKey, bucket_name, acl string) (*S3BucketList, error) {
 	var bucketList S3BucketList
 	var bucketFound *S3Bucket
-	var r []S3ObjectEntry
 	var err error
 
 	bucketFound, err = akey.FindBucket(bucket_name)
@@ -256,16 +255,24 @@ func s3ListBucket(akey *S3AccessKey, bucket_name, acl string) (*S3BucketList, er
 	bucketList.MaxKeys	= bucketFound.MaxObjects
 	bucketList.IsTruncated	= false
 
+
 	objects, err := bucketFound.dbFindAll()
 	if err != nil {
-		for _, k := range objects {
-			r = append(r,
-				S3ObjectEntry {
-					Key:	k.Name,
-					Size:	k.Size,
-				})
-			bucketList.KeyCount++
+		if err == mgo.ErrNotFound {
+			return &bucketList, nil
 		}
+
+		log.Errorf("s3: Can't find objects %s: %s", bucket_name, err.Error())
+		return nil, err
+	}
+
+	for _, k := range objects {
+		bucketList.Contents = append(bucketList.Contents,
+			S3ObjectEntry {
+				Key:	k.Name,
+				Size:	k.Size,
+			})
+		bucketList.KeyCount++
 	}
 
 	return &bucketList, nil
