@@ -269,8 +269,9 @@ func s3ListBucket(akey *S3AccessKey, bucket_name, acl string) (*S3BucketList, er
 	for _, k := range objects {
 		bucketList.Contents = append(bucketList.Contents,
 			S3ObjectEntry {
-				Key:	k.Name,
-				Size:	k.Size,
+				Key:		k.Name,
+				Size:		k.Size,
+				LastModified:	k.CreationTime,
 			})
 		bucketList.KeyCount++
 	}
