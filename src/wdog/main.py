@@ -76,10 +76,10 @@ class Runner:
         self.start()
 
     def stdout(self):
-        return self.pin.readlines()
+        return "".join(self.pin.readlines())
 
     def stderr(self):
-        return self.pine.readlines()
+        return "".join(self.pine.readlines())
 
 
 runner = Runner()
