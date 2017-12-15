@@ -166,7 +166,7 @@ tags:
 .PHONY: tags
 
 docs: .FORCE
-	$(Q) $(MAKE) -C docs/latex all
+	$(Q) $(MAKE) -C docs/ html
 .PHONY: docs
 
 tarball:
