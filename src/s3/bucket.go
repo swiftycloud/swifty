@@ -52,6 +52,13 @@ type S3Bucket struct {
 	Lifecycle			string		`json:"lifecycle,omitempty" bson:"lifecycle,omitempty"`
 	RequestPayment			string		`json:"request-payment,omitempty" bson:"request-payment,omitempty"`
 
+	// Not supported props
+	// analytics
+	// cors
+	// metrics
+	// replication
+	// website
+
 	State				uint32		`json:"state" bson:"state"`
 	CntObjects			int64		`json:"cnt-objects" bson:"cnt-objects"`
 	CntBytes			int64		`json:"cnt-bytes" bson:"cnt-bytes"`
