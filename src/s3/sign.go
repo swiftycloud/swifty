@@ -6,6 +6,7 @@ import (
 	"crypto/hmac"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"strings"
 	"regexp"
 	"sort"
@@ -135,7 +136,7 @@ func (ctx *AuthContext) BuildBodyDigest(r *http.Request) (error) {
 }
 
 func queryEncode(uri string) string {
-	uri = strings.Replace(uri, "+", "%20", -1)
+	uri = strings.Replace(url.QueryEscape(uri), "+", "%20", -1)
 	return strings.TrimSpace(uri)
 }
 
@@ -169,18 +170,19 @@ func (ctx *AuthContext) BuildCanonicalString(r *http.Request) {
 	}
 
 	if len(keys) > 0 {
-		var query string = ""
+		var queries []string
+		var query string
+
 		sort.Strings(keys)
-		for i, k := range keys {
-			query += queryEncode(k) + "="
+
+		for _, k := range keys {
+			query = queryEncode(k) + "="
 			if len(q[k]) > 0 {
 				query += queryEncode(q[k][0])
 			}
-			if i < len(keys) {
-				query += "&"
-			}
+			queries = append(queries, query)
 		}
-		members = append(members, query)
+		members = append(members, strings.Join(queries, "&"))
 	} else {
 		members = append(members, "")
 	}
