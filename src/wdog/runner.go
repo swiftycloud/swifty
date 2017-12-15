@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"xqueue"
 	"os"
+	"syscall"
+	"strconv"
 )
 
 func main() {
@@ -14,6 +16,13 @@ func main() {
 		fmt.Printf("Can't open queue %s: %s", os.Args[1], err.Error())
 		return
 	}
+
+	fd, _ := strconv.Atoi(os.Args[2])
+	syscall.Dup2(fd, 1)
+	syscall.Close(fd)
+	fd, _ = strconv.Atoi(os.Args[3])
+	syscall.Dup2(fd, 2)
+	syscall.Close(fd)
 
 	for {
 		var args map[string]string

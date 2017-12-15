@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"os/exec"
+	"strconv"
 	"errors"
 	"bytes"
 	"time"
@@ -25,6 +26,10 @@ var function *swyapi.SwdFunctionDesc
 type Runner struct {
 	cmd	*exec.Cmd
 	q	*xqueue.Queue
+	fout	string
+	ferr	string
+	fin	*os.File
+	fine	*os.File
 }
 
 var zcfg zap.Config = zap.Config {
@@ -50,17 +55,48 @@ func get_exit_code(err error) (bool, int) {
 
 var runner *Runner
 
+func restartRunner() {
+	runner.cmd.Wait()
+	runner.q.Close()
+	startQnR()
+}
+
 func startRunner() error {
 	var err error
+	p := make([]int, 2)
 
 	runner = &Runner {}
+
+	err = syscall.Pipe(p)
+	if err != nil {
+		return fmt.Errorf("Can't make out pipe: %s", err.Error())
+	}
+
+	runner.fout = strconv.Itoa(p[1])
+	syscall.SetNonblock(p[0], true)
+	runner.fin = os.NewFile(uintptr(p[0]), "runner.stdout")
+
+	err = syscall.Pipe(p)
+	if err != nil {
+		return fmt.Errorf("Can't make err pipe: %s", err.Error())
+	}
+
+	runner.ferr = strconv.Itoa(p[1])
+	syscall.SetNonblock(p[0], true)
+	runner.fine = os.NewFile(uintptr(p[0]), "runner.stderr")
+
+	return startQnR()
+}
+
+func startQnR() error {
+	var err error
 
 	runner.q, err = xqueue.MakeQueue()
 	if err != nil {
 		return fmt.Errorf("Can't make queue: %s", err.Error())
 	}
 
-	runner.cmd = exec.Command("/go/src/swycode/function", runner.q.GetId())
+	runner.cmd = exec.Command("/go/src/swycode/function", runner.q.GetId(), runner.fout, runner.ferr)
 	err = runner.cmd.Start()
 	if err != nil {
 		return fmt.Errorf("Can't start runner: %s", err.Error())
@@ -69,6 +105,19 @@ func startRunner() error {
 	log.Debugf("Started runner (queue %s)", runner.q.FDS())
 	runner.q.Started()
 	return nil
+}
+
+func readLines(f *os.File) string {
+	var ret string
+
+	buf := make([]byte, 512, 512)
+	for {
+		n, _ := f.Read(buf)
+		if n == 0 {
+			return ret
+		}
+		ret += string(buf[:n])
+	}
 }
 
 var runlock sync.Mutex
@@ -110,9 +159,7 @@ func doRun(params *swyapi.SwdFunctionRun) (*swyapi.SwdFunctionRunResult, int, er
 	res, err = runner.q.RecvStr()
 	if err != nil {
 		if timeout {
-			runner.cmd.Wait()
-			runner.q.Close()
-			startRunner()
+			restartRunner()
 			code = 524 /* A Timeout Occurred */
 			err = errors.New("Function timed out")
 		} else {
@@ -124,9 +171,14 @@ func doRun(params *swyapi.SwdFunctionRun) (*swyapi.SwdFunctionRunResult, int, er
 
 	done <-true
 
+	rout := readLines(runner.fin)
+	rerr := readLines(runner.fine)
+
 	return &swyapi.SwdFunctionRunResult{
 		Return: res,
 		Code: 0,
+		Stdout: rout,
+		Stderr: rerr,
 	}, 0, nil
 }
 

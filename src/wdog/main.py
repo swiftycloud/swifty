@@ -1,5 +1,6 @@
 #!/usr/local/bin/python3 -u
 from multiprocessing import Process, Queue
+from threading import Thread
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import queue
 import os
@@ -8,21 +9,81 @@ import json
 import importlib.util
 import sys
 import traceback
+import fcntl
 
 spec = importlib.util.spec_from_file_location('code', '/function/script.py')
 swycode = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(swycode)
 
-def runner(runq, resq):
+def runnerFn(runq, resq, pout, perr):
+    os.dup2(pout, 1)
+    os.close(pout)
+    os.dup2(perr, 2)
+    os.close(perr)
     while True:
         args = runq.get()
-        res = swycode.main(args)
-        resq.put(json.dumps(res))
+        try:
+            res = swycode.main(args)
+        except:
+            print("Exception running FN:")
+            traceback.print_exc()
+            resq.put("")
+        else:
+            resq.put(json.dumps(res))
 
-runq = Queue()
-resq = Queue()
-runp = Process(target = runner, args = (runq, resq))
-runp.start()
+# Main process waits on the resq, but if the runner process
+# exits for some reason, the former will get blocked till timeout.
+# Not nice, let's join it and report empty return instead.
+
+def waiterFn(subp, resq):
+    subp.join()
+    print("Runner exited")
+    resq.put("")
+
+def nbfile(fd):
+        fl = fcntl.fcntl(fd, fcntl.F_GETFL)
+        fcntl.fcntl(fd, fcntl.F_SETFL, fl | os.O_NONBLOCK)
+        return os.fdopen(fd)
+
+class Runner:
+    def makeQnP(self):
+        self.runq = Queue()
+        self.resq = Queue()
+        self.runp = Process(target = runnerFn, args = (self.runq, self.resq, self.pout, self.perr))
+        self.waiter = Thread(target = waiterFn, args = (self.runp, self.resq))
+
+    def __init__(self):
+        pin, self.pout = os.pipe() # pout is kept as FD for restart()-s
+        self.pin = nbfile(pin)
+        pin, self.perr = os.pipe() # so id perr
+        self.pine = nbfile(pin)
+        self.makeQnP()
+
+    def start(self):
+        self.runp.start()
+        self.waiter.start()
+        print("Started subp: %d" % self.runp.pid)
+
+    def restart(self):
+        os.kill(self.runp.pid, signal.SIGKILL)
+        self.waiter.join()
+        # Flush messages
+        self.stdout()
+        self.stderr()
+        # Restart everything, including queues, don't want them
+        # to contain dangling trash from previous runs
+        self.makeQnP()
+        self.start()
+
+    def stdout(self):
+        return self.pin.readlines()
+
+    def stderr(self):
+        return self.pine.readlines()
+
+
+runner = Runner()
+runner.start()
 
 class FnTmo(Exception):
     pass
@@ -34,9 +95,7 @@ class SwyHandler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_POST(self):
-        global runq
-        global resq
-        global runp
+        global runner
 
         if self.path != '/v1/run':
             print(self.path)
@@ -53,23 +112,19 @@ class SwyHandler(BaseHTTPRequestHandler):
                 raise Exception("POD token mismatch")
 
             print("Call with args: %r" % req['args'])
-            runq.put(req['args'])
+            runner.runq.put(req['args'])
             try:
-                res = resq.get(timeout = float(swyfunc['timeout']) / 1000)
-                print("Result: %r" % res)
+                resj = runner.resq.get(timeout = float(swyfunc['timeout']) / 1000)
+                fout = runner.stdout()
+                ferr = runner.stderr()
+                print("Result: %s" % resj)
+                print("Out:    %s" % fout)
             except queue.Empty as ex:
                 print("Timeout running FN")
-                os.kill(runp.pid, signal.SIGKILL)
-                runp.join()
-                # Restart everything, including queues, don't want them
-                # to contain dangling trash from previous runs
-                runq = Queue()
-                resq = Queue()
-                runp = Process(target = runner, args = (runq, resq))
-                runp.start()
+                runner.restart()
                 raise FnTmo()
 
-            ret = { 'return': res, 'code': 0, 'stdout': "", 'stderr': "" }
+            ret = { 'return': resj, 'code': 0, 'stdout': fout, 'stderr': ferr }
             retb = json.dumps(ret).encode('utf-8')
         except FnTmo as e:
             self.send_response(524) # A timeout occurred
