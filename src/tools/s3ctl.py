@@ -47,6 +47,12 @@ for cmd in ['list-buckets']:
     spp.add_argument('--access-key-id', dest = 'access_key_id', required = True)
     spp.add_argument('--secret-key-id', dest = 'secret_key_id', required = True)
 
+for cmd in ['list-objects']:
+    spp = sp.add_parser(cmd)
+    spp.add_argument('--access-key-id', dest = 'access_key_id', required = True)
+    spp.add_argument('--secret-key-id', dest = 'secret_key_id', required = True)
+    spp.add_argument('--name', dest = 'name', required = True)
+
 for cmd in ['bucket-add']:
     spp = sp.add_parser(cmd)
     spp.add_argument('--access-key-id', dest = 'access_key_id', required = True)
@@ -173,6 +179,15 @@ elif args.cmd == 'list-buckets':
                       (x['Name'], x['CreationDate']))
     except:
         print("ERROR: Can't list bucket")
+elif args.cmd == 'list-objects':
+    s3 = make_s3(args.endpoint_url, args.access_key_id, args.secret_key_id)
+    if s3 == None:
+         resp_error(args.cmd, None)
+    resp = s3.list_objects_v2(Bucket = args.name)
+    print("Objects list (bucket %s count %d)" % (args.name, resp['KeyCount']))
+    if 'Contents' in resp:
+        for x in resp['Contents']:
+            print("\tObject: Key %s Size %d" % (x['Key'], x['Size']))
 elif args.cmd == 'bucket-add':
     s3 = make_s3(args.endpoint_url, args.access_key_id, args.secret_key_id)
     if s3 == None:
