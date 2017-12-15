@@ -1,10 +1,7 @@
 package main
 
 import (
-	"encoding/json"
-	"io/ioutil"
 	"net/http"
-	"errors"
 	"fmt"
 
 	"../apis/apps"
@@ -26,7 +23,6 @@ func talkToLink(link *BalancerLink, cookie, event string, args map[string]string
 
 	var wd_result swyapi.SwdFunctionRunResult
 	var resp *http.Response
-	var resp_body []byte
 	var err error
 
 	if link.CntRS == 0 {
@@ -47,16 +43,8 @@ func talkToLink(link *BalancerLink, cookie, event string, args map[string]string
 		goto out
 	}
 
-	resp_body, err = ioutil.ReadAll(resp.Body)
-	resp.Body.Close()
+	err = swyhttp.ReadAndUnmarshalResp(resp, &wd_result)
 	if err != nil {
-		err = errors.New("Can't read reply")
-		goto out
-	}
-
-	err = json.Unmarshal(resp_body, &wd_result)
-	if err != nil {
-		err = fmt.Errorf("Unmarshal error %s", err.Error())
 		goto out
 	}
 
