@@ -135,7 +135,7 @@ func handleListBuckets(w http.ResponseWriter, akey *S3AccessKey) {
 		return
 	}
 
-	err = HTTPRespXML(w, list)
+	HTTPRespXML(w, list)
 }
 
 func handleBucket(w http.ResponseWriter, r *http.Request) {
