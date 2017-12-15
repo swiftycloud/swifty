@@ -70,7 +70,9 @@ func genNewAccessKey(namespace string) (*S3AccessKey, error) {
 		return nil, err
 	}
 
-	log.Debugf("genNewAccessKey: akey %v", akey)
+	if S3ModeDevel {
+		log.Debugf("genNewAccessKey: akey %v", akey)
+	}
 	return &akey, nil
 }
 
