@@ -6,7 +6,9 @@ import (
 
 type mqConsumer struct {
 	counter		int
+	conn		*amqp.Connection
 	channel		*amqp.Channel
+	done		chan bool
 }
 
 type mqListenerCb func(string, []byte)
@@ -62,12 +64,16 @@ func stopListener(req *mq_listener_req) {
 	cons.counter--
 	if cons.counter == 0 {
 		log.Debugf("mq: Stopping mq listener @%s", key)
-		cons.channel.Cancel(req.queue, false)
+		cons.done <-true
+		cons.channel.Close()
+		cons.conn.Close()
 		delete(consumers, key)
 	}
 }
 
 func startListener(req *mq_listener_req) error {
+	var err error
+
 	key := req.hkey()
 	cons := consumers[key]
 	if cons != nil {
@@ -77,16 +83,18 @@ func startListener(req *mq_listener_req) error {
 
 	cons = &mqConsumer{counter: 1}
 
+	cons.done = make(chan bool)
+
 	log.Debugf("mq: Starting mq listener @%s", key)
 
 	/* FIXME -- can there be one connection? */
-	conn, err := amqp.Dial("amqp://" + req.user + ":" + req.pass + "@" + req.url)
+	cons.conn, err = amqp.Dial("amqp://" + req.user + ":" + req.pass + "@" + req.url)
 	if err != nil {
 		return err
 	}
 
 	log.Debugf("mq:\tchan")
-	cons.channel, err = conn.Channel()
+	cons.channel, err = cons.conn.Channel()
 	if err != nil {
 		return err
 	}
@@ -105,15 +113,20 @@ func startListener(req *mq_listener_req) error {
 
 	go func() {
 		log.Debugf("mq: Getting messages for %s", key)
-		for d := range msgs {
-			log.Debugf("mq: Received message [%s] from [%s]", d.Body, d.UserId)
-			if d.UserId == "" {
-				continue
+	loop:
+		for {
+			log.Debugf("mq: >")
+			select {
+			case d := <-msgs:
+				log.Debugf("mq: Received message [%s] from [%s]", d.Body, d.UserId)
+				req.cb(d.UserId, d.Body)
+			case <-cons.done:
+				log.Debugf("mq: Done")
+				break loop
 			}
-
-			req.cb(d.UserId, d.Body)
+			log.Debugf("mq: <")
 		}
-		log.Debugf("mq: Bail out")
+		log.Debugf("mq: Stop getting messages")
 	}()
 
 	consumers[key] = cons

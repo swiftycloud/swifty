@@ -117,7 +117,9 @@ func EventRabbitMQ(conf *YAMLConfMw, source *FnEventDesc, mwd *MwareDesc, on boo
 		return mqStartListener(conf.Rabbit.Admin, conf.Rabbit.Pass,
 			conf.Rabbit.Addr + "/" + mwd.Namespace, source.MQueue,
 			func(userid string, data []byte) {
-				mqEvent(mwd.SwoId.Name, source.MQueue, userid, string(data))
+				if userid != "" {
+					mqEvent(mwd.SwoId.Name, source.MQueue, userid, string(data))
+				}
 			})
 	} else {
 		mqStopListener(conf.Rabbit.Addr + "/" + mwd.Namespace, source.MQueue)
