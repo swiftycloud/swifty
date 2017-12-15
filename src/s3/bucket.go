@@ -40,7 +40,7 @@ type S3Bucket struct {
 	ObjID				bson.ObjectId	`bson:"_id,omitempty"`
 	BackendID			string		`json:"bid,omitempty" bson:"bid,omitempty"`
 	NamespaceID			string		`json:"nsid,omitempty" bson:"nsid,omitempty"`
-	CreationTime			string		`json:"birth,omitempty" bson:"birth,omitempty"`
+	CreationTime			string		`json:"creation-time,omitempty" bson:"creation-time,omitempty"`
 
 	// Todo
 	Versioning			bool		`json:"versioning,omitempty" bson:"versioning,omitempty"`
