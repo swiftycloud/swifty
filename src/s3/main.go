@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"encoding/hex"
 	"net/http"
+	"strings"
 	"strconv"
 	"errors"
 	"time"
@@ -102,20 +103,22 @@ func setupLogger(conf *YAMLConf) {
 }
 
 func formatRequest(prefix string, r *http.Request) string {
-//	var request []string
-//
-//	url := fmt.Sprintf("%v %v %v", r.Method, r.URL, r.Proto)
-//	request = append(request, prefix)
-//	request = append(request, url)
-//	request = append(request, fmt.Sprintf("Host: %v", r.Host))
-//
-//	for name, headers := range r.Header {
-//		for _, h := range headers {
-//			request = append(request, fmt.Sprintf("%v:%v", name, h))
-//		}
-//	}
-//	return strings.Join(request, "\n")
-	return prefix
+	var request []string
+
+	url := fmt.Sprintf("%v %v %v", r.Method, r.URL, r.Proto)
+	request = append(request, prefix)
+	request = append(request, "---")
+	request = append(request, url)
+	request = append(request, fmt.Sprintf("Host: %v", r.Host))
+
+	for name, headers := range r.Header {
+		for _, h := range headers {
+			request = append(request, fmt.Sprintf("%v:%v", name, h))
+		}
+	}
+	request = append(request, "---")
+	return strings.Join(request, "\n")
+//	return prefix
 }
 
 func handleBucket(w http.ResponseWriter, r *http.Request) {
