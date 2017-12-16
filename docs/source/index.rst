@@ -7,6 +7,7 @@ Contents:
         :maxdepth: 4
         :numbered:
 
+        setup
         wdog
 
 .. only:: html 
