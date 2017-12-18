@@ -399,6 +399,7 @@ func forgetFunction(fn *FunctionDesc) {
 		}
 	}
 
+	statsDrop(fn)
 	memdGone(fn)
 	cleanRepo(fn)
 	logRemove(fn)

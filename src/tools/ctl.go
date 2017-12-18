@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strings"
 	"strconv"
+	"time"
 	"flag"
 	"fmt"
 	"os"
@@ -162,11 +163,11 @@ func info_function(project string, args []string, opts [8]string) {
 		ver = ver[:8]
 	}
 
-	fmt.Printf("Lang:    %s\n", ifo.Code.Lang)
-	fmt.Printf("Version: %s\n", ver)
-	fmt.Printf("State:   %s\n", ifo.State)
+	fmt.Printf("Lang:        %s\n", ifo.Code.Lang)
+	fmt.Printf("Version:     %s\n", ver)
+	fmt.Printf("State:       %s\n", ifo.State)
 	if len(ifo.Mware) > 0 {
-		fmt.Printf("Mware:   %s\n", strings.Join(ifo.Mware, ", "))
+		fmt.Printf("Mware:       %s\n", strings.Join(ifo.Mware, ", "))
 	}
 	if ifo.Event.Source != "" {
 		estr := ifo.Event.Source
@@ -185,17 +186,23 @@ func info_function(project string, args []string, opts [8]string) {
 		} else {
 			estr += "UNKNOWN"
 		}
-		fmt.Printf("Event:   %s\n", estr)
+		fmt.Printf("Event:       %s\n", estr)
 	}
 	if ifo.URL != "" {
-		fmt.Printf("URL:     http://%s:%s%s\n", conf.Login.Host, conf.Login.Port, ifo.URL)
+		fmt.Printf("URL:         http://%s:%s%s\n", conf.Login.Host, conf.Login.Port, ifo.URL)
 	}
-	fmt.Printf("Timeout: %dms\n", ifo.Size.Timeout)
+	fmt.Printf("Timeout:     %dms\n", ifo.Size.Timeout)
 	if ifo.Size.Rate != 0 {
-		fmt.Printf("Rate:    %d:%d\n", ifo.Size.Rate, ifo.Size.Burst)
+		fmt.Printf("Rate:        %d:%d\n", ifo.Size.Rate, ifo.Size.Burst)
 	}
-	fmt.Printf("Memory:  %dMi\n", ifo.Size.Memory)
-	fmt.Printf("Called:  %d\n", ifo.Stats.Called)
+	fmt.Printf("Memory:      %dMi\n", ifo.Size.Memory)
+	fmt.Printf("Called:      %d\n", ifo.Stats.Called)
+	if ifo.Stats.Called != 0 {
+		lc, _ := time.Parse(time.UnixDate, ifo.Stats.LastCall)
+		since := time.Since(lc)
+		since -= since % time.Second
+		fmt.Printf("Last run:    %s ago\n", since.String())
+	}
 }
 
 func detect_language(repo string) string {

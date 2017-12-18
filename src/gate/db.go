@@ -247,6 +247,21 @@ func dbFuncRemove(fn *FunctionDesc) {
 	c.Remove(bson.M{"_id": fn.ObjID});
 }
 
+func dbStatsGet(cookie string, st *FnStats) error {
+	c := dbSession.DB(dbState).C(DBColFnStats)
+	return c.Find(bson.M{"cookie": cookie}).One(st)
+}
+
+func dbStatsUpdate(st *FnStats) {
+	c := dbSession.DB(dbState).C(DBColFnStats)
+	c.Upsert(bson.M{"cookie": st.Cookie}, st)
+}
+
+func dbStatsDrop(st *FnStats) {
+	c := dbSession.DB(dbState).C(DBColFnStats)
+	c.Remove(bson.M{"cookie": st.Cookie})
+}
+
 func logSaveResult(fnCookie, event, stdout, stderr string) {
 	c := dbSession.DB(dbState).C(DBColLogs)
 	text := fmt.Sprintf("out: [%s], err: [%s]", stdout, stderr)

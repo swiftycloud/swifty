@@ -7,16 +7,9 @@ import (
 
 var fdmd sync.Map
 
-/*
- * This is a cache of data about function. It's zeroified
- * value should be valid initial one, as there's NO routine
- * that repopulates this object on gate restart.
- *
- * Or init fields with some at hands data or constants.
- */
 type FnMemData struct {
 	crl	*xratelimit.RL
-	calls	uint32
+	stats	FnStats
 }
 
 func memdGetFn(fn *FunctionDesc) *FnMemData {
@@ -25,6 +18,11 @@ func memdGetFn(fn *FunctionDesc) *FnMemData {
 
 func memdGet(cookie string) *FnMemData {
 	return memdGetOrInit(cookie, nil)
+}
+
+func memdGetCond(cookie string) *FnMemData {
+	ret, _ := fdmd.Load(cookie)
+	return ret.(*FnMemData)
 }
 
 func memdGetOrInit(cookie string, fn *FunctionDesc) *FnMemData {
@@ -41,6 +39,8 @@ func memdGetOrInit(cookie string, fn *FunctionDesc) *FnMemData {
 	if fn.Size.Rate != 0 {
 		nret.crl = xratelimit.MakeRL(fn.Size.Burst, fn.Size.Rate)
 	}
+
+	fnStatsInit(&nret.stats, fn)
 
 	ret, _ = fdmd.LoadOrStore(fn.Cookie, nret)
 	return ret.(*FnMemData)

@@ -387,6 +387,7 @@ func handleFunctionInfo(w http.ResponseWriter, r *http.Request, tennant string) 
 	var fn FunctionDesc
 	var url = ""
 	var stats *FnStats
+	var lcs string
 
 	err := swyhttp.ReadAndUnmarshalReq(r, &params)
 	if err != nil {
@@ -406,6 +407,9 @@ func handleFunctionInfo(w http.ResponseWriter, r *http.Request, tennant string) 
 	}
 
 	stats = statsGet(&fn)
+	if stats.Called != 0 {
+		lcs = stats.LastCall.Format(time.UnixDate)
+	}
 
 	err = swyhttp.MarshalAndWrite(w,  swyapi.FunctionInfo{
 			State:          fnStates[fn.State],
@@ -425,6 +429,7 @@ func handleFunctionInfo(w http.ResponseWriter, r *http.Request, tennant string) 
 			},
 			Stats:		swyapi.FunctionStats {
 				Called:		stats.Called,
+				LastCall:	lcs,
 			},
 			Size:		swyapi.FunctionSize {
 				Memory:		fn.Size.Mem,
@@ -458,9 +463,9 @@ func handleFunctionLogs(w http.ResponseWriter, r *http.Request, tennant string) 
 
 	for _, log := range logs {
 		resp = append(resp, swyapi.FunctionLogEntry{
-				Event: log.Event,
-				Ts: log.Time.String(),
-				Text: log.Text,
+				Event:	log.Event,
+				Ts:	log.Time.Format(time.UnixDate),
+				Text:	log.Text,
 			})
 	}
 
@@ -490,7 +495,6 @@ func makeArgMap(r *http.Request) map[string]string {
 func handleFunctionCall(w http.ResponseWriter, r *http.Request) {
 	var arg_map map[string]string
 	var res *swyapi.SwdFunctionRunResult
-	var sopq *statsOpaque
 	var err error
 	var fmd *FnMemData
 
@@ -517,15 +521,12 @@ func handleFunctionCall(w http.ResponseWriter, r *http.Request) {
 	}
 
 	arg_map = makeArgMap(r)
-	sopq = statsStart()
 
 	code = http.StatusInternalServerError
-	res, err = talkToLink(link, fnId, "run", arg_map)
+	res, err = talkToLink(link, fmd, fnId, "run", arg_map)
 	if err != nil {
 		goto out
 	}
-
-	statsUpdate(fmd, sopq)
 
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(http.StatusOK)

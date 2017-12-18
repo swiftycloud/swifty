@@ -13,6 +13,7 @@ type ProjectDel struct {
 
 type FunctionStats struct {
 	Called		uint64			`json:"called"`
+	LastCall	string			`json:"lastcall,omitempty"`
 }
 
 type FunctionInfo struct {

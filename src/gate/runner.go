@@ -15,20 +15,23 @@ func doRun(cookie, event string, args map[string]string) (*swyapi.SwdFunctionRun
 		return nil, fmt.Errorf("Can't find balancer for %s", cookie)
 	}
 
-	return talkToLink(link, cookie, event, args)
+	return talkToLink(link, nil, cookie, event, args)
 }
 
-func talkToLink(link *BalancerLink, cookie, event string, args map[string]string) (*swyapi.SwdFunctionRunResult, error) {
+func talkToLink(link *BalancerLink, fmd *FnMemData, cookie, event string, args map[string]string) (*swyapi.SwdFunctionRunResult, error) {
 	log.Debugf("RUN %s(%v)", cookie, args)
 
 	var wd_result swyapi.SwdFunctionRunResult
 	var resp *http.Response
 	var err error
+	var sopq *statsOpaque
 
 	if link.CntRS == 0 {
 		err = fmt.Errorf("No available pods found")
 		goto out
 	}
+
+	sopq = statsStart()
 
 	resp, err = swyhttp.MarshalAndPost(
 			&swyhttp.RestReq{
@@ -43,12 +46,20 @@ func talkToLink(link *BalancerLink, cookie, event string, args map[string]string
 		goto out
 	}
 
+	if fmd == nil {
+		fmd = memdGet(cookie)
+	}
+
+	statsUpdate(fmd, sopq)
+
 	err = swyhttp.ReadAndUnmarshalResp(resp, &wd_result)
 	if err != nil {
 		goto out
 	}
 
-	logSaveResult(cookie, event, wd_result.Stdout, wd_result.Stderr)
+	if wd_result.Stdout != "" || wd_result.Stderr != "" {
+		logSaveResult(cookie, event, wd_result.Stdout, wd_result.Stderr)
+	}
 	log.Debugf("RETurn %s: %d out[%s] err[%s]", cookie,
 			wd_result.Code, wd_result.Stdout, wd_result.Stderr)
 
@@ -71,7 +82,7 @@ func buildFunction(fn *FunctionDesc) error {
 		goto out
 	}
 
-	res, err = talkToLink(link, fn.Cookie, "build", map[string]string{})
+	res, err = talkToLink(link, nil, fn.Cookie, "build", map[string]string{})
 	log.Debugf("build %s finished", fn.SwoId.Str())
 	logSaveEvent(fn, "built", "")
 	if err != nil {
