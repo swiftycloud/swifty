@@ -51,6 +51,7 @@ type S3Object struct {
 	ETag				string		`json:"etag" bson:"etag"`
 
 	// Todo
+	Meta				[]S3Tag		`json:"meta,omitempty" bson:"meta,omitempty"`
 	TagSet				[]S3Tag		`json:"tags,omitempty" bson:"tags,omitempty"`
 	Policy				string		`json:"policy,omitempty" bson:"policy,omitempty"`
 
