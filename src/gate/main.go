@@ -381,6 +381,39 @@ out:
 	return err
 }
 
+func handleFunctionStats(w http.ResponseWriter, r *http.Request, tennant string) error {
+	var id *SwoId
+	var params swyapi.FunctionID
+	var fn FunctionDesc
+	var stats *FnStats
+	var lcs string
+
+	err := swyhttp.ReadAndUnmarshalReq(r, &params)
+	if err != nil {
+		goto out
+	}
+
+	id = makeSwoId(tennant, params.Project, params.FuncName)
+	log.Debugf("Get FN stats %s", id.Str())
+
+	fn, err = dbFuncFind(id)
+	if err != nil {
+		goto out
+	}
+
+	stats = statsGet(&fn)
+	if stats.Called != 0 {
+		lcs = stats.LastCall.Format(time.UnixDate)
+	}
+
+	err = swyhttp.MarshalAndWrite(w,  swyapi.FunctionStats{
+			Called:		stats.Called,
+			LastCall:	lcs,
+		})
+out:
+	return err
+}
+
 func handleFunctionInfo(w http.ResponseWriter, r *http.Request, tennant string) error {
 	var id *SwoId
 	var params swyapi.FunctionID
@@ -865,6 +898,7 @@ func main() {
 	r.Handle("/v1/function/run",		genReqHandler(handleFunctionRun))
 	r.Handle("/v1/function/list",		genReqHandler(handleFunctionList))
 	r.Handle("/v1/function/info",		genReqHandler(handleFunctionInfo))
+	r.Handle("/v1/function/stats",		genReqHandler(handleFunctionStats))
 	r.Handle("/v1/function/code",		genReqHandler(handleFunctionCode))
 	r.Handle("/v1/function/logs",		genReqHandler(handleFunctionLogs))
 	r.Handle("/v1/mware/add",		genReqHandler(handleMwareAdd))
