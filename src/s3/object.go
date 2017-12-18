@@ -3,6 +3,7 @@ package main
 import (
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
+	"crypto/md5"
 	"time"
 	"fmt"
 )
@@ -47,6 +48,7 @@ type S3Object struct {
 	Acl				string		`json:"acl" bson:"acl"`
 	Version				int32		`json:"version" bson:"version"`
 	Size				int64		`json:"size" bson:"size"`
+	ETag				string		`json:"etag" bson:"etag"`
 
 	// Todo
 	TagSet				[]S3Tag		`json:"tags,omitempty" bson:"tags,omitempty"`
@@ -87,15 +89,23 @@ func (object *S3Object)dbRemove() (error) {
 		)
 }
 
-func (object *S3Object)dbSetState(state uint32) (error) {
+func (object *S3Object)dbSet(state uint32, fields bson.M) (error) {
 	var res S3Object
 
 	return dbS3Update(
 			bson.M{"_id": object.ObjID,
 				"state": bson.M{"$in": s3StateTransition[state]}},
-			bson.M{"$set": bson.M{"state": state}},
+			bson.M{"$set": fields},
 			&res,
 		)
+}
+
+func (object *S3Object)dbSetState(state uint32) (error) {
+	return object.dbSet(state, bson.M{"state": state})
+}
+
+func (object *S3Object)dbSetStateEtag(state uint32, etag string) (error) {
+	return object.dbSet(state, bson.M{"state": state, "etag": etag})
 }
 
 func (bucket *S3Bucket)FindObject(object_name string, version int) (*S3Object, error) {
@@ -145,6 +155,7 @@ func s3InsertObject(bucket *S3Bucket, object_name string, version int,
 func s3CommitObject(namespace string, bucket *S3Bucket, object *S3Object, data []byte) error {
 	var err error
 	var size int64
+	var etag string
 
 	size = int64(len(data))
 
@@ -177,7 +188,14 @@ func s3CommitObject(namespace string, bucket *S3Bucket, object *S3Object, data [
 		s3Notify(namespace, bucket, object, S3NotifyPut)
 	}
 
-	err = object.dbSetState(S3StateActive)
+	etag = fmt.Sprintf("%x", md5.Sum(data))
+	if etag == "" {
+		log.Errorf("s3: Can't calculate ETag on object %s: %s",
+				object.BackendID, err.Error())
+		goto out
+	}
+
+	err = object.dbSetStateEtag(S3StateActive, etag)
 	if err != nil {
 		log.Errorf("s3: Can't activate object %s: %s",
 				object.BackendID, err.Error())
