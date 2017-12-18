@@ -233,12 +233,12 @@ func (ctx *AuthContext) BuildSignature() {
 	ctx.BuiltSignature = hex.EncodeToString(signature)
 }
 
-func s3VerifyAuthorization(r *http.Request) (*S3AccessKey, error) {
+func s3VerifyAuthorizationHeaders(r *http.Request, authHeader string) (*S3AccessKey, error) {
 	var akey *S3AccessKey
 	var ctx AuthContext
 	var err error
 
-	err = ctx.ParseAuthorization(getHeader(r, "Authorization"))
+	err = ctx.ParseAuthorization(authHeader)
 	if err != nil {
 		log.Error(err.Error())
 		return nil, err
@@ -263,11 +263,22 @@ func s3VerifyAuthorization(r *http.Request) (*S3AccessKey, error) {
 	ctx.BuildStringToSign()
 	ctx.BuildSignature()
 
-	log.Debugf("s3: verifyRequestSignature: %s %s",
+	log.Debugf("s3: s3VerifyAuthorizationHeaders: %s %s",
 		ctx.Signature, ctx.BuiltSignature)
 	if ctx.Signature == ctx.BuiltSignature {
 		return akey, nil
 	}
 
 	return nil, fmt.Errorf("Signature mismatch")
+}
+
+func s3VerifyAuthorization(r *http.Request) (*S3AccessKey, error) {
+	var authHeader string
+
+	authHeader = getHeader(r, "Authorization")
+	if authHeader != "" {
+		return s3VerifyAuthorizationHeaders(r, authHeader)
+	}
+
+	return nil, fmt.Errorf("Unsupported authorization type")
 }
