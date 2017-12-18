@@ -116,6 +116,15 @@ func formatRequest(prefix string, r *http.Request) string {
 			request = append(request, fmt.Sprintf("%v:%v", name, h))
 		}
 	}
+
+	content_type := r.Header.Get("Content-Type")
+	if content_type != "" {
+		if string(content_type[0:20]) == "multipart/form-data;" {
+			r.ParseMultipartForm(0)
+			request = append(request, fmt.Sprintf("MultipartForm: %v", r.MultipartForm))
+		}
+	}
+
 	request = append(request, "---")
 	return strings.Join(request, "\n")
 //	return prefix
