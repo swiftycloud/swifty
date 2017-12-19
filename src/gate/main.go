@@ -673,6 +673,20 @@ out:
 	return err
 }
 
+func handleLanguages(w http.ResponseWriter, r *http.Request, tennant string) error {
+	var ret []string
+
+	for l, lh := range rt_handlers {
+		if lh.Devel && !SwyModeDevel {
+			continue
+		}
+
+		ret = append(ret, l)
+	}
+
+	return swyhttp.MarshalAndWrite(w, ret)
+}
+
 func handleMwareTypes(w http.ResponseWriter, r *http.Request, tennant string) error {
 	var ret []string
 
@@ -899,10 +913,12 @@ func main() {
 	r.Handle("/v1/function/stats",		genReqHandler(handleFunctionStats))
 	r.Handle("/v1/function/code",		genReqHandler(handleFunctionCode))
 	r.Handle("/v1/function/logs",		genReqHandler(handleFunctionLogs))
-	r.Handle("/v1/mware/types",		genReqHandler(handleMwareTypes))
 	r.Handle("/v1/mware/add",		genReqHandler(handleMwareAdd))
 	r.Handle("/v1/mware/list",		genReqHandler(handleMwareList))
 	r.Handle("/v1/mware/remove",		genReqHandler(handleMwareRemove))
+
+	r.Handle("/v1/info/langs",		genReqHandler(handleLanguages))
+	r.Handle("/v1/info/mwares",		genReqHandler(handleMwareTypes))
 
 	r.HandleFunc("/call/{fnid}",			handleFunctionCall)
 

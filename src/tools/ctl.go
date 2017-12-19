@@ -421,13 +421,21 @@ func del_mware(project string, args []string, opts [8]string) {
 		swyapi.MwareRemove{ Project: project, ID: args[0], }, nil)
 }
 
-func mware_types(args []string, opts [8]string) {
+func req_list(url string) {
 	var r []string
 
-	make_faas_req("mware/types", nil, &r)
-	for _, mt := range r {
-		fmt.Printf("%s\n", mt)
+	make_faas_req(url, nil, &r)
+	for _, v := range r {
+		fmt.Printf("%s\n", v)
 	}
+}
+
+func languages(args []string, opts [8]string) {
+	req_list("info/langs")
+}
+
+func mware_types(args []string, opts [8]string) {
+	req_list("info/mwares")
 }
 
 func login() {
@@ -495,12 +503,13 @@ const (
 	CMD_MLS string		= "mls"
 	CMD_MADD string		= "madd"
 	CMD_MDEL string		= "mdel"
-	CMD_MTYPES string	= "mt"
 	CMD_LUSR string		= "uls"
 	CMD_UADD string		= "uadd"
 	CMD_UDEL string		= "udel"
 	CMD_PASS string		= "pass"
 	CMD_UINF string		= "uinf"
+	CMD_MTYPES string	= "mt"
+	CMD_LANGS string	= "lng"
 )
 
 var cmdOrder = []string {
@@ -517,12 +526,13 @@ var cmdOrder = []string {
 	CMD_MLS,
 	CMD_MADD,
 	CMD_MDEL,
-	CMD_MTYPES,
 	CMD_LUSR,
 	CMD_UADD,
 	CMD_UDEL,
 	CMD_PASS,
 	CMD_UINF,
+	CMD_LANGS,
+	CMD_MTYPES,
 }
 
 type cmdDesc struct {
@@ -547,12 +557,13 @@ var cmdMap = map[string]*cmdDesc {
 	CMD_MLS:	&cmdDesc{ pcall: list_mware,	  opts: flag.NewFlagSet(CMD_MLS, flag.ExitOnError) },
 	CMD_MADD:	&cmdDesc{ pcall: add_mware,	  opts: flag.NewFlagSet(CMD_MADD, flag.ExitOnError) },
 	CMD_MDEL:	&cmdDesc{ pcall: del_mware,	  opts: flag.NewFlagSet(CMD_MDEL, flag.ExitOnError) },
-	CMD_MTYPES:	&cmdDesc{  call: mware_types,	  opts: flag.NewFlagSet(CMD_MTYPES, flag.ExitOnError) },
 	CMD_LUSR:	&cmdDesc{  call: list_users,	  opts: flag.NewFlagSet(CMD_LUSR, flag.ExitOnError) },
 	CMD_UADD:	&cmdDesc{  call: add_user,	  opts: flag.NewFlagSet(CMD_UADD, flag.ExitOnError) },
 	CMD_UDEL:	&cmdDesc{  call: del_user,	  opts: flag.NewFlagSet(CMD_UDEL, flag.ExitOnError) },
 	CMD_PASS:	&cmdDesc{  call: set_password,	  opts: flag.NewFlagSet(CMD_PASS, flag.ExitOnError) },
 	CMD_UINF:	&cmdDesc{  call: show_user_info,  opts: flag.NewFlagSet(CMD_UINF, flag.ExitOnError) },
+	CMD_LANGS:	&cmdDesc{  call: languages,	  opts: flag.NewFlagSet(CMD_LANGS, flag.ExitOnError) },
+	CMD_MTYPES:	&cmdDesc{  call: mware_types,	  opts: flag.NewFlagSet(CMD_MTYPES, flag.ExitOnError) },
 }
 
 func bindCmdUsage(cmd string, args []string, help string, wp bool) {
@@ -602,7 +613,6 @@ func main() {
 	bindCmdUsage(CMD_MLS,	[]string{}, "List middleware", true)
 	bindCmdUsage(CMD_MADD,	[]string{"ID", "TYPE"}, "Add middleware", true)
 	bindCmdUsage(CMD_MDEL,	[]string{"ID"}, "Delete middleware", true)
-	bindCmdUsage(CMD_MTYPES, []string{}, "List middleware types", false)
 
 	bindCmdUsage(CMD_LUSR,	[]string{}, "List users", false)
 	cmdMap[CMD_UADD].opts.StringVar(&opts[0], "name", "", "User name")
@@ -612,6 +622,9 @@ func main() {
 	cmdMap[CMD_PASS].opts.StringVar(&opts[0], "pass", "", "New password")
 	bindCmdUsage(CMD_PASS,	[]string{"UID"}, "Set password", false)
 	bindCmdUsage(CMD_UINF,	[]string{"UID"}, "Get user info", false)
+
+	bindCmdUsage(CMD_MTYPES, []string{}, "List middleware types", false)
+	bindCmdUsage(CMD_LANGS, []string{}, "List of supported languages", false)
 
 	flag.Usage = func() {
 		for _, v := range cmdOrder {
