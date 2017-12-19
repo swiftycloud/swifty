@@ -10,13 +10,6 @@ import json
 import sys
 import os
 
-#[cyrill@uranus swifty] python3 src/tools/s3ctl.py --endpoint-url 127.0.0.1:8786 keygen --namespace s3
-#Access Key 2Q9WBU2DSYRO4310IXSQ
-#Secret Key mAQQFIhf4SZWRP2zptSlGxYiOMd3MH9H5FpMSFJx
-
-# sha256 for 'this is admin token' string
-default_admin_token = "44b56e701117c2ef5f116e6b8d6df7bb070e9068bd06d794cac3ae8d672bf345"
-
 def genRandomData(len):
     return ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits) for _ in range(len))
 
@@ -28,7 +21,6 @@ def genObjectName():
 
 parser = argparse.ArgumentParser(prog='s3ctl.py')
 parser.add_argument('--admin-secret', dest = 'admin_secret',
-                    default = default_admin_token,
                     help = 'access token to ented admin interface')
 parser.add_argument('--endpoint-url', dest = 'endpoint_url',
                     default = '192.168.122.197:8787',
