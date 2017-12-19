@@ -361,6 +361,15 @@ func update_function(project string, args []string, opts [8]string) {
 		req.Size.Rate, req.Size.Burst = parse_rate(opts[2])
 	}
 
+	if opts[3] != "" {
+		if opts[3] == "-" {
+			req.Mware = &[]string{}
+		} else {
+			mw := strings.Split(opts[3], ",")
+			req.Mware = &mw
+		}
+	}
+
 	make_faas_req("function/update", req, nil)
 
 }
@@ -583,6 +592,7 @@ func main() {
 	cmdMap[CMD_UPD].opts.StringVar(&opts[0], "src", "", "Source file")
 	cmdMap[CMD_UPD].opts.StringVar(&opts[1], "tmo", "", "Timeout")
 	cmdMap[CMD_UPD].opts.StringVar(&opts[2], "rl", "", "Rate (rate[:burst])")
+	cmdMap[CMD_UPD].opts.StringVar(&opts[3], "mw", "", "Mware to use, comma-separated")
 	bindCmdUsage(CMD_UPD,	[]string{"NAME"}, "Update a function", true)
 	bindCmdUsage(CMD_DEL,	[]string{"NAME"}, "Delete a function", true)
 	bindCmdUsage(CMD_LOGS,	[]string{"NAME"}, "Show function logs", true)

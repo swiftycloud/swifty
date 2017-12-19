@@ -102,6 +102,7 @@ type FunctionUpdate struct {
 	FuncName	string			`json:"name"`
 	Code		string			`json:"code"`
 	Size		*FunctionSize		`json:"size,omitempty"`
+	Mware		*[]string		`json:"mware,omitempty"`
 }
 
 type FunctionRemove struct {

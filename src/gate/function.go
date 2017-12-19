@@ -336,6 +336,11 @@ func updateFunction(conf *YAMLConf, id *SwoId, params *swyapi.FunctionUpdate) er
 		}
 	}
 
+	if params.Mware != nil {
+		fn.Mware = *params.Mware
+		update["mware"] = fn.Mware
+	}
+
 	if len(update) == 0 {
 		log.Debugf("Nothing to update for %s", fn.SwoId.Str())
 		goto out

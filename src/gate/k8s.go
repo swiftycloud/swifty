@@ -207,17 +207,9 @@ func swk8sUpdate(conf *YAMLConf, fn *FunctionDesc) error {
 
 	/*
 	 * Tune up SWD_FUNCTION_DESC to make wdog keep up with
-	 * updated Tmo value
+	 * updated Tmo value and MWARE_* secrets
 	 */
-	envs := this.Spec.Template.Spec.Containers[0].Env
-	for i, _ := range envs {
-		if envs[i].Name != "SWD_FUNCTION_DESC" {
-			continue
-		}
-
-		envs[i].Value = genFunctionDescJSON(fn, fn.Inst())
-		break
-	}
+	this.Spec.Template.Spec.Containers[0].Env = swk8sGenEnvVar(fn, fn.Inst(), conf.Wdog.Port)
 
 	specSetRes(&this.Spec.Template.Spec.Containers[0].Resources, fn)
 
