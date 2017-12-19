@@ -244,7 +244,7 @@ func dbFuncAdd(desc *FunctionDesc) error {
 
 func dbFuncRemove(fn *FunctionDesc) {
 	c := dbSession.DB(dbState).C(DBColFunc)
-	c.Remove(bson.M{"_id": fn.ObjID});
+	c.Remove(bson.M{"cookie": fn.Cookie});
 }
 
 func dbStatsGet(cookie string, st *FnStats) error {
