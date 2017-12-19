@@ -8,6 +8,7 @@ import urllib
 import boto3
 import json
 import sys
+import os
 
 #[cyrill@uranus swifty] python3 src/tools/s3ctl.py --endpoint-url 127.0.0.1:8786 keygen --namespace s3
 #Access Key 2Q9WBU2DSYRO4310IXSQ
@@ -37,46 +38,47 @@ sp = parser.add_subparsers(dest = 'cmd')
 for cmd in ['keygen']:
     spp = sp.add_parser(cmd)
     spp.add_argument('--namespace', dest = 'namespace', required = True)
+    spp.add_argument('--save', dest = 'save', action = 'store_true')
 
 for cmd in ['keydel']:
     spp = sp.add_parser(cmd)
-    spp.add_argument('--access-key-id', dest = 'access_key_id', required = True)
+    spp.add_argument('--access-key-id', dest = 'access_key_id')
 
 for cmd in ['list-buckets']:
     spp = sp.add_parser(cmd)
-    spp.add_argument('--access-key-id', dest = 'access_key_id', required = True)
-    spp.add_argument('--secret-key-id', dest = 'secret_key_id', required = True)
+    spp.add_argument('--access-key-id', dest = 'access_key_id')
+    spp.add_argument('--secret-key-id', dest = 'secret_key_id')
 
 for cmd in ['list-objects']:
     spp = sp.add_parser(cmd)
-    spp.add_argument('--access-key-id', dest = 'access_key_id', required = True)
-    spp.add_argument('--secret-key-id', dest = 'secret_key_id', required = True)
+    spp.add_argument('--access-key-id', dest = 'access_key_id')
+    spp.add_argument('--secret-key-id', dest = 'secret_key_id')
     spp.add_argument('--name', dest = 'name', required = True)
 
 for cmd in ['bucket-add']:
     spp = sp.add_parser(cmd)
-    spp.add_argument('--access-key-id', dest = 'access_key_id', required = True)
-    spp.add_argument('--secret-key-id', dest = 'secret_key_id', required = True)
-    spp.add_argument('--name', dest = 'name', required = False)
+    spp.add_argument('--access-key-id', dest = 'access_key_id')
+    spp.add_argument('--secret-key-id', dest = 'secret_key_id')
+    spp.add_argument('--name', dest = 'name', required = True)
 
 for cmd in ['bucket-del']:
     spp = sp.add_parser(cmd)
-    spp.add_argument('--access-key-id', dest = 'access_key_id', required = True)
-    spp.add_argument('--secret-key-id', dest = 'secret_key_id', required = True)
+    spp.add_argument('--access-key-id', dest = 'access_key_id')
+    spp.add_argument('--secret-key-id', dest = 'secret_key_id')
     spp.add_argument('--name', dest = 'name', required = True)
 
 for cmd in ['object-add']:
     spp = sp.add_parser(cmd)
-    spp.add_argument('--access-key-id', dest = 'access_key_id', required = True)
-    spp.add_argument('--secret-key-id', dest = 'secret_key_id', required = True)
+    spp.add_argument('--access-key-id', dest = 'access_key_id')
+    spp.add_argument('--secret-key-id', dest = 'secret_key_id')
     spp.add_argument('--name', dest = 'name', required = True)
-    spp.add_argument('--key', dest = 'key', required = False)
-    spp.add_argument('--file', dest = 'file', required = False)
+    spp.add_argument('--key', dest = 'key')
+    spp.add_argument('--file', dest = 'file')
 
 for cmd in ['object-copy']:
     spp = sp.add_parser(cmd)
-    spp.add_argument('--access-key-id', dest = 'access_key_id', required = True)
-    spp.add_argument('--secret-key-id', dest = 'secret_key_id', required = True)
+    spp.add_argument('--access-key-id', dest = 'access_key_id')
+    spp.add_argument('--secret-key-id', dest = 'secret_key_id')
     spp.add_argument('--name', dest = 'name', required = True)
     spp.add_argument('--key', dest = 'key', required = True)
     spp.add_argument('--dst-name', dest = 'dst_name', required = True)
@@ -84,8 +86,8 @@ for cmd in ['object-copy']:
 
 for cmd in ['object-del']:
     spp = sp.add_parser(cmd)
-    spp.add_argument('--access-key-id', dest = 'access_key_id', required = True)
-    spp.add_argument('--secret-key-id', dest = 'secret_key_id', required = True)
+    spp.add_argument('--access-key-id', dest = 'access_key_id')
+    spp.add_argument('--secret-key-id', dest = 'secret_key_id')
     spp.add_argument('--name', dest = 'name', required = True)
     spp.add_argument('--key', dest = 'key', required = True)
 
@@ -100,6 +102,39 @@ args = parser.parse_args()
 if args.cmd == None:
     parser.print_help()
     sys.exit(1)
+
+conf_path = "~/.swysecrets/s3ctl.json"
+
+def saveCreds(args):
+    try:
+        with open(os.path.expanduser(conf_path), "w") as f:
+            creds = {'access-key-id': args.access_key_id,
+                     'access-key-secret': args.secret_key_id,
+                     'admin-secret': args.admin_secret}
+            f.write(json.dumps(creds))
+            f.close()
+            os.chmod(os.path.expanduser(conf_path), 0o600)
+    except:
+        return None
+
+def readCreds():
+    try:
+        with open(os.path.expanduser(conf_path), "r") as f:
+            creds = json.loads(f.read())
+            f.close()
+            return creds
+    except:
+        return None
+
+def loadCreds(args):
+    creds = readCreds()
+    if creds != None:
+        args.access_key_id = creds['access-key-id']
+        args.secret_key_id = creds['access-key-secret']
+        args.admin_secret = creds['admin-secret']
+
+if args.access_key_id == None:
+    loadCreds(args)
 
 def resp_error(cmd, resp):
     if resp != None:
@@ -159,6 +194,10 @@ if args.cmd == 'keygen':
         akey = json.loads(resp.read().decode('utf-8'))
         print("Access Key %s\nSecret Key %s" % \
               (akey['access-key-id'], akey['access-key-secret']))
+        if args.save == True:
+            args.access_key_id = akey['access-key-id']
+            args.secret_key_id =  akey['access-key-secret']
+            saveCreds(args)
     else:
         resp_error(args.cmd, resp)
 elif args.cmd == 'keydel':
