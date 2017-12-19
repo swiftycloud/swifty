@@ -110,7 +110,7 @@ def resp_error(cmd, resp):
     sys.exit(1)
 
 def request_admin(cmd, data):
-    params = urllib.parse.urlencode({'cmd': args.cmd})
+    params = urllib.parse.urlencode({'cmd': cmd})
     headers = {"X-SwyS3-Token": args.admin_secret,
                'Content-type': 'application/json'}
     try:
