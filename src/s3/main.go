@@ -184,7 +184,7 @@ func handleBucket(w http.ResponseWriter, r *http.Request) {
 
 	if bucket_name == "" {
 		if r.Method == http.MethodGet {
-			if _, ok = r.URL.Query()["UploadId"]; ok {
+			if _, ok = r.URL.Query()["uploadId"]; ok {
 				HTTPRespError(w, S3ErrNotImplemented,
 					"Listing parts is not yet implemented")
 				return
@@ -326,7 +326,7 @@ func handleObject(w http.ResponseWriter, r *http.Request) {
 			}
 			HTTPRespXML(w, resp)
 			return
-		} else if _, ok = r.URL.Query()["UploadId"]; ok {
+		} else if _, ok = r.URL.Query()["uploadId"]; ok {
 			HTTPRespError(w, S3ErrNotImplemented,
 				"Finishing upload is not yet implemented")
 		} else if _, ok = r.URL.Query()["restore"]; ok {
@@ -339,7 +339,7 @@ func handleObject(w http.ResponseWriter, r *http.Request) {
 		return
 		break
 	case http.MethodPut:
-		if _, ok = r.URL.Query()["UploadId"]; ok {
+		if _, ok = r.URL.Query()["uploadId"]; ok {
 			HTTPRespError(w, S3ErrNotImplemented,
 				"Uploading part is not yet implemented")
 			return
@@ -366,7 +366,7 @@ func handleObject(w http.ResponseWriter, r *http.Request) {
 		}
 		break
 	case http.MethodGet:
-		if _, ok = r.URL.Query()["UploadId"]; ok {
+		if _, ok = r.URL.Query()["uploadId"]; ok {
 			HTTPRespError(w, S3ErrNotImplemented,
 				"Listing parts is not yet implemented")
 			return
