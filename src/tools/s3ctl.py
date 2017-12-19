@@ -321,6 +321,23 @@ if args.cmd == 'object-part-init':
     except:
         print("ERROR: Can't initiate multipart upload")
 
+if args.cmd == 'object-part-add':
+    print("Upload part %s/%s/%s/%s" % (args.name, args.key, args.id, args.part))
+    if args.file == None:
+        body = genRandomData(64)
+    else:
+        with open(args.file, 'rb') as f:
+            body = f.read()
+            f.close()
+    try:
+        resp = s3.upload_part(Bucket = args.name,
+                              Key = args.key,
+                              PartNumber = int(args.part),
+                              UploadId = args.id)
+        print("\tETag: %s" % (resp['ETag']))
+    except:
+        print("ERROR: Can't upload part")
+
 if args.cmd == 'object-part-abort':
     print("Aborting multipart upload %s/%s/%s" % (args.name, args.key, args.id))
     try:
