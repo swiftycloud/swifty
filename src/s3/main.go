@@ -249,6 +249,7 @@ func handleObject(w http.ResponseWriter, r *http.Request) {
 	var bucket *S3Bucket
 	var body []byte
 	var err error
+	var ok bool
 
 	defer r.Body.Close()
 
@@ -302,8 +303,16 @@ func handleObject(w http.ResponseWriter, r *http.Request) {
 
 	switch r.Method {
 	case http.MethodPost:
-		// Create new object in bucket
-		w.WriteHeader(http.StatusMethodNotAllowed)
+		if _, ok = r.URL.Query()["upload"]; ok {
+			HTTPRespError(w, S3ErrNotImplemented,
+				"Multipart upload not yet implemented")
+		} else if _, ok = r.URL.Query()["restore"]; ok {
+			HTTPRespError(w, S3ErrNotImplemented,
+				"Version restore not yet implemented")
+		} else {
+			HTTPRespError(w, S3ErrNotImplemented,
+				"Form post not yet implemented")
+		}
 		return
 		break
 	case http.MethodPut:
