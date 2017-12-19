@@ -90,7 +90,12 @@ func s3UploadAbort(bucket *S3Bucket, object_name, upload_id string) error {
 	// unusable and hidden.
 	//
 
-	log.Debugf("s3UploadAbort %s", upload_id)
+	uid := UploadUID(bucket.BackendID, object_name, 0, 0)
+	if uid != upload_id {
+		err = fmt.Errorf("uploadId mismatch")
+		log.Errorf("s3: Can't abort uploading, uploadId mismatch %s/%s", uid, upload_id)
+		return err
+	}
 
 	err = dbS3Update(
 			bson.M{"uid": upload_id,
