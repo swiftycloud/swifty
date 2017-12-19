@@ -169,6 +169,11 @@ def make_s3(endpoint_url, access_key, secret_key):
     except:
         return None
 
+if args.cmd not in ['keygen', 'keydel', 'notify']:
+    s3 = make_s3(args.endpoint_url, args.access_key_id, args.secret_key_id)
+    if s3 == None:
+         resp_error(args.cmd, None)
+
 if args.cmd == 'keygen':
     resp = request_admin(args.cmd, {"namespace": args.namespace})
     if resp != None and resp.status == 200:
@@ -194,9 +199,6 @@ elif args.cmd == 'notify':
     else:
         resp_error("notify", resp)
 elif args.cmd == 'list-buckets':
-    s3 = make_s3(args.endpoint_url, args.access_key_id, args.secret_key_id)
-    if s3 == None:
-         resp_error(args.cmd, None)
     try:
         resp = s3.list_buckets()
         print("Buckets list")
@@ -210,18 +212,12 @@ elif args.cmd == 'list-buckets':
     except:
         print("ERROR: Can't list bucket")
 elif args.cmd == 'list-objects':
-    s3 = make_s3(args.endpoint_url, args.access_key_id, args.secret_key_id)
-    if s3 == None:
-         resp_error(args.cmd, None)
     resp = s3.list_objects_v2(Bucket = args.name)
     print("Objects list (bucket %s count %d)" % (args.name, resp['KeyCount']))
     if 'Contents' in resp:
         for x in resp['Contents']:
             print("\tObject: Key %s Size %d" % (x['Key'], x['Size']))
 elif args.cmd == 'bucket-add':
-    s3 = make_s3(args.endpoint_url, args.access_key_id, args.secret_key_id)
-    if s3 == None:
-         resp_error(args.cmd, None)
     if args.name == None:
         args.name = genBucketName()
     print("Creating bucket %s" % (args.name))
@@ -231,9 +227,6 @@ elif args.cmd == 'bucket-add':
     except:
         print("ERROR: Can't create bucket")
 elif args.cmd == 'bucket-del':
-    s3 = make_s3(args.endpoint_url, args.access_key_id, args.secret_key_id)
-    if s3 == None:
-         resp_error(args.cmd, None)
     print("Deleting bucket %s" % (args.name))
     try:
         resp = s3.delete_bucket(Bucket = args.name)
@@ -241,9 +234,6 @@ elif args.cmd == 'bucket-del':
     except:
         print("ERROR: Can't delete bucket")
 elif args.cmd == 'object-add':
-    s3 = make_s3(args.endpoint_url, args.access_key_id, args.secret_key_id)
-    if s3 == None:
-         resp_error(args.cmd, None)
     if args.key == None:
         args.key = genObjectName()
     if args.file == None:
@@ -259,9 +249,6 @@ elif args.cmd == 'object-add':
     except:
         print("ERROR: Can't create object")
 elif args.cmd == 'object-copy':
-    s3 = make_s3(args.endpoint_url, args.access_key_id, args.secret_key_id)
-    if s3 == None:
-         resp_error(args.cmd, None)
     print("Copying object %s/%s -> %s/%s" % \
           (args.name, args.key, args.dst_name, args.dst_key))
     try:
@@ -272,9 +259,6 @@ elif args.cmd == 'object-copy':
     except:
         print("ERROR: Can't copy object")
 elif args.cmd == 'object-del':
-    s3 = make_s3(args.endpoint_url, args.access_key_id, args.secret_key_id)
-    if s3 == None:
-         resp_error(args.cmd, None)
     print("Deleting object %s/%s" % (args.name, args.key))
     try:
         resp = s3.delete_object(Bucket = args.name, Key = args.key)
