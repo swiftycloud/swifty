@@ -33,6 +33,10 @@ parser.add_argument('--admin-secret', dest = 'admin_secret',
 parser.add_argument('--endpoint-url', dest = 'endpoint_url',
                     default = '192.168.122.197:8787',
                     help = 'S3 service address')
+parser.add_argument('--access-key-id', dest = 'access_key_id',
+                    help = 'Access key')
+parser.add_argument('--secret-key-id', dest = 'secret_key_id',
+                    help = 'Secret key')
 
 sp = parser.add_subparsers(dest = 'cmd')
 for cmd in ['keygen']:
@@ -42,43 +46,30 @@ for cmd in ['keygen']:
 
 for cmd in ['keydel']:
     spp = sp.add_parser(cmd)
-    spp.add_argument('--access-key-id', dest = 'access_key_id')
 
 for cmd in ['list-buckets']:
     spp = sp.add_parser(cmd)
-    spp.add_argument('--access-key-id', dest = 'access_key_id')
-    spp.add_argument('--secret-key-id', dest = 'secret_key_id')
 
 for cmd in ['list-objects']:
     spp = sp.add_parser(cmd)
-    spp.add_argument('--access-key-id', dest = 'access_key_id')
-    spp.add_argument('--secret-key-id', dest = 'secret_key_id')
     spp.add_argument('--name', dest = 'name', required = True)
 
 for cmd in ['bucket-add']:
     spp = sp.add_parser(cmd)
-    spp.add_argument('--access-key-id', dest = 'access_key_id')
-    spp.add_argument('--secret-key-id', dest = 'secret_key_id')
     spp.add_argument('--name', dest = 'name', required = True)
 
 for cmd in ['bucket-del']:
     spp = sp.add_parser(cmd)
-    spp.add_argument('--access-key-id', dest = 'access_key_id')
-    spp.add_argument('--secret-key-id', dest = 'secret_key_id')
     spp.add_argument('--name', dest = 'name', required = True)
 
 for cmd in ['object-add']:
     spp = sp.add_parser(cmd)
-    spp.add_argument('--access-key-id', dest = 'access_key_id')
-    spp.add_argument('--secret-key-id', dest = 'secret_key_id')
     spp.add_argument('--name', dest = 'name', required = True)
     spp.add_argument('--key', dest = 'key')
     spp.add_argument('--file', dest = 'file')
 
 for cmd in ['object-copy']:
     spp = sp.add_parser(cmd)
-    spp.add_argument('--access-key-id', dest = 'access_key_id')
-    spp.add_argument('--secret-key-id', dest = 'secret_key_id')
     spp.add_argument('--name', dest = 'name', required = True)
     spp.add_argument('--key', dest = 'key', required = True)
     spp.add_argument('--dst-name', dest = 'dst_name', required = True)
@@ -86,8 +77,6 @@ for cmd in ['object-copy']:
 
 for cmd in ['object-del']:
     spp = sp.add_parser(cmd)
-    spp.add_argument('--access-key-id', dest = 'access_key_id')
-    spp.add_argument('--secret-key-id', dest = 'secret_key_id')
     spp.add_argument('--name', dest = 'name', required = True)
     spp.add_argument('--key', dest = 'key', required = True)
 
