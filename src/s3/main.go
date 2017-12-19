@@ -339,12 +339,6 @@ func handleObject(w http.ResponseWriter, r *http.Request) {
 		return
 		break
 	case http.MethodPut:
-		if _, ok = r.URL.Query()["uploadId"]; ok {
-			HTTPRespError(w, S3ErrNotImplemented,
-				"Uploading part is not yet implemented")
-			return
-		}
-
 		body, err = ioutil.ReadAll(r.Body)
 		if err != nil {
 			log.Errorf("Can't read data: %s", err.Error())
@@ -352,14 +346,41 @@ func handleObject(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		if _, ok = r.URL.Query()["uploadId"]; ok {
+			var etag string
+			var part int
+
+			if _, ok = r.URL.Query()["partNumber"]; ok {
+				part, _ = strconv.Atoi(r.URL.Query()["partNumber"][0])
+			}
+
+			if !ok || part == 0 {
+				HTTPRespError(w, S3ErrInvalidArgument,
+						"Invalid part number")
+				return
+			}
+
+			etag, err = s3UploadPart(akey.Namespace, bucket,
+				object_name, r.URL.Query()["uploadId"][0],
+				part, body)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+			}
+			w.Header().Set("ETag", etag)
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
 		var object *S3Object
 		// Create new object
-		object, err = s3InsertObject(bucket, object_name, 0, 1, object_size, acl)
+		object, err = s3InsertObject(bucket, object_name,
+						"", 0, 1,
+						object_size, acl)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		err = s3CommitObject(akey.Namespace, bucket, object, body)
+		_, err = s3CommitObject(akey.Namespace, bucket, object, body)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return

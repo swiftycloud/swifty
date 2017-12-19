@@ -127,8 +127,9 @@ func (bucket *S3Bucket)FindObject(object_name string, part, version int) (*S3Obj
 	return &res,nil
 }
 
-func s3InsertObject(bucket *S3Bucket, object_name string, part, version int,
-		objct_size int64, acl string) (*S3Object, error) {
+func s3InsertObject(bucket *S3Bucket, object_name string,
+			UploadID bson.ObjectId, part, version int,
+			objct_size int64, acl string) (*S3Object, error) {
 	var err error
 
 	object := &S3Object {
@@ -143,6 +144,7 @@ func s3InsertObject(bucket *S3Bucket, object_name string, part, version int,
 		ObjID:		bson.NewObjectId(),
 		BucketObjID:	bucket.ObjID,
 		BackendID:	bucket.ObjectBID(object_name, part, version),
+		UploadID:	UploadID,
 		State:		S3StateNone,
 	}
 
@@ -163,7 +165,7 @@ func s3InsertObject(bucket *S3Bucket, object_name string, part, version int,
 	return object, nil
 }
 
-func s3CommitObject(namespace string, bucket *S3Bucket, object *S3Object, data []byte) error {
+func s3CommitObject(namespace string, bucket *S3Bucket, object *S3Object, data []byte) (string, error) {
 	var err error
 	var size int64
 	var etag string
@@ -214,7 +216,7 @@ func s3CommitObject(namespace string, bucket *S3Bucket, object *S3Object, data [
 	}
 
 	log.Debugf("s3: Committed object %s", object.BackendID)
-	return nil
+	return etag, nil
 
 out:
 	err1 := bucket.dbDelObj(object.Size)
@@ -223,7 +225,7 @@ out:
 				object.BackendID, err1.Error())
 	}
 	object.dbRemove()
-	return err
+	return "", err
 }
 
 func s3DeleteObjectFound(bucket *S3Bucket, objectFound *S3Object) error {

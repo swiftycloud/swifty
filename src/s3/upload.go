@@ -47,7 +47,7 @@ func UploadUID(salt, key string, part, version int) string {
 func VerifyUploadUID(bucket *S3Bucket, object_name, upload_id string) error {
 	uid := UploadUID(bucket.BackendID, object_name, 0, 0)
 	if uid != upload_id {
-		err = fmt.Errorf("uploadId mismatch")
+		err := fmt.Errorf("uploadId mismatch")
 		log.Errorf("s3: uploadId mismatch %s/%s", uid, upload_id)
 		return err
 	}
@@ -78,6 +78,49 @@ func s3UploadInit(bucket *S3Bucket, object_name, acl string) (*S3Upload, error) 
 
 	log.Debugf("s3: Inserted upload %s", upload.UploadID)
 	return &upload, err
+}
+
+func s3UploadPart(namespace string, bucket *S3Bucket, object_name,
+			upload_id string, part int, data []byte) (string, error) {
+	var upload S3Upload
+	var object *S3Object
+	var etag string
+	var size int64
+	var err error
+
+	err = VerifyUploadUID(bucket, object_name, upload_id)
+	if err != nil {
+		return "", err
+	}
+
+	err = dbS3FindOne(bson.M{"uid": upload_id,
+				"state": S3StateActive},
+				&upload)
+	if err != nil {
+		return "", err
+	}
+
+	size = int64(len(data))
+
+	object, err = s3InsertObject(bucket, object_name,
+			upload.ObjID, part, 0, size, "")
+	if err != nil {
+		log.Errorf("s3: Can't insert object %s part %d: %s",
+				object_name, part, err.Error())
+		return "", err
+	}
+
+	log.Debugf("s3: Inserted object %s", object.BackendID)
+
+	etag, err = s3CommitObject(namespace, bucket, object, data)
+	if err != nil {
+		log.Errorf("s3: Can't commit object %s part %d: %s",
+				object_name, part, err.Error())
+		return "", err
+	}
+
+	log.Debugf("s3: Committed object %s part %d", object.BackendID, part)
+	return etag, nil
 }
 
 func s3UploadFini(bucket *S3Bucket, upload_id string) {
