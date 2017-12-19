@@ -21,8 +21,12 @@ func memdGet(cookie string) *FnMemData {
 }
 
 func memdGetCond(cookie string) *FnMemData {
-	ret, _ := fdmd.Load(cookie)
-	return ret.(*FnMemData)
+	ret, ok := fdmd.Load(cookie)
+	if ok {
+		return ret.(*FnMemData)
+	} else {
+		return nil
+	}
 }
 
 func memdGetOrInit(cookie string, fn *FunctionDesc) *FnMemData {
