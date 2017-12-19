@@ -36,13 +36,20 @@ func talkToLink(link *BalancerLink, fmd *FnMemData, cookie, event string, args m
 	resp, err = swyhttp.MarshalAndPost(
 			&swyhttp.RestReq{
 				Address: "http://" + link.VIP() + "/v1/run",
-				Timeout: 120,
+				Timeout: uint(conf.Runtime.Timeout.Max),
 			},
 			&swyapi.SwdFunctionRun{
 				PodToken:	cookie,
 				Args:		args,
 			})
 	if err != nil {
+		if resp.StatusCode == 524 { // FIXME -- http native TMO handling
+			log.Debugf("TMO %s", cookie)
+			wd_result.Code = 524
+			wd_result.Return = "Function timed out"
+			return &wd_result, nil
+		}
+
 		goto out
 	}
 

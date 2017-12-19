@@ -28,12 +28,14 @@ def list_fn():
 	fns = swyrun2([ 'ls' ])
 	return [ i.split()[0].strip() for i in fns[1:] ]
 
-def add_fn(name, lang, mw = [], evt = "url"):
+def add_fn(name, lang, mw = [], evt = "url", tmo = None):
 	cmd = [ "add", name, "-lang", lang,
 		"-src", "test/functions/" + lang + "/" + name + lext[lang],
 		"-event", evt ]
 	if mw:
 		cmd += [ "-mw", ",".join(mw) ]
+	if tmo:
+		cmd += [ "-tmo", "%d" % tmo ]
 	swyrun(cmd)
 
 	return _wait_fn(name)
@@ -70,8 +72,10 @@ def run_fn(inf, args):
 	conn = http.client.HTTPConnection(url[2])
 	conn.request('GET', '/' + url[3] + '?' + '&'.join([x[0]+'='+x[1] for x in args.items()]))
 	resp = conn.getresponse()
+	if resp.status != 200:
+		return "ERROR:%d" % resp.status
+
 	rv = resp.read()
-	print("Returned: [%s]" % rv)
 	return json.loads(rv)
 
 def del_fn(inf):
@@ -216,6 +220,22 @@ def s3notify(lang):
 	del_mw(s3name)
 	return ok
 
+def timeout(lang):
+	ok = False
+	inf = add_fn("timeout", lang, tmo = 2000)
+	ret = run_fn(inf, { 'tmo': '1000' })
+	print(ret)
+	if ret == 'slept:1000':
+		ret = run_fn(inf, { 'tmo': '3000' })
+		print(ret)
+		if ret == 'ERROR:524': # Timeout
+			ret = run_fn(inf, { 'tmo': '1500' })
+			print(ret)
+			if ret == 'slept:1500':
+				ok = True
+	del_fn(inf)
+	return ok
+
 def checkempty(lang):
 	fns = list_fn()
 	print(fns)
@@ -227,5 +247,6 @@ def checkempty(lang):
 #run_test(pgsql, ["python"])
 #run_test(mongo, ["python"])
 #run_test(s3, ["python"])
-run_test(s3notify, ["python"])
+#run_test(s3notify, ["python"])
+run_test(timeout, ["python"])
 run_test(checkempty, [""])

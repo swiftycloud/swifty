@@ -561,6 +561,12 @@ func handleFunctionCall(w http.ResponseWriter, r *http.Request) {
 		goto out
 	}
 
+	if res.Code != 0 {
+		code = res.Code
+		err = errors.New(res.Return)
+		goto out
+	}
+
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(res.Return))

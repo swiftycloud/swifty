@@ -13,7 +13,7 @@ import (
 type RestReq struct {
 	Method		string
 	Address		string
-	Timeout		time.Duration
+	Timeout		uint
 	Headers		map[string]string
 	Success		int
 }
@@ -69,7 +69,7 @@ func MarshalAndPost(req *RestReq, data interface{}) (*http.Response, error) {
 	}
 
 	var c = &http.Client{
-		Timeout: time.Second * req.Timeout,
+		Timeout: time.Duration(req.Timeout) * time.Second,
 	}
 
 	var req_body io.Reader
