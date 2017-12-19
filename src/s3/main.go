@@ -312,7 +312,7 @@ func handleObject(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodPost:
 		if _, ok = r.URL.Query()["uploads"]; ok {
-			upload, err = s3UploadInit(bucket, object_name)
+			upload, err = s3UploadInit(bucket, object_name, acl)
 			if err != nil {
 				HTTPRespError(w, S3ErrInternalError,
 					"Failed to initiate multipart upload")

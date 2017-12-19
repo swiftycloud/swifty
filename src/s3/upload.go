@@ -11,9 +11,10 @@ import (
 type S3Upload struct {
 	ObjID				bson.ObjectId	`bson:"_id,omitempty"`
 	BucketObjID			bson.ObjectId	`bson:"bucket-id,omitempty"`
-	UploadID			string		`bson:"uid,omitempty"`
-	Key				string		`bson:"key"`
-	State				uint32		`bson:"state"`
+	UploadID			string		`json:"uid" bson:"uid"`
+	State				uint32		`json:"state" bson:"state"`
+
+	S3ObjectPorps					`json:",inline" bson:",inline"`
 }
 
 // FIXME What to do if one start uploadin parts and
@@ -30,10 +31,16 @@ func UploadUID(salt, key string, part, version int) string {
 	return hex.EncodeToString(h.Sum(nil))
 }
 
-func s3UploadInit(bucket *S3Bucket, object_name string) (*S3Upload, error) {
+func s3UploadInit(bucket *S3Bucket, object_name, acl string) (*S3Upload, error) {
 	var err error
 
 	upload := S3Upload{
+		S3ObjectPorps: S3ObjectPorps {
+			Name:		object_name,
+			Acl:		acl,
+			CreationTime:	time.Now().Format(time.RFC3339),
+		},
+
 		BucketObjID:	bucket.ObjID,
 		UploadID:	UploadUID(bucket.BackendID, object_name, 0, 0),
 		State:		S3StateActive,

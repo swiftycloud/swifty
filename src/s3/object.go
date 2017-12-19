@@ -38,20 +38,10 @@ type S3ObjectData struct {
 	Data				[]byte		`bson:"data,omitempty"`
 }
 
-type S3Object struct {
-	ObjID				bson.ObjectId	`bson:"_id,omitempty"`
-	BucketObjID			bson.ObjectId	`bson:"bucket-id,omitempty"`
-	BackendID			string		`json:"bid" bson:"bid"`
-	UploadID			bson.ObjectId	`json:"upload-id,omitempty" bson:"upload-id,omitempty"`
+type S3ObjectPorps struct {
 	CreationTime			string		`json:"creation-time,omitempty" bson:"creation-time,omitempty"`
-	State				uint32		`json:"state" bson:"state"`
+	Acl				string		`json:"acl,omitempty" bson:"acl,omitempty"`
 	Name				string		`json:"name" bson:"name"`
-	Acl				string		`json:"acl" bson:"acl"`
-	PartNo				int32		`json:"part,omitempty" bson:"part,omitempty"`
-	Version				int32		`json:"version" bson:"version"`
-	Part				int32		`json:"part" bson:"part"`
-	Size				int64		`json:"size" bson:"size"`
-	ETag				string		`json:"etag" bson:"etag"`
 
 	// Todo
 	Meta				[]S3Tag		`json:"meta,omitempty" bson:"meta,omitempty"`
@@ -61,6 +51,20 @@ type S3Object struct {
 	// Not supported props
 	// torrent
 	// objects archiving
+}
+
+type S3Object struct {
+	ObjID				bson.ObjectId	`bson:"_id,omitempty"`
+	BucketObjID			bson.ObjectId	`bson:"bucket-id,omitempty"`
+	BackendID			string		`json:"bid" bson:"bid"`
+	UploadID			bson.ObjectId	`json:"upload-id,omitempty" bson:"upload-id,omitempty"`
+	State				uint32		`json:"state" bson:"state"`
+	Version				int32		`json:"version" bson:"version"`
+	Part				int32		`json:"part" bson:"part"`
+	Size				int64		`json:"size" bson:"size"`
+	ETag				string		`json:"etag" bson:"etag"`
+
+	S3ObjectPorps					`json:",inline" bson:",inline"`
 }
 
 func (objd *S3ObjectData)dbRemove() (error) {
@@ -128,14 +132,17 @@ func s3InsertObject(bucket *S3Bucket, object_name string, part, version int,
 	var err error
 
 	object := &S3Object {
-		Name:		object_name,
+		S3ObjectPorps: S3ObjectPorps {
+			Name:		object_name,
+			Acl:		acl,
+			CreationTime:	time.Now().Format(time.RFC3339),
+		},
+
 		Version:	int32(version),
 		Size:		objct_size,
-		Acl:		acl,
 		ObjID:		bson.NewObjectId(),
 		BucketObjID:	bucket.ObjID,
 		BackendID:	bucket.ObjectBID(object_name, part, version),
-		CreationTime:	time.Now().Format(time.RFC3339),
 		State:		S3StateNone,
 	}
 
