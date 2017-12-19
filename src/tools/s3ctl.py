@@ -204,8 +204,9 @@ elif args.cmd == 'list-buckets':
               (resp['Owner']['DisplayName'], resp['Owner']['ID']))
         if 'Buckets' in resp:
             for x in resp['Buckets']:
-                print("\tBucket: Name %s CreationDate %s" % \
-                      (x['Name'], x['CreationDate']))
+                if 'Name' in x:
+                    print("\tBucket: Name %s CreationDate %s" % \
+                          (x['Name'], x['CreationDate']))
     except:
         print("ERROR: Can't list bucket")
 elif args.cmd == 'list-objects':
