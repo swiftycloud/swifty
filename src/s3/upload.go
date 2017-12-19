@@ -44,6 +44,16 @@ func UploadUID(salt, key string, part, version int) string {
 	return hex.EncodeToString(h.Sum(nil))
 }
 
+func VerifyUploadUID(bucket *S3Bucket, object_name, upload_id string) error {
+	uid := UploadUID(bucket.BackendID, object_name, 0, 0)
+	if uid != upload_id {
+		err = fmt.Errorf("uploadId mismatch")
+		log.Errorf("s3: uploadId mismatch %s/%s", uid, upload_id)
+		return err
+	}
+	return nil
+}
+
 func s3UploadInit(bucket *S3Bucket, object_name, acl string) (*S3Upload, error) {
 	var err error
 
@@ -90,10 +100,8 @@ func s3UploadAbort(bucket *S3Bucket, object_name, upload_id string) error {
 	// unusable and hidden.
 	//
 
-	uid := UploadUID(bucket.BackendID, object_name, 0, 0)
-	if uid != upload_id {
-		err = fmt.Errorf("uploadId mismatch")
-		log.Errorf("s3: Can't abort uploading, uploadId mismatch %s/%s", uid, upload_id)
+	err = VerifyUploadUID(bucket, object_name, upload_id)
+	if err != nil {
 		return err
 	}
 
