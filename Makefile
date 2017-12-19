@@ -158,6 +158,8 @@ help:
 	@echo '      swifty/swift    - Build swifty/swift docker image'
 	@echo '      swifty/nodejs   - Build swifty/nodejs docker image'
 	@echo '      rsclean         - Cleanup resources'
+	@echo '      clean-db-swifty - Cleanup swifty mongo collections'
+	@echo '      clean-db-s3     - Cleanup s3 mongo collections'
 	@echo '      mqclean         - Cleanup rabbitmq'
 	@echo '      sqlclean        - Cleanup mariadb'
 .PHONY: help
