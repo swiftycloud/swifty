@@ -169,7 +169,7 @@ func handleBucket(w http.ResponseWriter, r *http.Request) {
 	case http.MethodHead:
 		break
 	default:
-		w.WriteHeader(http.StatusMethodNotAllowed)
+		HTTPRespError(w, S3ErrMethodNotAllowed)
 		return
 		break
 	}
@@ -270,7 +270,7 @@ func handleObject(w http.ResponseWriter, r *http.Request) {
 	case http.MethodHead:
 		break
 	default:
-		w.WriteHeader(http.StatusMethodNotAllowed)
+		HTTPRespError(w, S3ErrMethodNotAllowed)
 		return
 		break
 	}
