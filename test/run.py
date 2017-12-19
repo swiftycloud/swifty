@@ -65,9 +65,12 @@ def run_fn(inf, args):
 	conn = http.client.HTTPConnection(url[2])
 	conn.request('GET', '/' + url[3] + '?' + '&'.join([x[0]+'='+x[1] for x in args.items()]))
 	resp = conn.getresponse()
-	return json.loads(resp.read())
+	rv = resp.read()
+	print("Returned: [%s]" % rv)
+	return json.loads(rv)
 
 def del_fn(name):
+	swyrun([ "logs", name ])
 	swyrun([ "del", name ])
 
 def run_test(fname, langs):
@@ -190,8 +193,8 @@ def checkempty(lang):
 
 
 #run_test(helloworld, ["python", "golang"])
-run_test(update, ["python"])
-#run_test(pgsql, ["python"])
+#run_test(update, ["python"])
+run_test(pgsql, ["python"])
 #run_test(mongo, ["python"])
 #run_test(s3, ["python"])
 run_test(checkempty, [""])
