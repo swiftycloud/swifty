@@ -186,19 +186,22 @@ if args.cmd == 'keygen':
             saveCreds(args)
     else:
         resp_error(args.cmd, resp)
-elif args.cmd == 'keydel':
+
+if args.cmd == 'keydel':
     resp = request_admin(args.cmd, {"access-key-id": args.access_key_id})
     if resp != None and resp.status == 200:
         print("Access Key %s deleted" % (args.access_key_id))
     else:
         resp_error(args.cmd, resp)
-elif args.cmd == 'notify':
+
+if args.cmd == 'notify':
     resp = request_notify({'namespace': args.namespace, 'bucket': args.bucket, 'ops': 'put', 'queue': args.queue})
     if resp != None and resp.status == 202:
         print("Notification set up")
     else:
         resp_error("notify", resp)
-elif args.cmd == 'list-buckets':
+
+if args.cmd == 'list-buckets':
     try:
         resp = s3.list_buckets()
         print("Buckets list")
@@ -211,13 +214,15 @@ elif args.cmd == 'list-buckets':
                           (x['Name'], x['CreationDate']))
     except:
         print("ERROR: Can't list bucket")
-elif args.cmd == 'list-objects':
+
+if args.cmd == 'list-objects':
     resp = s3.list_objects_v2(Bucket = args.name)
     print("Objects list (bucket %s count %d)" % (args.name, resp['KeyCount']))
     if 'Contents' in resp:
         for x in resp['Contents']:
             print("\tObject: Key %s Size %d" % (x['Key'], x['Size']))
-elif args.cmd == 'bucket-add':
+
+if args.cmd == 'bucket-add':
     if args.name == None:
         args.name = genBucketName()
     print("Creating bucket %s" % (args.name))
@@ -226,14 +231,16 @@ elif args.cmd == 'bucket-add':
         print("\tdone")
     except:
         print("ERROR: Can't create bucket")
-elif args.cmd == 'bucket-del':
+
+if args.cmd == 'bucket-del':
     print("Deleting bucket %s" % (args.name))
     try:
         resp = s3.delete_bucket(Bucket = args.name)
         print("\tDone")
     except:
         print("ERROR: Can't delete bucket")
-elif args.cmd == 'object-add':
+
+if args.cmd == 'object-add':
     if args.key == None:
         args.key = genObjectName()
     if args.file == None:
@@ -248,7 +255,8 @@ elif args.cmd == 'object-add':
         print("\tDone")
     except:
         print("ERROR: Can't create object")
-elif args.cmd == 'object-copy':
+
+if args.cmd == 'object-copy':
     print("Copying object %s/%s -> %s/%s" % \
           (args.name, args.key, args.dst_name, args.dst_key))
     try:
@@ -258,7 +266,8 @@ elif args.cmd == 'object-copy':
         print("\tDone")
     except:
         print("ERROR: Can't copy object")
-elif args.cmd == 'object-del':
+
+if args.cmd == 'object-del':
     print("Deleting object %s/%s" % (args.name, args.key))
     try:
         resp = s3.delete_object(Bucket = args.name, Key = args.key)
