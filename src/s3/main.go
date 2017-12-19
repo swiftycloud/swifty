@@ -383,17 +383,19 @@ func handleObject(w http.ResponseWriter, r *http.Request) {
 		return
 		break
 	case http.MethodDelete:
-		if _, ok = r.URL.Query()["UploadId"]; ok {
-			HTTPRespError(w, S3ErrNotImplemented,
-				"Deleting uploads is not yet implemented")
-			return
-		}
-
-		// Delete a bucket
-		err = s3DeleteObject(bucket, object_name, 0, 1)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
+		if _, ok = r.URL.Query()["uploadId"]; ok {
+			err = s3UploadAbort(bucket, object_name, r.URL.Query()["uploadId"][0])
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+		} else {
+			// Delete a bucket
+			err = s3DeleteObject(bucket, object_name, 0, 1)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
 		}
 		break
 	case http.MethodHead:

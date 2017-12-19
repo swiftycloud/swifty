@@ -1,10 +1,12 @@
 package main
 
 import (
+	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 
 	"crypto/sha256"
 	"encoding/hex"
+	"time"
 	"fmt"
 )
 
@@ -15,6 +17,17 @@ type S3Upload struct {
 	State				uint32		`json:"state" bson:"state"`
 
 	S3ObjectPorps					`json:",inline" bson:",inline"`
+}
+
+func (upload *S3Upload)dbSetState(state uint32) (error) {
+	var res S3Upload
+
+	return dbS3Update(
+			bson.M{"_id": upload.ObjID,
+				"state": bson.M{"$in": s3StateTransition[state]}},
+			bson.M{"state": state},
+			&res,
+		)
 }
 
 // FIXME What to do if one start uploadin parts and
@@ -63,6 +76,63 @@ func s3UploadFini(bucket *S3Bucket, upload_id string) {
 func s3UploadList(bucket *S3Bucket) {
 }
 
-func s3UploadAbort(bucket *S3Bucket, upload_id string) error {
+func s3UploadAbort(bucket *S3Bucket, object_name, upload_id string) error {
+	var objects []S3Object
+	var upload S3Upload
+	var err error
+
+	// If upload is finished one have to delete parts like
+	// they are one object via traditional delete object
+	// interface.
+	//
+	// First disable the upload head, if something go wrong further
+	// and we won't be able to remove parts then this makes them
+	// unusable and hidden.
+	//
+
+	log.Debugf("s3UploadAbort %s", upload_id)
+
+	err = dbS3Update(
+			bson.M{"uid": upload_id,
+				"state": bson.M{"$in": s3StateTransition[S3StateAbort]}},
+			bson.M{"$set": bson.M{"state": S3StateAbort}},
+			&upload)
+	if err != nil {
+		if err == mgo.ErrNotFound {
+			return nil
+		}
+		log.Errorf("s3: Can't disable upload %s/%s: %s",
+				upload_id, object_name, err.Error())
+		return err
+	}
+
+	err = dbS3FindAll(bson.M{"upload-id": upload_id}, &objects)
+	if err != nil {
+		if err != mgo.ErrNotFound {
+			log.Errorf("s3: Can't find object parts with uid %s/%s: %s",
+					upload_id, object_name, err.Error())
+			return err
+		}
+	} else {
+		for _, obj := range objects {
+			err = s3DeleteObjectFound(bucket, &obj)
+			if err != nil {
+				if err != mgo.ErrNotFound {
+					log.Errorf("s3: Can't delete object part %s/%s: %s",
+							upload_id, object_name, err.Error())
+					return err
+				}
+			}
+		}
+	}
+
+	err = dbS3Remove(upload, bson.M{"_id": upload.ObjID})
+	if err != nil {
+		log.Errorf("s3: Can't delete upload %s/%s: %s",
+				upload_id, object_name, err.Error())
+		return err
+	}
+
+	log.Debugf("s3: Deleted upload %s/%s", upload_id, object_name)
 	return nil
 }

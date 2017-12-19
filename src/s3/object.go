@@ -226,26 +226,16 @@ out:
 	return err
 }
 
-func s3DeleteObject(bucket *S3Bucket, object_name string, part, version int) error {
+func s3DeleteObjectFound(bucket *S3Bucket, objectFound *S3Object) error {
 	var objdFound *S3ObjectData
-	var objectFound *S3Object
 	var err error
-
-	objectFound, err = bucket.FindObject(object_name, part, version)
-	if err != nil {
-		if err == mgo.ErrNotFound {
-			return nil
-		}
-		log.Errorf("s3: Can't find object %s: %s", object_name, err.Error())
-		return err
-	}
 
 	err = objectFound.dbSetState(S3StateInactive)
 	if err != nil {
 		if err == mgo.ErrNotFound {
 			return nil
 		}
-		log.Errorf("s3: Can't disable object %s: %s", object_name, err.Error())
+		log.Errorf("s3: Can't disable object %s: %s", objectFound.Name, err.Error())
 		return err
 	}
 
@@ -288,6 +278,22 @@ func s3DeleteObject(bucket *S3Bucket, object_name string, part, version int) err
 
 	log.Debugf("s3: Deleted object %s", objectFound.BackendID)
 	return nil
+}
+
+func s3DeleteObject(bucket *S3Bucket, object_name string, part, version int) error {
+	var objectFound *S3Object
+	var err error
+
+	objectFound, err = bucket.FindObject(object_name, part, version)
+	if err != nil {
+		if err == mgo.ErrNotFound {
+			return nil
+		}
+		log.Errorf("s3: Can't find object %s: %s", object_name, err.Error())
+		return err
+	}
+
+	return s3DeleteObjectFound(bucket, objectFound)
 }
 
 func s3ReadObject(bucket *S3Bucket, object_name string, part, version int) ([]byte, error) {

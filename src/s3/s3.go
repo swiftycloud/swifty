@@ -20,6 +20,7 @@ const (
 	S3StateNone			= 0
 	S3StateActive			= 1
 	S3StateInactive			= 2
+	S3StateAbort			= 3
 )
 
 const (
@@ -32,6 +33,7 @@ var s3StateTransition = map[uint32][]uint32 {
 	S3StateNone:		[]uint32{ S3StateNone, },
 	S3StateActive:		[]uint32{ S3StateNone, },
 	S3StateInactive:	[]uint32{ S3StateActive, },
+	S3StateAbort:		[]uint32{ S3StateActive, S3StateInactive, },
 }
 
 func s3VerifyAdmin(r *http.Request) error {

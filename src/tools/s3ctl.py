@@ -320,3 +320,13 @@ if args.cmd == 'object-part-init':
         print("\tUploadID: %s" % (resp['UploadId']))
     except:
         print("ERROR: Can't initiate multipart upload")
+
+if args.cmd == 'object-part-abort':
+    print("Aborting multipart upload %s/%s/%s" % (args.name, args.key, args.id))
+    try:
+        resp = s3.abort_multipart_upload(Bucket = args.name,
+                                         Key = args.key,
+                                         UploadId = args.id)
+        print("\tDone")
+    except:
+        print("ERROR: Can't initiate multipart upload")
