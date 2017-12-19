@@ -77,8 +77,8 @@ var mwareHandlers = map[string]*MwareOps {
 	"s3":		&MwareS3,
 }
 
-func forgetMware(conf *YAMLConf, handler *MwareOps, desc *MwareDesc) error {
-	err := handler.Fini(&conf.Mware, desc)
+func forgetMware(conf *YAMLConfMw, handler *MwareOps, desc *MwareDesc) error {
+	err := handler.Fini(conf, desc)
 	if err != nil {
 		log.Errorf("Failed cleanup for mware %s: %s", desc.SwoId.Str(), err.Error())
 		return err
@@ -99,7 +99,7 @@ func forgetMware(conf *YAMLConf, handler *MwareOps, desc *MwareDesc) error {
 	return nil
 }
 
-func mwareRemove(conf *YAMLConf, id *SwoId) error {
+func mwareRemove(conf *YAMLConfMw, id *SwoId) error {
 	item, err := dbMwareGetReady(id)
 	if err != nil {
 		log.Errorf("Can't find mware %s", id.Str())
@@ -134,7 +134,7 @@ func getMwareDesc(id *SwoId, mwType string) *MwareDesc {
 	return ret
 }
 
-func mwareSetup(conf *YAMLConf, id *SwoId, mwType string) error {
+func mwareSetup(conf *YAMLConfMw, id *SwoId, mwType string) error {
 	var handler *MwareOps
 	var ok bool
 
@@ -157,13 +157,13 @@ func mwareSetup(conf *YAMLConf, id *SwoId, mwType string) error {
 		goto outdb
 	}
 
-	err = handler.Init(&conf.Mware, mwd)
+	err = handler.Init(conf, mwd)
 	if err != nil {
 		err = fmt.Errorf("mware init error: %s", err.Error())
 		goto outdb
 	}
 
-	err = swk8sMwSecretAdd(mwd.Cookie, handler.GetEnv(&conf.Mware, mwd))
+	err = swk8sMwSecretAdd(mwd.Cookie, handler.GetEnv(conf, mwd))
 	if err != nil {
 		err = fmt.Errorf("mware secret add error: %s", err.Error())
 		goto outh
@@ -185,7 +185,7 @@ func mwareSetup(conf *YAMLConf, id *SwoId, mwType string) error {
 outs:
 	swk8sMwSecretRemove(mwd.Cookie)
 outh:
-	handler.Fini(&conf.Mware, mwd)
+	handler.Fini(conf, mwd)
 outdb:
 	dbMwareRemove(mwd)
 out:

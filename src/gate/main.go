@@ -212,7 +212,7 @@ func handleProjectDel(w http.ResponseWriter, r *http.Request, tennant string) er
 
 	for _, mw := range mws {
 		id.Name = mw.SwoId.Name
-		err = mwareRemove(&conf, id)
+		err = mwareRemove(&conf.Mware, id)
 		if err != nil {
 			log.Error("Mware removal failed: %s", err.Error())
 			ferr = err
@@ -656,7 +656,7 @@ func handleMwareAdd(w http.ResponseWriter, r *http.Request, tennant string) erro
 	id = makeSwoId(tennant, params.Project, params.ID)
 	log.Debugf("mware/add: %s params %v", tennant, params)
 
-	err = mwareSetup(&conf, id, params.Type)
+	err = mwareSetup(&conf.Mware, id, params.Type)
 	if err != nil {
 		err = fmt.Errorf("Unable to setup middleware: %s", err.Error())
 		goto out
@@ -725,7 +725,7 @@ func handleMwareRemove(w http.ResponseWriter, r *http.Request, tennant string) e
 	id = makeSwoId(tennant, params.Project, params.ID)
 	log.Debugf("mware/remove: %s params %v", tennant, params)
 
-	err = mwareRemove(&conf, id)
+	err = mwareRemove(&conf.Mware, id)
 	if err != nil {
 		err = fmt.Errorf("Unable to setup middleware: %s", err.Error())
 		goto out
