@@ -42,10 +42,12 @@ type S3Object struct {
 	ObjID				bson.ObjectId	`bson:"_id,omitempty"`
 	BucketObjID			bson.ObjectId	`bson:"bucket-id,omitempty"`
 	BackendID			string		`json:"bid" bson:"bid"`
+	UploadID			bson.ObjectId	`json:"upload-id,omitempty" bson:"upload-id,omitempty"`
 	CreationTime			string		`json:"creation-time,omitempty" bson:"creation-time,omitempty"`
 	State				uint32		`json:"state" bson:"state"`
 	Name				string		`json:"name" bson:"name"`
 	Acl				string		`json:"acl" bson:"acl"`
+	PartNo				int32		`json:"part,omitempty" bson:"part,omitempty"`
 	Version				int32		`json:"version" bson:"version"`
 	Part				int32		`json:"part" bson:"part"`
 	Size				int64		`json:"size" bson:"size"`

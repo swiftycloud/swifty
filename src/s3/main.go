@@ -254,6 +254,7 @@ func handleObject(w http.ResponseWriter, r *http.Request) {
 	var object_size int64
 	var akey *S3AccessKey
 	var bucket *S3Bucket
+	var upload *S3Upload
 	var body []byte
 	var err error
 	var ok bool
@@ -310,9 +311,21 @@ func handleObject(w http.ResponseWriter, r *http.Request) {
 
 	switch r.Method {
 	case http.MethodPost:
-		if _, ok = r.URL.Query()["upload"]; ok {
-			HTTPRespError(w, S3ErrNotImplemented,
-				"Initiating upload is not yet implemented")
+		if _, ok = r.URL.Query()["uploads"]; ok {
+			upload, err = s3UploadInit(bucket, object_name)
+			if err != nil {
+				HTTPRespError(w, S3ErrInternalError,
+					"Failed to initiate multipart upload")
+				return
+			}
+
+			resp := InitiateMultipartUploadResult{
+				Bucket:		bucket.Name,
+				Key:		object_name,
+				UploadId:	upload.UploadID,
+			}
+			HTTPRespXML(w, resp)
+			return
 		} else if _, ok = r.URL.Query()["UploadId"]; ok {
 			HTTPRespError(w, S3ErrNotImplemented,
 				"Finishing upload is not yet implemented")

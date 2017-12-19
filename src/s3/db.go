@@ -15,6 +15,7 @@ var dbName string
 const (
 	DBColS3Buckets				= "S3Buckets"
 	DBColS3Objects				= "S3Objects"
+	DBColS3Uploads				= "S3Uploads"
 	DBColS3ObjectData			= "S3ObjectData"
 	DBColS3AccessKeys			= "S3AccessKeys"
 )
@@ -51,6 +52,8 @@ func dbConnect(conf *YAMLConf) error {
 	dbSession.DB(dbName).C(DBColS3Buckets).EnsureIndex(index)
 	index.Key = []string{"bid"}
 	dbSession.DB(dbName).C(DBColS3Objects).EnsureIndex(index)
+	index.Key = []string{"uid"}
+	dbSession.DB(dbName).C(DBColS3Uploads).EnsureIndex(index)
 
 	index.Key = []string{"access-key-id"}
 	dbSession.DB(dbName).C(DBColS3AccessKeys).EnsureIndex(index)
@@ -64,6 +67,10 @@ func dbConnect(conf *YAMLConf) error {
 	dbColMap[reflect.TypeOf(&S3Object{})] = DBColS3Objects
 	dbColMap[reflect.TypeOf([]S3Object{})] = DBColS3Objects
 	dbColMap[reflect.TypeOf(&[]S3Object{})] = DBColS3Objects
+	dbColMap[reflect.TypeOf(S3Upload{})] = DBColS3Uploads
+	dbColMap[reflect.TypeOf(&S3Upload{})] = DBColS3Uploads
+	dbColMap[reflect.TypeOf([]S3Upload{})] = DBColS3Uploads
+	dbColMap[reflect.TypeOf(&[]S3Upload{})] = DBColS3Uploads
 	dbColMap[reflect.TypeOf(S3ObjectData{})] = DBColS3ObjectData
 	dbColMap[reflect.TypeOf(&S3ObjectData{})] = DBColS3ObjectData
 	dbColMap[reflect.TypeOf([]S3ObjectData{})] = DBColS3ObjectData
