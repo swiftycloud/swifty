@@ -186,7 +186,7 @@ func handleBucket(w http.ResponseWriter, r *http.Request) {
 			handleListBuckets(w, akey)
 			return
 		} else {
-			http.Error(w, "Empty bucket name provided", http.StatusBadRequest)
+			HTTPRespError(w, S3ErrInvalidBucketName)
 			return
 		}
 	}
@@ -276,10 +276,10 @@ func handleObject(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if bucket_name == "" {
-		http.Error(w, "Empty bucket name provided", http.StatusBadRequest)
+		HTTPRespError(w, S3ErrInvalidBucketName)
 		return
 	} else if object_name == "" {
-		http.Error(w, "Empty object name provided", http.StatusBadRequest)
+		HTTPRespError(w, S3ErrInvalidObjectName)
 		return
 	}
 

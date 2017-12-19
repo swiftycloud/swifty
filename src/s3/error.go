@@ -91,6 +91,9 @@ const (
 	S3ErrUnexpectedContent				int = 76
 	S3ErrUnresolvableGrantByEmailAddress		int = 77
 	S3ErrUserKeyMustBeSpecified			int = 78
+
+	// Own error codes
+	S3ErrInvalidObjectName				int = 79
 )
 
 var s3RespErrorMapData = map[int]s3RespErrorMap {
@@ -492,6 +495,11 @@ var s3RespErrorMapData = map[int]s3RespErrorMap {
 	S3ErrUserKeyMustBeSpecified: s3RespErrorMap {
 		HttpStatus:	http.StatusBadRequest,
 		ErrorCode:	"UserKeyMustBeSpecified",
+	},
+	// The specified object is not valid
+	S3ErrInvalidObjectName: s3RespErrorMap {
+		HttpStatus:	http.StatusBadRequest,
+		ErrorCode:	"InvalidObjectName",
 	},
 }
 
