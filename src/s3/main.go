@@ -152,6 +152,7 @@ func handleBucket(w http.ResponseWriter, r *http.Request) {
 	var acl string
 	var akey *S3AccessKey
 	var err error
+	var ok bool
 
 	log.Debug(formatRequest(fmt.Sprintf("handleBucket: bucket %v",
 						bucket_name), r))
@@ -183,6 +184,11 @@ func handleBucket(w http.ResponseWriter, r *http.Request) {
 
 	if bucket_name == "" {
 		if r.Method == http.MethodGet {
+			if _, ok = r.URL.Query()["UploadId"]; ok {
+				HTTPRespError(w, S3ErrNotImplemented,
+					"Listing parts is not yet implemented")
+				return
+			}
 			handleListBuckets(w, akey)
 			return
 		} else {
@@ -239,6 +245,7 @@ func handleBucket(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusOK)
 }
+
 
 func handleObject(w http.ResponseWriter, r *http.Request) {
 	var bucket_name string = mux.Vars(r)["BucketName"]
@@ -305,7 +312,10 @@ func handleObject(w http.ResponseWriter, r *http.Request) {
 	case http.MethodPost:
 		if _, ok = r.URL.Query()["upload"]; ok {
 			HTTPRespError(w, S3ErrNotImplemented,
-				"Multipart upload not yet implemented")
+				"Initiating upload is not yet implemented")
+		} else if _, ok = r.URL.Query()["UploadId"]; ok {
+			HTTPRespError(w, S3ErrNotImplemented,
+				"Finishing upload is not yet implemented")
 		} else if _, ok = r.URL.Query()["restore"]; ok {
 			HTTPRespError(w, S3ErrNotImplemented,
 				"Version restore not yet implemented")
@@ -316,6 +326,12 @@ func handleObject(w http.ResponseWriter, r *http.Request) {
 		return
 		break
 	case http.MethodPut:
+		if _, ok = r.URL.Query()["UploadId"]; ok {
+			HTTPRespError(w, S3ErrNotImplemented,
+				"Uploading part is not yet implemented")
+			return
+		}
+
 		body, err = ioutil.ReadAll(r.Body)
 		if err != nil {
 			log.Errorf("Can't read data: %s", err.Error())
@@ -337,6 +353,12 @@ func handleObject(w http.ResponseWriter, r *http.Request) {
 		}
 		break
 	case http.MethodGet:
+		if _, ok = r.URL.Query()["UploadId"]; ok {
+			HTTPRespError(w, S3ErrNotImplemented,
+				"Listing parts is not yet implemented")
+			return
+		}
+
 		// List all objects
 		body, err = s3ReadObject(bucket, object_name, 1)
 		if err != nil {
@@ -348,6 +370,12 @@ func handleObject(w http.ResponseWriter, r *http.Request) {
 		return
 		break
 	case http.MethodDelete:
+		if _, ok = r.URL.Query()["UploadId"]; ok {
+			HTTPRespError(w, S3ErrNotImplemented,
+				"Deleting uploads is not yet implemented")
+			return
+		}
+
 		// Delete a bucket
 		err = s3DeleteObject(bucket, object_name, 1)
 		if err != nil {
