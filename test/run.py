@@ -28,10 +28,10 @@ def list_fn():
 	fns = swyrun2([ 'ls' ])
 	return [ i.split()[0].strip() for i in fns[1:] ]
 
-def add_fn(name, lang, mw = []):
+def add_fn(name, lang, mw = [], evt = "url"):
 	cmd = [ "add", name, "-lang", lang,
 		"-src", "test/functions/" + lang + "/" + name + lext[lang],
-		"-event", "url" ]
+		"-event", evt ]
 	if mw:
 		cmd += [ "-mw", ",".join(mw) ]
 	swyrun(cmd)
@@ -52,6 +52,9 @@ def _get_inf_fn(name):
 	ret = { i[0].strip(): i[1].strip() for i in [ i.split(':', 1) for i in inf ] }
 	ret["name"] = name
 	return ret
+
+def inf_fn(inf):
+	return _get_inf_fn(inf['name'])
 
 def _wait_fn(name):
 	tmo = 1
@@ -188,6 +191,31 @@ def s3(lang):
 	del_mw(s3name)
 	return ok
 
+def s3notify(lang):
+	ok = False
+	s3name = 's3nns'
+	args_c = { 's3name': s3name, 'action': 'create', 'bucket': 'tbuck' }
+	args_p = { 's3name': s3name, 'action': 'put',    'bucket': 'tbuck' , 'name': 'xobj', 'data': 'abc' }
+
+	add_mw("s3", s3name)
+	inf = add_fn("s3", lang, mw = [ s3name ])
+	ret = run_fn(inf, args_c)
+	print(ret)
+
+	if ret.get('res', '') == 'done':
+		infe = add_fn("s3evt", lang, evt = 'mware:%s:b=tbuck' % s3name)
+		ret = run_fn(inf, args_p)
+		print(ret)
+		if ret.get('res', '') == 'done':
+			infe = inf_fn(infe)
+			if infe['Called'] == '0':
+				ok = True
+		del_fn(infe)
+
+	del_fn(inf)
+	del_mw(s3name)
+	return ok
+
 def checkempty(lang):
 	fns = list_fn()
 	print(fns)
@@ -196,7 +224,8 @@ def checkempty(lang):
 
 #run_test(helloworld, ["python", "golang"])
 #run_test(update, ["python"])
-run_test(pgsql, ["python"])
+#run_test(pgsql, ["python"])
 #run_test(mongo, ["python"])
 #run_test(s3, ["python"])
+run_test(s3notify, ["python"])
 run_test(checkempty, [""])
