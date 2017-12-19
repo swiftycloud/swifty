@@ -970,6 +970,7 @@ Prepare backend database
 use swifty-s3
 db.createUser({user:"swifty", pwd:"1q2w3e", roles:[{role:"dbOwner",db:"swifty-s3"}]})
 db.createCollection("S3Buckets")
+db.createCollection("S3Uploads")
 db.createCollection("S3Objects")
 db.createCollection("S3ObjectData")
 db.createCollection("S3AccessKeys")
