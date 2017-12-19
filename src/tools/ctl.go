@@ -412,12 +412,12 @@ func del_mware(project string, args []string, opts [8]string) {
 		swyapi.MwareRemove{ Project: project, ID: args[0], }, nil)
 }
 
-func show_mware_env(project string, args []string, opts [8]string) {
-	var r swyapi.MwareCinfoResp
+func mware_types(args []string, opts [8]string) {
+	var r []string
 
-	make_faas_req("mware/cinfo", swyapi.MwareCinfo { Project: project, MwId: args[0] }, &r)
-	for _, e := range r.Envs {
-		fmt.Printf("%s\n", e)
+	make_faas_req("mware/types", nil, &r)
+	for _, mt := range r {
+		fmt.Printf("%s\n", mt)
 	}
 }
 
@@ -486,7 +486,7 @@ const (
 	CMD_MLS string		= "mls"
 	CMD_MADD string		= "madd"
 	CMD_MDEL string		= "mdel"
-	CMD_MENV string		= "menv"
+	CMD_MTYPES string	= "mt"
 	CMD_LUSR string		= "uls"
 	CMD_UADD string		= "uadd"
 	CMD_UDEL string		= "udel"
@@ -508,7 +508,7 @@ var cmdOrder = []string {
 	CMD_MLS,
 	CMD_MADD,
 	CMD_MDEL,
-	CMD_MENV,
+	CMD_MTYPES,
 	CMD_LUSR,
 	CMD_UADD,
 	CMD_UDEL,
@@ -538,7 +538,7 @@ var cmdMap = map[string]*cmdDesc {
 	CMD_MLS:	&cmdDesc{ pcall: list_mware,	  opts: flag.NewFlagSet(CMD_MLS, flag.ExitOnError) },
 	CMD_MADD:	&cmdDesc{ pcall: add_mware,	  opts: flag.NewFlagSet(CMD_MADD, flag.ExitOnError) },
 	CMD_MDEL:	&cmdDesc{ pcall: del_mware,	  opts: flag.NewFlagSet(CMD_MDEL, flag.ExitOnError) },
-	CMD_MENV:	&cmdDesc{ pcall: show_mware_env,  opts: flag.NewFlagSet(CMD_MENV, flag.ExitOnError) },
+	CMD_MTYPES:	&cmdDesc{  call: mware_types,	  opts: flag.NewFlagSet(CMD_MTYPES, flag.ExitOnError) },
 	CMD_LUSR:	&cmdDesc{  call: list_users,	  opts: flag.NewFlagSet(CMD_LUSR, flag.ExitOnError) },
 	CMD_UADD:	&cmdDesc{  call: add_user,	  opts: flag.NewFlagSet(CMD_UADD, flag.ExitOnError) },
 	CMD_UDEL:	&cmdDesc{  call: del_user,	  opts: flag.NewFlagSet(CMD_UDEL, flag.ExitOnError) },
@@ -592,7 +592,7 @@ func main() {
 	bindCmdUsage(CMD_MLS,	[]string{}, "List middleware", true)
 	bindCmdUsage(CMD_MADD,	[]string{"ID", "TYPE"}, "Add middleware", true)
 	bindCmdUsage(CMD_MDEL,	[]string{"ID"}, "Delete middleware", true)
-	bindCmdUsage(CMD_MENV,	[]string{"ID"}, "Show middleware environment variables", true)
+	bindCmdUsage(CMD_MTYPES, []string{}, "List middleware types", false)
 
 	bindCmdUsage(CMD_LUSR,	[]string{}, "List users", false)
 	cmdMap[CMD_UADD].opts.StringVar(&opts[0], "name", "", "User name")
