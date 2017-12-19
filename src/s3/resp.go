@@ -55,6 +55,11 @@ type ListAllMyBucketsResultBucket struct {
 	CreationDate		string				`xml:"CreationDate,omitempy"`
 }
 
+type ListAllMyBucketsResultBuckets struct {
+	XMLName			xml.Name			`xml:"Buckets"`
+	Bucket			[]ListAllMyBucketsResultBucket
+}
+
 type ListAllMyBucketsResultOwner struct {
 	XMLName			xml.Name			`xml:"Owner"`
 	DisplayName		string				`xml:"DisplayName,omitempy"`
@@ -63,6 +68,6 @@ type ListAllMyBucketsResultOwner struct {
 
 type ListAllMyBucketsResult struct {
 	XMLName			xml.Name			`xml:"ListAllMyBucketsResult"`
-	Buckets			[]ListAllMyBucketsResultBucket
+	Buckets			ListAllMyBucketsResultBuckets
 	Owner			ListAllMyBucketsResultOwner
 }

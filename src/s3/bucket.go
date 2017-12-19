@@ -296,7 +296,7 @@ func s3ListBuckets(akey *S3AccessKey) (*ListAllMyBucketsResult, error) {
 	list.Owner.ID		= "Unknown"
 
 	for _, b := range buckets {
-		list.Buckets = append(list.Buckets,
+		list.Buckets.Bucket = append(list.Buckets.Bucket,
 			ListAllMyBucketsResultBucket{
 				Name:		b.Name,
 				CreationDate:	b.CreationTime,
