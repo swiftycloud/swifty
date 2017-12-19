@@ -36,10 +36,10 @@ def add_fn(name, lang, mw = []):
 		cmd += [ "-mw", ",".join(mw) ]
 	swyrun(cmd)
 
-	return wait_fn(name)
+	return _wait_fn(name)
 
-def upd_fn(name, lang):
-	swyrun([ "upd", name, "-src", "test/functions/" + lang + "/" + name + "2" + lext[lang] ])
+def upd_fn(inf, lang):
+	swyrun([ "upd", inf['name'], "-src", "test/functions/" + lang + "/" + name + "2" + lext[lang] ])
 
 def add_mw(typ, name):
 	swyrun([ "madd", name, typ ])
@@ -47,15 +47,17 @@ def add_mw(typ, name):
 def del_mw(name):
 	swyrun([ "mdel", name ])
 
-def get_inf_fn(name):
+def _get_inf_fn(name):
 	inf = swyrun2([ "inf", name ])
-	return { i[0].strip(): i[1].strip() for i in [ i.split(':', 1) for i in inf ] }
+	ret = { i[0].strip(): i[1].strip() for i in [ i.split(':', 1) for i in inf ] }
+	ret["name"] = name
+	return ret
 
-def wait_fn(name):
+def _wait_fn(name):
 	tmo = 1
 	while True:
 		time.sleep(tmo)
-		inf = get_inf_fn(name)
+		inf = _get_inf_fn(name)
 		if inf['State'] == 'ready':
 			return inf
 		tmo *= 2
@@ -69,9 +71,10 @@ def run_fn(inf, args):
 	print("Returned: [%s]" % rv)
 	return json.loads(rv)
 
-def del_fn(name):
-	swyrun([ "logs", name ])
-	swyrun([ "del", name ])
+def del_fn(inf):
+	swyrun([ "logs", inf['name'] ])
+	swyrun([ "del", inf['name'] ])
+
 
 def run_test(fname, langs):
 	print("====== Running %s" % fname.__name__)
@@ -86,7 +89,7 @@ def helloworld(lang):
 	cookie = randstr()
 	inf = add_fn("helloworld", lang)
 	ret = run_fn(inf, {'name': cookie})
-	del_fn("helloworld")
+	del_fn(inf)
 	print(ret)
 	return ret['message'] == 'hw:%s:%s' % (lang, cookie)
 
@@ -97,7 +100,7 @@ def update(lang):
 	ret = run_fn(inf, {'name': cookie})
 	print(ret)
 	if ret['message'] == 'hw:%s:%s' % (lang, cookie):
-		upd_fn("helloworld", lang)
+		upd_fn(inf, lang)
 		tmo = 0.5
 		while tmo < 12.0:
 			ret = run_fn(inf, {'name': cookie})
@@ -113,9 +116,8 @@ def update(lang):
 			else:
 				print("Alien message")
 			break
-	del_fn("helloworld")
+	del_fn(inf)
 	return ok
-
 
 def pgsql(lang):
 	ok = False
@@ -138,7 +140,7 @@ def pgsql(lang):
 			print(ret)
 			if ret.get('res', [['']])[0][0].strip() == cookie:
 				ok = True
-	del_fn("pgsql")
+	del_fn(inf)
 	del_mw(dbname)
 	return ok
 
@@ -158,7 +160,7 @@ def mongo(lang):
 		print(ret)
 		if ret.get('res', '') == cookie:
 			ok = True
-	del_fn("mongo")
+	del_fn(inf)
 	del_mw(dbname)
 	return ok
 
@@ -182,7 +184,7 @@ def s3(lang):
 			print(ret)
 			if ret.get('res', '') == cookie:
 				ok = True
-	del_fn("s3")
+	del_fn(inf)
 	del_mw(s3name)
 	return ok
 
