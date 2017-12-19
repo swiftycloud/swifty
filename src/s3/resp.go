@@ -13,6 +13,7 @@ type S3RespError struct {
 }
 
 type S3ObjectOwner struct {
+	XMLName			xml.Name			`xml:"Owner"`
 	DisplayName		string				`xml:"DisplayName,omitempy"`
 	ID			string				`xml:"ID,omitempy"`
 }
@@ -49,16 +50,19 @@ type S3BucketList struct {
 }
 
 type ListAllMyBucketsResultBucket struct {
-	Name			string
-	CreationDate		string
+	XMLName			xml.Name			`xml:"Bucket"`
+	Name			string				`xml:"Name,omitempy"`
+	CreationDate		string				`xml:"CreationDate,omitempy"`
 }
 
 type ListAllMyBucketsResultOwner struct {
-	DisplayName		string
-	ID			string
+	XMLName			xml.Name			`xml:"Owner"`
+	DisplayName		string				`xml:"DisplayName,omitempy"`
+	ID			string				`xml:"ID,omitempy"`
 }
 
 type ListAllMyBucketsResult struct {
+	XMLName			xml.Name			`xml:"ListAllMyBucketsResult"`
 	Buckets			[]ListAllMyBucketsResultBucket
 	Owner			ListAllMyBucketsResultOwner
 }
