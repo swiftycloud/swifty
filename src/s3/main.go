@@ -341,7 +341,7 @@ func handleObject(w http.ResponseWriter, r *http.Request) {
 
 		var object *S3Object
 		// Create new object
-		object, err = s3InsertObject(bucket, object_name, 1, object_size, acl)
+		object, err = s3InsertObject(bucket, object_name, 0, 1, object_size, acl)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
@@ -360,7 +360,7 @@ func handleObject(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// List all objects
-		body, err = s3ReadObject(bucket, object_name, 1)
+		body, err = s3ReadObject(bucket, object_name, 0, 1)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
@@ -377,7 +377,7 @@ func handleObject(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Delete a bucket
-		err = s3DeleteObject(bucket, object_name, 1)
+		err = s3DeleteObject(bucket, object_name, 0, 1)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return

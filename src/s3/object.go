@@ -47,6 +47,7 @@ type S3Object struct {
 	Name				string		`json:"name" bson:"name"`
 	Acl				string		`json:"acl" bson:"acl"`
 	Version				int32		`json:"version" bson:"version"`
+	Part				int32		`json:"part" bson:"part"`
 	Size				int64		`json:"size" bson:"size"`
 	ETag				string		`json:"etag" bson:"etag"`
 
@@ -109,10 +110,10 @@ func (object *S3Object)dbSetStateEtag(state uint32, etag string) (error) {
 	return object.dbSet(state, bson.M{"state": state, "etag": etag})
 }
 
-func (bucket *S3Bucket)FindObject(object_name string, version int) (*S3Object, error) {
+func (bucket *S3Bucket)FindObject(object_name string, part, version int) (*S3Object, error) {
 	var res S3Object
 
-	err := dbS3FindOne(bson.M{"bid": bucket.ObjectBID(object_name, version)}, &res)
+	err := dbS3FindOne(bson.M{"bid": bucket.ObjectBID(object_name, part, version)}, &res)
 	if err != nil {
 		return nil, err
 	}
@@ -120,7 +121,7 @@ func (bucket *S3Bucket)FindObject(object_name string, version int) (*S3Object, e
 	return &res,nil
 }
 
-func s3InsertObject(bucket *S3Bucket, object_name string, version int,
+func s3InsertObject(bucket *S3Bucket, object_name string, part, version int,
 		objct_size int64, acl string) (*S3Object, error) {
 	var err error
 
@@ -131,7 +132,7 @@ func s3InsertObject(bucket *S3Bucket, object_name string, version int,
 		Acl:		acl,
 		ObjID:		bson.NewObjectId(),
 		BucketObjID:	bucket.ObjID,
-		BackendID:	bucket.ObjectBID(object_name, version),
+		BackendID:	bucket.ObjectBID(object_name, part, version),
 		CreationTime:	time.Now().Format(time.RFC3339),
 		State:		S3StateNone,
 	}
@@ -216,12 +217,12 @@ out:
 	return err
 }
 
-func s3DeleteObject(bucket *S3Bucket, object_name string, version int) error {
+func s3DeleteObject(bucket *S3Bucket, object_name string, part, version int) error {
 	var objdFound *S3ObjectData
 	var objectFound *S3Object
 	var err error
 
-	objectFound, err = bucket.FindObject(object_name, version)
+	objectFound, err = bucket.FindObject(object_name, part, version)
 	if err != nil {
 		if err == mgo.ErrNotFound {
 			return nil
@@ -280,13 +281,13 @@ func s3DeleteObject(bucket *S3Bucket, object_name string, version int) error {
 	return nil
 }
 
-func s3ReadObject(bucket *S3Bucket, object_name string, version int) ([]byte, error) {
+func s3ReadObject(bucket *S3Bucket, object_name string, part, version int) ([]byte, error) {
 	var objdFound *S3ObjectData
 	var objectFound *S3Object
 	var res []byte
 	var err error
 
-	objectFound, err = bucket.FindObject(object_name, version)
+	objectFound, err = bucket.FindObject(object_name, part, version)
 	if err != nil {
 		if err == mgo.ErrNotFound {
 			return nil, err
