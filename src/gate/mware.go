@@ -43,6 +43,16 @@ func mwGenUserPassEnvs(mwd *MwareDesc, mwaddr string) ([][2]string) {
 	}
 }
 
+func mwareGetCookie(id SwoId, name string) (string, error) {
+	id.Name = name
+	mw, err := dbMwareGetItem(&id)
+	if err != nil {
+		return "", fmt.Errorf("No such mware: %s", id.Str())
+	}
+
+	return mw.Cookie, nil
+}
+
 func mwareGenerateUserPassClient(mwd *MwareDesc) (error) {
 	var err error
 
@@ -67,47 +77,16 @@ var mwareHandlers = map[string]*MwareOps {
 	"s3":		&MwareS3,
 }
 
-func mwareGetEnv(conf *YAMLConf, id *SwoId) ([][2]string, error) {
-	// No mware lock needed here since it's a pure
-	// read with mware counter increased already so
-	// can't disappear
-	item, err := dbMwareGetReady(id)
-	if err != nil {
-		return nil, fmt.Errorf("Can't fetch settings for mware %s", id.Str())
-	}
-
-	handler, ok := mwareHandlers[item.MwareType]
-	if !ok {
-		return nil, fmt.Errorf("No handler for %s mware", id.Str())
-	}
-
-	item.Secret, err = swycrypt.DecryptString(gateSecPas, item.Secret)
-	if err != nil {
-		return nil, err
-	}
-
-	return handler.GetEnv(&conf.Mware, &item), nil
-}
-
-func mwareGetFnEnv(conf *YAMLConf, fn *FunctionDesc) ([][2]string, error) {
-	var envs [][2]string
-
-	for _, mwId := range fn.Mware {
-		env, err := mwareGetEnv(conf, makeSwoId(fn.Tennant, fn.Project, mwId))
-		if err != nil {
-			return nil, err
-		}
-
-		envs = append(envs, env...)
-	}
-
-	return envs, nil
-}
-
 func forgetMware(conf *YAMLConf, handler *MwareOps, desc *MwareDesc) error {
 	err := handler.Fini(&conf.Mware, desc)
 	if err != nil {
 		log.Errorf("Failed cleanup for mware %s: %s", desc.SwoId.Str(), err.Error())
+		return err
+	}
+
+	err = swk8sMwSecretRemove(desc.Cookie)
+	if err != nil {
+		log.Errorf("Failed secret cleanup for mware %s: %s", desc.SwoId.Str(), err.Error())
 		return err
 	}
 
@@ -170,38 +149,45 @@ func mwareSetup(conf *YAMLConf, id *SwoId, mwType string) error {
 	handler, ok = mwareHandlers[mwType]
 	if !ok {
 		err = fmt.Errorf("no handler for %s:%s", id.Str(), mwType)
-		dbMwareRemove(mwd)
-		goto out
+		goto outdb
 	}
 
 	if handler.Devel && !SwyModeDevel {
 		err = fmt.Errorf("middleware %s not enabled", mwType)
-		dbMwareRemove(mwd)
-		goto out
+		goto outdb
 	}
 
 	err = handler.Init(&conf.Mware, mwd)
 	if err != nil {
 		err = fmt.Errorf("mware init error: %s", err.Error())
-		dbMwareRemove(mwd)
-		goto out
+		goto outdb
+	}
+
+	err = swk8sMwSecretAdd(mwd.Cookie, handler.GetEnv(&conf.Mware, mwd))
+	if err != nil {
+		err = fmt.Errorf("mware secret add error: %s", err.Error())
+		goto outh
 	}
 
 	mwd.Secret, err = swycrypt.EncryptString(gateSecPas, mwd.Secret)
 	if err != nil {
-		forgetMware(conf, handler, mwd)
-		goto out
+		goto outs
 	}
 
 	mwd.State = swy.DBMwareStateRdy
 	err = dbMwareUpdateAdded(mwd)
 	if err != nil {
-		forgetMware(conf, handler, mwd)
-		goto out
+		goto outs
 	}
 
 	return nil
 
+outs:
+	swk8sMwSecretRemove(mwd.Cookie)
+outh:
+	handler.Fini(&conf.Mware, mwd)
+outdb:
+	dbMwareRemove(mwd)
 out:
 	log.Errorf("mwareSetup: %s", err.Error())
 	return err

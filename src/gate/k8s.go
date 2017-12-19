@@ -45,26 +45,6 @@ func swk8sPodDelete(podname string) error {
 	return nil
 }
 
-func swk8sSecretRemove(depname string) error {
-	var orphan bool = false
-	var grace int64 = 0
-	var err error
-
-	secrets := swk8sClientSet.Secrets(v1.NamespaceDefault)
-	err = secrets.Delete(depname,
-				&v1.DeleteOptions{
-					GracePeriodSeconds: &grace,
-					OrphanDependents: &orphan,
-				})
-	if err != nil {
-		log.Errorf("Can't remove secret %s: %s",
-				depname, err.Error())
-		return err
-	}
-
-	return nil
-}
-
 func swk8sRemove(conf *YAMLConf, fn *FunctionDesc, fi *FnInst) error {
 	var nr_replicas int32 = 0
 	var orphan bool = false
@@ -108,13 +88,11 @@ func swk8sRemove(conf *YAMLConf, fn *FunctionDesc, fi *FnInst) error {
 		return err
 	}
 
-	swk8sSecretRemove(depname)
-
 	log.Debugf("Deleted %s deployment %s", fn.SwoId.Str(), depname)
 	return nil
 }
 
-func swk8sGenEnvVar(fn *FunctionDesc, fi *FnInst, wd_port int, secret *v1.Secret) []v1.EnvVar {
+func swk8sGenEnvVar(fn *FunctionDesc, fi *FnInst, wd_port int) []v1.EnvVar {
 	var s []v1.EnvVar
 
 	for _, v := range fn.Code.Env {
@@ -172,36 +150,36 @@ func swk8sGenEnvVar(fn *FunctionDesc, fi *FnInst, wd_port int, secret *v1.Secret
 				},
 			})
 
-	for key, _ := range secret.Data {
-		s = append(s, v1.EnvVar{
-			Name:	key,
-			ValueFrom:
-				&v1.EnvVarSource{
-					SecretKeyRef: &v1.SecretKeySelector {
-						LocalObjectReference: v1.LocalObjectReference {
-							Name: secret.ObjectMeta.Name,
+	for _, mw := range fn.Mware {
+		mwc, err := mwareGetCookie(fn.SwoId, mw)
+		if err != nil {
+			log.Errorf("No mware %s for %s", mw, fn.SwoId.Str())
+			continue
+		}
+
+		secret, err := swk8sClientSet.Secrets(v1.NamespaceDefault).Get("mw-" + mwc)
+		if err != nil {
+			log.Errorf("No mware secret for %s", mwc)
+			continue
+		}
+
+		for key, _ := range secret.Data {
+			s = append(s, v1.EnvVar{
+				Name:	key,
+				ValueFrom:
+					&v1.EnvVarSource{
+						SecretKeyRef: &v1.SecretKeySelector {
+							LocalObjectReference: v1.LocalObjectReference {
+								Name: secret.ObjectMeta.Name,
+							},
+							Key: key,
 						},
-						Key: key,
 					},
-				},
-			})
-	}
-	return s
-}
-
-func swk8sGenSecretData(conf *YAMLConf, fn *FunctionDesc) map[string][]byte {
-	var err error
-	var mwarevars [][2]string
-	secret := make(map[string][]byte)
-
-	mwarevars, err = mwareGetFnEnv(conf, fn)
-	if err == nil {
-		for _, v := range mwarevars {
-			secret[v[0]] = []byte(v[1])
+				})
 		}
 	}
 
-	return secret
+	return s
 }
 
 func swk8sGenLabels(depname string) map[string]string {
@@ -209,25 +187,6 @@ func swk8sGenLabels(depname string) map[string]string {
 		"deployment":	depname,
 	}
 	return labels
-}
-
-func swk8sSecretAdd(conf *YAMLConf, fn *FunctionDesc, depname string) (*v1.Secret, error) {
-	secrets := swk8sClientSet.Secrets(v1.NamespaceDefault)
-	secret, err := secrets.Create(&v1.Secret{
-			ObjectMeta:	v1.ObjectMeta {
-				Name:	depname,
-				Labels:	swk8sGenLabels(depname),
-			},
-			Data:		swk8sGenSecretData(conf, fn),
-			Type:		v1.SecretTypeOpaque,
-		})
-	if err != nil {
-		err = fmt.Errorf("Can't create secret: %s", err.Error())
-		log.Errorf("swk8sSecretSetup: %s", err.Error())
-		return nil, err
-	}
-
-	return secret, nil
 }
 
 func swk8sUpdate(conf *YAMLConf, fn *FunctionDesc) error {
@@ -318,14 +277,7 @@ func swk8sRun(conf *YAMLConf, fn *FunctionDesc, fi *FnInst) error {
 		return err
 	}
 
-	secret, err := swk8sSecretAdd(conf, fn, depname)
-	if err != nil {
-		err := fmt.Errorf("Can't add a secret: %s", err.Error())
-		log.Errorf("swk8sRun: %s", err.Error())
-		return err
-	}
-
-	envs := swk8sGenEnvVar(fn, fi, conf.Wdog.Port, secret)
+	envs := swk8sGenEnvVar(fn, fi, conf.Wdog.Port)
 
 	podspec := v1.PodTemplateSpec{
 		ObjectMeta:	v1.ObjectMeta {
@@ -390,7 +342,6 @@ func swk8sRun(conf *YAMLConf, fn *FunctionDesc, fi *FnInst) error {
 	deploy := swk8sClientSet.Extensions().Deployments(v1.NamespaceDefault)
 	_, err = deploy.Create(&deployspec)
 	if err != nil {
-		swk8sSecretRemove(depname)
 		BalancerDelete(depname)
 		log.Errorf("Can't add function %s: %s",
 				fn.SwoId.Str(), err.Error())
@@ -509,6 +460,52 @@ func swk8sPodUpd(obj_old, obj_new interface{}) {
 			notifyPodUpdate(&pod_new)
 		}
 	}
+}
+
+func swk8sMwSecretGen(envs [][2]string) map[string][]byte {
+	secret := make(map[string][]byte)
+
+	for _, v := range envs {
+		secret[v[0]] = []byte(v[1])
+	}
+
+	return secret
+}
+
+func swk8sMwSecretAdd(id string, envs [][2]string) error {
+	secrets := swk8sClientSet.Secrets(v1.NamespaceDefault)
+	_, err := secrets.Create(&v1.Secret{
+			ObjectMeta:	v1.ObjectMeta {
+				Name:	"mw-" + id,
+				Labels:	map[string]string{},
+			},
+			Data:		swk8sMwSecretGen(envs),
+			Type:		v1.SecretTypeOpaque,
+		})
+
+	if err != nil {
+		log.Errorf("mware secret add error: %s", err.Error())
+	}
+
+	return err
+}
+
+func swk8sMwSecretRemove(id string) error {
+	var orphan bool = false
+	var grace int64 = 0
+	var err error
+
+	secrets := swk8sClientSet.Secrets(v1.NamespaceDefault)
+	err = secrets.Delete("mw-" + id,
+		&v1.DeleteOptions{
+			GracePeriodSeconds: &grace,
+			OrphanDependents: &orphan,
+		})
+	if err != nil {
+		log.Errorf("Can't remove mw %s secret: %s", id, err.Error())
+	}
+
+	return err
 }
 
 func swk8sInit(conf *YAMLConf) error {

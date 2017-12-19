@@ -667,6 +667,20 @@ out:
 	return err
 }
 
+func handleMwareTypes(w http.ResponseWriter, r *http.Request, tennant string) error {
+	var ret []string
+
+	for mw, mt := range mwareHandlers {
+		if mt.Devel && !SwyModeDevel {
+			continue
+		}
+
+		ret = append(ret, mw)
+	}
+
+	return swyhttp.MarshalAndWrite(w, ret)
+}
+
 func handleMwareList(w http.ResponseWriter, r *http.Request, tennant string) error {
 	var id *SwoId
 	var result []swyapi.MwareItem
@@ -718,28 +732,6 @@ func handleMwareRemove(w http.ResponseWriter, r *http.Request, tennant string) e
 	}
 
 	w.WriteHeader(http.StatusOK)
-out:
-	return err
-}
-
-func handleMwareCinfo(w http.ResponseWriter, r *http.Request, tennant string) error {
-	var id *SwoId
-	var params swyapi.MwareCinfo
-	var envs [][2]string
-
-	err := swyhttp.ReadAndUnmarshalReq(r, &params)
-	if err != nil {
-		goto out
-	}
-
-	id = makeSwoId(tennant, params.Project, params.MwId)
-
-	envs, err = mwareGetEnv(&conf, id)
-	if err != nil {
-		goto out
-	}
-
-	err = swyhttp.MarshalAndWrite(w, &swyapi.MwareCinfoResp{ Envs: envs })
 out:
 	return err
 }
@@ -901,12 +893,10 @@ func main() {
 	r.Handle("/v1/function/stats",		genReqHandler(handleFunctionStats))
 	r.Handle("/v1/function/code",		genReqHandler(handleFunctionCode))
 	r.Handle("/v1/function/logs",		genReqHandler(handleFunctionLogs))
+	r.Handle("/v1/mware/types",		genReqHandler(handleMwareTypes))
 	r.Handle("/v1/mware/add",		genReqHandler(handleMwareAdd))
 	r.Handle("/v1/mware/list",		genReqHandler(handleMwareList))
 	r.Handle("/v1/mware/remove",		genReqHandler(handleMwareRemove))
-	if SwyModeDevel {
-		r.Handle("/v1/mware/cinfo",	genReqHandler(handleMwareCinfo))
-	}
 
 	r.HandleFunc("/call/{fnid}",			handleFunctionCall)
 
