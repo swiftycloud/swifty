@@ -79,7 +79,7 @@ for cmd in ['object-del']:
 for cmd in ['object-part-init']:
     spp = sp.add_parser(cmd)
     spp.add_argument('--name', dest = 'name', help = 'bucket name', required = True)
-    spp.add_argument('--key', dest = 'key', help = 'object name', required = True)
+    spp.add_argument('--key', dest = 'key', help = 'object name')
 
 for cmd in ['object-part-fini']:
     spp = sp.add_parser(cmd)
@@ -310,3 +310,13 @@ if args.cmd == 'object-del':
         print("\tDone")
     except:
         print("ERROR: Can't delete object")
+
+if args.cmd == 'object-part-init':
+    if args.key == None:
+        args.key = genObjectName()
+    print("Initiating multipart upload %s/%s" % (args.name, args.key))
+    try:
+        resp = s3.create_multipart_upload(Bucket = args.name, Key = args.key)
+        print("\tUploadID: %s" % (resp['UploadId']))
+    except:
+        print("ERROR: Can't initiate multipart upload")
