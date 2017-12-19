@@ -46,6 +46,10 @@ for cmd in ['list-objects']:
     spp = sp.add_parser(cmd)
     spp.add_argument('--name', dest = 'name', required = True)
 
+for cmd in ['list-uploading']:
+    spp = sp.add_parser(cmd)
+    spp.add_argument('--name', dest = 'name', required = True)
+
 for cmd in ['bucket-add']:
     spp = sp.add_parser(cmd)
     spp.add_argument('--name', dest = 'name', required = True)
@@ -71,6 +75,38 @@ for cmd in ['object-del']:
     spp = sp.add_parser(cmd)
     spp.add_argument('--name', dest = 'name', required = True)
     spp.add_argument('--key', dest = 'key', required = True)
+
+for cmd in ['object-part-init']:
+    spp = sp.add_parser(cmd)
+    spp.add_argument('--name', dest = 'name', help = 'bucket name', required = True)
+    spp.add_argument('--key', dest = 'key', help = 'object name', required = True)
+
+for cmd in ['object-part-fini']:
+    spp = sp.add_parser(cmd)
+    spp.add_argument('--name', dest = 'name', help = 'bucket name', required = True)
+    spp.add_argument('--key', dest = 'key', help = 'object name', required = True)
+    spp.add_argument('--id', dest = 'id', help = 'upload id', required = True)
+    spp.add_argument('--list', dest = 'list', help = 'part:etag,[...] list', required = True)
+
+for cmd in ['object-part-abort']:
+    spp = sp.add_parser(cmd)
+    spp.add_argument('--name', dest = 'name', help = 'bucket name', required = True)
+    spp.add_argument('--key', dest = 'key', help = 'object name', required = True)
+    spp.add_argument('--id', dest = 'id', help = 'upload id', required = True)
+
+for cmd in ['object-part-add']:
+    spp = sp.add_parser(cmd)
+    spp.add_argument('--name', dest = 'name', help = 'bucket name', required = True)
+    spp.add_argument('--key', dest = 'key', help = 'object name', required = True)
+    spp.add_argument('--part', dest = 'part', help = ' name', required = True)
+    spp.add_argument('--id', dest = 'id', help = 'upload id', required = True)
+    spp.add_argument('--file', dest = 'file', help = 'file to upload')
+
+for cmd in ['object-part-list']:
+    spp = sp.add_parser(cmd)
+    spp.add_argument('--name', dest = 'name', help = 'bucket name', required = True)
+    spp.add_argument('--key', dest = 'key', help = 'object name', required = True)
+    spp.add_argument('--id', dest = 'id', help = 'upload id', required = True)
 
 for cmd in ['notify']:
     spp = sp.add_parser(cmd)
