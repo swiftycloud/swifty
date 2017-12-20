@@ -162,7 +162,7 @@ func s3UploadAbort(bucket *S3Bucket, object_name, upload_id string) error {
 		return err
 	}
 
-	err = dbS3FindAll(bson.M{"upload-id": upload_id}, &objects)
+	err = dbS3FindAll(bson.M{"upload-id": upload.ObjID}, &objects)
 	if err != nil {
 		if err != mgo.ErrNotFound {
 			log.Errorf("s3: Can't find object parts with uid %s/%s: %s",
