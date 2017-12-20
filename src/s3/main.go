@@ -388,8 +388,13 @@ func handleObject(w http.ResponseWriter, r *http.Request) {
 		break
 	case http.MethodGet:
 		if _, ok = r.URL.Query()["uploadId"]; ok {
-			HTTPRespError(w, S3ErrNotImplemented,
-				"Listing parts is not yet implemented")
+			resp, err := s3UploadList(bucket, object_name,
+						r.URL.Query()["uploadId"][0])
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+			HTTPRespXML(w, resp)
 			return
 		}
 

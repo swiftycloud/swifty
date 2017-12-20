@@ -126,7 +126,54 @@ func s3UploadPart(namespace string, bucket *S3Bucket, object_name,
 func s3UploadFini(bucket *S3Bucket, upload_id string) {
 }
 
-func s3UploadList(bucket *S3Bucket) {
+func s3UploadList(bucket *S3Bucket, object_name, upload_id string) (*ListPartsResult, error) {
+	var res ListPartsResult
+	var objects []S3Object
+	var upload S3Upload
+	var err error
+
+	err = VerifyUploadUID(bucket, object_name, upload_id)
+	if err != nil {
+		return nil, err
+	}
+
+	err = dbS3FindOne(bson.M{"uid": upload_id,
+				"state": S3StateActive},
+				&upload)
+	if err != nil {
+		return nil, err
+	}
+
+	res.Bucket		= bucket.Name
+	res.Key			= object_name
+	res.UploadId		= upload_id
+	res.StorageClass	= S3StorageClassStandard
+	res.MaxParts		= 1000
+	res.IsTruncated		= false
+
+	err = dbS3FindAll(bson.M{"upload-id": upload.ObjID}, &objects)
+	if err != nil {
+		if err == mgo.ErrNotFound {
+			goto out
+		}
+		log.Errorf("s3: Can't find upload %s/%s: %s",
+				upload_id, object_name, err.Error())
+		return nil, err
+	} else {
+		for _, obj := range objects {
+			res.Part = append(res.Part,
+				ListPartsResultPart{
+					PartNumber:	obj.Part,
+					LastModified:	obj.CreationTime,
+					ETag:		obj.ETag,
+					Size:		obj.Size,
+				})
+		}
+	}
+
+out:
+	log.Debugf("s3: List upload %v", res)
+	return &res, nil
 }
 
 func s3UploadAbort(bucket *S3Bucket, object_name, upload_id string) error {

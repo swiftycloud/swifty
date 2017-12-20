@@ -76,7 +76,7 @@ type InitiateMultipartUploadResult struct {
 }
 
 type ListPartsResultPart struct {
-	PartNumber		int32				`xml:"PartNumber"`
+	PartNumber		int				`xml:"PartNumber"`
 	LastModified		string				`xml:"LastModified"`
 	ETag			string				`xml:"ETag"`
 	Size			int64				`xml:"Size"`

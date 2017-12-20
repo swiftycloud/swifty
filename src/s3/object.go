@@ -59,8 +59,8 @@ type S3Object struct {
 	BackendID			string		`json:"bid" bson:"bid"`
 	UploadID			bson.ObjectId	`json:"upload-id,omitempty" bson:"upload-id,omitempty"`
 	State				uint32		`json:"state" bson:"state"`
-	Version				int32		`json:"version" bson:"version"`
-	Part				int32		`json:"part" bson:"part"`
+	Version				int		`json:"version" bson:"version"`
+	Part				int		`json:"part" bson:"part"`
 	Size				int64		`json:"size" bson:"size"`
 	ETag				string		`json:"etag" bson:"etag"`
 
@@ -139,7 +139,8 @@ func s3InsertObject(bucket *S3Bucket, object_name string,
 			CreationTime:	time.Now().Format(time.RFC3339),
 		},
 
-		Version:	int32(version),
+		Version:	version,
+		Part:		part,
 		Size:		objct_size,
 		ObjID:		bson.NewObjectId(),
 		BucketObjID:	bucket.ObjID,
