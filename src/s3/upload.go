@@ -5,6 +5,7 @@ import (
 	"gopkg.in/mgo.v2/bson"
 
 	"crypto/sha256"
+	"crypto/md5"
 	"encoding/hex"
 	"time"
 	"fmt"
@@ -19,15 +20,24 @@ type S3Upload struct {
 	S3ObjectPorps					`json:",inline" bson:",inline"`
 }
 
-func (upload *S3Upload)dbSetState(state uint32) (error) {
+func (upload *S3Upload)dbSet(query bson.M, change bson.M) (error) {
 	var res S3Upload
+	return dbS3Update(query, change, &res)
+}
 
-	return dbS3Update(
+func (upload *S3Upload)dbSetState(state uint32) (error) {
+	return upload.dbSet(
 			bson.M{"_id": upload.ObjID,
 				"state": bson.M{"$in": s3StateTransition[state]}},
-			bson.M{"state": state},
-			&res,
-		)
+			bson.M{"state": state})
+}
+
+func (upload *S3Upload)dbSetStateEtag(state uint32, etag string) (error) {
+	return upload.dbSet(
+			bson.M{"_id": upload.ObjID,
+				"state": bson.M{"$in": s3StateTransition[state]}},
+			bson.M{"state": state,
+				"etag": etag})
 }
 
 // FIXME What to do if one start uploadin parts and
@@ -123,7 +133,54 @@ func s3UploadPart(namespace string, bucket *S3Bucket, object_name,
 	return etag, nil
 }
 
-func s3UploadFini(bucket *S3Bucket, upload_id string) {
+func s3UploadFini(bucket *S3Bucket, upload_id string,
+		compete *CompleteMultipartUpload) (*CompleteMultipartUploadResult, error) {
+	var res CompleteMultipartUploadResult
+	var objects []S3Object
+	var upload S3Upload
+	var err error
+
+	err = dbS3FindOne(bson.M{"uid": upload_id,
+				"state": S3StateActive},
+				&upload)
+	if err != nil {
+		return nil, err
+	}
+
+	res.Bucket	= bucket.Name
+
+	h := md5.New()
+
+	err = dbS3FindAll(bson.M{"upload-id": upload.ObjID}, &objects)
+	if err != nil {
+		if err == mgo.ErrNotFound {
+			res.ETag = fmt.Sprintf("%x", md5.Sum(nil))
+			goto out
+		}
+		log.Errorf("s3: Can't find upload %s: %s",
+				upload_id, err.Error())
+		return nil, err
+	} else {
+		for _, obj := range objects {
+			var data []byte
+
+			data, err = s3ReadObjectData(bucket, &obj)
+			if err != nil {
+				return nil, err
+			}
+
+			h.Write(data)
+		}
+	}
+
+	res.ETag = fmt.Sprintf("%x", md5.Sum(nil))
+	err = upload.dbSetStateEtag(S3StateInactive, res.ETag)
+	if err != nil {
+		return nil, err
+	}
+out:
+	log.Debugf("s3: Complete upload %v", res)
+	return &res, nil
 }
 
 func s3UploadList(bucket *S3Bucket, object_name, upload_id string) (*ListPartsResult, error) {

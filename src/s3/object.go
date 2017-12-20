@@ -299,39 +299,47 @@ func s3DeleteObject(bucket *S3Bucket, object_name string, part, version int) err
 	return s3DeleteObjectFound(bucket, objectFound)
 }
 
-func s3ReadObject(bucket *S3Bucket, object_name string, part, version int) ([]byte, error) {
-	var objdFound *S3ObjectData
-	var objectFound *S3Object
+func s3ReadObjectData(bucket *S3Bucket, object *S3Object) ([]byte, error) {
+	var objd *S3ObjectData
 	var res []byte
 	var err error
 
-	objectFound, err = bucket.FindObject(object_name, part, version)
-	if err != nil {
-		if err == mgo.ErrNotFound {
-			return nil, err
-		}
-		log.Errorf("s3: Can't find object %s: %s", object_name, err.Error())
-		return nil, err
-	}
-
-	if radosDisabled || objectFound.Size <= cachedObjSize {
-		objdFound, err = objdFound.dbFind(objectFound)
+	if radosDisabled || object.Size <= cachedObjSize {
+		objd, err = objd.dbFind(object)
 		if err != nil {
 			if err == mgo.ErrNotFound {
 				return nil, err
 			}
-			log.Errorf("s3: Can't find object stored %s: %s", object_name, err.Error())
+			log.Errorf("s3: Can't find object stored %s: %s",
+					object.Name, err.Error())
 			return nil, err
 		}
-		res = objdFound.Data
+		res = objd.Data
 	} else {
-		res, err = radosReadObject(bucket.BackendID, objectFound.Name,
-						uint64(objectFound.Size))
+		res, err = radosReadObject(bucket.BackendID, object.Name,
+						uint64(object.Size))
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	log.Debugf("s3: Read object %s", objectFound.BackendID)
+	log.Debugf("s3: Read object %s", object.BackendID)
 	return res, err
+}
+
+func s3ReadObject(bucket *S3Bucket, object_name string, part, version int) ([]byte, error) {
+	var object *S3Object
+	var err error
+
+	object, err = bucket.FindObject(object_name, part, version)
+	if err != nil {
+		if err == mgo.ErrNotFound {
+			return nil, err
+		}
+		log.Errorf("s3: Can't find object %s: %s",
+				object_name, err.Error())
+		return nil, err
+	}
+
+	return s3ReadObjectData(bucket, object)
 }

@@ -8,6 +8,7 @@ import (
 	"gopkg.in/mgo.v2"
 	"io/ioutil"
 	"encoding/hex"
+	"encoding/xml"
 	"net/http"
 	"strings"
 	"strconv"
@@ -327,8 +328,28 @@ func handleObject(w http.ResponseWriter, r *http.Request) {
 			HTTPRespXML(w, resp)
 			return
 		} else if _, ok = r.URL.Query()["uploadId"]; ok {
-			HTTPRespError(w, S3ErrNotImplemented,
-				"Finishing upload is not yet implemented")
+			var complete CompleteMultipartUpload
+
+			body, err = ioutil.ReadAll(r.Body)
+			if err != nil {
+				HTTPRespError(w, S3ErrIncompleteBody,
+					"Failed to read body")
+				return
+			}
+			err = xml.Unmarshal(body, &complete)
+			if err != nil {
+				HTTPRespError(w, S3ErrIncompleteBody,
+					"Failed to unmarshal body")
+				return
+			}
+			resp, err := s3UploadFini(bucket,
+					r.URL.Query()["uploadId"][0], &complete)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+			HTTPRespXML(w, resp)
+			return
 		} else if _, ok = r.URL.Query()["restore"]; ok {
 			HTTPRespError(w, S3ErrNotImplemented,
 				"Version restore not yet implemented")
