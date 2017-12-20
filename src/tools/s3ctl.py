@@ -321,6 +321,21 @@ if args.cmd == 'object-part-init':
     except:
         print("ERROR: Can't initiate multipart upload")
 
+if args.cmd == 'object-part-list':
+    print("List uploading parts %s" % (args.name))
+    try:
+        resp = s3.list_parts(Bucket = args.name,
+                             Key = args.key,
+                             UploadId = args.id)
+        if 'UploadId' in resp:
+            print("\tParts %s/%s/%s" % (resp['Bucket'], resp['Key'], resp['UploadId']))
+            if 'Parts' in resp:
+                for x in resp['Parts']:
+                    print("\t\tPartNumber %4d Size %6d ETag %s LastModified %s" % \
+                          (x['PartNumber'], x['Size'], x['ETag'], x['LastModified']))
+    except:
+        print("ERROR: Can't list parts")
+
 if args.cmd == 'object-part-add':
     print("Upload part %s/%s/%s/%s" % (args.name, args.key, args.id, args.part))
     if args.file == None:
@@ -333,7 +348,8 @@ if args.cmd == 'object-part-add':
         resp = s3.upload_part(Bucket = args.name,
                               Key = args.key,
                               PartNumber = int(args.part),
-                              UploadId = args.id)
+                              UploadId = args.id,
+                              Body = body)
         print("\tETag: %s" % (resp['ETag']))
     except:
         print("ERROR: Can't upload part")
