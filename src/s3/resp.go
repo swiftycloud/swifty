@@ -50,31 +50,49 @@ type S3BucketList struct {
 }
 
 type ListAllMyBucketsResultBucket struct {
-	XMLName			xml.Name			`xml:"Bucket"`
 	Name			string				`xml:"Name,omitempy"`
 	CreationDate		string				`xml:"CreationDate,omitempy"`
 }
 
 type ListAllMyBucketsResultBuckets struct {
 	XMLName			xml.Name			`xml:"Buckets"`
-	Bucket			[]ListAllMyBucketsResultBucket
+	Bucket			[]ListAllMyBucketsResultBucket	`xml:"Bucket"`
 }
 
-type ListAllMyBucketsResultOwner struct {
-	XMLName			xml.Name			`xml:"Owner"`
+type ResultOwner struct {
 	DisplayName		string				`xml:"DisplayName,omitempy"`
 	ID			string				`xml:"ID,omitempy"`
 }
 
 type ListAllMyBucketsResult struct {
-	XMLName			xml.Name			`xml:"ListAllMyBucketsResult"`
-	Buckets			ListAllMyBucketsResultBuckets
-	Owner			ListAllMyBucketsResultOwner
+	Buckets			ListAllMyBucketsResultBuckets	`xml:"Buckets,omitempy"`
+	Owner			ResultOwner			`xml:"Owner,omitempy"`
 }
 
 type InitiateMultipartUploadResult struct {
-	XMLName			xml.Name			`xml:"InitiateMultipartUploadResult"`
+	Bucket			string				`xml:"Bucket,omitempy"`
+	Key			string				`xml:"Key,omitempy"`
+	UploadId		string				`xml:"UploadId,omitempy"`
+}
+
+type ListPartsResultPart struct {
+	PartNumber		int32				`xml:"PartNumber"`
+	LastModified		string				`xml:"LastModified"`
+	ETag			string				`xml:"ETag"`
+	Size			int64				`xml:"Size"`
+}
+
+type ListPartsResult struct {
 	Bucket			string				`xml:"Bucket"`
+	EncodingType		string				`xml:"Encoding-Type"`
 	Key			string				`xml:"Key"`
 	UploadId		string				`xml:"UploadId"`
+	Initiator		ResultOwner			`xml:"Initiator"`
+	Owner			ResultOwner			`xml:"Owner"`
+	StorageClass		string				`xml:"StorageClass"`
+	PartNumberMarker	int				`xml:"PartNumberMarker"`
+	NextPartNumberMarker	int				`xml:"NextPartNumberMarker"`
+	MaxParts		int				`xml:"MaxParts"`
+	IsTruncated		bool				`xml:"IsTruncated"`
+	Part			[]ListPartsResultPart		`xml:"Part"`
 }
