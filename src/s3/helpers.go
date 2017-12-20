@@ -5,6 +5,22 @@ import (
 	"net/http"
 )
 
+func getURLParam(r *http.Request, param string) (string, bool) {
+	if v, ok := r.URL.Query()[param]; ok {
+		if len(v) > 0 {
+			return v[0], true
+		} else {
+			return "", true
+		}
+	}
+	return "", false
+}
+
+func getURLValue(r *http.Request, param string) (string) {
+	val, _ := getURLParam(r, param)
+	return val
+}
+
 func HTTPMarshalXMLAndWrite(w http.ResponseWriter, status int, data interface{}) error {
 	xdata, err := xml.Marshal(data)
 	if err != nil {
