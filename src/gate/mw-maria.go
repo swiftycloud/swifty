@@ -84,6 +84,5 @@ var MwareMariaDB = MwareOps {
 	Init:	InitMariaDB,
 	Fini:	FiniMariaDB,
 	GetEnv:	GetEnvMariaDB,
-	Devel:	true,
 }
 

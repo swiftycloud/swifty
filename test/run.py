@@ -126,6 +126,31 @@ def update(lang):
 	del_fn(inf)
 	return ok
 
+def maria(lang):
+	ok = False
+	dbname = 'mysqltst'
+	cookie = randstr()
+	args_c = { 'dbname': dbname, 'action': 'create' }
+	args_i = { 'dbname': dbname, 'action': 'insert', 'key': 'foo', 'val': cookie }
+	args_s = { 'dbname': dbname, 'action': 'select', 'key': 'foo' }
+
+
+	add_mw("maria", dbname)
+	inf = add_fn("maria", lang, mw = [ dbname ])
+	ret = run_fn(inf, args_c)
+	print(ret)
+	if ret.get('res', '') == 'done':
+		ret = run_fn(inf, args_i)
+		print(ret)
+		if ret.get('res', '') == 'done':
+			ret = run_fn(inf, args_s)
+			print(ret)
+			if ret.get('res', [['']])[0][0].strip() == cookie:
+				ok = True
+	del_fn(inf)
+	del_mw(dbname)
+	return ok
+
 def pgsql(lang):
 	ok = False
 	dbname = 'pgtst'
@@ -245,8 +270,9 @@ def checkempty(lang):
 #run_test(helloworld, ["python", "golang"])
 #run_test(update, ["python"])
 #run_test(pgsql, ["python"])
+run_test(maria, ["python"])
 #run_test(mongo, ["python"])
 #run_test(s3, ["python"])
 #run_test(s3notify, ["python"])
-run_test(timeout, ["python"])
+#run_test(timeout, ["python"])
 run_test(checkempty, [""])
