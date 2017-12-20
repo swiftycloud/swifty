@@ -9,18 +9,11 @@ import (
 	"../apis/apps/s3"
 )
 
-const (
-	S3BucketAclPrivate			= "private"
-	S3BucketAclPublicRead			= "public-read"
-	S3BucketAclPublicReadWrite		= "public-read-write"
-	S3BucketAclAuthenticatedRead		= "authenticated-read"
-)
-
 var BucketAcls = []string {
-	S3BucketAclPrivate,
-	S3BucketAclPublicRead,
-	S3BucketAclPublicReadWrite,
-	S3BucketAclAuthenticatedRead,
+	swys3api.S3BucketAclPrivate,
+	swys3api.S3BucketAclPublicRead,
+	swys3api.S3BucketAclPublicReadWrite,
+	swys3api.S3BucketAclAuthenticatedRead,
 }
 
 type S3BucketNotify struct {

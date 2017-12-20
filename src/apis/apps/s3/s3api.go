@@ -35,6 +35,23 @@ const (
 	S3StorageClassGlacier			= "GLACIER"
 )
 
+const (
+	S3ObjectAclPrivate			= "private"
+	S3ObjectAclPublicRead			= "public-read"
+	S3ObjectAclPublicReadWrite		= "public-read-write"
+	S3ObjectAclAuthenticatedRead		= "authenticated-read"
+	S3ObjectAclAwsExecRead			= "aws-exec-read"
+	S3ObjectAclBucketOwnerRead		= "bucket-owner-read"
+	S3ObjectAclBucketOwnerFullControl	= "bucket-owner-full-control"
+)
+
+const (
+	S3BucketAclPrivate			= "private"
+	S3BucketAclPublicRead			= "public-read"
+	S3BucketAclPublicReadWrite		= "public-read-write"
+	S3BucketAclAuthenticatedRead		= "authenticated-read"
+)
+
 type S3Error struct {
 	XMLName			xml.Name			`xml:"Error"`
 	Code			string				`xml:"Code,omitempy"`

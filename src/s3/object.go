@@ -6,26 +6,18 @@ import (
 	"crypto/md5"
 	"time"
 	"fmt"
-)
 
-const (
-	S3ObjectAclPrivate			= "private"
-	S3ObjectAclPublicRead			= "public-read"
-	S3ObjectAclPublicReadWrite		= "public-read-write"
-	S3ObjectAclAuthenticatedRead		= "authenticated-read"
-	S3ObjectAclAwsExecRead			= "aws-exec-read"
-	S3ObjectAclBucketOwnerRead		= "bucket-owner-read"
-	S3ObjectAclBucketOwnerFullControl	= "bucket-owner-full-control"
+	"../apis/apps/s3"
 )
 
 var ObjectAcls = []string {
-	S3ObjectAclPrivate,
-	S3ObjectAclPublicRead,
-	S3ObjectAclPublicReadWrite,
-	S3ObjectAclAuthenticatedRead,
-	S3ObjectAclAwsExecRead,
-	S3ObjectAclBucketOwnerRead,
-	S3ObjectAclBucketOwnerFullControl,
+	swys3api.S3ObjectAclPrivate,
+	swys3api.S3ObjectAclPublicRead,
+	swys3api.S3ObjectAclPublicReadWrite,
+	swys3api.S3ObjectAclAuthenticatedRead,
+	swys3api.S3ObjectAclAwsExecRead,
+	swys3api.S3ObjectAclBucketOwnerRead,
+	swys3api.S3ObjectAclBucketOwnerFullControl,
 }
 
 var cachedObjSize int64

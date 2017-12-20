@@ -178,7 +178,7 @@ func handleBucket(w http.ResponseWriter, r *http.Request) {
 
 	// Setup default ACL
 	if verifyAclValue(r.Header.Get("x-amz-acl"), BucketAcls) == false {
-		r.Header.Set("x-amz-acl", S3BucketAclPrivate)
+		r.Header.Set("x-amz-acl", swys3api.S3BucketAclPrivate)
 	}
 
 	acl = r.Header.Get("x-amz-acl")
@@ -294,7 +294,7 @@ func handleObject(w http.ResponseWriter, r *http.Request) {
 
 	// Setup default ACL
 	if verifyAclValue(r.Header.Get("x-amz-acl"), ObjectAcls) == false {
-		r.Header.Set("x-amz-acl", S3ObjectAclPrivate)
+		r.Header.Set("x-amz-acl", swys3api.S3ObjectAclPrivate)
 	}
 
 	bucket, err = akey.FindBucket(bucket_name)
