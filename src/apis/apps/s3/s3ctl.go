@@ -1,4 +1,4 @@
-package swys3ctl
+package swys3api
 
 type S3CtlKeyGen struct {
 	Namespace		string		`json:"namespace,omitempty"`

@@ -36,7 +36,7 @@ out:
 	return ret, nil
 }
 
-func s3Subscribe(params *swys3ctl.S3Subscribe) error {
+func s3Subscribe(params *swys3api.S3Subscribe) error {
 	var ops uint64
 	ops, err := genOpsMask(params.Ops)
 	if err != nil {
@@ -57,7 +57,7 @@ func s3Subscribe(params *swys3ctl.S3Subscribe) error {
 			}, &res)
 }
 
-func s3Unsubscribe(params *swys3ctl.S3Subscribe) error {
+func s3Unsubscribe(params *swys3api.S3Subscribe) error {
 	var res S3Bucket
 	return dbS3Update(
 			bson.M {"bid": BIDFromNames(params.Namespace, params.Bucket),
@@ -73,7 +73,7 @@ func s3Notify(namespace string, bucket *S3Bucket, object *S3Object, op uint) {
 		return
 	}
 
-	data, err := json.Marshal(&swys3ctl.S3Event{
+	data, err := json.Marshal(&swys3api.S3Event{
 			Namespace: namespace,
 			Bucket: bucket.Name,
 			Object: object.Name,

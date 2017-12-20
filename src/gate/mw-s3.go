@@ -23,7 +23,7 @@ func InitS3(conf *YAMLConfMw, mwd *MwareDesc) (error) {
 			Timeout: 120,
 			Headers: map[string]string{"X-SwyS3-Token": gateSecrets[conf.S3.Token]},
 		},
-		&swys3ctl.S3CtlKeyGen{
+		&swys3api.S3CtlKeyGen{
 			Namespace: s3ns,
 		})
 	if err != nil {
@@ -35,7 +35,7 @@ func InitS3(conf *YAMLConfMw, mwd *MwareDesc) (error) {
 		return fmt.Errorf("Bad responce from S3 gate: %s", string(resp.Status))
 	}
 
-	var out swys3ctl.S3CtlKeyGenResult
+	var out swys3api.S3CtlKeyGenResult
 
 	err = swyhttp.ReadAndUnmarshalResp(resp, &out)
 	if err != nil {
@@ -57,7 +57,7 @@ func FiniS3(conf *YAMLConfMw, mwd *MwareDesc) error {
 			Timeout: 120,
 			Headers: map[string]string{"X-SwyS3-Token": gateSecrets[conf.S3.Token]},
 		},
-		&swys3ctl.S3CtlKeyDel{
+		&swys3api.S3CtlKeyDel{
 			AccessKeyID: mwd.Client,
 		})
 	if err != nil {
@@ -79,7 +79,7 @@ func s3Subscribe(conf *YAMLConfMw, namespace, bucket string) error {
 			Headers: map[string]string{"X-SwyS3-Token": gateSecrets[conf.S3.Token]},
 			Success: http.StatusAccepted,
 		},
-		&swys3ctl.S3Subscribe{
+		&swys3api.S3Subscribe{
 			Namespace: namespace,
 			Bucket: bucket,
 			Ops: "put",
@@ -100,7 +100,7 @@ func s3Unsubscribe(conf *YAMLConfMw, namespace, bucket string) {
 			Headers: map[string]string{"X-SwyS3-Token": gateSecrets[conf.S3.Token]},
 			Success: http.StatusAccepted,
 		},
-		&swys3ctl.S3Subscribe{
+		&swys3api.S3Subscribe{
 			Namespace: namespace,
 			Bucket: bucket,
 		})
@@ -110,7 +110,7 @@ func s3Unsubscribe(conf *YAMLConfMw, namespace, bucket string) {
 }
 
 func handleS3Event(user string, data []byte) {
-	var evt swys3ctl.S3Event
+	var evt swys3api.S3Event
 
 	err := json.Unmarshal(data, &evt)
 	if err != nil {

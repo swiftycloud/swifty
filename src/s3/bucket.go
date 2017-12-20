@@ -5,6 +5,8 @@ import (
 	"gopkg.in/mgo.v2/bson"
 	"time"
 	"fmt"
+
+	"../apis/apps/s3"
 )
 
 const (
@@ -239,8 +241,8 @@ func (bucket *S3Bucket)dbFindAll() ([]S3Object, error) {
 	return res, nil
 }
 
-func s3ListBucket(akey *S3AccessKey, bucket_name, acl string) (*S3BucketList, error) {
-	var bucketList S3BucketList
+func s3ListBucket(akey *S3AccessKey, bucket_name, acl string) (*swys3api.S3Bucket, error) {
+	var bucketList swys3api.S3Bucket
 	var bucketFound *S3Bucket
 	var err error
 
@@ -268,7 +270,7 @@ func s3ListBucket(akey *S3AccessKey, bucket_name, acl string) (*S3BucketList, er
 
 	for _, k := range objects {
 		bucketList.Contents = append(bucketList.Contents,
-			S3ObjectEntry {
+			swys3api.S3Object {
 				Key:		k.Name,
 				Size:		k.Size,
 				LastModified:	k.CreationTime,
@@ -279,8 +281,8 @@ func s3ListBucket(akey *S3AccessKey, bucket_name, acl string) (*S3BucketList, er
 	return &bucketList, nil
 }
 
-func s3ListBuckets(akey *S3AccessKey) (*ListAllMyBucketsResult, error) {
-	var list ListAllMyBucketsResult
+func s3ListBuckets(akey *S3AccessKey) (*swys3api.S3BucketList, error) {
+	var list swys3api.S3BucketList
 	var buckets []S3Bucket
 	var err error
 
@@ -297,7 +299,7 @@ func s3ListBuckets(akey *S3AccessKey) (*ListAllMyBucketsResult, error) {
 
 	for _, b := range buckets {
 		list.Buckets.Bucket = append(list.Buckets.Bucket,
-			ListAllMyBucketsResultBucket{
+			swys3api.S3BucketListEntry{
 				Name:		b.Name,
 				CreationDate:	b.CreationTime,
 			})

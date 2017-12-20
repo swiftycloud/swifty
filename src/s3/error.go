@@ -3,6 +3,8 @@ package main
 import (
 	"net/http"
 	"fmt"
+
+	"../apis/apps/s3"
 )
 
 // Some of error codes we use, the
@@ -505,7 +507,7 @@ var s3RespErrorMapData = map[int]s3RespErrorMap {
 
 func HTTPRespError(w http.ResponseWriter, errcode int, params ...string) {
 	if m, ok := s3RespErrorMapData[errcode]; ok {
-		e := S3RespError { Code: m.ErrorCode, }
+		e := swys3api.S3Error { Code: m.ErrorCode, }
 
 		switch len(params) {
 		case 3:

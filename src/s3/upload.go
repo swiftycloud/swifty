@@ -9,6 +9,8 @@ import (
 	"encoding/hex"
 	"time"
 	"fmt"
+
+	"../apis/apps/s3"
 )
 
 type S3Upload struct {
@@ -141,9 +143,8 @@ func s3UploadPart(namespace string, bucket *S3Bucket, object_name,
 	return etag, nil
 }
 
-func s3UploadFini(bucket *S3Bucket, upload_id string,
-		compete *CompleteMultipartUpload) (*CompleteMultipartUploadResult, error) {
-	var res CompleteMultipartUploadResult
+func s3UploadFini(bucket *S3Bucket, upload_id string, compete *swys3api.S3MpuFiniParts) (*swys3api.S3MpuFini, error) {
+	var res swys3api.S3MpuFini
 	var objects []S3Object
 	var parts, size int64
 	var upload S3Upload
@@ -196,8 +197,8 @@ out:
 	return &res, nil
 }
 
-func s3UploadList(bucket *S3Bucket, object_name, upload_id string) (*ListPartsResult, error) {
-	var res ListPartsResult
+func s3UploadList(bucket *S3Bucket, object_name, upload_id string) (*swys3api.S3MpuPartList, error) {
+	var res swys3api.S3MpuPartList
 	var objects []S3Object
 	var upload S3Upload
 	var err error
@@ -217,7 +218,7 @@ func s3UploadList(bucket *S3Bucket, object_name, upload_id string) (*ListPartsRe
 	res.Bucket		= bucket.Name
 	res.Key			= object_name
 	res.UploadId		= upload_id
-	res.StorageClass	= S3StorageClassStandard
+	res.StorageClass	= swys3api.S3StorageClassStandard
 	res.MaxParts		= 1000
 	res.IsTruncated		= false
 
@@ -232,7 +233,7 @@ func s3UploadList(bucket *S3Bucket, object_name, upload_id string) (*ListPartsRe
 	} else {
 		for _, obj := range objects {
 			res.Part = append(res.Part,
-				ListPartsResultPart{
+				swys3api.S3MpuPart{
 					PartNumber:	obj.Part,
 					LastModified:	obj.CreationTime,
 					ETag:		obj.ETag,

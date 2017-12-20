@@ -132,7 +132,7 @@ func formatRequest(prefix string, r *http.Request) string {
 }
 
 func handleListBuckets(w http.ResponseWriter, akey *S3AccessKey) {
-	var list *ListAllMyBucketsResult
+	var list *swys3api.S3BucketList
 	var err error
 
 	list, err = s3ListBuckets(akey)
@@ -320,7 +320,7 @@ func handleObject(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
-			resp := InitiateMultipartUploadResult{
+			resp := swys3api.S3MpuInit{
 				Bucket:		bucket.Name,
 				Key:		object_name,
 				UploadId:	upload.UploadID,
@@ -328,7 +328,7 @@ func handleObject(w http.ResponseWriter, r *http.Request) {
 			HTTPRespXML(w, resp)
 			return
 		} else if _, ok = r.URL.Query()["uploadId"]; ok {
-			var complete CompleteMultipartUpload
+			var complete swys3api.S3MpuFiniParts
 
 			body, err = ioutil.ReadAll(r.Body)
 			if err != nil {
@@ -468,7 +468,7 @@ func handleObject(w http.ResponseWriter, r *http.Request) {
 
 func handleKeygen(w http.ResponseWriter, r *http.Request) {
 	var akey *S3AccessKey
-	var kg swys3ctl.S3CtlKeyGen
+	var kg swys3api.S3CtlKeyGen
 	var err error
 
 	err = swyhttp.ReadAndUnmarshalReq(r, &kg)
@@ -487,7 +487,7 @@ func handleKeygen(w http.ResponseWriter, r *http.Request) {
 		goto out
 	}
 
-	err = swyhttp.MarshalAndWrite(w, &swys3ctl.S3CtlKeyGenResult{
+	err = swyhttp.MarshalAndWrite(w, &swys3api.S3CtlKeyGenResult{
 			AccessKeyID:	akey.AccessKeyID,
 			AccessKeySecret:akey.AccessKeySecret,
 		})
@@ -502,7 +502,7 @@ out:
 }
 
 func handleKeydel(w http.ResponseWriter, r *http.Request) {
-	var kd swys3ctl.S3CtlKeyDel
+	var kd swys3api.S3CtlKeyDel
 	var err error
 
 	err = swyhttp.ReadAndUnmarshalReq(r, &kd)
@@ -549,7 +549,7 @@ func handleAdminOp(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleNotify(w http.ResponseWriter, r *http.Request, subscribe bool) {
-	var params swys3ctl.S3Subscribe
+	var params swys3api.S3Subscribe
 
 	/* For now make it admin-only op */
 	err := s3VerifyAdmin(r)
