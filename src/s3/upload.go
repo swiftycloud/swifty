@@ -17,6 +17,12 @@ type S3Upload struct {
 	UploadID			string		`json:"uid" bson:"uid"`
 	State				uint32		`json:"state" bson:"state"`
 
+	// These three are filled upon
+	// parts completion
+	Parts				int64		`json:"parts" bson:"parts"`
+	Size				int64		`json:"size" bson:"size"`
+	ETag				string		`json:"etag" bson:"etag"`
+
 	S3ObjectPorps					`json:",inline" bson:",inline"`
 }
 
@@ -32,11 +38,13 @@ func (upload *S3Upload)dbSetState(state uint32) (error) {
 			bson.M{"state": state})
 }
 
-func (upload *S3Upload)dbSetStateEtag(state uint32, etag string) (error) {
+func (upload *S3Upload)dbSetStateComplete(state uint32, etag string, parts, size int64) (error) {
 	return upload.dbSet(
 			bson.M{"_id": upload.ObjID,
 				"state": bson.M{"$in": s3StateTransition[state]}},
 			bson.M{"state": state,
+				"parts": parts,
+				"size": size,
 				"etag": etag})
 }
 
@@ -137,6 +145,7 @@ func s3UploadFini(bucket *S3Bucket, upload_id string,
 		compete *CompleteMultipartUpload) (*CompleteMultipartUploadResult, error) {
 	var res CompleteMultipartUploadResult
 	var objects []S3Object
+	var parts, size int64
 	var upload S3Upload
 	var err error
 
@@ -164,6 +173,9 @@ func s3UploadFini(bucket *S3Bucket, upload_id string,
 		for _, obj := range objects {
 			var data []byte
 
+			parts++
+			size += obj.Size
+
 			data, err = s3ReadObjectData(bucket, &obj)
 			if err != nil {
 				return nil, err
@@ -174,7 +186,8 @@ func s3UploadFini(bucket *S3Bucket, upload_id string,
 	}
 
 	res.ETag = fmt.Sprintf("%x", md5.Sum(nil))
-	err = upload.dbSetStateEtag(S3StateInactive, res.ETag)
+	err = upload.dbSetStateComplete(S3StateInactive,
+			res.ETag, parts, size)
 	if err != nil {
 		return nil, err
 	}
