@@ -8,18 +8,19 @@ import (
 //
 // AnalyticsConfiguration
 // BucketLoggingStatus
-// CompleteMultipartUploadResult
+// CompleteMultipartUploadResult		+
 // CopyObjectResult
 // Delete
 // DeleteResult
-// InitiateMultipartUploadResult
+// Error					+
+// InitiateMultipartUploadResult		+
 // InventoryConfiguration
 // LifecycleConfiguration
-// ListAllMyBucketsResult
-// ListBucketResult
+// ListAllMyBucketsResult			+
+// ListBucketResult				+
 // ListInventoryConfigurationsResult
 // ListMultipartUploadsResult
-// ListPartsResult
+// ListPartsResult				+
 // ListVersionsResult
 // LocationConstraint
 // MetricsConfiguration
@@ -75,6 +76,7 @@ type S3Object struct {
 }
 
 type S3Bucket struct {
+	XMLName			xml.Name			`xml:"ListBucketResult"`
 	Name			string				`xml:"Name,omitempy"`
 	Prefix			string				`xml:"Prefix,omitempy"`
 	KeyCount		int64				`xml:"KeyCount,omitempy"`
