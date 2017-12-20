@@ -76,7 +76,7 @@ func s3Notify(namespace string, bucket *S3Bucket, object *S3Object, op uint) {
 	data, err := json.Marshal(&swys3api.S3Event{
 			Namespace: namespace,
 			Bucket: bucket.Name,
-			Object: object.Name,
+			Object: object.Key,
 			Op: eventNames[op],
 		})
 

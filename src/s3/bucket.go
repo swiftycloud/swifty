@@ -271,7 +271,7 @@ func s3ListBucket(akey *S3AccessKey, bucket_name, acl string) (*swys3api.S3Bucke
 	for _, k := range objects {
 		bucketList.Contents = append(bucketList.Contents,
 			swys3api.S3Object {
-				Key:		k.Name,
+				Key:		k.Key,
 				Size:		k.Size,
 				LastModified:	k.CreationTime,
 			})

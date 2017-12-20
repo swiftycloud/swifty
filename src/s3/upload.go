@@ -79,7 +79,7 @@ func s3UploadInit(bucket *S3Bucket, object_name, acl string) (*S3Upload, error) 
 
 	upload := S3Upload{
 		S3ObjectPorps: S3ObjectPorps {
-			Name:		object_name,
+			Key:		object_name,
 			Acl:		acl,
 			CreationTime:	time.Now().Format(time.RFC3339),
 		},
