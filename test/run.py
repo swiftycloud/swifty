@@ -6,6 +6,7 @@ import json
 import time
 import random
 import string
+import argparse
 
 def randstr():
 	return ''.join(random.choice(string.ascii_letters) for _ in range(0,8))
@@ -83,24 +84,25 @@ def del_fn(inf):
 	swyrun([ "del", inf['name'] ])
 
 
-def run_test(fname, langs):
+def run_test(fname, langs, opts):
 	print("====== Running %s" % fname.__name__)
 	for l in langs:
 		print("______ %s" % l)
-		if fname(l):
+		if fname(l, opts):
 			print("------ PASS")
 		else:
 			print("====== FAIL")
 
-def helloworld(lang):
+def helloworld(lang, opts):
 	cookie = randstr()
 	inf = add_fn("helloworld", lang)
 	ret = run_fn(inf, {'name': cookie})
-	del_fn(inf)
 	print(ret)
+	if not opts['keep']:
+		del_fn(inf)
 	return ret['message'] == 'hw:%s:%s' % (lang, cookie)
 
-def update(lang):
+def update(lang, opts):
 	ok = False
 	cookie = randstr()
 	inf = add_fn("helloworld", lang)
@@ -123,10 +125,11 @@ def update(lang):
 			else:
 				print("Alien message")
 			break
-	del_fn(inf)
+	if not opts['keep']:
+		del_fn(inf)
 	return ok
 
-def maria(lang):
+def maria(lang, opts):
 	ok = False
 	dbname = 'mysqltst'
 	cookie = randstr()
@@ -145,13 +148,14 @@ def maria(lang):
 		if ret.get('res', '') == 'done':
 			ret = run_fn(inf, args_s)
 			print(ret)
-			if ret.get('res', [['']])[0][0].strip() == cookie:
+			if ret.get('res', '').strip() == cookie:
 				ok = True
-	del_fn(inf)
-	del_mw(dbname)
+	if not opts['keep']:
+		del_fn(inf)
+		del_mw(dbname)
 	return ok
 
-def pgsql(lang):
+def pgsql(lang, opts):
 	ok = False
 	dbname = 'pgtst'
 	cookie = randstr()
@@ -172,11 +176,12 @@ def pgsql(lang):
 			print(ret)
 			if ret.get('res', [['']])[0][0].strip() == cookie:
 				ok = True
-	del_fn(inf)
-	del_mw(dbname)
+	if not opts['keep']:
+		del_fn(inf)
+		del_mw(dbname)
 	return ok
 
-def mongo(lang):
+def mongo(lang, opts):
 	ok = False
 	dbname = 'mgotst'
 	cookie = randstr()
@@ -192,11 +197,12 @@ def mongo(lang):
 		print(ret)
 		if ret.get('res', '') == cookie:
 			ok = True
-	del_fn(inf)
-	del_mw(dbname)
+	if not opts['keep']:
+		del_fn(inf)
+		del_mw(dbname)
 	return ok
 
-def s3(lang):
+def s3(lang, opts):
 	ok = False
 	s3name = 's3tns'
 	cookie = randstr()
@@ -216,11 +222,12 @@ def s3(lang):
 			print(ret)
 			if ret.get('res', '') == cookie:
 				ok = True
-	del_fn(inf)
-	del_mw(s3name)
+	if not opts['keep']:
+		del_fn(inf)
+		del_mw(s3name)
 	return ok
 
-def s3notify(lang):
+def s3notify(lang, opts):
 	ok = False
 	s3name = 's3nns'
 	args_c = { 's3name': s3name, 'action': 'create', 'bucket': 'tbuck' }
@@ -239,13 +246,15 @@ def s3notify(lang):
 			infe = inf_fn(infe)
 			if infe['Called'] == '0':
 				ok = True
-		del_fn(infe)
+		if not opts['keep']:
+			del_fn(infe)
 
-	del_fn(inf)
-	del_mw(s3name)
+	if not opts['keep']:
+		del_fn(inf)
+		del_mw(s3name)
 	return ok
 
-def timeout(lang):
+def timeout(lang, opts):
 	ok = False
 	inf = add_fn("timeout", lang, tmo = 2000)
 	ret = run_fn(inf, { 'tmo': '1000' })
@@ -258,21 +267,52 @@ def timeout(lang):
 			print(ret)
 			if ret == 'slept:1500':
 				ok = True
-	del_fn(inf)
+	if not opts['keep']:
+		del_fn(inf)
 	return ok
 
-def checkempty(lang):
+def checkempty(lang, opts):
 	fns = list_fn()
 	print(fns)
 	return len(fns) == 0
 
+tests = [
+	(helloworld,	["python", "golang"]),
+	(update,	["python"]),
+	(pgsql,		["python"]),
+	(maria,		["python"]),
+	(mongo,		["python"]),
+	(s3,		["python"]),
+	(s3notify,	["python"]),
+	(timeout,	["python"]),
+	(checkempty,	[""]),
+]
 
-#run_test(helloworld, ["python", "golang"])
-#run_test(update, ["python"])
-#run_test(pgsql, ["python"])
-run_test(maria, ["python"])
-#run_test(mongo, ["python"])
-#run_test(s3, ["python"])
-#run_test(s3notify, ["python"])
-#run_test(timeout, ["python"])
-run_test(checkempty, [""])
+def list_tests(opts):
+	print("Tests:")
+	for t in tests:
+		print("\t%s" % t[0].__name__)
+
+def run_tests(opts):
+	tn = opts.get('test', '')
+	for t in tests:
+		if tn and t[0].__name__ != tn:
+			continue
+		run_test(t[0], t[1], opts)
+
+
+p = argparse.ArgumentParser("Swifty tests")
+sp = p.add_subparsers(help = "Use --help for list of actions")
+
+lp = sp.add_parser("ls", help = "List tests")
+lp.set_defaults(action = list_tests)
+rp = sp.add_parser("run", help = "Run tests")
+rp.add_argument("-t", "--test", help = "Name of test")
+rp.add_argument("-k", "--keep", help = "Keep fns and mware", action = 'store_true')
+rp.set_defaults(action = run_tests)
+
+def show_help(opts):
+	print("Run with --help for list of options")
+
+opts = vars(p.parse_args())
+opts.get('action', show_help)(opts)
