@@ -113,6 +113,40 @@ type S3MpuInit struct {
 	UploadId		string				`xml:"UploadId,omitempy"`
 }
 
+type S3CommonPrefixEntry struct {
+	Prefix			string				`xml:"Prefix,omitempy"`
+}
+
+
+type S3CommonPrefixes struct {
+	Prefixes		[]S3CommonPrefixEntry		`xml:"CommonPrefixes,omitempy"`
+}
+
+type S3MpuUpload struct {
+	UploadId		string				`xml:"UploadId,omitempy"`
+	Key			string				`xml:"Key,omitempy"`
+	Initiated		string				`xml:"Initiated,omitempy"`
+	StorageClass		string				`xml:"StorageClass,omitempy"`
+	Initiator		S3Owner				`xml:"Initiator,omitempy"`
+	Owner			S3Owner				`xml:"Owner,omitempy"`
+}
+
+type S3MpuList struct {
+	XMLName			xml.Name			`xml:"ListMultipartUploadsResult"`
+	Bucket			string				`xml:"Bucket,omitempy"`
+	KeyMarker		string				`xml:"KeyMarker,omitempy"`
+	UploadIdMarker		string				`xml:"UploadIdMarker,omitempy"`
+	NextKeyMarker		string				`xml:"NextKeyMarker,omitempy"`
+	NextUploadIdMarker	string				`xml:"NextUploadIdMarker,omitempy"`
+	EncodingType		string				`xml:"Encoding-Type,omitempy"`
+	MaxUploads		int64				`xml:"MaxUploads,omitempy"`
+	IsTruncated		bool				`xml:"IsTruncated,omitempy"`
+	Upload			[]S3MpuUpload			`xml:"Upload,omitempy"`
+	Prefix			string				`xml:"Prefix,omitempy"`
+	CommonPrefixes		[]S3CommonPrefixes
+	Delimiter		string				`xml:"Delimiter,omitempy"`
+}
+
 type S3MpuPart struct {
 	XMLName			xml.Name			`xml:"ListPartsResultPart"`
 	PartNumber		int				`xml:"PartNumber"`

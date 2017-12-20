@@ -197,6 +197,47 @@ out:
 	return &res, nil
 }
 
+func s3Uploads(akey *S3AccessKey, bucket_name string) (*swys3api.S3MpuList, error) {
+	var res swys3api.S3MpuList
+	var bucket *S3Bucket
+	var uploads []S3Upload
+	var err error
+
+	bucket, err = akey.FindBucket(bucket_name)
+	if err != nil {
+		log.Errorf("s3: Can't find bucket %s: %s", bucket_name, err.Error())
+		return nil, err
+	}
+
+	res.Bucket		= bucket.Name
+	res.MaxUploads		= 1000
+	res.IsTruncated		= false
+
+	err = dbS3FindAll(bson.M{"bucket-id": bucket.ObjID,
+				"state": S3StateActive}, &uploads)
+	if err != nil {
+		if err == mgo.ErrNotFound {
+			goto out
+		}
+		log.Errorf("s3: Can't find uploads on bucket %s: %s",
+				bucket.Name, err.Error())
+		return nil, err
+	} else {
+		for _, u := range uploads {
+			res.Upload = append(res.Upload,
+				swys3api.S3MpuUpload{
+					UploadId:	u.UploadID,
+					Key:		u.Key,
+					Initiated:	u.CreationTime,
+				})
+		}
+	}
+
+out:
+	log.Debugf("s3: List upload %v", res)
+	return &res, nil
+}
+
 func s3UploadList(bucket *S3Bucket, object_name, upload_id string) (*swys3api.S3MpuPartList, error) {
 	var res swys3api.S3MpuPartList
 	var objects []S3Object

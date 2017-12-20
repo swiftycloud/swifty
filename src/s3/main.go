@@ -185,11 +185,6 @@ func handleBucket(w http.ResponseWriter, r *http.Request) {
 
 	if bucket_name == "" {
 		if r.Method == http.MethodGet {
-			if _, ok = r.URL.Query()["uploadId"]; ok {
-				HTTPRespError(w, S3ErrNotImplemented,
-					"Listing parts is not yet implemented")
-				return
-			}
 			handleListBuckets(w, akey)
 			return
 		} else {
@@ -208,6 +203,16 @@ func handleBucket(w http.ResponseWriter, r *http.Request) {
 		}
 		break
 	case http.MethodGet:
+		if _, ok = r.URL.Query()["uploads"]; ok {
+			resp, err := s3Uploads(akey, bucket_name)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+
+			HTTPRespXML(w, resp)
+			return
+		}
 		// List all objects
 		objects, err := s3ListBucket(akey, bucket_name, acl)
 		if err != nil {
