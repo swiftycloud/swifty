@@ -46,7 +46,7 @@ for cmd in ['list-objects']:
     spp = sp.add_parser(cmd)
     spp.add_argument('--name', dest = 'name', required = True)
 
-for cmd in ['list-uploading']:
+for cmd in ['list-uploads']:
     spp = sp.add_parser(cmd)
     spp.add_argument('--name', dest = 'name', required = True)
 
@@ -257,6 +257,17 @@ if args.cmd == 'list-objects':
     if 'Contents' in resp:
         for x in resp['Contents']:
             print("\tObject: Key %s Size %d" % (x['Key'], x['Size']))
+
+if args.cmd == 'list-uploads':
+    try:
+        resp = s3.list_multipart_uploads(Bucket = args.name)
+        print("Bucket %s uploads list" % (args.name))
+        if 'Uploads' in resp:
+            for x in resp['Uploads']:
+                print("\tKey %s Initiated %s UploadId %s" % \
+                      (x['Key'], x['Initiated'], x['UploadId']))
+    except:
+        print("ERROR: Can't list uploads")
 
 if args.cmd == 'bucket-add':
     if args.name == None:
