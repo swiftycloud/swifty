@@ -121,7 +121,7 @@ func (bucket *S3Bucket)FindObject(oname string, part, version int) (*S3Object, e
 
 func s3InsertObject(bucket *S3Bucket, oname string,
 			UploadID bson.ObjectId, part, version int,
-			objct_size int64, acl string) (*S3Object, error) {
+			size int64, acl string) (*S3Object, error) {
 	var err error
 
 	object := &S3Object {
@@ -133,7 +133,7 @@ func s3InsertObject(bucket *S3Bucket, oname string,
 
 		Version:	version,
 		Part:		part,
-		Size:		objct_size,
+		Size:		size,
 		ObjID:		bson.NewObjectId(),
 		BucketObjID:	bucket.ObjID,
 		BackendID:	bucket.ObjectBID(oname, part, version),
