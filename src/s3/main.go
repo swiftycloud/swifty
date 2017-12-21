@@ -255,7 +255,7 @@ func handleBucket(w http.ResponseWriter, r *http.Request) {
 
 func handleObject(w http.ResponseWriter, r *http.Request) {
 	var bname string = mux.Vars(r)["BucketName"]
-	var object_name string = mux.Vars(r)["ObjName"]
+	var oname string = mux.Vars(r)["ObjName"]
 	var acl string
 	var object_size int64
 	var akey *S3AccessKey
@@ -268,7 +268,7 @@ func handleObject(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
 	log.Debug(formatRequest(fmt.Sprintf("handleObject: bucket %v object %v",
-						bname, object_name), r))
+						bname, oname), r))
 
 	akey, err = s3VerifyAuthorization(r)
 	if err != nil {
@@ -292,7 +292,7 @@ func handleObject(w http.ResponseWriter, r *http.Request) {
 	if bname == "" {
 		HTTPRespError(w, S3ErrInvalidBucketName)
 		return
-	} else if object_name == "" {
+	} else if oname == "" {
 		HTTPRespError(w, S3ErrInvalidObjectName)
 		return
 	}
@@ -318,7 +318,7 @@ func handleObject(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodPost:
 		if _, ok = r.URL.Query()["uploads"]; ok {
-			upload, err = s3UploadInit(bucket, object_name, acl)
+			upload, err = s3UploadInit(bucket, oname, acl)
 			if err != nil {
 				HTTPRespError(w, S3ErrInternalError,
 					"Failed to initiate multipart upload")
@@ -327,7 +327,7 @@ func handleObject(w http.ResponseWriter, r *http.Request) {
 
 			resp := swys3api.S3MpuInit{
 				Bucket:		bucket.Name,
-				Key:		object_name,
+				Key:		oname,
 				UploadId:	upload.UploadID,
 			}
 			HTTPRespXML(w, resp)
@@ -387,7 +387,7 @@ func handleObject(w http.ResponseWriter, r *http.Request) {
 			}
 
 			etag, err = s3UploadPart(akey.Namespace, bucket,
-				object_name, r.URL.Query()["uploadId"][0],
+				oname, r.URL.Query()["uploadId"][0],
 				part, body)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusBadRequest)
@@ -399,7 +399,7 @@ func handleObject(w http.ResponseWriter, r *http.Request) {
 
 		var object *S3Object
 		// Create new object
-		object, err = s3InsertObject(bucket, object_name,
+		object, err = s3InsertObject(bucket, oname,
 						"", 0, 1,
 						object_size, acl)
 		if err != nil {
@@ -414,7 +414,7 @@ func handleObject(w http.ResponseWriter, r *http.Request) {
 		break
 	case http.MethodGet:
 		if _, ok = r.URL.Query()["uploadId"]; ok {
-			resp, err := s3UploadList(bucket, object_name,
+			resp, err := s3UploadList(bucket, oname,
 						r.URL.Query()["uploadId"][0])
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusBadRequest)
@@ -425,7 +425,7 @@ func handleObject(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// List all objects
-		body, err = s3ReadObject(bucket, object_name, 0, 1)
+		body, err = s3ReadObject(bucket, oname, 0, 1)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
@@ -436,14 +436,14 @@ func handleObject(w http.ResponseWriter, r *http.Request) {
 		break
 	case http.MethodDelete:
 		if _, ok = r.URL.Query()["uploadId"]; ok {
-			err = s3UploadAbort(bucket, object_name, r.URL.Query()["uploadId"][0])
+			err = s3UploadAbort(bucket, oname, r.URL.Query()["uploadId"][0])
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusBadRequest)
 				return
 			}
 		} else {
 			// Delete a bucket
-			err = s3DeleteObject(bucket, object_name, 0, 1)
+			err = s3DeleteObject(bucket, oname, 0, 1)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusBadRequest)
 				return
@@ -452,7 +452,7 @@ func handleObject(w http.ResponseWriter, r *http.Request) {
 		break
 	case http.MethodHead:
 		// Check if we can access a bucket
-		err = s3CheckAccess(akey, bname, object_name)
+		err = s3CheckAccess(akey, bname, oname)
 		if err != nil {
 			if err == mgo.ErrNotFound {
 				http.Error(w, "No bucket/object found", http.StatusBadRequest)

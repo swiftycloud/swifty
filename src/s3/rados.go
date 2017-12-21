@@ -118,7 +118,7 @@ func radosCreatePool(pool string, max_objects, max_bytes uint64) error {
 	return err
 }
 
-func radosWriteObject(pool, key string, data []byte) error {
+func radosWriteObject(pool, oname string, data []byte) error {
 	var ioctx *rados.IOContext
 	var err error
 
@@ -128,27 +128,27 @@ func radosWriteObject(pool, key string, data []byte) error {
 
 	ioctx, err = radosConn.OpenIOContext(pool)
 	if err != nil {
-		log.Errorf("rados: Can't open context for pool %s key %s: %s",
-				pool, key, err.Error())
+		log.Errorf("rados: Can't open context for pool %s object %s: %s",
+				pool, oname, err.Error())
 	}
 
-	err = ioctx.Write(key, data, 0)
+	err = ioctx.Write(oname, data, 0)
 	if err != nil {
-		log.Errorf("rados: Can't write object for pool %s key %s: %s",
-				pool, key, err.Error())
+		log.Errorf("rados: Can't write object for pool %s object %s: %s",
+				pool, oname, err.Error())
 		ioctx.Destroy()
 		return err
 	}
 
 	log.Debugf("rados: Wrote pool %s object %s size %d",
-			pool, key, len(data))
+			pool, oname, len(data))
 
 	ioctx.Destroy()
 	return nil
 }
 
 // FIXME: We can read up to int value at once
-func radosReadObject(pool, key string, size uint64) ([]byte, error) {
+func radosReadObject(pool, oname string, size uint64) ([]byte, error) {
 	var ioctx *rados.IOContext
 	var data []byte
 	var err error
@@ -160,28 +160,28 @@ func radosReadObject(pool, key string, size uint64) ([]byte, error) {
 
 	ioctx, err = radosConn.OpenIOContext(pool)
 	if err != nil {
-		log.Errorf("rados: Can't open context for pool %s key %s: %s",
-				pool, key, err.Error())
+		log.Errorf("rados: Can't open context for pool %s object %s: %s",
+				pool, oname, err.Error())
 		return nil, err
 	}
 
 	data = make([]byte, size)
-	n, err = ioctx.Read(key, data, 0)
+	n, err = ioctx.Read(oname, data, 0)
 	if err != nil {
-		log.Errorf("rados: Can't read object from pool %s key %s: %s",
-				pool, key, err.Error())
+		log.Errorf("rados: Can't read object from pool %s object %s: %s",
+				pool, oname, err.Error())
 		ioctx.Destroy()
 		return nil, err
 	}
 
 	log.Debugf("rados: Read pool %s object %s size %d",
-			pool, key, n)
+			pool, oname, n)
 
 	ioctx.Destroy()
 	return data, nil
 }
 
-func radosDeleteObject(pool, key string) error {
+func radosDeleteObject(pool, oname string) error {
 	var ioctx *rados.IOContext
 	var err error
 
@@ -191,20 +191,20 @@ func radosDeleteObject(pool, key string) error {
 
 	ioctx, err = radosConn.OpenIOContext(pool)
 	if err != nil {
-		log.Errorf("rados: Can't open context for pool %s key %s: %s",
-				pool, key, err.Error())
+		log.Errorf("rados: Can't open context for pool %s object %s: %s",
+				pool, oname, err.Error())
 	}
 
-	err = ioctx.Delete(key)
+	err = ioctx.Delete(oname)
 	if err != nil {
-		log.Errorf("rados: Can't delete object for pool %s key %s: %s",
-				pool, key, err.Error())
+		log.Errorf("rados: Can't delete object for pool %s object %s: %s",
+				pool, oname, err.Error())
 		ioctx.Destroy()
 		return err
 	}
 
 	log.Debugf("rados: Delete pool %s object %s",
-			pool, key)
+			pool, oname)
 
 	ioctx.Destroy()
 	return nil

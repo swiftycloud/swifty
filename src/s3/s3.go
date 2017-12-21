@@ -50,7 +50,7 @@ func s3VerifyAdmin(r *http.Request) error {
 	return nil
 }
 
-func s3CheckAccess(akey *S3AccessKey, bname, object_name string) error {
+func s3CheckAccess(akey *S3AccessKey, bname, oname string) error {
 	// FIXME Implement lookup and ACL, for now just allow
 	return nil
 }

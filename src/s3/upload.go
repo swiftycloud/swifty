@@ -58,14 +58,14 @@ func (upload *S3Upload)dbSetStateComplete(state uint32, etag string, parts, size
 // suspect they are simply increment versioning or
 // overwrite old files). We don't plan to merge
 // the chunks instead and carry them as is.
-func UploadUID(salt, key string, part, version int) string {
+func UploadUID(salt, oname string, part, version int) string {
 	h := sha256.New()
-	h.Write([]byte(salt + "-" + fmt.Sprintf("%d-%d", part, version) + "-" + key))
+	h.Write([]byte(salt + "-" + fmt.Sprintf("%d-%d", part, version) + "-" + oname))
 	return hex.EncodeToString(h.Sum(nil))
 }
 
-func VerifyUploadUID(bucket *S3Bucket, object_name, upload_id string) error {
-	uid := UploadUID(bucket.BackendID, object_name, 0, 0)
+func VerifyUploadUID(bucket *S3Bucket, oname, upload_id string) error {
+	uid := UploadUID(bucket.BackendID, oname, 0, 0)
 	if uid != upload_id {
 		err := fmt.Errorf("uploadId mismatch")
 		log.Errorf("s3: uploadId mismatch %s/%s", uid, upload_id)
@@ -74,18 +74,18 @@ func VerifyUploadUID(bucket *S3Bucket, object_name, upload_id string) error {
 	return nil
 }
 
-func s3UploadInit(bucket *S3Bucket, object_name, acl string) (*S3Upload, error) {
+func s3UploadInit(bucket *S3Bucket, oname, acl string) (*S3Upload, error) {
 	var err error
 
 	upload := S3Upload{
 		S3ObjectPorps: S3ObjectPorps {
-			Key:		object_name,
+			Key:		oname,
 			Acl:		acl,
 			CreationTime:	time.Now().Format(time.RFC3339),
 		},
 
 		BucketObjID:	bucket.ObjID,
-		UploadID:	UploadUID(bucket.BackendID, object_name, 0, 0),
+		UploadID:	UploadUID(bucket.BackendID, oname, 0, 0),
 		State:		S3StateActive,
 	}
 
@@ -100,7 +100,7 @@ func s3UploadInit(bucket *S3Bucket, object_name, acl string) (*S3Upload, error) 
 	return &upload, err
 }
 
-func s3UploadPart(namespace string, bucket *S3Bucket, object_name,
+func s3UploadPart(namespace string, bucket *S3Bucket, oname,
 			upload_id string, part int, data []byte) (string, error) {
 	var upload S3Upload
 	var object *S3Object
@@ -108,7 +108,7 @@ func s3UploadPart(namespace string, bucket *S3Bucket, object_name,
 	var size int64
 	var err error
 
-	err = VerifyUploadUID(bucket, object_name, upload_id)
+	err = VerifyUploadUID(bucket, oname, upload_id)
 	if err != nil {
 		return "", err
 	}
@@ -122,11 +122,11 @@ func s3UploadPart(namespace string, bucket *S3Bucket, object_name,
 
 	size = int64(len(data))
 
-	object, err = s3InsertObject(bucket, object_name,
+	object, err = s3InsertObject(bucket, oname,
 			upload.ObjID, part, 0, size, "")
 	if err != nil {
 		log.Errorf("s3: Can't insert object %s part %d: %s",
-				object_name, part, err.Error())
+				oname, part, err.Error())
 		return "", err
 	}
 
@@ -135,7 +135,7 @@ func s3UploadPart(namespace string, bucket *S3Bucket, object_name,
 	etag, err = s3CommitObject(namespace, bucket, object, data)
 	if err != nil {
 		log.Errorf("s3: Can't commit object %s part %d: %s",
-				object_name, part, err.Error())
+				oname, part, err.Error())
 		return "", err
 	}
 
@@ -238,13 +238,13 @@ out:
 	return &res, nil
 }
 
-func s3UploadList(bucket *S3Bucket, object_name, upload_id string) (*swys3api.S3MpuPartList, error) {
+func s3UploadList(bucket *S3Bucket, oname, upload_id string) (*swys3api.S3MpuPartList, error) {
 	var res swys3api.S3MpuPartList
 	var objects []S3Object
 	var upload S3Upload
 	var err error
 
-	err = VerifyUploadUID(bucket, object_name, upload_id)
+	err = VerifyUploadUID(bucket, oname, upload_id)
 	if err != nil {
 		return nil, err
 	}
@@ -257,7 +257,7 @@ func s3UploadList(bucket *S3Bucket, object_name, upload_id string) (*swys3api.S3
 	}
 
 	res.Bucket		= bucket.Name
-	res.Key			= object_name
+	res.Key			= oname
 	res.UploadId		= upload_id
 	res.StorageClass	= swys3api.S3StorageClassStandard
 	res.MaxParts		= 1000
@@ -269,7 +269,7 @@ func s3UploadList(bucket *S3Bucket, object_name, upload_id string) (*swys3api.S3
 			goto out
 		}
 		log.Errorf("s3: Can't find upload %s/%s: %s",
-				upload_id, object_name, err.Error())
+				upload_id, oname, err.Error())
 		return nil, err
 	} else {
 		for _, obj := range objects {
@@ -288,7 +288,7 @@ out:
 	return &res, nil
 }
 
-func s3UploadAbort(bucket *S3Bucket, object_name, upload_id string) error {
+func s3UploadAbort(bucket *S3Bucket, oname, upload_id string) error {
 	var objects []S3Object
 	var upload S3Upload
 	var err error
@@ -302,7 +302,7 @@ func s3UploadAbort(bucket *S3Bucket, object_name, upload_id string) error {
 	// unusable and hidden.
 	//
 
-	err = VerifyUploadUID(bucket, object_name, upload_id)
+	err = VerifyUploadUID(bucket, oname, upload_id)
 	if err != nil {
 		return err
 	}
@@ -317,7 +317,7 @@ func s3UploadAbort(bucket *S3Bucket, object_name, upload_id string) error {
 			return nil
 		}
 		log.Errorf("s3: Can't disable upload %s/%s: %s",
-				upload_id, object_name, err.Error())
+				upload_id, oname, err.Error())
 		return err
 	}
 
@@ -325,7 +325,7 @@ func s3UploadAbort(bucket *S3Bucket, object_name, upload_id string) error {
 	if err != nil {
 		if err != mgo.ErrNotFound {
 			log.Errorf("s3: Can't find object parts with uid %s/%s: %s",
-					upload_id, object_name, err.Error())
+					upload_id, oname, err.Error())
 			return err
 		}
 	} else {
@@ -334,7 +334,7 @@ func s3UploadAbort(bucket *S3Bucket, object_name, upload_id string) error {
 			if err != nil {
 				if err != mgo.ErrNotFound {
 					log.Errorf("s3: Can't delete object part %s/%s: %s",
-							upload_id, object_name, err.Error())
+							upload_id, oname, err.Error())
 					return err
 				}
 			}
@@ -344,10 +344,10 @@ func s3UploadAbort(bucket *S3Bucket, object_name, upload_id string) error {
 	err = dbS3Remove(upload, bson.M{"_id": upload.ObjID})
 	if err != nil {
 		log.Errorf("s3: Can't delete upload %s/%s: %s",
-				upload_id, object_name, err.Error())
+				upload_id, oname, err.Error())
 		return err
 	}
 
-	log.Debugf("s3: Deleted upload %s/%s", upload_id, object_name)
+	log.Debugf("s3: Deleted upload %s/%s", upload_id, oname)
 	return nil
 }
