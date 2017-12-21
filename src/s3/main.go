@@ -149,14 +149,14 @@ func handleListBuckets(w http.ResponseWriter, akey *S3AccessKey) {
 }
 
 func handleBucket(w http.ResponseWriter, r *http.Request) {
-	var bucket_name string = mux.Vars(r)["BucketName"]
+	var bname string = mux.Vars(r)["BucketName"]
 	var acl string
 	var akey *S3AccessKey
 	var err error
 	var ok bool
 
 	log.Debug(formatRequest(fmt.Sprintf("handleBucket: bucket %v",
-						bucket_name), r))
+						bname), r))
 
 	akey, err = s3VerifyAuthorization(r)
 	if err != nil {
@@ -183,7 +183,7 @@ func handleBucket(w http.ResponseWriter, r *http.Request) {
 
 	acl = r.Header.Get("x-amz-acl")
 
-	if bucket_name == "" {
+	if bname == "" {
 		if r.Method == http.MethodGet {
 			handleListBuckets(w, akey)
 			return
@@ -196,7 +196,7 @@ func handleBucket(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodPut:
 		// Create a new bucket
-		err = s3InsertBucket(akey, bucket_name, acl)
+		err = s3InsertBucket(akey, bname, acl)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
@@ -204,7 +204,7 @@ func handleBucket(w http.ResponseWriter, r *http.Request) {
 		break
 	case http.MethodGet:
 		if _, ok = r.URL.Query()["uploads"]; ok {
-			resp, err := s3Uploads(akey, bucket_name)
+			resp, err := s3Uploads(akey, bname)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusBadRequest)
 				return
@@ -214,7 +214,7 @@ func handleBucket(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		// List all objects
-		objects, err := s3ListBucket(akey, bucket_name, acl)
+		objects, err := s3ListBucket(akey, bname, acl)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
@@ -225,7 +225,7 @@ func handleBucket(w http.ResponseWriter, r *http.Request) {
 		break
 	case http.MethodDelete:
 		// Delete a bucket
-		err = s3DeleteBucket(akey, bucket_name, acl)
+		err = s3DeleteBucket(akey, bname, acl)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
@@ -233,7 +233,7 @@ func handleBucket(w http.ResponseWriter, r *http.Request) {
 		break
 	case http.MethodHead:
 		// Check if we can access a bucket
-		err = s3CheckAccess(akey, bucket_name, "")
+		err = s3CheckAccess(akey, bname, "")
 		if err != nil {
 			if err == mgo.ErrNotFound {
 				HTTPRespError(w, S3ErrNoSuchBucket, "No bucket found")
@@ -254,7 +254,7 @@ func handleBucket(w http.ResponseWriter, r *http.Request) {
 
 
 func handleObject(w http.ResponseWriter, r *http.Request) {
-	var bucket_name string = mux.Vars(r)["BucketName"]
+	var bname string = mux.Vars(r)["BucketName"]
 	var object_name string = mux.Vars(r)["ObjName"]
 	var acl string
 	var object_size int64
@@ -268,7 +268,7 @@ func handleObject(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
 	log.Debug(formatRequest(fmt.Sprintf("handleObject: bucket %v object %v",
-						bucket_name, object_name), r))
+						bname, object_name), r))
 
 	akey, err = s3VerifyAuthorization(r)
 	if err != nil {
@@ -289,7 +289,7 @@ func handleObject(w http.ResponseWriter, r *http.Request) {
 		break
 	}
 
-	if bucket_name == "" {
+	if bname == "" {
 		HTTPRespError(w, S3ErrInvalidBucketName)
 		return
 	} else if object_name == "" {
@@ -302,7 +302,7 @@ func handleObject(w http.ResponseWriter, r *http.Request) {
 		r.Header.Set("x-amz-acl", swys3api.S3ObjectAclPrivate)
 	}
 
-	bucket, err = akey.FindBucket(bucket_name)
+	bucket, err = akey.FindBucket(bname)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -452,7 +452,7 @@ func handleObject(w http.ResponseWriter, r *http.Request) {
 		break
 	case http.MethodHead:
 		// Check if we can access a bucket
-		err = s3CheckAccess(akey, bucket_name, object_name)
+		err = s3CheckAccess(akey, bname, object_name)
 		if err != nil {
 			if err == mgo.ErrNotFound {
 				http.Error(w, "No bucket/object found", http.StatusBadRequest)

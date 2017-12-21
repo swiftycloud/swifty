@@ -127,10 +127,10 @@ func (bucket *S3Bucket)dbDelObj(size int64) (error) {
 		)
 }
 
-func (akey *S3AccessKey)FindBucket(bucket_name string) (*S3Bucket, error) {
+func (akey *S3AccessKey)FindBucket(bname string) (*S3Bucket, error) {
 	var res S3Bucket
 
-	err := dbS3FindOne(bson.M{"bid": akey.BucketBID(bucket_name)}, &res)
+	err := dbS3FindOne(bson.M{"bid": akey.BucketBID(bname)}, &res)
 	if err != nil {
 		return nil, err
 	}
@@ -138,14 +138,14 @@ func (akey *S3AccessKey)FindBucket(bucket_name string) (*S3Bucket, error) {
 	return &res,nil
 }
 
-func s3InsertBucket(akey *S3AccessKey, bucket_name, acl string) error {
+func s3InsertBucket(akey *S3AccessKey, bname, acl string) error {
 	var err error
 
 	bucket := &S3Bucket{
-		Name:		bucket_name,
+		Name:		bname,
 		Acl:		acl,
 		ObjID:		bson.NewObjectId(),
-		BackendID:	akey.BucketBID(bucket_name),
+		BackendID:	akey.BucketBID(bname),
 		NamespaceID:	akey.NamespaceID(),
 		CreationTime:	time.Now().Format(time.RFC3339),
 		State:		S3StateNone,
@@ -182,16 +182,16 @@ out_nopool:
 	return err
 }
 
-func s3DeleteBucket(akey *S3AccessKey, bucket_name, acl string) error {
+func s3DeleteBucket(akey *S3AccessKey, bname, acl string) error {
 	var bucketFound *S3Bucket
 	var err error
 
-	bucketFound, err = akey.FindBucket(bucket_name)
+	bucketFound, err = akey.FindBucket(bname)
 	if err != nil {
 		if err == mgo.ErrNotFound {
 			return nil
 		}
-		log.Errorf("s3: Can't find bucket %s: %s", bucket_name, err.Error())
+		log.Errorf("s3: Can't find bucket %s: %s", bname, err.Error())
 		return err
 	}
 
@@ -234,14 +234,14 @@ func (bucket *S3Bucket)dbFindAll() ([]S3Object, error) {
 	return res, nil
 }
 
-func s3ListBucket(akey *S3AccessKey, bucket_name, acl string) (*swys3api.S3Bucket, error) {
+func s3ListBucket(akey *S3AccessKey, bname, acl string) (*swys3api.S3Bucket, error) {
 	var bucketList swys3api.S3Bucket
 	var bucketFound *S3Bucket
 	var err error
 
-	bucketFound, err = akey.FindBucket(bucket_name)
+	bucketFound, err = akey.FindBucket(bname)
 	if err != nil {
-		log.Errorf("s3: Can't find bucket %s: %s", bucket_name, err.Error())
+		log.Errorf("s3: Can't find bucket %s: %s", bname, err.Error())
 		return nil, err
 	}
 
@@ -257,7 +257,7 @@ func s3ListBucket(akey *S3AccessKey, bucket_name, acl string) (*swys3api.S3Bucke
 			return &bucketList, nil
 		}
 
-		log.Errorf("s3: Can't find objects %s: %s", bucket_name, err.Error())
+		log.Errorf("s3: Can't find objects %s: %s", bname, err.Error())
 		return nil, err
 	}
 

@@ -88,8 +88,8 @@ func BIDFromNames(namespace, bucket string) string {
 	return hex.EncodeToString(h.Sum(nil))
 }
 
-func (akey *S3AccessKey)BucketBID(bucket_name string) string {
-	return BIDFromNames(akey.Namespace, bucket_name)
+func (akey *S3AccessKey)BucketBID(bname string) string {
+	return BIDFromNames(akey.Namespace, bname)
 }
 
 func (akey *S3AccessKey)NamespaceID() string {

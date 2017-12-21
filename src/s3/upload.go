@@ -197,15 +197,15 @@ out:
 	return &res, nil
 }
 
-func s3Uploads(akey *S3AccessKey, bucket_name string) (*swys3api.S3MpuList, error) {
+func s3Uploads(akey *S3AccessKey, bname string) (*swys3api.S3MpuList, error) {
 	var res swys3api.S3MpuList
 	var bucket *S3Bucket
 	var uploads []S3Upload
 	var err error
 
-	bucket, err = akey.FindBucket(bucket_name)
+	bucket, err = akey.FindBucket(bname)
 	if err != nil {
-		log.Errorf("s3: Can't find bucket %s: %s", bucket_name, err.Error())
+		log.Errorf("s3: Can't find bucket %s: %s", bname, err.Error())
 		return nil, err
 	}
 
