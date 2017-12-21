@@ -1,9 +1,17 @@
 package main
 
 import (
+	"crypto/sha256"
 	"encoding/xml"
+	"encoding/hex"
 	"net/http"
 )
+
+func sha256sum(s []byte) string {
+	h := sha256.New()
+	h.Write([]byte(s))
+	return hex.EncodeToString(h.Sum(nil))
+}
 
 func getURLParam(r *http.Request, param string) (string, bool) {
 	if v, ok := r.URL.Query()[param]; ok {
