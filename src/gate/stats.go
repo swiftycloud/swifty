@@ -17,7 +17,8 @@ type FnStats struct {
 	Called		uint64		`bson:"called"`
 	LastCall	time.Time	`bson:"lastcall"`
 	RunTime		time.Duration	`bson:"rtime"`
-	CallTime	time.Duration	`bson:"ctime"`
+	WdogTime	time.Duration	`bson:"wtime"`
+	GateTime	time.Duration	`bson:"gtime"`
 
 	dirty		bool
 	done		chan chan bool
@@ -42,7 +43,8 @@ func statsUpdate(fmd *FnMemData, op *statsOpaque, res *swyapi.SwdFunctionRunResu
 	atomic.AddUint64(&fmd.stats.Called, 1)
 	fmd.stats.LastCall = op.ts
 	fmd.stats.RunTime += time.Duration(res.Time) * time.Microsecond
-	fmd.stats.CallTime += time.Since(op.ts)
+	fmd.stats.WdogTime += time.Duration(res.CTime) * time.Microsecond
+	fmd.stats.GateTime += time.Since(op.ts)
 }
 
 var statsFlusher chan *FnStats
@@ -65,9 +67,9 @@ func statsDrop(fn *FunctionDesc) {
 		done := make(chan bool)
 		md.stats.done <-done
 		<-done
-
-		dbStatsDrop(&md.stats)
 	}
+
+	dbStatsDrop(&md.stats)
 }
 
 func fnStatsInit(st *FnStats, fn *FunctionDesc) {

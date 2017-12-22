@@ -15,7 +15,8 @@ type FunctionStats struct {
 	Called		uint64			`json:"called"`
 	LastCall	string			`json:"lastcall,omitempty"`
 	Time		uint64			`json:"time"`
-	Time2		uint64			`json:"time2,omitempty"`
+	TimeW		uint64			`json:"timewdog,omitempty"`
+	TimeG		uint64			`json:"timegate,omitempty"`
 }
 
 type FunctionInfo struct {
