@@ -43,13 +43,11 @@ func talkToLink(link *BalancerLink, fmd *FnMemData, cookie, event string, args m
 				Args:		args,
 			})
 	if err != nil {
-		if resp.StatusCode == 524 { // FIXME -- http native TMO handling
-			log.Debugf("TMO %s", cookie)
-			wd_result.Code = 524
-			wd_result.Return = "Function timed out"
-			return &wd_result, nil
-		}
+		goto out
+	}
 
+	err = swyhttp.ReadAndUnmarshalResp(resp, &wd_result)
+	if err != nil {
 		goto out
 	}
 
@@ -57,12 +55,7 @@ func talkToLink(link *BalancerLink, fmd *FnMemData, cookie, event string, args m
 		fmd = memdGet(cookie)
 	}
 
-	statsUpdate(fmd, sopq)
-
-	err = swyhttp.ReadAndUnmarshalResp(resp, &wd_result)
-	if err != nil {
-		goto out
-	}
+	statsUpdate(fmd, sopq, &wd_result)
 
 	if wd_result.Stdout != "" || wd_result.Stderr != "" {
 		logSaveResult(cookie, event, wd_result.Stdout, wd_result.Stderr)

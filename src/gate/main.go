@@ -410,6 +410,7 @@ func handleFunctionStats(w http.ResponseWriter, r *http.Request, tennant string)
 	err = swyhttp.MarshalAndWrite(w,  swyapi.FunctionStats{
 			Called:		stats.Called,
 			LastCall:	lcs,
+			Time:		uint64(stats.RunTime.Nanoseconds()/1000),
 		})
 out:
 	return err
@@ -422,6 +423,7 @@ func handleFunctionInfo(w http.ResponseWriter, r *http.Request, tennant string) 
 	var url = ""
 	var stats *FnStats
 	var lcs string
+	var ctime uint64
 
 	err := swyhttp.ReadAndUnmarshalReq(r, &params)
 	if err != nil {
@@ -445,6 +447,11 @@ func handleFunctionInfo(w http.ResponseWriter, r *http.Request, tennant string) 
 		lcs = stats.LastCall.Format(time.UnixDate)
 	}
 
+	if SwyModeDevel {
+		ctime = uint64(stats.CallTime.Nanoseconds()/1000)
+	}
+
+
 	err = swyhttp.MarshalAndWrite(w,  swyapi.FunctionInfo{
 			State:          fnStates[fn.State],
 			Mware:          fn.Mware,
@@ -464,6 +471,8 @@ func handleFunctionInfo(w http.ResponseWriter, r *http.Request, tennant string) 
 			Stats:		swyapi.FunctionStats {
 				Called:		stats.Called,
 				LastCall:	lcs,
+				Time:		uint64(stats.RunTime.Nanoseconds()/1000),
+				Time2:		ctime,
 			},
 			Size:		swyapi.FunctionSize {
 				Memory:		fn.Size.Mem,

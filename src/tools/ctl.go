@@ -202,6 +202,11 @@ func info_function(project string, args []string, opts [8]string) {
 		since := time.Since(lc)
 		since -= since % time.Second
 		fmt.Printf("Last run:    %s ago\n", since.String())
+		fmt.Printf("Time:        %d (avg %d) usec\n", ifo.Stats.Time, ifo.Stats.Time / ifo.Stats.Called)
+
+		if ifo.Stats.Time2 != 0 {
+			fmt.Printf("RTime:       %d (avg %d) usec\n", ifo.Stats.Time2, ifo.Stats.Time2 / ifo.Stats.Called)
+		}
 	}
 }
 
