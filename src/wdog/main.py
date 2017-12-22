@@ -16,6 +16,9 @@ spec = importlib.util.spec_from_file_location('code', '/function/script.py')
 swycode = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(swycode)
 
+def durusec(start):
+    return int((time.time() - start) * 1000000)
+
 def runnerFn(runq, resq, pout, perr):
     os.dup2(pout, 1)
     os.close(pout)
@@ -26,7 +29,7 @@ def runnerFn(runq, resq, pout, perr):
         try:
             now = time.time()
             res = swycode.main(args)
-            dur = int((time.time() - now) * 1000000) # to usec
+            dur = durusec(now)
         except:
             print("Exception running FN:")
             traceback.print_exc()
@@ -104,6 +107,7 @@ class SwyHandler(BaseHTTPRequestHandler):
             return
 
         try:
+            start = time.time()
             clen = int(self.headers.get('content-length'))
             body = self.rfile.read(clen)
             req = json.loads(body)
@@ -127,7 +131,13 @@ class SwyHandler(BaseHTTPRequestHandler):
                 errc = 524
 
             if res["res"] == "ok":
-                ret = { 'return': res["retj"], 'code': 0, 'stdout': fout, 'stderr': ferr, 'time': res["time"] }
+                ret = { 'return': res["retj"],
+                        'code': 0,
+                        'stdout': fout,
+                        'stderr': ferr,
+                        'time': res["time"],
+                        'ctime': durusec(start),
+                }
             else:
                 ret = { 'return': res["res"], 'code': errc }
             retb = json.dumps(ret).encode('utf-8')

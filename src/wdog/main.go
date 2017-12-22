@@ -180,6 +180,7 @@ func doRun(params *swyapi.SwdFunctionRun) (*swyapi.SwdFunctionRunResult, int, er
 		Code: 0,
 		Stdout: rout,
 		Stderr: rerr,
+		/* FIXME -- calc Time and CTime */
 	}, 0, nil
 }
 
