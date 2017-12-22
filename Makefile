@@ -87,6 +87,7 @@ go-mquotad-y	+= src/mquotad/main.go
 
 go-s3-y	+= src/s3/main.go
 go-s3-y	+= src/s3/db.go
+go-s3-y	+= src/s3/iam.go
 go-s3-y	+= src/s3/bucket.go
 go-s3-y	+= src/s3/object.go
 go-s3-y	+= src/s3/upload.go
@@ -229,6 +230,7 @@ clean-db-swifty:
 
 clean-db-s3:
 	$(call msg-gen,"Cleaning up s3 MongoDB")
+	$(Q) $(MONGO)/$(DB-S3) --eval 'db.S3Iams.remove({});'
 	$(Q) $(MONGO)/$(DB-S3) --eval 'db.S3Buckets.remove({});'
 	$(Q) $(MONGO)/$(DB-S3) --eval 'db.S3Objects.remove({});'
 	$(Q) $(MONGO)/$(DB-S3) --eval 'db.S3Uploads.remove({});'

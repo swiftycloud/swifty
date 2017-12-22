@@ -129,8 +129,15 @@ func (bucket *S3Bucket)dbDelObj(size int64) (error) {
 
 func (akey *S3AccessKey)FindBucket(bname string) (*S3Bucket, error) {
 	var res S3Bucket
+	var iam *S3Iam
+	var err error
 
-	err := dbS3FindOne(bson.M{"bid": akey.BucketBID(bname)}, &res)
+	iam, err = akey.s3IamFind()
+	if err != nil {
+		return nil, err
+	}
+
+	err = dbS3FindOne(bson.M{"bid": iam.BucketBID(bname)}, &res)
 	if err != nil {
 		return nil, err
 	}
@@ -139,14 +146,20 @@ func (akey *S3AccessKey)FindBucket(bname string) (*S3Bucket, error) {
 }
 
 func s3InsertBucket(akey *S3AccessKey, bname, acl string) error {
+	var iam *S3Iam
 	var err error
+
+	iam, err = akey.s3IamFind()
+	if err != nil {
+		return err
+	}
 
 	bucket := &S3Bucket{
 		Name:		bname,
 		Acl:		acl,
 		ObjID:		bson.NewObjectId(),
-		BackendID:	akey.BucketBID(bname),
-		NamespaceID:	akey.NamespaceID(),
+		BackendID:	iam.BucketBID(bname),
+		NamespaceID:	iam.NamespaceID(),
 		CreationTime:	time.Now().Format(time.RFC3339),
 		State:		S3StateNone,
 		MaxObjects:	S3StogateMaxObjects,

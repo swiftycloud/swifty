@@ -152,6 +152,7 @@ func handleBucket(w http.ResponseWriter, r *http.Request) {
 	var bname string = mux.Vars(r)["BucketName"]
 	var acl string
 	var akey *S3AccessKey
+	var iam *S3Iam
 	var err error
 	var ok bool
 
@@ -159,7 +160,11 @@ func handleBucket(w http.ResponseWriter, r *http.Request) {
 						bname), r))
 
 	akey, err = s3VerifyAuthorization(r)
-	if err != nil {
+	if err == nil {
+		iam, err = akey.s3IamFind()
+	}
+
+	if akey == nil || iam == nil || err != nil {
 		HTTPRespError(w, S3ErrAccessDenied, err.Error())
 		return
 	}
@@ -259,6 +264,7 @@ func handleObject(w http.ResponseWriter, r *http.Request) {
 	var acl string
 	var object_size int64
 	var akey *S3AccessKey
+	var iam *S3Iam
 	var bucket *S3Bucket
 	var upload *S3Upload
 	var body []byte
@@ -271,7 +277,11 @@ func handleObject(w http.ResponseWriter, r *http.Request) {
 						bname, oname), r))
 
 	akey, err = s3VerifyAuthorization(r)
-	if err != nil {
+	if err == nil {
+		iam, err = akey.s3IamFind()
+	}
+
+	if akey == nil || iam == nil || err != nil {
 		HTTPRespError(w, S3ErrAccessDenied, err.Error())
 		return
 	}
@@ -386,7 +396,7 @@ func handleObject(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
-			etag, err = s3UploadPart(akey.Namespace, bucket,
+			etag, err = s3UploadPart(iam.Namespace, bucket,
 				oname, r.URL.Query()["uploadId"][0],
 				part, body)
 			if err != nil {
@@ -406,7 +416,7 @@ func handleObject(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		_, err = s3CommitObject(akey.Namespace, bucket, object, body)
+		_, err = s3CommitObject(iam.Namespace, bucket, object, body)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return

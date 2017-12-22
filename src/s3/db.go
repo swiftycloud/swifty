@@ -13,6 +13,7 @@ var dbSession *mgo.Session
 var dbName string
 
 const (
+	DBColS3Iams				= "S3Iams"
 	DBColS3Buckets				= "S3Buckets"
 	DBColS3Objects				= "S3Objects"
 	DBColS3Uploads				= "S3Uploads"
@@ -48,6 +49,8 @@ func dbConnect(conf *YAMLConf) error {
 			Background:	true,
 			Sparse:		true}
 
+	index.Key = []string{"iam", "namespace"}
+	dbSession.DB(dbName).C(DBColS3Iams).EnsureIndex(index)
 	index.Key = []string{"bid"}
 	dbSession.DB(dbName).C(DBColS3Buckets).EnsureIndex(index)
 	index.Key = []string{"bid"}
@@ -59,6 +62,10 @@ func dbConnect(conf *YAMLConf) error {
 	dbSession.DB(dbName).C(DBColS3AccessKeys).EnsureIndex(index)
 
 	dbColMap = make(map[reflect.Type]string)
+	dbColMap[reflect.TypeOf(S3Iam{})] = DBColS3Iams
+	dbColMap[reflect.TypeOf(&S3Iam{})] = DBColS3Iams
+	dbColMap[reflect.TypeOf([]S3Iam{})] = DBColS3Iams
+	dbColMap[reflect.TypeOf(&[]S3Iam{})] = DBColS3Iams
 	dbColMap[reflect.TypeOf(S3Bucket{})] = DBColS3Buckets
 	dbColMap[reflect.TypeOf(&S3Bucket{})] = DBColS3Buckets
 	dbColMap[reflect.TypeOf([]S3Bucket{})] = DBColS3Buckets
