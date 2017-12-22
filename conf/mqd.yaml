@@ -1,0 +1,5 @@
+---
+db: "swifty"
+address: "192.168.122.197:3306"
+user: "root"
+password: "MARIAPASS"

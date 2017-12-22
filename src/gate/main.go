@@ -75,6 +75,7 @@ type YAMLConfRabbit struct {
 
 type YAMLConfMaria struct {
 	YAMLConfMWCreds				`yaml:",inline"`
+	QDB		string			`yaml:"quotdb"`
 }
 
 type YAMLConfMongo struct {

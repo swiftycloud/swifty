@@ -83,6 +83,8 @@ go-admd-y	+= src/admd/ks.go
 
 go-pgrest-y	+= src/pgrest/main.go
 
+go-mquotad-y	+= src/mquotad/main.go
+
 go-s3-y	+= src/s3/main.go
 go-s3-y	+= src/s3/db.go
 go-s3-y	+= src/s3/bucket.go
@@ -103,6 +105,7 @@ go-sg-y		+= src/tools/sg.go
 $(eval $(call gen-gobuild,gate))
 $(eval $(call gen-gobuild,admd))
 $(eval $(call gen-gobuild,pgrest))
+$(eval $(call gen-gobuild,mquotad))
 $(eval $(call gen-gobuild,s3))
 $(eval $(call gen-gobuild-t,ctl))
 $(eval $(call gen-gobuild-t,sg))

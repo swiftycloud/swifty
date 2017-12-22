@@ -25,6 +25,7 @@ middleware:
                 address: "192.168.122.197:3306"
                 admin: "root"
                 password: "MARIAPASS"
+                quotdb: "swifty.quotas"
         rabbit:
                 address: "192.168.122.197:5672"
                 admin: "root"

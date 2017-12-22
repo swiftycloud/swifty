@@ -11,6 +11,7 @@ swy-gate
 swy-wdog-*
 swy-admd
 swy-pgrest
+swy-mquotad
 swy-s3
 swyctl
 swysg
