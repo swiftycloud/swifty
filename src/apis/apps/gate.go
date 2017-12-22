@@ -45,7 +45,7 @@ type FunctionSources struct {
 
 type FunctionSize struct {
 	Memory		uint64			`json:"memory"`
-	Timeout		uint64			`json:"timeout"`
+	Timeout		uint64			`json:"timeout"` /* msec */
 	Rate		uint			`json:"rate,omitempty"`
 	Burst		uint			`json:"burst,omitempty"`
 }

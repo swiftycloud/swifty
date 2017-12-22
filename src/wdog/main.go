@@ -158,15 +158,16 @@ func doRun(params *swyapi.SwdFunctionRun) (*swyapi.SwdFunctionRunResult, int, er
 	var res string
 	res, err = runner.q.RecvStr()
 	if err != nil {
-		if timeout {
-			restartRunner()
-			code = 524 /* A Timeout Occurred */
-			err = errors.New("Function timed out")
-		} else {
+		if !timeout {
 			err = fmt.Errorf("Can't get back the result: %s", err.Error())
+			return nil, code, err
 		}
 
-		return nil, code, err
+		restartRunner()
+		return &swyapi.SwdFunctionRunResult{
+			Return: "timeout",
+			Code: 524, /* A Timeout Occurred */
+		}, 0, nil
 	}
 
 	done <-true

@@ -10,6 +10,7 @@ import importlib.util
 import sys
 import traceback
 import fcntl
+import time
 
 spec = importlib.util.spec_from_file_location('code', '/function/script.py')
 swycode = importlib.util.module_from_spec(spec)
@@ -23,13 +24,15 @@ def runnerFn(runq, resq, pout, perr):
     while True:
         args = runq.get()
         try:
+            now = time.time()
             res = swycode.main(args)
+            dur = int((time.time() - now) * 1000000) # to usec
         except:
             print("Exception running FN:")
             traceback.print_exc()
-            resq.put("")
+            resq.put({"res": "exception"})
         else:
-            resq.put(json.dumps(res))
+            resq.put({"res": "ok", "retj": json.dumps(res), "time": dur})
 
 # Main process waits on the resq, but if the runner process
 # exits for some reason, the former will get blocked till timeout.
@@ -38,7 +41,7 @@ def runnerFn(runq, resq, pout, perr):
 def waiterFn(subp, resq):
     subp.join()
     print("Runner exited")
-    resq.put("")
+    resq.put({"res": "exited"})
 
 def nbfile(fd):
         fl = fcntl.fcntl(fd, fcntl.F_GETFL)
@@ -85,9 +88,6 @@ class Runner:
 runner = Runner()
 runner.start()
 
-class FnTmo(Exception):
-    pass
-
 class SwyHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         print("PING: %s" % self.path)
@@ -113,23 +113,24 @@ class SwyHandler(BaseHTTPRequestHandler):
 
             print("Call with args: %r" % req['args'])
             runner.runq.put(req['args'])
+            errc = 500
             try:
-                resj = runner.resq.get(timeout = float(swyfunc['timeout']) / 1000)
+                res = runner.resq.get(timeout = float(swyfunc['timeout']) / 1000)
                 fout = runner.stdout()
                 ferr = runner.stderr()
-                print("Result: %s" % resj)
+                print("Result: %s" % res)
                 print("Out:    %s" % fout)
             except queue.Empty as ex:
                 print("Timeout running FN")
                 runner.restart()
-                raise FnTmo()
+                res['res'] = "timeout"
+                errc = 524
 
-            ret = { 'return': resj, 'code': 0, 'stdout': fout, 'stderr': ferr }
+            if res["res"] == "ok":
+                ret = { 'return': res["retj"], 'code': 0, 'stdout': fout, 'stderr': ferr, 'time': res["time"] }
+            else:
+                ret = { 'return': res["res"], 'code': errc }
             retb = json.dumps(ret).encode('utf-8')
-        except FnTmo as e:
-            self.send_response(524) # A timeout occurred
-            self.end_headers()
-            self.wfile.write("Function timed out".encode('utf-8'))
         except Exception as e:
             print("*** Error processing request ***")
             traceback.print_exc()

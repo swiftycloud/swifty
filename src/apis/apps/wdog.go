@@ -16,4 +16,5 @@ type SwdFunctionRunResult struct {
 	Code		int		`json:"code"`
 	Stdout		string		`json:"stdout"`
 	Stderr		string		`json:"stderr"`
+	Time		uint		`json:"time"` /* usec */
 }
