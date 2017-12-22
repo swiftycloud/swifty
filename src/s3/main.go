@@ -201,7 +201,7 @@ func handleBucket(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodPut:
 		// Create a new bucket
-		err = s3InsertBucket(akey, bname, acl)
+		err = s3InsertBucket(iam, bname, acl)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
