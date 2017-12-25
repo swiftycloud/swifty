@@ -342,43 +342,45 @@ func dbBalancerPodFindAll(link *BalancerLink) ([]BalancerRS) {
 	return v
 }
 
-func dbBalancerPodAdd(link *BalancerLink, uid, wdogaddr string) (error) {
+func dbBalancerPodAdd(link *BalancerLink, pod *k8sPod) error {
 	c := dbSession.DB(dbState).C(DBColBalancerRS)
 	err := c.Insert(bson.M{
 			"balancerid":	link.ObjID,
-			"uid":		uid,
-			"wdogaddr":	wdogaddr,
+			"uid":		pod.UID,
+			"wdogaddr":	pod.WdogAddr,
+			"fnid":		link.FnId,
+			"fnversion":	pod.Version,
 		})
 	if err != nil {
 		log.Errorf("balancer-db: Can't add pod %s/%s/%s: %s",
-				link.DepName, uid, wdogaddr, err.Error())
+				link.DepName, pod.UID, pod.WdogAddr, err.Error())
 	} else {
 		eref := dbBalancerRefIncRS(link)
 		if eref != nil {
 			log.Errorf("balancer-db: Can't increment RS %s/%s/%s: %s",
-					link.DepName, uid, wdogaddr, eref.Error())
+					link.DepName, pod.UID, pod.WdogAddr, eref.Error())
 		}
 	}
 	return err
 }
 
-func dbBalancerPodDel(link *BalancerLink, uid string) (error) {
+func dbBalancerPodDel(link *BalancerLink, pod *k8sPod) (error) {
 	c := dbSession.DB(dbState).C(DBColBalancerRS)
 	err := c.Remove(bson.M{
 			"balancerid":	link.ObjID,
-			"uid":	uid,
+			"uid":	pod.UID,
 		})
 	if err != nil {
 		if err == mgo.ErrNotFound {
 			return nil
 		}
 		log.Errorf("balancer-db: Can't del pod %s/%s: %s",
-				link.DepName, uid, err.Error())
+				link.DepName, pod.UID, err.Error())
 	} else {
 		eref := dbBalancerRefDecRS(link)
 		if eref != nil {
 			log.Errorf("balancer-db: Can't decrement RS %s/%s: %s",
-					link.DepName, uid, eref.Error())
+					link.DepName, pod.UID, eref.Error())
 		}
 	}
 	return err

@@ -121,6 +121,9 @@ func swk8sGenEnvVar(fn *FunctionDesc, fi *FnInst, wd_port int) []v1.EnvVar {
 	s = append(s, v1.EnvVar{
 			Name:	"SWD_FUNCNAME",
 			Value:	fn.Name, })
+	s = append(s, v1.EnvVar{
+			Name:	"SWD_VERSION",
+			Value:	fn.Src.Version, })
 
 	s = append(s, v1.EnvVar{
 			Name:	"SWD_POD_IP",
@@ -350,8 +353,17 @@ var podStates = map[int]string {
 	swy.DBPodStateBsy: "Bsy",
 }
 
-func genBalancerPod(pod *v1.Pod) (BalancerPod) {
-	var r  BalancerPod = BalancerPod {
+type k8sPod struct {
+	SwoId
+	Version		string
+	DepName		string
+	WdogAddr	string
+	UID		string
+	State		int
+}
+
+func genBalancerPod(pod *v1.Pod) (*k8sPod) {
+	r := &k8sPod {
 		DepName:	pod.ObjectMeta.Labels["deployment"],
 		UID:		string(pod.ObjectMeta.UID),
 		WdogAddr:	pod.Status.PodIP,
@@ -366,6 +378,8 @@ func genBalancerPod(pod *v1.Pod) (BalancerPod) {
 				r.Project = v.Value
 			} else if v.Name == "SWD_FUNCNAME" {
 				r.Name = v.Value
+			} else if v.Name == "SWD_VERSION" {
+				r.Version = v.Value
 			} else if v.Name == "SWD_PORT" {
 				if r.WdogAddr != "" {
 					r.WdogAddr += ":" + v.Value
@@ -401,8 +415,8 @@ func genBalancerPod(pod *v1.Pod) (BalancerPod) {
 	}
 
 	if r.WdogAddr == "" || r.UID == "" ||
-		r.Tennant == "" || r.Project == "" || r.Name == "" ||
-		r.DepName == "" {
+			r.Tennant == "" || r.Project == "" || r.Name == "" ||
+			r.Version == "" || r.DepName == "" {
 		r.State = swy.DBPodStateNak
 	}
 
@@ -427,14 +441,14 @@ func swk8sPodUpd(obj_old, obj_new interface{}) {
 					podStates[pod_old.State], podStates[pod_new.State],
 					pod_new.DepName)
 
-			err = BalancerPodAdd(pod_new.DepName, pod_new.UID, pod_new.WdogAddr)
+			err = BalancerPodAdd(pod_new)
 			if err != nil {
 				log.Errorf("Can't add pod %s/%s/%s: %s",
 						pod_new.DepName, pod_new.UID,
 						pod_new.WdogAddr, err.Error())
 				return
 			}
-			notifyPodUpdate(&pod_new)
+			notifyPodUpdate(pod_new)
 		}
 	} else {
 		if pod_new.State != swy.DBPodStateRdy {
@@ -442,14 +456,14 @@ func swk8sPodUpd(obj_old, obj_new interface{}) {
 					podStates[pod_old.State], podStates[pod_new.State],
 					pod_new.DepName)
 
-			err = BalancerPodDel(pod_new.DepName, pod_new.UID)
+			err = BalancerPodDel(pod_new)
 			if err != nil  && err != mgo.ErrNotFound {
 				log.Errorf("Can't delete pod %s/%s/%s: %s",
 						pod_new.DepName, pod_new.UID,
 						pod_new.WdogAddr, err.Error())
 				return
 			}
-			notifyPodUpdate(&pod_new)
+			notifyPodUpdate(pod_new)
 		}
 	}
 }

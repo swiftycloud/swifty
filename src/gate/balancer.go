@@ -91,19 +91,13 @@ func manageLocalIps() {
 	}
 }
 
-type BalancerPod struct {
-	SwoId
-	DepName		string
-	WdogAddr	string
-	UID		string
-	State		int
-}
-
 type BalancerRS struct {
 	ObjID		bson.ObjectId	`bson:"_id,omitempty"`
 	BalancerId	bson.ObjectId	`bson:"balancerid,omitempty"`
 	UID		string		`bson:"uid"`
 	WdogAddr	string		`bson:"wdogaddr"`
+	FnId		string		`bson:"fnid"`
+	Version		string		`bson:"fnversion"`
 }
 
 type BalancerLink struct {
@@ -203,16 +197,16 @@ func BalancerPodDelAll(depname string) (error) {
 	return nil
 }
 
-func BalancerPodDel(depname, uid string) (error) {
+func BalancerPodDel(pod *k8sPod) error {
 	var link *BalancerLink
 	var rs *BalancerRS
 	var err error
 
-	link = dbBalancerLinkFindByDepname(depname)
+	link = dbBalancerLinkFindByDepname(pod.DepName)
 	if link != nil {
-		rs = dbBalancerPodFind(link, uid)
+		rs = dbBalancerPodFind(link, pod.UID)
 		if rs != nil {
-			err = dbBalancerPodDel(link, uid)
+			err = dbBalancerPodDel(link, pod)
 			if err != nil {
 				return err
 			}
@@ -226,19 +220,19 @@ func BalancerPodDel(depname, uid string) (error) {
 	return nil
 }
 
-func BalancerPodAdd(depname, uid, wdogaddr string) (error) {
+func BalancerPodAdd(pod *k8sPod) error {
 	var link *BalancerLink
 	var err error
 
-	link = dbBalancerLinkFindByDepname(depname)
+	link = dbBalancerLinkFindByDepname(pod.DepName)
 	if link != nil {
-		err = dbBalancerPodAdd(link, uid, wdogaddr)
+		err = dbBalancerPodAdd(link, pod)
 		if err != nil {
 			return err
 		}
-		err = balancerAddRS(link, wdogaddr)
+		err = balancerAddRS(link, pod.WdogAddr)
 		if err != nil {
-			errdb := dbBalancerPodDel(link, uid)
+			errdb := dbBalancerPodDel(link, pod)
 			if errdb != nil {
 				return fmt.Errorf("%s: %s", err.Error(), errdb.Error())
 			}
@@ -329,7 +323,7 @@ func BalancerLoad(conf *YAMLConf) (error) {
 	return nil
 }
 
-func notifyPodUpdate(pod *BalancerPod) {
+func notifyPodUpdate(pod *k8sPod) {
 	var err error = nil
 
 	if pod.State == swy.DBPodStateRdy {
