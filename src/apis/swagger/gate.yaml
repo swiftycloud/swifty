@@ -11,12 +11,84 @@ consumes:
 produces:
   - application/json
 paths:
+  /login:
+    post:
+      summary: Sign-in request
+      parameters:
+        - in: body
+          name: data
+          description: Credentials
+          required: true
+          schema:
+            $ref: '#/definitions/UserLogin'
+      responses:
+        '200':
+          description: OK
+          headers:
+            X-Subject-Token:
+              type: string
+              description: Auth token for further requests
+        '400':
+          description: Something went wrong
+        '401':
+          description: Bad username/pass
+  /project/list:
+    post:
+      summary: List projects
+      parameters:
+        - in: header
+          name: X-Auth-Token
+          type: string
+          required: true
+      responses:
+        '200':
+          description: OK
+          schema:
+            properties:
+              functions:
+                type: array
+                items:
+                  $ref: '#/definitions/ProjectItem'
+        '400':
+          description: Bad request
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad authentication token
+  /project/del:
+    post:
+      summary: Delete project and all functoins and mwares in it
+      parameters:
+        - in: header
+          name: X-Auth-Token
+          type: string
+          required: true
+        - in: body
+          name: data
+          description: Project removal options
+          required: true
+          schema:
+            $ref: '#/definitions/ProjectDel'
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad authentication token
+  
   /function/list:
     post:
       summary: List functions
       parameters:
-        - name: data
-          in: body
+        - in: header
+          name: X-Auth-Token
+          type: string
+          required: true
+        - in: body
+          name: data
           description: List parameters
           required: true
           schema:
@@ -32,13 +104,21 @@ paths:
                   $ref: '#/definitions/FunctionItem'
         '400':
           description: Bad request
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad authentication token
   /function/add:
     post:
       summary: Add a function
       parameters:
+        - in: header
+          name: X-Auth-Token
+          type: string
+          required: true
         - name: data
           in: body
-          description: Function source and environment
+          description: Function specification
           required: true
           schema:
             $ref: '#/definitions/FunctionAdd'
@@ -46,14 +126,22 @@ paths:
         '200':
           description: Function added
         '400':
-          description: Bad request
+          description: Some error occurred
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad authentication token
   /function/update:
     post:
-      summary: Update repo of a function
+      summary: Update function code and/or properties
       parameters:
+        - in: header
+          name: X-Auth-Token
+          type: string
+          required: true
         - name: data
           in: body
-          description: Function to update
+          description: Update description
           required: true
           schema:
             $ref: '#/definitions/FunctionUpdate'
@@ -61,11 +149,19 @@ paths:
         '200':
           description: Function updated
         '400':
-          description: Bad request
+          description: Something went wrong
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad authentication token
   /function/remove:
     post:
       summary: Remove a function
       parameters:
+        - in: header
+          name: X-Auth-Token
+          type: string
+          required: true
         - name: data
           in: body
           description: Function to remove
@@ -76,28 +172,44 @@ paths:
         '200':
           description: Function removed
         '400':
-          description: Bad request
+          description: Something went wrong
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad authentication token
   /function/run:
     post:
-      summary: Trigger execution
+      summary: Manual execution trigger
       parameters:
+        - in: header
+          name: X-Auth-Token
+          type: string
+          required: true
         - name: data
           in: body
-          description: An array of command line arguments
+          description: Function ID and arguments
           required: false
           schema:
             $ref: '#/definitions/FunctionRun'
       responses:
         '200':
-          description: Function finished execution
+          description: Function run result
           schema:
             $ref: '#/definitions/FunctionRunResult'
         '400':
           description: Bad request
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad authentication token
   /function/logs:
     post:
       summary: Show logs of a function
       parameters:
+        - in: header
+          name: X-Auth-Token
+          type: string
+          required: true
         - name: data
           in: body
           description: Function name to see logs for
@@ -114,43 +226,94 @@ paths:
                 items:
                   $ref: '#/definitions/FunctionLogEntry'
         '400':
-          description: Bad request
+          description: Something went wrong
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad authentication token
   /function/info:
     post:
       summary: Show extended info about a function
       parameters:
+        - in: header
+          name: X-Auth-Token
+          type: string
+          required: true
         - name: date
           in: body
           description: Function name
           required: true
           schema:
             $ref: '#/definitions/FunctionID'
-    responses:
-      '200':
-        description: OK
-        schema:
+      responses:
+        '200':
+          description: OK
+          schema:
             $ref: '#/definitions/FunctionInfo'
         '400':
           description: Bad request
-  /mware/add:
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad authentication token
+  /function/stats:
     post:
-      summary: Add middleware
+      summary: Show function statistics
       parameters:
-        - name: data
+        - in: header
+          name: X-Auth-Token
+          type: string
+          required: true
+        - name: date
           in: body
-          description: Middleware specification
+          description: Function name
           required: true
           schema:
-            $ref: '#/definitions/MwareAdd'
+            $ref: '#/definitions/FunctionID'
       responses:
         '200':
-          description: Middleware added
+          description: OK
+          schema:
+            $ref: '#/definitions/FunctionStats'
         '400':
           description: Bad request
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad authentication token
+  /function/code:
+    post:
+      summary: Show function code
+      parameters:
+        - in: header
+          name: X-Auth-Token
+          type: string
+          required: true
+        - name: date
+          in: body
+          description: Function name
+          required: true
+          schema:
+            $ref: '#/definitions/FunctionXID'
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/FunctionSources'
+        '400':
+          description: Bad request
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad authentication token
   /mware/list:
     post:
       summary: List middleware
       parameters:
+        - in: header
+          name: X-Auth-Token
+          type: string
+          required: true
         - name: data
           in: body
           description: List parameters
@@ -165,13 +328,44 @@ paths:
               mware:
                 type: array
                 items:
-                  $ref: '#/definitions/MwareGetItem'
+                  $ref: '#/definitions/MwareItem'
         '400':
           description: Bad request
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad authentication token
+  /mware/add:
+    post:
+      summary: Add middleware
+      parameters:
+        - in: header
+          name: X-Auth-Token
+          type: string
+          required: true
+        - name: data
+          in: body
+          description: Middleware specification
+          required: true
+          schema:
+            $ref: '#/definitions/MwareAdd'
+      responses:
+        '200':
+          description: Middleware added
+        '400':
+          description: Bad request
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad authentication token
   /mware/remove:
     post:
       summary: Remove middleware
       parameters:
+        - in: header
+          name: X-Auth-Token
+          type: string
+          required: true
         - name: data
           in: body
           description: Middleware to remove
@@ -183,84 +377,74 @@ paths:
           description: Middleware removed
         '400':
           description: Bad request
-definitions:
-  MwareItem:
-    type: object
-    description: Middleware item specification
-    required:
-      - id
-      - type
-    properties:
-      id:
-        type: string
-        description: Middleware id to share between several services
-        example: sqlsharedid
-      type:
-        type: string
-        enum:
-          - sql
-          - mq
-          - nosql
-        description: Type of middleware to install
-        example: sql
-  MwareAdd:
-    type: object
-    description: Middleware specification
-    required:
-      - project
-      - mware
-    properties:
-      project:
-        type: string
-        example: my-project
-      mware:
-        type: array
-        items:
-          $ref: '#/definitions/MwareItem'
-  MwareRemove:
-    type: object
-    description: Middleware specification
-    required:
-      - project
-      - mware
-    properties:
-      project:
-        type: string
-        example: my-project
-      mware:
-        type: array
-        items:
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad authentication token
+  /info/langs:
+    post:
+      summary: Show supported languages
+      parameters:
+        - in: header
+          name: X-Auth-Token
           type: string
-          example:
-            - foo
-            - bar
-  MwareGetItem:
-    type: object
-    description: Middleware item specification
+          required: true
+      responses:
+        '200':
+          description: OK
+          schema:
+            properties:
+              langs:
+                type: array
+                items:
+                  type: string
+        '400':
+          description: Bad request
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad authentication token
+  /info/mwares:
+    post:
+      summary: Show supported mware types
+      parameters:
+        - in: header
+          name: X-Auth-Token
+          type: string
+          required: true
+      responses:
+        '200':
+          description: OK
+          schema:
+            properties:
+              mwares:
+                type: array
+                items:
+                  type: string
+        '400':
+          description: Bad request
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad authentication token
+definitions:
+  UserLogin:
     required:
-      - id
-      - type
+      - username
+      - password
     properties:
-      id:
+      username:
         type: string
-        description: Middleware id to share between several services
-        example: sqlsharedid
-      type:
+        example: john@doe.com
+      password:
         type: string
-        enum:
-          - sql
-          - mq
-          - nosql
-        description: Type of middleware to install
-        example: sql
-      counter:
-        type: integer
-        description: Middleware counter
-        example: 1
-      jsettings:
+        example: secretpass123
+  ProjectItem:
+    properties:
+      project:
         type: string
-        description: Middleware specific settings in JSON format
-  MwareList:
+        example: my-project
+  ProjectDel:
     required:
       - project
     properties:
@@ -268,60 +452,55 @@ definitions:
         type: string
         example: my-project
   FunctionList:
-    required:
-      - project
     properties:
       project:
         type: string
         example: my-project
   FunctionInfo:
-    required:
-      - name
-      - state
     properties:
-      name:
-        type: string
-        example: function-1
       state:
         type: string
-        description: State of a function
-        example: 'ready'
-      commit:
+        description: Function state
+        example: ready
+      version:
         type: string
-        description: git id of the sources running
-      script:
-        $ref: '#/definitions/FunctionScript'
+        description: Function code version
+        example: 0
+      url:
+        type: string
+        description: URL for direct calls if event.source is "url"
+        example: "/call/ki4r4380984csdlsiduo9049843jk"
+      code:
+        $ref: '#/definitions/FunctionCode'
       event:
         $ref: '#/definitions/FunctionEvent'
+      size:
+        $ref: '#/definitions/FunctionSize'
+      stats:
+        $ref: '#/definitions/FunctionStats'
       mware:
         type: array
         items:
           type: string
           example:
-            - foo
-            - bar
-  FunctionScript:
+            - mymariadb
+              mys3strg
+  FunctionStats:
     type: object
-    description: Script specification
-    required:
-      - lang
+    description: Statistics about function
     properties:
-      lang:
+      called:
+        type: integer
+        description: Number of funciton invovations so far
+        example: 42
+      lastcall:
         type: string
-        description: 'Language of the source code, to choose docker image'
-        example: python
-      run:
-        type: string
-        description: Path to the file to launch
-        example: hello.py
-      env:
-        type: array
-        description: Environment variables to set
-        items:
-          type: string
-          example:
-            - VAR1=VALUE1
-            - VAR2=VALUE2
+        description: Time or last call in UnixDate format
+        example: 'Mon Dec 25 14:18:18 MSK 2017'
+      time:
+        type: integer
+        description: Total time spent in function code (in microseconds)
+        example: 123000
   FunctionEvent:
     type: object
     description: Event specification
@@ -331,67 +510,99 @@ definitions:
       source:
         type: string
         description: 'Event source type, supported by platform'
-        example: mw
+        example: url
       crontab:
         type: string
-        description: Cron string if type is cron
+        description: Cron string if source is "cron"
         example: '* * * * * *'
       mwid:
         type: string
-        description: Mware ID if type is mw
-        example: 'myrmq'
+        description: Mware ID if type is "mware"
+        example: myrmq
+      s3bucket:
+        type: string
+        description: S3 bucket name if source is "mware" and mwid refers to an s3 type
+        example: mybucket
       mqueue:
         type: string
-        description: MQ queue name if type is mw and mwid refers to a message queue
-        example: 'myqueue'
-  CmdRun:
-    description: Command to execute
+        description: MQ queue name if type is "mware" and mwid refers to a rabbitmq type
+        example: myqueue
+  FunctionSources:
+    type: object
+    description: Sources description
     required:
-      - exe
+      - type
     properties:
-      exe:
+      type:
         type: string
-        description: Executable to run
-        example: go
-      args:
+        description: Sources type ("code")
+        example: code
+      code:
+        type: string
+        description: Base64 encoded source file
+        example: 'cHJpbnQoIkhlbGxvIHdvcmxkIikK'
+  FunctionCode:
+    type: object
+    description: Code description
+    required:
+      - lang
+    properties:
+      lang:
+        type: string
+        description: 'Language ("python", "golang", ...)'
+        example: python
+      env:
         type: array
         items:
           type: string
-          example:
-            - build
-            - '-o'
-            - main
+          example: FOO=bar
+  FunctionSize:
+    type: object
+    description: Function runtime size specification
+    properties:
+      memory:
+        type: integer
+        description: size in megabytes
+        example: 128
+      timeout:
+        type: integer
+        description: timeout in milliseconds
+        example: 10
+      rate:
+        type: integer
+        description: max calls per second
+        example: 100
+      burst:
+        type: integer
+        description: rate-limiter burst value
+        example: 10
   FunctionAdd:
     required:
-      - project
       - name
-      - repo
-      - script
+      - sources
+      - code
     properties:
       project:
         type: string
         example: my-project
       name:
         type: string
-        example: function-1
-      replicas:
-        type: integer
-        example: 2
-      repo:
-        type: string
-        description: Repository to fetch source code from
-        example: 'https://github.com/cyrillos/test.git'
-      script:
-        $ref: '#/definitions/FunctionAddScript'
+        example: my-function
+      sources:
+        $ref: '#/definitions/FunctionSources'
+      code:
+        $ref: '#/definitions/FunctionCode'
+      event:
+        $ref: '#/definitions/FunctionEvent'
+      size:
+        $ref: '#/definitions/FunctionSize'
       mware:
         type: array
         items:
-          $ref: '#/definitions/MwareItem'
-      event:
-        $ref: '#/definitions/FunctionEvent'
+          type: string
+          example: mymariadb
   FunctionUpdate:
     required:
-      - project
       - name
     properties:
       project:
@@ -399,39 +610,21 @@ definitions:
         example: my-project
       name:
         type: string
-        example: function-1
-  FunctionRemove:
-    required:
-      - project
-      - name
-    properties:
-      project:
+        example: my-function
+      code:
         type: string
-        example: my-project
-      name:
-        type: string
-        example: function-1
-  FunctionRun:
-    required:
-      - project
-      - name
-    properties:
-      project:
-        type: string
-        example: my-project
-      name:
-        type: string
-        example: function-1
-      args:
+        description: Base64 encoded source file
+        example: 'cHJpbnQoIkhlbGxvIHdvcmxkIikK'
+      size:
+        $ref: '#/definitions/FunctionSize'
+      mware:
         type: array
+        description: 'No value means "leave as is", any other value, even empty list, means "set to this"'
         items:
           type: string
-          example:
-            - arg1
-            - arg2
-  FunctionID:
+          example: mymariadb
+  FunctionRemove:
     required:
-      - project
       - name
     properties:
       project:
@@ -439,47 +632,138 @@ definitions:
         example: my-project
       name:
         type: string
-        example: function-1
-  FunctionItem:
+        example: my-function
+  FunctionID:
     required:
       - name
     properties:
+      project:
+        type: string
+        example: my-project
       name:
         type: string
-        example: function-1
+        example: my-function
+  FunctionXID:
+    required:
+      - name
+      - version
+    properties:
+      project:
+        type: string
+        example: my-project
+      name:
+        type: string
+        example: my-function
+      version:
+        type: string
+        example: 0
+  FunctionItem:
+    properties:
+      name:
+        type: string
+        example: my-function
       state:
         type: string
         example: ready
+        description: function state description
+      timeout:
+        type: integer
+        example: 10
+        description: timeout in msec
   FunctionLogEntry:
-    required:
-      - commit
-      - event
-      - ts
-      - text
+    description: Entry in function logs
     properties:
-      commit:
-        type: string
-        description: Function commit that generated the entry
       event:
         type: string
-        description: Reason why this entry appeared
+        description: Event name
+        example: "run"
       ts:
         type: string
-        description: Timestamp
+        description: Timestamp in UnixDate format
       text:
         type: string
+        description: Log entry text (stdout and stderr typically)
+  FunctionRun:
+    description: Function ID and arguments
+    required:
+      - name
+    properties:
+      project:
+        type: string
+        example: my-project
+      name:
+        type: string
+        example: my-function
+      args:
+        type: object
+        description: Dict with arguments
+        additionalProperties:
+          type: string
+        example:
+          - foo: bar
+            baz: fuz
   FunctionRunResult:
     required:
-      - code
-      - stdout
-      - stderr
+      - return
     properties:
-      code:
-        type: integer
-        example: 0
+      return:
+        type: string
+        description: JSON-encoded function return object
+        example: {"message": "hello, world"}
       stdout:
         type: string
-        example: Hello word
+        description: String with stdout captured while running
       stderr:
         type: string
-        example: ''
+        description: String with stderr captured while running
+  MwareItem:
+    type: object
+    description: Middleware item description
+    required:
+      - id
+      - type
+    properties:
+      id:
+        type: string
+        description: Middleware id
+        example: mymariadb
+      type:
+        type: string
+        description: Type of middleware
+        example: maria
+  MwareAdd:
+    type: object
+    description: Middleware specification
+    required:
+      - id
+      - type
+    properties:
+      project:
+        type: string
+        example: my-project
+      id:
+        type: string
+        description: Just an identifier
+        example: mymariadb
+      type:
+        type: string
+        description: Middleware type
+        example: maria
+  MwareRemove:
+    type: object
+    description: Middleware specification
+    required:
+      - id
+    properties:
+      project:
+        type: string
+        example: my-project
+      id:
+        type: string
+        description: Just an identifier
+        example: mymariadb
+  MwareList:
+    properties:
+      project:
+        type: string
+        example: my-project
