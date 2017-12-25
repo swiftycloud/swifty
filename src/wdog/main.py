@@ -12,14 +12,23 @@ import traceback
 import fcntl
 import time
 
-spec = importlib.util.spec_from_file_location('code', '/function/script.py')
-swycode = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(swycode)
+fdesc = os.getenv('SWD_FUNCTION_DESC')
+if not fdesc:
+    raise Exception("No function desc provided")
+
+swyfunc = json.loads(fdesc)
+
+addr = os.getenv('SWD_POD_IP')
+port = os.getenv('SWD_PORT')
+if not addr or not port:
+    raise Exception("No IP:PORT pair (%s:%s)" % (addr, port))
 
 def durusec(start):
     return int((time.time() - start) * 1000000)
 
 def runnerFn(runq, resq, pout, perr):
+    global swycode
+
     os.dup2(pout, 1)
     os.close(pout)
     os.dup2(perr, 2)
@@ -52,26 +61,26 @@ def nbfile(fd):
     return os.fdopen(fd)
 
 class Runner:
-    def makeQnP(self):
+    def _makeQnP(self):
         self.runq = Queue()
         self.resq = Queue()
         self.runp = Process(target = runnerFn, args = (self.runq, self.resq, self.pout, self.perr))
         self.waiter = Thread(target = waiterFn, args = (self.runp, self.resq))
 
-    def __init__(self):
-        self.fntmo = float(swyfunc['timeout']) / 1000
+    def __init__(self, fdesc):
+        self.fntmo = float(fdesc['timeout']) / 1000
         pin, self.pout = os.pipe() # pout is kept as FD for restart()-s
         self.pin = nbfile(pin)
         pin, self.perr = os.pipe() # so id perr
         self.pine = nbfile(pin)
-        self.makeQnP()
+        self._makeQnP()
 
     def start(self):
         self.runp.start()
         self.waiter.start()
         print("Started subp: %d" % self.runp.pid)
 
-    def restart(self):
+    def _restart(self):
         os.kill(self.runp.pid, signal.SIGKILL)
         self.waiter.join()
         # Flush messages
@@ -79,10 +88,10 @@ class Runner:
         self.stderr()
         # Restart everything, including queues, don't want them
         # to contain dangling trash from previous runs
-        self.makeQnP()
+        self._makeQnP()
         self.start()
 
-    def try_call_fn(self, args):
+    def try_call_fn(self, start, args):
         print("Call with args: %r" % args)
         self.runq.put(args)
         try:
@@ -93,7 +102,7 @@ class Runner:
             print("Out:    %s" % fout)
         except queue.Empty as ex:
             print("Timeout running FN")
-            self.restart()
+            self._restart()
             return { 'return': "timeout", 'code': 524 }
 
         if res["res"] != "ok":
@@ -108,9 +117,25 @@ class Runner:
                 'ctime': durusec(start),
         }
 
+class FailRunner:
+    def __init__(self, etype, value, tb):
+        self.exc_txt = "%s" % value
+        self.exc_msg = ''.join(traceback.format_exception(etype, value, tb))
 
-runner = Runner()
-runner.start()
+    def try_call_fn(self, start, args):
+        return { 'code': 503, 'return': self.exc_txt, 'stdout': self.exc_msg, }
+
+try:
+    spec = importlib.util.spec_from_file_location('code', '/function/script.py')
+    swycode = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(swycode)
+except:
+    etype, value, tb = sys.exc_info()
+    runner = FailRunner(etype, value, tb)
+else:
+    runner = Runner(swyfunc)
+    runner.start()
+
 
 class SwyHandler(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -136,7 +161,7 @@ class SwyHandler(BaseHTTPRequestHandler):
             if req['podtoken'] != swyfunc['podtoken']:
                 raise Exception("POD token mismatch")
 
-            ret = runner.try_call_fn(req['args'])
+            ret = runner.try_call_fn(start, req['args'])
             retb = json.dumps(ret).encode('utf-8')
         except Exception as e:
             print("*** Error processing request ***")
@@ -149,17 +174,6 @@ class SwyHandler(BaseHTTPRequestHandler):
             self.send_header('Content-type', 'application/json')
             self.end_headers()
             self.wfile.write(retb)
-
-fdesc = os.getenv('SWD_FUNCTION_DESC')
-if not fdesc:
-    raise Exception("No function desc provided")
-
-swyfunc = json.loads(fdesc)
-
-addr = os.getenv('SWD_POD_IP')
-port = os.getenv('SWD_PORT')
-if not addr or not port:
-    raise Exception("No IP:PORT pair (%s:%s)" % (addr, port))
 
 print("Listen on %s:%s" % (addr, port))
 http = HTTPServer((addr, int(port)), SwyHandler)
