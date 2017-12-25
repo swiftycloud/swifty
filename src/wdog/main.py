@@ -47,9 +47,9 @@ def waiterFn(subp, resq):
     resq.put({"res": "exited"})
 
 def nbfile(fd):
-        fl = fcntl.fcntl(fd, fcntl.F_GETFL)
-        fcntl.fcntl(fd, fcntl.F_SETFL, fl | os.O_NONBLOCK)
-        return os.fdopen(fd)
+    fl = fcntl.fcntl(fd, fcntl.F_GETFL)
+    fcntl.fcntl(fd, fcntl.F_SETFL, fl | os.O_NONBLOCK)
+    return os.fdopen(fd)
 
 class Runner:
     def makeQnP(self):
