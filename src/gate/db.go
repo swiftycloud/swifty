@@ -257,9 +257,9 @@ func dbStatsUpdate(st *FnStats) {
 	c.Upsert(bson.M{"cookie": st.Cookie}, st)
 }
 
-func dbStatsDrop(st *FnStats) {
+func dbStatsDrop(cookie string) {
 	c := dbSession.DB(dbState).C(DBColFnStats)
-	c.Remove(bson.M{"cookie": st.Cookie})
+	c.Remove(bson.M{"cookie": cookie})
 }
 
 func logSaveResult(fnCookie, event, stdout, stderr string) {

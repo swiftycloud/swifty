@@ -222,6 +222,7 @@ clean-db-swifty:
 	$(call msg-gen,"Cleaning up main MongoDB")
 	$(Q) $(MONGO)/$(DB-SWIFTY) --eval 'db.Function.remove({});'
 	$(Q) $(MONGO)/$(DB-SWIFTY) --eval 'db.Mware.remove({});'
+	$(Q) $(MONGO)/$(DB-SWIFTY) --eval 'db.FnStats.remove({});'
 	$(Q) $(MONGO)/$(DB-SWIFTY) --eval 'db.Pods.remove({});'
 	$(Q) $(MONGO)/$(DB-SWIFTY) --eval 'db.Balancer.remove({});'
 	$(Q) $(MONGO)/$(DB-SWIFTY) --eval 'db.BalancerRS.remove({});'

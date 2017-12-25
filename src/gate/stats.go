@@ -69,7 +69,7 @@ func statsDrop(fn *FunctionDesc) {
 		<-done
 	}
 
-	dbStatsDrop(&md.stats)
+	dbStatsDrop(fn.Cookie)
 }
 
 func fnStatsInit(st *FnStats, fn *FunctionDesc) {
