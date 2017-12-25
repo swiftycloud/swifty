@@ -568,7 +568,7 @@ func handleFunctionCall(w http.ResponseWriter, r *http.Request) {
 	arg_map = makeArgMap(r)
 
 	code = http.StatusInternalServerError
-	res, err = talkToLink(link, fmd, fnId, "run", arg_map)
+	res, err = doRunLink(link, fmd, fnId, "run", arg_map)
 	if err != nil {
 		goto out
 	}
@@ -592,6 +592,7 @@ func handleFunctionRun(w http.ResponseWriter, r *http.Request, tennant string) e
 	var id *SwoId
 	var params swyapi.FunctionRun
 	var fn FunctionDesc
+	var lrs *BalancerRS
 	var res *swyapi.SwdFunctionRunResult
 
 	err := swyhttp.ReadAndUnmarshalReq(r, &params)
@@ -608,7 +609,17 @@ func handleFunctionRun(w http.ResponseWriter, r *http.Request, tennant string) e
 		goto out
 	}
 
-	res, err = doRun(fn.Cookie, "run", params.Args)
+	/*
+	 * We can lookup id.Cookie() here, but ... it's manual run,
+	 * let's also make sure the FN exists at all
+	 */
+	lrs = dbBalancerPodFindExact(fn.Cookie, fn.Src.Version)
+	if lrs == nil {
+		err = errors.New("Nothing to run (yet)")
+		goto out
+	}
+
+	res, err = doRunIp(lrs.VIP(), nil, fn.Cookie, "run", params.Args)
 	if err != nil {
 		goto out
 	}

@@ -323,6 +323,26 @@ func dbBalancerPodFind(link *BalancerLink, uid string) (*BalancerRS) {
 	return &v
 }
 
+func dbBalancerPodFindExact(fnid, version string) (*BalancerRS) {
+	var v BalancerRS
+
+	c := dbSession.DB(dbState).C(DBColBalancerRS)
+	err := c.Find(bson.M{
+			"fnid":		fnid,
+			"fnversion":	version,
+		}).One(&v)
+	if err != nil {
+		if err == mgo.ErrNotFound {
+			return nil
+		}
+		log.Errorf("balancer-db: Can't find pod %s/%s: %s",
+				fnid, version, err.Error())
+		return nil
+	}
+
+	return &v
+}
+
 func dbBalancerPodFindAll(link *BalancerLink) ([]BalancerRS) {
 	var v []BalancerRS
 

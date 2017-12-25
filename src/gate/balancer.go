@@ -100,6 +100,10 @@ type BalancerRS struct {
 	Version		string		`bson:"fnversion"`
 }
 
+func (rs *BalancerRS)VIP() string {
+	return rs.WdogAddr
+}
+
 type BalancerLink struct {
 	ObjID		bson.ObjectId	`bson:"_id,omitempty"`
 	FnId		string		`bson:"fnid"`
