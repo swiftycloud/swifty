@@ -59,6 +59,7 @@ class Runner:
         self.waiter = Thread(target = waiterFn, args = (self.runp, self.resq))
 
     def __init__(self):
+        self.fntmo = float(swyfunc['timeout']) / 1000
         pin, self.pout = os.pipe() # pout is kept as FD for restart()-s
         self.pin = nbfile(pin)
         pin, self.perr = os.pipe() # so id perr
@@ -81,11 +82,31 @@ class Runner:
         self.makeQnP()
         self.start()
 
-    def stdout(self):
-        return "".join(self.pin.readlines())
+    def try_call_fn(self, args):
+        print("Call with args: %r" % args)
+        self.runq.put(args)
+        try:
+            res = self.resq.get(self.fntmo)
+            fout = "".join(self.pin.readlines())
+            ferr = "".join(self.pine.readlines())
+            print("Result: %s" % res)
+            print("Out:    %s" % fout)
+        except queue.Empty as ex:
+            print("Timeout running FN")
+            self.restart()
+            return { 'return': "timeout", 'code': 524 }
 
-    def stderr(self):
-        return "".join(self.pine.readlines())
+        if res["res"] != "ok":
+            print("Error running FN")
+            return { 'return': res["res"], 'code': 500 }
+
+        return { 'return': res["retj"],
+                'code': 0,
+                'stdout': fout,
+                'stderr': ferr,
+                'time': res["time"],
+                'ctime': durusec(start),
+        }
 
 
 runner = Runner()
@@ -115,31 +136,7 @@ class SwyHandler(BaseHTTPRequestHandler):
             if req['podtoken'] != swyfunc['podtoken']:
                 raise Exception("POD token mismatch")
 
-            print("Call with args: %r" % req['args'])
-            runner.runq.put(req['args'])
-            errc = 500
-            try:
-                res = runner.resq.get(timeout = float(swyfunc['timeout']) / 1000)
-                fout = runner.stdout()
-                ferr = runner.stderr()
-                print("Result: %s" % res)
-                print("Out:    %s" % fout)
-            except queue.Empty as ex:
-                print("Timeout running FN")
-                runner.restart()
-                res['res'] = "timeout"
-                errc = 524
-
-            if res["res"] == "ok":
-                ret = { 'return': res["retj"],
-                        'code': 0,
-                        'stdout': fout,
-                        'stderr': ferr,
-                        'time': res["time"],
-                        'ctime': durusec(start),
-                }
-            else:
-                ret = { 'return': res["res"], 'code': errc }
+            ret = runner.try_call_fn(req['args'])
             retb = json.dumps(ret).encode('utf-8')
         except Exception as e:
             print("*** Error processing request ***")
