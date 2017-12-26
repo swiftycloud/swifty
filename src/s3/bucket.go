@@ -139,7 +139,7 @@ func (iam *S3Iam)FindBucket(key *S3AccessKey, bname string) (*S3Bucket, error) {
 	return &res, nil
 }
 
-func s3InsertBucket(iam *S3Iam, bname, acl string) error {
+func s3InsertBucket(iam *S3Iam, akey *S3AccessKey, bname, acl string) error {
 	var err error
 
 	bucket := &S3Bucket{
