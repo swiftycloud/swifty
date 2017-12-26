@@ -127,22 +127,16 @@ func (bucket *S3Bucket)dbDelObj(size int64) (error) {
 		)
 }
 
-func (akey *S3AccessKey)FindBucket(bname string) (*S3Bucket, error) {
+func (iam *S3Iam)FindBucket(key *S3AccessKey, bname string) (*S3Bucket, error) {
 	var res S3Bucket
-	var iam *S3Iam
 	var err error
-
-	iam, err = akey.s3IamFind()
-	if err != nil {
-		return nil, err
-	}
 
 	err = dbS3FindOne(bson.M{"bid": iam.BucketBID(bname)}, &res)
 	if err != nil {
 		return nil, err
 	}
 
-	return &res,nil
+	return &res, nil
 }
 
 func s3InsertBucket(iam *S3Iam, bname, acl string) error {
@@ -189,11 +183,11 @@ out_nopool:
 	return err
 }
 
-func s3DeleteBucket(akey *S3AccessKey, bname, acl string) error {
+func s3DeleteBucket(iam *S3Iam, akey *S3AccessKey, bname, acl string) error {
 	var bucketFound *S3Bucket
 	var err error
 
-	bucketFound, err = akey.FindBucket(bname)
+	bucketFound, err = iam.FindBucket(akey, bname)
 	if err != nil {
 		if err == mgo.ErrNotFound {
 			return nil
@@ -241,12 +235,12 @@ func (bucket *S3Bucket)dbFindAll() ([]S3Object, error) {
 	return res, nil
 }
 
-func s3ListBucket(akey *S3AccessKey, bname, acl string) (*swys3api.S3Bucket, error) {
+func s3ListBucket(iam *S3Iam, akey *S3AccessKey, bname, acl string) (*swys3api.S3Bucket, error) {
 	var bucketList swys3api.S3Bucket
 	var bucketFound *S3Bucket
 	var err error
 
-	bucketFound, err = akey.FindBucket(bname)
+	bucketFound, err = iam.FindBucket(akey, bname)
 	if err != nil {
 		log.Errorf("s3: Can't find bucket %s: %s", bname, err.Error())
 		return nil, err

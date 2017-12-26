@@ -209,7 +209,7 @@ func handleBucket(w http.ResponseWriter, r *http.Request) {
 		break
 	case http.MethodGet:
 		if _, ok = r.URL.Query()["uploads"]; ok {
-			resp, err := s3Uploads(akey, bname)
+			resp, err := s3Uploads(iam, akey, bname)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusBadRequest)
 				return
@@ -219,7 +219,7 @@ func handleBucket(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		// List all objects
-		objects, err := s3ListBucket(akey, bname, acl)
+		objects, err := s3ListBucket(iam, akey, bname, acl)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
@@ -230,7 +230,7 @@ func handleBucket(w http.ResponseWriter, r *http.Request) {
 		break
 	case http.MethodDelete:
 		// Delete a bucket
-		err = s3DeleteBucket(akey, bname, acl)
+		err = s3DeleteBucket(iam, akey, bname, acl)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
@@ -312,7 +312,7 @@ func handleObject(w http.ResponseWriter, r *http.Request) {
 		r.Header.Set("x-amz-acl", swys3api.S3ObjectAclPrivate)
 	}
 
-	bucket, err = akey.FindBucket(bname)
+	bucket, err = iam.FindBucket(akey, bname)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
