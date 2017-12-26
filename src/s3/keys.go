@@ -43,6 +43,14 @@ func genKey(length int, dict []byte) (string) {
 	return string(pass)
 }
 
+func (key *S3AccessKey)CheckBucketAccess(bname string) error {
+	if key.Bucket == "" || key.Bucket == bname {
+		return nil
+	}
+
+	return fmt.Errorf("Access to bucket %s prohibited", bname)
+}
+
 //
 // Keys operation should not report any errors,
 // for security reason.
@@ -86,9 +94,14 @@ func (iam *S3Iam)FindBuckets(akey *S3AccessKey) ([]S3Bucket, error) {
 	var res []S3Bucket
 	var err error
 
-	query := bson.M{"nsid": iam.NamespaceID()}
+	if akey.Bucket != "" {
+		var b S3Bucket
+		err = dbS3FindOne(bson.M{"nsid": iam.NamespaceID, "name": akey.Bucket}, &b)
+		res = []S3Bucket{b}
+	} else {
+		err = dbS3FindAll(bson.M{"nsid": iam.NamespaceID()}, &res)
+	}
 
-	err = dbS3FindAll(query, &res)
 	if err != nil {
 		return nil, err
 	}
