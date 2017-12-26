@@ -216,12 +216,10 @@ func addFunction(conf *YAMLConf, tennant string, params *swyapi.FunctionAdd) err
 		goto out
 	}
 
-	if fn.Event.Source != "" {
-		err = eventSetup(conf, fn, true)
-		if err != nil {
-			err = fmt.Errorf("Unable to setup even %s: %s", fn.Event, err.Error())
-			goto out_clean_func
-		}
+	err = eventSetup(conf, fn, true)
+	if err != nil {
+		err = fmt.Errorf("Unable to setup even %s: %s", fn.Event, err.Error())
+		goto out_clean_func
 	}
 
 	err = getSources(fn)
@@ -251,9 +249,7 @@ func addFunction(conf *YAMLConf, tennant string, params *swyapi.FunctionAdd) err
 out_clean_repo:
 	cleanRepo(fn)
 out_clean_evt:
-	if fn.Event.Source != "" {
-		eventSetup(conf, fn, false)
-	}
+	eventSetup(conf, fn, false)
 out_clean_func:
 	dbFuncRemove(fn)
 out:
@@ -395,17 +391,9 @@ out:
 }
 
 func forgetFunction(fn *FunctionDesc) {
-	var err error
-
-	if fn.Event.Source != "" {
-		err = eventSetup(&conf, fn, false)
-		if err != nil {
-			log.Errorf("remove event %s error: %s", fn.Event, err.Error())
-		}
-	}
-
 	log.Debugf("Forget function %s", fn.SwoId.Str())
 
+	eventSetup(&conf, fn, false)
 	statsDrop(fn)
 	memdGone(fn)
 	cleanRepo(fn)

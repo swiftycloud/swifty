@@ -15,6 +15,10 @@ var evtHandlers = map[string]func(*YAMLConf, *FunctionDesc, bool) error {
 }
 
 func eventSetup(conf *YAMLConf, fn *FunctionDesc, on bool) error {
+	if fn.Event.Source == "" {
+		return nil
+	}
+
 	evtHandler, ok := evtHandlers[fn.Event.Source]
 	if ok {
 		return evtHandler(conf, fn, on)
