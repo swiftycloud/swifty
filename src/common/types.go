@@ -22,4 +22,5 @@ const (
 	DBFuncStateRdy	int = 6		// Ready
 	DBFuncStateUpd	int = 7		// Update-build
 	DBFuncStateTrm	int = 8		// Terminating
+	DBFuncStateDea	int = 9		// Deactivated
 )

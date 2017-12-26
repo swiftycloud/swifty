@@ -295,6 +295,28 @@ out:
 	return err
 }
 
+func handleFunctionState(w http.ResponseWriter, r *http.Request, tennant string) error {
+	var id *SwoId
+	var params swyapi.FunctionState
+
+	err := swyhttp.ReadAndUnmarshalReq(r, &params)
+	if err != nil {
+		goto out
+	}
+
+	id = makeSwoId(tennant, params.Project, params.FuncName)
+	log.Debugf("function/state %s -> %s", id.Str(), params.State)
+
+	err = setFunctionState(&conf, id, &params)
+	if err != nil {
+		goto out
+	}
+
+	w.WriteHeader(http.StatusOK)
+out:
+	return err
+}
+
 func handleFunctionUpdate(w http.ResponseWriter, r *http.Request, tennant string) error {
 	var id *SwoId
 	var params swyapi.FunctionUpdate
@@ -942,6 +964,7 @@ func main() {
 	r.Handle("/v1/function/stats",		genReqHandler(handleFunctionStats))
 	r.Handle("/v1/function/code",		genReqHandler(handleFunctionCode))
 	r.Handle("/v1/function/logs",		genReqHandler(handleFunctionLogs))
+	r.Handle("/v1/function/state",		genReqHandler(handleFunctionState))
 	r.Handle("/v1/mware/add",		genReqHandler(handleMwareAdd))
 	r.Handle("/v1/mware/list",		genReqHandler(handleMwareList))
 	r.Handle("/v1/mware/remove",		genReqHandler(handleMwareRemove))

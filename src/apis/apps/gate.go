@@ -101,6 +101,12 @@ type FunctionAdd struct {
 	Mware		[]string		`json:"mware"`
 }
 
+type FunctionState struct {
+	Project		string			`json:"project"`
+	FuncName	string			`json:"name"`
+	State		string			`json:"state"`
+}
+
 type FunctionUpdate struct {
 	Project		string			`json:"project"`
 	FuncName	string			`json:"name"`

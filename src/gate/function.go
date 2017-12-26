@@ -50,6 +50,7 @@ var fnStates = map[int]string {
 	swy.DBFuncStatePrt: "partial",
 	swy.DBFuncStateRdy: "ready",
 	swy.DBFuncStateUpd: "updating",
+	swy.DBFuncStateDea: "deactivated",
 	swy.DBFuncStateTrm: "terminating",
 }
 
@@ -412,13 +413,13 @@ func removeFunction(conf *YAMLConf, id *SwoId) error {
 
 	// Allow to remove function if only we're in known state,
 	// otherwise wait for function building to complete
-	err = dbFuncSetStateCond(id, swy.DBFuncStateTrm,
-					[]int{swy.DBFuncStateRdy, swy.DBFuncStateStl})
+	err = dbFuncSetStateCond(id, swy.DBFuncStateTrm, []int{
+			swy.DBFuncStateRdy, swy.DBFuncStateStl, swy.DBFuncStateDea})
 	if err != nil {
 		goto out
 	}
 
-	if !fn.OneShot && (fn.State != swy.DBFuncStateStl) {
+	if !fn.OneShot && (fn.State == swy.DBFuncStateRdy) {
 		err = swk8sRemove(conf, &fn, fn.Inst())
 		if err != nil {
 			log.Errorf("remove deploy error: %s", err.Error())
@@ -429,4 +430,64 @@ func removeFunction(conf *YAMLConf, id *SwoId) error {
 	forgetFunction(&fn)
 out:
 	return err
+}
+
+func deactivateFunction(conf *YAMLConf, id *SwoId) error {
+	var err error
+	var fn FunctionDesc
+
+	fn, err = dbFuncFind(id)
+	if err != nil {
+		goto out
+	}
+
+	err = dbFuncSetStateCond(id, swy.DBFuncStateDea, []int{swy.DBFuncStateRdy})
+	if err != nil {
+		goto out
+	}
+
+	err = swk8sRemove(conf, &fn, fn.Inst())
+	if err != nil {
+		log.Errorf("Can't deactivate FN")
+		dbFuncSetState(&fn, swy.DBFuncStateRdy)
+	}
+out:
+	return err
+}
+
+func activateFunction(conf *YAMLConf, id *SwoId) error {
+	var err error
+	var fn FunctionDesc
+
+	fn, err = dbFuncFind(id)
+	if err != nil {
+		goto out
+	}
+
+	if fn.State != swy.DBFuncStateDea {
+		err = errors.New("Can't activate not deactivated function")
+		goto out
+	}
+
+	dbFuncSetState(&fn, swy.DBFuncStateQue)
+
+	err = swk8sRun(conf, &fn, fn.Inst())
+	if err != nil {
+		dbFuncSetState(&fn, swy.DBFuncStateDea)
+		log.Errorf("Can't activate FN: %s", err.Error())
+		goto out
+	}
+out:
+	return err
+}
+
+func setFunctionState(conf *YAMLConf, id *SwoId, st *swyapi.FunctionState) error {
+	switch st.State {
+	case fnStates[swy.DBFuncStateDea]:
+		return deactivateFunction(conf, id)
+	case fnStates[swy.DBFuncStateRdy]:
+		return activateFunction(conf, id)
+	}
+
+	return fmt.Errorf("Can't set state %s", st.State)
 }

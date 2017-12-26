@@ -390,6 +390,16 @@ func del_function(project string, args []string, opts [8]string) {
 		swyapi.FunctionRemove{ Project: project, FuncName: args[0] }, nil)
 }
 
+func on_fn(project string, args []string, opts [8]string) {
+	make_faas_req("function/state",
+		swyapi.FunctionState{ Project: project, FuncName: args[0], State: "ready" }, nil)
+}
+
+func off_fn(project string, args []string, opts [8]string) {
+	make_faas_req("function/state",
+		swyapi.FunctionState{ Project: project, FuncName: args[0], State: "deactivated" }, nil)
+}
+
 func show_code(project string, args []string, opts [8]string) {
 	var res swyapi.FunctionSources
 	make_faas_req("function/code",
@@ -511,6 +521,8 @@ const (
 	CMD_DEL string		= "del"
 	CMD_LOGS string		= "logs"
 	CMD_CODE string		= "code"
+	CMD_ON string		= "on"
+	CMD_OFF string		= "off"
 	CMD_MLS string		= "mls"
 	CMD_MADD string		= "madd"
 	CMD_MDEL string		= "mdel"
@@ -534,6 +546,8 @@ var cmdOrder = []string {
 	CMD_DEL,
 	CMD_LOGS,
 	CMD_CODE,
+	CMD_ON,
+	CMD_OFF,
 	CMD_MLS,
 	CMD_MADD,
 	CMD_MDEL,
@@ -565,6 +579,8 @@ var cmdMap = map[string]*cmdDesc {
 	CMD_DEL:	&cmdDesc{ pcall: del_function,	  opts: flag.NewFlagSet(CMD_DEL, flag.ExitOnError) },
 	CMD_LOGS:	&cmdDesc{ pcall: show_logs,	  opts: flag.NewFlagSet(CMD_LOGS, flag.ExitOnError) },
 	CMD_CODE:	&cmdDesc{ pcall: show_code,	  opts: flag.NewFlagSet(CMD_CODE, flag.ExitOnError) },
+	CMD_ON:		&cmdDesc{ pcall: on_fn,		  opts: flag.NewFlagSet(CMD_ON, flag.ExitOnError) },
+	CMD_OFF:	&cmdDesc{ pcall: off_fn,	  opts: flag.NewFlagSet(CMD_OFF, flag.ExitOnError) },
 	CMD_MLS:	&cmdDesc{ pcall: list_mware,	  opts: flag.NewFlagSet(CMD_MLS, flag.ExitOnError) },
 	CMD_MADD:	&cmdDesc{ pcall: add_mware,	  opts: flag.NewFlagSet(CMD_MADD, flag.ExitOnError) },
 	CMD_MDEL:	&cmdDesc{ pcall: del_mware,	  opts: flag.NewFlagSet(CMD_MDEL, flag.ExitOnError) },
@@ -620,6 +636,8 @@ func main() {
 	bindCmdUsage(CMD_LOGS,	[]string{"NAME"}, "Show function logs", true)
 	cmdMap[CMD_CODE].opts.StringVar(&opts[0], "version", "", "Version")
 	bindCmdUsage(CMD_CODE,  []string{"NAME"}, "Show function code", true)
+	bindCmdUsage(CMD_ON,	[]string{"NAME"}, "Activate function", true)
+	bindCmdUsage(CMD_OFF,	[]string{"NAME"}, "Deactivate function", true)
 
 	bindCmdUsage(CMD_MLS,	[]string{}, "List middleware", true)
 	bindCmdUsage(CMD_MADD,	[]string{"ID", "TYPE"}, "Add middleware", true)
