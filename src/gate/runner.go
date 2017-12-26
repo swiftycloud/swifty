@@ -9,13 +9,13 @@ import (
 	"../common/http"
 )
 
-func doRun(cookie, event string, args map[string]string) (*swyapi.SwdFunctionRunResult, error) {
-	link := dbBalancerLinkFindByCookie(cookie)
+func doRun(fn *FunctionDesc, event string, args map[string]string) (*swyapi.SwdFunctionRunResult, error) {
+	link := dbBalancerLinkFindByCookie(fn.Cookie)
 	if link == nil {
-		return nil, fmt.Errorf("Can't find balancer for %s", cookie)
+		return nil, fmt.Errorf("Can't find balancer for %s", fn.Cookie)
 	}
 
-	return doRunLink(link, nil, cookie, event, args)
+	return doRunLink(link, nil, fn.Cookie, event, args)
 }
 
 func doRunLink(link *BalancerLink, fmd *FnMemData,
@@ -28,7 +28,7 @@ func doRunLink(link *BalancerLink, fmd *FnMemData,
 }
 
 func doRunIp(VIP string, fmd *FnMemData, cookie, event string, args map[string]string) (*swyapi.SwdFunctionRunResult, error) {
-	log.Debugf("RUN %s(%v)", cookie, args)
+	log.Debugf("RUN %s %s (%v)", cookie, event, args)
 
 	var wd_result swyapi.SwdFunctionRunResult
 	var resp *http.Response
@@ -138,7 +138,7 @@ out_nok8s:
 
 func runFunctionOnce(fn *FunctionDesc) {
 	log.Debugf("oneshot RUN for %s", fn.SwoId.Str())
-	doRun(fn.Cookie, "oneshot", map[string]string{})
+	doRun(fn, "oneshot", map[string]string{})
 	log.Debugf("oneshor %s finished", fn.SwoId.Str())
 
 	swk8sRemove(&conf, fn, fn.Inst())

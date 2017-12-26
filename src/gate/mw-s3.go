@@ -138,7 +138,7 @@ func handleS3Event(user string, data []byte) {
 	for _, fn := range funcs {
 		log.Debugf("s3 event -> [%s]", fn.SwoId.Str())
 		/* FIXME -- this is synchronous */
-		_, err := doRun(fn.Cookie, "mware:" + mw.SwoId.Name + ":" + evt.Bucket,
+		_, err := doRun(&fn, "mware:" + mw.SwoId.Name + ":" + evt.Bucket,
 				map[string]string {
 					"bucket": evt.Bucket,
 					"object": evt.Object,

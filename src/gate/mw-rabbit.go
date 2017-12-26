@@ -105,7 +105,7 @@ func mqEvent(mwid, queue, userid, data string) {
 	for _, fn := range funcs {
 		log.Debugf("mq: `- [%s]", fn)
 		/* FIXME -- this is synchronous */
-		_, err := doRun(fn.Cookie, "mware:" + mwid + ":" + queue, map[string]string{"body": data})
+		_, err := doRun(&fn, "mware:" + mwid + ":" + queue, map[string]string{"body": data})
 		if err != nil {
 			log.Errorf("mq: Error running FN %s", err.Error())
 		}
