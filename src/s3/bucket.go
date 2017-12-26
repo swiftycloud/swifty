@@ -200,6 +200,7 @@ func s3DeleteBucket(iam *S3Iam, akey *S3AccessKey, bname, acl string) error {
 	bucketFound, err = iam.FindBucket(akey, bname)
 	if err != nil {
 		if err == mgo.ErrNotFound {
+			log.Debugf("Remove: no such bucket")
 			return nil
 		}
 		log.Errorf("s3: Can't find bucket %s: %s", bname, err.Error())
@@ -209,6 +210,7 @@ func s3DeleteBucket(iam *S3Iam, akey *S3AccessKey, bname, acl string) error {
 	err = bucketFound.dbSetState(S3StateInactive)
 	if err != nil {
 		if err == mgo.ErrNotFound {
+			log.Debugf("Remove: cannot deactivate bucket")
 			return nil
 		}
 		log.Errorf("s3: Can't disable bucket %s: %s",

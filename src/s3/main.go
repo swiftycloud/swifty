@@ -558,6 +558,10 @@ func handleBreq(w http.ResponseWriter, r *http.Request, op string) {
 		goto out
 	}
 
+	if breq.Acl == "" {
+		breq.Acl = swys3api.S3BucketAclPrivate
+	}
+
 	key = iam.MakeBucketKey(breq.Bucket, breq.Acl)
 
 	if op == "badd" {
