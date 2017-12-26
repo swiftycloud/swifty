@@ -38,6 +38,15 @@ func (akey *S3AccessKey)s3IamFind() (*S3Iam, error) {
 				"state": S3StateActive})
 }
 
+/* Key, that gives access to bucket */
+func (iam *S3Iam)MakeBucketKey(bucket, act string) *S3AccessKey {
+	return &S3AccessKey{
+		IamID: iam.ObjID,
+		Bucket: bucket,
+	}
+}
+
+
 // FIXME: There MUST not be plain namespace coming
 // from notification, we always must obtain akey instead
 // and figure out which namespace it belongs, but it

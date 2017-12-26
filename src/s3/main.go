@@ -541,6 +541,48 @@ out:
 	http.Error(w, err.Error(), http.StatusBadRequest)
 }
 
+func handleBreq(w http.ResponseWriter, r *http.Request, op string) {
+	var err error
+	var breq swys3api.S3CtlBucketReq
+	var iam *S3Iam
+	var key *S3AccessKey
+	var code int
+
+	err = swyhttp.ReadAndUnmarshalReq(r, &breq)
+	if err != nil {
+		goto out
+	}
+
+	iam, err = s3IamFindByNamespace(breq.Namespace)
+	if err != nil {
+		goto out
+	}
+
+	key = iam.MakeBucketKey(breq.Bucket, breq.Acl)
+
+	if op == "badd" {
+		err = s3InsertBucket(iam, key, breq.Bucket, breq.Acl)
+		if err != nil {
+			goto out
+		}
+
+		code = http.StatusCreated
+	} else {
+		err = s3DeleteBucket(iam, key, breq.Bucket, breq.Acl)
+		if err != nil {
+			goto out
+		}
+
+		code = http.StatusNoContent
+	}
+
+	w.WriteHeader(code)
+	return
+
+out:
+	http.Error(w, err.Error(), http.StatusBadRequest)
+}
+
 func handleAdminOp(w http.ResponseWriter, r *http.Request) {
 	var op string = mux.Vars(r)["op"]
 	var err error
@@ -557,6 +599,12 @@ func handleAdminOp(w http.ResponseWriter, r *http.Request) {
 		return
 	case "keydel":
 		handleKeydel(w, r)
+		return
+	case "badd":
+		handleBreq(w, r, op)
+		return
+	case "bdel":
+		handleBreq(w, r, op)
 		return
 	}
 
