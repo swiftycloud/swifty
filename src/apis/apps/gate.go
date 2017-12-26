@@ -23,6 +23,7 @@ type FunctionInfo struct {
 	Mware		[]string		`json:"mware"`
 	State		string			`json:"state"`
 	Version		string			`json:"version"`
+	RdyVersions	[]string		`json:"rversions"`
 	Code		FunctionCode		`json:"code"`
 	Event		FunctionEvent		`json:"event"`
 	URL		string			`json:"url"`

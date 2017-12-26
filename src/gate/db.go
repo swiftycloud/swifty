@@ -303,6 +303,13 @@ func logRemove(fn *FunctionDesc) {
 	}
 }
 
+func dbBalancerRSListVersions(fn *FunctionDesc) ([]string, error) {
+	var fv []string
+	c := dbSession.DB(dbState).C(DBColBalancerRS)
+	err := c.Find(bson.M{"fnid": fn.Cookie}).Distinct("fnversion", &fv)
+	return fv, err
+}
+
 func dbBalancerPodFind(link *BalancerLink, uid string) (*BalancerRS) {
 	var v BalancerRS
 

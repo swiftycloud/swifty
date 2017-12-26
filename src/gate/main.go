@@ -420,6 +420,7 @@ func handleFunctionInfo(w http.ResponseWriter, r *http.Request, tennant string) 
 	var id *SwoId
 	var params swyapi.FunctionID
 	var fn FunctionDesc
+	var fv []string
 	var url = ""
 	var stats *FnStats
 	var lcs string
@@ -452,11 +453,16 @@ func handleFunctionInfo(w http.ResponseWriter, r *http.Request, tennant string) 
 		gtime = uint64(stats.GateTime.Nanoseconds()/1000)
 	}
 
+	fv, err = dbBalancerRSListVersions(&fn)
+	if err != nil {
+		goto out
+	}
 
 	err = swyhttp.MarshalAndWrite(w,  swyapi.FunctionInfo{
 			State:          fnStates[fn.State],
 			Mware:          fn.Mware,
-			Version:         fn.Src.Version,
+			Version:        fn.Src.Version,
+			RdyVersions:    fv,
 			URL:		url,
 			Code:		swyapi.FunctionCode{
 				Lang:		fn.Code.Lang,

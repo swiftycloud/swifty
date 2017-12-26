@@ -164,7 +164,12 @@ func info_function(project string, args []string, opts [8]string) {
 	}
 
 	fmt.Printf("Lang:        %s\n", ifo.Code.Lang)
-	fmt.Printf("Version:     %s\n", ver)
+
+	rv := ""
+	if len(ifo.RdyVersions) != 0 {
+		rv = " (" + strings.Join(ifo.RdyVersions, ",") + ")"
+	}
+	fmt.Printf("Version:     %s%s\n", ver, rv)
 	fmt.Printf("State:       %s\n", ifo.State)
 	if len(ifo.Mware) > 0 {
 		fmt.Printf("Mware:       %s\n", strings.Join(ifo.Mware, ", "))

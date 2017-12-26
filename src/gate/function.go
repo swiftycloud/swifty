@@ -404,6 +404,8 @@ func forgetFunction(fn *FunctionDesc) {
 		}
 	}
 
+	log.Debugf("Forget function %s", fn.SwoId.Str())
+
 	statsDrop(fn)
 	memdGone(fn)
 	cleanRepo(fn)
