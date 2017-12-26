@@ -10,7 +10,7 @@ import (
 	"../apis/apps/s3"
 )
 
-func s3KeyGen(conf *YAMLConfS3, addr, namespace string) (string, string, error) {
+func s3KeyGen(conf *YAMLConfS3, addr, namespace, bucket string) (string, string, error) {
 	resp, err := swyhttp.MarshalAndPost(
 		&swyhttp.RestReq{
 			Address: "http://" + addr + "/v1/api/admin/keygen",
@@ -19,6 +19,7 @@ func s3KeyGen(conf *YAMLConfS3, addr, namespace string) (string, string, error) 
 		},
 		&swys3api.S3CtlKeyGen{
 			Namespace: namespace,
+			Bucket: bucket,
 		})
 	if err != nil {
 		return "", "", fmt.Errorf("Error requesting NS from S3: %s", err.Error())
@@ -56,28 +57,57 @@ func s3KeyDel(conf *YAMLConfS3, addr, key string) error {
 	return nil
 }
 
+func s3BucketReq(conf *YAMLConfS3, addr, req, namespace, bucket string) error {
+	_, err := swyhttp.MarshalAndPost(
+		&swyhttp.RestReq{
+			Address: "http://" + addr + "/v1/api/admin/" + req,
+			Timeout: 120,
+			Headers: map[string]string{"X-SwyS3-Token": gateSecrets[conf.Token]},
+		},
+		&swys3api.S3CtlBucketReq{
+			Namespace: namespace,
+			Bucket: bucket,
+		})
+	if err != nil {
+		return fmt.Errorf("Error deleting key from S3: %s", err.Error())
+	}
+
+	return nil
+}
+
 func InitS3(conf *YAMLConfMw, mwd *MwareDesc) (error) {
-	s3ns, err := swy.GenRandId(32)
-	if err != nil {
-		return err
-	}
-
+	/* There can be only one s3 namespace per project */
+	pns := mwd.SwoId.Tennant + "::" + mwd.SwoId.Project
 	addr := swy.MakeAdminURL(conf.S3.Addr, conf.S3.AdminPort)
-	key, secret, err := s3KeyGen(&conf.S3, addr, s3ns)
+
+	key, secret, err := s3KeyGen(&conf.S3, addr, pns, mwd.SwoId.Name)
 	if err != nil {
 		return err
 	}
 
-	log.Debugf("Added S3 client: %s:%s", key, s3ns)
+	err = s3BucketReq(&conf.S3, addr, "badd", pns, mwd.SwoId.Name)
+	if err != nil {
+		s3KeyDel(&conf.S3, addr, key)
+		return err
+	}
+
+	log.Debugf("Added S3 client: %s:%s", key, pns)
 	mwd.Client = key
 	mwd.Secret = secret
-	mwd.Namespace = s3ns
+	mwd.Namespace = pns
 	return nil
 }
 
 func FiniS3(conf *YAMLConfMw, mwd *MwareDesc) error {
+	pns := mwd.Namespace
 	addr := swy.MakeAdminURL(conf.S3.Addr, conf.S3.AdminPort)
-	return s3KeyDel(&conf.S3, addr, mwd.Client)
+
+	er1 := s3BucketReq(&conf.S3, addr, "bdel", pns, mwd.SwoId.Name)
+	er2 := s3KeyDel(&conf.S3, addr, mwd.Client)
+	if er1 == nil {
+		er1 = er2
+	}
+	return er1
 }
 
 const (

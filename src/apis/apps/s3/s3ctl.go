@@ -14,6 +14,12 @@ type S3CtlKeyDel struct {
 	AccessKeyID		string		`json:"access-key-id"`
 }
 
+type S3CtlBucketReq struct {
+	Namespace		string		`json:"namespace,omitempty"`
+	Bucket			string		`json:"bucket,omitempty"`
+	Acl			string		`json:"acl,omitempty"`
+}
+
 type S3Subscribe struct {
 	Namespace		string		`json:"namespace"`
 	Bucket			string		`json:"bucket"`
