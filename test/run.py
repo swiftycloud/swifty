@@ -204,24 +204,20 @@ def mongo(lang, opts):
 
 def s3(lang, opts):
 	ok = False
-	s3name = 's3tns'
+	s3name = 'tbuck'
 	cookie = randstr()
-	args_c = { 's3name': s3name, 'action': 'create', 'bucket': 'tbuck' }
-	args_p = { 's3name': s3name, 'action': 'put',    'bucket': 'tbuck' , 'name': 'tobj', 'data': cookie }
-	args_g = { 's3name': s3name, 'action': 'get',    'bucket': 'tbuck' , 'name': 'tobj' }
+	args_p = { 'action': 'put',  'bucket': s3name , 'name': 'tobj', 'data': cookie }
+	args_g = { 'action': 'get',  'bucket': s3name , 'name': 'tobj' }
 
 	add_mw("s3", s3name)
 	inf = add_fn("s3", lang, mw = [ s3name ])
-	ret = run_fn(inf, args_c)
+	ret = run_fn(inf, args_p)
 	print(ret)
 	if ret.get('res', '') == 'done':
-		ret = run_fn(inf, args_p)
+		ret = run_fn(inf, args_g)
 		print(ret)
-		if ret.get('res', '') == 'done':
-			ret = run_fn(inf, args_g)
-			print(ret)
-			if ret.get('res', '') == cookie:
-				ok = True
+		if ret.get('res', '') == cookie:
+			ok = True
 	if not opts['keep']:
 		del_fn(inf)
 		del_mw(s3name)
