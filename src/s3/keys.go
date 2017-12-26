@@ -175,10 +175,6 @@ func dbRemoveAccessKey(AccessKeyID string) (error) {
 		return err
 	}
 
-	if akey.s3IamRemove() != nil {
-		log.Errorf("dbRemoveAccessKey: Can't remove iam for akey %v", akey)
-	}
-
 	log.Debugf("dbRemoveAccessKey: akey %v", akey)
 	return nil
 }
