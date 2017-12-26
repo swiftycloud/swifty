@@ -1,6 +1,7 @@
 package main
 
 import (
+	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 	"time"
 	"fmt"
@@ -68,37 +69,82 @@ func (akey *S3AccessKey)s3IamRemove() error {
 	return dbS3Remove(&S3Iam{}, bson.M{"_id": akey.IamID})
 }
 
-func s3IamInsert(namespace, user, email string) (*S3Iam, error) {
+type iamResp struct {
+	iam *S3Iam
+	err error
+}
+
+type iamReq struct {
+	namespace string
+	user string
+	email string
+	resp chan *iamResp
+}
+
+var iamReqs chan *iamReq
+
+func s3IamGet(namespace, user, email string) (*S3Iam, error) {
+	rq := &iamReq {
+		namespace: namespace,
+		user: user, email: email,
+		resp: make(chan *iamResp),
+	}
+	iamReqs <- rq
+	rsp := <-rq.resp
+
+	return rsp.iam, rsp.err
+}
+
+func iamGetter(rq *iamReq) *iamResp {
 	var err error
 
-	if namespace == "" {
-		return nil, fmt.Errorf("s3,iam: Empty namespace passed")
+	if rq.namespace == "" {
+		return &iamResp{ nil, fmt.Errorf("s3,iam: Empty namespace passed") }
 	}
 
-	if user == "" || email == "" {
-		user = genKey(16, AccessKeyLetters)
-		email = genKey(8, AccessKeyLetters) + "@fake.mail"
-		if user == "" || email == "" {
-			return nil, fmt.Errorf("s3,iam: Can't generate user/email")
+	iam, err := s3IamFindByNamespace(rq.namespace)
+	if err == nil {
+		return &iamResp{ iam, nil }
+	}
+
+	if err != mgo.ErrNotFound {
+		return &iamResp{ nil, err }
+	}
+
+	if rq.user == "" || rq.email == "" {
+		rq.user = genKey(16, AccessKeyLetters)
+		rq.email = genKey(8, AccessKeyLetters) + "@fake.mail"
+		if rq.user == "" || rq.email == "" {
+			return &iamResp{ nil, fmt.Errorf("s3,iam: Can't generate user/email") }
 		}
 	}
 
 	// FIXME Add counter so namespace would be shareable
-	iam := &S3Iam{
+	iam = &S3Iam{
 		ObjID:		bson.NewObjectId(),
-		IamID:		sha256sum([]byte(email)),
-		Namespace:	namespace,
+		IamID:		sha256sum([]byte(rq.email)),
+		Namespace:	rq.namespace,
 		CreationTime:	time.Now().Format(time.RFC3339),
 		State:		S3StateActive,
-		User:		user,
-		Email:		email,
+		User:		rq.user,
+		Email:		rq.email,
 	}
 
 	err = dbS3Insert(iam)
 	if err != nil {
-		return nil, err
+		return &iamResp{ nil, err }
 	}
 
 	log.Debugf("s3,iam: Created namespace %v", iam)
-	return iam, nil
+	return &iamResp{ iam, nil }
+}
+
+func init() {
+	iamReqs = make(chan *iamReq)
+	go func() {
+		for {
+			rq := <-iamReqs
+			rq.resp <- iamGetter(rq)
+		}
+	}()
 }
