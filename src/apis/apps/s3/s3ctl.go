@@ -2,6 +2,7 @@ package swys3api
 
 type S3CtlKeyGen struct {
 	Namespace		string		`json:"namespace,omitempty"`
+	Bucket			string		`json:"bucket,omitempty"`
 }
 
 type S3CtlKeyGenResult struct {

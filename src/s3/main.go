@@ -497,7 +497,7 @@ func handleKeygen(w http.ResponseWriter, r *http.Request) {
 		goto out
 	}
 
-	akey, err = genNewAccessKey(kg.Namespace)
+	akey, err = genNewAccessKey(kg.Namespace, kg.Bucket)
 	if err != nil {
 		goto out
 	}
