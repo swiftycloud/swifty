@@ -10,6 +10,52 @@ import (
 	"../apis/apps/s3"
 )
 
+func s3KeyGen(conf *YAMLConfS3, addr, namespace string) (string, string, error) {
+	resp, err := swyhttp.MarshalAndPost(
+		&swyhttp.RestReq{
+			Address: "http://" + addr + "/v1/api/admin/keygen",
+			Timeout: 120,
+			Headers: map[string]string{"X-SwyS3-Token": gateSecrets[conf.Token]},
+		},
+		&swys3api.S3CtlKeyGen{
+			Namespace: namespace,
+		})
+	if err != nil {
+		return "", "", fmt.Errorf("Error requesting NS from S3: %s", err.Error())
+	}
+
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return "", "", fmt.Errorf("Bad responce from S3 gate: %s", string(resp.Status))
+	}
+
+	var out swys3api.S3CtlKeyGenResult
+
+	err = swyhttp.ReadAndUnmarshalResp(resp, &out)
+	if err != nil {
+		return "", "", fmt.Errorf("Error reading responce from S3: %s", err.Error())
+	}
+
+	return out.AccessKeyID, out.AccessKeySecret, nil
+}
+
+func s3KeyDel(conf *YAMLConfS3, addr, key string) error {
+	_, err := swyhttp.MarshalAndPost(
+		&swyhttp.RestReq{
+			Address: "http://" + addr + "/v1/api/admin/keydel",
+			Timeout: 120,
+			Headers: map[string]string{"X-SwyS3-Token": gateSecrets[conf.Token]},
+		},
+		&swys3api.S3CtlKeyDel{
+			AccessKeyID: key,
+		})
+	if err != nil {
+		return fmt.Errorf("Error deleting key from S3: %s", err.Error())
+	}
+
+	return nil
+}
+
 func InitS3(conf *YAMLConfMw, mwd *MwareDesc) (error) {
 	s3ns, err := swy.GenRandId(32)
 	if err != nil {
@@ -17,54 +63,21 @@ func InitS3(conf *YAMLConfMw, mwd *MwareDesc) (error) {
 	}
 
 	addr := swy.MakeAdminURL(conf.S3.Addr, conf.S3.AdminPort)
-	resp, err := swyhttp.MarshalAndPost(
-		&swyhttp.RestReq{
-			Address: "http://" + addr + "/v1/api/admin/keygen",
-			Timeout: 120,
-			Headers: map[string]string{"X-SwyS3-Token": gateSecrets[conf.S3.Token]},
-		},
-		&swys3api.S3CtlKeyGen{
-			Namespace: s3ns,
-		})
+	key, secret, err := s3KeyGen(&conf.S3, addr, s3ns)
 	if err != nil {
-		return fmt.Errorf("Error requesting NS from S3: %s", err.Error())
+		return err
 	}
 
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("Bad responce from S3 gate: %s", string(resp.Status))
-	}
-
-	var out swys3api.S3CtlKeyGenResult
-
-	err = swyhttp.ReadAndUnmarshalResp(resp, &out)
-	if err != nil {
-		return fmt.Errorf("Error reading responce from S3: %s", err.Error())
-	}
-
-	log.Debugf("Added S3 client: %s:%s", out.AccessKeyID, s3ns)
-	mwd.Client = out.AccessKeyID
-	mwd.Secret = out.AccessKeySecret
+	log.Debugf("Added S3 client: %s:%s", key, s3ns)
+	mwd.Client = key
+	mwd.Secret = secret
 	mwd.Namespace = s3ns
 	return nil
 }
 
 func FiniS3(conf *YAMLConfMw, mwd *MwareDesc) error {
 	addr := swy.MakeAdminURL(conf.S3.Addr, conf.S3.AdminPort)
-	_, err := swyhttp.MarshalAndPost(
-		&swyhttp.RestReq{
-			Address: "http://" + addr + "/v1/api/admin/keydel",
-			Timeout: 120,
-			Headers: map[string]string{"X-SwyS3-Token": gateSecrets[conf.S3.Token]},
-		},
-		&swys3api.S3CtlKeyDel{
-			AccessKeyID: mwd.Client,
-		})
-	if err != nil {
-		return fmt.Errorf("Error deleting key from S3: %s", err.Error())
-	}
-
-	return nil
+	return s3KeyDel(&conf.S3, addr, mwd.Client)
 }
 
 const (
