@@ -83,15 +83,9 @@ func genNewAccessKey(namespace string) (*S3AccessKey, error) {
 	return &akey, nil
 }
 
-func (akey *S3AccessKey)FindBuckets() ([]S3Bucket, error) {
+func (iam *S3Iam)FindBuckets(akey *S3AccessKey) ([]S3Bucket, error) {
 	var res []S3Bucket
-	var iam *S3Iam
 	var err error
-
-	iam, err = akey.s3IamFind()
-	if err != nil {
-		return nil, err
-	}
 
 	query := bson.M{"nsid": iam.NamespaceID()}
 

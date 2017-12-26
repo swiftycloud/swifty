@@ -131,11 +131,11 @@ func formatRequest(prefix string, r *http.Request) string {
 //	return prefix
 }
 
-func handleListBuckets(w http.ResponseWriter, akey *S3AccessKey) {
+func handleListBuckets(w http.ResponseWriter, iam *S3Iam, akey *S3AccessKey) {
 	var list *swys3api.S3BucketList
 	var err error
 
-	list, err = s3ListBuckets(akey)
+	list, err = s3ListBuckets(iam, akey)
 	if err != nil {
 		if err == mgo.ErrNotFound {
 			HTTPRespError(w, S3ErrNoSuchBucket, err.Error())
@@ -190,7 +190,7 @@ func handleBucket(w http.ResponseWriter, r *http.Request) {
 
 	if bname == "" {
 		if r.Method == http.MethodGet {
-			handleListBuckets(w, akey)
+			handleListBuckets(w, iam, akey)
 			return
 		} else {
 			HTTPRespError(w, S3ErrInvalidBucketName)

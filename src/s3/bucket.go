@@ -275,12 +275,12 @@ func s3ListBucket(iam *S3Iam, akey *S3AccessKey, bname, acl string) (*swys3api.S
 	return &bucketList, nil
 }
 
-func s3ListBuckets(akey *S3AccessKey) (*swys3api.S3BucketList, error) {
+func s3ListBuckets(iam *S3Iam, akey *S3AccessKey) (*swys3api.S3BucketList, error) {
 	var list swys3api.S3BucketList
 	var buckets []S3Bucket
 	var err error
 
-	buckets, err = akey.FindBuckets()
+	buckets, err = iam.FindBuckets(akey)
 	if err != nil {
 		if err == mgo.ErrNotFound {
 			err = nil
