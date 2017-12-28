@@ -3,7 +3,6 @@ package main
 import (
 	"errors"
 	"fmt"
-	"encoding/json"
 	"gopkg.in/mgo.v2/bson"
 
 	"../apis/apps"
@@ -109,6 +108,14 @@ func (fi *FnInst)DepName() string {
 	return dn
 }
 
+func (fi *FnInst)Str() string {
+	if !fi.Build {
+		return "run"
+	} else {
+		return "build"
+	}
+}
+
 func (fi *FnInst)Replicas() int32 {
 	if fi.Build {
 		return 1
@@ -138,16 +145,6 @@ func (fn *FunctionDesc) Inst() *FnInst {
 
 func (fn *FunctionDesc) InstBuild() *FnInst {
 	return &FnInst { Build: true, fn: fn }
-}
-
-func genFunctionDescJSON(fn *FunctionDesc, fi *FnInst) string {
-	jdata, _ := json.Marshal(&swyapi.SwdFunctionDesc{
-				PodToken:	fn.Cookie,
-				Timeout:	fn.Size.Tmo,
-				Build:		fi.Build,
-			})
-
-	return string(jdata[:])
 }
 
 func getFunctionDesc(tennant string, p_add *swyapi.FunctionAdd) *FunctionDesc {

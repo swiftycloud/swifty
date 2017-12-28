@@ -12,11 +12,14 @@ import traceback
 import fcntl
 import time
 
-fdesc = os.getenv('SWD_FUNCTION_DESC')
-if not fdesc:
-    raise Exception("No function desc provided")
+swyfunc = {}
 
-swyfunc = json.loads(fdesc)
+swyfunc['podtoken'] = os.getenv('SWD_POD_TOKEN')
+if not swyfunc['podtoken']:
+    raise Exception("No podtoken provided")
+swyfunc['timeout'] = os.getenv('SWD_FN_TMO')
+if not swyfunc['timeout']:
+    raise Exception("No fn timeout provided")
 
 addr = os.getenv('SWD_POD_IP')
 port = os.getenv('SWD_PORT')

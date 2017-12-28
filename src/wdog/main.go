@@ -3,7 +3,6 @@ package main
 import (
 	"go.uber.org/zap"
 
-	"encoding/json"
 	"net/http"
 	"os/exec"
 	"strconv"
@@ -21,7 +20,9 @@ import (
 	"../apis/apps"
 )
 
-var function *swyapi.SwdFunctionDesc
+var podToken string
+var build bool
+var fnTmo int
 
 type Runner struct {
 	cmd	*exec.Cmd
@@ -142,7 +143,7 @@ func doRun(params *swyapi.SwdFunctionRun) (*swyapi.SwdFunctionRunResult, int, er
 		select {
 		case <-done:
 			return
-		case <-time.After(time.Duration(function.Timeout) * time.Millisecond):
+		case <-time.After(time.Duration(fnTmo) * time.Millisecond):
 			break
 		}
 
@@ -221,12 +222,12 @@ func handleRun(w http.ResponseWriter, r *http.Request) {
 		goto out
 	}
 
-	if params.PodToken != function.PodToken {
+	if params.PodToken != podToken {
 		err = errors.New("Pod Token mismatch")
 		goto out
 	}
 
-	if !function.Build {
+	if !build {
 		result, code, err = doRun(&params)
 	} else {
 		result, err = doBuild()
@@ -264,8 +265,6 @@ func getSwdAddr() string {
 }
 
 func main() {
-	var params swyapi.SwdFunctionDesc
-	var desc_raw string
 	var err error
 
 	swy.InitLogger(log)
@@ -275,23 +274,33 @@ func main() {
 		log.Fatal("No address specified")
 	}
 
-	desc_raw = swy.SafeEnv("SWD_FUNCTION_DESC", "")
-	if desc_raw == "" {
-		log.Fatal("SWD_FUNCTION_DESC not set")
+	podToken = swy.SafeEnv("SWD_POD_TOKEN", "")
+	if podToken == "" {
+		log.Fatal("SWD_POD_TOKEN not set")
 	}
 
-	err = json.Unmarshal([]byte(desc_raw), &params)
+	inst := swy.SafeEnv("SWD_INSTANCE", "")
+	if inst == "" {
+		log.Fatal("SWD_INSTANCE not set")
+	}
+
+	tmos := swy.SafeEnv("SWD_FN_TMO", "")
+	if tmos == "" {
+		log.Fatal("SWD_FN_TMO not set")
+	}
+
+	fnTmo, err = strconv.Atoi(tmos)
 	if err != nil {
-		log.Fatal("SWD_FUNCTION_DESC unmarshal error: %s, abort", err.Error())
+		log.Fatal("Bad timeout value")
 	}
 
-	function = &params
-
-	if !function.Build {
+	if inst == "run" {
 		err = startRunner()
 		if err != nil {
 			log.Fatal("Can't start runner")
 		}
+	} else {
+		build = true
 	}
 
 	http.HandleFunc("/v1/run", handleRun)

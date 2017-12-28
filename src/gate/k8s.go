@@ -105,10 +105,15 @@ func swk8sGenEnvVar(fn *FunctionDesc, fi *FnInst, wd_port int) []v1.EnvVar {
 		s = append(s, v1.EnvVar{Name: vs[0], Value: vs[1]})
 	}
 
-	s = append(s,  v1.EnvVar{
-			Name:	"SWD_FUNCTION_DESC",
-			Value:	genFunctionDescJSON(fn, fi), })
-
+	s = append(s, v1.EnvVar{
+			Name:	"SWD_POD_TOKEN",
+			Value:	fn.Cookie, })
+	s = append(s, v1.EnvVar{
+			Name:	"SWD_FN_TMO",
+			Value:	strconv.Itoa(int(fn.Size.Tmo)), })
+	s = append(s, v1.EnvVar{
+			Name:	"SWD_INSTANCE",
+			Value:	fi.Str(), })
 	s = append(s, v1.EnvVar{
 			Name:	"SWD_PORT",
 			Value:	strconv.Itoa(int(wd_port)), })
