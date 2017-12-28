@@ -200,7 +200,7 @@ func validateProjectAndFuncName(params *swyapi.FunctionAdd) error {
 }
 
 func addFunction(conf *YAMLConf, tennant string, params *swyapi.FunctionAdd) error {
-	var err error
+	var err, erc error
 	var fn *FunctionDesc
 	var fi *FnInst
 
@@ -259,13 +259,26 @@ func addFunction(conf *YAMLConf, tennant string, params *swyapi.FunctionAdd) err
 	return nil
 
 out_clean_repo:
-	cleanRepo(fn)
+	erc = cleanRepo(fn)
+	if erc != nil {
+		goto stalled
+	}
 out_clean_evt:
-	eventSetup(conf, fn, false)
+	erc = eventSetup(conf, fn, false)
+	if erc != nil {
+		goto stalled
+	}
 out_clean_func:
-	dbFuncRemove(fn)
+	erc = dbFuncRemove(fn)
+	if erc != nil {
+		goto stalled
+	}
 out:
 	return err
+
+stalled:
+	dbFuncSetState(fn, swy.DBFuncStateStl)
+	goto out
 }
 
 func swyFixSize(sz *swyapi.FunctionSize, conf *YAMLConf) error {
@@ -402,24 +415,13 @@ out:
 	return err
 }
 
-func forgetFunction(fn *FunctionDesc) {
-	log.Debugf("Forget function %s", fn.SwoId.Str())
-
-	eventSetup(&conf, fn, false)
-	statsDrop(fn)
-	memdGone(fn)
-	cleanRepo(fn)
-	logRemove(fn)
-	dbFuncRemove(fn)
-}
-
 func removeFunction(conf *YAMLConf, id *SwoId) error {
 	var err error
 	var fn FunctionDesc
 
 	fn, err = dbFuncFind(id)
 	if err != nil {
-		goto out
+		return err
 	}
 
 	// Allow to remove function if only we're in known state,
@@ -427,19 +429,51 @@ func removeFunction(conf *YAMLConf, id *SwoId) error {
 	err = dbFuncSetStateCond(id, swy.DBFuncStateTrm, []int{
 			swy.DBFuncStateRdy, swy.DBFuncStateStl, swy.DBFuncStateDea})
 	if err != nil {
-		goto out
+		return err
 	}
+
+	log.Debugf("Forget function %s", fn.SwoId.Str())
 
 	if !fn.OneShot && (fn.State == swy.DBFuncStateRdy) {
 		err = swk8sRemove(conf, &fn, fn.Inst())
 		if err != nil {
 			log.Errorf("remove deploy error: %s", err.Error())
-			goto out
+			goto stalled
 		}
 	}
 
-	forgetFunction(&fn)
-out:
+
+	err = eventSetup(conf, &fn, false)
+	if err != nil {
+		goto stalled
+	}
+
+	err = statsDrop(&fn)
+	if err != nil {
+		goto stalled
+	}
+
+	err = logRemove(&fn)
+	if err != nil {
+		goto stalled
+	}
+
+	err = cleanRepo(&fn)
+	if err != nil {
+		goto stalled
+	}
+
+	memdGone(&fn)
+
+	err = dbFuncRemove(&fn)
+	if err != nil {
+		goto stalled
+	}
+
+	return nil
+
+stalled:
+	dbFuncSetState(&fn, swy.DBFuncStateStl)
 	return err
 }
 

@@ -196,14 +196,17 @@ func updateFileFromReq(fn *FunctionDesc, params *swyapi.FunctionUpdate) error {
 	return writeSource(fn, params.Code)
 }
 
-func cleanRepo(fn *FunctionDesc) {
+func cleanRepo(fn *FunctionDesc) error {
 	sd := fnRepoClone(fn, "")
 
 	clone_to := conf.Daemon.Sources.Clone
-	swy.DropDir(clone_to, sd)
+	err := swy.DropDir(clone_to, sd)
+	if err != nil {
+		return err
+	}
 
 	share_to := conf.Daemon.Sources.Share
-	swy.DropDir(share_to, sd)
+	return swy.DropDir(share_to, sd)
 }
 
 func update_deps(repo_path string) error {

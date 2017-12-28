@@ -255,9 +255,9 @@ func dbFuncAdd(desc *FunctionDesc) error {
 	return err
 }
 
-func dbFuncRemove(fn *FunctionDesc) {
+func dbFuncRemove(fn *FunctionDesc) error {
 	c := dbSession.DB(dbState).C(DBColFunc)
-	c.Remove(bson.M{"cookie": fn.Cookie});
+	return c.Remove(bson.M{"cookie": fn.Cookie});
 }
 
 func dbStatsGet(cookie string, st *FnStats) error {
@@ -270,9 +270,13 @@ func dbStatsUpdate(st *FnStats) {
 	c.Upsert(bson.M{"cookie": st.Cookie}, st)
 }
 
-func dbStatsDrop(cookie string) {
+func dbStatsDrop(cookie string) error {
 	c := dbSession.DB(dbState).C(DBColFnStats)
-	c.Remove(bson.M{"cookie": cookie})
+	err := c.Remove(bson.M{"cookie": cookie})
+	if err == mgo.ErrNotFound {
+		err = nil
+	}
+	return err
 }
 
 func logSaveResult(fnCookie, event, stdout, stderr string) {
@@ -308,12 +312,16 @@ func logGetCalls(id *SwoId) (int, error) {
 	return c.Find(bson.M{"fnid": id.Cookie(), "event": "run"}).Count()
 }
 
-func logRemove(fn *FunctionDesc) {
+func logRemove(fn *FunctionDesc) error {
 	c := dbSession.DB(dbState).C(DBColLogs)
 	_, err := c.RemoveAll(bson.M{"fnid": fn.Cookie})
+	if err == mgo.ErrNotFound {
+		err = nil
+	}
 	if err != nil {
 		log.Errorf("logs %s remove error: %s", fn.SwoId.Str(), err.Error())
 	}
+	return err
 }
 
 func dbBalancerRSListVersions(fn *FunctionDesc) ([]string, error) {

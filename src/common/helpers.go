@@ -149,17 +149,24 @@ func Exec(exe string, args []string) (bytes.Buffer, bytes.Buffer, error) {
 	return stdout, stderr, nil
 }
 
-func DropDir(dir, subdir string) {
+func DropDir(dir, subdir string) error {
+	_, err := os.Stat(dir + "/" + subdir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+
+		return fmt.Errorf("Can't stat %s%s: %s", dir, subdir, err.Error())
+	}
+
 	nname, err := ioutil.TempDir(dir, ".rm")
 	if err != nil {
-		swylog.Errorf("leaking %s: %s", subdir, err.Error())
-		return
+		return fmt.Errorf("leaking %s: %s", subdir, err.Error())
 	}
 
 	err = os.Rename(dir + "/" + subdir, nname + "/_" /* Why _ ? Why not...*/)
 	if err != nil {
-		swylog.Errorf("can't move repo clone: %s", err.Error())
-		return
+		return fmt.Errorf("can't move repo clone: %s", err.Error())
 	}
 
 	swylog.Debugf("Will remove %s/%s (via %s)", dir, subdir, nname)
@@ -169,4 +176,6 @@ func DropDir(dir, subdir string) {
 			swylog.Errorf("can't remove %s (%s): %s", nname, subdir, err.Error())
 		}
 	}()
+
+	return nil
 }

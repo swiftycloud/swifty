@@ -61,7 +61,7 @@ func statsInit(conf *YAMLConf) error {
 	return nil
 }
 
-func statsDrop(fn *FunctionDesc) {
+func statsDrop(fn *FunctionDesc) error {
 	md := memdGetCond(fn.Cookie)
 	if md != nil {
 		done := make(chan bool)
@@ -69,7 +69,7 @@ func statsDrop(fn *FunctionDesc) {
 		<-done
 	}
 
-	dbStatsDrop(fn.Cookie)
+	return dbStatsDrop(fn.Cookie)
 }
 
 func fnStatsInit(st *FnStats, fn *FunctionDesc) {
