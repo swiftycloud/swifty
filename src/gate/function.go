@@ -110,9 +110,9 @@ func (fi *FnInst)DepName() string {
 
 func (fi *FnInst)Str() string {
 	if !fi.Build {
-		return "run"
+		return swy.SwyPodInstRun
 	} else {
-		return "build"
+		return swy.SwyPodInstBld
 	}
 }
 

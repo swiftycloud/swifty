@@ -294,7 +294,7 @@ func main() {
 		log.Fatal("Bad timeout value")
 	}
 
-	if inst == "run" {
+	if inst == swy.SwyPodInstRun {
 		err = startRunner()
 		if err != nil {
 			log.Fatal("Can't start runner")

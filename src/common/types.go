@@ -26,3 +26,9 @@ const (
 	DBFuncStateTrm	int = 8		// Terminating
 	DBFuncStateDea	int = 9		// Deactivated
 )
+
+const (
+	SwyPodInstRun string = "run"
+	SwyPodInstBld string = "build"
+)
+

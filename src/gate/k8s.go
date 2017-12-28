@@ -365,6 +365,7 @@ type k8sPod struct {
 	WdogAddr	string
 	UID		string
 	State		int
+	Instance	string
 }
 
 func genBalancerPod(pod *v1.Pod) (*k8sPod) {
@@ -389,6 +390,8 @@ func genBalancerPod(pod *v1.Pod) (*k8sPod) {
 				if r.WdogAddr != "" {
 					r.WdogAddr += ":" + v.Value
 				}
+			} else if v.Name == "SWD_INSTANCE" {
+				r.Instance = v.Value
 			}
 		}
 	}
@@ -421,7 +424,7 @@ func genBalancerPod(pod *v1.Pod) (*k8sPod) {
 
 	if r.WdogAddr == "" || r.UID == "" ||
 			r.Tennant == "" || r.Project == "" || r.Name == "" ||
-			r.Version == "" || r.DepName == "" {
+			r.Version == "" || r.DepName == "" || r.Instance == "" {
 		r.State = swy.DBPodStateNak
 	}
 
