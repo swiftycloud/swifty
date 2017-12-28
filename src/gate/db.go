@@ -40,6 +40,7 @@ func dbMwareAdd(desc *MwareDesc) error {
 }
 
 func dbMwareUpdateAdded(desc *MwareDesc) error {
+	desc.State = swy.DBMwareStateRdy
 	c := dbSession.DB(dbState).C(DBColMware)
 	err := c.Update(bson.M{"cookie": desc.Cookie},
 		bson.M{"$set": bson.M{
@@ -55,9 +56,22 @@ func dbMwareUpdateAdded(desc *MwareDesc) error {
 	return err
 }
 
+func dbMwareTerminate(mwd *MwareDesc) error {
+	c := dbSession.DB(dbState).C(DBColMware)
+	return c.Update(
+		bson.M{"cookie": mwd.Cookie, "state": bson.M{"$in": []int{swy.DBMwareStateRdy, swy.DBMwareStateStl}}},
+		bson.M{"$set": bson.M{"state": swy.DBMwareStateTrm, }})
+}
+
 func dbMwareRemove(mwd *MwareDesc) error {
 	c := dbSession.DB(dbState).C(DBColMware)
 	return c.Remove(bson.M{"cookie": mwd.Cookie})
+}
+
+func dbMwareSetStalled(mwd *MwareDesc) error {
+	c := dbSession.DB(dbState).C(DBColMware)
+	return c.Update( bson.M{"cookie": mwd.Cookie, },
+		bson.M{"$set": bson.M{"state": swy.DBMwareStateStl, }})
 }
 
 func dbMwareGetOne(q bson.M) (MwareDesc, error) {

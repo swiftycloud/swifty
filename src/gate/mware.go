@@ -45,7 +45,7 @@ func mwGenUserPassEnvs(mwd *MwareDesc, mwaddr string) ([][2]string) {
 
 func mwareGetCookie(id SwoId, name string) (string, error) {
 	id.Name = name
-	mw, err := dbMwareGetItem(&id)
+	mw, err := dbMwareGetReady(&id)
 	if err != nil {
 		return "", fmt.Errorf("No such mware: %s", id.Str())
 	}
@@ -77,30 +77,8 @@ var mwareHandlers = map[string]*MwareOps {
 	"s3":		&MwareS3,
 }
 
-func forgetMware(conf *YAMLConfMw, handler *MwareOps, desc *MwareDesc) error {
-	err := handler.Fini(conf, desc)
-	if err != nil {
-		log.Errorf("Failed cleanup for mware %s: %s", desc.SwoId.Str(), err.Error())
-		return err
-	}
-
-	err = swk8sMwSecretRemove(desc.Cookie)
-	if err != nil {
-		log.Errorf("Failed secret cleanup for mware %s: %s", desc.SwoId.Str(), err.Error())
-		return err
-	}
-
-	err = dbMwareRemove(desc)
-	if err != nil {
-		log.Errorf("Can't remove mware %s: %s", desc.SwoId.Str(), err.Error())
-		return err
-	}
-
-	return nil
-}
-
 func mwareRemove(conf *YAMLConfMw, id *SwoId) error {
-	item, err := dbMwareGetReady(id)
+	item, err := dbMwareGetItem(id)
 	if err != nil {
 		log.Errorf("Can't find mware %s", id.Str())
 		return err
@@ -111,12 +89,35 @@ func mwareRemove(conf *YAMLConfMw, id *SwoId) error {
 		return fmt.Errorf("no handler for %s", id.Str())
 	}
 
-	err = forgetMware(conf, handler, &item)
+	err = dbMwareTerminate(&item)
 	if err != nil {
+		log.Errorf("Can't terminate mware %s", id.Str())
 		return err
 	}
 
+	err = handler.Fini(conf, &item)
+	if err != nil {
+		log.Errorf("Failed cleanup for mware %s: %s", item.SwoId.Str(), err.Error())
+		goto stalled
+	}
+
+	err = swk8sMwSecretRemove(item.Cookie)
+	if err != nil {
+		log.Errorf("Failed secret cleanup for mware %s: %s", item.SwoId.Str(), err.Error())
+		goto stalled
+	}
+
+	err = dbMwareRemove(&item)
+	if err != nil {
+		log.Errorf("Can't remove mware %s: %s", item.SwoId.Str(), err.Error())
+		goto stalled
+	}
+
 	return nil
+
+stalled:
+	dbMwareSetStalled(&item)
+	return err
 }
 
 func getMwareDesc(id *SwoId, mwType string) *MwareDesc {
@@ -127,7 +128,7 @@ func getMwareDesc(id *SwoId, mwType string) *MwareDesc {
 			Name:		id.Name,
 		},
 		MwareType:	mwType,
-		State:		swy.DBMwareStateBsy,
+		State:		swy.DBMwareStatePrp,
 	}
 
 	ret.Cookie = ret.SwoId.Cookie()
@@ -174,7 +175,6 @@ func mwareSetup(conf *YAMLConfMw, id *SwoId, mwType string) error {
 		goto outs
 	}
 
-	mwd.State = swy.DBMwareStateRdy
 	err = dbMwareUpdateAdded(mwd)
 	if err != nil {
 		goto outs
@@ -194,7 +194,7 @@ out:
 }
 
 func mwareEventSetup(conf *YAMLConf, fn *FunctionDesc, on bool) error {
-	item, err := dbMwareGetItem(makeSwoId(fn.Tennant, fn.Project, fn.Event.MwareId))
+	item, err := dbMwareGetReady(makeSwoId(fn.Tennant, fn.Project, fn.Event.MwareId))
 	if err != nil {
 		log.Errorf("Can't find mware %s for event", fn.Event.MwareId)
 		return err

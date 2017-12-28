@@ -1,8 +1,10 @@
 package swy
 
 const (
-	DBMwareStateRdy	int = 1		// Ready
-	DBMwareStateBsy	int = 2		// Busy
+	DBMwareStatePrp	int = 1		// Preparing
+	DBMwareStateRdy	int = 2		// Ready
+	DBMwareStateTrm	int = 3		// Terminating
+	DBMwareStateStl	int = 4		// Stalled (while terminating or cleaning up)
 )
 
 const (
