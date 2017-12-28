@@ -188,12 +188,23 @@ func getFunctionDesc(tennant string, p_add *swyapi.FunctionAdd) *FunctionDesc {
 	return fn
 }
 
+func validateProjectAndFuncName(params *swyapi.FunctionAdd) error {
+	var err error
+
+	err = swy.CheckName(params.Project, 64)
+	if err == nil {
+		err = swy.CheckName(params.FuncName, 50)
+	}
+
+	return err
+}
+
 func addFunction(conf *YAMLConf, tennant string, params *swyapi.FunctionAdd) error {
 	var err error
 	var fn *FunctionDesc
 	var fi *FnInst
 
-	err = swy.ValidateProjectAndFuncName(params.Project, params.FuncName)
+	err = validateProjectAndFuncName(params)
 	if err != nil {
 		goto out
 	}

@@ -52,11 +52,6 @@ func NameSymsAllowed(name string) bool {
 	return !re.MatchString(name)
 }
 
-// Function names, middleware databes tables names
-// must be limited with @MaxNameLengthUsr and match
-// NameSymsAllowed.
-const MaxNameLengthUsr int = 50
-
 func CheckName(name string, limit int) error {
 	if name == "" {
 		return errors.New("Empty name detected")
@@ -72,42 +67,6 @@ func CheckName(name string, limit int) error {
 	}
 
 	return nil
-}
-
-func CheckFunName(name string) error {
-	return CheckName(name, MaxNameLengthUsr)
-}
-
-func ProjectSymsAllowed(proj string) bool {
-	re := regexp.MustCompile("[^(a-z)(A-Z)(0-9)_]")
-	return !re.MatchString(proj)
-}
-
-func CheckProjectId(project string) error {
-	if project == "" {
-		return errors.New("Empty Project detected")
-	}
-
-	if ProjectSymsAllowed(project) == false {
-		return fmt.Errorf("Project %s is not allowed", project)
-	}
-
-	if len(project) > 64 {
-		return fmt.Errorf("Project %s is too long (max 64 allowed)", project)
-	}
-
-	return nil
-}
-
-func ValidateProjectAndFuncName(project string, funcname string) error {
-	var err error
-
-	err = CheckProjectId(project)
-	if err == nil {
-		err = CheckFunName(funcname)
-	}
-
-	return err
 }
 
 func GenRandId(length int) (string, error) {
