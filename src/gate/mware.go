@@ -138,11 +138,12 @@ func getMwareDesc(id *SwoId, mwType string) *MwareDesc {
 func mwareSetup(conf *YAMLConfMw, id *SwoId, mwType string) error {
 	var handler *MwareOps
 	var ok bool
+	var err, erc error
 
 	mwd := getMwareDesc(id, mwType)
 	log.Debugf("set up wmare %s:%s", mwd.SwoId.Str(), mwType)
 
-	err := dbMwareAdd(mwd)
+	err = dbMwareAdd(mwd)
 	if err != nil {
 		goto out
 	}
@@ -183,14 +184,27 @@ func mwareSetup(conf *YAMLConfMw, id *SwoId, mwType string) error {
 	return nil
 
 outs:
-	swk8sMwSecretRemove(mwd.Cookie)
+	erc = swk8sMwSecretRemove(mwd.Cookie)
+	if erc != nil {
+		goto stalled
+	}
 outh:
-	handler.Fini(conf, mwd)
+	erc = handler.Fini(conf, mwd)
+	if erc != nil {
+		goto stalled
+	}
 outdb:
-	dbMwareRemove(mwd)
+	erc = dbMwareRemove(mwd)
+	if erc != nil {
+		goto stalled
+	}
 out:
 	log.Errorf("mwareSetup: %s", err.Error())
 	return err
+
+stalled:
+	dbMwareSetStalled(mwd)
+	goto out
 }
 
 func mwareEventSetup(conf *YAMLConf, fn *FunctionDesc, on bool) error {
