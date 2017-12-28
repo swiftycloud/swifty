@@ -105,7 +105,7 @@ func buildFunction(fn *FunctionDesc) error {
 	}
 
 	if orig_state == swy.DBFuncStateBld {
-		err = dbFuncSetState(fn, swy.DBFuncStateBlt)
+		err = dbFuncSetState(fn, swy.DBFuncStateQue)
 		if err == nil {
 			err = swk8sRun(&conf, fn, fn.Inst())
 		}

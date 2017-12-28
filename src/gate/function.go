@@ -46,7 +46,6 @@ var fnStates = map[int]string {
 	swy.DBFuncStateQue: "preparing",
 	swy.DBFuncStateStl: "stalled",
 	swy.DBFuncStateBld: "building",
-	swy.DBFuncStateBlt: "built", // FIXME -- WTF?
 	swy.DBFuncStatePrt: "partial",
 	swy.DBFuncStateRdy: "ready",
 	swy.DBFuncStateUpd: "updating",
@@ -493,7 +492,7 @@ func notifyPodUpdate(pod *k8sPod) {
 			if err != nil {
 				goto out
 			}
-		} else if fn.State == swy.DBFuncStateBlt || fn.State == swy.DBFuncStateQue {
+		} else if fn.State == swy.DBFuncStateQue {
 			dbFuncSetState(&fn, swy.DBFuncStateRdy)
 			if fn.OneShot {
 				runFunctionOnce(&fn)
