@@ -223,7 +223,6 @@ func dbFuncUpdateAdded(fn *FunctionDesc) error {
 		bson.M{"$set": bson.M{
 				"src.version": fn.Src.Version,
 				"cronid": fn.CronID,
-				"mware": fn.Mware,
 				"oneshot": fn.OneShot,
 				"urlcall": fn.URLCall,
 			}})
