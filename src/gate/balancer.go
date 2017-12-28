@@ -327,36 +327,6 @@ func BalancerLoad(conf *YAMLConf) (error) {
 	return nil
 }
 
-func notifyPodUpdate(pod *k8sPod) {
-	var err error = nil
-
-	if pod.State == swy.DBPodStateRdy {
-		fn, err2 := dbFuncFind(&pod.SwoId)
-		if err2 != nil {
-			err = err2
-			goto out
-		}
-
-		logSaveEvent(&fn, "POD", fmt.Sprintf("state: %s", fnStates[fn.State]))
-		if fn.State == swy.DBFuncStateBld || fn.State == swy.DBFuncStateUpd {
-			err = buildFunction(&fn)
-			if err != nil {
-				goto out
-			}
-		} else if fn.State == swy.DBFuncStateBlt || fn.State == swy.DBFuncStateQue {
-			dbFuncSetState(&fn, swy.DBFuncStateRdy)
-			if fn.OneShot {
-				runFunctionOnce(&fn)
-			}
-		}
-	}
-
-	return
-
-out:
-	log.Errorf("POD update notify: %s", err.Error())
-}
-
 func BalancerInit(conf *YAMLConf) (error) {
 	var err error
 
