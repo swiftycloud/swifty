@@ -299,16 +299,12 @@ func updateFunction(conf *YAMLConf, id *SwoId, params *swyapi.FunctionUpdate) er
 
 	update := make(bson.M)
 
-	fn, err := dbFuncFind(id)
+	fn, err := dbFuncFindStates(id, []int{swy.DBFuncStateRdy, swy.DBFuncStateStl})
 	if err != nil {
 		goto out
 	}
 
 	// FIXME -- lock other requests :\
-	if fn.State != swy.DBFuncStateRdy && fn.State != swy.DBFuncStateStl {
-		err = fmt.Errorf("function %s is not running", fn.SwoId.Str())
-		goto out
-	}
 
 	if params.Code != "" {
 		log.Debugf("Will update sources for %s", fn.SwoId.Str())
@@ -525,13 +521,8 @@ out:
 func activateFunction(conf *YAMLConf, id *SwoId) error {
 	var err error
 
-	fn, err := dbFuncFind(id)
+	fn, err := dbFuncFindStates(id, []int{swy.DBFuncStateDea})
 	if err != nil {
-		goto out
-	}
-
-	if fn.State != swy.DBFuncStateDea {
-		err = errors.New("Can't activate not deactivated function")
 		goto out
 	}
 

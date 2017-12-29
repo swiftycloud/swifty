@@ -119,7 +119,7 @@ func dbFuncUpdate(q, ch bson.M) (error) {
 }
 
 func dbFuncFind(id *SwoId) (*FunctionDesc, error) {
-	return dbFuncFindOne(bson.M{"tennant": id.Tennant, "project": id.Project, "name": id.Name})
+	return dbFuncFindOne(bson.M{"cookie": id.Cookie()})
 }
 
 func dbFuncFindByCookie(cookie string) (*FunctionDesc, error) {
@@ -127,8 +127,7 @@ func dbFuncFindByCookie(cookie string) (*FunctionDesc, error) {
 }
 
 func dbFuncFindStates(id *SwoId, states []int) (*FunctionDesc, error) {
-	return dbFuncFindOne(bson.M{"tennant": id.Tennant, "project": id.Project, "name": id.Name,
-		"state": bson.M{"$in": states}})
+	return dbFuncFindOne(bson.M{"cookie": id.Cookie(), "state": bson.M{"$in": states}})
 }
 
 func dbFuncList() ([]FunctionDesc, error) {
@@ -152,8 +151,7 @@ func dbFuncListWithEvents() ([]FunctionDesc, error) {
 
 func dbFuncSetStateCond(id *SwoId, state int, states []int) error {
 	err := dbFuncUpdate(
-		bson.M{"tennant": id.Tennant, "project": id.Project, "name": id.Name,
-				"state": bson.M{"$in": states}},
+		bson.M{"cookie": id.Cookie(), "state": bson.M{"$in": states}},
 		bson.M{"$set": bson.M{"state": state}})
 	if err != nil {
 		log.Errorf("dbFuncSetState: Can't change function %s to state %d: %s",
@@ -166,8 +164,7 @@ func dbFuncSetStateCond(id *SwoId, state int, states []int) error {
 func dbFuncSetState(fn *FunctionDesc, state int) error {
 	fn.State = state
 	err := dbFuncUpdate(
-		bson.M{"tennant": fn.Tennant, "project": fn.Project, "name": fn.Name,
-				"state": bson.M{"$ne": state}},
+		bson.M{"cookie": fn.Cookie, "state": bson.M{"$ne": state}},
 		bson.M{"$set": bson.M{"state": state}})
 	if err != nil {
 		log.Errorf("dbFuncSetState: Can't change function %s state: %s",
@@ -179,7 +176,7 @@ func dbFuncSetState(fn *FunctionDesc, state int) error {
 
 func dbFuncUpdateAdded(fn *FunctionDesc) error {
 	err := dbFuncUpdate(
-		bson.M{"tennant": fn.Tennant, "project": fn.Project, "name": fn.Name},
+		bson.M{"cookie": fn.Cookie},
 		bson.M{"$set": bson.M{
 				"src.version": fn.Src.Version,
 				"cronid": fn.CronID,
@@ -195,7 +192,7 @@ func dbFuncUpdateAdded(fn *FunctionDesc) error {
 
 func dbFuncUpdatePulled(fn *FunctionDesc, update bson.M) error {
 	err := dbFuncUpdate(
-		bson.M{"tennant": fn.Tennant, "project": fn.Project, "name": fn.Name},
+		bson.M{"cookie": fn.Cookie},
 		bson.M{"$set": update })
 	if err != nil {
 		log.Errorf("Can't update pulled %s: %s", fn.Name, err.Error())
