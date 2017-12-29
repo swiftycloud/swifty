@@ -23,6 +23,7 @@ import (
 	"fmt"
 
 	"../common"
+	"../common/xtimer"
 )
 
 var swk8sClientSet *kubernetes.Clientset
@@ -339,15 +340,21 @@ func swk8sRun(conf *YAMLConf, fn *FunctionDesc, fi *FnInst) error {
 		},
 	}
 
+	xtimer.Create(fn.Cookie)
+
 	deploy := swk8sClientSet.Extensions().Deployments(v1.NamespaceDefault)
 	_, err = deploy.Create(&deployspec)
 	if err != nil {
+		xtimer.Cancel(fn.Cookie)
 		BalancerDelete(depname)
 		log.Errorf("Can't add function %s: %s",
 				fn.SwoId.Str(), err.Error())
+		return err
 	}
 
-	return err
+	xtimer.Start(fn.Cookie, fi.Str(), SwyPodStartTmo, swk8sPodTmo)
+
+	return nil
 }
 
 var podStates = map[int]string {
@@ -437,6 +444,11 @@ func swk8sPodAdd(obj interface{}) {
 func swk8sPodDel(obj interface{}) {
 }
 
+func swk8sPodTmo(cookie, inst string) {
+	log.Errorf("POD %s.%s start timeout", cookie, inst)
+	notifyPodTmo(cookie, inst)
+}
+
 func swk8sPodUpd(obj_old, obj_new interface{}) {
 	var err error = nil
 
@@ -456,7 +468,10 @@ func swk8sPodUpd(obj_old, obj_new interface{}) {
 						pod_new.WdogAddr, err.Error())
 				return
 			}
-			notifyPodUpdate(pod_new)
+
+			if xtimer.Cancel(pod_new.SwoId.Cookie()) {
+				notifyPodUp(pod_new)
+			}
 		}
 	} else {
 		if pod_new.State != swy.DBPodStateRdy {
@@ -471,7 +486,6 @@ func swk8sPodUpd(obj_old, obj_new interface{}) {
 						pod_new.WdogAddr, err.Error())
 				return
 			}
-			notifyPodUpdate(pod_new)
 		}
 	}
 }

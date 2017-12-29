@@ -466,27 +466,41 @@ stalled:
 	return err
 }
 
-func notifyPodUpdate(pod *k8sPod) {
-	var err error = nil
+func notifyPodTmo(cookie, inst string) {
+	fn, err := dbFuncFindByCookie(cookie)
+	if err != nil {
+		log.Errorf("POD timeout %s.%s error: %s", cookie, inst, err.Error())
+		return
+	}
 
-	if pod.State == swy.DBPodStateRdy {
-		fn, err2 := dbFuncFind(&pod.SwoId)
-		if err2 != nil {
-			err = err2
+	var fi *FnInst
+	if inst == swy.SwyPodInstRun {
+		fi = fn.Inst()
+	} else {
+		fi = fn.InstBuild()
+	}
+
+	logSaveEvent(fn, "POD", "Start timeout")
+	swk8sRemove(&conf, fn, fi)
+	dbFuncSetState(fn, swy.DBFuncStateStl)
+}
+
+func notifyPodUp(pod *k8sPod) {
+	fn, err := dbFuncFind(&pod.SwoId)
+	if err != nil {
+		goto out
+	}
+
+	logSaveEvent(fn, "POD", fmt.Sprintf("state: %s", fnStates[fn.State]))
+	if pod.Instance == swy.SwyPodInstBld {
+		err = buildFunction(fn)
+		if err != nil {
 			goto out
 		}
-
-		logSaveEvent(fn, "POD", fmt.Sprintf("state: %s", fnStates[fn.State]))
-		if pod.Instance == swy.SwyPodInstBld {
-			err = buildFunction(fn)
-			if err != nil {
-				goto out
-			}
-		} else {
-			dbFuncSetState(fn, swy.DBFuncStateRdy)
-			if fn.OneShot {
-				runFunctionOnce(fn)
-			}
+	} else {
+		dbFuncSetState(fn, swy.DBFuncStateRdy)
+		if fn.OneShot {
+			runFunctionOnce(fn)
 		}
 	}
 
