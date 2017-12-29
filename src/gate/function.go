@@ -42,14 +42,14 @@ import (
  *
  */
 var fnStates = map[int]string {
-	swy.DBFuncStateQue: "preparing",
-	swy.DBFuncStateStl: "stalled",
-	swy.DBFuncStateBld: "building",
-	swy.DBFuncStatePrt: "partial",
+	swy.DBFuncStateIni: "initializing",
+	swy.DBFuncStateStr: "starting",
 	swy.DBFuncStateRdy: "ready",
+	swy.DBFuncStateBld: "building",
 	swy.DBFuncStateUpd: "updating",
 	swy.DBFuncStateDea: "deactivated",
 	swy.DBFuncStateTrm: "terminating",
+	swy.DBFuncStateStl: "stalled",
 }
 
 type FnCodeDesc struct {
@@ -211,14 +211,10 @@ func addFunction(conf *YAMLConf, tennant string, params *swyapi.FunctionAdd) err
 	}
 
 	fn = getFunctionDesc(tennant, params)
-	if RtBuilding(&fn.Code) {
-		fn.State = swy.DBFuncStateBld
-	} else {
-		fn.State = swy.DBFuncStateQue
-	}
 
 	log.Debugf("function/add %s (cookie %s)", fn.SwoId.Str(), fn.Cookie[:32])
 
+	fn.State = swy.DBFuncStateIni
 	err = dbFuncAdd(fn)
 	if err != nil {
 		goto out
@@ -235,15 +231,17 @@ func addFunction(conf *YAMLConf, tennant string, params *swyapi.FunctionAdd) err
 		goto out_clean_evt
 	}
 
+	if RtBuilding(&fn.Code) {
+		fn.State = swy.DBFuncStateBld
+		fi = fn.InstBuild()
+	} else {
+		fn.State = swy.DBFuncStateStr
+		fi = fn.Inst()
+	}
+
 	err = dbFuncUpdateAdded(fn)
 	if err != nil {
 		goto out_clean_repo
-	}
-
-	if RtBuilding(&fn.Code) {
-		fi = fn.InstBuild()
-	} else {
-		fi = fn.Inst()
 	}
 
 	err = swk8sRun(conf, fn, fi)
@@ -403,6 +401,7 @@ func updateFunction(conf *YAMLConf, id *SwoId, params *swyapi.FunctionUpdate) er
 	}
 
 	if err != nil {
+		/* FIXME -- stalled? */
 		goto out
 	}
 
@@ -484,12 +483,12 @@ func notifyPodUpdate(pod *k8sPod) {
 		}
 
 		logSaveEvent(&fn, "POD", fmt.Sprintf("state: %s", fnStates[fn.State]))
-		if fn.State == swy.DBFuncStateBld || fn.State == swy.DBFuncStateUpd {
+		if pod.Instance == swy.SwyPodInstBld {
 			err = buildFunction(&fn)
 			if err != nil {
 				goto out
 			}
-		} else if fn.State == swy.DBFuncStateQue {
+		} else {
 			dbFuncSetState(&fn, swy.DBFuncStateRdy)
 			if fn.OneShot {
 				runFunctionOnce(&fn)
@@ -540,7 +539,7 @@ func activateFunction(conf *YAMLConf, id *SwoId) error {
 		goto out
 	}
 
-	dbFuncSetState(&fn, swy.DBFuncStateQue)
+	dbFuncSetState(&fn, swy.DBFuncStateStr)
 
 	err = swk8sRun(conf, &fn, fn.Inst())
 	if err != nil {

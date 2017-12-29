@@ -673,16 +673,7 @@ func handleFunctionList(w http.ResponseWriter, r *http.Request, tennant string) 
 	}
 
 	id = makeSwoId(tennant, params.Project, "")
-
-	// List all but terminating
-	recs, err = dbFuncListStates(id, []int{
-				swy.DBFuncStateQue,
-				swy.DBFuncStateBld,
-				swy.DBFuncStateStl,
-				swy.DBFuncStateBlt,
-				swy.DBFuncStatePrt,
-				swy.DBFuncStateRdy,
-				swy.DBFuncStateUpd})
+	recs, err = dbFuncListProj(id)
 	if err != nil {
 		goto out
 	}

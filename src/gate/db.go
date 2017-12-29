@@ -100,38 +100,6 @@ func dbMwareGetAll(id *SwoId) ([]MwareDesc, error) {
 }
 
 
-func dbGetFuncStatusString(status int) string {
-	status_str := map[int]string {
-		swy.DBFuncStateQue:	"Queued",
-		swy.DBFuncStateBld:	"Building",
-		swy.DBFuncStateBlt:	"Built",
-		swy.DBFuncStatePrt:	"Partial",
-		swy.DBFuncStateRdy:	"Ready",
-		swy.DBFuncStateTrm:	"Terminating",
-	}
-
-	return status_str[status]
-}
-
-func dbGetPodStateString(status int) string {
-	var ret string
-
-	str := map[int]string {
-		swy.DBPodStateNak:	"Unknown",
-		swy.DBPodStateQue:	"Queued",
-		swy.DBPodStateRdy:	"Ready",
-		swy.DBPodStateTrm:	"Terminating",
-		swy.DBPodStateBsy:	"Busy",
-	}
-
-	ret, ok := str[status]
-	if !ok {
-		ret = str[swy.DBPodStateNak]
-	}
-
-	return ret
-}
-
 func dbFuncFindOne(q bson.M) (v FunctionDesc, err error) {
 	c := dbSession.DB(dbState).C(DBColFunc)
 	err = c.Find(q).One(&v)
@@ -160,15 +128,6 @@ func dbFuncFindByCookie(cookie string) (FunctionDesc, error) {
 func dbFuncFindStates(id *SwoId, states []int) (FunctionDesc, error) {
 	return dbFuncFindOne(bson.M{"tennant": id.Tennant, "project": id.Project, "name": id.Name,
 		"state": bson.M{"$in": states}})
-}
-
-func dbFuncListByProjCond(id *SwoId, cond bson.M) ([]FunctionDesc, error) {
-	vs, err := dbFuncFindAll(bson.M{"tennant": id.Tennant, "project": id.Project, "state": cond})
-	return vs, err
-}
-
-func dbFuncListStates(id *SwoId, states []int) ([]FunctionDesc, error) {
-	return dbFuncListByProjCond(id, bson.M{"$in": states})
 }
 
 func dbFuncList() ([]FunctionDesc, error) {

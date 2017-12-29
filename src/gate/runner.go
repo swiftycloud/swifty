@@ -74,7 +74,7 @@ out:
 }
 
 func buildFunction(fn *FunctionDesc) error {
-	var err error
+	var err, er2 error
 	var orig_state int
 	var res *swyapi.SwdFunctionRunResult
 
@@ -105,11 +105,11 @@ func buildFunction(fn *FunctionDesc) error {
 	}
 
 	if orig_state == swy.DBFuncStateBld {
-		err = dbFuncSetState(fn, swy.DBFuncStateQue)
+		err = dbFuncSetState(fn, swy.DBFuncStateStr)
 		if err == nil {
 			err = swk8sRun(&conf, fn, fn.Inst())
 		}
-	} else {
+	} else /* Upd */ {
 		err = dbFuncSetState(fn, swy.DBFuncStateRdy)
 		if err == nil {
 			err = swk8sUpdate(&conf, fn)
@@ -122,13 +122,12 @@ func buildFunction(fn *FunctionDesc) error {
 	return nil
 
 out:
-	swk8sRemove(&conf, fn, fn.InstBuild())
+	er2 = swk8sRemove(&conf, fn, fn.InstBuild())
 out_nok8s:
-	if orig_state == swy.DBFuncStateBld {
+	if orig_state == swy.DBFuncStateBld || er2 != nil {
 		log.Debugf("Setting stalled state")
 		dbFuncSetState(fn, swy.DBFuncStateStl);
-	} else {
-		log.Debugf("Setting ready state")
+	} else /* Upd */ {
 		// Keep fn ready with the original commit of
 		// the repo checked out
 		dbFuncSetState(fn, swy.DBFuncStateRdy)
