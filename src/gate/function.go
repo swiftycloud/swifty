@@ -293,14 +293,13 @@ func swyFixSize(sz *swyapi.FunctionSize, conf *YAMLConf) error {
 }
 
 func updateFunction(conf *YAMLConf, id *SwoId, params *swyapi.FunctionUpdate) error {
-	var fn FunctionDesc
 	var err error
 	var rebuild bool
 	var rlfix bool
 
 	update := make(bson.M)
 
-	fn, err = dbFuncFind(id)
+	fn, err := dbFuncFind(id)
 	if err != nil {
 		goto out
 	}
@@ -313,7 +312,7 @@ func updateFunction(conf *YAMLConf, id *SwoId, params *swyapi.FunctionUpdate) er
 
 	if params.Code != "" {
 		log.Debugf("Will update sources for %s", fn.SwoId.Str())
-		err = updateSources(&fn, params)
+		err = updateSources(fn, params)
 		if err != nil {
 			goto out
 		}
@@ -371,13 +370,13 @@ func updateFunction(conf *YAMLConf, id *SwoId, params *swyapi.FunctionUpdate) er
 
 	update["state"] = fn.State
 
-	err = dbFuncUpdatePulled(&fn, update)
+	err = dbFuncUpdatePulled(fn, update)
 	if err != nil {
 		goto out
 	}
 
 	if rlfix {
-		fdm := memdGetFn(&fn)
+		fdm := memdGetFn(fn)
 		if fn.Size.Rate != 0 {
 			if fdm.crl != nil {
 				/* Update */
@@ -394,10 +393,10 @@ func updateFunction(conf *YAMLConf, id *SwoId, params *swyapi.FunctionUpdate) er
 
 	if rebuild {
 		log.Debugf("Starting build dep")
-		err = swk8sRun(conf, &fn, fn.InstBuild())
+		err = swk8sRun(conf, fn, fn.InstBuild())
 	} else {
 		log.Debugf("Updating deploy")
-		err = swk8sUpdate(conf, &fn)
+		err = swk8sUpdate(conf, fn)
 	}
 
 	if err != nil {
@@ -405,16 +404,15 @@ func updateFunction(conf *YAMLConf, id *SwoId, params *swyapi.FunctionUpdate) er
 		goto out
 	}
 
-	logSaveEvent(&fn, "updated", fmt.Sprintf("to: %s", fn.Src.Version))
+	logSaveEvent(fn, "updated", fmt.Sprintf("to: %s", fn.Src.Version))
 out:
 	return err
 }
 
 func removeFunction(conf *YAMLConf, id *SwoId) error {
 	var err error
-	var fn FunctionDesc
 
-	fn, err = dbFuncFind(id)
+	fn, err := dbFuncFind(id)
 	if err != nil {
 		return err
 	}
@@ -430,7 +428,7 @@ func removeFunction(conf *YAMLConf, id *SwoId) error {
 	log.Debugf("Forget function %s", fn.SwoId.Str())
 
 	if !fn.OneShot && (fn.State == swy.DBFuncStateRdy) {
-		err = swk8sRemove(conf, &fn, fn.Inst())
+		err = swk8sRemove(conf, fn, fn.Inst())
 		if err != nil {
 			log.Errorf("remove deploy error: %s", err.Error())
 			goto stalled
@@ -438,29 +436,29 @@ func removeFunction(conf *YAMLConf, id *SwoId) error {
 	}
 
 
-	err = eventSetup(conf, &fn, false)
+	err = eventSetup(conf, fn, false)
 	if err != nil {
 		goto stalled
 	}
 
-	err = statsDrop(&fn)
+	err = statsDrop(fn)
 	if err != nil {
 		goto stalled
 	}
 
-	err = logRemove(&fn)
+	err = logRemove(fn)
 	if err != nil {
 		goto stalled
 	}
 
-	err = cleanRepo(&fn)
+	err = cleanRepo(fn)
 	if err != nil {
 		goto stalled
 	}
 
-	memdGone(&fn)
+	memdGone(fn)
 
-	err = dbFuncRemove(&fn)
+	err = dbFuncRemove(fn)
 	if err != nil {
 		goto stalled
 	}
@@ -468,7 +466,7 @@ func removeFunction(conf *YAMLConf, id *SwoId) error {
 	return nil
 
 stalled:
-	dbFuncSetState(&fn, swy.DBFuncStateStl)
+	dbFuncSetState(fn, swy.DBFuncStateStl)
 	return err
 }
 
@@ -482,16 +480,16 @@ func notifyPodUpdate(pod *k8sPod) {
 			goto out
 		}
 
-		logSaveEvent(&fn, "POD", fmt.Sprintf("state: %s", fnStates[fn.State]))
+		logSaveEvent(fn, "POD", fmt.Sprintf("state: %s", fnStates[fn.State]))
 		if pod.Instance == swy.SwyPodInstBld {
-			err = buildFunction(&fn)
+			err = buildFunction(fn)
 			if err != nil {
 				goto out
 			}
 		} else {
-			dbFuncSetState(&fn, swy.DBFuncStateRdy)
+			dbFuncSetState(fn, swy.DBFuncStateRdy)
 			if fn.OneShot {
-				runFunctionOnce(&fn)
+				runFunctionOnce(fn)
 			}
 		}
 	}
@@ -504,9 +502,8 @@ out:
 
 func deactivateFunction(conf *YAMLConf, id *SwoId) error {
 	var err error
-	var fn FunctionDesc
 
-	fn, err = dbFuncFind(id)
+	fn, err := dbFuncFind(id)
 	if err != nil {
 		goto out
 	}
@@ -516,10 +513,10 @@ func deactivateFunction(conf *YAMLConf, id *SwoId) error {
 		goto out
 	}
 
-	err = swk8sRemove(conf, &fn, fn.Inst())
+	err = swk8sRemove(conf, fn, fn.Inst())
 	if err != nil {
 		log.Errorf("Can't deactivate FN")
-		dbFuncSetState(&fn, swy.DBFuncStateRdy)
+		dbFuncSetState(fn, swy.DBFuncStateRdy)
 	}
 out:
 	return err
@@ -527,9 +524,8 @@ out:
 
 func activateFunction(conf *YAMLConf, id *SwoId) error {
 	var err error
-	var fn FunctionDesc
 
-	fn, err = dbFuncFind(id)
+	fn, err := dbFuncFind(id)
 	if err != nil {
 		goto out
 	}
@@ -539,11 +535,11 @@ func activateFunction(conf *YAMLConf, id *SwoId) error {
 		goto out
 	}
 
-	dbFuncSetState(&fn, swy.DBFuncStateStr)
+	dbFuncSetState(fn, swy.DBFuncStateStr)
 
-	err = swk8sRun(conf, &fn, fn.Inst())
+	err = swk8sRun(conf, fn, fn.Inst())
 	if err != nil {
-		dbFuncSetState(&fn, swy.DBFuncStateDea)
+		dbFuncSetState(fn, swy.DBFuncStateDea)
 		log.Errorf("Can't activate FN: %s", err.Error())
 		goto out
 	}

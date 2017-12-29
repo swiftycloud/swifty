@@ -36,8 +36,7 @@ func memdGetOrInit(cookie string, fn *FunctionDesc) *FnMemData {
 	}
 
 	if fn == nil {
-		fx, _ := dbFuncFindByCookie(cookie)
-		fn = &fx
+		fn, _ = dbFuncFindByCookie(cookie)
 	}
 	nret := &FnMemData{}
 	if fn.Size.Rate != 0 {

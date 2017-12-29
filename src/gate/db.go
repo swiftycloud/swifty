@@ -100,10 +100,11 @@ func dbMwareGetAll(id *SwoId) ([]MwareDesc, error) {
 }
 
 
-func dbFuncFindOne(q bson.M) (v FunctionDesc, err error) {
+func dbFuncFindOne(q bson.M) (*FunctionDesc, error) {
 	c := dbSession.DB(dbState).C(DBColFunc)
-	err = c.Find(q).One(&v)
-	return
+	var v FunctionDesc
+	err := c.Find(q).One(&v)
+	return &v, err
 }
 
 func dbFuncFindAll(q bson.M) (vs []FunctionDesc, err error) {
@@ -117,15 +118,15 @@ func dbFuncUpdate(q, ch bson.M) (error) {
 	return c.Update(q, ch)
 }
 
-func dbFuncFind(id *SwoId) (FunctionDesc, error) {
+func dbFuncFind(id *SwoId) (*FunctionDesc, error) {
 	return dbFuncFindOne(bson.M{"tennant": id.Tennant, "project": id.Project, "name": id.Name})
 }
 
-func dbFuncFindByCookie(cookie string) (FunctionDesc, error) {
+func dbFuncFindByCookie(cookie string) (*FunctionDesc, error) {
 	return dbFuncFindOne(bson.M{"cookie": cookie})
 }
 
-func dbFuncFindStates(id *SwoId, states []int) (FunctionDesc, error) {
+func dbFuncFindStates(id *SwoId, states []int) (*FunctionDesc, error) {
 	return dbFuncFindOne(bson.M{"tennant": id.Tennant, "project": id.Project, "name": id.Name,
 		"state": bson.M{"$in": states}})
 }

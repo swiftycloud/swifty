@@ -364,7 +364,7 @@ out:
 func handleFunctionCode(w http.ResponseWriter, r *http.Request, tennant string) error {
 	var id *SwoId
 	var params swyapi.FunctionXID
-	var fn FunctionDesc
+	var fn *FunctionDesc
 	var codeFile string
 	var fnCode []byte
 
@@ -385,7 +385,7 @@ func handleFunctionCode(w http.ResponseWriter, r *http.Request, tennant string) 
 		goto out
 	}
 
-	codeFile, err = fnCodePath(&conf, &fn, params.Version)
+	codeFile, err = fnCodePath(&conf, fn, params.Version)
 	if err != nil {
 		goto out
 	}
@@ -407,7 +407,7 @@ out:
 func handleFunctionStats(w http.ResponseWriter, r *http.Request, tennant string) error {
 	var id *SwoId
 	var params swyapi.FunctionID
-	var fn FunctionDesc
+	var fn *FunctionDesc
 	var stats *FnStats
 	var lcs string
 
@@ -424,7 +424,7 @@ func handleFunctionStats(w http.ResponseWriter, r *http.Request, tennant string)
 		goto out
 	}
 
-	stats = statsGet(&fn)
+	stats = statsGet(fn)
 	if stats.Called != 0 {
 		lcs = stats.LastCall.Format(time.UnixDate)
 	}
@@ -441,7 +441,7 @@ out:
 func handleFunctionInfo(w http.ResponseWriter, r *http.Request, tennant string) error {
 	var id *SwoId
 	var params swyapi.FunctionID
-	var fn FunctionDesc
+	var fn *FunctionDesc
 	var fv []string
 	var url = ""
 	var stats *FnStats
@@ -465,7 +465,7 @@ func handleFunctionInfo(w http.ResponseWriter, r *http.Request, tennant string) 
 		url = "/call/" + fn.Cookie
 	}
 
-	stats = statsGet(&fn)
+	stats = statsGet(fn)
 	if stats.Called != 0 {
 		lcs = stats.LastCall.Format(time.UnixDate)
 	}
@@ -475,7 +475,7 @@ func handleFunctionInfo(w http.ResponseWriter, r *http.Request, tennant string) 
 		gtime = uint64(stats.GateTime.Nanoseconds()/1000)
 	}
 
-	fv, err = dbBalancerRSListVersions(&fn)
+	fv, err = dbBalancerRSListVersions(fn)
 	if err != nil {
 		goto out
 	}
@@ -619,7 +619,7 @@ out:
 func handleFunctionRun(w http.ResponseWriter, r *http.Request, tennant string) error {
 	var id *SwoId
 	var params swyapi.FunctionRun
-	var fn FunctionDesc
+	var fn *FunctionDesc
 	var lrs *BalancerRS
 	var res *swyapi.SwdFunctionRunResult
 
