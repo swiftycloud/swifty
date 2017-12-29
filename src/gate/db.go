@@ -82,14 +82,11 @@ func dbMwareGetOne(q bson.M) (MwareDesc, error) {
 }
 
 func dbMwareGetItem(id *SwoId) (MwareDesc, error) {
-	return dbMwareGetOne(bson.M{"tennant": id.Tennant,
-			"project": id.Project, "name": id.Name})
+	return dbMwareGetOne(bson.M{"cookie": id.Cookie()})
 }
 
 func dbMwareGetReady(id *SwoId) (MwareDesc, error) {
-	return dbMwareGetOne(bson.M{"tennant": id.Tennant,
-			"project": id.Project, "name": id.Name,
-			"state": swy.DBMwareStateRdy})
+	return dbMwareGetOne(bson.M{"cookie": id.Cookie(), "state": swy.DBMwareStateRdy})
 }
 
 func dbMwareGetAll(id *SwoId) ([]MwareDesc, error) {
