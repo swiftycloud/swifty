@@ -1,0 +1,12 @@
+---
+- name: initiate virt machines
+  shell: |
+    prlctl create '{{ item }}' --vmtype vm --ostype linux -d linux
+    prlctl set '{{ item }}' --device-add hdd --size 20G
+    prlctl set '{{ item }}' --device-add hdd --size 32G
+    prlctl set '{{ item }}' --vnc-mode auto --vnc-nopasswd
+    prlctl set '{{ item }}' --memsize 2G
+    prlctl set '{{ item }}' --device-set cdrom0 --image /root/iso/Fedora-Workstation-netinst-x86_64-27-1.6.iso
+    prlctl set '{{ item }}' --device-bootorder cdrom0
+    prlctl start '{{ item }}'
+  with_items: '{{ virt_machines }}'

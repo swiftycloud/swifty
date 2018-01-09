@@ -1,10 +1,24 @@
-# 10.94.4.206             kt
+# 10.94.4.208             kt
 # 10.94.96.216            crvm0
 # 10.94.96.217            crvm1
 # 10.94.96.218            crvm2
 # 10.94.96.220            crvm3
 # 10.94.96.219            crvm4
 # 10.94.96.221            crvm5
+[all:vars]
+ansible_sudo_pass=1q2w3e
+
+[node]
+kt
+
+[vms]
+swy0
+swy1
+swy2
+swy3
+swy4
+swy5
+
 [master]
 crvm3
 

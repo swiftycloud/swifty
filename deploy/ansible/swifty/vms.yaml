@@ -1,0 +1,8 @@
+---
+# ansible-playbook-3 -u root /etc/ansible/swifty/vms.yaml
+#
+# Install virtual machines via prlctl
+- hosts: kt
+  remote_user: root
+  roles:
+  - vms

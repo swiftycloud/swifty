@@ -24,3 +24,6 @@ s3_cluster_network: "10.94.0.0/16"
 #
 # This node
 this_node: '{{ ansible_nodename }}'
+#
+# Virt machines
+virt_machines: "{{ groups['vms'] }}"
