@@ -358,6 +358,7 @@ useradd -d /home/ceph -m ceph
 passwd ceph
 echo "ceph ALL = (root) NOPASSWD:ALL" > /etc/sudoers.d/ceph
 chmod 0440 /etc/sudoers.d/ceph
+mkdir -p /home/ceph/.ssh/
 chown -R ceph:users /home/ceph/
 \end{lstlisting}
 
@@ -387,7 +388,7 @@ On admin node initiate cluster deploy
 su - ceph
 mkdir ceph-admin
 cd ceph-admin
-ceph-deploy new crvm{3,4,5}
+ceph-deploy new swy{3,4,5}
 \end{lstlisting}
 
 The add the following lines into \code{ceph.conf}
@@ -397,11 +398,11 @@ cluster_network = 10.94.0.0/16
 \end{lstlisting}
 
 \begin{lstlisting}
-ceph-deploy install crvm{3,4,5} --no-adjust-repos
+ceph-deploy install swy{3,4,5} --no-adjust-repos
 ceph-deploy --overwrite-conf mon create-initial
-ceph-deploy gatherkeys crvm{3,4,5}
-ceph-deploy disk zap crvm{3,4,5}:sdc
-ceph-deploy osd create crvm{3,4,5}:sdc
+ceph-deploy gatherkeys swy{3,4,5}
+ceph-deploy disk zap swy{3,4,5}:sdc
+ceph-deploy osd create swy{3,4,5}:sdc
 \end{lstlisting}
 
 Side note: if something gone wrong and need to wipe
@@ -411,8 +412,8 @@ following on the admin node
 \begin{lstlisting}
 su - ceph
 cd ceph-admin
-ceph-deploy purge crvm{3,4,5}
-ceph-deploy purgedata crvm{3,4,5}
+ceph-deploy purge swy{3,4,5}
+ceph-deploy purgedata swy{3,4,5}
 ceph-deploy forgetkeys
 rm ceph.*
 \end{lstlisting}
