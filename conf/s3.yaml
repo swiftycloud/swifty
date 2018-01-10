@@ -1,17 +1,17 @@
 ---
 db:
         state: "swifty-s3"
-        address: "192.168.122.211:27017"
+        address: "swy0:27017"
         user: "swifty"
         password: "MGOS3PASS"
 daemon:
-        address: "192.168.122.197:8787"
+        address: "swy1:8787"
         admport: "8789"
         token: "S3TOKEN"
         loglevel: "debug"
 notify:
         rabbitmq:
-                target: "192.168.122.197:5672/s3"
+                target: "swy0:5672/s3"
                 user: "s3"
                 password: "RMQS3PASS"
 secretskey: "S3SECRETSKEY"

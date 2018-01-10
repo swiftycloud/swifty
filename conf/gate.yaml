@@ -5,10 +5,10 @@ db:
         user: "swifty"
         password: "DBPASS"
 keystone:
-        address: "192.168.122.197:5000"
+        address: "swy0:5000"
         domain: "swifty"
 daemon:
-        address: "192.168.122.211:8686"
+        address: "swy0:8686"
         sources:
                 share: "/home/swifty-volume"
                 clone: "/home/swifty/local-sources"
@@ -22,29 +22,29 @@ balancer:
 middleware:
         mwseckey: "MWSECPASS"
         maria:
-                address: "192.168.122.197:3306"
+                address: "swy1:3306"
                 admin: "root"
                 password: "MARIAPASS"
                 quotdb: "swifty.quotas"
         rabbit:
-                address: "192.168.122.197:5672"
+                address: "swy1:5672"
                 admin: "root"
                 password: "RABBITPASS"
                 admport: "15672"
         mongo:
-                address: "192.168.122.197:27017"
+                address: "swy1:27017"
                 admin: "admin"
                 password: "MONGOPASS"
         postgres:
-                address: "192.168.122.197:5432"
+                address: "swy1:5432"
                 admport: "3872"
                 token: "PGRTOKEN"
         s3:
-                address: "192.168.122.197:8787"
+                address: "swy1:8787"
                 admport: "8789"
                 token: "S3TOKEN"
                 notify:
-                        url: "192.168.122.197:5672/s3"
+                        url: "swy0:5672/s3"
                         user: "swifty"
                         password: "S3IFYPASS"
 runtime:
