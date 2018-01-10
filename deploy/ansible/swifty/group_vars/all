@@ -32,6 +32,11 @@ virt_machines: "{{ groups['vms'] }}"
 docker_drive: /dev/sdb
 
 #
+# Secrets directory
+secrets_dir: /home/root/.secrets
+secrets_gate_map: [ "admd", "gate", "mqd", "pgrest", "s3" ]
+
+#
 # Usernames/passwords for backends
 #
 # keystone-master
