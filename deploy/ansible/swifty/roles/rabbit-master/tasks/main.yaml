@@ -17,7 +17,7 @@
 
 - name: configure rabbitmq-server
   shell: |
-    rabbitmqctl add_user root {{ rabbit_root_pass }}
+    rabbitmqctl add_user root {{ rabbit_master_root_pass }}
     rabbitmqctl set_user_tags root administrator
     rabbitmqctl set_permissions -p / root ".*" ".*" ".*"
     rabbitmq-plugins enable rabbitmq_management

@@ -12,17 +12,17 @@
   service: name=mongod state=started enabled=yes
 
 - name: check config
-  shell: mongo --quiet localhost:27017 --eval 'db.getMongo().getDBNames().indexOf("{{ db_name }}")'
+  shell: mongo --quiet localhost:27017 --eval 'db.getMongo().getDBNames().indexOf("{{ s3_db_name }}")'
   register: db_name_result
   ignore_errors: True
 
 - name: create admin
   shell: |
-    mongo --quiet localhost:27017/{{ db_name }} --eval 'db.createUser({user:"{{ db_user }}", pwd:"{{ db_pass }}", roles:[{role:"dbOwner",db:"{{ db_name }}"}]});'
+    mongo --quiet localhost:27017/{{ s3_db_name }} --eval 'db.createUser({user:"{{ s3_db_user }}", pwd:"{{ s3_db_pass }}", roles:[{role:"dbOwner",db:"{{ s3_db_name }}"}]});'
   when: db_name_result.stdout == "-1"
 
 - name: create collections
-  shell: mongo --quiet localhost:27017/{{ db_name }} --eval 'db.createCollection("{{ item }}");'
+  shell: mongo --quiet localhost:27017/{{ s3_db_name }} --eval 'db.createCollection("{{ item }}");'
   with_items:
     - "S3Iams"
     - "S3Buckets"

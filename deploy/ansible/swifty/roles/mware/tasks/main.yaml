@@ -12,7 +12,7 @@
   service: name=mongod state=started enabled=yes
 
 - name: check mongod
-  shell: mongo --quiet localhost:27017/{{ mongo_db_name }} --eval 'db.getUser("{{ mongo_db_user }}");'
+  shell: mongo --quiet localhost:27017/{{ mgo_mware_db_name }} --eval 'db.getUser("{{ mgo_mware_db_user }}");'
   register: mongod_result
   ignore_errors: True
 
@@ -31,7 +31,7 @@
 
 - name: create mongod admin
   shell: |
-    mongo --quiet localhost:27017/{{ mongo_db_name }} --eval 'db.createUser({user:"{{ mongo_db_user }}", pwd:"{{ mongo_db_pass }}", roles:[{role:"userAdminAnyDatabase",db:"{{ mongo_db_name }}"}]});'
+    mongo --quiet localhost:27017/{{ mgo_mware_db_name }} --eval 'db.createUser({user:"{{ mgo_mware_db_user }}", pwd:"{{ mgo_mware_db_pass }}", roles:[{role:"userAdminAnyDatabase",db:"{{ mgo_mware_db_name }}"}]});'
   when: mongod_result.stdout == "null"
 
 - name: restart mongod
@@ -50,14 +50,14 @@
   service: name=mariadb state=started enabled=yes
 
 - name: check mariadb
-  shell: mysql -u root --password={{ mariadb_root_pass }} -c mysql -e "SHOW DATABASES;"
+  shell: mysql -u root --password={{ mariadb_mware_root_pass }} -c mysql -e "SHOW DATABASES;"
   register: mariadb_result
   ignore_errors: True
 
 - name: set mariadb root password
   shell: |
-    mysqladmin -u root password "{{ mariadb_root_pass }}"
-    mysql -u root --password={{ mariadb_root_pass }} -c mysql -e "GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' IDENTIFIED BY '{{ mariadb_root_pass }}' WITH GRANT OPTION;"
+    mysqladmin -u root password "{{ mariadb_mware_root_pass }}"
+    mysql -u root --password={{ mariadb_mware_root_pass }} -c mysql -e "GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' IDENTIFIED BY '{{ mariadb_mware_root_pass }}' WITH GRANT OPTION;"
   when: mariadb_result.rc != 0
 
 - name: install rabbitmq
@@ -78,7 +78,7 @@
 
 - name: configure rabbitmq-server
   shell: |
-    rabbitmqctl add_user root {{ rabbit_root_pass }}
+    rabbitmqctl add_user root {{ rabbit_mware_root_pass }}
     rabbitmqctl set_user_tags root administrator
     rabbitmqctl set_permissions -p / root ".*" ".*" ".*"
     rabbitmq-plugins enable rabbitmq_management

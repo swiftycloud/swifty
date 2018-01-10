@@ -27,3 +27,38 @@ this_node: '{{ ansible_nodename }}'
 #
 # Virt machines
 virt_machines: "{{ groups['vms'] }}"
+#
+# Docker drive
+docker_drive: /dev/sdb
+
+#
+# Usernames/passwords for backends
+#
+# keystone-master
+ks_db_root_pass: 'aiNe1sah9ichu1re'
+ks_db_name: 'keystone'
+ks_db_user: 'keystone'
+ks_db_pass: 'Ja7hey6keiThoyoi'
+ks_domain: 'controller'
+ks_domain_pass: 'Cae6ThiekuShiece'
+ks_swyadmin_pass: 'choph5AhrieFooG6'
+#
+# mongo-master
+mgo_master_db_name: 'swifty'
+mgo_master_db_user: 'swifty'
+mgo_master_db_pass: 'woh0jee1eivaiR6A'
+#
+# mware
+mgo_mware_db_name: 'admin'
+mgo_mware_db_user: 'root'
+mgo_mware_db_pass: 'aebaep6chofuY3sh'
+mariadb_mware_root_pass: 'aiNe1sah9ichu1re'
+rabbit_mware_root_pass: 'airooV1Echah4wei'
+#
+# rabbit-master
+rabbit_master_root_pass: 'aixo9queikeegh0U'
+#
+# s3
+s3_db_name: 'swifty-s3'
+s3_db_user: 'swifty-s3'
+s3_db_pass: 'aebik0eichie0eXu'
