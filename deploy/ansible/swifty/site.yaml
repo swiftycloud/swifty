@@ -20,6 +20,7 @@
   - keystone-master
   - mongo-master
   - rabbit-master
+  - s3
 
 #
 # Setup slave nodes

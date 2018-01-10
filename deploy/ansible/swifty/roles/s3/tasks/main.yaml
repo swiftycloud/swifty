@@ -1,0 +1,33 @@
+---
+- name: install mongodb
+  dnf:
+    name: '{{ item }}'
+    state: present
+  with_items:
+    - mongodb-server
+    - mongo-tools
+    - mongodb
+
+- name: enable mongod
+  service: name=mongod state=started enabled=yes
+
+- name: check config
+  shell: mongo --quiet localhost:27017 --eval 'db.getMongo().getDBNames().indexOf("{{ db_name }}")'
+  register: db_name_result
+  ignore_errors: True
+
+- name: create admin
+  shell: |
+    mongo --quiet localhost:27017/{{ db_name }} --eval 'db.createUser({user:"{{ db_user }}", pwd:"{{ db_pass }}", roles:[{role:"dbOwner",db:"{{ db_name }}"}]});'
+  when: db_name_result.stdout == "-1"
+
+- name: create collections
+  shell: mongo --quiet localhost:27017/{{ db_name }} --eval 'db.createCollection("{{ item }}");'
+  with_items:
+    - "S3Iams"
+    - "S3Buckets"
+    - "S3Uploads"
+    - "S3Objects"
+    - "S3ObjectData"
+    - "S3AccessKeys"
+  when: db_name_result.stdout == "-1"
