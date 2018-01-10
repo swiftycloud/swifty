@@ -4,6 +4,7 @@
     name: "{{ item }}"
     state: present
   with_items:
+    - screen
     - tar
     - rsync
     - wget
