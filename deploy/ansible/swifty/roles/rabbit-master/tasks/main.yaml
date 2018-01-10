@@ -20,6 +20,10 @@
     rabbitmqctl add_user root {{ rabbit_master_root_pass }}
     rabbitmqctl set_user_tags root administrator
     rabbitmqctl set_permissions -p / root ".*" ".*" ".*"
+    rabbitmqctl add_user s3 {{ rabbit_master_s3_pass }}
+    rabbitmqctl set_user_tags s3 administrator
+    rabbitmqctl add_vhost s3
+    rabbitmqctl set_permissions -p s3 s3 ".*" ".*" ".*"
     rabbitmq-plugins enable rabbitmq_management
   when: rabbit_root_result.stdout == ""
 

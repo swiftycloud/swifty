@@ -62,6 +62,7 @@ rabbit_mware_root_pass: 'airooV1Echah4wei'
 #
 # rabbit-master
 rabbit_master_root_pass: 'aixo9queikeegh0U'
+rabbit_master_s3_pass: 'PeM4de9ailaur2nu'
 #
 # s3
 s3_db_name: 'swifty-s3'
