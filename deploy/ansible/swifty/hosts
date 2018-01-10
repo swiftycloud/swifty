@@ -20,19 +20,19 @@ ansible_sudo_pass=1q2w3e
 #swy5
 
 [master]
-swy3
+swy0
 
 [slave]
-swy4
-swy5
+swy1
+swy2
 
 [mware]
-swy4
+swy1
 
 [s3admin]
-swy3
+swy0
 
 [s3nodes]
-swy3
-swy4
-swy5
+swy0
+swy1
+swy2
