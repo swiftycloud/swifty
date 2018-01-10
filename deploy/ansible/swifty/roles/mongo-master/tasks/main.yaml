@@ -16,6 +16,19 @@
   register: db_name_result
   ignore_errors: True
 
+- name: configure mongod
+  lineinfile:
+    path: /etc/mongod.conf
+    insertafter: '{{ item.after }}'
+    regexp: '{{ item.re }}'
+    line: '{{ item.val }}'
+    backup: yes
+  with_items:
+    - { after: "^net:", re: "  bindIp", val: "  #bindIp: 127.0.0.1,::1" }
+    - { after: "", re: "^#security:", val: "security:" }
+    - { after: "^security:", re: "  #authorization", val: "  authorization: 'enabled'" }
+  when: mongod_result.stdout == "null"
+
 - name: create admin
   shell: |
     mongo --quiet localhost:27017/{{ mgo_master_db_name }} --eval 'db.createUser({user:"{{ mgo_master_db_user }}", pwd:"{{ mgo_master_db_pass }}", roles:[{role:"dbOwner",db:"{{ mgo_master_db_name }}"}]});'
