@@ -1,0 +1,25 @@
+---
+- name: install rabbitmq
+  dnf:
+    name: '{{ item }}'
+    state: present
+  with_items:
+    - rabbitmq-server
+    - librabbitmq
+
+- name: start rabbitmq-server
+  service: name=rabbitmq-server state=started enabled=yes
+
+- name: check rabbitmq
+  shell: rabbitmqctl list_users | grep root | cut -f1
+  register: rabbit_root_result
+  ignore_errors: True
+
+- name: configure rabbitmq-server
+  shell: |
+    rabbitmqctl add_user root {{ rabbit_root_pass }}
+    rabbitmqctl set_user_tags root administrator
+    rabbitmqctl set_permissions -p / root ".*" ".*" ".*"
+    rabbitmq-plugins enable rabbitmq_management
+  when: rabbit_root_result.stdout == ""
+

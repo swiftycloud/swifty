@@ -19,6 +19,7 @@
   - kube-master
   - keystone-master
   - mongo-master
+  - rabbit-master
 
 #
 # Setup slave nodes
