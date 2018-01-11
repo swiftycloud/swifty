@@ -3,18 +3,23 @@
   dnf:
     name: docker
     state: present
+  register: docker_installed
+
 - name: enable docker
   service: name=docker state=started enabled=yes
 
 - name: prepare docker drive
   shell: |
     systemctl stop docker
+    ip link set dev docker0 down
+    ip link delete docker0
     rm -rf /var/lib/docker
     pvcreate {{ docker_drive }}
     vgcreate docker {{ docker_drive }}
     lvcreate --wipesignatures y -n thinpool docker -l 95%VG
     lvcreate --wipesignatures y -n thinpoolmeta docker -l 1%VG
     lvconvert -y --zero n -c 512K --thinpool docker/thinpool --poolmetadata docker/thinpoolmeta
+  when: docker_installed.changed
 
 - name: copy templates
   template:
@@ -24,8 +29,10 @@
   with_items:
     - { src: "templates/docker-thinpool.profile", dest: "/etc/lvm/profile/docker-thinpool.profile" }
     - { src: "templates/daemon.json", dest: "/etc/docker/daemon.json" }
+  when: docker_installed.changed
 
 - name: activate the pool and start docker with kubelet
   shell: |
     lvchange --metadataprofile docker-thinpool docker/thinpool
     systemctl start docker
+  when: docker_installed.changed
