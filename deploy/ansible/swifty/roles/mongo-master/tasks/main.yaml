@@ -14,7 +14,7 @@
 
 - name: create system user admin
   shell: |
-    mongo --quiet localhost:27017/{{ mgo_master_db_admin }} --eval 'db.createUser({ user: "{{ mgo_master_db_admin_name }}",pwd:"{{ mgo_master_db_admin_pass }}",roles:[{role:"userAdminAnyDatabase",db:"admin"}]});'
+    mongo --quiet localhost:27017/{{ mgo_master_db_admin }} --eval 'db.createUser({ user: "{{ mgo_master_db_admin_name }}",pwd:"{{ mgo_master_db_admin_pass }}",roles:[{role:"userAdminAnyDatabase",db:"{{ mgo_master_db_admin }}"}]});'
   ignore_errors: True
   when: mongod_installed.changed
 
