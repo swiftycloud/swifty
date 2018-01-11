@@ -1,0 +1,20 @@
+---
+- name: install flannel
+  dnf:
+    name: '{{ item }}'
+    state: present
+  with_items:
+    - flannel
+
+- name: configure flannel
+  lineinfile:
+    path: /etc/sysconfig/flanneld
+    regexp: '^{{ item.name }}'
+    line: '{{ item.name }} = {{ item.value }}'
+    backup: yes
+  register: flannel_conf
+  with_items: '{{ flanneld_conf_t }}'
+
+- name: restart flanneld
+  service: name=flanneld state=restarted enabled=yes
+  when: flannel_conf.changed

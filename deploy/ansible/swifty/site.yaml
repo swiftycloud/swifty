@@ -20,13 +20,13 @@
   - keystone-master
   - mongo-master
   - rabbit-master
-  - s3
 
 #
 # Setup slave nodes
 - hosts: slave
   roles:
   - nfs-slave
+  - flannel-slave
   - docker-slave
   - kube-slave
 
