@@ -49,6 +49,9 @@ ks_domain_pass: 'Cae6ThiekuShiece'
 ks_swyadmin_pass: 'choph5AhrieFooG6'
 #
 # mongo-master
+mgo_master_db_admin: 'admin'
+mgo_master_db_admin_name: 'root'
+mgo_master_db_admin_pass: 'OechengaeHie0aiv'
 mgo_master_db_name: 'swifty'
 mgo_master_db_user: 'swifty'
 mgo_master_db_pass: 'woh0jee1eivaiR6A'

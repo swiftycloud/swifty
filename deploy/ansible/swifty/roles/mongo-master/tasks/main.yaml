@@ -3,6 +3,7 @@
   dnf:
     name: '{{ item }}'
     state: present
+  register: mongod_installed
   with_items:
     - mongodb-server
     - mongo-tools
@@ -11,30 +12,24 @@
 - name: enable mongod
   service: name=mongod state=started enabled=yes
 
-- name: check config
-  shell: mongo --quiet localhost:27017 --eval 'db.getMongo().getDBNames().indexOf("{{ mgo_master_db_name }}")'
-  register: db_name_result
+- name: create system user admin
+  shell: |
+    mongo --quiet localhost:27017/{{ mgo_master_db_admin }} --eval 'db.createUser({ user: "{{ mgo_master_db_admin_name }}",pwd:"{{ mgo_master_db_admin_pass }}",roles:[{role:"userAdminAnyDatabase",db:"admin"}]});'
   ignore_errors: True
+  when: mongod_installed.changed
 
-- name: configure mongod
-  lineinfile:
-    path: /etc/mongod.conf
-    insertafter: '{{ item.after }}'
-    regexp: '{{ item.re }}'
-    line: '{{ item.val }}'
-    backup: yes
-  with_items:
-    - { after: "^net:", re: "  bindIp", val: "  #bindIp: 127.0.0.1,::1" }
-    - { after: "", re: "^#security:", val: "security:" }
-    - { after: "^security:", re: "  #authorization", val: "  authorization: 'enabled'" }
-  when: mongod_result.stdout == "null"
+  #- name: check config
+  #  shell: mongo --quiet localhost:27017 --eval 'db.getMongo().getDBNames().indexOf("{{ mgo_master_db_name }}")'
+  #  register: db_name_result
+  #  ignore_errors: True
+  #  when: mongod_installed.changed
 
-- name: create admin
+- name: create swifty user
   shell: |
     mongo --quiet localhost:27017/{{ mgo_master_db_name }} --eval 'db.createUser({user:"{{ mgo_master_db_user }}", pwd:"{{ mgo_master_db_pass }}", roles:[{role:"dbOwner",db:"{{ mgo_master_db_name }}"}]});'
-  when: db_name_result.stdout == "-1"
+  when: mongod_installed.changed
 
-- name: create collections
+- name: create collections for swifty
   shell: mongo --quiet localhost:27017/{{ mgo_master_db_name }} --eval 'db.createCollection("{{ item }}");'
   with_items:
     - "Function"
@@ -43,4 +38,29 @@
     - "FnStats"
     - "Balancer"
     - "BalancerRS"
-  when: db_name_result.stdout == "-1"
+  when: mongod_installed.changed
+
+- name: create s3 user
+  shell: mongo --quiet localhost:27017/{{ s3_db_name }} --eval 'db.createUser({user:"{{ s3_db_user }}", pwd:"{{ s3_db_pass }}", roles:[{role:"dbOwner",db:"{{ s3_db_name }}"}]});'
+  when: mongod_installed.changed
+
+- name: create s3 collections
+  shell: mongo --quiet localhost:27017/{{ s3_db_name }} --eval 'db.createCollection("{{ item }}");'
+  with_items:
+    - "S3Iams"
+    - "S3Buckets"
+    - "S3Uploads"
+    - "S3Objects"
+    - "S3ObjectData"
+    - "S3AccessKeys"
+  when: mongod_installed.changed
+
+- name: copy mongod.conf template
+  template:
+    src: "templates/mongod.conf"
+    dest: "/etc/mongod.conf"
+  when: mongod_installed.changed
+
+- name: restart mongod
+  service: name=mongod state=restarted enabled=yes
+  when: mongod_installed.changed
