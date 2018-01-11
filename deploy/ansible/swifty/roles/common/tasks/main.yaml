@@ -30,6 +30,7 @@
   command: go version
   register: go_version_result
   ignore_errors: True
+  changed_when: false
 
 - name: import go setup recipe
   include_tasks: go.yaml
