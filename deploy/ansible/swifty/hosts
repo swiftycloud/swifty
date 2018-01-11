@@ -19,6 +19,8 @@ ansible_sudo_pass=1q2w3e
 #swy4
 #swy5
 
+#
+# VM1
 [master]
 swy0
 
@@ -36,3 +38,23 @@ swy0
 swy0
 swy1
 swy2
+
+##
+## VM2
+#[master]
+#swy3
+#
+#[slave]
+#swy4
+#swy5
+#
+#[mware]
+#swy4
+#
+#[s3admin]
+#swy5
+#
+#[s3nodes]
+#swy3
+#swy4
+#swy5
