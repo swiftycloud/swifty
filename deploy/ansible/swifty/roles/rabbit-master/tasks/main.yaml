@@ -14,6 +14,7 @@
   shell: rabbitmqctl list_users | grep root | cut -f1
   register: rabbit_root_result
   ignore_errors: True
+  changed_when: rabbit_root_result.stdout == ""
 
 - name: configure rabbitmq-server
   shell: |
@@ -25,5 +26,4 @@
     rabbitmqctl add_vhost s3
     rabbitmqctl set_permissions -p s3 s3 ".*" ".*" ".*"
     rabbitmq-plugins enable rabbitmq_management
-  when: rabbit_root_result.stdout == ""
-
+  when: rabbit_root_result.changed
