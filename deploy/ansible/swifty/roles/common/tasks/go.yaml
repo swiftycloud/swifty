@@ -1,0 +1,24 @@
+---
+- name: download go-1.9.2
+  get_url:
+    url: https://redirector.gvt1.com/edgedl/go/go1.9.2.linux-amd64.tar.gz
+    checksum: sha256:de874549d9a8d8d8062be05808509c09a88a248e77ec14eb77453530829ac02b
+    dest: /tmp
+
+- name: extract go
+  unarchive:
+    src: /tmp/go1.9.2.linux-amd64.tar.gz
+    dest: /usr/local/bin
+    remote_src: yes
+
+- name: cleaup downloaded
+  file:
+    path: /tmp/go1.9.2.linux-amd64.tar.gz
+    state: absent
+
+- name: copy templates
+  template:
+    src: templates/golang.sh
+    dest: /etc/profile.d/golang.sh
+    backup: yes
+  when: go_version_result|failed
