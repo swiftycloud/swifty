@@ -3,6 +3,7 @@
   dnf:
     name: '{{ item }}'
     state: present
+  register: mongod_installed
   with_items:
     - mongodb-server
     - mongo-tools
@@ -11,32 +12,21 @@
 - name: enable mongod
   service: name=mongod state=started enabled=yes
 
-- name: check mongod
-  shell: mongo --quiet localhost:27017/{{ mgo_mware_db_name }} --eval 'db.getUser("{{ mgo_mware_db_user }}");'
-  register: mongod_result
-  ignore_errors: True
-
-- name: configure mongod
-  lineinfile:
-    path: /etc/mongod.conf
-    insertafter: '{{ item.after }}'
-    regexp: '{{ item.re }}'
-    line: '{{ item.val }}'
-    backup: yes
-  with_items:
-    - { after: "^net:", re: "  bindIp", val: "  #bindIp: 127.0.0.1,::1" }
-    - { after: "", re: "^#security:", val: "security:" }
-    - { after: "^security:", re: "  #authorization", val: "  authorization: 'enabled'" }
-  when: mongod_result.stdout == "null"
-
-- name: create mongod admin
+- name: create system user admin
   shell: |
-    mongo --quiet localhost:27017/{{ mgo_mware_db_name }} --eval 'db.createUser({user:"{{ mgo_mware_db_user }}", pwd:"{{ mgo_mware_db_pass }}", roles:[{role:"userAdminAnyDatabase",db:"{{ mgo_mware_db_name }}"}]});'
-  when: mongod_result.stdout == "null"
+    mongo --quiet localhost:27017/{{ mgo_mware_db_name }} --eval 'db.createUser({ user: "{{ mgo_mware_db_user }}",pwd:"{{ mgo_mware_db_pass }}",roles:[{role:"userAdminAnyDatabase",db:"mgo_mware_db_name"}]});'
+  ignore_errors: True
+  when: mongod_installed.changed
+
+- name: copy mongod.conf template
+  template:
+    src: "templates/mongod.conf"
+    dest: "/etc/mongod.conf"
+  when: mongod_installed.changed
 
 - name: restart mongod
   service: name=mongod state=restarted enabled=yes
-  when: mongod_result.stdout == "null"
+  when: mongod_installed.changed
 
 - name: install mariadb
   dnf:
@@ -53,12 +43,13 @@
   shell: mysql -u root --password={{ mariadb_mware_root_pass }} -c mysql -e "SHOW DATABASES;"
   register: mariadb_result
   ignore_errors: True
+  changed_when: mariadb_result.rc != 0
 
 - name: set mariadb root password
   shell: |
     mysqladmin -u root password "{{ mariadb_mware_root_pass }}"
     mysql -u root --password={{ mariadb_mware_root_pass }} -c mysql -e "GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' IDENTIFIED BY '{{ mariadb_mware_root_pass }}' WITH GRANT OPTION;"
-  when: mariadb_result.rc != 0
+  when: mariadb_result.changed
 
 - name: install rabbitmq
   dnf:
@@ -75,6 +66,7 @@
   shell: rabbitmqctl list_users | grep root | cut -f1
   register: rabbit_root_result
   ignore_errors: True
+  changed_when: rabbit_root_result.stdout == ""
 
 - name: configure rabbitmq-server
   shell: |
@@ -82,7 +74,7 @@
     rabbitmqctl set_user_tags root administrator
     rabbitmqctl set_permissions -p / root ".*" ".*" ".*"
     rabbitmq-plugins enable rabbitmq_management
-  when: rabbit_root_result.stdout == ""
+  when: rabbit_root_result.changed
 
 - name: install postgresql
   dnf:
