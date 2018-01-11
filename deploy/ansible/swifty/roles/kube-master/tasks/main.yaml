@@ -15,9 +15,11 @@
     line: '{{ item.name }} = {{ item.value }}'
     backup: yes
   with_items: '{{ etcd_conf_t }}'
+  register: etcd_updated
 
 - name: restart etcd
   service: name=etcd state=restarted enabled=yes
+  when: etcd_updated.changed
 
 - name: configure flannel
   lineinfile:
@@ -26,12 +28,15 @@
     line: '{{ item.name }} = {{ item.value }}'
     backup: yes
   with_items: '{{ flanneld_conf_t }}'
+  register: flanneld_updated
 
 - name: setup flannel network
   shell: echo '{"Network":"{{ flannel_network }}","SubnetLen":{{ flannel_subnetlen }},"Backend":{"Type":"vxlan","VNI":1}}' | etcdctl set "{{ flannel_etcd_prefix }}"/config
+  when: flanneld_updated.changed
 
 - name: restart flanneld
   service: name=flanneld state=restarted enabled=yes
+  when: flanneld_updated.changed
 
 - name: configure kubernetes master
   lineinfile:
@@ -40,6 +45,7 @@
     line: '{{ item.name }} = {{ item.value }}'
     backup: yes
   with_items: '{{ kube_master_conf_t }}'
+  register: config_updated
 
 - name: configure kubernetes apiserver
   lineinfile:
@@ -48,6 +54,7 @@
     line: '{{ item.name }} = {{ item.value }}'
     backup: yes
   with_items: '{{ kube_apiserver_conf_t }}'
+  register: apiserver_updated
 
 - name: configure kubelet
   lineinfile:
@@ -56,6 +63,7 @@
     line: '{{ item.name }} = {{ item.value }}'
     backup: yes
   with_items: '{{ kubelet_conf_t }}'
+  register: kubelet_updated
 
 - name: restart kubernetes services
   service:
@@ -66,3 +74,4 @@
     - kube-apiserver
     - kube-controller-manager
     - kube-scheduler
+  when: config_updated.changed or apiserver_updated.changed or kubelet_updated.changed
