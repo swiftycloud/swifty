@@ -6,97 +6,24 @@
   with_items:
     - mariadb
     - mariadb-server-utils
+  register: mariadb_installed
 
 - name: enable mariadb
   service: name=mariadb state=started enabled=yes
+  when: mariadb_installed.changed
 
 - name: set mariadb root password
   shell: |
     mysqladmin -u root password "{{ ks_db_root_pass }}"
     mysql -u root --password={{ ks_db_root_pass }} -c mysql -e "GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' IDENTIFIED BY '{{ ks_db_root_pass }}' WITH GRANT OPTION;"
+  when: mariadb_installed.changed
 
 - name: configure mariadb keystone database
   shell: |
     mysql -u root --password={{ ks_db_root_pass }} -c mysql -e "CREATE DATABASE {{ ks_db_name }};"
     mysql -u root --password={{ ks_db_root_pass }} -c mysql -e "GRANT ALL PRIVILEGES ON {{ ks_db_name }}.* TO {{ ks_db_user}}@localhost IDENTIFIED BY '{{ ks_db_pass }}';"
     mysql -u root --password={{ ks_db_root_pass }} -c mysql -e "GRANT ALL PRIVILEGES ON {{ ks_db_name }}.* TO {{ ks_db_user}}@'%' IDENTIFIED BY '{{ ks_db_pass }}';"
+  when: mariadb_installed.changed
 
-
-- name: install keystone Pike repo
-  shell: dnf -y install https://repos.fedorapeople.org/repos/openstack/openstack-pike/rdo-release-pike-1.noarch.rpm
-- name: install keystone Pike components
-  dnf:
-    name: '{{ item }}'
-    state: present
-  with_items:
-    - openstack-keystone
-    - httpd
-    - mod_wsgi
-    - python-openstackclient
-
-- name: configure domain address for keystone
-  lineinfile:
-    path: /etc/hosts
-    regexp: '{{ ks_domain }}'
-    line: '127.0.0.1 {{ ks_domain }}'
-
-- name: configure connection in keystone
-  lineinfile:
-    path: /etc/keystone/keystone.conf
-    insertafter: '^\[database\]'
-    regexp: 'connection ='
-    line: 'connection = mysql+pymysql://{{ ks_db_user }}:{{ ks_db_pass }}@{{ ks_domain }}/{{ ks_db_name }}'
-
-- name: configure provider in keystone
-  lineinfile:
-    path: /etc/keystone/keystone.conf
-    insertafter: '^\[token\]'
-    regexp: 'provider ='
-    line: 'provider = fernet'
-
-- name: bootstrap the keystone
-  shell: |
-    /bin/sh -c "keystone-manage db_sync" '{{ ks_db_name }}'
-    keystone-manage fernet_setup --keystone-user {{ ks_db_user }} --keystone-group {{ ks_db_name }}
-    keystone-manage credential_setup --keystone-user {{ ks_db_user }} --keystone-group {{ ks_db_name }}
-    keystone-manage bootstrap --bootstrap-password {{ ks_domain_pass }} --bootstrap-admin-url http://{{ ks_domain }}:35357/v3/ --bootstrap-internal-url http://{{ ks_domain }}:5000/v3/ --bootstrap-public-url http://{{ ks_domain }}:5000/v3/ --bootstrap-region-id RegionOne
-
-- name: configure httpd for domain '{{ ks_domain }}'
-  lineinfile:
-    path: /etc/httpd/conf/httpd.conf
-    regexp: '^#ServerName '
-    line: 'ServerName {{ ks_domain }}'
-
-- name: link wsgi-keynote
-  file:
-    src: /usr/share/keystone/wsgi-keystone.conf
-    dest: /etc/httpd/conf.d/wsgi-keystone.conf
-    state: link
-
-- name: enable httpd
-  service: name=httpd state=started enabled=yes
-
-- name: export keystone to root user
-  lineinfile:
-    path: /root/.bashrc
-    regexp: '{{ item.re }}'
-    line: '{{ item.re }}={{ item.val }}'
-  with_items:
-    - { re: 'export OS_USERNAME',            val: 'admin' }
-    - { re: 'export OS_PASSWORD',            val: '{{ ks_domain_pass }}' }
-    - { re: 'export OS_PROJECT_NAME',        val: 'admin' }
-    - { re: 'export OS_USER_DOMAIN_NAME',    val: 'Default' }
-    - { re: 'export OS_PROJECT_DOMAIN_NAME', val: 'Default' }
-    - { re: 'export OS_AUTH_URL',            val: 'http://{{ ks_domain }}:5000/v3' }
-    - { re: 'export OS_IDENTITY_API_VERSION',val: '3' }
-
-- name: create keystone roles,projects,domains
-  shell: |
-    openstack role create swifty.admin
-    openstack role create swifty.owner
-    openstack role create swifty.ui
-    openstack domain create swifty
-    openstack project create --domain swifty swyadmin
-    openstack user create --project swyadmin --domain swifty --password {{ ks_swyadmin_pass }} swyadmin
-    openstack role add --user-domain swifty --user swyadmin --project-domain swifty --project swyadmin swifty.admin
-    openstack role add --user-domain swifty --user swyadmin --project-domain swifty --project swyadmin swifty.owner
+- name: import keystone tasks
+  include_tasks: keystone.yaml
