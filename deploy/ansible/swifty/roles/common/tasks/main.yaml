@@ -40,3 +40,11 @@
 - name: import go setup recipe
   include_tasks: go.yaml
   when: go_version_result|failed
+
+- name: Build hosts file
+  lineinfile:
+    dest: /etc/hosts
+    regexp: '.*{{ item }}$'
+    line: '{{ hostvars[item].ansible_default_ipv4.address }} {{item}}'
+    state: present
+  with_items: '{{ groups["all"] }}'
