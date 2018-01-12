@@ -5,14 +5,8 @@
     state: present
   register: docker_installed
 
-- name: enable docker
-  service: name=docker state=started enabled=yes
-
 - name: prepare docker drive
   shell: |
-    systemctl stop docker
-    ip link set dev docker0 down
-    ip link delete docker0
     rm -rf /var/lib/docker
     pvcreate {{ docker_drive }}
     vgcreate docker {{ docker_drive }}
@@ -31,8 +25,20 @@
     - { src: "templates/daemon.json", dest: "/etc/docker/daemon.json" }
   when: docker_installed.changed
 
-- name: activate the pool and start docker with kubelet
+- name: change /etc/sysconfig/docker-storage-setup
+  lineinfile:
+    path: /etc/sysconfig/docker-storage-setup
+    regexp: '^STORAGE_DRIVER.*'
+    line: 'STORAGE_DRIVER=""'
+    backup: yes
+  when: docker_installed.changed
+
+- name: activate the pool and start docker
   shell: |
     lvchange --metadataprofile docker-thinpool docker/thinpool
     systemctl start docker
+  when: docker_installed.changed
+
+- name: enable docker
+  service: name=docker state=started enabled=yes
   when: docker_installed.changed
