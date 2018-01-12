@@ -178,9 +178,9 @@ tags:
 	$(Q) $(GOTAGS) -R src/ > tags
 .PHONY: tags
 
-docs: .FORCE
-	$(Q) $(MAKE) -C docs/ html
-.PHONY: docs
+#docs: .FORCE
+#	$(Q) $(MAKE) -C docs/ html
+#.PHONY: docs
 
 tarball:
 	$(Q) $(GIT) archive --format=tar --prefix=swifty/ HEAD > swifty.tar
@@ -286,7 +286,7 @@ clean:
 	$(Q) $(RM) swy-admd
 	$(call msg-clean,swy-s3)
 	$(Q) $(RM) swy-s3
-	$(Q) $(MAKE) -C docs clean
+#	$(Q) $(MAKE) -C docs clean
 .PHONY: clean
 
 mrproper: clean
