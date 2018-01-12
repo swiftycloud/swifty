@@ -284,8 +284,18 @@ clean:
 	$(Q) $(RM) swy-wdog
 	$(call msg-clean,swy-admd)
 	$(Q) $(RM) swy-admd
+	$(call msg-clean,swy-pgrest)
+	$(Q) $(RM) swy-pgrest
+	$(call msg-clean,swy-mquotad)
+	$(Q) $(RM) swy-mquotad
+	$(call msg-clean,swy-wdog-go)
+	$(Q) $(RM) swy-wdog-go
 	$(call msg-clean,swy-s3)
 	$(Q) $(RM) swy-s3
+	$(call msg-clean,swyctl)
+	$(Q) $(RM) swyctl
+	$(call msg-clean,swysg)
+	$(Q) $(RM) swysg
 #	$(Q) $(MAKE) -C docs clean
 .PHONY: clean
 
