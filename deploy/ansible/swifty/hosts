@@ -12,14 +12,17 @@
 #
 # - One of slave nodes is hosting middleware.
 [all:vars]
-ansible_sudo_pass=1q2w3e
+ansible_sudo_pass=aV3eabo0Z
 
 [master]
-swy0
+swy3
 
 [slave]
-swy1
-swy2
+swy4
+swy5
 
 [mware]
-swy1
+swy4
+
+[s3]
+swy4
