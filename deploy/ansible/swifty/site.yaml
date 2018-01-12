@@ -5,33 +5,39 @@
 #  roles:
 #  - debug
 
+##
+## Install common components
+#- hosts: all
+#  roles:
+#  - common
 #
-# Install common components
-- hosts: all
-  roles:
-  - common
+##
+## Setup master node
+#- hosts: master
+#  roles:
+#  - nfs-master
+#  - kube-master
+#  - keystone-master
+#  - mongo-master
+#  - rabbit-master
+#
+##
+## Setup slave nodes
+#- hosts: slave
+#  roles:
+#  - nfs-slave
+#  - flannel-slave
+#  - docker-slave
+#  - kube-slave
+#
+##
+## Setup middleware
+#- hosts: mware
+#  roles:
+#  - mware
 
 #
-# Setup master node
-- hosts: master
+# Ship secrets
+- hosts: master mware s3
   roles:
-  - nfs-master
-  - kube-master
-  - keystone-master
-  - mongo-master
-  - rabbit-master
-
-#
-# Setup slave nodes
-- hosts: slave
-  roles:
-  - nfs-slave
-  - flannel-slave
-  - docker-slave
-  - kube-slave
-
-#
-# Setup middleware
-- hosts: mware
-  roles:
-  - mware
+  - secrets

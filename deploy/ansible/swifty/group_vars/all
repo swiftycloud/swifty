@@ -32,12 +32,20 @@ virt_machines: "{{ groups['vms'] }}"
 docker_drive: /dev/sdb
 
 #
-# Secrets directory
+# Secrets directory and file map
 secrets_dir: /home/root/.secrets
-secrets_gate_map: [ "admd", "gate", "mqd", "pgrest", "s3" ]
+secrets_master_map: [ "admd", "gate" ]
+secrets_mware_map: [ "mqd", "pgrest" ]
+secrets_s3_map: [ "s3" ]
 
 #
 # Usernames/passwords for backends
+#
+# AES password to encrypt mware secrets
+mware_aes_pass: 'f406a11cd8598e80b6180230f116b15b'
+#
+# pgrest token 64+ bytes
+pgrest_token: 'e8yftKPn_GrhFa0d9TMwCt7GG?Ggu:biw:e_bfndvfyC^i-D*=+*euNznmpxE1jq'
 #
 # keystone-master
 ks_db_root_pass: 'aiNe1sah9ichu1re'
@@ -71,3 +79,5 @@ rabbit_master_s3_pass: 'PeM4de9ailaur2nu'
 s3_db_name: 'swifty-s3'
 s3_db_user: 'swifty-s3'
 s3_db_pass: 'aebik0eichie0eXu'
+s3_aes_pass: 'fd7b1601ae2ff4ccb91b85ea315f2b2e'
+s3_token: 'NgsfqX&ruOcjk+CXr@a2yq_M-YAGv7^#-6?E=zw:Rh?FJf_fWVfivHKi1A?m2jDR'
