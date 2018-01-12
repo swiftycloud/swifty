@@ -223,25 +223,39 @@ endif
 DB-SWIFTY	:= swifty
 DB-S3		:= swifty-s3
 
+mgo-swifty-creds :=
+ifneq ($(mgo-swifty-user),)
+ifneq ($(mgo-swifty-pass),)
+	mgo-swifty-creds := -u $(mgo-swifty-user) -p $(mgo-swifty-pass)
+endif
+endif
+
+mgo-s3-creds :=
+ifneq ($(mgo-s3-user),)
+ifneq ($(mgo-s3-pass),)
+	mgo-s3-creds := -u $(mgo-s3-user) -p $(mgo-s3-pass)
+endif
+endif
+
 clean-db-swifty:
 	$(call msg-gen,"Cleaning up main MongoDB")
-	$(Q) $(MONGO)/$(DB-SWIFTY) --eval 'db.Function.remove({});'
-	$(Q) $(MONGO)/$(DB-SWIFTY) --eval 'db.Mware.remove({});'
-	$(Q) $(MONGO)/$(DB-SWIFTY) --eval 'db.FnStats.remove({});'
-	$(Q) $(MONGO)/$(DB-SWIFTY) --eval 'db.Pods.remove({});'
-	$(Q) $(MONGO)/$(DB-SWIFTY) --eval 'db.Balancer.remove({});'
-	$(Q) $(MONGO)/$(DB-SWIFTY) --eval 'db.BalancerRS.remove({});'
-	$(Q) $(MONGO)/$(DB-SWIFTY) --eval 'db.Logs.remove({});'
+	$(Q) $(MONGO)/$(DB-SWIFTY) $(mgo-swifty-creds) --eval 'db.Function.remove({});'
+	$(Q) $(MONGO)/$(DB-SWIFTY) $(mgo-swifty-creds) --eval 'db.Mware.remove({});'
+	$(Q) $(MONGO)/$(DB-SWIFTY) $(mgo-swifty-creds) --eval 'db.FnStats.remove({});'
+	$(Q) $(MONGO)/$(DB-SWIFTY) $(mgo-swifty-creds) --eval 'db.Pods.remove({});'
+	$(Q) $(MONGO)/$(DB-SWIFTY) $(mgo-swifty-creds) --eval 'db.Balancer.remove({});'
+	$(Q) $(MONGO)/$(DB-SWIFTY) $(mgo-swifty-creds) --eval 'db.BalancerRS.remove({});'
+	$(Q) $(MONGO)/$(DB-SWIFTY) $(mgo-swifty-creds) --eval 'db.Logs.remove({});'
 .PHONY: clean-db-swifty
 
 clean-db-s3:
 	$(call msg-gen,"Cleaning up s3 MongoDB")
-	$(Q) $(MONGO)/$(DB-S3) --eval 'db.S3Iams.remove({});'
-	$(Q) $(MONGO)/$(DB-S3) --eval 'db.S3Buckets.remove({});'
-	$(Q) $(MONGO)/$(DB-S3) --eval 'db.S3Objects.remove({});'
-	$(Q) $(MONGO)/$(DB-S3) --eval 'db.S3Uploads.remove({});'
-	$(Q) $(MONGO)/$(DB-S3) --eval 'db.S3ObjectData.remove({});'
-	$(Q) $(MONGO)/$(DB-S3) --eval 'db.S3AccessKeys.remove({});'
+	$(Q) $(MONGO)/$(DB-S3) $(mgo-s3-creds) --eval 'db.S3Iams.remove({});'
+	$(Q) $(MONGO)/$(DB-S3) $(mgo-s3-creds) --eval 'db.S3Buckets.remove({});'
+	$(Q) $(MONGO)/$(DB-S3) $(mgo-s3-creds) --eval 'db.S3Objects.remove({});'
+	$(Q) $(MONGO)/$(DB-S3) $(mgo-s3-creds) --eval 'db.S3Uploads.remove({});'
+	$(Q) $(MONGO)/$(DB-S3) $(mgo-s3-creds) --eval 'db.S3ObjectData.remove({});'
+	$(Q) $(MONGO)/$(DB-S3) $(mgo-s3-creds) --eval 'db.S3AccessKeys.remove({});'
 .PHONY: clean-db-s3
 
 rsclean: clean-db-swifty clean-db-s3
