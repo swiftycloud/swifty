@@ -1,26 +1,19 @@
-# 10.94.4.208		kt
-# 10.94.109.25		swy0
-# 10.94.109.36		swy1
-# 10.94.109.35		swy2
-# 10.94.109.37		swy3
-# 10.94.109.38		swy4
-# 10.94.109.39		swy5
+#
+# The structure of setup is the following
+#
+# - One master gate node where swy-gate,
+#   main and s3 database, admin utils, keystone
+#   are spinning. It serves incoming requests
+#   and boot up docker containers.
+#
+# - Two slave nodes where docker is spinning
+#   and containers are running with watchdog
+#   inside.
+#
+# - One of slave nodes is hosting middleware.
 [all:vars]
 ansible_sudo_pass=1q2w3e
 
-#[node]
-#kt
-#
-#[vms]
-#swy0
-#swy1
-#swy2
-#swy3
-#swy4
-#swy5
-
-#
-# VM1
 [master]
 swy0
 
@@ -30,31 +23,3 @@ swy2
 
 [mware]
 swy1
-
-[s3admin]
-swy0
-
-[s3nodes]
-swy0
-swy1
-swy2
-
-##
-## VM2
-#[master]
-#swy3
-#
-#[slave]
-#swy4
-#swy5
-#
-#[mware]
-#swy4
-#
-#[s3admin]
-#swy5
-#
-#[s3nodes]
-#swy3
-#swy4
-#swy5
