@@ -1,6 +1,6 @@
 _swyctl()
 {
-	local cur prev words cword split=false
+	local cmd cur prev words cword split=false
 
 	if type -t _init_completion >/dev/null; then
 		_init_completion -n = || return
@@ -11,7 +11,13 @@ _swyctl()
 		prev="${COMP_WORDS[COMP_CWORD-1]}"
 	fi
 
-	case "$prev" in
+	if [ $COMP_CWORD -gt 1 ] ; then
+		cmd="${COMP_WORDS[1]}"
+	else
+		cmd="$prev"
+	fi
+
+	case "$cmd" in
 	add)
 		COMPREPLY=($(compgen -W '-event -lang -mw -proj -rl -src -tmo' -- $cur))
 		return
