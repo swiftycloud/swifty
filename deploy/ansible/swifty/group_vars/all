@@ -33,7 +33,7 @@ docker_drive: /dev/sdb
 
 #
 # Secrets directory and file map
-secrets_dir: /home/root/.secrets
+secrets_dir: /root/.swysecrets
 secrets_master_map: [ "admd", "gate" ]
 secrets_mware_map: [ "mqd", "pgrest" ]
 secrets_s3_map: [ "s3" ]
