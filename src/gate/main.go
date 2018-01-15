@@ -13,6 +13,7 @@ import (
 	"time"
 	"fmt"
 	"net"
+	"os"
 	"io/ioutil"
 	"encoding/base64"
 
@@ -914,12 +915,12 @@ func main() {
 
 	flag.StringVar(&config_path,
 			"conf",
-				"",
+				"/etc/swifty/conf/gate.yaml",
 				"path to a config file")
 	flag.BoolVar(&SwyModeDevel, "devel", false, "launch in development mode")
 	flag.Parse()
 
-	if config_path != "" {
+	if _, err := os.Stat(config_path); err == nil {
 		swy.ReadYamlConfig(config_path, &conf)
 		setupLogger(&conf)
 		setupMwareAddr(&conf)

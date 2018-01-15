@@ -16,6 +16,7 @@ import (
 	"time"
 	"flag"
 	"fmt"
+	"os"
 
 	"../common"
 	"../common/http"
@@ -664,7 +665,7 @@ func main() {
 	flag.BoolVar(&S3ModeDevel, "devel", false, "launch in development mode")
 	flag.StringVar(&config_path,
 			"conf",
-				"",
+				"/etc/swifty/conf/s3.yaml",
 				"path to a config file")
 	flag.BoolVar(&radosDisabled,
 			"no-rados",
@@ -676,7 +677,7 @@ func main() {
 				"object size in bytes to put into cache")
 	flag.Parse()
 
-	if config_path != "" {
+	if _, err := os.Stat(config_path); err == nil {
 		swy.ReadYamlConfig(config_path, &conf)
 		setupLogger(&conf)
 	} else {

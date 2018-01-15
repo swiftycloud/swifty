@@ -354,12 +354,12 @@ func main() {
 
 	flag.StringVar(&config_path,
 			"conf",
-				"",
+				"/etc/swifty/conf/admd.yaml",
 				"path to a config file")
 	flag.BoolVar(&devel, "devel", false, "launch in development mode")
 	flag.Parse()
 
-	if config_path != "" {
+	if _, err := os.Stat(config_path); err == nil {
 		swy.ReadYamlConfig(config_path, &conf)
 		setupLogger(&conf)
 	} else {

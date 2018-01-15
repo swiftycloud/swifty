@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"flag"
 	"syscall"
+	"os"
 	"../apis/apps"
 	"../common"
 	"../common/http"
@@ -180,10 +181,12 @@ func main() {
 
 	flag.StringVar(&conf_path,
 			"conf",
-				"",
+				"/etc/swifty/conf/pgrest.yaml",
 				"path to the configuration file")
 	flag.Parse()
-	swy.ReadYamlConfig(conf_path, &conf)
+	if _, err := os.Stat(config_path); err == nil {
+		swy.ReadYamlConfig(conf_path, &conf)
+	}
 
 	pgrSecrets, err = swysec.ReadSecrets("pgrest")
 	if err != nil {

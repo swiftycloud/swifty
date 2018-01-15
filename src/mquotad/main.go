@@ -6,6 +6,7 @@ import (
 	"go.uber.org/zap"
 	"flag"
 	"time"
+	"os"
 	"../common"
 	"../common/secrets"
 )
@@ -98,10 +99,12 @@ func main() {
 
 	flag.StringVar(&conf_path,
 			"conf",
-				"",
+				"/etc/swifty/conf/mquotad.yaml",
 				"path to the configuration file")
 	flag.Parse()
-	err = swy.ReadYamlConfig(conf_path, &conf)
+	if _, err := os.Stat(config_path); err == nil {
+		err = swy.ReadYamlConfig(conf_path, &conf)
+	}
 	if err != nil {
 		log.Errorf("Can't read config: %s", err.Error())
 		return
