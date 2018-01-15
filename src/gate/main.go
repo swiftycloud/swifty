@@ -681,11 +681,18 @@ func handleFunctionList(w http.ResponseWriter, r *http.Request, tennant string) 
 	}
 
 	for _, v := range recs {
+		var lcs string
+		stats := statsGet(&v)
+		if stats.Called != 0 {
+			lcs = stats.LastCall.Format(time.UnixDate)
+		}
+
 		result = append(result,
 			swyapi.FunctionItem{
 				FuncName:	v.Name,
 				State:		fnStates[v.State],
 				Timeout:	v.Size.Tmo,
+				LastCall:	lcs,
 		})
 	}
 

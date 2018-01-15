@@ -147,6 +147,7 @@ type FunctionItem struct {
 	FuncName	string			`json:"name"`
 	State		string			`json:"state"`
 	Timeout		uint64			`json:"timeout"`
+	LastCall	string			`json:"lastcall,omitempty"`
 }
 
 type ProjectItem struct {
