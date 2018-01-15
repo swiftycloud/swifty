@@ -1,0 +1,43 @@
+---
+- name: setup common go packages
+  shell: |
+    echo "Setup {{ item }}"
+    go get {{ item }}
+  with_items:
+    - github.com/willf/bitset
+    - gopkg.in/yaml.v2
+    - github.com/gorilla/mux
+    - go.uber.org/zap
+    - gopkg.in/mgo.v2
+    - github.com/go-sql-driver/mysql
+    - github.com/streadway/amqp
+    - github.com/michaelklishin/rabbit-hole
+    - gopkg.in/robfig/cron.v2
+
+- name: setup K8S go packages
+  shell: |
+    go get k8s.io/client-go/...
+    cd ~/go/src/k8s.io/client-go
+    git checkout -fb v2.0.0  v2.0.0
+    go get k8s.io/client-go/...
+
+- name: setup packets for S3
+  dnf:
+    name: "{{ item }}"
+    state: present
+  with_items:
+    - gcc
+    - librados2-devel
+    - librbd-devel
+
+- name: setup Rados go packages
+  shell: |
+    go get github.com/ceph/go-ceph/rados
+
+- name: setup testing deps
+  dnf:
+    name: "{{ item }}"
+    state: present
+  with_items:
+    - python3-PyYAML
+    - python3-boto3

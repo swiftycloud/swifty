@@ -1,0 +1,8 @@
+#
+# Deploy development environment for Swifty.
+---
+#
+# gate
+- hosts: all
+  roles:
+  - devel
