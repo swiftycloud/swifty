@@ -13,6 +13,7 @@
 # - One of slave nodes is hosting middleware.
 [all:vars]
 ansible_sudo_pass=aV3eabo0Z
+ansible_user=root
 
 [master]
 swy3
