@@ -1,0 +1,21 @@
+---
+- name: create swifty directory
+  file:
+    path: '/etc/swifty/conf'
+    state: directory
+
+- name: ship configs
+  template:
+    src: 'templates/{{ item }}'
+    dest: "/etc/swifty/conf/{{ item }}"
+    mode: 0600
+    owner: root
+    group: root
+    force: yes
+  with_items:
+    - admd.yaml
+    - gate.yaml
+    - kubeconfig
+    - mqd.yaml
+    - pgrest.yaml
+    - s3.yaml

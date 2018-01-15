@@ -1,0 +1,6 @@
+#
+# Deploy configuration files.
+---
+- hosts: all
+  roles:
+  - conf

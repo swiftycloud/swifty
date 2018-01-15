@@ -1,0 +1,68 @@
+---
+db:
+        state: "swifty"
+        address: "127.0.0.1:27017"
+        user: "swifty"
+        password: "DBPASS"
+keystone:
+        address: "{{ groups['master'][0] }}:5000"
+        domain: "swifty"
+daemon:
+        address: "{{ groups['master'][0] }}:8686"
+        sources:
+                share: "/home/swifty-volume"
+                clone: "/home/swifty/local-sources"
+        loglevel: "debug"
+balancer:
+        localips:
+                - ip: "10.8.0.1"
+                  ports: "8680:8880"
+                - ip: "10.8.0.2"
+                  ports: "8780:8980"
+middleware:
+        mwseckey: "MWSECPASS"
+        maria:
+                address: "{{ groups['mware'][0] }}:3306"
+                admin: "root"
+                password: "MARIAPASS"
+                quotdb: "swifty.quotas"
+        rabbit:
+                address: "{{ groups['mware'][0] }}:5672"
+                admin: "root"
+                password: "RABBITPASS"
+                admport: "15672"
+        mongo:
+                address: "{{ groups['mware'][0] }}:27017"
+                admin: "admin"
+                password: "MONGOPASS"
+        postgres:
+                address: "{{ groups['mware'][0] }}:5432"
+                admport: "3872"
+                token: "PGRTOKEN"
+        s3:
+                address: "{{ groups['s3'][0] }}:8787"
+                admport: "8789"
+                token: "S3TOKEN"
+                notify:
+                        url: "{{ groups['master'][0] }}:5672/s3"
+                        user: "swifty"
+                        password: "S3IFYPASS"
+runtime:
+        timeout:
+                max: 60
+                def: 1
+        memory:
+                max: 1024
+                min: 64
+                def: 128
+        images:
+                golang: "swifty/golang"
+                python: "swifty/python"
+                swift:  "swifty/swift"
+                nodejs: "swifty/nodejs"
+wdog:
+        ct-path: "/usr/bin/swy-wdog"
+        port: 8687
+kubernetes:
+        config-path: /etc/swifty/conf/kubeconfig
+        max-replicas: 32

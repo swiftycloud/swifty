@@ -1,0 +1,5 @@
+---
+address: "{{ groups['mware'][0] }}:3872"
+token:   "TOKEN"
+user:    26
+group:   26
