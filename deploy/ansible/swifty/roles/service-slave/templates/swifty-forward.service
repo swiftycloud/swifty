@@ -1,0 +1,10 @@
+[Unit]
+Description=Swifty setup FORWARD policy
+After=kubelet.service
+
+[Service]
+Type=simple
+ExecStart=/usr/sbin/iptables -P FORWARD ACCEPT
+
+[Install]
+WantedBy=multi-user.target

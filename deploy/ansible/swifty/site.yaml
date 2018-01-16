@@ -30,6 +30,7 @@
   - flannel-slave
   - docker-slave
   - kube-slave
+  - service-slave
 
 #
 # Setup middleware

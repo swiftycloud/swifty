@@ -1,0 +1,9 @@
+---
+- name: install swifty-forward.service
+  template:
+    src:  templates/swifty-forward.service
+    dest: /usr/lib/systemd/system/swifty-forward.service
+    backup: yes
+
+- name: enable swifty-forward.service
+  service: name=swifty-forward state=started enabled=yes
