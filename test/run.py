@@ -42,7 +42,7 @@ def add_fn(name, lang, mw = [], evt = "url", tmo = None):
 	return _wait_fn(name)
 
 def upd_fn(inf, lang):
-	swyrun([ "upd", inf['name'], "-src", "test/functions/" + lang + "/" + name + "2" + lext[lang] ])
+	swyrun([ "upd", inf['name'], "-src", "test/functions/" + lang + "/" + inf['name'] + "2" + lext[lang] ])
 
 def add_mw(typ, name):
 	swyrun([ "madd", name, typ ])
@@ -87,6 +87,8 @@ def del_fn(inf):
 def run_test(fname, langs, opts):
 	print("====== Running %s" % fname.__name__)
 	for l in langs:
+		if opts['lang'] and l != opts['lang']:
+			continue
 		print("______ %s" % l)
 		if fname(l, opts):
 			print("------ PASS")
@@ -305,6 +307,7 @@ lp.set_defaults(action = list_tests)
 rp = sp.add_parser("run", help = "Run tests")
 rp.add_argument("-t", "--test", help = "Name of test")
 rp.add_argument("-k", "--keep", help = "Keep fns and mware", action = 'store_true')
+rp.add_argument("-l", "--lang", help = "Run for specific language")
 rp.set_defaults(action = run_tests)
 
 def show_help(opts):
