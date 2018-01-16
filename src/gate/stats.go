@@ -15,6 +15,8 @@ type FnStats struct {
 	Cookie		string		`bson:"cookie"`
 
 	Called		uint64		`bson:"called"`
+	Timeouts	uint64		`bson:"timeouts"`
+	Errors		uint64		`bson:"errors"`
 	LastCall	time.Time	`bson:"lastcall"`
 	RunTime		time.Duration	`bson:"rtime"`
 	WdogTime	time.Duration	`bson:"wtime"`
@@ -40,7 +42,13 @@ func statsStart() *statsOpaque {
 
 func statsUpdate(fmd *FnMemData, op *statsOpaque, res *swyapi.SwdFunctionRunResult) {
 	fmd.stats.dirty = true
-	atomic.AddUint64(&fmd.stats.Called, 1)
+	if res.Code == 0 {
+		atomic.AddUint64(&fmd.stats.Called, 1)
+	} else if res.Code == 524 {
+		atomic.AddUint64(&fmd.stats.Timeouts, 1)
+	} else {
+		atomic.AddUint64(&fmd.stats.Errors, 1)
+	}
 	fmd.stats.LastCall = op.ts
 	fmd.stats.RunTime += time.Duration(res.Time) * time.Microsecond
 	fmd.stats.WdogTime += time.Duration(res.CTime) * time.Microsecond

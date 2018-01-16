@@ -433,6 +433,8 @@ func handleFunctionStats(w http.ResponseWriter, r *http.Request, tennant string)
 
 	err = swyhttp.MarshalAndWrite(w,  swyapi.FunctionStats{
 			Called:		stats.Called,
+			Timeouts:	stats.Timeouts,
+			Errors:		stats.Errors,
 			LastCall:	lcs,
 			Time:		uint64(stats.RunTime.Nanoseconds()/1000),
 		})
@@ -501,6 +503,8 @@ func handleFunctionInfo(w http.ResponseWriter, r *http.Request, tennant string) 
 			},
 			Stats:		swyapi.FunctionStats {
 				Called:		stats.Called,
+				Timeouts:	stats.Timeouts,
+				Errors:		stats.Errors,
 				LastCall:	lcs,
 				Time:		uint64(stats.RunTime.Nanoseconds()/1000),
 				TimeW:		wtime,
