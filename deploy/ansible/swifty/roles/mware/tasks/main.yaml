@@ -49,6 +49,8 @@
   shell: |
     mysqladmin -u root password "{{ mariadb_mware_root_pass }}"
     mysql -u root --password={{ mariadb_mware_root_pass }} -c mysql -e "GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' IDENTIFIED BY '{{ mariadb_mware_root_pass }}' WITH GRANT OPTION;"
+    mysql -u root --password={{ mariadb_mware_root_pass }} -c mysql -e "CREATE DATABASE swifty;"
+    mysql -u root --password={{ mariadb_mware_root_pass }} -D swifty -c mysql -e "CREATE TABLE QUOTAS (`id` varchar(64), `size` INT, `rows` INT, `locked` BOOL);"
   when: mariadb_result.changed
 
 - name: install rabbitmq
