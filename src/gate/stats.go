@@ -22,6 +22,12 @@ type FnStats struct {
 	WdogTime	time.Duration	`bson:"wtime"`
 	GateTime	time.Duration	`bson:"gtime"`
 
+	/* RunCost is a value that represents the amount of
+	 * resources spent for this function. It's used by
+	 * billing to change the tennant.
+	 */
+	RunCost		uint64		`bson:"runcost"`
+
 	dirty		bool
 	done		chan chan bool
 	flushed		chan bool
@@ -50,9 +56,13 @@ func statsUpdate(fmd *FnMemData, op *statsOpaque, res *swyapi.SwdFunctionRunResu
 		atomic.AddUint64(&fmd.stats.Errors, 1)
 	}
 	fmd.stats.LastCall = op.ts
-	fmd.stats.RunTime += time.Duration(res.Time) * time.Microsecond
+
+	rt := time.Duration(res.Time) * time.Microsecond
+	fmd.stats.RunTime += rt
 	fmd.stats.WdogTime += time.Duration(res.CTime) * time.Microsecond
 	fmd.stats.GateTime += time.Since(op.ts)
+
+	fmd.stats.RunCost += uint64(rt) * fmd.mem
 }
 
 var statsFlusher chan *FnStats

@@ -8,6 +8,7 @@ import (
 var fdmd sync.Map
 
 type FnMemData struct {
+	mem	uint64
 	crl	*xratelimit.RL
 	stats	FnStats
 }
@@ -44,6 +45,7 @@ func memdGetOrInit(cookie string, fn *FunctionDesc) *FnMemData {
 	}
 
 	fnStatsInit(&nret.stats, fn)
+	nret.mem = fn.Size.Mem
 
 	ret, _ = fdmd.LoadOrStore(fn.Cookie, nret)
 	return ret.(*FnMemData)

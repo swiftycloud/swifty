@@ -295,7 +295,7 @@ func swyFixSize(sz *swyapi.FunctionSize, conf *YAMLConf) error {
 func updateFunction(conf *YAMLConf, id *SwoId, params *swyapi.FunctionUpdate) error {
 	var err error
 	var rebuild bool
-	var rlfix bool
+	var mfix, rlfix bool
 
 	update := make(bson.M)
 
@@ -333,6 +333,7 @@ func updateFunction(conf *YAMLConf, id *SwoId, params *swyapi.FunctionUpdate) er
 			log.Debugf("Will update mem for %s", fn.SwoId.Str())
 			fn.Size.Mem = params.Size.Memory
 			update["size.mem"] = params.Size.Memory
+			mfix = true
 		}
 
 		if params.Size.Rate != 0 && (params.Size.Rate != fn.Size.Rate ||
@@ -371,19 +372,25 @@ func updateFunction(conf *YAMLConf, id *SwoId, params *swyapi.FunctionUpdate) er
 		goto out
 	}
 
-	if rlfix {
+	if rlfix || mfix {
 		fdm := memdGetFn(fn)
-		if fn.Size.Rate != 0 {
-			if fdm.crl != nil {
-				/* Update */
-				fdm.crl.Update(fn.Size.Burst, fn.Size.Rate)
+		if mfix {
+			fdm.mem = fn.Size.Mem
+		}
+
+		if rlfix {
+			if fn.Size.Rate != 0 {
+				if fdm.crl != nil {
+					/* Update */
+					fdm.crl.Update(fn.Size.Burst, fn.Size.Rate)
+				} else {
+					/* Create */
+					fdm.crl = xratelimit.MakeRL(fn.Size.Burst, fn.Size.Rate)
+				}
 			} else {
-				/* Create */
-				fdm.crl = xratelimit.MakeRL(fn.Size.Burst, fn.Size.Rate)
+				/* Remove */
+				fdm.crl = nil
 			}
-		} else {
-			/* Remove */
-			fdm.crl = nil
 		}
 	}
 
