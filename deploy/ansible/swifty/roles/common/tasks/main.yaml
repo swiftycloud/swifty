@@ -31,6 +31,13 @@
 - name: enable nfs
   service: name=nfs state=started enabled=yes
 
+- name: enable ntpdate
+  service: name=ntpdate state=started enabled=yes
+
+- name: set timezone to Europe/Moscow
+  timezone:
+    name: Europe/Moscow
+
 - name: check if go need to be installed
   command: go version
   register: go_version_result
