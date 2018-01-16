@@ -90,4 +90,5 @@
     openstack user create --project swyadmin --domain swifty --password {{ ks_swyadmin_pass }} swyadmin
     openstack role add --user-domain swifty --user swyadmin --project-domain swifty --project swyadmin swifty.admin
     openstack role add --user-domain swifty --user swyadmin --project-domain swifty --project swyadmin swifty.owner
+    openstack user set --project admin admin
   when: pike_installed.changed
