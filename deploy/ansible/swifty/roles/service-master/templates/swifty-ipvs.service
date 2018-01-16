@@ -1,0 +1,10 @@
+[Unit]
+Description=Swifty IPVS routing
+After=flanneld.service
+
+[Service]
+Type=simple
+ExecStart=/usr/sbin/ip r add {{ ipvs_master_net }}/{{ 24 }} dev flannel.1
+
+[Install]
+WantedBy=multi-user.target

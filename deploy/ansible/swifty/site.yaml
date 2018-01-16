@@ -20,6 +20,7 @@
   - keystone-master
   - mongo-master
   - rabbit-master
+  - service-master
 
 #
 # Setup slave nodes

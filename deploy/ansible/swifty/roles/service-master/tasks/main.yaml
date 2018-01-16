@@ -1,0 +1,9 @@
+---
+- name: install swifty-ipvs.service
+  template:
+    src:  templates/swifty-ipvs.service
+    dest: /usr/lib/systemd/system/swifty-ipvs.service
+    backup: yes
+
+- name: enable swifty-ipvs.service
+  service: name=swifty-ipvs state=started enabled=yes

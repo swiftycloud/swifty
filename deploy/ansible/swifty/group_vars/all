@@ -11,6 +11,10 @@ kube_cluster_ip_range: "16.18.0.0/16"
 kube_apiserver_port: 8080
 kube_master_node: "{{ groups['master'][0] }}"
 #
+# Routining for IPVS
+ipvs_master_net: "10.8.0.0"
+ipvs_master_mask: 24
+#
 # NFS sharing directories
 nfs_volume_dir: "/home/swifty-volume"
 nfs_master_node: "{{ groups['master'][0] }}"
