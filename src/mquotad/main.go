@@ -102,7 +102,7 @@ func main() {
 				"/etc/swifty/conf/mquotad.yaml",
 				"path to the configuration file")
 	flag.Parse()
-	if _, err := os.Stat(config_path); err == nil {
+	if _, err := os.Stat(conf_path); err == nil {
 		err = swy.ReadYamlConfig(conf_path, &conf)
 	}
 	if err != nil {

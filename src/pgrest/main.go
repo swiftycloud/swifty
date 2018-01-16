@@ -184,7 +184,7 @@ func main() {
 				"/etc/swifty/conf/pgrest.yaml",
 				"path to the configuration file")
 	flag.Parse()
-	if _, err := os.Stat(config_path); err == nil {
+	if _, err := os.Stat(conf_path); err == nil {
 		swy.ReadYamlConfig(conf_path, &conf)
 	}
 
