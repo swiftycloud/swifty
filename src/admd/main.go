@@ -38,10 +38,26 @@ var conf YAMLConf
 var gatesrv *http.Server
 var log *zap.SugaredLogger
 
+func handleCORS(w http.ResponseWriter, r *http.Request) bool {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+
+	if r.Method == http.MethodOptions {
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST")
+		w.Header().Set("Access-Control-Allow-Headers", "X-Subject-Token, Content-Type")
+		w.WriteHeader(http.StatusOK)
+	}
+
+	return r.Method == http.MethodOptions
+}
+
 func handleUserLogin(w http.ResponseWriter, r *http.Request) {
 	var params swyapi.UserLogin
 	var token string
 	var resp = http.StatusBadRequest
+
+	if handleCORS(w, r) {
+		return
+	}
 
 	err := swyhttp.ReadAndUnmarshalReq(r, &params)
 	if err != nil {
@@ -105,6 +121,10 @@ func handleUserInfo(w http.ResponseWriter, r *http.Request) {
 	var ui swyapi.UserInfo
 	var kui *swyks.KeystoneUser
 
+	if handleCORS(w, r) {
+		return
+	}
+
 	td, code, err := handleAdminReq(r, &ui)
 	if err != nil {
 		goto out
@@ -141,6 +161,10 @@ func handleListUsers(w http.ResponseWriter, r *http.Request) {
 	var params swyapi.ListUsers
 	var result *[]swyapi.UserInfo
 	var code = http.StatusBadRequest
+
+	if handleCORS(w, r) {
+		return
+	}
 
 	td, code, err := handleAdminReq(r, &params)
 	if err != nil {
@@ -221,6 +245,10 @@ func handleDelUser(w http.ResponseWriter, r *http.Request) {
 	var params swyapi.UserInfo
 	var code = http.StatusBadRequest
 
+	if handleCORS(w, r) {
+		return
+	}
+
 	td, code, err := handleAdminReq(r, &params)
 	if err != nil {
 		goto out
@@ -268,6 +296,10 @@ func handleAddUser(w http.ResponseWriter, r *http.Request) {
 	var params swyapi.AddUser
 	var code = http.StatusBadRequest
 
+	if handleCORS(w, r) {
+		return
+	}
+
 	td, code, err := handleAdminReq(r, &params)
 	if err != nil {
 		goto out
@@ -297,6 +329,10 @@ out:
 func handleSetPassword(w http.ResponseWriter, r *http.Request) {
 	var params swyapi.UserLogin
 	var code = http.StatusBadRequest
+
+	if handleCORS(w, r) {
+		return
+	}
 
 	td, code, err := handleAdminReq(r, &params)
 	if err != nil {
