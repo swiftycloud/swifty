@@ -1,7 +1,7 @@
 ---
 db:
         state: "swifty-s3"
-        address: "swy0:27017"
+        address: "{{ groups['master'][0] }}:27017"
         user: "swifty-s3"
         password: "MGOS3PASS"
 daemon:
