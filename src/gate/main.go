@@ -150,10 +150,27 @@ type YAMLConf struct {
 var conf YAMLConf
 var gatesrv *http.Server
 
+func handleCORS(w http.ResponseWriter, r *http.Request) bool {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+
+	if r.Method == http.MethodOptions {
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST")
+		w.Header().Set("Access-Control-Allow-Headers",
+			"X-Subject-Token, Content-Type, X-Relay-Tennant, X-Auth-Token")
+		w.WriteHeader(http.StatusOK)
+	}
+
+	return r.Method == http.MethodOptions
+}
+
 func handleUserLogin(w http.ResponseWriter, r *http.Request) {
 	var params swyapi.UserLogin
 	var token string
 	var resp = http.StatusBadRequest
+
+	if handleCORS(w, r) {
+		return
+	}
 
 	err := swyhttp.ReadAndUnmarshalReq(r, &params)
 	if err != nil {
@@ -577,6 +594,10 @@ func handleFunctionCall(w http.ResponseWriter, r *http.Request) {
 	var err error
 	var fmd *FnMemData
 
+	if handleCORS(w, r) {
+		return
+	}
+
 	fnId := mux.Vars(r)["fnid"]
 
 	code := http.StatusServiceUnavailable
@@ -848,6 +869,10 @@ func handleGenericReq(r *http.Request) (string, int, error) {
 
 func genReqHandler(cb func(w http.ResponseWriter, r *http.Request, tennant string) error) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if handleCORS(w, r) {
+			return
+		}
+
 		tennant, code, err := handleGenericReq(r)
 		if err == nil {
 			code = http.StatusBadRequest
