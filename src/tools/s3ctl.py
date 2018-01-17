@@ -19,6 +19,11 @@ def genBucketName():
 def genObjectName():
     return genRandomData(10)
 
+def json_get(key, data):
+    if key in data:
+        return data[key]
+    return None
+
 parser = argparse.ArgumentParser(prog='s3ctl.py')
 parser.add_argument('--admin-secret', dest = 'admin_secret',
                     help = 'access token to ented admin interface')
@@ -146,9 +151,9 @@ def readCreds():
 def loadCreds(args):
     creds = readCreds()
     if creds != None:
-        args.access_key_id = creds['access-key-id']
-        args.secret_key_id = creds['access-key-secret']
-        args.admin_secret = creds['admin-secret']
+        args.access_key_id = json_get('access-key-id', creds)
+        args.secret_key_id = json_get('access-key-secret', creds)
+        args.admin_secret = json_get('admin-secret', creds)
 
 if args.access_key_id == None:
     loadCreds(args)
