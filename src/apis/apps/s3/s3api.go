@@ -148,7 +148,6 @@ type S3MpuList struct {
 }
 
 type S3MpuPart struct {
-	XMLName			xml.Name			`xml:"ListPartsResultPart"`
 	PartNumber		int				`xml:"PartNumber"`
 	LastModified		string				`xml:"LastModified"`
 	ETag			string				`xml:"ETag"`
