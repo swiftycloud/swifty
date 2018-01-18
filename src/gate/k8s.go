@@ -9,6 +9,7 @@ import (
 	//metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1beta1 "k8s.io/client-go/pkg/apis/extensions/v1beta1"
 	"k8s.io/client-go/tools/clientcmd"
+	k8serr "k8s.io/client-go/pkg/api/errors"
 
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/pkg/fields"
@@ -63,6 +64,11 @@ func swk8sRemove(conf *YAMLConf, fn *FunctionDesc, fi *FnInst) error {
 	deploy := swk8sClientSet.Extensions().Deployments(v1.NamespaceDefault)
 	this, err := deploy.Get(depname)
 	if err != nil {
+		if k8serr.IsNotFound(err) {
+			log.Debugf("Deployment %s/%s doesn't exist", fn.SwoId.Str(), depname)
+			return nil
+		}
+
 		log.Errorf("Can't get deployment for %s", fn.SwoId.Str())
 		return err
 	}

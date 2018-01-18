@@ -430,7 +430,7 @@ func removeFunction(conf *YAMLConf, id *SwoId) error {
 
 	log.Debugf("Forget function %s", fn.SwoId.Str())
 
-	if !fn.OneShot && (fn.State == swy.DBFuncStateRdy) {
+	if !fn.OneShot && (fn.State != swy.DBFuncStateDea) {
 		err = swk8sRemove(conf, fn, fn.Inst())
 		if err != nil {
 			log.Errorf("remove deploy error: %s", err.Error())
