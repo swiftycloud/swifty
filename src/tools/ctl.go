@@ -279,7 +279,10 @@ func add_function(project string, args []string, opts [8]string) {
 
 	code.Lang = opts[0]
 
-	mw := strings.Split(opts[2], ",")
+	var mw []string
+	if opts[2] != "" {
+		mw = strings.Split(opts[2], ",")
+	}
 
 	evt := swyapi.FunctionEvent {}
 	if opts[3] != "" {
