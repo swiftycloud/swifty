@@ -11,6 +11,7 @@ import (
 	"os"
 	"fmt"
 	"errors"
+	"strings"
 
 	"../apis/apps"
 	"../common"
@@ -38,12 +39,26 @@ var conf YAMLConf
 var gatesrv *http.Server
 var log *zap.SugaredLogger
 
+var CORS_Headers = []string {
+	"Content-Type",
+	"Content-Length",
+	"X-Subject-Token",
+	"X-Auth-Token",
+}
+
+var CORS_Methods = []string {
+	http.MethodPost,
+	http.MethodGet,
+}
+
 func handleCORS(w http.ResponseWriter, r *http.Request) bool {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
 	if r.Method == http.MethodOptions {
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST")
-		w.Header().Set("Access-Control-Allow-Headers", "X-Subject-Token, Content-Type")
+		w.Header().Set("Access-Control-Allow-Methods",
+				strings.Join(CORS_Methods, ","))
+		w.Header().Set("Access-Control-Allow-Headers",
+				strings.Join(CORS_Headers, ","))
 		w.WriteHeader(http.StatusOK)
 	}
 
@@ -55,9 +70,7 @@ func handleUserLogin(w http.ResponseWriter, r *http.Request) {
 	var token string
 	var resp = http.StatusBadRequest
 
-	if handleCORS(w, r) {
-		return
-	}
+	if handleCORS(w, r) { return }
 
 	err := swyhttp.ReadAndUnmarshalReq(r, &params)
 	if err != nil {
@@ -121,9 +134,7 @@ func handleUserInfo(w http.ResponseWriter, r *http.Request) {
 	var ui swyapi.UserInfo
 	var kui *swyks.KeystoneUser
 
-	if handleCORS(w, r) {
-		return
-	}
+	if handleCORS(w, r) { return }
 
 	td, code, err := handleAdminReq(r, &ui)
 	if err != nil {
@@ -162,9 +173,7 @@ func handleListUsers(w http.ResponseWriter, r *http.Request) {
 	var result *[]swyapi.UserInfo
 	var code = http.StatusBadRequest
 
-	if handleCORS(w, r) {
-		return
-	}
+	if handleCORS(w, r) { return }
 
 	td, code, err := handleAdminReq(r, &params)
 	if err != nil {
@@ -245,9 +254,7 @@ func handleDelUser(w http.ResponseWriter, r *http.Request) {
 	var params swyapi.UserInfo
 	var code = http.StatusBadRequest
 
-	if handleCORS(w, r) {
-		return
-	}
+	if handleCORS(w, r) { return }
 
 	td, code, err := handleAdminReq(r, &params)
 	if err != nil {
@@ -296,9 +303,7 @@ func handleAddUser(w http.ResponseWriter, r *http.Request) {
 	var params swyapi.AddUser
 	var code = http.StatusBadRequest
 
-	if handleCORS(w, r) {
-		return
-	}
+	if handleCORS(w, r) { return }
 
 	td, code, err := handleAdminReq(r, &params)
 	if err != nil {
@@ -330,9 +335,7 @@ func handleSetPassword(w http.ResponseWriter, r *http.Request) {
 	var params swyapi.UserLogin
 	var code = http.StatusBadRequest
 
-	if handleCORS(w, r) {
-		return
-	}
+	if handleCORS(w, r) { return }
 
 	td, code, err := handleAdminReq(r, &params)
 	if err != nil {
