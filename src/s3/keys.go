@@ -22,11 +22,9 @@ const (
 	S3KeyStatusActive		= 2
 )
 
-// use swifty-s3
-// db.S3AccessKeys.insert({"_id":ObjectId("5a16ccdbb3e8ee4bdf83da35"),"key-id":ObjectId("5a16ccd7b3e8ee4bdf83da34"),"access-key-id":"6DLA43X797XL2I42IJ33","access-key-secret":"AJwz9vZpdnz6T5TqEDQOEFos6wxxCnW0qwLQeDcB"})
-
 var AccessKeyLetters = []byte("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
 var SecretKeyLetters = []byte("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789")
+
 
 func genKey(length int, dict []byte) (string) {
 	idx := make([]byte, length)
