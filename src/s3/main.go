@@ -121,20 +121,6 @@ var CORS_Methods = []string {
 	http.MethodHead,
 }
 
-func handleCORS(w http.ResponseWriter, r *http.Request) bool {
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-
-	if r.Method == http.MethodOptions {
-		w.Header().Set("Access-Control-Allow-Methods",
-				strings.Join(CORS_Methods, ","))
-		w.Header().Set("Access-Control-Allow-Headers",
-				strings.Join(CORS_Headers, ","))
-		w.WriteHeader(http.StatusOK)
-	}
-
-	return r.Method == http.MethodOptions
-}
-
 func formatRequest(prefix string, r *http.Request) string {
 	var request []string
 
@@ -191,7 +177,7 @@ func handleBucket(w http.ResponseWriter, r *http.Request) {
 	log.Debug(formatRequest(fmt.Sprintf("handleBucket: bucket %v",
 						bname), r))
 
-	if handleCORS(w, r) { return }
+	if swyhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
 
 	akey, err = s3VerifyAuthorization(r)
 	if err == nil {
@@ -310,7 +296,7 @@ func handleObject(w http.ResponseWriter, r *http.Request) {
 	log.Debug(formatRequest(fmt.Sprintf("handleObject: bucket %v object %v",
 						bname, oname), r))
 
-	if handleCORS(w, r) { return }
+	if swyhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
 
 	akey, err = s3VerifyAuthorization(r)
 	if err == nil {
@@ -627,7 +613,7 @@ func handleAdminOp(w http.ResponseWriter, r *http.Request) {
 	var op string = mux.Vars(r)["op"]
 	var err error
 
-	if handleCORS(w, r) { return }
+	if swyhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
 
 	err = s3VerifyAdmin(r)
 	if err != nil {
@@ -656,7 +642,7 @@ func handleAdminOp(w http.ResponseWriter, r *http.Request) {
 func handleNotify(w http.ResponseWriter, r *http.Request, subscribe bool) {
 	var params swys3api.S3Subscribe
 
-	if handleCORS(w, r) { return }
+	if swyhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
 
 	/* For now make it admin-only op */
 	err := s3VerifyAdmin(r)
