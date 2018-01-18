@@ -1,0 +1,172 @@
+swagger: '2.0'
+info:
+  version: 1.0.0
+  title: admd api
+host: 'localhost:8687'
+basePath: /v1
+schemes:
+  - https
+consumes:
+  - application/json
+produces:
+  - application/json
+paths:
+  /login:
+    post:
+      summary: Sign-in request
+      parameters:
+        - in: body
+          name: data
+          description: Credentials
+          required: true
+          schema:
+            $ref: '#/definitions/UserLogin'
+      responses:
+        '200':
+          description: OK
+          headers:
+            X-Subject-Token:
+              type: string
+              description: Auth token for further requests
+        '400':
+          description: Something went wrong
+        '401':
+          description: Bad username/pass
+  /users:
+    post:
+      summary: List users (admin)
+      parameters:
+        - in: header
+          name: X-Auth-Token
+          type: string
+          required: true
+      responses:
+        '200':
+          description: OK
+          schema:
+            properties:
+              users:
+                type: array
+                items:
+                  $ref: '#/definitions/UserInfo'
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad auth token
+  /userinfo:
+    post:
+      summary: Show user info by ID (admin or self)
+      parameters:
+        - in: header
+          name: X-Auth-Token
+          type: string
+          required: true
+        - in: body
+          name: data
+          description: ID of a user to get info for
+          required: true
+          schema:
+            $ref: '#/definitions/UserInfo'
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/UserInfo'
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad auth token
+  /adduser:
+    post:
+      summary: Add new user (admin or UI)
+      parameters:
+        - in: header
+          name: X-Auth-Token
+          type: string
+          required: true
+        - in: body
+          name: data
+          description: User description
+          required: true
+          schema:
+            $ref: '#/definitions/UserAdd'
+      responses:
+        '201':
+          description: OK
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad auth token
+  /deluser:
+    post:
+      summary: Del existing user (admin or self)
+      parameters:
+        - in: header
+          name: X-Auth-Token
+          type: string
+          required: true
+        - in: body
+          name: data
+          description: User description (id may be empty for self)
+          schema:
+            $ref: '#/definitions/UserInfo'
+      responses:
+        '204':
+          description: OK
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad auth token
+  /setpass:
+    post:
+      summary: Set user password (admin or self)
+      parameters:
+        - in: header
+          name: X-Auth-Token
+          type: string
+          required: true
+        - in: body
+          name: data
+          description: User description (username may be empty for self)
+          schema:
+            $ref: '#/definitions/UserLogin'
+      responses:
+        '201':
+          description: OK
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad auth token
+definitions:
+  UserLogin:
+    required:
+      - password
+    properties:
+      username:
+        type: string
+        example: john@doe.com
+      password:
+        type: string
+        example: secretpass123
+  UserInfo:
+    properties:
+      id:
+        type: string
+        example: john@doe.com
+      name:
+        type: string
+        example: John Doe
+  UserAdd:
+    required:
+      - id
+      - pass
+    properties:
+      id:
+        type: string
+        example: john@doe.com
+      pass:
+        type: string
+        example: pAs$w0rd
+      name:
+        type: string
+        example: John Doe

@@ -307,7 +307,7 @@ func handleAddUser(w http.ResponseWriter, r *http.Request) {
 
 	/* User can be added by admin or UI */
 	code = http.StatusForbidden
-	if !swyks.KeystoneRoleHas(td, swyks.SwyAdminRole) && !swyks.KeystoneRoleHas(td, swyks.SwyUserRole) {
+	if !swyks.KeystoneRoleHas(td, swyks.SwyAdminRole) && !swyks.KeystoneRoleHas(td, swyks.SwyUIRole) {
 		goto out
 	}
 
