@@ -594,10 +594,6 @@ func handleFunctionCall(w http.ResponseWriter, r *http.Request) {
 	var err error
 	var fmd *FnMemData
 
-	if handleCORS(w, r) {
-		return
-	}
-
 	fnId := mux.Vars(r)["fnid"]
 
 	code := http.StatusServiceUnavailable
