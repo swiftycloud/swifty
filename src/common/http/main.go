@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
+	"strings"
 	"bytes"
 	"time"
 	"fmt"
@@ -16,6 +17,24 @@ type RestReq struct {
 	Timeout		uint
 	Headers		map[string]string
 	Success		int
+}
+
+func SetCORS(w http.ResponseWriter, methods []string, headers []string) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", strings.Join(methods, ","))
+	w.Header().Set("Access-Control-Allow-Headers", strings.Join(headers, ","))
+	w.Header().Set("Access-Control-Expose-Headers", strings.Join(headers, ","))
+}
+
+func HandleCORS(w http.ResponseWriter, r *http.Request, methods []string, headers []string) bool {
+	SetCORS(w, methods, headers)
+
+	if r.Method == http.MethodOptions {
+		w.WriteHeader(http.StatusOK)
+		return true
+	}
+
+	return false
 }
 
 func ReadAndUnmarshalReq(r *http.Request, data interface{}) error {
