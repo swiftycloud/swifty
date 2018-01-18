@@ -136,9 +136,11 @@ conf_path = "~/.swysecrets/s3ctl.json"
 def saveCreds(args):
     try:
         with open(os.path.expanduser(conf_path), "w") as f:
-            creds = {'access-key-id': args.access_key_id,
-                     'access-key-secret': args.secret_key_id,
-                     'admin-secret': args.admin_secret}
+            creds = {
+                'access-key-id': args.access_key_id,
+                'access-key-secret': args.secret_key_id,
+                'admin-secret': args.admin_secret,
+            }
             f.write(json.dumps(creds))
             f.close()
             os.chmod(os.path.expanduser(conf_path), 0o600)
@@ -154,15 +156,14 @@ def readCreds():
     except:
         return None
 
-def loadCreds(args):
-    creds = readCreds()
-    if creds != None:
+creds = readCreds()
+if creds != None:
+    if not args.access_key_id:
         args.access_key_id = json_get('access-key-id', creds)
+    if not args.secret_key_id:
         args.secret_key_id = json_get('access-key-secret', creds)
+    if not args.admin_secret:
         args.admin_secret = json_get('admin-secret', creds)
-
-if args.access_key_id == None:
-    loadCreds(args)
 
 def resp_error(cmd, resp):
     if resp != None:
