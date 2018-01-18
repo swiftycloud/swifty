@@ -178,6 +178,7 @@ func dbFuncUpdateAdded(fn *FunctionDesc) error {
 				"src.version": fn.Src.Version,
 				"cronid": fn.CronID,
 				"oneshot": fn.OneShot,
+				"state": fn.State,
 				"urlcall": fn.URLCall,
 			}})
 	if err != nil {
@@ -281,7 +282,7 @@ func logRemove(fn *FunctionDesc) error {
 func dbBalancerRSListVersions(fn *FunctionDesc) ([]string, error) {
 	var fv []string
 	c := dbSession.DB(dbState).C(DBColBalancerRS)
-	err := c.Find(bson.M{"fnid": fn.Cookie}).Distinct("fnversion", &fv)
+	err := c.Find(bson.M{"fnid": fn.Cookie, "instance": swy.SwyPodInstRun}).Distinct("fnversion", &fv)
 	return fv, err
 }
 
@@ -311,6 +312,7 @@ func dbBalancerPodFindExact(fnid, version string) (*BalancerRS) {
 	c := dbSession.DB(dbState).C(DBColBalancerRS)
 	err := c.Find(bson.M{
 			"fnid":		fnid,
+			"instance":	swy.SwyPodInstRun,
 			"fnversion":	version,
 		}).One(&v)
 	if err != nil {
@@ -345,12 +347,14 @@ func dbBalancerPodFindAll(link *BalancerLink) ([]BalancerRS) {
 }
 
 func dbBalancerPodAdd(link *BalancerLink, pod *k8sPod) error {
+	log.Debugf("ADD FOR %s %s", link.FnId, pod.Instance)
 	c := dbSession.DB(dbState).C(DBColBalancerRS)
 	err := c.Insert(bson.M{
 			"balancerid":	link.ObjID,
 			"uid":		pod.UID,
 			"wdogaddr":	pod.WdogAddr,
 			"fnid":		link.FnId,
+			"instance":	pod.Instance,
 			"fnversion":	pod.Version,
 		})
 	if err != nil {
