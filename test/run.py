@@ -66,6 +66,7 @@ def _wait_fn(name):
 		inf = _get_inf_fn(name)
 		if inf['State'] == 'ready':
 			return inf
+		print("  `- %s" % inf['State'])
 		tmo *= 2
 
 def run_fn(inf, args):
@@ -113,7 +114,7 @@ def update(lang, opts):
 	if ret['message'] == 'hw:%s:%s' % (lang, cookie):
 		upd_fn(inf, lang)
 		tmo = 0.5
-		while tmo < 12.0:
+		while tmo < 32.0:
 			ret = run_fn(inf, {'name': cookie})
 			print(ret)
 			if ret['message'] == 'hw:%s:%s' % (lang, cookie):
@@ -276,7 +277,7 @@ def checkempty(lang, opts):
 
 tests = [
 	(helloworld,	["python", "golang"]),
-	(update,	["python"]),
+	(update,	["python", "golang"]),
 	(pgsql,		["python"]),
 	(maria,		["python"]),
 	(mongo,		["python"]),
