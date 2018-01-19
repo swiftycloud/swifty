@@ -283,7 +283,7 @@ tests = [
 	(mongo,		["python"]),
 	(s3,		["python"]),
 	(s3notify,	["python"]),
-	(timeout,	["python"]),
+	(timeout,	["python", "golang"]),
 	(checkempty,	[""]),
 ]
 
