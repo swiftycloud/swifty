@@ -37,17 +37,18 @@ func (upload *S3Upload)dbSetState(state uint32) (error) {
 	return upload.dbSet(
 			bson.M{"_id": upload.ObjID,
 				"state": bson.M{"$in": s3StateTransition[state]}},
-			bson.M{"state": state})
+			bson.M{"$set": bson.M{"state": state}})
 }
 
 func (upload *S3Upload)dbSetStateComplete(state uint32, etag string, parts, size int64) (error) {
 	return upload.dbSet(
 			bson.M{"_id": upload.ObjID,
 				"state": bson.M{"$in": s3StateTransition[state]}},
-			bson.M{"state": state,
-				"parts": parts,
-				"size": size,
-				"etag": etag})
+			bson.M{"$set":
+				bson.M{"state": state,
+					"parts": parts,
+					"size": size,
+					"etag": etag}})
 }
 
 // FIXME What to do if one start uploadin parts and
@@ -158,6 +159,7 @@ func s3UploadFini(bucket *S3Bucket, uid string, compete *swys3api.S3MpuFiniParts
 	}
 
 	res.Bucket	= bucket.Name
+	res.Key		= upload.Key
 
 	h := md5.New()
 
