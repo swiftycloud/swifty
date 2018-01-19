@@ -352,14 +352,14 @@ if args.cmd == 'object-part-fini':
         parts = []
         for x in args.list.split(","):
             y = x.split(":")
-            parts.append({'PartNumber': int(y[1]), 'ETag': y[0]})
+            parts.append({'PartNumber': int(y[0]), 'ETag': y[1]})
         resp = s3.complete_multipart_upload(Bucket = args.name, Key = args.key,
                                             MultipartUpload = {'Parts': parts},
                                             UploadId = args.id)
         if 'Bucket' in resp:
             print("\tBucket %s Key %s ETag %s" % (resp['tBucket'], resp['Key'], resp['ETag']))
     except:
-        print("ERROR: Can't initiate multipart upload")
+        print("ERROR: Can't finalize multipart upload")
 
 if args.cmd == 'object-part-list':
     print("List uploading parts %s" % (args.name))
