@@ -94,13 +94,19 @@ class Runner:
         self._makeQnP()
         self.start()
 
+    def stdout(self):
+        return "".join(self.pin.readlines())
+    def stderr(self):
+        return "".join(self.pine.readlines())
+
     def try_call_fn(self, start, args):
         print("Call with args: %r" % args)
         self.runq.put(args)
         try:
-            res = self.resq.get(self.fntmo)
-            fout = "".join(self.pin.readlines())
-            ferr = "".join(self.pine.readlines())
+            print("`- timeout %r" % self.fntmo)
+            res = self.resq.get(timeout = self.fntmo)
+            fout = self.stdout()
+            ferr = self.stderr()
             print("Result: %s" % res)
             print("Out:    %s" % fout)
         except queue.Empty as ex:
