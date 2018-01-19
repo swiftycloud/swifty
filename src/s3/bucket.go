@@ -68,8 +68,8 @@ type S3Bucket struct {
 	MaxBytes			int64		`json:"max-bytes" bson:"max-bytes"`
 }
 
-func (bucket *S3Bucket)ObjectBID(oname string, part, version int) string {
-	return bucket.BackendID + "-" + fmt.Sprintf("%d-%d", part, version) + "-" + oname
+func (bucket *S3Bucket)ObjectBID(oname string, version int) string {
+	return bucket.BackendID + "-" + fmt.Sprintf("%d", version) + "-" + oname
 }
 
 func (bucket *S3Bucket)dbRemove() (error) {

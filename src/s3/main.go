@@ -379,7 +379,7 @@ func handleObject(w http.ResponseWriter, r *http.Request) {
 					"Failed to unmarshal body")
 				return
 			}
-			resp, err := s3UploadFini(bucket,
+			resp, err := s3UploadFini(iam.Namespace, bucket,
 					r.URL.Query()["uploadId"][0], &complete)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusBadRequest)
@@ -431,9 +431,7 @@ func handleObject(w http.ResponseWriter, r *http.Request) {
 
 		var object *S3Object
 		// Create new object
-		object, err = s3InsertObject(bucket, oname,
-						"", 0, 1,
-						object_size, acl)
+		object, err = s3InsertObject(bucket, oname, 1, object_size, acl)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
@@ -475,7 +473,7 @@ func handleObject(w http.ResponseWriter, r *http.Request) {
 			}
 		} else {
 			// Delete a bucket
-			err = s3DeleteObject(bucket, oname, 0, 1)
+			err = s3DeleteObject(bucket, oname, 0)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusBadRequest)
 				return
