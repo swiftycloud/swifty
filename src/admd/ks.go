@@ -7,19 +7,16 @@ import (
 	"../common/keystone"
 )
 
-var ksToken string
+var ksClient *swyks.KsClient
 var ksSwyDomainId string
 var ksSwyOwnerRole string
 
 func keystoneGetDomainId(conf *YAMLConfKeystone) (string, error) {
 	var doms swyks.KeystoneDomainsResp
 
-	log.Debugf("Domains w/ token %s", ksToken)
-	err := swyks.KeystoneMakeReq(&swyks.KeystoneReq {
+	err := ksClient.MakeReq(&swyks.KeystoneReq {
 			Type:	"GET",
-			Addr:	conf.Addr,
 			URL:	"domains",
-			Token:	ksToken,
 			Succ:	http.StatusOK, }, nil, &doms)
 	if err != nil {
 		return "", err
@@ -39,11 +36,9 @@ func keystoneGetDomainId(conf *YAMLConfKeystone) (string, error) {
 func keystoneGetOwnerRoleId(conf *YAMLConfKeystone) (string, error) {
 	var roles swyks.KeystoneRolesResp
 
-	err := swyks.KeystoneMakeReq(&swyks.KeystoneReq {
+	err := ksClient.MakeReq(&swyks.KeystoneReq {
 			Type:	"GET",
-			Addr:	conf.Addr,
 			URL:	"roles",
-			Token:	ksToken,
 			Succ:	http.StatusOK, }, nil, &roles)
 	if err != nil {
 		return "", err
@@ -64,11 +59,9 @@ func ksListUsers(conf *YAMLConfKeystone) (*[]swyapi.UserInfo, error) {
 	var users swyks.KeystoneUsersResp
 	var res []swyapi.UserInfo
 
-	err := swyks.KeystoneMakeReq(&swyks.KeystoneReq {
+	err := ksClient.MakeReq(&swyks.KeystoneReq {
 			Type:	"GET",
-			Addr:	conf.Addr,
 			URL:	"users",
-			Token:	ksToken,
 			Succ:	http.StatusOK, }, nil, &users)
 	if err != nil {
 		return nil, err
@@ -88,12 +81,10 @@ func ksListUsers(conf *YAMLConfKeystone) (*[]swyapi.UserInfo, error) {
 func ksAddUserAndProject(conf *YAMLConfKeystone, user *swyapi.AddUser) error {
 	var presp swyks.KeystoneProjectAdd
 
-	err := swyks.KeystoneMakeReq(
+	err := ksClient.MakeReq(
 		&swyks.KeystoneReq {
 			Type:	"POST",
-			Addr:	conf.Addr,
 			URL:	"projects",
-			Token:	ksToken,
 			Succ:	http.StatusCreated, },
 		&swyks.KeystoneProjectAdd {
 			Project: swyks.KeystoneProject {
@@ -110,12 +101,10 @@ func ksAddUserAndProject(conf *YAMLConfKeystone, user *swyapi.AddUser) error {
 
 	var uresp swyks.KeystonePassword
 
-	err = swyks.KeystoneMakeReq(
+	err = ksClient.MakeReq(
 		&swyks.KeystoneReq {
 			Type:	"POST",
-			Addr:	conf.Addr,
 			URL:	"users",
-			Token:	ksToken,
 			Succ:	http.StatusCreated, },
 		&swyks.KeystonePassword {
 			User: swyks.KeystoneUser {
@@ -132,11 +121,9 @@ func ksAddUserAndProject(conf *YAMLConfKeystone, user *swyapi.AddUser) error {
 
 	log.Debugf("Added user %s (id %s)", uresp.User.Name, uresp.User.Id[:8])
 
-	err = swyks.KeystoneMakeReq(&swyks.KeystoneReq {
+	err = ksClient.MakeReq(&swyks.KeystoneReq {
 			Type:	"PUT",
-			Addr:	conf.Addr,
 			URL:	"projects/" + presp.Project.Id + "/users/" + uresp.User.Id + "/roles/" + ksSwyOwnerRole,
-			Token:	ksToken,
 			Succ:	http.StatusNoContent, }, nil, nil)
 	if err != nil {
 		return fmt.Errorf("Can't assign role: %s", err.Error())
@@ -148,12 +135,10 @@ func ksAddUserAndProject(conf *YAMLConfKeystone, user *swyapi.AddUser) error {
 func ksGetUserInfo(conf *YAMLConfKeystone, user string) (*swyks.KeystoneUser, error) {
 	var uresp swyks.KeystoneUsersResp
 
-	err := swyks.KeystoneMakeReq(
+	err := ksClient.MakeReq(
 		&swyks.KeystoneReq {
 			Type:	"GET",
-			Addr:	conf.Addr,
 			URL:	"users?name=" + user,
-			Token:	ksToken,
 			Succ:	http.StatusOK, },
 		nil, &uresp)
 	if err != nil {
@@ -169,12 +154,10 @@ func ksGetUserInfo(conf *YAMLConfKeystone, user string) (*swyks.KeystoneUser, er
 func ksGetProjectInfo(conf *YAMLConfKeystone, project string) (*swyks.KeystoneProject, error) {
 	var presp swyks.KeystoneProjectsResp
 
-	err := swyks.KeystoneMakeReq(
+	err := ksClient.MakeReq(
 		&swyks.KeystoneReq {
 			Type:	"GET",
-			Addr:	conf.Addr,
 			URL:	"projects?name=" + project,
-			Token:	ksToken,
 			Succ:	http.StatusOK, },
 		nil, &presp)
 	if err != nil {
@@ -194,12 +177,10 @@ func ksChangeUserPass(conf *YAMLConfKeystone, up *swyapi.UserLogin) error {
 	}
 
 	log.Debugf("Change pass for %s/%s", up.UserName, uinf.Id)
-	err = swyks.KeystoneMakeReq(
+	err = ksClient.MakeReq(
 		&swyks.KeystoneReq {
 			Type:	"PATCH",
-			Addr:	conf.Addr,
 			URL:	"users/" + uinf.Id,
-			Token:	ksToken,
 			Succ:	http.StatusOK, },
 		&swyks.KeystonePassword {
 			User: swyks.KeystoneUser {
@@ -221,12 +202,10 @@ func ksDelUserAndProject(conf *YAMLConfKeystone, ui *swyapi.UserInfo) error {
 		return err
 	}
 
-	err = swyks.KeystoneMakeReq(
+	err = ksClient.MakeReq(
 		&swyks.KeystoneReq {
 			Type:	"DELETE",
-			Addr:	conf.Addr,
 			URL:	"users/" + uinf.Id,
-			Token:	ksToken,
 			Succ:	http.StatusNoContent, }, nil, nil)
 	if err != nil {
 		return err
@@ -237,12 +216,10 @@ func ksDelUserAndProject(conf *YAMLConfKeystone, ui *swyapi.UserInfo) error {
 		return err
 	}
 
-	err = swyks.KeystoneMakeReq(
+	err = ksClient.MakeReq(
 		&swyks.KeystoneReq {
 			Type:	"DELETE",
-			Addr:	conf.Addr,
 			URL:	"projects/" + pinf.Id,
-			Token:	ksToken,
 			Succ:	http.StatusNoContent, }, nil, nil)
 	if err != nil {
 		return err
@@ -255,7 +232,7 @@ func ksInit(conf *YAMLConfKeystone) error {
 	var err error
 
 	log.Debugf("Logging in")
-	ksToken, err = swyks.KeystoneAuthWithPass(conf.Addr, "default",
+	ksClient, err = swyks.KeystoneConnect(conf.Addr, "default",
 				&swyapi.UserLogin{UserName: conf.Admin, Password: admdSecrets[conf.Pass]})
 	if err != nil {
 		return err

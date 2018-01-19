@@ -100,24 +100,32 @@ func KeystoneRoleHas(td *KeystoneTokenData, wrole string) bool {
 	return false
 }
 
-type KeystoneReq struct {
-	Type		string
-	Addr		string
-	URL		string
-	Token		string
-	Succ		int
+type KsClient struct {
+	addr	string
+	domain	string
+	user	string
+	pass	string
+	Token	string
 }
 
-func KeystoneMakeReq(ksreq *KeystoneReq, in interface{}, out interface{}) error {
+type KeystoneReq struct {
+	Type		string
+	URL		string
+	Succ		int
+
+	outToken	string
+}
+
+func (kc *KsClient)MakeReq(ksreq *KeystoneReq, in interface{}, out interface{}) error {
 	headers := make(map[string]string)
-	if ksreq.Token != "" {
-		headers["X-Auth-Token"] = ksreq.Token
+	if kc.Token != "" {
+		headers["X-Auth-Token"] = kc.Token
 	}
 
 	resp, err := swyhttp.MarshalAndPost(
 			&swyhttp.RestReq{
 				Method:  ksreq.Type,
-				Address: "http://" + ksreq.Addr + "/v3/" + ksreq.URL,
+				Address: "http://" + kc.addr + "/v3/" + ksreq.URL,
 				Headers: headers,
 				Success: ksreq.Succ,
 			}, in)
@@ -126,7 +134,7 @@ func KeystoneMakeReq(ksreq *KeystoneReq, in interface{}, out interface{}) error 
 	}
 
 	defer resp.Body.Close()
-	ksreq.Token = resp.Header.Get("X-Subject-Token")
+	ksreq.outToken = resp.Header.Get("X-Subject-Token")
 
 	if out != nil {
 		err = swyhttp.ReadAndUnmarshalResp(resp, out)
@@ -141,14 +149,15 @@ func KeystoneMakeReq(ksreq *KeystoneReq, in interface{}, out interface{}) error 
 func KeystoneGetTokenData(addr, token string) (*KeystoneTokenData, int) {
 	var out KeystoneAuthResp
 
+	kc := &KsClient { addr: addr, }
+
 	req := KeystoneReq {
 		Type:		"POST",
-		Addr:		addr,
 		URL:		"auth/tokens",
 		Succ:		201,
 	}
 
-	err := KeystoneMakeReq(&req, &KeystoneAuthReq {
+	err := kc.MakeReq(&req, &KeystoneAuthReq {
 		Auth: KeystoneAuth{
 			Identity: KeystoneIdentity{
 				Methods: []string{"token"},
@@ -164,14 +173,15 @@ func KeystoneGetTokenData(addr, token string) (*KeystoneTokenData, int) {
 }
 
 func KeystoneAuthWithPass(addr, domain string, up *swyapi.UserLogin) (string, error) {
+	kc := &KsClient { addr: addr, }
+
 	req := KeystoneReq {
 		Type:		"POST",
-		Addr:		addr,
 		URL:		"auth/tokens",
 		Succ:		201,
 	}
 
-	err := KeystoneMakeReq(&req, &KeystoneAuthReq {
+	err := kc.MakeReq(&req, &KeystoneAuthReq {
 		Auth: KeystoneAuth{
 			Identity: KeystoneIdentity{
 				Methods: []string{"password"},
@@ -184,5 +194,21 @@ func KeystoneAuthWithPass(addr, domain string, up *swyapi.UserLogin) (string, er
 						Password: up.Password,
 					}, }, }, },
 				}, nil)
-	return req.Token, err
+
+	return req.outToken, err
+}
+
+func KeystoneConnect(addr, domain string, up *swyapi.UserLogin) (*KsClient, error) {
+	token, err := KeystoneAuthWithPass(addr, domain, up)
+	if err != nil {
+		return nil, err
+	}
+
+	return &KsClient {
+		addr:		addr,
+		domain:		domain,
+		user:		up.UserName,
+		pass:		up.Password,
+		Token:		token,
+	}, nil
 }
