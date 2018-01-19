@@ -357,7 +357,7 @@ if args.cmd == 'object-part-fini':
                                             MultipartUpload = {'Parts': parts},
                                             UploadId = args.id)
         if 'Bucket' in resp:
-            print("\tBucket %s Key %s ETag %s" % (resp['tBucket'], resp['Key'], resp['ETag']))
+            print("\tBucket %s Key %s ETag %s" % (resp['Bucket'], resp['Key'], resp['ETag']))
     except:
         print("ERROR: Can't finalize multipart upload")
 
