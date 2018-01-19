@@ -116,7 +116,12 @@ class Runner:
 
         if res["res"] != "ok":
             print("Error running FN")
-            return { 'return': res["res"], 'code': 500 }
+            return {
+                'return': res["res"],
+                'code': 500,
+                'stdout': fout,
+                'stderr': ferr,
+            }
 
         return { 'return': res["retj"],
                 'code': 0,
