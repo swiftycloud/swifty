@@ -26,7 +26,7 @@ const (
 const (
 	S3StogateMaxObjects		= int64(10000)
 	S3StogateMaxBytes		= int64(100 << 20)
-	S3StorageSizePerObj		= int64(8 << 20)
+	S3StorageSizePerObj		= int64(16 << 20)
 )
 
 var s3StateTransition = map[uint32][]uint32 {
