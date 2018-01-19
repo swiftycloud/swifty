@@ -7,6 +7,7 @@ import (
 	"crypto/sha256"
 	"crypto/md5"
 	"encoding/hex"
+	"sort"
 	"time"
 	"fmt"
 
@@ -144,10 +145,16 @@ func s3UploadPart(namespace string, bucket *S3Bucket, oname,
 	return etag, nil
 }
 
+type S3ObjectByPart []S3Object
+
+func (o S3ObjectByPart) Len() int           { return len(o) }
+func (o S3ObjectByPart) Swap(i, j int)      { o[i], o[j] = o[j], o[i] }
+func (o S3ObjectByPart) Less(i, j int) bool { return o[i].Part < o[j].Part }
+
 func s3UploadFini(bucket *S3Bucket, uid string, compete *swys3api.S3MpuFiniParts) (*swys3api.S3MpuFini, error) {
+	var partno, parts, size int64
 	var res swys3api.S3MpuFini
 	var objects []S3Object
-	var parts, size int64
 	var upload S3Upload
 	var err error
 
@@ -173,8 +180,20 @@ func s3UploadFini(bucket *S3Bucket, uid string, compete *swys3api.S3MpuFiniParts
 				uid, err.Error())
 		return nil, err
 	} else {
+		sort.Sort(S3ObjectByPart(objects))
+		partno = 0
+
 		for _, obj := range objects {
 			var data []byte
+
+			if partno != int64(obj.Part - 1) {
+				err = fmt.Errorf("upload %s unexpected part %d",
+						uid, obj.Part)
+				log.Errorf("s3: Uload verification failed: %s",
+						err.Error())
+				return nil, err
+			}
+			partno = int64(obj.Part)
 
 			parts++
 			size += obj.Size
