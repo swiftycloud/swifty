@@ -1,6 +1,7 @@
 package swyks
 
 import (
+	"sync"
 	"net/http"
 	"../http"
 	"../../apis/apps"
@@ -106,6 +107,7 @@ type KsClient struct {
 	user	string
 	pass	string
 	Token	string
+	lock	sync.Mutex
 }
 
 type KeystoneReq struct {
@@ -116,10 +118,31 @@ type KeystoneReq struct {
 	outToken	string
 }
 
+func tryRefreshToken(kc *KsClient, token string) error {
+	var err error
+
+	kc.lock.Lock()
+	defer kc.lock.Unlock()
+
+	/* We might have raced with another updater */
+	if kc.Token == token {
+		token, err = KeystoneAuthWithPass(kc.addr, kc.domain,
+				&swyapi.UserLogin{ UserName: kc.user, Password: kc.pass })
+		if err == nil {
+			kc.Token = token
+		}
+	}
+
+	return err
+}
+
 func (kc *KsClient)MakeReq(ksreq *KeystoneReq, in interface{}, out interface{}) error {
+	var cToken string
 	headers := make(map[string]string)
+retry:
 	if kc.Token != "" {
-		headers["X-Auth-Token"] = kc.Token
+		cToken = kc.Token
+		headers["X-Auth-Token"] = cToken
 	}
 
 	resp, err := swyhttp.MarshalAndPost(
@@ -130,6 +153,13 @@ func (kc *KsClient)MakeReq(ksreq *KeystoneReq, in interface{}, out interface{}) 
 				Success: ksreq.Succ,
 			}, in)
 	if err != nil {
+		if resp != nil && resp.StatusCode == http.StatusUnauthorized && cToken != "" {
+			/* Token has expired. Refresh one */
+			err = tryRefreshToken(kc, cToken)
+			if err == nil {
+				goto retry
+			}
+		}
 		return err
 	}
 
