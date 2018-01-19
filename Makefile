@@ -122,6 +122,7 @@ all: $(all-y)
 swifty/python: src/wdog/main.py kubectl/docker/images/python/Dockerfile
 	$(call msg-gen,$@)
 	$(Q) $(CP) src/wdog/main.py  kubectl/docker/images/python/swy-wdog
+	$(Q) $(CP) src/wdog/lib.py kubectl/docker/images/python/swifty.py
 	$(Q) $(MAKE) -C kubectl/docker/images/python all
 .PHONY: swifty/python
 
