@@ -1,4 +1,5 @@
 import pymysql.cursors
+from pymongo import MongoClient
 import os
 
 _swiftyMariaConn = None
@@ -18,3 +19,18 @@ def MariaConn(mwname):
                 cursorclass=pymysql.cursors.DictCursor)
 
     return _swiftyMariaConn
+
+_swiftyMongoClient = None
+
+def MongoDatabase(mwname):
+    global _swiftyMongoClient
+    mwn = mwname.upper()
+    dbname = os.getenv('MWARE_' + mwn + '_DBNAME')
+    if _swiftyMongoClient == None:
+        dbaddr = os.getenv('MWARE_' + mwn + '_ADDR')
+        dbuser = os.getenv('MWARE_' + mwn + '_USER')
+        dbpass = os.getenv('MWARE_' + mwn + '_PASS')
+        connstr = 'mongodb://%s:%s@%s/%s' % (dbuser, dbpass, dbaddr, dbname)
+        _swiftyMongoClient = MongoClient(connstr)
+
+    return _swiftyMongoClient[dbname]
