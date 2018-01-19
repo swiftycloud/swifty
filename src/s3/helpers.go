@@ -2,10 +2,17 @@ package main
 
 import (
 	"crypto/sha256"
+	"crypto/md5"
 	"encoding/xml"
 	"encoding/hex"
 	"net/http"
 )
+
+func md5sum(s []byte) string {
+	h := md5.New()
+	h.Write([]byte(s))
+	return hex.EncodeToString(h.Sum(nil))
+}
 
 func sha256sum(s []byte) string {
 	h := sha256.New()
