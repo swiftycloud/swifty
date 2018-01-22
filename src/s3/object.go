@@ -223,7 +223,7 @@ func s3DeleteObjectFound(bucket *S3Bucket, objectFound *S3Object) error {
 		if err == mgo.ErrNotFound {
 			return nil
 		}
-		log.Errorf("s3: Can't disable object %s: %s", objectFound.Key, err.Error())
+		log.Errorf("s3: Can't disable object %s: %s", objectFound.BackendID, err.Error())
 		return err
 	}
 
@@ -277,7 +277,8 @@ func s3DeleteObject(bucket *S3Bucket, oname string, version int) error {
 		if err == mgo.ErrNotFound {
 			return nil
 		}
-		log.Errorf("s3: Can't find object %s: %s", oname, err.Error())
+		log.Errorf("s3: Can't find object %s/%s: %s",
+				bucket.Name, oname, err.Error())
 		return err
 	}
 
@@ -296,7 +297,7 @@ func s3ReadObjectData(bucket *S3Bucket, object *S3Object) ([]byte, error) {
 				return nil, err
 			}
 			log.Errorf("s3: Can't find object stored %s: %s",
-					object.Key, err.Error())
+					object.BackendID, err.Error())
 			return nil, err
 		}
 		res = objd.Data
@@ -322,7 +323,7 @@ func s3ReadObject(bucket *S3Bucket, oname string, part, version int) ([]byte, er
 			return nil, err
 		}
 		log.Errorf("s3: Can't find object %s: %s",
-				oname, err.Error())
+				object.BackendID, err.Error())
 		return nil, err
 	}
 
