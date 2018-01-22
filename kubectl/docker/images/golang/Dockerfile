@@ -1,7 +1,7 @@
 FROM golang:latest
 
 WORKDIR /home
-
+RUN go get github.com/go-sql-driver/mysql
 COPY swy-wdog /usr/bin/
 RUN chmod +x /usr/bin/swy-wdog
 COPY runner.go /go/src/swyrunner/
