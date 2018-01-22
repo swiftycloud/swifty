@@ -114,6 +114,13 @@ func s3UploadPart(namespace string, bucket *S3Bucket, oname,
 		return "", err
 	}
 
+	if int64(len(data)) > cachedObjSize {
+		err = fmt.Errorf("upload part is too big")
+		log.Errorf("s3: Can't insert upload %s object %s part %d: %s",
+				upload.UploadID, oname, part.Part, err.Error())
+		return "", err
+	}
+
 	part = S3UploadPart{
 		S3ObjectPorps: S3ObjectPorps {
 			CreationTime:	time.Now().Format(time.RFC3339),
