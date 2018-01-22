@@ -41,5 +41,5 @@ func (iam *S3Iam)BucketBID(bname string) string {
 
 // Object key in backend and index in DB for lookup
 func (bucket *S3Bucket)ObjectBID(oname string, version int) string {
-	return bucket.BackendID + "-" + strconv.Itoa(version) + "-" + oname
+	return sha256sum([]byte(bucket.BackendID + oname + strconv.Itoa(version)))
 }
