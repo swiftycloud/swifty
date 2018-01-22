@@ -23,7 +23,6 @@ var ObjectAcls = []string {
 type S3ObjectData struct {
 	ObjID				bson.ObjectId	`bson:"_id,omitempty"`
 	ObjectObjID			bson.ObjectId	`bson:"object-id,omitempty"`	// S3Object
-	State				uint32		`json:"state" bson:"state"`
 	Size				int64		`json:"size" bson:"size"`
 	Data				[]byte		`bson:"data,omitempty"`
 }
