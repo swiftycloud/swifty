@@ -22,7 +22,7 @@ var ObjectAcls = []string {
 
 type S3ObjectData struct {
 	ObjID				bson.ObjectId	`bson:"_id,omitempty"`
-	ObjectObjID			bson.ObjectId	`bson:"object-id,omitempty"`	// S3Object
+	RefID				bson.ObjectId	`bson:"ref-id,omitempty"`
 	Size				int64		`json:"size" bson:"size"`
 	Data				[]byte		`bson:"data,omitempty"`
 }
@@ -55,18 +55,13 @@ type S3Object struct {
 }
 
 func (objd *S3ObjectData)dbRemove() (error) {
-	return dbS3Remove(
-			objd,
-			bson.M{"_id": objd.ObjID},
-		)
+	return dbS3Remove(objd, bson.M{"_id": objd.ObjID})
 }
 
-func (objd *S3ObjectData)dbFind(object *S3Object) (*S3ObjectData, error) {
+func (objd *S3ObjectData)dbFind(refID bson.ObjectId) (*S3ObjectData, error) {
 	var res S3ObjectData
 
-	err := dbS3FindOne(
-			bson.M{"object-id": object.ObjID},
-			&res)
+	err := dbS3FindOne(bson.M{"ref-id": refID}, &res)
 	if err != nil {
 		return nil, err
 	}
@@ -160,7 +155,7 @@ func s3CommitObject(namespace string, bucket *S3Bucket, object *S3Object, data [
 	if radosDisabled || size <= S3StorageSizePerObj {
 		objd := S3ObjectData{
 			ObjID:		bson.NewObjectId(),
-			ObjectObjID:	object.ObjID,
+			RefID:		object.ObjID,
 			Size:		size,
 			Data:		data,
 		}
@@ -227,7 +222,7 @@ func s3DeleteObjectFound(bucket *S3Bucket, objectFound *S3Object) error {
 	}
 
 	if radosDisabled || objectFound.Size <= S3StorageSizePerObj {
-		objdFound, err = objdFound.dbFind(objectFound)
+		objdFound, err = objdFound.dbFind(objectFound.ObjID)
 		if err != nil {
 			if err == mgo.ErrNotFound {
 				return nil
@@ -290,7 +285,7 @@ func s3ReadObjectData(bucket *S3Bucket, object *S3Object) ([]byte, error) {
 	var err error
 
 	if radosDisabled || object.Size <= S3StorageSizePerObj {
-		objd, err = objd.dbFind(object)
+		objd, err = objd.dbFind(object.ObjID)
 		if err != nil {
 			if err == mgo.ErrNotFound {
 				return nil, err
