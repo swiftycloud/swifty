@@ -39,7 +39,17 @@ func (iam *S3Iam)BucketBID(bname string) string {
 	return BIDFromNames(iam.Namespace, bname)
 }
 
+// UploadID for DB lookup
+func (bucket *S3Bucket)UploadUID(oname string) string {
+	return sha256sum([]byte(bucket.BackendID + oname))
+}
+
 // Object key in backend and index in DB for lookup
 func (bucket *S3Bucket)ObjectBID(oname string, version int) string {
 	return sha256sum([]byte(bucket.BackendID + oname + strconv.Itoa(version)))
+}
+
+// Object part key in backend and index in DB for lookup
+func (upload *S3Upload)ObjectBID(oname string, part int) string {
+	return sha256sum([]byte(upload.UploadID + oname + strconv.Itoa(part)))
 }

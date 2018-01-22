@@ -4,9 +4,7 @@ import (
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 
-	"crypto/sha256"
 	"crypto/md5"
-	"encoding/hex"
 	"sort"
 	"time"
 	"fmt"
@@ -17,6 +15,7 @@ import (
 type S3UploadPart struct {
 	ObjID				bson.ObjectId	`bson:"_id,omitempty"`
 	UploadObjID			bson.ObjectId	`bson:"upload-id,omitempty"`
+	BackendID			string		`json:"bid" bson:"bid"`
 
 	Part				int		`json:"part" bson:"part"`
 	Size				int64		`json:"size" bson:"size"`
@@ -33,14 +32,8 @@ type S3Upload struct {
 	S3ObjectPorps					`json:",inline" bson:",inline"`
 }
 
-func UploadUID(salt, oname string) string {
-	h := sha256.New()
-	h.Write([]byte(salt + "-" + oname))
-	return hex.EncodeToString(h.Sum(nil))
-}
-
 func VerifyUploadUID(bucket *S3Bucket, oname, uid string) error {
-	genuid := UploadUID(bucket.BackendID, oname)
+	genuid := bucket.UploadUID(oname)
 	if genuid != uid {
 		err := fmt.Errorf("uploadId mismatch")
 		log.Errorf("s3: uploadId mismatch %s/%s", genuid, uid)
@@ -84,7 +77,7 @@ func s3UploadInit(bucket *S3Bucket, oname, acl string) (*S3Upload, error) {
 		},
 
 		BucketObjID:	bucket.ObjID,
-		UploadID:	UploadUID(bucket.BackendID, oname),
+		UploadID:	bucket.UploadUID(oname),
 	}
 
 	err = dbS3Insert(upload)
@@ -126,6 +119,7 @@ func s3UploadPart(namespace string, bucket *S3Bucket, oname,
 			CreationTime:	time.Now().Format(time.RFC3339),
 		},
 		UploadObjID:	upload.ObjID,
+		BackendID:	upload.ObjectBID(oname, partno),
 		Part:		partno,
 		Size:		int64(len(data)),
 		ETag:		md5sum(data),

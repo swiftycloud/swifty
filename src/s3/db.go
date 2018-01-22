@@ -55,7 +55,7 @@ func dbConnect(conf *YAMLConf) error {
 	dbSession.DB(dbName).C(DBColS3Buckets).EnsureIndex(index)
 	index.Key = []string{"bid"}
 	dbSession.DB(dbName).C(DBColS3Objects).EnsureIndex(index)
-	index.Key = []string{"uid"}
+	index.Key = []string{"uid", "bid"}
 	dbSession.DB(dbName).C(DBColS3Uploads).EnsureIndex(index)
 
 	index.Key = []string{"access-key-id"}
