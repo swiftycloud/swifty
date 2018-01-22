@@ -3,6 +3,7 @@ package xqueue
 import (
 	"fmt"
 	"os"
+	"io"
 	"strconv"
 	"syscall"
 	"encoding/json"
@@ -88,7 +89,11 @@ func (q *Queue)recvBytes() ([]byte, error) {
 	for {
 		l, err := q.sk.Read(bts)
 		if err != nil {
-			return nil, fmt.Errorf("recv message error: %s", err.Error())
+			if err == io.EOF {
+				return nil, err /* Propagate EOF as is */
+			} else {
+				return nil, fmt.Errorf("recv message error: %s", err.Error())
+			}
 		}
 
 		if l < qChunk {
