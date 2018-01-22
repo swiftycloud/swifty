@@ -694,10 +694,6 @@ func main() {
 			"no-rados",
 				false,
 				"disable rados")
-	flag.Int64Var(&cachedObjSize,
-			"cached-obj-size",
-				S3StorageSizePerObj,
-				"object size in bytes to put into cache")
 	flag.Parse()
 
 	if _, err := os.Stat(config_path); err == nil {
@@ -710,12 +706,6 @@ func main() {
 	}
 
 	log.Debugf("config: %v", &conf)
-
-	if cachedObjSize > S3StorageSizePerObj {
-		log.Errorf("Caching more than %d bytes is not allowed",
-				S3StorageSizePerObj)
-		return
-	}
 
 	s3Secrets, err = swysec.ReadSecrets("s3")
 	if err != nil {
