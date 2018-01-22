@@ -74,8 +74,7 @@ func (bucket *S3Bucket)dbRemove() (error) {
 			bson.M{	"_id": bucket.ObjID,
 				"state": S3StateInactive,
 				"cnt-objects": 0},
-			&res,
-		)
+			&res)
 }
 
 func (bucket *S3Bucket)dbSetState(state uint32) (error) {
@@ -86,8 +85,7 @@ func (bucket *S3Bucket)dbSetState(state uint32) (error) {
 				"state": bson.M{"$in": s3StateTransition[state]},
 				"cnt-objects": 0},
 			bson.M{"$set": bson.M{"state": state}},
-			&res,
-		)
+			&res)
 }
 
 func (bucket *S3Bucket)dbAddObj(size int64) (error) {
@@ -102,8 +100,7 @@ func (bucket *S3Bucket)dbAddObj(size int64) (error) {
 					"cnt-objects": 1,
 					"cnt-bytes": size},
 				},
-			&res,
-		)
+			&res)
 }
 
 func (bucket *S3Bucket)dbDelObj(size int64) (error) {
@@ -118,8 +115,7 @@ func (bucket *S3Bucket)dbDelObj(size int64) (error) {
 					"cnt-objects": -1,
 					"cnt-bytes": -size},
 				},
-			&res,
-		)
+			&res)
 }
 
 func (iam *S3Iam)FindBucket(key *S3AccessKey, bname string) (*S3Bucket, error) {
