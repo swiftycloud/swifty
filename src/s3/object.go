@@ -177,7 +177,7 @@ func s3CommitObject(namespace string, bucket *S3Bucket, object *S3Object, data [
 			goto out
 		}
 	} else {
-		err = radosWriteObject(bucket.BackendID, object.Key, data, 0)
+		err = radosWriteObject(bucket.BackendID, object.BackendID, data, 0)
 		if err != nil {
 			goto out
 		}
@@ -244,7 +244,7 @@ func s3DeleteObjectFound(bucket *S3Bucket, objectFound *S3Object) error {
 			return err
 		}
 	} else {
-		err = radosDeleteObject(bucket.BackendID, objectFound.Key)
+		err = radosDeleteObject(bucket.BackendID, objectFound.BackendID)
 		if err != nil {
 			return err
 		}
@@ -301,7 +301,7 @@ func s3ReadObjectData(bucket *S3Bucket, object *S3Object) ([]byte, error) {
 		}
 		res = objd.Data
 	} else {
-		res, err = radosReadObject(bucket.BackendID, object.Key,
+		res, err = radosReadObject(bucket.BackendID, object.BackendID,
 						uint64(object.Size), 0)
 		if err != nil {
 			return nil, err
