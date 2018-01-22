@@ -12,6 +12,7 @@ import (
 	"sync"
 	"syscall"
 	"fmt"
+	"io"
 	"os"
 
 	"../common"
@@ -158,23 +159,33 @@ func doRun(params *swyapi.SwdFunctionRun) (*swyapi.SwdFunctionRunResult, int, er
 
 	var res string
 	res, err = runner.q.RecvStr()
-	if err != nil {
-		if !timeout {
-			err = fmt.Errorf("Can't get back the result: %s", err.Error())
-			return nil, code, err
-		}
-
-		restartRunner()
-		return &swyapi.SwdFunctionRunResult{
-			Return: "timeout",
-			Code: 524, /* A Timeout Occurred */
-		}, 0, nil
-	}
-
 	done <-true
 
 	rout := readLines(runner.fin)
 	rerr := readLines(runner.fine)
+
+	if err != nil {
+		if timeout {
+			restartRunner()
+			return &swyapi.SwdFunctionRunResult{
+				Return: "timeout",
+				Code: 524, /* A Timeout Occurred */
+			}, 0, nil
+		}
+
+		if err == io.EOF {
+			restartRunner()
+			return &swyapi.SwdFunctionRunResult{
+				Return: "exited",
+				Code: 500,
+				Stdout: rout,
+				Stderr: rerr,
+			}, 0, nil
+		}
+
+		err = fmt.Errorf("Can't get back the result: %s", err.Error())
+		return nil, code, err
+	}
 
 	return &swyapi.SwdFunctionRunResult{
 		Return: res,
