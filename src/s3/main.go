@@ -723,7 +723,7 @@ func main() {
 	rgatesrv := mux.NewRouter()
 
 	match_bucket := "/{BucketName:[a-zA-Z0-9-.]*}"
-	match_object := "/{BucketName:[a-zA-Z0-9-.]+}/{ObjName:[a-zA-Z0-9-.]+}"
+	match_object := "/{BucketName:[a-zA-Z0-9-.]+}/{ObjName:[a-zA-Z0-9-./]+}"
 
 	rgatesrv.HandleFunc(match_bucket,	handleBucket)
 	rgatesrv.HandleFunc(match_object,	handleObject)
