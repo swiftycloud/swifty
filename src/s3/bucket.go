@@ -160,8 +160,8 @@ func s3InsertBucket(iam *S3Iam, akey *S3AccessKey, bname, acl string) error {
 		NamespaceID:	iam.NamespaceID(),
 		CreationTime:	time.Now().Format(time.RFC3339),
 		State:		S3StateNone,
-		MaxObjects:	S3StogateMaxObjects,
-		MaxBytes:	S3StogateMaxBytes,
+		MaxObjects:	S3StorageMaxObjects,
+		MaxBytes:	S3StorageMaxBytes,
 	}
 
 	err = dbS3Insert(bucket)
