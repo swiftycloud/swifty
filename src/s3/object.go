@@ -179,7 +179,7 @@ func s3CommitObject(namespace string, bucket *S3Bucket, object *S3Object, data [
 			goto out
 		}
 	} else {
-		err = radosWriteObject(bucket.BackendID, object.Key, data)
+		err = radosWriteObject(bucket.BackendID, object.Key, data, 0)
 		if err != nil {
 			goto out
 		}
@@ -304,7 +304,7 @@ func s3ReadObjectData(bucket *S3Bucket, object *S3Object) ([]byte, error) {
 		res = objd.Data
 	} else {
 		res, err = radosReadObject(bucket.BackendID, object.Key,
-						uint64(object.Size))
+						uint64(object.Size), 0)
 		if err != nil {
 			return nil, err
 		}

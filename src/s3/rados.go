@@ -118,7 +118,7 @@ func radosCreatePool(pool string, max_objects, max_bytes uint64) error {
 	return err
 }
 
-func radosWriteObject(pool, oname string, data []byte) error {
+func radosWriteObject(pool, oname string, data []byte, offset uint64) error {
 	var ioctx *rados.IOContext
 	var err error
 
@@ -132,10 +132,10 @@ func radosWriteObject(pool, oname string, data []byte) error {
 				pool, oname, err.Error())
 	}
 
-	err = ioctx.Write(oname, data, 0)
+	err = ioctx.Write(oname, data, offset)
 	if err != nil {
-		log.Errorf("rados: Can't write object for pool %s object %s: %s",
-				pool, oname, err.Error())
+		log.Errorf("rados: Can't write object for pool %s object %s size %d offset %d: %s",
+				pool, oname, len(data), offset, err.Error())
 		ioctx.Destroy()
 		return err
 	}
@@ -148,7 +148,7 @@ func radosWriteObject(pool, oname string, data []byte) error {
 }
 
 // FIXME: We can read up to int value at once
-func radosReadObject(pool, oname string, size uint64) ([]byte, error) {
+func radosReadObject(pool, oname string, size uint64, offset uint64) ([]byte, error) {
 	var ioctx *rados.IOContext
 	var data []byte
 	var err error
@@ -166,16 +166,16 @@ func radosReadObject(pool, oname string, size uint64) ([]byte, error) {
 	}
 
 	data = make([]byte, size)
-	n, err = ioctx.Read(oname, data, 0)
+	n, err = ioctx.Read(oname, data, offset)
 	if err != nil {
-		log.Errorf("rados: Can't read object from pool %s object %s: %s",
-				pool, oname, err.Error())
+		log.Errorf("rados: Can't read object from pool %s object %s size %d offset %d: %s",
+				pool, oname, size, offset, err.Error())
 		ioctx.Destroy()
 		return nil, err
 	}
 
-	log.Debugf("rados: Read pool %s object %s size %d",
-			pool, oname, n)
+	log.Debugf("rados: Read pool %s object %s size %d offset %d",
+			pool, oname, n, offset)
 
 	ioctx.Destroy()
 	return data, nil
