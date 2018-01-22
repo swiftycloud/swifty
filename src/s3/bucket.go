@@ -4,7 +4,6 @@ import (
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 	"time"
-	"fmt"
 
 	"../apis/apps/s3"
 )
@@ -66,10 +65,6 @@ type S3Bucket struct {
 
 	MaxObjects			int64		`json:"max-objects" bson:"max-objects"`
 	MaxBytes			int64		`json:"max-bytes" bson:"max-bytes"`
-}
-
-func (bucket *S3Bucket)ObjectBID(oname string, version int) string {
-	return bucket.BackendID + "-" + fmt.Sprintf("%d", version) + "-" + oname
 }
 
 func (bucket *S3Bucket)dbRemove() (error) {

@@ -47,25 +47,6 @@ func (iam *S3Iam)MakeBucketKey(bucket, act string) *S3AccessKey {
 }
 
 
-// FIXME: There MUST not be plain namespace coming
-// from notification, we always must obtain akey instead
-// and figure out which namespace it belongs, but it
-// require changes in gate code, so left as is for now.
-
-func BIDFromNames(namespace, bucket string) string {
-	/*
-	 * BID stands for backend-id and is a unique identifier
-	 * in the storage. For CEPH case this is pool ID and
-	 * since all users live in a plain pool namespace, it
-	 * should be unique across users and their buckets.
-	 */
-	return sha256sum([]byte(namespace + bucket))
-}
-
-func (iam *S3Iam)BucketBID(bname string) string {
-	return BIDFromNames(iam.Namespace, bname)
-}
-
 func (iam *S3Iam)NamespaceID() string {
 	return sha256sum([]byte(iam.Namespace))
 }
