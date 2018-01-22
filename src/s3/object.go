@@ -178,12 +178,6 @@ func s3CommitObject(namespace string, bucket *S3Bucket, object *S3Object, data [
 	}
 
 	etag = fmt.Sprintf("%x", md5.Sum(data))
-	if etag == "" {
-		log.Errorf("s3: Can't calculate ETag on object %s: %s",
-				object.BackendID, err.Error())
-		goto out
-	}
-
 	err = object.dbSetStateEtag(S3StateActive, etag)
 	if err != nil {
 		log.Errorf("s3: Can't activate object %s: %s",
