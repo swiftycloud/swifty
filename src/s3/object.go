@@ -204,7 +204,11 @@ out:
 		log.Errorf("s3: Can't -account object %s: %s",
 				object.BackendID, err1.Error())
 	}
-	object.dbRemove()
+	err2 := object.dbRemove()
+	if err2 != nil {
+		log.Errorf("s3: Can't remove object %s: %s",
+				object.BackendID, err2.Error())
+	}
 	return "", err
 }
 

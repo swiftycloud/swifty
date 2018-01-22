@@ -184,7 +184,11 @@ func s3InsertBucket(iam *S3Iam, akey *S3AccessKey, bname, acl string) error {
 out:
 	radosDeletePool(bucket.BackendID)
 out_nopool:
-	bucket.dbRemove()
+	err1 := bucket.dbRemove()
+	if err1 != nil {
+		log.Errorf("s3: Can't remove bucket %s: %s",
+				bucket.BackendID, err1.Error())
+	}
 	return err
 }
 
