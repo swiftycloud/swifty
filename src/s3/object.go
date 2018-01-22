@@ -183,10 +183,6 @@ func s3CommitObject(namespace string, bucket *S3Bucket, object *S3Object, data [
 		}
 	}
 
-	if bucket.BasicNotify != nil {
-		s3Notify(namespace, bucket, object, S3NotifyPut)
-	}
-
 	etag = fmt.Sprintf("%x", md5.Sum(data))
 	if etag == "" {
 		log.Errorf("s3: Can't calculate ETag on object %s: %s",
@@ -199,6 +195,10 @@ func s3CommitObject(namespace string, bucket *S3Bucket, object *S3Object, data [
 		log.Errorf("s3: Can't activate object %s: %s",
 				object.BackendID, err.Error())
 		goto out
+	}
+
+	if bucket.BasicNotify != nil {
+		s3Notify(namespace, bucket, object, S3NotifyPut)
 	}
 
 	log.Debugf("s3: Committed object %s", object.BackendID)
