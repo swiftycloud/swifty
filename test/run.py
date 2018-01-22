@@ -142,7 +142,7 @@ def maria(lang, opts):
 
 
 	add_mw("maria", dbname)
-	inf = add_fn("maria", lang, mw = [ dbname ])
+	inf = add_fn("maria", lang, mw = [ dbname ], tmo = 2000)
 	ret = run_fn(inf, args_c)
 	print(ret)
 	if ret.get('res', '') == 'done':
@@ -278,8 +278,8 @@ def checkempty(lang, opts):
 tests = [
 	(helloworld,	["python", "golang"]),
 	(update,	["python", "golang"]),
-	(pgsql,		["python"]),
-	(maria,		["python"]),
+#	(pgsql,		["python"]),
+	(maria,		["python", "golang"]),
 	(mongo,		["python"]),
 	(s3,		["python"]),
 	(s3notify,	["python"]),
