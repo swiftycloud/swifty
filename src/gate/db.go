@@ -482,6 +482,9 @@ func dbConnect(conf *YAMLConf) error {
 			Background:	true,
 			Sparse:		true}
 
+	index.Key = []string{"cookie"}
+	dbSession.DB(dbState).C(DBColFunc).EnsureIndex(index)
+
 	index.Key = []string{"addr", "depname"}
 	dbSession.DB(dbState).C(DBColBalancer).EnsureIndex(index)
 
