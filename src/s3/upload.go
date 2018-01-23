@@ -33,13 +33,13 @@ type S3Upload struct {
 }
 
 func (upload *S3Upload)infoLong() (string) {
-	return fmt.Sprintf("upload: %s/%s/%s/%d/%s",
+	return fmt.Sprintf("{ S3Upload: %s/%s/%s/%d/%s }",
 			upload.ObjID, upload.BucketObjID,
 			upload.UploadID, upload.Key)
 }
 
 func (part *S3UploadPart)infoLong() (string) {
-	return fmt.Sprintf("upload-part: %s/%s/%s/%d/%s",
+	return fmt.Sprintf("{ S3UploadPart: %s/%s/%s/%d/%s }",
 			part.ObjID, part.UploadObjID,
 			part.BackendID, part.Part,
 			part.Key)

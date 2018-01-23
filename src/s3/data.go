@@ -20,7 +20,7 @@ type S3ObjectData struct {
 }
 
 func (objd *S3ObjectData)infoLong() (string) {
-	return fmt.Sprintf("object-data: %s/%s/%s/%s/%d/%d",
+	return fmt.Sprintf("{ S3ObjectData: %s/%s/%s/%s/%d/%d }",
 			objd.ObjID, objd.RefID,
 			objd.BucketBID, objd.ObjectBID,
 			objd.State, objd.Size)

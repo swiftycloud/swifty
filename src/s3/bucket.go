@@ -69,7 +69,7 @@ type S3Bucket struct {
 }
 
 func (bucket *S3Bucket)infoLong() (string) {
-	return fmt.Sprintf("bucket: %s/%s/%s/%d/%s",
+	return fmt.Sprintf("{ S3Bucket: %s/%s/%s/%d/%s }",
 		bucket.ObjID, bucket.BackendID,
 		bucket.NamespaceID, bucket.State,
 		bucket.Name)

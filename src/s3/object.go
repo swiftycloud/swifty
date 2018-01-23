@@ -47,7 +47,7 @@ type S3Object struct {
 }
 
 func (object *S3Object)infoLong() (string) {
-	return fmt.Sprintf("object: %s/%s/%s/%d/%s",
+	return fmt.Sprintf("{ S3Object: %s/%s/%s/%d/%s }",
 			object.ObjID, object.BucketObjID,
 			object.BackendID, object.State,
 			object.Key)
@@ -117,7 +117,7 @@ func (bucket *S3Bucket)FindObject(oname string, version int) (*S3Object, error) 
 func s3AddObject(namespace string, bucket *S3Bucket, oname string,
 		acl string, size int64, data []byte) (*S3Object, error) {
 	var etag string
-	var err, err1 error
+	var err error
 
 	object := &S3Object {
 		S3ObjectPorps: S3ObjectPorps {
@@ -162,14 +162,11 @@ func s3AddObject(namespace string, bucket *S3Bucket, oname string,
 		s3Notify(namespace, bucket, object, S3NotifyPut)
 	}
 
-	log.Debugf("s3: Added %s %s", bucket.infoLong(), object.infoLong())
+	log.Debugf("s3: Added %s", object.infoLong())
 	return object, nil
 
 out:
-	err1 = bucket.dbDelObj(object.Size)
-	if err1 != nil {
-		log.Errorf("s3: Can't -account object %s: %s", oname, err1.Error())
-	}
+	bucket.dbDelObj(object.Size)
 out_no_size:
 	object.dbRemoveF()
 	return nil, err
@@ -184,7 +181,6 @@ func s3DeleteObjectFound(bucket *S3Bucket, objectFound *S3Object) error {
 		if err == mgo.ErrNotFound {
 			return nil
 		}
-		log.Errorf("s3: Can't disable object %s: %s", objectFound.BackendID, err.Error())
 		return err
 	}
 
@@ -192,7 +188,7 @@ func s3DeleteObjectFound(bucket *S3Bucket, objectFound *S3Object) error {
 	if err != nil {
 		if err != mgo.ErrNotFound {
 			log.Errorf("s3: Can't find object data %s: %s",
-				objectFound.BackendID, err.Error())
+				objectFound.infoLong(), err.Error())
 			return err
 		}
 	} else {
@@ -204,19 +200,15 @@ func s3DeleteObjectFound(bucket *S3Bucket, objectFound *S3Object) error {
 
 	err = bucket.dbDelObj(objectFound.Size)
 	if err != nil {
-		log.Errorf("s3: Can't -account object %s: %s",
-				objectFound.BackendID, err.Error())
 		return err
 	}
 
 	err = objectFound.dbRemove()
 	if err != nil {
-		log.Errorf("s3: Can't delete object %s: %s",
-				objectFound.BackendID, err.Error())
 		return err
 	}
 
-	log.Debugf("s3: Deleted object %s", objectFound.BackendID)
+	log.Debugf("s3: Deleted %s", objectFound.infoLong())
 	return nil
 }
 
@@ -229,8 +221,8 @@ func s3DeleteObject(bucket *S3Bucket, oname string, version int) error {
 		if err == mgo.ErrNotFound {
 			return nil
 		}
-		log.Errorf("s3: Can't find object %s/%s: %s",
-				bucket.Name, oname, err.Error())
+		log.Errorf("s3: Can't find object %s on %s: %s",
+			oname, bucket.infoLong(), err.Error())
 		return err
 	}
 
@@ -246,7 +238,7 @@ func s3ReadObjectData(bucket *S3Bucket, object *S3Object) ([]byte, error) {
 	if err != nil {
 		if err != mgo.ErrNotFound {
 			log.Errorf("s3: Can't find object data %s: %s",
-				object.BackendID, err.Error())
+				object.infoLong(), err.Error())
 			return nil, err
 		}
 		return nil, err
@@ -257,7 +249,7 @@ func s3ReadObjectData(bucket *S3Bucket, object *S3Object) ([]byte, error) {
 		return nil, err
 	}
 
-	log.Debugf("s3: Read object data %s", object.BackendID)
+	log.Debugf("s3: Read %s", object.infoLong())
 	return res, err
 }
 
@@ -270,8 +262,8 @@ func s3ReadObject(bucket *S3Bucket, oname string, part, version int) ([]byte, er
 		if err == mgo.ErrNotFound {
 			return nil, err
 		}
-		log.Errorf("s3: Can't find object %s: %s",
-				object.BackendID, err.Error())
+		log.Errorf("s3: Can't find object %s on %s: %s",
+				oname, bucket.infoLong(), err.Error())
 		return nil, err
 	}
 
