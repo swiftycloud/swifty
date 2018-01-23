@@ -11,6 +11,7 @@ import (
 	"errors"
 	"flag"
 	"context"
+	"sync/atomic"
 	"time"
 	"fmt"
 	"net"
@@ -166,11 +167,14 @@ var CORS_Methods = []string {
 
 type gateContext struct {
 	context.Context
-	Tenant string
+	Tenant	string
+	ReqId	uint64
 }
 
+var reqIds uint64
+
 func mkContext(parent context.Context, tenant string) context.Context {
-	return &gateContext{parent, tenant}
+	return &gateContext{parent, tenant, atomic.AddUint64(&reqIds, 1)}
 }
 
 func fromContext(ctx context.Context) *gateContext {
@@ -178,6 +182,10 @@ func fromContext(ctx context.Context) *gateContext {
 }
 
 func ctxlog(ctx context.Context) *zap.SugaredLogger {
+	if gctx, ok := ctx.(*gateContext); ok {
+		return glog.With(zap.Int64("request", int64(gctx.ReqId)))
+	}
+
 	return glog
 }
 
