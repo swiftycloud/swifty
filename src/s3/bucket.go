@@ -77,29 +77,42 @@ func (bucket *S3Bucket)infoLong() (string) {
 
 func (bucket *S3Bucket)dbRemove() (error) {
 	var res S3Bucket
+	var err error
 
-	return dbS3RemoveCond(
+	err = dbS3RemoveCond(
 			bson.M{	"_id": bucket.ObjID,
 				"state": S3StateInactive,
 				"cnt-objects": 0},
 			&res)
+	if err != nil && err != mgo.ErrNotFound {
+		log.Errorf("s3: Can't remove %s: %s",
+			bucket.infoLong(), err.Error())
+	}
+	return err
 }
 
 func (bucket *S3Bucket)dbSetState(state uint32) (error) {
 	var res S3Bucket
+	var err error
 
-	return dbS3Update(
+	err = dbS3Update(
 			bson.M{"_id": bucket.ObjID,
 				"state": bson.M{"$in": s3StateTransition[state]},
 				"cnt-objects": 0},
 			bson.M{"$set": bson.M{"state": state}},
 			&res)
+	if err != nil {
+		log.Errorf("s3: Can't set state %d %s: %s",
+			state, bucket.infoLong(), err.Error())
+	}
+	return err
 }
 
 func (bucket *S3Bucket)dbAddObj(size int64) (error) {
 	var res S3Bucket
+	var err error
 
-	return dbS3Update(
+	err = dbS3Update(
 			bson.M{"_id": bucket.ObjID,
 				"state": S3StateActive,
 			},
@@ -109,12 +122,18 @@ func (bucket *S3Bucket)dbAddObj(size int64) (error) {
 					"cnt-bytes": size},
 				},
 			&res)
+	if err != nil {
+		log.Errorf("s3: Can't +account %d bytes %s: %s",
+			size, bucket.infoLong(), err.Error())
+	}
+	return err
 }
 
 func (bucket *S3Bucket)dbDelObj(size int64) (error) {
 	var res S3Bucket
+	var err error
 
-	return dbS3Update(
+	err = dbS3Update(
 			bson.M{"_id": bucket.ObjID,
 				"state": S3StateActive,
 			},
@@ -124,6 +143,11 @@ func (bucket *S3Bucket)dbDelObj(size int64) (error) {
 					"cnt-bytes": -size},
 				},
 			&res)
+	if err != nil {
+		log.Errorf("s3: Can't -account %d bytes %s: %s",
+			size, bucket.infoLong(), err.Error())
+	}
+	return err
 }
 
 func (iam *S3Iam)FindBucket(key *S3AccessKey, bname string) (*S3Bucket, error) {
@@ -165,8 +189,8 @@ func s3InsertBucket(iam *S3Iam, akey *S3AccessKey, bname, acl string) error {
 
 	err = dbS3Insert(bucket)
 	if err != nil {
-		log.Errorf("s3: Can't insert bucket %s: %s",
-				bucket.BackendID, err.Error())
+		log.Errorf("s3: Can't insert %s: %s",
+			bucket.infoLong(), err.Error())
 		return err
 	}
 
@@ -177,22 +201,16 @@ func s3InsertBucket(iam *S3Iam, akey *S3AccessKey, bname, acl string) error {
 
 	err = bucket.dbSetState(S3StateActive)
 	if err != nil {
-		log.Errorf("s3: Can't activate bucket %s: %s",
-				bucket.BackendID, err.Error())
 		goto out
 	}
 
-	log.Debugf("s3: Inserted bucket %s", bucket.BackendID)
+	log.Debugf("s3: Inserted %s", bucket.infoLong())
 	return nil
 
 out:
 	radosDeletePool(bucket.BackendID)
 out_nopool:
-	err1 := bucket.dbRemove()
-	if err1 != nil {
-		log.Errorf("s3: Can't remove bucket %s: %s",
-				bucket.BackendID, err1.Error())
-	}
+	bucket.dbRemove()
 	return err
 }
 
@@ -203,7 +221,6 @@ func s3DeleteBucket(iam *S3Iam, akey *S3AccessKey, bname, acl string) error {
 	bucketFound, err = iam.FindBucket(akey, bname)
 	if err != nil {
 		if err == mgo.ErrNotFound {
-			log.Debugf("Remove: no such bucket")
 			return nil
 		}
 		log.Errorf("s3: Can't find bucket %s: %s", bname, err.Error())
@@ -213,11 +230,8 @@ func s3DeleteBucket(iam *S3Iam, akey *S3AccessKey, bname, acl string) error {
 	err = bucketFound.dbSetState(S3StateInactive)
 	if err != nil {
 		if err == mgo.ErrNotFound {
-			log.Debugf("Remove: cannot deactivate bucket")
 			return nil
 		}
-		log.Errorf("s3: Can't disable bucket %s: %s",
-				bucketFound.BackendID, err.Error())
 		return err
 	}
 
@@ -228,12 +242,10 @@ func s3DeleteBucket(iam *S3Iam, akey *S3AccessKey, bname, acl string) error {
 
 	err = bucketFound.dbRemove()
 	if err != nil {
-		log.Errorf("s3: Can't delete bucket %s: %s",
-				bucketFound.BackendID, err.Error())
 		return err
 	}
 
-	log.Debugf("s3: Deleted bucket %s", bucketFound.BackendID)
+	log.Debugf("s3: Deleted %s", bucketFound.infoLong())
 	return nil
 }
 
@@ -273,7 +285,8 @@ func s3ListBucket(iam *S3Iam, akey *S3AccessKey, bname, acl string) (*swys3api.S
 			return &bucketList, nil
 		}
 
-		log.Errorf("s3: Can't find objects %s: %s", bname, err.Error())
+		log.Errorf("s3: Can't find objects %s: %s",
+			bucketFound.infoLong(), err.Error())
 		return nil, err
 	}
 
