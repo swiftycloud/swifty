@@ -279,9 +279,7 @@ func swk8sRun(conf *YAMLConf, fn *FunctionDesc, fi *FnInst) error {
 
 	img, ok := conf.Runtime.Images[fn.Code.Lang]
 	if !ok {
-		err := errors.New("Wrong language selected")
-		log.Error("Wrong language")
-		return err
+		return errors.New("Bad lang selected") /* cannot happen actually */
 	}
 
 	envs := swk8sGenEnvVar(fn, fi, conf.Wdog.Port)
@@ -327,9 +325,8 @@ func swk8sRun(conf *YAMLConf, fn *FunctionDesc, fi *FnInst) error {
 
 	err = BalancerCreate(fn.Cookie, depname, uint(nr_replicas), fn.URLCall)
 	if err != nil {
-		log.Errorf("Can't create balancer %s for %s: %s",
-				depname, fn.SwoId.Str(), err.Error())
-		return err
+		log.Errorf("Can't create balancer %s for %s: %s", depname, fn.SwoId.Str(), err.Error())
+		return errors.New("Net error")
 	}
 
 	deployspec := v1beta1.Deployment{
@@ -353,9 +350,8 @@ func swk8sRun(conf *YAMLConf, fn *FunctionDesc, fi *FnInst) error {
 	if err != nil {
 		xtimer.Cancel(fn.Cookie)
 		BalancerDelete(depname)
-		log.Errorf("Can't add function %s: %s",
-				fn.SwoId.Str(), err.Error())
-		return err
+		log.Errorf("Can't start deployment %s: %s", fn.SwoId.Str(), err.Error())
+		return errors.New("K8S error")
 	}
 
 	xtimer.Start(fn.Cookie, fi.Str(), SwyPodStartTmo, swk8sPodTmo)

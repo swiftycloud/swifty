@@ -54,16 +54,15 @@ func NameSymsAllowed(name string) bool {
 
 func CheckName(name string, limit int) error {
 	if name == "" {
-		return errors.New("Empty name detected")
+		return errors.New("Empty name")
 	}
 
 	if NameSymsAllowed(name) == false {
-		return fmt.Errorf("Name %s is not allowed", name)
+		return fmt.Errorf("Bad symbols in %s", name)
 	}
 
 	if len(name) > limit {
-		return fmt.Errorf("Name %s is too long (max %d allowed)",
-					name, limit)
+		return fmt.Errorf("Too long name %s (max %d)", name, limit)
 	}
 
 	return nil

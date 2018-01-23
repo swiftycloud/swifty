@@ -4,6 +4,7 @@ import (
 	"gopkg.in/mgo.v2/bson"
 	"strings"
 	"fmt"
+	"errors"
 
 	"../common"
 	"../common/crypto"
@@ -210,8 +211,7 @@ stalled:
 func mwareEventSetup(conf *YAMLConf, fn *FunctionDesc, on bool) error {
 	item, err := dbMwareGetReady(makeSwoId(fn.Tennant, fn.Project, fn.Event.MwareId))
 	if err != nil {
-		log.Errorf("Can't find mware %s for event", fn.Event.MwareId)
-		return err
+		return errors.New("No mware for event")
 	}
 
 	log.Debugf("set up event for %s.%s mware", fn.Event.MwareId, item.MwareType)
@@ -221,5 +221,6 @@ func mwareEventSetup(conf *YAMLConf, fn *FunctionDesc, on bool) error {
 		return iface.Event(&conf.Mware, &fn.Event, &item, on)
 	}
 
-	return fmt.Errorf("No mware for event")
+	log.Errorf("Can't find mware handler for %s.%s event", item.SwoId.Str(), item.MwareType)
+	return errors.New("Bad mware for event")
 }

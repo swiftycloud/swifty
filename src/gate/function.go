@@ -217,12 +217,13 @@ func addFunction(conf *YAMLConf, tennant string, params *swyapi.FunctionAdd) err
 	fn.State = swy.DBFuncStateIni
 	err = dbFuncAdd(fn)
 	if err != nil {
+		log.Errorf("Can't add function %s: %s", fn.SwoId.Str(), err.Error())
+		err = errors.New("DB error")
 		goto out
 	}
 
 	err = eventSetup(conf, fn, true)
 	if err != nil {
-		err = fmt.Errorf("Unable to setup even %s: %s", fn.Event, err.Error())
 		goto out_clean_func
 	}
 
@@ -241,6 +242,8 @@ func addFunction(conf *YAMLConf, tennant string, params *swyapi.FunctionAdd) err
 
 	err = dbFuncUpdateAdded(fn)
 	if err != nil {
+		log.Errorf("Can't update added %s: %s", fn.SwoId.Str(), err.Error())
+		err = errors.New("DB error")
 		goto out_clean_repo
 	}
 

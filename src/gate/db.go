@@ -172,7 +172,7 @@ func dbFuncSetState(fn *FunctionDesc, state int) error {
 }
 
 func dbFuncUpdateAdded(fn *FunctionDesc) error {
-	err := dbFuncUpdate(
+	return dbFuncUpdate(
 		bson.M{"cookie": fn.Cookie},
 		bson.M{"$set": bson.M{
 				"src.version": fn.Src.Version,
@@ -181,11 +181,6 @@ func dbFuncUpdateAdded(fn *FunctionDesc) error {
 				"state": fn.State,
 				"urlcall": fn.URLCall,
 			}})
-	if err != nil {
-		log.Errorf("Can't update added %s: %s", fn.Name, err.Error())
-	}
-
-	return err
 }
 
 func dbFuncUpdatePulled(fn *FunctionDesc, update bson.M) error {
@@ -201,13 +196,7 @@ func dbFuncUpdatePulled(fn *FunctionDesc, update bson.M) error {
 
 func dbFuncAdd(desc *FunctionDesc) error {
 	c := dbSession.DB(dbState).C(DBColFunc)
-	err := c.Insert(desc)
-	if err != nil {
-		log.Errorf("dbFuncAdd: Can't add function %v: %s",
-				desc, err.Error())
-	}
-
-	return err
+	return c.Insert(desc)
 }
 
 func dbFuncRemove(fn *FunctionDesc) error {

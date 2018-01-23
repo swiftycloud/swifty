@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"encoding/base64"
 	"strconv"
+	"errors"
 	"../common"
 	"../apis/apps"
 )
@@ -136,7 +137,8 @@ func writeSource(fn *FunctionDesc, codeb64 string) error {
 	to := fnRepoCheckout(&conf, fn)
 	err := os.MkdirAll(to, 0750)
 	if err != nil {
-		return fmt.Errorf("Can't put sources")
+		log.Error("Can't mkdir sources: %s", err.Error())
+		return errors.New("FS error")
 	}
 
 	data, err := base64.StdEncoding.DecodeString(codeb64)
@@ -148,7 +150,8 @@ func writeSource(fn *FunctionDesc, codeb64 string) error {
 
 	err = ioutil.WriteFile(to + "/" + script, data, 0600)
 	if err != nil {
-		return fmt.Errorf("Can't write source file")
+		log.Error("Can't write sources: %s", err.Error())
+		return errors.New("FS error")
 	}
 
 	return nil
