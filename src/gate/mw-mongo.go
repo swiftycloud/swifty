@@ -2,6 +2,7 @@ package main
 
 import (
 	"gopkg.in/mgo.v2"
+	"context"
 	"time"
 )
 
@@ -17,7 +18,7 @@ func mgoDial(conf *YAMLConfMw) (*mgo.Session, error) {
 	return mgo.DialWithInfo(&ifo)
 }
 
-func InitMongo(conf *YAMLConfMw, mwd *MwareDesc) (error) {
+func InitMongo(ctx context.Context, conf *YAMLConfMw, mwd *MwareDesc) (error) {
 	err := mwareGenerateUserPassClient(mwd)
 	if err != nil {
 		return err
@@ -41,7 +42,7 @@ func InitMongo(conf *YAMLConfMw, mwd *MwareDesc) (error) {
 	return err
 }
 
-func FiniMongo(conf *YAMLConfMw, mwd *MwareDesc) error {
+func FiniMongo(ctx context.Context, conf *YAMLConfMw, mwd *MwareDesc) error {
 	sess, err := mgoDial(conf)
 	if err != nil {
 		return err
@@ -50,7 +51,7 @@ func FiniMongo(conf *YAMLConfMw, mwd *MwareDesc) error {
 
 	err = sess.DB(mwd.Namespace).DropDatabase()
 	if err != nil {
-		log.Errorf("can't drop database %s: %s", mwd.Namespace, err.Error())
+		ctxlog(ctx).Errorf("can't drop database %s: %s", mwd.Namespace, err.Error())
 	}
 
 	return nil

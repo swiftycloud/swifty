@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"context"
 	"database/sql"
 	_ "github.com/go-sql-driver/mysql"
 )
@@ -33,7 +34,7 @@ func mariaReq(db *sql.DB, req string) error {
 // DROP USER IF EXISTS '8257fbff9618952fbd2b83b4794eb694'@'%';
 // DROP DATABASE IF EXISTS 8257fbff9618952fbd2b83b4794eb694;
 
-func InitMariaDB(conf *YAMLConfMw, mwd *MwareDesc) (error) {
+func InitMariaDB(ctx context.Context, conf *YAMLConfMw, mwd *MwareDesc) (error) {
 	err := mwareGenerateUserPassClient(mwd)
 	if err != nil {
 		return err
@@ -71,44 +72,44 @@ func InitMariaDB(conf *YAMLConfMw, mwd *MwareDesc) (error) {
 	return nil
 
 outd:
-	mariaDropDb(db, mwd)
+	mariaDropDb(ctx, db, mwd)
 outu:
-	mariaDropUser(db, mwd)
+	mariaDropUser(ctx, db, mwd)
 out:
 	return err
 }
 
-func mariaDropUser(db *sql.DB, mwd *MwareDesc) {
+func mariaDropUser(ctx context.Context, db *sql.DB, mwd *MwareDesc) {
 	err := mariaReq(db, "DROP USER IF EXISTS '" + mwd.Client + "'@'%';")
 	if err != nil {
-		log.Errorf("maria: can't drop user %s: %s", mwd.Client, err.Error())
+		ctxlog(ctx).Errorf("maria: can't drop user %s: %s", mwd.Client, err.Error())
 	}
 }
 
-func mariaDropDb(db *sql.DB, mwd *MwareDesc) {
+func mariaDropDb(ctx context.Context, db *sql.DB, mwd *MwareDesc) {
 	err := mariaReq(db, "DROP DATABASE IF EXISTS " + mwd.Namespace + ";")
 	if err != nil {
-		log.Errorf("maria: can't drop database %s: %s", mwd.Namespace, err.Error())
+		ctxlog(ctx).Errorf("maria: can't drop database %s: %s", mwd.Namespace, err.Error())
 	}
 }
 
-func mariaDropQuota(conf *YAMLConfMaria, db *sql.DB, mwd *MwareDesc) {
+func mariaDropQuota(ctx context.Context, conf *YAMLConfMaria, db *sql.DB, mwd *MwareDesc) {
 	err := mariaReq(db, "DELETE FROM " + conf.QDB + " WHERE id='" + mwd.Namespace + "';")
 	if err != nil {
-		log.Errorf("maria: can't dereg quota for %s: %s", mwd.Namespace, err.Error())
+		ctxlog(ctx).Errorf("maria: can't dereg quota for %s: %s", mwd.Namespace, err.Error())
 	}
 }
 
-func FiniMariaDB(conf *YAMLConfMw, mwd *MwareDesc) error {
+func FiniMariaDB(ctx context.Context, conf *YAMLConfMw, mwd *MwareDesc) error {
 	db, err := mariaConn(conf)
 	if err != nil {
 		return err
 	}
 	defer db.Close()
 
-	mariaDropQuota(&conf.Maria, db, mwd)
-	mariaDropUser(db, mwd)
-	mariaDropDb(db, mwd)
+	mariaDropQuota(ctx, &conf.Maria, db, mwd)
+	mariaDropUser(ctx, db, mwd)
+	mariaDropDb(ctx, db, mwd)
 
 	return nil
 }

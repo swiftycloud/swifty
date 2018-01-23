@@ -35,7 +35,7 @@ func fnCodePath(conf *YAMLConf, fn *FunctionDesc, version string) (string, error
 	return fnRepoCheckoutC(conf, fn, version) + "/" + RtDefaultScriptName(&fn.Code), nil
 }
 
-func checkoutSources(fn *FunctionDesc) error {
+func checkoutSources(ctx context.Context, fn *FunctionDesc) error {
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 	share_to := "?"
@@ -52,7 +52,7 @@ func checkoutSources(fn *FunctionDesc) error {
 	fn.Src.Version = stdout.String()
 
 	// Bring the necessary deps
-	err = update_deps(cloned_to)
+	err = update_deps(ctx, cloned_to)
 	if err != nil {
 		goto co_err
 	}
@@ -60,7 +60,7 @@ func checkoutSources(fn *FunctionDesc) error {
 	// Now put the sources into shared place
 	share_to = fnRepoCheckout(&conf, fn)
 
-	log.Debugf("Checkout %s to %s", fn.Src.Version[:12], share_to)
+	ctxlog(ctx).Debugf("Checkout %s to %s", fn.Src.Version[:12], share_to)
 	err = copy_git_files(cloned_to, share_to)
 	if err != nil {
 		goto co_err
@@ -69,7 +69,7 @@ func checkoutSources(fn *FunctionDesc) error {
 	return nil
 
 co_err:
-	log.Errorf("can't checkout sources to %s: %s",
+	ctxlog(ctx).Errorf("can't checkout sources to %s: %s",
 			share_to, err.Error())
 	return err
 }
@@ -107,16 +107,16 @@ func cloneGitRepo(ctx context.Context, fn *FunctionDesc) error {
 	}
 
 	clone_to := fnRepoClone(fn, conf.Daemon.Sources.Clone)
-	log.Debugf("Git clone %s -> %s", fn.Src.Repo, clone_to)
+	ctxlog(ctx).Debugf("Git clone %s -> %s", fn.Src.Repo, clone_to)
 
 	_, err := os.Stat(clone_to)
 	if err == nil || !os.IsNotExist(err) {
-		log.Errorf("repo for %s is already there", fn.SwoId.Str())
+		ctxlog(ctx).Errorf("repo for %s is already there", fn.SwoId.Str())
 		return fmt.Errorf("can't clone repo")
 	}
 
 	if os.MkdirAll(clone_to, 0777) != nil {
-		log.Errorf("can't create %s: %s", clone_to, err.Error())
+		ctxlog(ctx).Errorf("can't create %s: %s", clone_to, err.Error())
 		return err
 	}
 
@@ -125,20 +125,20 @@ func cloneGitRepo(ctx context.Context, fn *FunctionDesc) error {
 	cmd.Stderr = &stderr
 	err = cmd.Run()
 	if err != nil {
-		log.Errorf("can't clone %s -> %s: %s (%s:%s)",
+		ctxlog(ctx).Errorf("can't clone %s -> %s: %s (%s:%s)",
 				fn.Src.Repo, clone_to, err.Error(),
 				stdout.String(), stderr.String())
 		return err
 	}
 
-	return checkoutSources(fn)
+	return checkoutSources(ctx, fn)
 }
 
-func writeSource(fn *FunctionDesc, codeb64 string) error {
+func writeSource(ctx context.Context, fn *FunctionDesc, codeb64 string) error {
 	to := fnRepoCheckout(&conf, fn)
 	err := os.MkdirAll(to, 0750)
 	if err != nil {
-		log.Error("Can't mkdir sources: %s", err.Error())
+		ctxlog(ctx).Error("Can't mkdir sources: %s", err.Error())
 		return errors.New("FS error")
 	}
 
@@ -151,7 +151,7 @@ func writeSource(fn *FunctionDesc, codeb64 string) error {
 
 	err = ioutil.WriteFile(to + "/" + script, data, 0600)
 	if err != nil {
-		log.Error("Can't write sources: %s", err.Error())
+		ctxlog(ctx).Error("Can't write sources: %s", err.Error())
 		return errors.New("FS error")
 	}
 
@@ -160,7 +160,7 @@ func writeSource(fn *FunctionDesc, codeb64 string) error {
 
 func getFileFromReq(ctx context.Context, fn *FunctionDesc) error {
 	fn.Src.Version = zeroVersion
-	return writeSource(fn, fn.Src.Code)
+	return writeSource(ctx, fn, fn.Src.Code)
 }
 
 func updateSources(ctx context.Context, fn *FunctionDesc, params *swyapi.FunctionUpdate) error {
@@ -177,27 +177,27 @@ func updateGitRepo(ctx context.Context, fn *FunctionDesc, params *swyapi.Functio
 	var stderr bytes.Buffer
 
 	clone_to := fnRepoClone(fn, conf.Daemon.Sources.Clone)
-	log.Debugf("Git pull %s", clone_to)
+	ctxlog(ctx).Debugf("Git pull %s", clone_to)
 
 	cmd := exec.Command("git", "-C", clone_to, "pull")
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	err := cmd.Run()
 	if err != nil {
-		log.Errorf("can't pull %s -> %s: %s (%s:%s)",
+		ctxlog(ctx).Errorf("can't pull %s -> %s: %s (%s:%s)",
 				fn.Src.Repo, clone_to, err.Error(),
 				stdout.String(), stderr.String())
 		return err
 	}
 
-	return checkoutSources(fn)
+	return checkoutSources(ctx, fn)
 }
 
 func updateFileFromReq(ctx context.Context, fn *FunctionDesc, params *swyapi.FunctionUpdate) error {
 	ov, _ := strconv.Atoi(fn.Src.Version)
 	fn.Src.Version = strconv.Itoa(ov + 1)
 
-	return writeSource(fn, params.Code)
+	return writeSource(ctx, fn, params.Code)
 }
 
 func cleanRepo(fn *FunctionDesc) error {
@@ -213,11 +213,11 @@ func cleanRepo(fn *FunctionDesc) error {
 	return swy.DropDir(share_to, sd)
 }
 
-func update_deps(repo_path string) error {
+func update_deps(ctx context.Context, repo_path string) error {
 	// First -- check git submodules
 	_, err := os.Stat(repo_path + "/.gitmodules")
 	if err == nil {
-		err = update_git_submodules(repo_path)
+		err = update_git_submodules(ctx, repo_path)
 	} else if !os.IsNotExist(err) {
 		err = fmt.Errorf("Can't update git submodules: %s", err.Error())
 	} else {
@@ -225,18 +225,18 @@ func update_deps(repo_path string) error {
 	}
 
 	if err != nil {
-		log.Error("Can't update git submodules")
+		ctxlog(ctx).Error("Can't update git submodules")
 		return err
 	}
 
 	return nil
 }
 
-func update_git_submodules(repo_path string) error {
+func update_git_submodules(ctx context.Context, repo_path string) error {
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 
-	log.Debugf("Updating git submodules @%s", repo_path)
+	ctxlog(ctx).Debugf("Updating git submodules @%s", repo_path)
 
 	cmd := exec.Command("git", "-C", repo_path, "submodule", "init")
 	cmd.Stdout = &stdout

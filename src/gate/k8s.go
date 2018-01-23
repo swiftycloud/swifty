@@ -58,7 +58,7 @@ func swk8sRemove(ctx context.Context, conf *YAMLConf, fn *FunctionDesc, fi *FnIn
 
 	err = BalancerDelete(ctx, depname)
 	if err != nil && err != mgo.ErrNotFound {
-		log.Errorf("Can't delete balancer %s : %s", depname, err.Error())
+		ctxlog(ctx).Errorf("Can't delete balancer %s : %s", depname, err.Error())
 		return err
 	}
 
@@ -66,18 +66,18 @@ func swk8sRemove(ctx context.Context, conf *YAMLConf, fn *FunctionDesc, fi *FnIn
 	this, err := deploy.Get(depname)
 	if err != nil {
 		if k8serr.IsNotFound(err) {
-			log.Debugf("Deployment %s/%s doesn't exist", fn.SwoId.Str(), depname)
+			ctxlog(ctx).Debugf("Deployment %s/%s doesn't exist", fn.SwoId.Str(), depname)
 			return nil
 		}
 
-		log.Errorf("Can't get deployment for %s", fn.SwoId.Str())
+		ctxlog(ctx).Errorf("Can't get deployment for %s", fn.SwoId.Str())
 		return err
 	}
 
 	this.Spec.Replicas = &nr_replicas
 	_, err = deploy.Update(this)
 	if err != nil {
-		log.Errorf("Can't shrink replicas for %s: %s", fn.SwoId.Str(), err.Error())
+		ctxlog(ctx).Errorf("Can't shrink replicas for %s: %s", fn.SwoId.Str(), err.Error())
 		return err
 	}
 
@@ -91,12 +91,12 @@ func swk8sRemove(ctx context.Context, conf *YAMLConf, fn *FunctionDesc, fi *FnIn
 					OrphanDependents: &orphan,
 				})
 	if err != nil {
-		log.Errorf("Can't delete deployment for %s: %s",
+		ctxlog(ctx).Errorf("Can't delete deployment for %s: %s",
 				fn.SwoId.Str(), err.Error())
 		return err
 	}
 
-	log.Debugf("Deleted %s deployment %s", fn.SwoId.Str(), depname)
+	ctxlog(ctx).Debugf("Deleted %s deployment %s", fn.SwoId.Str(), depname)
 	return nil
 }
 
@@ -107,7 +107,7 @@ func swk8sGenEnvVar(ctx context.Context, fn *FunctionDesc, fi *FnInst, wd_port i
 		vs := strings.SplitN(v, "=", 2)
 		if strings.HasPrefix(vs[0], "SWD_") {
 			// FIXME -- check earlier and abort adding
-			log.Warn("Bogus env %s in %s", vs[0], fn.SwoId.Str())
+			ctxlog(ctx).Warn("Bogus env %s in %s", vs[0], fn.SwoId.Str())
 			continue
 		}
 		s = append(s, v1.EnvVar{Name: vs[0], Value: vs[1]})
@@ -169,13 +169,13 @@ func swk8sGenEnvVar(ctx context.Context, fn *FunctionDesc, fi *FnInst, wd_port i
 	for _, mw := range fn.Mware {
 		mwc, err := mwareGetCookie(fn.SwoId, mw)
 		if err != nil {
-			log.Errorf("No mware %s for %s", mw, fn.SwoId.Str())
+			ctxlog(ctx).Errorf("No mware %s for %s", mw, fn.SwoId.Str())
 			continue
 		}
 
 		secret, err := swk8sClientSet.Secrets(v1.NamespaceDefault).Get("mw-" + mwc)
 		if err != nil {
-			log.Errorf("No mware secret for %s", mwc)
+			ctxlog(ctx).Errorf("No mware secret for %s", mwc)
 			continue
 		}
 
@@ -211,7 +211,7 @@ func swk8sUpdate(ctx context.Context, conf *YAMLConf, fn *FunctionDesc) error {
 	deploy := swk8sClientSet.Extensions().Deployments(v1.NamespaceDefault)
 	this, err := deploy.Get(depname)
 	if err != nil {
-		log.Errorf("Can't get deployment for %s", fn.SwoId.Str())
+		ctxlog(ctx).Errorf("Can't get deployment for %s", fn.SwoId.Str())
 		return err
 	}
 
@@ -231,7 +231,7 @@ func swk8sUpdate(ctx context.Context, conf *YAMLConf, fn *FunctionDesc) error {
 
 	if fn.Size.Replicas == 1 {
 		/* Don't let pods disappear at all */
-		log.Debugf("Tuning up update strategy")
+		ctxlog(ctx).Debugf("Tuning up update strategy")
 		one := intstr.FromInt(1)
 		zero := intstr.FromInt(0)
 
@@ -245,7 +245,7 @@ func swk8sUpdate(ctx context.Context, conf *YAMLConf, fn *FunctionDesc) error {
 
 	_, err = deploy.Update(this)
 	if err != nil {
-		log.Errorf("Can't shrink replicas for %s: %s", fn.SwoId.Str(), err.Error())
+		ctxlog(ctx).Errorf("Can't shrink replicas for %s: %s", fn.SwoId.Str(), err.Error())
 		return err
 	}
 
@@ -276,7 +276,7 @@ func swk8sRun(ctx context.Context, conf *YAMLConf, fn *FunctionDesc, fi *FnInst)
 	var err error
 
 	depname := fi.DepName()
-	log.Debugf("Start %s deployment for %s", depname, fn.SwoId.Str())
+	ctxlog(ctx).Debugf("Start %s deployment for %s", depname, fn.SwoId.Str())
 
 	img, ok := conf.Runtime.Images[fn.Code.Lang]
 	if !ok {
@@ -326,7 +326,7 @@ func swk8sRun(ctx context.Context, conf *YAMLConf, fn *FunctionDesc, fi *FnInst)
 
 	err = BalancerCreate(ctx, fn.Cookie, depname, uint(nr_replicas), fn.URLCall)
 	if err != nil {
-		log.Errorf("Can't create balancer %s for %s: %s", depname, fn.SwoId.Str(), err.Error())
+		ctxlog(ctx).Errorf("Can't create balancer %s for %s: %s", depname, fn.SwoId.Str(), err.Error())
 		return errors.New("Net error")
 	}
 
@@ -351,7 +351,7 @@ func swk8sRun(ctx context.Context, conf *YAMLConf, fn *FunctionDesc, fi *FnInst)
 	if err != nil {
 		xtimer.Cancel(fn.Cookie)
 		BalancerDelete(ctx, depname)
-		log.Errorf("Can't start deployment %s: %s", fn.SwoId.Str(), err.Error())
+		ctxlog(ctx).Errorf("Can't start deployment %s: %s", fn.SwoId.Str(), err.Error())
 		return errors.New("K8S error")
 	}
 
@@ -448,43 +448,45 @@ func swk8sPodDel(obj interface{}) {
 }
 
 func swk8sPodTmo(cookie, inst string) {
-	log.Errorf("POD %s.%s start timeout", cookie, inst)
-	notifyPodTmo(context.Background(), cookie, inst)
+	ctx := context.Background()
+	ctxlog(ctx).Errorf("POD %s.%s start timeout", cookie, inst)
+	notifyPodTmo(ctx, cookie, inst)
 }
 
 func swk8sPodUpd(obj_old, obj_new interface{}) {
 	var err error = nil
 
+	ctx := context.Background()
 	pod_old := genBalancerPod(obj_old.(*v1.Pod))
 	pod_new := genBalancerPod(obj_new.(*v1.Pod))
 
 	if pod_old.State != swy.DBPodStateRdy {
 		if pod_new.State == swy.DBPodStateRdy {
-			log.Debugf("POD %s (%s) up (%s->%s) deploy %s", pod_new.UID, pod_new.WdogAddr,
+			ctxlog(ctx).Debugf("POD %s (%s) up (%s->%s) deploy %s", pod_new.UID, pod_new.WdogAddr,
 					podStates[pod_old.State], podStates[pod_new.State],
 					pod_new.DepName)
 
-			err = BalancerPodAdd(pod_new)
+			err = BalancerPodAdd(ctx, pod_new)
 			if err != nil {
-				log.Errorf("Can't add pod %s/%s/%s: %s",
+				ctxlog(ctx).Errorf("Can't add pod %s/%s/%s: %s",
 						pod_new.DepName, pod_new.UID,
 						pod_new.WdogAddr, err.Error())
 				return
 			}
 
 			if xtimer.Cancel(pod_new.SwoId.Cookie()) {
-				notifyPodUp(context.Background(), pod_new)
+				notifyPodUp(ctx, pod_new)
 			}
 		}
 	} else {
 		if pod_new.State != swy.DBPodStateRdy {
-			log.Debugf("POD %s down (%s->%s) deploy %s", pod_new.UID,
+			ctxlog(ctx).Debugf("POD %s down (%s->%s) deploy %s", pod_new.UID,
 					podStates[pod_old.State], podStates[pod_new.State],
 					pod_new.DepName)
 
-			err = BalancerPodDel(pod_new)
+			err = BalancerPodDel(ctx, pod_new)
 			if err != nil  && err != mgo.ErrNotFound {
-				log.Errorf("Can't delete pod %s/%s/%s: %s",
+				ctxlog(ctx).Errorf("Can't delete pod %s/%s/%s: %s",
 						pod_new.DepName, pod_new.UID,
 						pod_new.WdogAddr, err.Error())
 				return
@@ -515,14 +517,14 @@ func swk8sMwSecretAdd(ctx context.Context, id string, envs [][2]string) error {
 		})
 
 	if err != nil {
-		log.Errorf("mware secret add error: %s", err.Error())
+		ctxlog(ctx).Errorf("mware secret add error: %s", err.Error())
 		err = errors.New("K8S error")
 	}
 
 	return err
 }
 
-func swk8sMwSecretRemove(id string) error {
+func swk8sMwSecretRemove(ctx context.Context, id string) error {
 	var orphan bool = false
 	var grace int64 = 0
 	var err error
@@ -534,7 +536,7 @@ func swk8sMwSecretRemove(id string) error {
 			OrphanDependents: &orphan,
 		})
 	if err != nil {
-		log.Errorf("Can't remove mw %s secret: %s", id, err.Error())
+		ctxlog(ctx).Errorf("Can't remove mw %s secret: %s", id, err.Error())
 	}
 
 	return err
@@ -546,13 +548,13 @@ func swk8sInit(conf *YAMLConf) error {
 
 	config, err := clientcmd.BuildConfigFromFlags("", *kubeconfig)
 	if err != nil {
-		log.Error("BuildConfigFromFlags: %s", err.Error())
+		glog.Error("BuildConfigFromFlags: %s", err.Error())
 		return err
 	}
 
 	swk8sClientSet, err = kubernetes.NewForConfig(config)
 	if err != nil {
-		log.Error("NewForConfig: %s", err.Error())
+		glog.Error("NewForConfig: %s", err.Error())
 		return err
 	}
 

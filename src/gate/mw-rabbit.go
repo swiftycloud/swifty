@@ -2,6 +2,7 @@ package main
 
 import (
 	"net/http"
+	"context"
 	"gopkg.in/mgo.v2/bson"
 	"github.com/michaelklishin/rabbit-hole"
 	"fmt"
@@ -25,7 +26,7 @@ func rabbitErr(resp *http.Response, err error) error {
 	}
 }
 
-func InitRabbitMQ(conf *YAMLConfMw, mwd *MwareDesc) (error) {
+func InitRabbitMQ(ctx context.Context, conf *YAMLConfMw, mwd *MwareDesc) (error) {
 	err := mwareGenerateUserPassClient(mwd)
 	if err != nil {
 		return err
@@ -64,7 +65,7 @@ func InitRabbitMQ(conf *YAMLConfMw, mwd *MwareDesc) (error) {
 	return nil
 }
 
-func FiniRabbitMQ(conf *YAMLConfMw, mwd *MwareDesc) error {
+func FiniRabbitMQ(ctx context.Context, conf *YAMLConfMw, mwd *MwareDesc) error {
 	rmqc, err := rabbitConn(conf)
 	if err != nil {
 		return err
@@ -72,24 +73,24 @@ func FiniRabbitMQ(conf *YAMLConfMw, mwd *MwareDesc) error {
 
 	err = rabbitErr(rmqc.DeleteVhost(mwd.Namespace))
 	if err != nil {
-		log.Errorf("rabbit: can't delete vhost %s: %s", mwd.Client, err.Error())
+		ctxlog(ctx).Errorf("rabbit: can't delete vhost %s: %s", mwd.Client, err.Error())
 	}
 
 	err = rabbitErr(rmqc.DeleteUser(mwd.Client))
 	if err != nil {
-		log.Errorf("rabbit: can't delete user %s: %s", mwd.Client, err.Error())
+		ctxlog(ctx).Errorf("rabbit: can't delete user %s: %s", mwd.Client, err.Error())
 	}
 
 	return nil
 }
 
-func mqEvent(mwid, queue, userid, data string) {
+func mqEvent(ctx context.Context, mwid, queue, userid, data string) {
 	mware, err := dbMwareGetOne(bson.M{"mwaretype": "rabbit", "client": userid})
 	if err != nil {
 		return
 	}
 
-	log.Debugf("mq: Resolved client to project %s", mware.Project)
+	ctxlog(ctx).Debugf("mq: Resolved client to project %s", mware.Project)
 
 	funcs, err := dbFuncListMwEvent(&mware.SwoId, bson.M {
 		"event.source": "mware",
@@ -98,27 +99,27 @@ func mqEvent(mwid, queue, userid, data string) {
 	})
 	if err != nil {
 		/* FIXME -- this should be notified? Or what? */
-		log.Errorf("mq: Can't list functions for event")
+		ctxlog(ctx).Errorf("mq: Can't list functions for event")
 		return
 	}
 
 	for _, fn := range funcs {
-		log.Debugf("mq: `- [%s]", fn)
+		ctxlog(ctx).Debugf("mq: `- [%s]", fn)
 		/* FIXME -- this is synchronous */
-		_, err := doRun(&fn, "mware:" + mwid + ":" + queue, map[string]string{"body": data})
+		_, err := doRun(ctx, &fn, "mware:" + mwid + ":" + queue, map[string]string{"body": data})
 		if err != nil {
-			log.Errorf("mq: Error running FN %s", err.Error())
+			ctxlog(ctx).Errorf("mq: Error running FN %s", err.Error())
 		}
 	}
 }
 
-func EventRabbitMQ(conf *YAMLConfMw, source *FnEventDesc, mwd *MwareDesc, on bool) (error) {
+func EventRabbitMQ(ctx context.Context, conf *YAMLConfMw, source *FnEventDesc, mwd *MwareDesc, on bool) (error) {
 	if on {
 		return mqStartListener(conf.Rabbit.Admin, conf.Rabbit.Pass,
 			conf.Rabbit.Addr + "/" + mwd.Namespace, source.MQueue,
-			func(userid string, data []byte) {
+			func(ctx context.Context, userid string, data []byte) {
 				if userid != "" {
-					mqEvent(mwd.SwoId.Name, source.MQueue, userid, string(data))
+					mqEvent(ctx, mwd.SwoId.Name, source.MQueue, userid, string(data))
 				}
 			})
 	} else {

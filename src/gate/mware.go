@@ -26,9 +26,9 @@ type MwareDesc struct {
 }
 
 type MwareOps struct {
-	Init	func(conf *YAMLConfMw, mwd *MwareDesc) (error)
-	Fini	func(conf *YAMLConfMw, mwd *MwareDesc) (error)
-	Event	func(conf *YAMLConfMw, source *FnEventDesc, mwd *MwareDesc, on bool) (error)
+	Init	func(ctx context.Context, conf *YAMLConfMw, mwd *MwareDesc) (error)
+	Fini	func(ctx context.Context, conf *YAMLConfMw, mwd *MwareDesc) (error)
+	Event	func(ctx context.Context, conf *YAMLConfMw, source *FnEventDesc, mwd *MwareDesc, on bool) (error)
 	GetEnv	func(conf *YAMLConfMw, mwd *MwareDesc) ([][2]string)
 	Devel	bool
 }
@@ -82,7 +82,7 @@ var mwareHandlers = map[string]*MwareOps {
 func mwareRemove(ctx context.Context, conf *YAMLConfMw, id *SwoId) error {
 	item, err := dbMwareGetItem(id)
 	if err != nil {
-		log.Errorf("Can't find mware %s", id.Str())
+		ctxlog(ctx).Errorf("Can't find mware %s", id.Str())
 		return err
 	}
 
@@ -93,25 +93,25 @@ func mwareRemove(ctx context.Context, conf *YAMLConfMw, id *SwoId) error {
 
 	err = dbMwareTerminate(&item)
 	if err != nil {
-		log.Errorf("Can't terminate mware %s", id.Str())
+		ctxlog(ctx).Errorf("Can't terminate mware %s", id.Str())
 		return err
 	}
 
-	err = handler.Fini(conf, &item)
+	err = handler.Fini(ctx, conf, &item)
 	if err != nil {
-		log.Errorf("Failed cleanup for mware %s: %s", item.SwoId.Str(), err.Error())
+		ctxlog(ctx).Errorf("Failed cleanup for mware %s: %s", item.SwoId.Str(), err.Error())
 		goto stalled
 	}
 
-	err = swk8sMwSecretRemove(item.Cookie)
+	err = swk8sMwSecretRemove(ctx, item.Cookie)
 	if err != nil {
-		log.Errorf("Failed secret cleanup for mware %s: %s", item.SwoId.Str(), err.Error())
+		ctxlog(ctx).Errorf("Failed secret cleanup for mware %s: %s", item.SwoId.Str(), err.Error())
 		goto stalled
 	}
 
 	err = dbMwareRemove(&item)
 	if err != nil {
-		log.Errorf("Can't remove mware %s: %s", item.SwoId.Str(), err.Error())
+		ctxlog(ctx).Errorf("Can't remove mware %s: %s", item.SwoId.Str(), err.Error())
 		goto stalled
 	}
 
@@ -143,11 +143,11 @@ func mwareSetup(ctx context.Context, conf *YAMLConfMw, id *SwoId, mwType string)
 	var err, erc error
 
 	mwd := getMwareDesc(id, mwType)
-	log.Debugf("set up wmare %s:%s", mwd.SwoId.Str(), mwType)
+	ctxlog(ctx).Debugf("set up wmare %s:%s", mwd.SwoId.Str(), mwType)
 
 	err = dbMwareAdd(mwd)
 	if err != nil {
-		log.Errorf("Can't add mware %s: %s", mwd.SwoId.Str(), err.Error())
+		ctxlog(ctx).Errorf("Can't add mware %s: %s", mwd.SwoId.Str(), err.Error())
 		err = errors.New("DB error")
 		goto out
 	}
@@ -163,7 +163,7 @@ func mwareSetup(ctx context.Context, conf *YAMLConfMw, id *SwoId, mwType string)
 		goto outdb
 	}
 
-	err = handler.Init(conf, mwd)
+	err = handler.Init(ctx, conf, mwd)
 	if err != nil {
 		err = fmt.Errorf("mware init error: %s", err.Error())
 		goto outdb
@@ -176,14 +176,14 @@ func mwareSetup(ctx context.Context, conf *YAMLConfMw, id *SwoId, mwType string)
 
 	mwd.Secret, err = swycrypt.EncryptString(gateSecPas, mwd.Secret)
 	if err != nil {
-		log.Errorf("Mw secret encrypt error: %s", err.Error())
+		ctxlog(ctx).Errorf("Mw secret encrypt error: %s", err.Error())
 		err = errors.New("Encrypt error")
 		goto outs
 	}
 
 	err = dbMwareUpdateAdded(mwd)
 	if err != nil {
-		log.Errorf("Can't update added %s: %s", mwd.SwoId.Str(), err.Error())
+		ctxlog(ctx).Errorf("Can't update added %s: %s", mwd.SwoId.Str(), err.Error())
 		err = errors.New("DB error")
 		goto outs
 	}
@@ -191,12 +191,12 @@ func mwareSetup(ctx context.Context, conf *YAMLConfMw, id *SwoId, mwType string)
 	return nil
 
 outs:
-	erc = swk8sMwSecretRemove(mwd.Cookie)
+	erc = swk8sMwSecretRemove(ctx, mwd.Cookie)
 	if erc != nil {
 		goto stalled
 	}
 outh:
-	erc = handler.Fini(conf, mwd)
+	erc = handler.Fini(ctx, conf, mwd)
 	if erc != nil {
 		goto stalled
 	}
@@ -206,7 +206,7 @@ outdb:
 		goto stalled
 	}
 out:
-	log.Errorf("mwareSetup: %s", err.Error())
+	ctxlog(ctx).Errorf("mwareSetup: %s", err.Error())
 	return err
 
 stalled:
@@ -214,19 +214,19 @@ stalled:
 	goto out
 }
 
-func mwareEventSetup(conf *YAMLConf, fn *FunctionDesc, on bool) error {
+func mwareEventSetup(ctx context.Context, conf *YAMLConf, fn *FunctionDesc, on bool) error {
 	item, err := dbMwareGetReady(makeSwoId(fn.Tennant, fn.Project, fn.Event.MwareId))
 	if err != nil {
 		return errors.New("No mware for event")
 	}
 
-	log.Debugf("set up event for %s.%s mware", fn.Event.MwareId, item.MwareType)
+	ctxlog(ctx).Debugf("set up event for %s.%s mware", fn.Event.MwareId, item.MwareType)
 
 	iface, ok := mwareHandlers[item.MwareType]
 	if ok && (iface.Event != nil) {
-		return iface.Event(&conf.Mware, &fn.Event, &item, on)
+		return iface.Event(ctx, &conf.Mware, &fn.Event, &item, on)
 	}
 
-	log.Errorf("Can't find mware handler for %s.%s event", item.SwoId.Str(), item.MwareType)
+	ctxlog(ctx).Errorf("Can't find mware handler for %s.%s event", item.SwoId.Str(), item.MwareType)
 	return errors.New("Bad mware for event")
 }

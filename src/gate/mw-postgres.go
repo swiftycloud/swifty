@@ -2,12 +2,13 @@ package main
 
 import (
 	"strings"
+	"context"
 	"../common"
 	"../common/http"
 	"../apis/apps"
 )
 
-func InitPostgres(conf *YAMLConfMw, mwd *MwareDesc) (error) {
+func InitPostgres(ctx context.Context, conf *YAMLConfMw, mwd *MwareDesc) (error) {
 	err := mwareGenerateUserPassClient(mwd)
 	if err != nil {
 		return err
@@ -31,7 +32,7 @@ func InitPostgres(conf *YAMLConfMw, mwd *MwareDesc) (error) {
 	return err
 }
 
-func FiniPostgres(conf *YAMLConfMw, mwd *MwareDesc) error {
+func FiniPostgres(ctx context.Context, conf *YAMLConfMw, mwd *MwareDesc) error {
 	addr := swy.MakeAdminURL(conf.Postgres.Addr, conf.Postgres.AdminPort)
 	_, err := swyhttp.MarshalAndPost(
 			&swyhttp.RestReq{

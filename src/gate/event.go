@@ -8,7 +8,7 @@ import (
 
 var cronRunner *cron.Cron
 
-var evtHandlers = map[string]func(*YAMLConf, *FunctionDesc, bool) error {
+var evtHandlers = map[string]func(context.Context, *YAMLConf, *FunctionDesc, bool) error {
 	"mware": mwareEventSetup,
 	"cron": cronEventSetup,
 	"oneshot": oneshotEventSetup,
@@ -22,7 +22,7 @@ func eventSetup(ctx context.Context, conf *YAMLConf, fn *FunctionDesc, on bool) 
 
 	evtHandler, ok := evtHandlers[fn.Event.Source]
 	if ok {
-		return evtHandler(conf, fn, on)
+		return evtHandler(ctx, conf, fn, on)
 	} else {
 		return fmt.Errorf("Unknown event type %s", fn.Event.Source)
 	}
@@ -33,19 +33,19 @@ type faasCronJob struct {
 }
 
 func (cj faasCronJob) Run () {
-	log.Debugf("Will run %s function", cj.Id.Str())
+	glog.Debugf("Will run %s function", cj.Id.Str())
 }
 
-func oneshotEventSetup(conf *YAMLConf, fn *FunctionDesc, on bool) error {
+func oneshotEventSetup(ctx context.Context, conf *YAMLConf, fn *FunctionDesc, on bool) error {
 	fn.OneShot = true
 	return nil
 }
 
-func cronEventSetup(conf *YAMLConf, fn *FunctionDesc, on bool) error {
+func cronEventSetup(ctx context.Context, conf *YAMLConf, fn *FunctionDesc, on bool) error {
 	if on {
 		id, err := cronRunner.AddJob(fn.Event.CronTab, faasCronJob{Id: fn.SwoId})
 		if err != nil {
-			log.Errorf("Can't setup cron trigger for %s", fn.SwoId.Str())
+			ctxlog(ctx).Errorf("Can't setup cron trigger for %s", fn.SwoId.Str())
 			return err
 		}
 
@@ -60,12 +60,12 @@ func cronEventSetup(conf *YAMLConf, fn *FunctionDesc, on bool) error {
 func eventsRestart(conf *YAMLConf) error {
 	fns, err := dbFuncListWithEvents()
 	if err != nil {
-		log.Errorf("Can't list functions with events: %s", err.Error())
+		glog.Errorf("Can't list functions with events: %s", err.Error())
 		return err
 	}
 
 	for _, fn := range fns {
-		log.Debugf("Restart event for %s", fn.SwoId.Str())
+		glog.Debugf("Restart event for %s", fn.SwoId.Str())
 		err = eventSetup(context.Background(), conf, &fn, true)
 		if err != nil {
 			return err

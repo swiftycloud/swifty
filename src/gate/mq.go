@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"github.com/streadway/amqp"
 )
 
@@ -11,7 +12,7 @@ type mqConsumer struct {
 	done		chan bool
 }
 
-type mqListenerCb func(string, []byte)
+type mqListenerCb func(context.Context, string, []byte)
 
 // FIXME -- isn't there out-of-the-box factory engine in go?
 type mq_listener_req struct {
@@ -57,13 +58,13 @@ func stopListener(req *mq_listener_req) {
 	key := req.hkey()
 	cons, ok := consumers[key]
 	if !ok {
-		log.Errorf("mq: FATAL: no consumer for %s found", key)
+		glog.Errorf("mq: FATAL: no consumer for %s found", key)
 		return
 	}
 
 	cons.counter--
 	if cons.counter == 0 {
-		log.Debugf("mq: Stopping mq listener @%s", key)
+		glog.Debugf("mq: Stopping mq listener @%s", key)
 		cons.done <-true
 		cons.channel.Close()
 		cons.conn.Close()
@@ -85,7 +86,7 @@ func startListener(req *mq_listener_req) error {
 
 	cons.done = make(chan bool)
 
-	log.Debugf("mq: Starting mq listener @%s", key)
+	glog.Debugf("mq: Starting mq listener @%s", key)
 
 	/* FIXME -- can there be one connection? */
 	cons.conn, err = amqp.Dial("amqp://" + req.user + ":" + req.pass + "@" + req.url)
@@ -93,44 +94,45 @@ func startListener(req *mq_listener_req) error {
 		return err
 	}
 
-	log.Debugf("mq:\tchan")
+	glog.Debugf("mq:\tchan")
 	cons.channel, err = cons.conn.Channel()
 	if err != nil {
 		return err
 	}
 
-	log.Debugf("mq:\tqueue")
+	glog.Debugf("mq:\tqueue")
 	q, err := cons.channel.QueueDeclare(req.queue, false, false, false, false, nil)
 	if err != nil {
 		return err
 	}
 
-	log.Debugf("mq:\tconsume")
+	glog.Debugf("mq:\tconsume")
 	msgs, err := cons.channel.Consume(q.Name, "", true, false, false, false, nil)
 	if err != nil {
 		return err
 	}
 
 	go func() {
-		log.Debugf("mq: Getting messages for %s", key)
+		ctx := context.Background()
+		ctxlog(ctx).Debugf("mq: Getting messages for %s", key)
 	loop:
 		for {
-			log.Debugf("mq: >")
+			ctxlog(ctx).Debugf("mq: >")
 			select {
 			case d := <-msgs:
-				log.Debugf("mq: Received message [%s] from [%s]", d.Body, d.UserId)
-				req.cb(d.UserId, d.Body)
+				ctxlog(ctx).Debugf("mq: Received message [%s] from [%s]", d.Body, d.UserId)
+				req.cb(ctx, d.UserId, d.Body)
 			case <-cons.done:
-				log.Debugf("mq: Done")
+				ctxlog(ctx).Debugf("mq: Done")
 				break loop
 			}
-			log.Debugf("mq: <")
+			ctxlog(ctx).Debugf("mq: <")
 		}
-		log.Debugf("mq: Stop getting messages")
+		ctxlog(ctx).Debugf("mq: Stop getting messages")
 	}()
 
 	consumers[key] = cons
-	log.Debugf("mq: ... Done");
+	glog.Debugf("mq: ... Done");
 	return nil
 }
 

@@ -34,7 +34,7 @@ const (
 	SwyPodStartTmo time.Duration	= 30 * time.Second
 )
 
-var log *zap.SugaredLogger
+var glog *zap.SugaredLogger
 
 type YAMLConfSwd struct {
 	Port		int			`yaml:"port"`
@@ -177,6 +177,10 @@ func fromContext(ctx context.Context) *gateContext {
 	return ctx.(*gateContext)
 }
 
+func ctxlog(ctx context.Context) *zap.SugaredLogger {
+	return glog
+}
+
 func handleUserLogin(w http.ResponseWriter, r *http.Request) {
 	var params swyapi.UserLogin
 	var token string
@@ -189,7 +193,7 @@ func handleUserLogin(w http.ResponseWriter, r *http.Request) {
 		goto out
 	}
 
-	log.Debugf("Trying to login user %s", params.UserName)
+	glog.Debugf("Trying to login user %s", params.UserName)
 
 	token, err = swyks.KeystoneAuthWithPass(conf.Keystone.Addr, conf.Keystone.Domain, &params)
 	if err != nil {
@@ -197,7 +201,7 @@ func handleUserLogin(w http.ResponseWriter, r *http.Request) {
 		goto out
 	}
 
-	log.Debugf("Login passed, token %s", token[:16])
+	glog.Debugf("Login passed, token %s", token[:16])
 
 	w.Header().Set("X-Subject-Token", token)
 	w.WriteHeader(http.StatusOK)
@@ -231,7 +235,7 @@ func handleProjectDel(ctx context.Context, w http.ResponseWriter, r *http.Reques
 		id.Name = fn.SwoId.Name
 		err = removeFunction(ctx, &conf, id)
 		if err != nil {
-			log.Error("Funciton removal failed: %s", err.Error())
+			ctxlog(ctx).Error("Funciton removal failed: %s", err.Error())
 			ferr = err
 		}
 	}
@@ -246,7 +250,7 @@ func handleProjectDel(ctx context.Context, w http.ResponseWriter, r *http.Reques
 		id.Name = mw.SwoId.Name
 		err = mwareRemove(ctx, &conf.Mware, id)
 		if err != nil {
-			log.Error("Mware removal failed: %s", err.Error())
+			ctxlog(ctx).Error("Mware removal failed: %s", err.Error())
 			ferr = err
 		}
 	}
@@ -272,7 +276,7 @@ func handleProjectList(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		goto out
 	}
 
-	log.Debugf("List projects for %s", fromContext(ctx).Tenant)
+	ctxlog(ctx).Debugf("List projects for %s", fromContext(ctx).Tenant)
 	fns, mws, err = dbProjectListAll(fromContext(ctx).Tenant)
 	if err != nil {
 		goto out
@@ -336,7 +340,7 @@ func handleFunctionState(ctx context.Context, w http.ResponseWriter, r *http.Req
 	}
 
 	id = makeSwoId(fromContext(ctx).Tenant, params.Project, params.FuncName)
-	log.Debugf("function/state %s -> %s", id.Str(), params.State)
+	ctxlog(ctx).Debugf("function/state %s -> %s", id.Str(), params.State)
 
 	err = setFunctionState(ctx, &conf, id, &params)
 	if err != nil {
@@ -358,7 +362,7 @@ func handleFunctionUpdate(ctx context.Context, w http.ResponseWriter, r *http.Re
 	}
 
 	id = makeSwoId(fromContext(ctx).Tenant, params.Project, params.FuncName)
-	log.Debugf("function/update %s", id.Str())
+	ctxlog(ctx).Debugf("function/update %s", id.Str())
 
 	err = updateFunction(ctx, &conf, id, &params)
 	if err != nil {
@@ -380,7 +384,7 @@ func handleFunctionRemove(ctx context.Context, w http.ResponseWriter, r *http.Re
 	}
 
 	id = makeSwoId(fromContext(ctx).Tenant, params.Project, params.FuncName)
-	log.Debugf("function/remove %s", id.Str())
+	ctxlog(ctx).Debugf("function/remove %s", id.Str())
 
 	err = removeFunction(ctx, &conf, id)
 	if err != nil {
@@ -409,7 +413,7 @@ func handleFunctionCode(ctx context.Context, w http.ResponseWriter, r *http.Requ
 	}
 
 	id = makeSwoId(fromContext(ctx).Tenant, params.Project, params.FuncName)
-	log.Debugf("Get FN code %s:%s", id.Str(), params.Version)
+	ctxlog(ctx).Debugf("Get FN code %s:%s", id.Str(), params.Version)
 
 	fn, err = dbFuncFind(id)
 	if err != nil {
@@ -448,7 +452,7 @@ func handleFunctionStats(ctx context.Context, w http.ResponseWriter, r *http.Req
 	}
 
 	id = makeSwoId(fromContext(ctx).Tenant, params.Project, params.FuncName)
-	log.Debugf("Get FN stats %s", id.Str())
+	ctxlog(ctx).Debugf("Get FN stats %s", id.Str())
 
 	fn, err = dbFuncFind(id)
 	if err != nil {
@@ -487,7 +491,7 @@ func handleFunctionInfo(ctx context.Context, w http.ResponseWriter, r *http.Requ
 	}
 
 	id = makeSwoId(fromContext(ctx).Tenant, params.Project, params.FuncName)
-	log.Debugf("Get FN Info %s", id.Str())
+	ctxlog(ctx).Debugf("Get FN Info %s", id.Str())
 
 	fn, err = dbFuncFind(id)
 	if err != nil {
@@ -562,7 +566,7 @@ func handleFunctionLogs(ctx context.Context, w http.ResponseWriter, r *http.Requ
 	}
 
 	id = makeSwoId(fromContext(ctx).Tenant, params.Project, params.FuncName)
-	log.Debugf("Get logs for %s", fromContext(ctx).Tenant)
+	ctxlog(ctx).Debugf("Get logs for %s", fromContext(ctx).Tenant)
 
 	logs, err = logGetFor(id)
 	if err != nil {
@@ -606,6 +610,8 @@ func handleFunctionCall(w http.ResponseWriter, r *http.Request) {
 	var err error
 	var fmd *FnMemData
 
+	ctx := context.Background()
+
 	fnId := mux.Vars(r)["fnid"]
 
 	code := http.StatusServiceUnavailable
@@ -633,9 +639,8 @@ func handleFunctionCall(w http.ResponseWriter, r *http.Request) {
 	}
 
 	arg_map = makeArgMap(r)
-
 	code = http.StatusInternalServerError
-	res, err = doRunLink(link, fmd, fnId, "run", arg_map)
+	res, err = doRunLink(ctx, link, fmd, fnId, "run", arg_map)
 	if err != nil {
 		goto out
 	}
@@ -668,7 +673,7 @@ func handleFunctionRun(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	}
 
 	id = makeSwoId(fromContext(ctx).Tenant, params.Project, params.FuncName)
-	log.Debugf("function/run %s", id.Str())
+	ctxlog(ctx).Debugf("function/run %s", id.Str())
 
 	fn, err = dbFuncFindStates(id, []int{swy.DBFuncStateRdy, swy.DBFuncStateUpd})
 	if err != nil {
@@ -685,14 +690,14 @@ func handleFunctionRun(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		if err == nil {
 			err = errors.New("Nothing to run (yet)")
 		} else {
-			log.Errorf("balancer-db: Can't find pod %s/%s: %s",
+			ctxlog(ctx).Errorf("balancer-db: Can't find pod %s/%s: %s",
 					fn.Cookie, fn.Src.Version, err.Error())
 			err = errors.New("DB error")
 		}
 		goto out
 	}
 
-	res, err = doRunIp(lrs.VIP(), nil, fn.Cookie, "run", params.Args)
+	res, err = doRunIp(ctx, lrs.VIP(), nil, fn.Cookie, "run", params.Args)
 	if err != nil {
 		goto out
 	}
@@ -754,7 +759,7 @@ func handleMwareAdd(ctx context.Context, w http.ResponseWriter, r *http.Request)
 	}
 
 	id = makeSwoId(fromContext(ctx).Tenant, params.Project, params.ID)
-	log.Debugf("mware/add: %s params %v", fromContext(ctx).Tenant, params)
+	ctxlog(ctx).Debugf("mware/add: %s params %v", fromContext(ctx).Tenant, params)
 
 	err = mwareSetup(ctx, &conf.Mware, id, params.Type)
 	if err != nil {
@@ -806,7 +811,7 @@ func handleMwareList(ctx context.Context, w http.ResponseWriter, r *http.Request
 	}
 
 	id = makeSwoId(fromContext(ctx).Tenant, params.Project, "")
-	log.Debugf("list mware for %s", fromContext(ctx).Tenant)
+	ctxlog(ctx).Debugf("list mware for %s", fromContext(ctx).Tenant)
 
 	mwares, err = dbMwareGetAll(id)
 	if err != nil {
@@ -836,7 +841,7 @@ func handleMwareRemove(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	}
 
 	id = makeSwoId(fromContext(ctx).Tenant, params.Project, params.ID)
-	log.Debugf("mware/remove: %s params %v", fromContext(ctx).Tenant, params)
+	ctxlog(ctx).Debugf("mware/remove: %s params %v", fromContext(ctx).Tenant, params)
 
 	err = mwareRemove(ctx, &conf.Mware, id)
 	if err != nil {
@@ -900,7 +905,7 @@ func genReqHandler(cb func(ctx context.Context, w http.ResponseWriter, r *http.R
 			code = http.StatusBadRequest
 			err = cb(ctx, w, r)
 			if err != nil {
-				log.Errorf("Error in callback: %s", err.Error())
+				ctxlog(ctx).Errorf("Error in callback: %s", err.Error())
 			}
 		}
 		if err != nil {
@@ -964,9 +969,9 @@ func setupLogger(conf *YAMLConf) {
 	}
 
 	logger, _ := zcfg.Build()
-	log = logger.Sugar()
+	glog = logger.Sugar()
 
-	swy.InitLogger(log)
+	swy.InitLogger(glog)
 }
 
 func main() {
@@ -986,23 +991,23 @@ func main() {
 		setupMwareAddr(&conf)
 	} else {
 		setupLogger(nil)
-		log.Errorf("Provide config path")
+		glog.Errorf("Provide config path")
 		return
 	}
 
 	gateSecrets, err = swysec.ReadSecrets("gate")
 	if err != nil {
-		log.Errorf("Can't read gate secrets: %s", err.Error())
+		glog.Errorf("Can't read gate secrets: %s", err.Error())
 		return
 	}
 
 	gateSecPas, err = hex.DecodeString(gateSecrets[conf.Mware.SecKey])
 	if err != nil || len(gateSecPas) < 16 {
-		log.Errorf("Secrets pass should be decodable and at least 16 bytes long")
+		glog.Errorf("Secrets pass should be decodable and at least 16 bytes long")
 		return
 	}
 
-	log.Debugf("config: %v", &conf)
+	glog.Debugf("config: %v", &conf)
 
 	r := mux.NewRouter()
 	r.HandleFunc("/v1/login",		handleUserLogin)
@@ -1029,29 +1034,29 @@ func main() {
 
 	err = dbConnect(&conf)
 	if err != nil {
-		log.Fatalf("Can't setup connection to backend: %s",
+		glog.Fatalf("Can't setup connection to backend: %s",
 				err.Error())
 	}
 
 	err = eventsInit(&conf)
 	if err != nil {
-		log.Fatalf("Can't setup events: %s", err.Error())
+		glog.Fatalf("Can't setup events: %s", err.Error())
 	}
 
 	err = statsInit(&conf)
 	if err != nil {
-		log.Fatalf("Can't setup stats: %s", err.Error())
+		glog.Fatalf("Can't setup stats: %s", err.Error())
 	}
 
 	err = swk8sInit(&conf)
 	if err != nil {
-		log.Fatalf("Can't setup connection to kubernetes: %s",
+		glog.Fatalf("Can't setup connection to kubernetes: %s",
 				err.Error())
 	}
 
 	err = BalancerInit(&conf)
 	if err != nil {
-		log.Fatalf("Can't setup: %s", err.Error())
+		glog.Fatalf("Can't setup: %s", err.Error())
 	}
 
 	gatesrv = &http.Server{
@@ -1063,7 +1068,7 @@ func main() {
 
 	err = gatesrv.ListenAndServe()
 	if err != nil {
-		log.Errorf("ListenAndServe: %s", err.Error())
+		glog.Errorf("ListenAndServe: %s", err.Error())
 	}
 
 	dbDisconnect()

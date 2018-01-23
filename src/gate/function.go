@@ -213,12 +213,12 @@ func addFunction(ctx context.Context, conf *YAMLConf, tennant string, params *sw
 
 	fn = getFunctionDesc(tennant, params)
 
-	log.Debugf("function/add %s (cookie %s)", fn.SwoId.Str(), fn.Cookie[:32])
+	ctxlog(ctx).Debugf("function/add %s (cookie %s)", fn.SwoId.Str(), fn.Cookie[:32])
 
 	fn.State = swy.DBFuncStateIni
 	err = dbFuncAdd(fn)
 	if err != nil {
-		log.Errorf("Can't add function %s: %s", fn.SwoId.Str(), err.Error())
+		ctxlog(ctx).Errorf("Can't add function %s: %s", fn.SwoId.Str(), err.Error())
 		err = errors.New("DB error")
 		goto out
 	}
@@ -243,7 +243,7 @@ func addFunction(ctx context.Context, conf *YAMLConf, tennant string, params *sw
 
 	err = dbFuncUpdateAdded(fn)
 	if err != nil {
-		log.Errorf("Can't update added %s: %s", fn.SwoId.Str(), err.Error())
+		ctxlog(ctx).Errorf("Can't update added %s: %s", fn.SwoId.Str(), err.Error())
 		err = errors.New("DB error")
 		goto out_clean_repo
 	}
@@ -311,7 +311,7 @@ func updateFunction(ctx context.Context, conf *YAMLConf, id *SwoId, params *swya
 	// FIXME -- lock other requests :\
 
 	if params.Code != "" {
-		log.Debugf("Will update sources for %s", fn.SwoId.Str())
+		ctxlog(ctx).Debugf("Will update sources for %s", fn.SwoId.Str())
 		err = updateSources(ctx, fn, params)
 		if err != nil {
 			goto out
@@ -328,13 +328,13 @@ func updateFunction(ctx context.Context, conf *YAMLConf, id *SwoId, params *swya
 		}
 
 		if fn.Size.Tmo != params.Size.Timeout {
-			log.Debugf("Will update tmo for %s", fn.SwoId.Str())
+			ctxlog(ctx).Debugf("Will update tmo for %s", fn.SwoId.Str())
 			fn.Size.Tmo = params.Size.Timeout
 			update["size.timeout"] = params.Size.Timeout
 		}
 
 		if fn.Size.Mem != params.Size.Memory {
-			log.Debugf("Will update mem for %s", fn.SwoId.Str())
+			ctxlog(ctx).Debugf("Will update mem for %s", fn.SwoId.Str())
 			fn.Size.Mem = params.Size.Memory
 			update["size.mem"] = params.Size.Memory
 			mfix = true
@@ -342,7 +342,7 @@ func updateFunction(ctx context.Context, conf *YAMLConf, id *SwoId, params *swya
 
 		if params.Size.Rate != 0 && (params.Size.Rate != fn.Size.Rate ||
 						params.Size.Burst != fn.Size.Burst) {
-			log.Debugf("Will update ratelimit for %s", fn.SwoId.Str())
+			ctxlog(ctx).Debugf("Will update ratelimit for %s", fn.SwoId.Str())
 			fn.Size.Burst = params.Size.Burst
 			fn.Size.Rate = params.Size.Rate
 			update["size.rate"] = params.Size.Rate
@@ -357,7 +357,7 @@ func updateFunction(ctx context.Context, conf *YAMLConf, id *SwoId, params *swya
 	}
 
 	if len(update) == 0 {
-		log.Debugf("Nothing to update for %s", fn.SwoId.Str())
+		ctxlog(ctx).Debugf("Nothing to update for %s", fn.SwoId.Str())
 		goto out
 	}
 
@@ -373,7 +373,7 @@ func updateFunction(ctx context.Context, conf *YAMLConf, id *SwoId, params *swya
 
 	err = dbFuncUpdatePulled(fn, update)
 	if err != nil {
-		log.Errorf("Can't update pulled %s: %s", fn.Name, err.Error())
+		ctxlog(ctx).Errorf("Can't update pulled %s: %s", fn.Name, err.Error())
 		err = errors.New("DB error")
 		goto out
 	}
@@ -401,10 +401,10 @@ func updateFunction(ctx context.Context, conf *YAMLConf, id *SwoId, params *swya
 	}
 
 	if rebuild {
-		log.Debugf("Starting build dep")
+		ctxlog(ctx).Debugf("Starting build dep")
 		err = swk8sRun(ctx, conf, fn, fn.InstBuild())
 	} else {
-		log.Debugf("Updating deploy")
+		ctxlog(ctx).Debugf("Updating deploy")
 		err = swk8sUpdate(ctx, conf, fn)
 	}
 
@@ -431,16 +431,16 @@ func removeFunction(ctx context.Context, conf *YAMLConf, id *SwoId) error {
 	err = dbFuncSetStateCond(id, swy.DBFuncStateTrm, []int{
 			swy.DBFuncStateRdy, swy.DBFuncStateStl, swy.DBFuncStateDea})
 	if err != nil {
-		log.Errorf("Can't terminate function %s: %s", id.Name, err.Error())
+		ctxlog(ctx).Errorf("Can't terminate function %s: %s", id.Name, err.Error())
 		return errors.New("Cannot terminate fn")
 	}
 
-	log.Debugf("Forget function %s", fn.SwoId.Str())
+	ctxlog(ctx).Debugf("Forget function %s", fn.SwoId.Str())
 
 	if !fn.OneShot && (fn.State != swy.DBFuncStateDea) {
 		err = swk8sRemove(ctx, conf, fn, fn.Inst())
 		if err != nil {
-			log.Errorf("remove deploy error: %s", err.Error())
+			ctxlog(ctx).Errorf("remove deploy error: %s", err.Error())
 			goto stalled
 		}
 	}
@@ -458,7 +458,7 @@ func removeFunction(ctx context.Context, conf *YAMLConf, id *SwoId) error {
 
 	err = logRemove(fn)
 	if err != nil {
-		log.Errorf("logs %s remove error: %s", fn.SwoId.Str(), err.Error())
+		ctxlog(ctx).Errorf("logs %s remove error: %s", fn.SwoId.Str(), err.Error())
 		goto stalled
 	}
 
@@ -484,7 +484,7 @@ stalled:
 func notifyPodTmo(ctx context.Context, cookie, inst string) {
 	fn, err := dbFuncFindByCookie(cookie)
 	if err != nil {
-		log.Errorf("POD timeout %s.%s error: %s", cookie, inst, err.Error())
+		ctxlog(ctx).Errorf("POD timeout %s.%s error: %s", cookie, inst, err.Error())
 		return
 	}
 
@@ -522,7 +522,7 @@ func notifyPodUp(ctx context.Context, pod *k8sPod) {
 	return
 
 out:
-	log.Errorf("POD update notify: %s", err.Error())
+	ctxlog(ctx).Errorf("POD update notify: %s", err.Error())
 }
 
 func deactivateFunction(ctx context.Context, conf *YAMLConf, id *SwoId) error {
@@ -535,14 +535,14 @@ func deactivateFunction(ctx context.Context, conf *YAMLConf, id *SwoId) error {
 
 	err = dbFuncSetStateCond(id, swy.DBFuncStateDea, []int{swy.DBFuncStateRdy})
 	if err != nil {
-		log.Errorf("Can't deactivate function %s: %s", id.Name, err.Error())
+		ctxlog(ctx).Errorf("Can't deactivate function %s: %s", id.Name, err.Error())
 		err = errors.New("Cannot deactivate function")
 		goto out
 	}
 
 	err = swk8sRemove(ctx, conf, fn, fn.Inst())
 	if err != nil {
-		log.Errorf("Can't deactivate FN")
+		ctxlog(ctx).Errorf("Can't deactivate FN")
 		dbFuncSetState(ctx, fn, swy.DBFuncStateRdy)
 	}
 out:
@@ -562,7 +562,7 @@ func activateFunction(ctx context.Context, conf *YAMLConf, id *SwoId) error {
 	err = swk8sRun(ctx, conf, fn, fn.Inst())
 	if err != nil {
 		dbFuncSetState(ctx, fn, swy.DBFuncStateDea)
-		log.Errorf("Can't activate FN: %s", err.Error())
+		ctxlog(ctx).Errorf("Can't activate FN: %s", err.Error())
 		goto out
 	}
 out:

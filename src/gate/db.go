@@ -149,7 +149,7 @@ func dbFuncSetState(ctx context.Context, fn *FunctionDesc, state int) error {
 		bson.M{"cookie": fn.Cookie, "state": bson.M{"$ne": state}},
 		bson.M{"$set": bson.M{"state": state}})
 	if err != nil {
-		log.Errorf("dbFuncSetState: Can't change function %s state: %s",
+		ctxlog(ctx).Errorf("dbFuncSetState: Can't change function %s state: %s",
 				fn.Name, err.Error())
 	}
 
@@ -287,23 +287,6 @@ func dbBalancerPodFindExact(fnid, version string) (*BalancerRS, error) {
 	}
 
 	return &v, nil
-}
-
-func dbBalancerPodFindAll(link *BalancerLink) ([]BalancerRS, error) {
-	var v []BalancerRS
-
-	c := dbSession.DB(dbState).C(DBColBalancerRS)
-	err := c.Find(bson.M{
-			"balancerid": link.ObjID,
-		}).All(&v)
-	if err != nil {
-		if err == mgo.ErrNotFound {
-			return nil, nil
-		}
-		return nil, err
-	}
-
-	return v, nil
 }
 
 func dbBalancerPodAdd(link *BalancerLink, pod *k8sPod) error {
@@ -481,7 +464,7 @@ func dbConnect(conf *YAMLConf) error {
 
 	session, err := mgo.DialWithInfo(&info);
 	if err != nil {
-		log.Errorf("dbConnect: Can't dial to %s with db %s (%s)",
+		glog.Errorf("dbConnect: Can't dial to %s with db %s (%s)",
 				conf.DB.Addr, conf.DB.StateDB, err.Error())
 		return err
 	}
