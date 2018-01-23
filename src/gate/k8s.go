@@ -16,6 +16,7 @@ import (
 
 	"gopkg.in/mgo.v2"
 
+	"context"
 	"strconv"
 	"strings"
 	"errors"
@@ -47,7 +48,7 @@ func swk8sPodDelete(podname string) error {
 	return nil
 }
 
-func swk8sRemove(conf *YAMLConf, fn *FunctionDesc, fi *FnInst) error {
+func swk8sRemove(ctx context.Context, conf *YAMLConf, fn *FunctionDesc, fi *FnInst) error {
 	var nr_replicas int32 = 0
 	var orphan bool = false
 	var grace int64 = 0
@@ -55,7 +56,7 @@ func swk8sRemove(conf *YAMLConf, fn *FunctionDesc, fi *FnInst) error {
 
 	depname := fi.DepName()
 
-	err = BalancerDelete(depname)
+	err = BalancerDelete(ctx, depname)
 	if err != nil && err != mgo.ErrNotFound {
 		log.Errorf("Can't delete balancer %s : %s", depname, err.Error())
 		return err
@@ -99,7 +100,7 @@ func swk8sRemove(conf *YAMLConf, fn *FunctionDesc, fi *FnInst) error {
 	return nil
 }
 
-func swk8sGenEnvVar(fn *FunctionDesc, fi *FnInst, wd_port int) []v1.EnvVar {
+func swk8sGenEnvVar(ctx context.Context, fn *FunctionDesc, fi *FnInst, wd_port int) []v1.EnvVar {
 	var s []v1.EnvVar
 
 	for _, v := range fn.Code.Env {
@@ -204,7 +205,7 @@ func swk8sGenLabels(depname string) map[string]string {
 	return labels
 }
 
-func swk8sUpdate(conf *YAMLConf, fn *FunctionDesc) error {
+func swk8sUpdate(ctx context.Context, conf *YAMLConf, fn *FunctionDesc) error {
 	depname := fn.Inst().DepName()
 
 	deploy := swk8sClientSet.Extensions().Deployments(v1.NamespaceDefault)
@@ -224,7 +225,7 @@ func swk8sUpdate(conf *YAMLConf, fn *FunctionDesc) error {
 	 * Tune up SWD_FUNCTION_DESC to make wdog keep up with
 	 * updated Tmo value and MWARE_* secrets
 	 */
-	this.Spec.Template.Spec.Containers[0].Env = swk8sGenEnvVar(fn, fn.Inst(), conf.Wdog.Port)
+	this.Spec.Template.Spec.Containers[0].Env = swk8sGenEnvVar(ctx, fn, fn.Inst(), conf.Wdog.Port)
 
 	specSetRes(&this.Spec.Template.Spec.Containers[0].Resources, fn)
 
@@ -271,7 +272,7 @@ func specSetRes(res *v1.ResourceRequirements, fn *FunctionDesc) {
 	}
 }
 
-func swk8sRun(conf *YAMLConf, fn *FunctionDesc, fi *FnInst) error {
+func swk8sRun(ctx context.Context, conf *YAMLConf, fn *FunctionDesc, fi *FnInst) error {
 	var err error
 
 	depname := fi.DepName()
@@ -282,7 +283,7 @@ func swk8sRun(conf *YAMLConf, fn *FunctionDesc, fi *FnInst) error {
 		return errors.New("Bad lang selected") /* cannot happen actually */
 	}
 
-	envs := swk8sGenEnvVar(fn, fi, conf.Wdog.Port)
+	envs := swk8sGenEnvVar(ctx, fn, fi, conf.Wdog.Port)
 
 	podspec := v1.PodTemplateSpec{
 		ObjectMeta:	v1.ObjectMeta {
@@ -323,7 +324,7 @@ func swk8sRun(conf *YAMLConf, fn *FunctionDesc, fi *FnInst) error {
 
 	nr_replicas := fi.Replicas()
 
-	err = BalancerCreate(fn.Cookie, depname, uint(nr_replicas), fn.URLCall)
+	err = BalancerCreate(ctx, fn.Cookie, depname, uint(nr_replicas), fn.URLCall)
 	if err != nil {
 		log.Errorf("Can't create balancer %s for %s: %s", depname, fn.SwoId.Str(), err.Error())
 		return errors.New("Net error")
@@ -349,7 +350,7 @@ func swk8sRun(conf *YAMLConf, fn *FunctionDesc, fi *FnInst) error {
 	_, err = deploy.Create(&deployspec)
 	if err != nil {
 		xtimer.Cancel(fn.Cookie)
-		BalancerDelete(depname)
+		BalancerDelete(ctx, depname)
 		log.Errorf("Can't start deployment %s: %s", fn.SwoId.Str(), err.Error())
 		return errors.New("K8S error")
 	}
@@ -448,7 +449,7 @@ func swk8sPodDel(obj interface{}) {
 
 func swk8sPodTmo(cookie, inst string) {
 	log.Errorf("POD %s.%s start timeout", cookie, inst)
-	notifyPodTmo(cookie, inst)
+	notifyPodTmo(context.Background(), cookie, inst)
 }
 
 func swk8sPodUpd(obj_old, obj_new interface{}) {
@@ -472,7 +473,7 @@ func swk8sPodUpd(obj_old, obj_new interface{}) {
 			}
 
 			if xtimer.Cancel(pod_new.SwoId.Cookie()) {
-				notifyPodUp(pod_new)
+				notifyPodUp(context.Background(), pod_new)
 			}
 		}
 	} else {
@@ -502,7 +503,7 @@ func swk8sMwSecretGen(envs [][2]string) map[string][]byte {
 	return secret
 }
 
-func swk8sMwSecretAdd(id string, envs [][2]string) error {
+func swk8sMwSecretAdd(ctx context.Context, id string, envs [][2]string) error {
 	secrets := swk8sClientSet.Secrets(v1.NamespaceDefault)
 	_, err := secrets.Create(&v1.Secret{
 			ObjectMeta:	v1.ObjectMeta {

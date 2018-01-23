@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"context"
 	"gopkg.in/robfig/cron.v2"
 )
 
@@ -14,7 +15,7 @@ var evtHandlers = map[string]func(*YAMLConf, *FunctionDesc, bool) error {
 	"url": urlSetup,
 }
 
-func eventSetup(conf *YAMLConf, fn *FunctionDesc, on bool) error {
+func eventSetup(ctx context.Context, conf *YAMLConf, fn *FunctionDesc, on bool) error {
 	if fn.Event.Source == "" {
 		return nil
 	}
@@ -65,7 +66,7 @@ func eventsRestart(conf *YAMLConf) error {
 
 	for _, fn := range fns {
 		log.Debugf("Restart event for %s", fn.SwoId.Str())
-		err = eventSetup(conf, &fn, true)
+		err = eventSetup(context.Background(), conf, &fn, true)
 		if err != nil {
 			return err
 		}

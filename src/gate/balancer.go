@@ -7,6 +7,7 @@ import (
 
 	"strings"
 	"strconv"
+	"context"
 	"fmt"
 
 	"../common"
@@ -249,7 +250,7 @@ func BalancerPodAdd(pod *k8sPod) error {
 	return nil
 }
 
-func BalancerDelete(depname string) (error) {
+func BalancerDelete(ctx context.Context, depname string) (error) {
 	var link *BalancerLink
 	var err error
 
@@ -276,7 +277,7 @@ func BalancerDelete(depname string) (error) {
 	return nil
 }
 
-func BalancerCreate(cookie, depname string, numrs uint, public bool) (error) {
+func BalancerCreate(ctx context.Context, cookie, depname string, numrs uint, public bool) (error) {
 	var err error
 
 	resp := make(chan *LocalIp)

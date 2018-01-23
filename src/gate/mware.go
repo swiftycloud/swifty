@@ -4,6 +4,7 @@ import (
 	"gopkg.in/mgo.v2/bson"
 	"strings"
 	"fmt"
+	"context"
 	"errors"
 
 	"../common"
@@ -78,7 +79,7 @@ var mwareHandlers = map[string]*MwareOps {
 	"s3":		&MwareS3,
 }
 
-func mwareRemove(conf *YAMLConfMw, id *SwoId) error {
+func mwareRemove(ctx context.Context, conf *YAMLConfMw, id *SwoId) error {
 	item, err := dbMwareGetItem(id)
 	if err != nil {
 		log.Errorf("Can't find mware %s", id.Str())
@@ -136,7 +137,7 @@ func getMwareDesc(id *SwoId, mwType string) *MwareDesc {
 	return ret
 }
 
-func mwareSetup(conf *YAMLConfMw, id *SwoId, mwType string) error {
+func mwareSetup(ctx context.Context, conf *YAMLConfMw, id *SwoId, mwType string) error {
 	var handler *MwareOps
 	var ok bool
 	var err, erc error
@@ -168,7 +169,7 @@ func mwareSetup(conf *YAMLConfMw, id *SwoId, mwType string) error {
 		goto outdb
 	}
 
-	err = swk8sMwSecretAdd(mwd.Cookie, handler.GetEnv(conf, mwd))
+	err = swk8sMwSecretAdd(ctx, mwd.Cookie, handler.GetEnv(conf, mwd))
 	if err != nil {
 		goto outh
 	}

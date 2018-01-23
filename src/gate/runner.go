@@ -3,6 +3,7 @@ package main
 import (
 	"net/http"
 	"fmt"
+	"context"
 
 	"../apis/apps"
 	"../common"
@@ -73,7 +74,7 @@ out:
 	return nil, fmt.Errorf("RUN error %s", err.Error())
 }
 
-func buildFunction(fn *FunctionDesc) error {
+func buildFunction(ctx context.Context, fn *FunctionDesc) error {
 	var err, er2 error
 	var orig_state int
 	var res *swyapi.SwdFunctionRunResult
@@ -98,7 +99,7 @@ func buildFunction(fn *FunctionDesc) error {
 		goto out
 	}
 
-	err = swk8sRemove(&conf, fn, fn.InstBuild())
+	err = swk8sRemove(ctx, &conf, fn, fn.InstBuild())
 	if err != nil {
 		log.Errorf("remove deploy error: %s", err.Error())
 		goto out
@@ -107,12 +108,12 @@ func buildFunction(fn *FunctionDesc) error {
 	if orig_state == swy.DBFuncStateBld {
 		err = dbFuncSetState(fn, swy.DBFuncStateStr)
 		if err == nil {
-			err = swk8sRun(&conf, fn, fn.Inst())
+			err = swk8sRun(ctx, &conf, fn, fn.Inst())
 		}
 	} else /* Upd */ {
 		err = dbFuncSetState(fn, swy.DBFuncStateRdy)
 		if err == nil {
-			err = swk8sUpdate(&conf, fn)
+			err = swk8sUpdate(ctx, &conf, fn)
 		}
 	}
 	if err != nil {
@@ -122,7 +123,7 @@ func buildFunction(fn *FunctionDesc) error {
 	return nil
 
 out:
-	er2 = swk8sRemove(&conf, fn, fn.InstBuild())
+	er2 = swk8sRemove(ctx, &conf, fn, fn.InstBuild())
 out_nok8s:
 	if orig_state == swy.DBFuncStateBld || er2 != nil {
 		log.Debugf("Setting stalled state")
@@ -135,11 +136,11 @@ out_nok8s:
 	return fmt.Errorf("buildFunction: %s", err.Error())
 }
 
-func runFunctionOnce(fn *FunctionDesc) {
+func runFunctionOnce(ctx context.Context, fn *FunctionDesc) {
 	log.Debugf("oneshot RUN for %s", fn.SwoId.Str())
 	doRun(fn, "oneshot", map[string]string{})
 	log.Debugf("oneshor %s finished", fn.SwoId.Str())
 
-	swk8sRemove(&conf, fn, fn.Inst())
+	swk8sRemove(ctx, &conf, fn, fn.Inst())
 	dbFuncSetState(fn, swy.DBFuncStateStl);
 }

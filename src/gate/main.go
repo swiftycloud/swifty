@@ -229,7 +229,7 @@ func handleProjectDel(ctx context.Context, w http.ResponseWriter, r *http.Reques
 	}
 	for _, fn := range fns {
 		id.Name = fn.SwoId.Name
-		err = removeFunction(&conf, id)
+		err = removeFunction(ctx, &conf, id)
 		if err != nil {
 			log.Error("Funciton removal failed: %s", err.Error())
 			ferr = err
@@ -244,7 +244,7 @@ func handleProjectDel(ctx context.Context, w http.ResponseWriter, r *http.Reques
 
 	for _, mw := range mws {
 		id.Name = mw.SwoId.Name
-		err = mwareRemove(&conf.Mware, id)
+		err = mwareRemove(ctx, &conf.Mware, id)
 		if err != nil {
 			log.Error("Mware removal failed: %s", err.Error())
 			ferr = err
@@ -316,7 +316,7 @@ func handleFunctionAdd(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		goto out
 	}
 
-	err = addFunction(&conf, fromContext(ctx).Tenant, &params)
+	err = addFunction(ctx, &conf, fromContext(ctx).Tenant, &params)
 	if err != nil {
 		goto out
 	}
@@ -338,7 +338,7 @@ func handleFunctionState(ctx context.Context, w http.ResponseWriter, r *http.Req
 	id = makeSwoId(fromContext(ctx).Tenant, params.Project, params.FuncName)
 	log.Debugf("function/state %s -> %s", id.Str(), params.State)
 
-	err = setFunctionState(&conf, id, &params)
+	err = setFunctionState(ctx, &conf, id, &params)
 	if err != nil {
 		goto out
 	}
@@ -360,7 +360,7 @@ func handleFunctionUpdate(ctx context.Context, w http.ResponseWriter, r *http.Re
 	id = makeSwoId(fromContext(ctx).Tenant, params.Project, params.FuncName)
 	log.Debugf("function/update %s", id.Str())
 
-	err = updateFunction(&conf, id, &params)
+	err = updateFunction(ctx, &conf, id, &params)
 	if err != nil {
 		goto out
 	}
@@ -382,7 +382,7 @@ func handleFunctionRemove(ctx context.Context, w http.ResponseWriter, r *http.Re
 	id = makeSwoId(fromContext(ctx).Tenant, params.Project, params.FuncName)
 	log.Debugf("function/remove %s", id.Str())
 
-	err = removeFunction(&conf, id)
+	err = removeFunction(ctx, &conf, id)
 	if err != nil {
 		goto out
 	}
@@ -569,11 +569,11 @@ func handleFunctionLogs(ctx context.Context, w http.ResponseWriter, r *http.Requ
 		goto out
 	}
 
-	for _, log := range logs {
+	for _, loge := range logs {
 		resp = append(resp, swyapi.FunctionLogEntry{
-				Event:	log.Event,
-				Ts:	log.Time.Format(time.UnixDate),
-				Text:	log.Text,
+				Event:	loge.Event,
+				Ts:	loge.Time.Format(time.UnixDate),
+				Text:	loge.Text,
 			})
 	}
 
@@ -746,7 +746,7 @@ func handleMwareAdd(ctx context.Context, w http.ResponseWriter, r *http.Request)
 	id = makeSwoId(fromContext(ctx).Tenant, params.Project, params.ID)
 	log.Debugf("mware/add: %s params %v", fromContext(ctx).Tenant, params)
 
-	err = mwareSetup(&conf.Mware, id, params.Type)
+	err = mwareSetup(ctx, &conf.Mware, id, params.Type)
 	if err != nil {
 		goto out
 	}
@@ -828,7 +828,7 @@ func handleMwareRemove(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	id = makeSwoId(fromContext(ctx).Tenant, params.Project, params.ID)
 	log.Debugf("mware/remove: %s params %v", fromContext(ctx).Tenant, params)
 
-	err = mwareRemove(&conf.Mware, id)
+	err = mwareRemove(ctx, &conf.Mware, id)
 	if err != nil {
 		err = fmt.Errorf("Unable to setup middleware: %s", err.Error())
 		goto out
@@ -889,9 +889,11 @@ func genReqHandler(cb func(ctx context.Context, w http.ResponseWriter, r *http.R
 			ctx = mkContext(ctx, tennant)
 			code = http.StatusBadRequest
 			err = cb(ctx, w, r)
+			if err != nil {
+				log.Errorf("Error in callback: %s", err.Error())
+			}
 		}
 		if err != nil {
-			log.Errorf("Error in callback: %s", err.Error())
 			http.Error(w, err.Error(), code)
 		}
 	})

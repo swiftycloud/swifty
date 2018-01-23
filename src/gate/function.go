@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"context"
 	"gopkg.in/mgo.v2/bson"
 
 	"../apis/apps"
@@ -195,7 +196,7 @@ func validateProjectAndFuncName(params *swyapi.FunctionAdd) error {
 	return err
 }
 
-func addFunction(conf *YAMLConf, tennant string, params *swyapi.FunctionAdd) error {
+func addFunction(ctx context.Context, conf *YAMLConf, tennant string, params *swyapi.FunctionAdd) error {
 	var err, erc error
 	var fn *FunctionDesc
 	var fi *FnInst
@@ -222,12 +223,12 @@ func addFunction(conf *YAMLConf, tennant string, params *swyapi.FunctionAdd) err
 		goto out
 	}
 
-	err = eventSetup(conf, fn, true)
+	err = eventSetup(ctx, conf, fn, true)
 	if err != nil {
 		goto out_clean_func
 	}
 
-	err = getSources(fn)
+	err = getSources(ctx, fn)
 	if err != nil {
 		goto out_clean_evt
 	}
@@ -247,7 +248,7 @@ func addFunction(conf *YAMLConf, tennant string, params *swyapi.FunctionAdd) err
 		goto out_clean_repo
 	}
 
-	err = swk8sRun(conf, fn, fi)
+	err = swk8sRun(ctx, conf, fn, fi)
 	if err != nil {
 		goto out_clean_repo
 	}
@@ -261,7 +262,7 @@ out_clean_repo:
 		goto stalled
 	}
 out_clean_evt:
-	erc = eventSetup(conf, fn, false)
+	erc = eventSetup(ctx, conf, fn, false)
 	if erc != nil {
 		goto stalled
 	}
@@ -295,7 +296,7 @@ func swyFixSize(sz *swyapi.FunctionSize, conf *YAMLConf) error {
 	return nil
 }
 
-func updateFunction(conf *YAMLConf, id *SwoId, params *swyapi.FunctionUpdate) error {
+func updateFunction(ctx context.Context, conf *YAMLConf, id *SwoId, params *swyapi.FunctionUpdate) error {
 	var err error
 	var rebuild bool
 	var mfix, rlfix bool
@@ -311,7 +312,7 @@ func updateFunction(conf *YAMLConf, id *SwoId, params *swyapi.FunctionUpdate) er
 
 	if params.Code != "" {
 		log.Debugf("Will update sources for %s", fn.SwoId.Str())
-		err = updateSources(fn, params)
+		err = updateSources(ctx, fn, params)
 		if err != nil {
 			goto out
 		}
@@ -399,10 +400,10 @@ func updateFunction(conf *YAMLConf, id *SwoId, params *swyapi.FunctionUpdate) er
 
 	if rebuild {
 		log.Debugf("Starting build dep")
-		err = swk8sRun(conf, fn, fn.InstBuild())
+		err = swk8sRun(ctx, conf, fn, fn.InstBuild())
 	} else {
 		log.Debugf("Updating deploy")
-		err = swk8sUpdate(conf, fn)
+		err = swk8sUpdate(ctx, conf, fn)
 	}
 
 	if err != nil {
@@ -415,7 +416,7 @@ out:
 	return err
 }
 
-func removeFunction(conf *YAMLConf, id *SwoId) error {
+func removeFunction(ctx context.Context, conf *YAMLConf, id *SwoId) error {
 	var err error
 
 	fn, err := dbFuncFind(id)
@@ -434,7 +435,7 @@ func removeFunction(conf *YAMLConf, id *SwoId) error {
 	log.Debugf("Forget function %s", fn.SwoId.Str())
 
 	if !fn.OneShot && (fn.State != swy.DBFuncStateDea) {
-		err = swk8sRemove(conf, fn, fn.Inst())
+		err = swk8sRemove(ctx, conf, fn, fn.Inst())
 		if err != nil {
 			log.Errorf("remove deploy error: %s", err.Error())
 			goto stalled
@@ -442,7 +443,7 @@ func removeFunction(conf *YAMLConf, id *SwoId) error {
 	}
 
 
-	err = eventSetup(conf, fn, false)
+	err = eventSetup(ctx, conf, fn, false)
 	if err != nil {
 		goto stalled
 	}
@@ -476,7 +477,7 @@ stalled:
 	return err
 }
 
-func notifyPodTmo(cookie, inst string) {
+func notifyPodTmo(ctx context.Context, cookie, inst string) {
 	fn, err := dbFuncFindByCookie(cookie)
 	if err != nil {
 		log.Errorf("POD timeout %s.%s error: %s", cookie, inst, err.Error())
@@ -491,11 +492,11 @@ func notifyPodTmo(cookie, inst string) {
 	}
 
 	logSaveEvent(fn, "POD", "Start timeout")
-	swk8sRemove(&conf, fn, fi)
+	swk8sRemove(ctx, &conf, fn, fi)
 	dbFuncSetState(fn, swy.DBFuncStateStl)
 }
 
-func notifyPodUp(pod *k8sPod) {
+func notifyPodUp(ctx context.Context, pod *k8sPod) {
 	fn, err := dbFuncFind(&pod.SwoId)
 	if err != nil {
 		goto out
@@ -503,14 +504,14 @@ func notifyPodUp(pod *k8sPod) {
 
 	logSaveEvent(fn, "POD", fmt.Sprintf("state: %s", fnStates[fn.State]))
 	if pod.Instance == swy.SwyPodInstBld {
-		err = buildFunction(fn)
+		err = buildFunction(ctx, fn)
 		if err != nil {
 			goto out
 		}
 	} else {
 		dbFuncSetState(fn, swy.DBFuncStateRdy)
 		if fn.OneShot {
-			runFunctionOnce(fn)
+			runFunctionOnce(ctx, fn)
 		}
 	}
 
@@ -520,7 +521,7 @@ out:
 	log.Errorf("POD update notify: %s", err.Error())
 }
 
-func deactivateFunction(conf *YAMLConf, id *SwoId) error {
+func deactivateFunction(ctx context.Context, conf *YAMLConf, id *SwoId) error {
 	var err error
 
 	fn, err := dbFuncFind(id)
@@ -533,7 +534,7 @@ func deactivateFunction(conf *YAMLConf, id *SwoId) error {
 		goto out
 	}
 
-	err = swk8sRemove(conf, fn, fn.Inst())
+	err = swk8sRemove(ctx, conf, fn, fn.Inst())
 	if err != nil {
 		log.Errorf("Can't deactivate FN")
 		dbFuncSetState(fn, swy.DBFuncStateRdy)
@@ -542,7 +543,7 @@ out:
 	return err
 }
 
-func activateFunction(conf *YAMLConf, id *SwoId) error {
+func activateFunction(ctx context.Context, conf *YAMLConf, id *SwoId) error {
 	var err error
 
 	fn, err := dbFuncFindStates(id, []int{swy.DBFuncStateDea})
@@ -552,7 +553,7 @@ func activateFunction(conf *YAMLConf, id *SwoId) error {
 
 	dbFuncSetState(fn, swy.DBFuncStateStr)
 
-	err = swk8sRun(conf, fn, fn.Inst())
+	err = swk8sRun(ctx, conf, fn, fn.Inst())
 	if err != nil {
 		dbFuncSetState(fn, swy.DBFuncStateDea)
 		log.Errorf("Can't activate FN: %s", err.Error())
@@ -562,12 +563,12 @@ out:
 	return err
 }
 
-func setFunctionState(conf *YAMLConf, id *SwoId, st *swyapi.FunctionState) error {
+func setFunctionState(ctx context.Context, conf *YAMLConf, id *SwoId, st *swyapi.FunctionState) error {
 	switch st.State {
 	case fnStates[swy.DBFuncStateDea]:
-		return deactivateFunction(conf, id)
+		return deactivateFunction(ctx, conf, id)
 	case fnStates[swy.DBFuncStateRdy]:
-		return activateFunction(conf, id)
+		return activateFunction(ctx, conf, id)
 	}
 
 	return fmt.Errorf("Can't set state %s", st.State)

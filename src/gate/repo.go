@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"os/exec"
 	"os"
+	"context"
 	"io"
 	"io/ioutil"
 	"encoding/base64"
@@ -74,8 +75,8 @@ co_err:
 }
 
 var srcHandlers = map[string] struct {
-	get func (*FunctionDesc) error
-	update func (*FunctionDesc, *swyapi.FunctionUpdate) error
+	get func (context.Context, *FunctionDesc) error
+	update func (context.Context, *FunctionDesc, *swyapi.FunctionUpdate) error
 } {
 	"git": {
 		get:	cloneGitRepo,
@@ -88,16 +89,16 @@ var srcHandlers = map[string] struct {
 	},
 }
 
-func getSources(fn *FunctionDesc) error {
+func getSources(ctx context.Context, fn *FunctionDesc) error {
 	srch, ok := srcHandlers[fn.Src.Type]
 	if !ok {
 		return fmt.Errorf("Unknown sources type %s", fn.Src.Type)
 	}
 
-	return srch.get(fn)
+	return srch.get(ctx, fn)
 }
 
-func cloneGitRepo(fn *FunctionDesc) error {
+func cloneGitRepo(ctx context.Context, fn *FunctionDesc) error {
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 
@@ -157,21 +158,21 @@ func writeSource(fn *FunctionDesc, codeb64 string) error {
 	return nil
 }
 
-func getFileFromReq(fn *FunctionDesc) error {
+func getFileFromReq(ctx context.Context, fn *FunctionDesc) error {
 	fn.Src.Version = zeroVersion
 	return writeSource(fn, fn.Src.Code)
 }
 
-func updateSources(fn *FunctionDesc, params *swyapi.FunctionUpdate) error {
+func updateSources(ctx context.Context, fn *FunctionDesc, params *swyapi.FunctionUpdate) error {
 	srch, ok := srcHandlers[fn.Src.Type]
 	if !ok {
 		return fmt.Errorf("Unknown sources type %s", fn.Src.Type)
 	}
 
-	return srch.update(fn, params)
+	return srch.update(ctx, fn, params)
 }
 
-func updateGitRepo(fn *FunctionDesc, params *swyapi.FunctionUpdate) error {
+func updateGitRepo(ctx context.Context, fn *FunctionDesc, params *swyapi.FunctionUpdate) error {
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 
@@ -192,7 +193,7 @@ func updateGitRepo(fn *FunctionDesc, params *swyapi.FunctionUpdate) error {
 	return checkoutSources(fn)
 }
 
-func updateFileFromReq(fn *FunctionDesc, params *swyapi.FunctionUpdate) error {
+func updateFileFromReq(ctx context.Context, fn *FunctionDesc, params *swyapi.FunctionUpdate) error {
 	ov, _ := strconv.Atoi(fn.Src.Version)
 	fn.Src.Version = strconv.Itoa(ov + 1)
 
