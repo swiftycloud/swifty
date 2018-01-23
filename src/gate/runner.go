@@ -108,12 +108,12 @@ func buildFunction(ctx context.Context, fn *FunctionDesc) error {
 	}
 
 	if orig_state == swy.DBFuncStateBld {
-		err = dbFuncSetState(fn, swy.DBFuncStateStr)
+		err = dbFuncSetState(ctx, fn, swy.DBFuncStateStr)
 		if err == nil {
 			err = swk8sRun(ctx, &conf, fn, fn.Inst())
 		}
 	} else /* Upd */ {
-		err = dbFuncSetState(fn, swy.DBFuncStateRdy)
+		err = dbFuncSetState(ctx, fn, swy.DBFuncStateRdy)
 		if err == nil {
 			err = swk8sUpdate(ctx, &conf, fn)
 		}
@@ -129,11 +129,11 @@ out:
 out_nok8s:
 	if orig_state == swy.DBFuncStateBld || er2 != nil {
 		log.Debugf("Setting stalled state")
-		dbFuncSetState(fn, swy.DBFuncStateStl);
+		dbFuncSetState(ctx, fn, swy.DBFuncStateStl);
 	} else /* Upd */ {
 		// Keep fn ready with the original commit of
 		// the repo checked out
-		dbFuncSetState(fn, swy.DBFuncStateRdy)
+		dbFuncSetState(ctx, fn, swy.DBFuncStateRdy)
 	}
 	return fmt.Errorf("buildFunction: %s", err.Error())
 }
@@ -144,5 +144,5 @@ func runFunctionOnce(ctx context.Context, fn *FunctionDesc) {
 	log.Debugf("oneshor %s finished", fn.SwoId.Str())
 
 	swk8sRemove(ctx, &conf, fn, fn.Inst())
-	dbFuncSetState(fn, swy.DBFuncStateStl);
+	dbFuncSetState(ctx, fn, swy.DBFuncStateStl);
 }

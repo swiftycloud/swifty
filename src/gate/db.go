@@ -3,6 +3,7 @@ package main
 import (
 	"time"
 	"fmt"
+	"context"
 
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
@@ -142,7 +143,7 @@ func dbFuncSetStateCond(id *SwoId, state int, states []int) error {
 		bson.M{"$set": bson.M{"state": state}})
 }
 
-func dbFuncSetState(fn *FunctionDesc, state int) error {
+func dbFuncSetState(ctx context.Context, fn *FunctionDesc, state int) error {
 	fn.State = state
 	err := dbFuncUpdate(
 		bson.M{"cookie": fn.Cookie, "state": bson.M{"$ne": state}},

@@ -275,7 +275,7 @@ out:
 	return err
 
 stalled:
-	dbFuncSetState(fn, swy.DBFuncStateStl)
+	dbFuncSetState(ctx, fn, swy.DBFuncStateStl)
 	goto out
 }
 
@@ -477,7 +477,7 @@ func removeFunction(ctx context.Context, conf *YAMLConf, id *SwoId) error {
 	return nil
 
 stalled:
-	dbFuncSetState(fn, swy.DBFuncStateStl)
+	dbFuncSetState(ctx, fn, swy.DBFuncStateStl)
 	return err
 }
 
@@ -497,7 +497,7 @@ func notifyPodTmo(ctx context.Context, cookie, inst string) {
 
 	logSaveEvent(fn, "POD", "Start timeout")
 	swk8sRemove(ctx, &conf, fn, fi)
-	dbFuncSetState(fn, swy.DBFuncStateStl)
+	dbFuncSetState(ctx, fn, swy.DBFuncStateStl)
 }
 
 func notifyPodUp(ctx context.Context, pod *k8sPod) {
@@ -513,7 +513,7 @@ func notifyPodUp(ctx context.Context, pod *k8sPod) {
 			goto out
 		}
 	} else {
-		dbFuncSetState(fn, swy.DBFuncStateRdy)
+		dbFuncSetState(ctx, fn, swy.DBFuncStateRdy)
 		if fn.OneShot {
 			runFunctionOnce(ctx, fn)
 		}
@@ -543,7 +543,7 @@ func deactivateFunction(ctx context.Context, conf *YAMLConf, id *SwoId) error {
 	err = swk8sRemove(ctx, conf, fn, fn.Inst())
 	if err != nil {
 		log.Errorf("Can't deactivate FN")
-		dbFuncSetState(fn, swy.DBFuncStateRdy)
+		dbFuncSetState(ctx, fn, swy.DBFuncStateRdy)
 	}
 out:
 	return err
@@ -557,11 +557,11 @@ func activateFunction(ctx context.Context, conf *YAMLConf, id *SwoId) error {
 		goto out
 	}
 
-	dbFuncSetState(fn, swy.DBFuncStateStr)
+	dbFuncSetState(ctx, fn, swy.DBFuncStateStr)
 
 	err = swk8sRun(ctx, conf, fn, fn.Inst())
 	if err != nil {
-		dbFuncSetState(fn, swy.DBFuncStateDea)
+		dbFuncSetState(ctx, fn, swy.DBFuncStateDea)
 		log.Errorf("Can't activate FN: %s", err.Error())
 		goto out
 	}
