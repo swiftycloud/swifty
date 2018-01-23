@@ -734,7 +734,6 @@ func handleMwareAdd(w http.ResponseWriter, r *http.Request, tennant string) erro
 
 	err = mwareSetup(&conf.Mware, id, params.Type)
 	if err != nil {
-		err = fmt.Errorf("Unable to setup middleware: %s", err.Error())
 		goto out
 	}
 

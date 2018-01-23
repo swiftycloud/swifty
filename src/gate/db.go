@@ -31,29 +31,19 @@ var dbState string
 
 func dbMwareAdd(desc *MwareDesc) error {
 	c := dbSession.DB(dbState).C(DBColMware)
-	err := c.Insert(desc)
-	if err != nil {
-		log.Errorf("Can't add mware %s: %s", desc.SwoId.Str(), err.Error())
-	}
-
-	return err
+	return c.Insert(desc)
 }
 
 func dbMwareUpdateAdded(desc *MwareDesc) error {
 	desc.State = swy.DBMwareStateRdy
 	c := dbSession.DB(dbState).C(DBColMware)
-	err := c.Update(bson.M{"cookie": desc.Cookie},
+	return c.Update(bson.M{"cookie": desc.Cookie},
 		bson.M{"$set": bson.M{
 				"client":	desc.Client,
 				"secret":	desc.Secret,
 				"namespace":	desc.Namespace,
 				"state":	desc.State,
 			}})
-	if err != nil {
-		log.Errorf("Can't update added %s: %s", desc.SwoId.Str(), err.Error())
-	}
-
-	return err
 }
 
 func dbMwareTerminate(mwd *MwareDesc) error {

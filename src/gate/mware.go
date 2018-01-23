@@ -146,17 +146,19 @@ func mwareSetup(conf *YAMLConfMw, id *SwoId, mwType string) error {
 
 	err = dbMwareAdd(mwd)
 	if err != nil {
+		log.Errorf("Can't add mware %s: %s", mwd.SwoId.Str(), err.Error())
+		err = errors.New("DB error")
 		goto out
 	}
 
 	handler, ok = mwareHandlers[mwType]
 	if !ok {
-		err = fmt.Errorf("no handler for %s:%s", id.Str(), mwType)
+		err = fmt.Errorf("Bad mware type %s", mwType)
 		goto outdb
 	}
 
 	if handler.Devel && !SwyModeDevel {
-		err = fmt.Errorf("middleware %s not enabled", mwType)
+		err = fmt.Errorf("Bad mware type %s", mwType)
 		goto outdb
 	}
 
@@ -168,17 +170,20 @@ func mwareSetup(conf *YAMLConfMw, id *SwoId, mwType string) error {
 
 	err = swk8sMwSecretAdd(mwd.Cookie, handler.GetEnv(conf, mwd))
 	if err != nil {
-		err = fmt.Errorf("mware secret add error: %s", err.Error())
 		goto outh
 	}
 
 	mwd.Secret, err = swycrypt.EncryptString(gateSecPas, mwd.Secret)
 	if err != nil {
+		log.Errorf("Mw secret encrypt error: %s", err.Error())
+		err = errors.New("Encrypt error")
 		goto outs
 	}
 
 	err = dbMwareUpdateAdded(mwd)
 	if err != nil {
+		log.Errorf("Can't update added %s: %s", mwd.SwoId.Str(), err.Error())
+		err = errors.New("DB error")
 		goto outs
 	}
 

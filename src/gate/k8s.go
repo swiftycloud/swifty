@@ -515,6 +515,7 @@ func swk8sMwSecretAdd(id string, envs [][2]string) error {
 
 	if err != nil {
 		log.Errorf("mware secret add error: %s", err.Error())
+		err = errors.New("K8S error")
 	}
 
 	return err
