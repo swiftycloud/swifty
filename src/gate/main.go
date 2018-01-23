@@ -10,6 +10,7 @@ import (
 	"strings"
 	"errors"
 	"flag"
+	"context"
 	"time"
 	"fmt"
 	"net"
@@ -194,7 +195,7 @@ out:
 	http.Error(w, err.Error(), resp)
 }
 
-func handleProjectDel(w http.ResponseWriter, r *http.Request, tennant string) error {
+func handleProjectDel(ctx context.Context, w http.ResponseWriter, r *http.Request, tennant string) error {
 	var par swyapi.ProjectDel
 	var fns []FunctionDesc
 	var mws []MwareDesc
@@ -246,7 +247,7 @@ out:
 	return ferr
 }
 
-func handleProjectList(w http.ResponseWriter, r *http.Request, tennant string) error {
+func handleProjectList(ctx context.Context, w http.ResponseWriter, r *http.Request, tennant string) error {
 	var result []swyapi.ProjectItem
 	var params swyapi.ProjectList
 	var fns, mws []string
@@ -280,7 +281,7 @@ out:
 	return err
 }
 
-func handleFunctionAdd(w http.ResponseWriter, r *http.Request, tennant string) error {
+func handleFunctionAdd(ctx context.Context, w http.ResponseWriter, r *http.Request, tennant string) error {
 	var params swyapi.FunctionAdd
 
 	err := swyhttp.ReadAndUnmarshalReq(r, &params)
@@ -312,7 +313,7 @@ out:
 	return err
 }
 
-func handleFunctionState(w http.ResponseWriter, r *http.Request, tennant string) error {
+func handleFunctionState(ctx context.Context, w http.ResponseWriter, r *http.Request, tennant string) error {
 	var id *SwoId
 	var params swyapi.FunctionState
 
@@ -334,7 +335,7 @@ out:
 	return err
 }
 
-func handleFunctionUpdate(w http.ResponseWriter, r *http.Request, tennant string) error {
+func handleFunctionUpdate(ctx context.Context, w http.ResponseWriter, r *http.Request, tennant string) error {
 	var id *SwoId
 	var params swyapi.FunctionUpdate
 
@@ -356,7 +357,7 @@ out:
 	return err
 }
 
-func handleFunctionRemove(w http.ResponseWriter, r *http.Request, tennant string) error {
+func handleFunctionRemove(ctx context.Context, w http.ResponseWriter, r *http.Request, tennant string) error {
 	var id *SwoId
 	var params swyapi.FunctionRemove
 
@@ -378,7 +379,7 @@ out:
 	return err
 }
 
-func handleFunctionCode(w http.ResponseWriter, r *http.Request, tennant string) error {
+func handleFunctionCode(ctx context.Context, w http.ResponseWriter, r *http.Request, tennant string) error {
 	var id *SwoId
 	var params swyapi.FunctionXID
 	var fn *FunctionDesc
@@ -421,7 +422,7 @@ out:
 	return err
 }
 
-func handleFunctionStats(w http.ResponseWriter, r *http.Request, tennant string) error {
+func handleFunctionStats(ctx context.Context, w http.ResponseWriter, r *http.Request, tennant string) error {
 	var id *SwoId
 	var params swyapi.FunctionID
 	var fn *FunctionDesc
@@ -457,7 +458,7 @@ out:
 	return err
 }
 
-func handleFunctionInfo(w http.ResponseWriter, r *http.Request, tennant string) error {
+func handleFunctionInfo(ctx context.Context, w http.ResponseWriter, r *http.Request, tennant string) error {
 	var id *SwoId
 	var params swyapi.FunctionID
 	var fn *FunctionDesc
@@ -536,7 +537,7 @@ out:
 	return err
 }
 
-func handleFunctionLogs(w http.ResponseWriter, r *http.Request, tennant string) error {
+func handleFunctionLogs(ctx context.Context, w http.ResponseWriter, r *http.Request, tennant string) error {
 	var id *SwoId
 	var params swyapi.FunctionID
 	var resp []swyapi.FunctionLogEntry
@@ -637,7 +638,7 @@ out:
 	http.Error(w, err.Error(), code)
 }
 
-func handleFunctionRun(w http.ResponseWriter, r *http.Request, tennant string) error {
+func handleFunctionRun(ctx context.Context, w http.ResponseWriter, r *http.Request, tennant string) error {
 	var id *SwoId
 	var params swyapi.FunctionRun
 	var fn *FunctionDesc
@@ -682,7 +683,7 @@ out:
 	return err
 }
 
-func handleFunctionList(w http.ResponseWriter, r *http.Request, tennant string) error {
+func handleFunctionList(ctx context.Context, w http.ResponseWriter, r *http.Request, tennant string) error {
 	var id *SwoId
 	var recs []FunctionDesc
 	var result []swyapi.FunctionItem
@@ -720,7 +721,7 @@ out:
 	return err
 }
 
-func handleMwareAdd(w http.ResponseWriter, r *http.Request, tennant string) error {
+func handleMwareAdd(ctx context.Context, w http.ResponseWriter, r *http.Request, tennant string) error {
 	var id *SwoId
 	var params swyapi.MwareAdd
 
@@ -742,7 +743,7 @@ out:
 	return err
 }
 
-func handleLanguages(w http.ResponseWriter, r *http.Request, tennant string) error {
+func handleLanguages(ctx context.Context, w http.ResponseWriter, r *http.Request, tennant string) error {
 	var ret []string
 
 	for l, lh := range rt_handlers {
@@ -756,7 +757,7 @@ func handleLanguages(w http.ResponseWriter, r *http.Request, tennant string) err
 	return swyhttp.MarshalAndWrite(w, ret)
 }
 
-func handleMwareTypes(w http.ResponseWriter, r *http.Request, tennant string) error {
+func handleMwareTypes(ctx context.Context, w http.ResponseWriter, r *http.Request, tennant string) error {
 	var ret []string
 
 	for mw, mt := range mwareHandlers {
@@ -770,7 +771,7 @@ func handleMwareTypes(w http.ResponseWriter, r *http.Request, tennant string) er
 	return swyhttp.MarshalAndWrite(w, ret)
 }
 
-func handleMwareList(w http.ResponseWriter, r *http.Request, tennant string) error {
+func handleMwareList(ctx context.Context, w http.ResponseWriter, r *http.Request, tennant string) error {
 	var id *SwoId
 	var result []swyapi.MwareItem
 	var params swyapi.MwareList
@@ -802,7 +803,7 @@ out:
 	return err
 }
 
-func handleMwareRemove(w http.ResponseWriter, r *http.Request, tennant string) error {
+func handleMwareRemove(ctx context.Context, w http.ResponseWriter, r *http.Request, tennant string) error {
 	var id *SwoId
 	var params swyapi.MwareRemove
 
@@ -825,7 +826,7 @@ out:
 	return err
 }
 
-func handleGenericReq(r *http.Request) (string, int, error) {
+func handleGenericReq(ctx context.Context, r *http.Request) (string, int, error) {
 	token := r.Header.Get("X-Auth-Token")
 	if token == "" {
 		return "", http.StatusUnauthorized, fmt.Errorf("Auth token not provided")
@@ -860,15 +861,20 @@ func handleGenericReq(r *http.Request) (string, int, error) {
 	return tennant, 0, nil
 }
 
-func genReqHandler(cb func(w http.ResponseWriter, r *http.Request, tennant string) error) http.Handler {
+func genReqHandler(cb func(ctx context.Context, w http.ResponseWriter, r *http.Request, tennant string) error) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var ctx context.Context
+		var cancel context.CancelFunc
 
 		if swyhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
 
-		tennant, code, err := handleGenericReq(r)
+		ctx, cancel = context.WithCancel(context.Background())
+		defer cancel()
+
+		tennant, code, err := handleGenericReq(ctx, r)
 		if err == nil {
 			code = http.StatusBadRequest
-			err = cb(w, r, tennant)
+			err = cb(ctx, w, r, tennant)
 		}
 		if err != nil {
 			log.Errorf("Error in callback: %s", err.Error())
