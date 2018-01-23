@@ -164,6 +164,19 @@ var CORS_Methods = []string {
 	http.MethodGet,
 }
 
+type gateContext struct {
+	context.Context
+	Tenant string
+}
+
+func mkContext(parent context.Context, tenant string) context.Context {
+	return &gateContext{parent, tenant}
+}
+
+func fromContext(ctx context.Context) *gateContext {
+	return ctx.(*gateContext)
+}
+
 func handleUserLogin(w http.ResponseWriter, r *http.Request) {
 	var params swyapi.UserLogin
 	var token string
@@ -195,7 +208,7 @@ out:
 	http.Error(w, err.Error(), resp)
 }
 
-func handleProjectDel(ctx context.Context, w http.ResponseWriter, r *http.Request, tennant string) error {
+func handleProjectDel(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
 	var par swyapi.ProjectDel
 	var fns []FunctionDesc
 	var mws []MwareDesc
@@ -207,7 +220,7 @@ func handleProjectDel(ctx context.Context, w http.ResponseWriter, r *http.Reques
 		goto out
 	}
 
-	id = makeSwoId(tennant, par.Project, "")
+	id = makeSwoId(fromContext(ctx).Tenant, par.Project, "")
 
 	fns, err = dbFuncListProj(id)
 	if err != nil {
@@ -247,7 +260,7 @@ out:
 	return ferr
 }
 
-func handleProjectList(ctx context.Context, w http.ResponseWriter, r *http.Request, tennant string) error {
+func handleProjectList(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
 	var result []swyapi.ProjectItem
 	var params swyapi.ProjectList
 	var fns, mws []string
@@ -259,8 +272,8 @@ func handleProjectList(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		goto out
 	}
 
-	log.Debugf("List projects for %s", tennant)
-	fns, mws, err = dbProjectListAll(tennant)
+	log.Debugf("List projects for %s", fromContext(ctx).Tenant)
+	fns, mws, err = dbProjectListAll(fromContext(ctx).Tenant)
 	if err != nil {
 		goto out
 	}
@@ -281,7 +294,7 @@ out:
 	return err
 }
 
-func handleFunctionAdd(ctx context.Context, w http.ResponseWriter, r *http.Request, tennant string) error {
+func handleFunctionAdd(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
 	var params swyapi.FunctionAdd
 
 	err := swyhttp.ReadAndUnmarshalReq(r, &params)
@@ -303,7 +316,7 @@ func handleFunctionAdd(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		goto out
 	}
 
-	err = addFunction(&conf, tennant, &params)
+	err = addFunction(&conf, fromContext(ctx).Tenant, &params)
 	if err != nil {
 		goto out
 	}
@@ -313,7 +326,7 @@ out:
 	return err
 }
 
-func handleFunctionState(ctx context.Context, w http.ResponseWriter, r *http.Request, tennant string) error {
+func handleFunctionState(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
 	var id *SwoId
 	var params swyapi.FunctionState
 
@@ -322,7 +335,7 @@ func handleFunctionState(ctx context.Context, w http.ResponseWriter, r *http.Req
 		goto out
 	}
 
-	id = makeSwoId(tennant, params.Project, params.FuncName)
+	id = makeSwoId(fromContext(ctx).Tenant, params.Project, params.FuncName)
 	log.Debugf("function/state %s -> %s", id.Str(), params.State)
 
 	err = setFunctionState(&conf, id, &params)
@@ -335,7 +348,7 @@ out:
 	return err
 }
 
-func handleFunctionUpdate(ctx context.Context, w http.ResponseWriter, r *http.Request, tennant string) error {
+func handleFunctionUpdate(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
 	var id *SwoId
 	var params swyapi.FunctionUpdate
 
@@ -344,7 +357,7 @@ func handleFunctionUpdate(ctx context.Context, w http.ResponseWriter, r *http.Re
 		goto out
 	}
 
-	id = makeSwoId(tennant, params.Project, params.FuncName)
+	id = makeSwoId(fromContext(ctx).Tenant, params.Project, params.FuncName)
 	log.Debugf("function/update %s", id.Str())
 
 	err = updateFunction(&conf, id, &params)
@@ -357,7 +370,7 @@ out:
 	return err
 }
 
-func handleFunctionRemove(ctx context.Context, w http.ResponseWriter, r *http.Request, tennant string) error {
+func handleFunctionRemove(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
 	var id *SwoId
 	var params swyapi.FunctionRemove
 
@@ -366,7 +379,7 @@ func handleFunctionRemove(ctx context.Context, w http.ResponseWriter, r *http.Re
 		goto out
 	}
 
-	id = makeSwoId(tennant, params.Project, params.FuncName)
+	id = makeSwoId(fromContext(ctx).Tenant, params.Project, params.FuncName)
 	log.Debugf("function/remove %s", id.Str())
 
 	err = removeFunction(&conf, id)
@@ -379,7 +392,7 @@ out:
 	return err
 }
 
-func handleFunctionCode(ctx context.Context, w http.ResponseWriter, r *http.Request, tennant string) error {
+func handleFunctionCode(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
 	var id *SwoId
 	var params swyapi.FunctionXID
 	var fn *FunctionDesc
@@ -395,7 +408,7 @@ func handleFunctionCode(ctx context.Context, w http.ResponseWriter, r *http.Requ
 		params.Version = fn.Src.Version
 	}
 
-	id = makeSwoId(tennant, params.Project, params.FuncName)
+	id = makeSwoId(fromContext(ctx).Tenant, params.Project, params.FuncName)
 	log.Debugf("Get FN code %s:%s", id.Str(), params.Version)
 
 	fn, err = dbFuncFind(id)
@@ -422,7 +435,7 @@ out:
 	return err
 }
 
-func handleFunctionStats(ctx context.Context, w http.ResponseWriter, r *http.Request, tennant string) error {
+func handleFunctionStats(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
 	var id *SwoId
 	var params swyapi.FunctionID
 	var fn *FunctionDesc
@@ -434,7 +447,7 @@ func handleFunctionStats(ctx context.Context, w http.ResponseWriter, r *http.Req
 		goto out
 	}
 
-	id = makeSwoId(tennant, params.Project, params.FuncName)
+	id = makeSwoId(fromContext(ctx).Tenant, params.Project, params.FuncName)
 	log.Debugf("Get FN stats %s", id.Str())
 
 	fn, err = dbFuncFind(id)
@@ -458,7 +471,7 @@ out:
 	return err
 }
 
-func handleFunctionInfo(ctx context.Context, w http.ResponseWriter, r *http.Request, tennant string) error {
+func handleFunctionInfo(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
 	var id *SwoId
 	var params swyapi.FunctionID
 	var fn *FunctionDesc
@@ -473,7 +486,7 @@ func handleFunctionInfo(ctx context.Context, w http.ResponseWriter, r *http.Requ
 		goto out
 	}
 
-	id = makeSwoId(tennant, params.Project, params.FuncName)
+	id = makeSwoId(fromContext(ctx).Tenant, params.Project, params.FuncName)
 	log.Debugf("Get FN Info %s", id.Str())
 
 	fn, err = dbFuncFind(id)
@@ -537,7 +550,7 @@ out:
 	return err
 }
 
-func handleFunctionLogs(ctx context.Context, w http.ResponseWriter, r *http.Request, tennant string) error {
+func handleFunctionLogs(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
 	var id *SwoId
 	var params swyapi.FunctionID
 	var resp []swyapi.FunctionLogEntry
@@ -548,8 +561,8 @@ func handleFunctionLogs(ctx context.Context, w http.ResponseWriter, r *http.Requ
 		goto out
 	}
 
-	id = makeSwoId(tennant, params.Project, params.FuncName)
-	log.Debugf("Get logs for %s", tennant)
+	id = makeSwoId(fromContext(ctx).Tenant, params.Project, params.FuncName)
+	log.Debugf("Get logs for %s", fromContext(ctx).Tenant)
 
 	logs, err = logGetFor(id)
 	if err != nil {
@@ -638,7 +651,7 @@ out:
 	http.Error(w, err.Error(), code)
 }
 
-func handleFunctionRun(ctx context.Context, w http.ResponseWriter, r *http.Request, tennant string) error {
+func handleFunctionRun(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
 	var id *SwoId
 	var params swyapi.FunctionRun
 	var fn *FunctionDesc
@@ -650,7 +663,7 @@ func handleFunctionRun(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		goto out
 	}
 
-	id = makeSwoId(tennant, params.Project, params.FuncName)
+	id = makeSwoId(fromContext(ctx).Tenant, params.Project, params.FuncName)
 	log.Debugf("function/run %s", id.Str())
 
 	fn, err = dbFuncFindStates(id, []int{swy.DBFuncStateRdy, swy.DBFuncStateUpd})
@@ -683,7 +696,7 @@ out:
 	return err
 }
 
-func handleFunctionList(ctx context.Context, w http.ResponseWriter, r *http.Request, tennant string) error {
+func handleFunctionList(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
 	var id *SwoId
 	var recs []FunctionDesc
 	var result []swyapi.FunctionItem
@@ -694,7 +707,7 @@ func handleFunctionList(ctx context.Context, w http.ResponseWriter, r *http.Requ
 		goto out
 	}
 
-	id = makeSwoId(tennant, params.Project, "")
+	id = makeSwoId(fromContext(ctx).Tenant, params.Project, "")
 	recs, err = dbFuncListProj(id)
 	if err != nil {
 		goto out
@@ -721,7 +734,7 @@ out:
 	return err
 }
 
-func handleMwareAdd(ctx context.Context, w http.ResponseWriter, r *http.Request, tennant string) error {
+func handleMwareAdd(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
 	var id *SwoId
 	var params swyapi.MwareAdd
 
@@ -730,8 +743,8 @@ func handleMwareAdd(ctx context.Context, w http.ResponseWriter, r *http.Request,
 		goto out
 	}
 
-	id = makeSwoId(tennant, params.Project, params.ID)
-	log.Debugf("mware/add: %s params %v", tennant, params)
+	id = makeSwoId(fromContext(ctx).Tenant, params.Project, params.ID)
+	log.Debugf("mware/add: %s params %v", fromContext(ctx).Tenant, params)
 
 	err = mwareSetup(&conf.Mware, id, params.Type)
 	if err != nil {
@@ -743,7 +756,7 @@ out:
 	return err
 }
 
-func handleLanguages(ctx context.Context, w http.ResponseWriter, r *http.Request, tennant string) error {
+func handleLanguages(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
 	var ret []string
 
 	for l, lh := range rt_handlers {
@@ -757,7 +770,7 @@ func handleLanguages(ctx context.Context, w http.ResponseWriter, r *http.Request
 	return swyhttp.MarshalAndWrite(w, ret)
 }
 
-func handleMwareTypes(ctx context.Context, w http.ResponseWriter, r *http.Request, tennant string) error {
+func handleMwareTypes(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
 	var ret []string
 
 	for mw, mt := range mwareHandlers {
@@ -771,7 +784,7 @@ func handleMwareTypes(ctx context.Context, w http.ResponseWriter, r *http.Reques
 	return swyhttp.MarshalAndWrite(w, ret)
 }
 
-func handleMwareList(ctx context.Context, w http.ResponseWriter, r *http.Request, tennant string) error {
+func handleMwareList(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
 	var id *SwoId
 	var result []swyapi.MwareItem
 	var params swyapi.MwareList
@@ -782,8 +795,8 @@ func handleMwareList(ctx context.Context, w http.ResponseWriter, r *http.Request
 		goto out
 	}
 
-	id = makeSwoId(tennant, params.Project, "")
-	log.Debugf("list mware for %s", tennant)
+	id = makeSwoId(fromContext(ctx).Tenant, params.Project, "")
+	log.Debugf("list mware for %s", fromContext(ctx).Tenant)
 
 	mwares, err = dbMwareGetAll(id)
 	if err != nil {
@@ -803,7 +816,7 @@ out:
 	return err
 }
 
-func handleMwareRemove(ctx context.Context, w http.ResponseWriter, r *http.Request, tennant string) error {
+func handleMwareRemove(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
 	var id *SwoId
 	var params swyapi.MwareRemove
 
@@ -812,8 +825,8 @@ func handleMwareRemove(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		goto out
 	}
 
-	id = makeSwoId(tennant, params.Project, params.ID)
-	log.Debugf("mware/remove: %s params %v", tennant, params)
+	id = makeSwoId(fromContext(ctx).Tenant, params.Project, params.ID)
+	log.Debugf("mware/remove: %s params %v", fromContext(ctx).Tenant, params)
 
 	err = mwareRemove(&conf.Mware, id)
 	if err != nil {
@@ -861,7 +874,7 @@ func handleGenericReq(ctx context.Context, r *http.Request) (string, int, error)
 	return tennant, 0, nil
 }
 
-func genReqHandler(cb func(ctx context.Context, w http.ResponseWriter, r *http.Request, tennant string) error) http.Handler {
+func genReqHandler(cb func(ctx context.Context, w http.ResponseWriter, r *http.Request) error) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var ctx context.Context
 		var cancel context.CancelFunc
@@ -873,8 +886,9 @@ func genReqHandler(cb func(ctx context.Context, w http.ResponseWriter, r *http.R
 
 		tennant, code, err := handleGenericReq(ctx, r)
 		if err == nil {
+			ctx = mkContext(ctx, tennant)
 			code = http.StatusBadRequest
-			err = cb(ctx, w, r, tennant)
+			err = cb(ctx, w, r)
 		}
 		if err != nil {
 			log.Errorf("Error in callback: %s", err.Error())
