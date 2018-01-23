@@ -4,6 +4,7 @@ import (
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 	"time"
+	"fmt"
 
 	"../apis/apps/s3"
 )
@@ -43,6 +44,13 @@ type S3Object struct {
 	ETag				string		`json:"etag" bson:"etag"`
 
 	S3ObjectPorps					`json:",inline" bson:",inline"`
+}
+
+func (object *S3Object)infoLong() (string) {
+	return fmt.Sprintf("object: %s/%s/%s/%d/%s",
+			object.ObjID, object.BucketObjID,
+			object.BackendID, object.State,
+			object.Key)
 }
 
 func (object *S3Object)dbRemove() (error) {

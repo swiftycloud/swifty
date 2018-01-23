@@ -18,6 +18,13 @@ type S3ObjectData struct {
 	Data				[]byte		`bson:"data,omitempty"`
 }
 
+func (objd *S3ObjectData)infoLong() (string) {
+	return fmt.Sprintf("object-data: %s/%s/%s/%s/%d",
+			objd.ObjID, objd.RefID,
+			objd.BucketBID, objd.ObjectBID,
+			objd.State)
+}
+
 func (objd *S3ObjectData)dbSet(state uint32, fields bson.M) (error) {
 	var res S3ObjectData
 
