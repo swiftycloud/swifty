@@ -88,6 +88,7 @@ go-mquotad-y	+= src/mquotad/main.go
 go-s3-y	+= src/s3/main.go
 go-s3-y	+= src/s3/db.go
 go-s3-y	+= src/s3/nmap.go
+go-s3-y	+= src/s3/data.go
 go-s3-y	+= src/s3/iam.go
 go-s3-y	+= src/s3/bucket.go
 go-s3-y	+= src/s3/object.go

@@ -429,14 +429,8 @@ func handleObject(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		var object *S3Object
 		// Create new object
-		object, err = s3InsertObject(bucket, oname, 1, object_size, acl)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-		_, err = s3CommitObject(iam.Namespace, bucket, object, body)
+		_, err = s3AddObject(iam.Namespace, bucket, oname, acl, object_size, body)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return

@@ -148,7 +148,6 @@ func s3UploadFini(namespace string, bucket *S3Bucket, uid string,
 			compete *swys3api.S3MpuFiniParts) (*swys3api.S3MpuFini, error) {
 	var res swys3api.S3MpuFini
 	var parts []S3UploadPart
-	var object *S3Object
 	var upload S3Upload
 	var size int64
 	var partno int
@@ -194,16 +193,9 @@ func s3UploadFini(namespace string, bucket *S3Bucket, uid string,
 		}
 	}
 
-	object, err = s3InsertObject(bucket, upload.Key, 1, size, upload.Acl)
+	_, err = s3AddObject(namespace, bucket, upload.Key, upload.Acl, size, data)
 	if err != nil {
 		log.Errorf("s3: Can't insert object %d upload %s: %s",
-				upload.Key, uid, err.Error())
-		return nil, err
-	}
-
-	_, err = s3CommitObject(namespace, bucket, object, data)
-	if err != nil {
-		log.Errorf("s3: Can't commit object %d upload %s: %s",
 				upload.Key, uid, err.Error())
 		return nil, err
 	}
