@@ -53,23 +53,46 @@ func (object *S3Object)infoLong() (string) {
 			object.Key)
 }
 
+func (object *S3Object)dbRemoveF() (error) {
+	var err error
+
+	err = dbS3Remove(object, bson.M{"_id": object.ObjID})
+	if err != nil && err != mgo.ErrNotFound {
+		log.Errorf("s3: Can't force remove %s: %s",
+			object.infoLong(), err.Error())
+	}
+	return err
+}
+
 func (object *S3Object)dbRemove() (error) {
 	var res S3Object
+	var err error
 
-	return dbS3RemoveCond(
+	err = dbS3RemoveCond(
 			bson.M{	"_id": object.ObjID,
 				"state": S3StateInactive},
 			&res)
+	if err != nil && err != mgo.ErrNotFound {
+		log.Errorf("s3: Can't remove %s: %s",
+			object.infoLong(), err.Error())
+	}
+	return err
 }
 
 func (object *S3Object)dbSet(state uint32, fields bson.M) (error) {
 	var res S3Object
+	var err error
 
-	return dbS3Update(
+	err = dbS3Update(
 			bson.M{"_id": object.ObjID,
 				"state": bson.M{"$in": s3StateTransition[state]}},
 			bson.M{"$set": fields},
 			&res)
+	if err != nil {
+		log.Errorf("s3: Can't set state %d %s: %s",
+			state, object.infoLong(), err.Error())
+	}
+	return err
 }
 
 func (object *S3Object)dbSetState(state uint32) (error) {
@@ -113,27 +136,25 @@ func s3AddObject(namespace string, bucket *S3Bucket, oname string,
 
 	err = dbS3Insert(object)
 	if err != nil {
-		log.Errorf("s3: Can't insert object %s/%s/%s: %s",
-			 bucket.BackendID, object.BackendID, oname, err.Error())
+		log.Errorf("s3: Can't insert %s: %s",
+			 object.infoLong(), err.Error())
 		return nil, err
 	}
+	log.Debugf("s3: Inserted %s", object.infoLong())
 
 	err = bucket.dbAddObj(object.Size)
 	if err != nil {
-		log.Errorf("s3: Can't +account object %s/%s/%s: %s",
-			bucket.BackendID, object.BackendID, oname, err.Error())
 		goto out_no_size
 	}
 
-	etag, err = s3ObjectDataAdd(object.ObjID, bucket.BackendID, object.BackendID, data)
+	etag, err = s3ObjectDataAdd(object.ObjID, bucket.BackendID,
+					object.BackendID, data)
 	if err != nil {
 		goto out
 	}
 
 	err = object.dbSetStateEtag(S3StateActive, etag)
 	if err != nil {
-		log.Errorf("s3: Can't activate object %s: %s",
-				object.BackendID, err.Error())
 		goto out
 	}
 
@@ -141,7 +162,7 @@ func s3AddObject(namespace string, bucket *S3Bucket, oname string,
 		s3Notify(namespace, bucket, object, S3NotifyPut)
 	}
 
-	log.Debugf("s3: Inserted object %s/%s", bucket.BackendID, object.BackendID)
+	log.Debugf("s3: Added %s %s", bucket.infoLong(), object.infoLong())
 	return object, nil
 
 out:
@@ -150,7 +171,7 @@ out:
 		log.Errorf("s3: Can't -account object %s: %s", oname, err1.Error())
 	}
 out_no_size:
-	dbS3Remove(object, bson.M{"_id": object.ObjID})
+	object.dbRemoveF()
 	return nil, err
 }
 
