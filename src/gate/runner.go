@@ -11,8 +11,9 @@ import (
 )
 
 func doRun(fn *FunctionDesc, event string, args map[string]string) (*swyapi.SwdFunctionRunResult, error) {
-	link := dbBalancerLinkFindByCookie(fn.Cookie)
+	link, err := dbBalancerLinkFindByCookie(fn.Cookie)
 	if link == nil {
+		log.Errorf("Can't find %s cookie balancer: %s", fn.Cookie, err.Error())
 		return nil, fmt.Errorf("Can't find balancer for %s", fn.Cookie)
 	}
 
@@ -81,8 +82,9 @@ func buildFunction(ctx context.Context, fn *FunctionDesc) error {
 
 	orig_state = fn.State
 	log.Debugf("build RUN %s", fn.SwoId.Str())
-	link := dbBalancerLinkFindByDepname(fn.InstBuild().DepName())
+	link, err := dbBalancerLinkFindByDepname(fn.InstBuild().DepName())
 	if link == nil {
+		log.Errorf("Can't find build balancer: %s", err.Error())
 		err = fmt.Errorf("Can't find build balancer for %s", fn.SwoId.Str())
 		goto out
 	}

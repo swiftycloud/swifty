@@ -609,7 +609,11 @@ func handleFunctionCall(w http.ResponseWriter, r *http.Request) {
 	fnId := mux.Vars(r)["fnid"]
 
 	code := http.StatusServiceUnavailable
-	link := dbBalancerLinkFindByCookie(fnId)
+	link, err := dbBalancerLinkFindByCookie(fnId)
+	if err != nil {
+		err = errors.New("DB error")
+		goto out
+	}
 	if link == nil {
 		err = errors.New("No such function")
 		goto out
@@ -676,9 +680,15 @@ func handleFunctionRun(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	 * We can lookup id.Cookie() here, but ... it's manual run,
 	 * let's also make sure the FN exists at all
 	 */
-	lrs = dbBalancerPodFindExact(fn.Cookie, fn.Src.Version)
+	lrs, err = dbBalancerPodFindExact(fn.Cookie, fn.Src.Version)
 	if lrs == nil {
-		err = errors.New("Nothing to run (yet)")
+		if err == nil {
+			err = errors.New("Nothing to run (yet)")
+		} else {
+			log.Errorf("balancer-db: Can't find pod %s/%s: %s",
+					fn.Cookie, fn.Src.Version, err.Error())
+			err = errors.New("DB error")
+		}
 		goto out
 	}
 

@@ -137,15 +137,9 @@ func dbFuncListWithEvents() ([]FunctionDesc, error) {
 }
 
 func dbFuncSetStateCond(id *SwoId, state int, states []int) error {
-	err := dbFuncUpdate(
+	return dbFuncUpdate(
 		bson.M{"cookie": id.Cookie(), "state": bson.M{"$in": states}},
 		bson.M{"$set": bson.M{"state": state}})
-	if err != nil {
-		log.Errorf("dbFuncSetState: Can't change function %s to state %d: %s",
-				id.Name, state, err.Error())
-	}
-
-	return err
 }
 
 func dbFuncSetState(fn *FunctionDesc, state int) error {
@@ -174,14 +168,9 @@ func dbFuncUpdateAdded(fn *FunctionDesc) error {
 }
 
 func dbFuncUpdatePulled(fn *FunctionDesc, update bson.M) error {
-	err := dbFuncUpdate(
+	return dbFuncUpdate(
 		bson.M{"cookie": fn.Cookie},
 		bson.M{"$set": update })
-	if err != nil {
-		log.Errorf("Can't update pulled %s: %s", fn.Name, err.Error())
-	}
-
-	return err
 }
 
 func dbFuncAdd(desc *FunctionDesc) error {
@@ -252,9 +241,6 @@ func logRemove(fn *FunctionDesc) error {
 	if err == mgo.ErrNotFound {
 		err = nil
 	}
-	if err != nil {
-		log.Errorf("logs %s remove error: %s", fn.SwoId.Str(), err.Error())
-	}
 	return err
 }
 
@@ -265,7 +251,7 @@ func dbBalancerRSListVersions(fn *FunctionDesc) ([]string, error) {
 	return fv, err
 }
 
-func dbBalancerPodFind(link *BalancerLink, uid string) (*BalancerRS) {
+func dbBalancerPodFind(link *BalancerLink, uid string) (*BalancerRS, error) {
 	var v BalancerRS
 
 	c := dbSession.DB(dbState).C(DBColBalancerRS)
@@ -275,17 +261,15 @@ func dbBalancerPodFind(link *BalancerLink, uid string) (*BalancerRS) {
 		}).One(&v)
 	if err != nil {
 		if err == mgo.ErrNotFound {
-			return nil
+			return nil, nil
 		}
-		log.Errorf("balancer-db: Can't find pod %s/%s: %s",
-				link.DepName, uid, err.Error())
-		return nil
+		return nil, err
 	}
 
-	return &v
+	return &v, nil
 }
 
-func dbBalancerPodFindExact(fnid, version string) (*BalancerRS) {
+func dbBalancerPodFindExact(fnid, version string) (*BalancerRS, error) {
 	var v BalancerRS
 
 	c := dbSession.DB(dbState).C(DBColBalancerRS)
@@ -296,17 +280,15 @@ func dbBalancerPodFindExact(fnid, version string) (*BalancerRS) {
 		}).One(&v)
 	if err != nil {
 		if err == mgo.ErrNotFound {
-			return nil
+			return nil, nil
 		}
-		log.Errorf("balancer-db: Can't find pod %s/%s: %s",
-				fnid, version, err.Error())
-		return nil
+		return nil, err
 	}
 
-	return &v
+	return &v, nil
 }
 
-func dbBalancerPodFindAll(link *BalancerLink) ([]BalancerRS) {
+func dbBalancerPodFindAll(link *BalancerLink) ([]BalancerRS, error) {
 	var v []BalancerRS
 
 	c := dbSession.DB(dbState).C(DBColBalancerRS)
@@ -315,18 +297,15 @@ func dbBalancerPodFindAll(link *BalancerLink) ([]BalancerRS) {
 		}).All(&v)
 	if err != nil {
 		if err == mgo.ErrNotFound {
-			return nil
+			return nil, nil
 		}
-		log.Errorf("balancer-db: Can't find pods %s: %s",
-				link.DepName, err.Error())
-		return nil
+		return nil, err
 	}
 
-	return v
+	return v, nil
 }
 
 func dbBalancerPodAdd(link *BalancerLink, pod *k8sPod) error {
-	log.Debugf("ADD FOR %s %s", link.FnId, pod.Instance)
 	c := dbSession.DB(dbState).C(DBColBalancerRS)
 	err := c.Insert(bson.M{
 			"balancerid":	link.ObjID,
@@ -337,16 +316,15 @@ func dbBalancerPodAdd(link *BalancerLink, pod *k8sPod) error {
 			"fnversion":	pod.Version,
 		})
 	if err != nil {
-		log.Errorf("balancer-db: Can't add pod %s/%s/%s: %s",
-				link.DepName, pod.UID, pod.WdogAddr, err.Error())
-	} else {
-		eref := dbBalancerRefIncRS(link)
-		if eref != nil {
-			log.Errorf("balancer-db: Can't increment RS %s/%s/%s: %s",
-					link.DepName, pod.UID, pod.WdogAddr, eref.Error())
-		}
+		return fmt.Errorf("add: %s", err.Error())
 	}
-	return err
+
+	err = dbBalancerRefIncRS(link)
+	if err != nil {
+		return fmt.Errorf("inc rs: %s", err.Error())
+	}
+
+	return nil
 }
 
 func dbBalancerPodDel(link *BalancerLink, pod *k8sPod) (error) {
@@ -359,16 +337,16 @@ func dbBalancerPodDel(link *BalancerLink, pod *k8sPod) (error) {
 		if err == mgo.ErrNotFound {
 			return nil
 		}
-		log.Errorf("balancer-db: Can't del pod %s/%s: %s",
-				link.DepName, pod.UID, err.Error())
-	} else {
-		eref := dbBalancerRefDecRS(link)
-		if eref != nil {
-			log.Errorf("balancer-db: Can't decrement RS %s/%s: %s",
-					link.DepName, pod.UID, eref.Error())
-		}
+
+		return fmt.Errorf("del: %s", err.Error())
 	}
-	return err
+
+	err = dbBalancerRefDecRS(link)
+	if err != nil {
+		return fmt.Errorf("dec rs: %s", err.Error())
+	}
+
+	return nil
 }
 
 func dbBalancerPodDelAll(link *BalancerLink) (error) {
@@ -380,12 +358,11 @@ func dbBalancerPodDelAll(link *BalancerLink) (error) {
 		if err == mgo.ErrNotFound {
 			return nil
 		}
-		log.Errorf("balancer-db: Can't del all pods %s: %s",
-				link.DepName, err.Error())
-	} else {
-		return dbBalancerRefZeroRS(link)
+
+		return fmt.Errorf("delall: %s", err.Error())
 	}
-	return err
+
+	return dbBalancerRefZeroRS(link)
 }
 
 func dbBalancerOpRS(link *BalancerLink, update bson.M) (error) {
@@ -403,15 +380,15 @@ func dbBalancerOpRS(link *BalancerLink, update bson.M) (error) {
 		if err == mgo.ErrNotFound {
 			return nil
 		}
-		log.Errorf("balancer-db: OpRS error %s/%v: %s",
-				link.DepName, update, err.Error())
+
+		return fmt.Errorf("oprs: %s", err.Error())
 	}
-	return err
+
+	return nil
 }
 
 func dbBalancerRefZeroRS(link *BalancerLink) (error) {
-	return dbBalancerOpRS(link,
-		bson.M{"$set": bson.M{"cntrs": 0}})
+	return dbBalancerOpRS(link, bson.M{"$set": bson.M{"cntrs": 0}})
 }
 
 func dbBalancerRefIncRS(link *BalancerLink) (error) {
@@ -424,27 +401,27 @@ func dbBalancerRefDecRS(link *BalancerLink) (error) {
 		bson.M{"$inc": bson.M{"cntrs": -1}})
 }
 
-func dbBalancerLinkFind(q bson.M) (*BalancerLink) {
+func dbBalancerLinkFind(q bson.M) (*BalancerLink, error) {
 	var link BalancerLink
 
 	c := dbSession.DB(dbState).C(DBColBalancer)
 	err := c.Find(q).One(&link)
 	if err != nil {
 		if err == mgo.ErrNotFound {
-			return nil
+			return nil, nil
 		}
-		log.Errorf("balancer-db: Can't find link: %s", err.Error())
-		return nil
+
+		return nil, err
 	}
 
-	return &link
+	return &link, nil
 }
 
-func dbBalancerLinkFindByDepname(depname string) (*BalancerLink) {
+func dbBalancerLinkFindByDepname(depname string) (*BalancerLink, error) {
 	return dbBalancerLinkFind(bson.M{"depname": depname})
 }
 
-func dbBalancerLinkFindByCookie(cookie string) (*BalancerLink) {
+func dbBalancerLinkFindByCookie(cookie string) (*BalancerLink, error) {
 	return dbBalancerLinkFind(bson.M{"fnid": cookie})
 }
 
@@ -453,11 +430,8 @@ func dbBalancerLinkFindAll() ([]BalancerLink, error) {
 
 	c := dbSession.DB(dbState).C(DBColBalancer)
 	err := c.Find(bson.M{}).All(&links)
-	if err != nil {
-		if err != mgo.ErrNotFound {
-			log.Errorf("balancer-db: Can't find links %s/%s: %s", err.Error())
-			return nil, err
-		}
+	if err != nil && err != mgo.ErrNotFound {
+		return nil, err
 	}
 
 	return links, nil
@@ -465,12 +439,7 @@ func dbBalancerLinkFindAll() ([]BalancerLink, error) {
 
 func dbBalancerLinkAdd(link *BalancerLink) (error) {
 	c := dbSession.DB(dbState).C(DBColBalancer)
-	err := c.Insert(link)
-	if err != nil {
-		log.Errorf("balancer-db: Can't insert link %v: %s",
-				link, err.Error())
-	}
-	return err
+	return c.Insert(link)
 }
 
 func dbBalancerLinkDel(link *BalancerLink) (error) {
@@ -482,10 +451,11 @@ func dbBalancerLinkDel(link *BalancerLink) (error) {
 		if err == mgo.ErrNotFound {
 			return nil
 		}
-		log.Errorf("balancer-db: Can't remove link %v: %s",
-				link, err.Error())
+
+		return fmt.Errorf("can't remove link: %s", err.Error())
 	}
-	return err
+
+	return nil
 }
 
 func dbProjectListAll(ten string) (fn []string, mw []string, err error) {

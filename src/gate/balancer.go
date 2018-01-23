@@ -181,10 +181,13 @@ func BalancerPodDelAll(depname string) (error) {
 	var rs []BalancerRS
 	var err error
 
-	link = dbBalancerLinkFindByDepname(depname)
+	link, err = dbBalancerLinkFindByDepname(depname)
 	if link != nil {
-		rs = dbBalancerPodFindAll(link)
-		if rs != nil {
+		rs, err = dbBalancerPodFindAll(link)
+		if err != nil {
+			log.Errorf("balancer-db: Can't find pods %s: %s",
+					link.DepName, err.Error())
+		} else if rs != nil {
 			err = dbBalancerPodDelAll(link)
 			if err != nil {
 				return err
@@ -207,12 +210,17 @@ func BalancerPodDel(pod *k8sPod) error {
 	var rs *BalancerRS
 	var err error
 
-	link = dbBalancerLinkFindByDepname(pod.DepName)
+	link, err = dbBalancerLinkFindByDepname(pod.DepName)
 	if link != nil {
-		rs = dbBalancerPodFind(link, pod.UID)
-		if rs != nil {
+		rs, err = dbBalancerPodFind(link, pod.UID)
+		if err != nil {
+			log.Errorf("balancer-db: Can't find pod %s/%s: %s",
+					link.DepName, pod.UID, err.Error())
+		} else if rs != nil {
 			err = dbBalancerPodDel(link, pod)
 			if err != nil {
+				log.Errorf("balancer-db: Can't del pod %s/%s: %s",
+					link.DepName, pod.UID, err.Error())
 				return err
 			}
 			err = balancerDelRS(link, rs.WdogAddr)
@@ -229,10 +237,12 @@ func BalancerPodAdd(pod *k8sPod) error {
 	var link *BalancerLink
 	var err error
 
-	link = dbBalancerLinkFindByDepname(pod.DepName)
+	link, err = dbBalancerLinkFindByDepname(pod.DepName)
 	if link != nil {
 		err = dbBalancerPodAdd(link, pod)
 		if err != nil {
+			log.Errorf("Can't add pod %s/%s/%s: %s",
+					link.DepName, pod.UID, pod.WdogAddr, err.Error())
 			return err
 		}
 		err = balancerAddRS(link, pod.WdogAddr)
@@ -254,7 +264,7 @@ func BalancerDelete(ctx context.Context, depname string) (error) {
 	var link *BalancerLink
 	var err error
 
-	link = dbBalancerLinkFindByDepname(depname)
+	link, err = dbBalancerLinkFindByDepname(depname)
 	if link != nil {
 		lip := link.lip()
 
@@ -267,10 +277,12 @@ func BalancerDelete(ctx context.Context, depname string) (error) {
 
 		err = dbBalancerLinkDel(link)
 		if err != nil {
+			log.Errorf("link del error: %s", err.Error())
 			return err
 		}
 		err = dbBalancerPodDelAll(link)
 		if err != nil {
+			log.Errorf("POD del all error: %s", err.Error())
 			return err
 		}
 	}
@@ -305,6 +317,7 @@ func BalancerCreate(ctx context.Context, cookie, depname string, numrs uint, pub
 
 	err = dbBalancerLinkAdd(link)
 	if err != nil {
+		log.Errorf("balancer-db: Can't insert link %v: %s", link, err.Error())
 		errdel := balancerServiceDel(lip)
 		if errdel != nil {
 			err = fmt.Errorf("%s: %s", err.Error(), errdel.Error())
@@ -319,6 +332,7 @@ func BalancerCreate(ctx context.Context, cookie, depname string, numrs uint, pub
 func BalancerLoad(conf *YAMLConf) (error) {
 	links, err := dbBalancerLinkFindAll()
 	if err != nil {
+		log.Errorf("balancer-db: Can't find links %s/%s: %s", err.Error())
 		return err
 	}
 

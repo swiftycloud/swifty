@@ -373,6 +373,8 @@ func updateFunction(ctx context.Context, conf *YAMLConf, id *SwoId, params *swya
 
 	err = dbFuncUpdatePulled(fn, update)
 	if err != nil {
+		log.Errorf("Can't update pulled %s: %s", fn.Name, err.Error())
+		err = errors.New("DB error")
 		goto out
 	}
 
@@ -429,7 +431,8 @@ func removeFunction(ctx context.Context, conf *YAMLConf, id *SwoId) error {
 	err = dbFuncSetStateCond(id, swy.DBFuncStateTrm, []int{
 			swy.DBFuncStateRdy, swy.DBFuncStateStl, swy.DBFuncStateDea})
 	if err != nil {
-		return err
+		log.Errorf("Can't terminate function %s: %s", id.Name, err.Error())
+		return errors.New("Cannot terminate fn")
 	}
 
 	log.Debugf("Forget function %s", fn.SwoId.Str())
@@ -455,6 +458,7 @@ func removeFunction(ctx context.Context, conf *YAMLConf, id *SwoId) error {
 
 	err = logRemove(fn)
 	if err != nil {
+		log.Errorf("logs %s remove error: %s", fn.SwoId.Str(), err.Error())
 		goto stalled
 	}
 
@@ -531,6 +535,8 @@ func deactivateFunction(ctx context.Context, conf *YAMLConf, id *SwoId) error {
 
 	err = dbFuncSetStateCond(id, swy.DBFuncStateDea, []int{swy.DBFuncStateRdy})
 	if err != nil {
+		log.Errorf("Can't deactivate function %s: %s", id.Name, err.Error())
+		err = errors.New("Cannot deactivate function")
 		goto out
 	}
 
