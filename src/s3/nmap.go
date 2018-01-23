@@ -38,9 +38,9 @@ import (
 // and get rid of stale records.
 //
 // - S3Object
-//	State::S3StateInactive, CreationTime::<= some current time delta
+//	State::S3StateInactive|S3StateNone, CreationTime::<= some current time delta
 // - S3Bucket
-//	State::S3StateInactive, CreationTime::<= some current time delta
+//	State::S3StateInactive|S3StateNone, CreationTime::<= some current time delta
 // - S3ObjectData (FIXME)
 //	RefID doesn't belong any of S3Object, S3UploadPart
 // - S3UploadPart (FIXME)
