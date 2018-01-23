@@ -416,16 +416,16 @@ func handleFunctionCode(ctx context.Context, w http.ResponseWriter, r *http.Requ
 		goto out
 	}
 
-	if params.Version == "" {
-		params.Version = fn.Src.Version
-	}
-
 	id = makeSwoId(fromContext(ctx).Tenant, params.Project, params.FuncName)
 	ctxlog(ctx).Debugf("Get FN code %s:%s", id.Str(), params.Version)
 
 	fn, err = dbFuncFind(id)
 	if err != nil {
 		goto out
+	}
+
+	if params.Version == "" {
+		params.Version = fn.Src.Version
 	}
 
 	codeFile, err = fnCodePath(&conf, fn, params.Version)
