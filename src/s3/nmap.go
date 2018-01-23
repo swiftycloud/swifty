@@ -29,6 +29,22 @@ import (
 // The backend storage carries buckets as "pools" thus their name should be
 // unique, objects should take care of version in naming and object parts
 // to consider part numbers.
+//
+// Cleanup rules
+// -------------
+//
+// BD backend may fail in various operations, so to provide DB consistency
+// sometime we need to run a "cleanup" action which would walk over collections
+// and get rid of stale records.
+//
+// - S3Object
+//	State::S3StateInactive, CreationTime::<= some current time delta
+// - S3Bucket
+//	State::S3StateInactive, CreationTime::<= some current time delta
+// - S3ObjectData (FIXME)
+//	RefID doesn't belong any of S3Object, S3UploadPart
+// - S3UploadPart (FIXME)
+// - S3Upload (FIXME)
 
 func BIDFromNames(namespace, bucket string) string {
 	return sha256sum([]byte(namespace + bucket))
