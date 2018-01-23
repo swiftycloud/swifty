@@ -1,6 +1,7 @@
 package main
 
 import (
+	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 	"crypto/md5"
 	"time"
@@ -19,31 +20,55 @@ type S3ObjectData struct {
 }
 
 func (objd *S3ObjectData)infoLong() (string) {
-	return fmt.Sprintf("object-data: %s/%s/%s/%s/%d",
+	return fmt.Sprintf("object-data: %s/%s/%s/%s/%d/%d",
 			objd.ObjID, objd.RefID,
 			objd.BucketBID, objd.ObjectBID,
-			objd.State)
+			objd.State, objd.Size)
 }
 
 func (objd *S3ObjectData)dbSet(state uint32, fields bson.M) (error) {
 	var res S3ObjectData
+	var err error
 
-	return dbS3Update(
+	err = dbS3Update(
 			bson.M{"_id": objd.ObjID,
 				"state": bson.M{"$in": s3StateTransition[state]}},
 			bson.M{"$set": fields},
 			&res)
+	if err != nil {
+		log.Errorf("s3: Can't set state %d %s: %s",
+			state, objd.infoLong(), err.Error())
+	}
+	return err
 }
 
 func (objd *S3ObjectData)dbSetState(state uint32) (error) {
 	return objd.dbSet(state, bson.M{"state": state})
 }
 
+func (objd *S3ObjectData)dbRemoveF() (error) {
+	var err error
+
+	err = dbS3Remove(objd, bson.M{"_id": objd.ObjID})
+	if err != nil && err != mgo.ErrNotFound {
+		log.Errorf("s3: Can't force remove %s: %s",
+			objd.infoLong(), err.Error())
+	}
+	return err
+}
+
 func (objd *S3ObjectData)dbRemove() (error) {
-	return dbS3RemoveCond(
+	var err error
+
+	err = dbS3RemoveCond(
 			bson.M{	"_id": objd.ObjID,
 				"state": S3StateInactive},
-		&S3ObjectData{})
+			&S3ObjectData{})
+	if err != nil && err != mgo.ErrNotFound {
+		log.Errorf("s3: Can't remove %s: %s",
+			objd.infoLong(), err.Error())
+	}
+	return err
 }
 
 func s3ObjectDataFind(refID bson.ObjectId) (*S3ObjectData, error) {
@@ -71,7 +96,7 @@ func s3ObjectDataAdd(refid bson.ObjectId, bucket_bid, object_bid string, data []
 
 	if radosDisabled || objd.Size <= S3StorageSizePerObj {
 		if objd.Size > S3StorageSizePerObj {
-			log.Errorf("s3: Too big object to store %d", objd.Size)
+			log.Errorf("s3: Too big %s", objd.infoLong())
 			err = fmt.Errorf("s3: Object is too big")
 			return "", err
 		}
@@ -80,8 +105,8 @@ func s3ObjectDataAdd(refid bson.ObjectId, bucket_bid, object_bid string, data []
 
 		err = dbS3Insert(objd)
 		if err != nil {
-			log.Errorf("s3: Can't insert object data %s/%s/%s: %s",
-				objd.RefID, objd.BucketBID, objd.ObjectBID, err.Error())
+			log.Errorf("s3: Can't insert %s: %s",
+				objd.infoLong(), err.Error())
 			return "", err
 		}
 	} else {
@@ -93,21 +118,14 @@ func s3ObjectDataAdd(refid bson.ObjectId, bucket_bid, object_bid string, data []
 
 	err = objd.dbSetState(S3StateActive)
 	if err != nil {
-		log.Errorf("s3: Can't activate object data %s/%s/%s: %s",
-			objd.RefID, objd.BucketBID, objd.ObjectBID, err.Error())
 		goto out
 	}
 
-	log.Debugf("s3: Added object data %s/%s/%s", objd.RefID, objd.BucketBID, objd.ObjectBID)
+	log.Debugf("s3: Added %s", objd.infoLong())
 	return fmt.Sprintf("%x", md5.Sum(data)), nil
 
 out:
-	err1 := dbS3Remove(objd, bson.M{"_id": objd.ObjID})
-	if err1 != nil {
-		log.Errorf("s3: Can't remove object data %s/%s/%s",
-			objd.RefID, objd.BucketBID, objd.ObjectBID)
-	}
-
+	objd.dbRemoveF()
 	return "", nil
 }
 
@@ -116,8 +134,6 @@ func s3ObjectDataDel(objd *S3ObjectData) (error) {
 
 	err = objd.dbSetState(S3StateInactive)
 	if err != nil {
-		log.Errorf("s3: Can't deactivate object data %s/%s/%s",
-			objd.RefID, objd.BucketBID, objd.ObjectBID)
 		return err
 	}
 
@@ -130,13 +146,10 @@ func s3ObjectDataDel(objd *S3ObjectData) (error) {
 
 	err = objd.dbRemove()
 	if err != nil {
-		log.Errorf("s3: Can't delete object data %s/%s/%s",
-			objd.RefID, objd.BucketBID, objd.ObjectBID)
 		return err
 	}
 
-	log.Debugf("s3: Deleted object data %s/%s/%s",
-		objd.RefID, objd.BucketBID, objd.ObjectBID)
+	log.Debugf("s3: Deleted %s", objd.infoLong())
 	return nil
 }
 
@@ -148,8 +161,6 @@ func s3ObjectDataGet(objd *S3ObjectData) ([]byte, error) {
 		res, err = radosReadObject(objd.BucketBID, objd.ObjectBID,
 						uint64(objd.Size), 0)
 		if err != nil {
-			log.Errorf("s3: Can't read object data %s/%s/%s",
-				objd.RefID, objd.BucketBID, objd.ObjectBID)
 			return nil, err
 		}
 
