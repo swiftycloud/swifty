@@ -107,17 +107,20 @@ func s3ObjectDataAdd(refid bson.ObjectId, bucket_bid, object_bid string, data []
 		if err != nil {
 			log.Errorf("s3: Can't insert %s: %s",
 				objd.infoLong(), err.Error())
-			return "", err
+			goto out
 		}
 	} else {
 		err = radosWriteObject(objd.BucketBID, objd.ObjectBID, data, 0)
 		if err != nil {
-			return "", err
+			goto out
 		}
 	}
 
 	err = objd.dbSetState(S3StateActive)
 	if err != nil {
+		if objd.Data != nil {
+			radosDeleteObject(objd.BucketBID, objd.ObjectBID)
+		}
 		goto out
 	}
 
