@@ -48,9 +48,7 @@ func (part *S3UploadPart)infoLong() (string) {
 }
 
 func (part *S3UploadPart)dbRemoveF() (error) {
-	var err error
-
-	err = dbS3Remove(part, bson.M{"_id": part.ObjID})
+	err := dbS3Remove(part, bson.M{"_id": part.ObjID})
 	if err != nil && err != mgo.ErrNotFound {
 		log.Errorf("s3: Can't force remove %s: %s",
 			part.infoLong(), err.Error())
@@ -59,13 +57,10 @@ func (part *S3UploadPart)dbRemoveF() (error) {
 }
 
 func (part *S3UploadPart)dbRemove() (error) {
-	var res S3UploadPart
-	var err error
-
-	err = dbS3RemoveCond(
+	err := dbS3RemoveCond(
 			bson.M{	"_id": part.ObjID,
 				"state": S3StateInactive},
-			&res)
+			&S3UploadPart{})
 	if err != nil && err != mgo.ErrNotFound {
 		log.Errorf("s3: Can't remove %s: %s",
 			part.infoLong(), err.Error())
@@ -74,14 +69,11 @@ func (part *S3UploadPart)dbRemove() (error) {
 }
 
 func (part *S3UploadPart)dbSet(state uint32, fields bson.M) (error) {
-	var res S3UploadPart
-	var err error
-
-	err = dbS3Update(
+	err := dbS3Update(
 			bson.M{"_id": part.ObjID,
 				"state": bson.M{"$in": s3StateTransition[state]}},
 			bson.M{"$set": fields},
-			&res)
+			&S3UploadPart{})
 	if err != nil {
 		log.Errorf("s3: Can't set state %d %s: %s",
 			state, part.infoLong(), err.Error())
@@ -94,9 +86,7 @@ func (part *S3UploadPart)dbSetState(state uint32) (error) {
 }
 
 func (upload *S3Upload)dbRemoveF() (error) {
-	var err error
-
-	err = dbS3Remove(upload, bson.M{"_id": upload.ObjID})
+	err := dbS3Remove(upload, bson.M{"_id": upload.ObjID})
 	if err != nil && err != mgo.ErrNotFound {
 		log.Errorf("s3: Can't force remove %s: %s",
 			upload.infoLong(), err.Error())
@@ -105,13 +95,10 @@ func (upload *S3Upload)dbRemoveF() (error) {
 }
 
 func (upload *S3Upload)dbRemove() (error) {
-	var res S3Upload
-	var err error
-
-	err = dbS3RemoveCond(
+	err := dbS3RemoveCond(
 			bson.M{	"_id": upload.ObjID,
 				"state": S3StateInactive},
-			&res)
+			&S3Upload{})
 	if err != nil && err != mgo.ErrNotFound {
 		log.Errorf("s3: Can't remove %s: %s",
 			upload.infoLong(), err.Error())
@@ -120,14 +107,11 @@ func (upload *S3Upload)dbRemove() (error) {
 }
 
 func (upload *S3Upload)dbSet(state uint32, fields bson.M) (error) {
-	var res S3Upload
-	var err error
-
-	err = dbS3Update(
+	err := dbS3Update(
 			bson.M{"_id": upload.ObjID,
 				"state": bson.M{"$in": s3StateTransition[state]}},
 			bson.M{"$set": fields},
-			&res)
+			&S3Upload{})
 	if err != nil {
 		log.Errorf("s3: Can't set state %d %s: %s",
 			state, upload.infoLong(), err.Error())
