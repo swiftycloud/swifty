@@ -21,6 +21,13 @@ type FunctionStats struct {
 	TimeG		uint64			`json:"timegate,omitempty"`
 }
 
+type FunctionWait struct {
+	Project		string			`json:"project"`
+	FuncName	string			`json:"name"`
+	Timeout		uint32			`json:"timeout"` /* msec */
+	Version		string			`json:"version,omitempty"`
+}
+
 type FunctionInfo struct {
 	Mware		[]string		`json:"mware"`
 	State		string			`json:"state"`

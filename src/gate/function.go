@@ -481,6 +481,10 @@ stalled:
 	return err
 }
 
+func waitFunctionVersion(ctx context.Context, id *SwoId, version string, tmo uint32) (error, bool) {
+	return nil, false
+}
+
 func notifyPodTmo(ctx context.Context, cookie, inst string) {
 	fn, err := dbFuncFindByCookie(cookie)
 	if err != nil {

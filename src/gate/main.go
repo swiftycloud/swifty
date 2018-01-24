@@ -338,6 +338,36 @@ out:
 	return err
 }
 
+func handleFunctionWait(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
+	var id *SwoId
+	var wi swyapi.FunctionWait
+	var err error
+	var tmo bool
+
+	err = swyhttp.ReadAndUnmarshalReq(r, &wi)
+	if err != nil {
+		goto out
+	}
+
+	id = makeSwoId(fromContext(ctx).Tenant, wi.Project, wi.FuncName)
+
+	if wi.Version != "" {
+		ctxlog(ctx).Debugf("function/wait %s -> version >= %s", id.Str(), wi.Version)
+		err, tmo = waitFunctionVersion(ctx, id, wi.Version, wi.Timeout)
+		if err != nil {
+			goto out
+		}
+	}
+
+	if !tmo {
+		w.WriteHeader(http.StatusOK)
+	} else {
+		w.WriteHeader(524) /* CloudFlare's timeout */
+	}
+out:
+	return err
+}
+
 func handleFunctionState(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
 	var id *SwoId
 	var params swyapi.FunctionState
@@ -1031,6 +1061,7 @@ func main() {
 	r.Handle("/v1/function/code",		genReqHandler(handleFunctionCode))
 	r.Handle("/v1/function/logs",		genReqHandler(handleFunctionLogs))
 	r.Handle("/v1/function/state",		genReqHandler(handleFunctionState))
+	r.Handle("/v1/function/wait",		genReqHandler(handleFunctionWait))
 	r.Handle("/v1/mware/add",		genReqHandler(handleMwareAdd))
 	r.Handle("/v1/mware/list",		genReqHandler(handleMwareList))
 	r.Handle("/v1/mware/remove",		genReqHandler(handleMwareRemove))
