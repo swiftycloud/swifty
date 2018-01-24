@@ -333,6 +333,27 @@ func dbBalancerPodDel(link *BalancerLink, pod *k8sPod) (error) {
 	return nil
 }
 
+func dbBalancerPodPop(link *BalancerLink, pod *k8sPod) (*BalancerRS, error) {
+	var v BalancerRS
+
+	c := dbSession.DB(dbState).C(DBColBalancerRS)
+	_, err := c.Find(bson.M{
+			"balancerid":	link.ObjID,
+			"uid":	pod.UID,
+		}).Apply(mgo.Change{Remove: true}, &v)
+	if err != nil {
+		return nil, fmt.Errorf("pop: %s", err.Error())
+	}
+
+	err = dbBalancerRefDecRS(link)
+	if err != nil {
+		return &v, fmt.Errorf("dec rs: %s", err.Error())
+	}
+
+	return &v, nil
+}
+
+
 func dbBalancerPodDelAll(link *BalancerLink) (error) {
 	c := dbSession.DB(dbState).C(DBColBalancerRS)
 	err := c.Remove(bson.M{

@@ -186,14 +186,9 @@ func BalancerPodDel(pod *k8sPod) error {
 		return fmt.Errorf("No link: %s", err.Error())
 	}
 
-	rs, err = dbBalancerPodFind(link, pod.UID)
+	rs, err = dbBalancerPodPop(link, pod)
 	if err != nil {
-		return fmt.Errorf("No linkRS: %s", err.Error())
-	}
-
-	err = dbBalancerPodDel(link, pod)
-	if err != nil {
-		return fmt.Errorf("Del error: %s", err.Error())
+		return fmt.Errorf("Pop error: %s", err.Error())
 	}
 
 	err = balancerDelRS(link, rs.WdogAddr)
