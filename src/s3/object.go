@@ -54,9 +54,7 @@ func (object *S3Object)infoLong() (string) {
 }
 
 func (object *S3Object)dbRemoveF() (error) {
-	var err error
-
-	err = dbS3Remove(object, bson.M{"_id": object.ObjID})
+	err := dbS3Remove(object, bson.M{"_id": object.ObjID})
 	if err != nil && err != mgo.ErrNotFound {
 		log.Errorf("s3: Can't force remove %s: %s",
 			object.infoLong(), err.Error())
@@ -65,13 +63,10 @@ func (object *S3Object)dbRemoveF() (error) {
 }
 
 func (object *S3Object)dbRemove() (error) {
-	var res S3Object
-	var err error
-
-	err = dbS3RemoveCond(
+	err := dbS3RemoveCond(
 			bson.M{	"_id": object.ObjID,
 				"state": S3StateInactive},
-			&res)
+			&S3Object{})
 	if err != nil && err != mgo.ErrNotFound {
 		log.Errorf("s3: Can't remove %s: %s",
 			object.infoLong(), err.Error())
@@ -80,14 +75,11 @@ func (object *S3Object)dbRemove() (error) {
 }
 
 func (object *S3Object)dbSet(state uint32, fields bson.M) (error) {
-	var res S3Object
-	var err error
-
-	err = dbS3Update(
+	err := dbS3Update(
 			bson.M{"_id": object.ObjID,
 				"state": bson.M{"$in": s3StateTransition[state]}},
 			bson.M{"$set": fields},
-			&res)
+			&S3Object{})
 	if err != nil {
 		log.Errorf("s3: Can't set state %d %s: %s",
 			state, object.infoLong(), err.Error())
