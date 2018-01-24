@@ -108,6 +108,7 @@ func (bucket *S3Bucket)FindObject(oname string, version int) (*S3Object, error) 
 
 func s3AddObject(namespace string, bucket *S3Bucket, oname string,
 		acl string, size int64, data []byte) (*S3Object, error) {
+	var objd *S3ObjectData
 	var etag string
 	var err error
 
@@ -139,10 +140,10 @@ func s3AddObject(namespace string, bucket *S3Bucket, oname string,
 		goto out_no_size
 	}
 
-	etag, err = s3ObjectDataAdd(object.ObjID, bucket.BackendID,
+	objd, etag, err = s3ObjectDataAdd(object.ObjID, bucket.BackendID,
 					object.BackendID, data)
 	if err != nil {
-		goto out
+		goto out_obj
 	}
 
 	err = object.dbSetStateEtag(S3StateActive, etag)
@@ -158,6 +159,8 @@ func s3AddObject(namespace string, bucket *S3Bucket, oname string,
 	return object, nil
 
 out:
+	s3ObjectDataDel(objd)
+out_obj:
 	bucket.dbDelObj(object.Size)
 out_no_size:
 	object.dbRemoveF()

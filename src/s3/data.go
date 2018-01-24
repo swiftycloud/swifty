@@ -82,7 +82,7 @@ func s3ObjectDataFind(refID bson.ObjectId) (*S3ObjectData, error) {
 	return &res, nil
 }
 
-func s3ObjectDataAdd(refid bson.ObjectId, bucket_bid, object_bid string, data []byte) (string, error) {
+func s3ObjectDataAdd(refid bson.ObjectId, bucket_bid, object_bid string, data []byte) (*S3ObjectData, string, error) {
 	var objd S3ObjectData
 	var err error
 
@@ -98,7 +98,7 @@ func s3ObjectDataAdd(refid bson.ObjectId, bucket_bid, object_bid string, data []
 		if objd.Size > S3StorageSizePerObj {
 			log.Errorf("s3: Too big %s", objd.infoLong())
 			err = fmt.Errorf("s3: Object is too big")
-			return "", err
+			return nil, "", err
 		}
 
 		objd.Data = data
@@ -125,11 +125,11 @@ func s3ObjectDataAdd(refid bson.ObjectId, bucket_bid, object_bid string, data []
 	}
 
 	log.Debugf("s3: Added %s", objd.infoLong())
-	return fmt.Sprintf("%x", md5.Sum(data)), nil
+	return &objd, fmt.Sprintf("%x", md5.Sum(data)), nil
 
 out:
 	objd.dbRemoveF()
-	return "", nil
+	return nil, "", nil
 }
 
 func s3ObjectDataDel(objd *S3ObjectData) (error) {
