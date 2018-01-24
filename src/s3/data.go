@@ -43,7 +43,11 @@ func (objd *S3ObjectData)dbSet(state uint32, fields bson.M) (error) {
 }
 
 func (objd *S3ObjectData)dbSetState(state uint32) (error) {
-	return objd.dbSet(state, bson.M{"state": state})
+	err := objd.dbSet(state, bson.M{"state": state})
+	if err == nil {
+		objd.State = state
+	}
+	return err
 }
 
 func (objd *S3ObjectData)dbRemoveF() (error) {
