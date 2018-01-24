@@ -76,14 +76,11 @@ func (bucket *S3Bucket)infoLong() (string) {
 }
 
 func (bucket *S3Bucket)dbRemove() (error) {
-	var res S3Bucket
-	var err error
-
-	err = dbS3RemoveCond(
+	err := dbS3RemoveCond(
 			bson.M{	"_id": bucket.ObjID,
 				"state": S3StateInactive,
 				"cnt-objects": 0},
-			&res)
+			&S3Bucket{})
 	if err != nil && err != mgo.ErrNotFound {
 		log.Errorf("s3: Can't remove %s: %s",
 			bucket.infoLong(), err.Error())
@@ -92,15 +89,12 @@ func (bucket *S3Bucket)dbRemove() (error) {
 }
 
 func (bucket *S3Bucket)dbSetState(state uint32) (error) {
-	var res S3Bucket
-	var err error
-
-	err = dbS3Update(
+	err := dbS3Update(
 			bson.M{"_id": bucket.ObjID,
 				"state": bson.M{"$in": s3StateTransition[state]},
 				"cnt-objects": 0},
 			bson.M{"$set": bson.M{"state": state}},
-			&res)
+			&S3Bucket{})
 	if err != nil {
 		log.Errorf("s3: Can't set state %d %s: %s",
 			state, bucket.infoLong(), err.Error())
@@ -109,10 +103,7 @@ func (bucket *S3Bucket)dbSetState(state uint32) (error) {
 }
 
 func (bucket *S3Bucket)dbAddObj(size int64) (error) {
-	var res S3Bucket
-	var err error
-
-	err = dbS3Update(
+	err := dbS3Update(
 			bson.M{"_id": bucket.ObjID,
 				"state": S3StateActive,
 			},
@@ -121,7 +112,7 @@ func (bucket *S3Bucket)dbAddObj(size int64) (error) {
 					"cnt-objects": 1,
 					"cnt-bytes": size},
 				},
-			&res)
+			&S3Bucket{})
 	if err != nil {
 		log.Errorf("s3: Can't +account %d bytes %s: %s",
 			size, bucket.infoLong(), err.Error())
@@ -130,10 +121,7 @@ func (bucket *S3Bucket)dbAddObj(size int64) (error) {
 }
 
 func (bucket *S3Bucket)dbDelObj(size int64) (error) {
-	var res S3Bucket
-	var err error
-
-	err = dbS3Update(
+	err := dbS3Update(
 			bson.M{"_id": bucket.ObjID,
 				"state": S3StateActive,
 			},
@@ -142,7 +130,7 @@ func (bucket *S3Bucket)dbDelObj(size int64) (error) {
 					"cnt-objects": -1,
 					"cnt-bytes": -size},
 				},
-			&res)
+			&S3Bucket{})
 	if err != nil {
 		log.Errorf("s3: Can't -account %d bytes %s: %s",
 			size, bucket.infoLong(), err.Error())
