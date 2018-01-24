@@ -88,11 +88,20 @@ func (object *S3Object)dbSet(state uint32, fields bson.M) (error) {
 }
 
 func (object *S3Object)dbSetState(state uint32) (error) {
-	return object.dbSet(state, bson.M{"state": state})
+	err := object.dbSet(state, bson.M{"state": state})
+	if err == nil {
+		object.State = state
+	}
+	return err
 }
 
 func (object *S3Object)dbSetStateEtag(state uint32, etag string) (error) {
-	return object.dbSet(state, bson.M{"state": state, "etag": etag})
+	err := object.dbSet(state, bson.M{"state": state, "etag": etag})
+	if err == nil {
+		object.State = state
+		object.ETag = etag
+	}
+	return err
 }
 
 func (bucket *S3Bucket)FindObject(oname string, version int) (*S3Object, error) {
