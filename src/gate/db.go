@@ -359,15 +359,11 @@ func dbBalancerPodDelAll(link *BalancerLink) (error) {
 	err := c.Remove(bson.M{
 			"balancerid":	link.ObjID,
 		})
-	if err != nil {
-		if err == mgo.ErrNotFound {
-			return nil
-		}
-
-		return fmt.Errorf("delall: %s", err.Error())
+	if err == mgo.ErrNotFound {
+		err = nil
 	}
 
-	return dbBalancerRefZeroRS(link)
+	return err
 }
 
 func dbBalancerOpRS(link *BalancerLink, update bson.M) (error) {
@@ -390,10 +386,6 @@ func dbBalancerOpRS(link *BalancerLink, update bson.M) (error) {
 	}
 
 	return nil
-}
-
-func dbBalancerRefZeroRS(link *BalancerLink) (error) {
-	return dbBalancerOpRS(link, bson.M{"$set": bson.M{"cntrs": 0}})
 }
 
 func dbBalancerRefIncRS(link *BalancerLink) (error) {
@@ -449,18 +441,7 @@ func dbBalancerLinkAdd(link *BalancerLink) (error) {
 
 func dbBalancerLinkDel(link *BalancerLink) (error) {
 	c := dbSession.DB(dbState).C(DBColBalancer)
-	err := c.Remove(bson.M{
-			"depname":	link.DepName,
-		})
-	if err != nil {
-		if err == mgo.ErrNotFound {
-			return nil
-		}
-
-		return fmt.Errorf("can't remove link: %s", err.Error())
-	}
-
-	return nil
+	return c.Remove(bson.M{"depname": link.DepName})
 }
 
 func dbProjectListAll(ten string) (fn []string, mw []string, err error) {

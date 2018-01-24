@@ -14,8 +14,6 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/pkg/fields"
 
-	"gopkg.in/mgo.v2"
-
 	"context"
 	"strconv"
 	"strings"
@@ -57,7 +55,7 @@ func swk8sRemove(ctx context.Context, conf *YAMLConf, fn *FunctionDesc, fi *FnIn
 	depname := fi.DepName()
 
 	err = BalancerDelete(ctx, depname)
-	if err != nil && err != mgo.ErrNotFound {
+	if err != nil {
 		ctxlog(ctx).Errorf("Can't delete balancer %s : %s", depname, err.Error())
 		return err
 	}

@@ -4,6 +4,7 @@ import (
 	"github.com/willf/bitset"
 
 	"gopkg.in/mgo.v2/bson"
+	"gopkg.in/mgo.v2"
 
 	"strings"
 	"strconv"
@@ -183,6 +184,10 @@ func BalancerPodDel(pod *k8sPod) error {
 
 	link, err = dbBalancerLinkFindByDepname(pod.DepName)
 	if err != nil {
+		if err == mgo.ErrNotFound {
+			return nil
+		}
+
 		return fmt.Errorf("No link: %s", err.Error())
 	}
 
@@ -227,27 +232,34 @@ func BalancerDelete(ctx context.Context, depname string) (error) {
 	var err error
 
 	link, err = dbBalancerLinkFindByDepname(depname)
-	if link != nil {
-		lip := link.lip()
-
-		err = balancerServiceDel(lip)
-		if err != nil {
-			return err
+	if err != nil {
+		if err == mgo.ErrNotFound {
+			return nil
 		}
 
-		putLocalIp <- lip
-
-		err = dbBalancerLinkDel(link)
-		if err != nil {
-			ctxlog(ctx).Errorf("link del error: %s", err.Error())
-			return err
-		}
-		err = dbBalancerPodDelAll(link)
-		if err != nil {
-			ctxlog(ctx).Errorf("POD del all error: %s", err.Error())
-			return err
-		}
+		return fmt.Errorf("Link get err: %s", err.Error())
 	}
+
+	err = dbBalancerPodDelAll(link)
+	if err != nil {
+		return fmt.Errorf("POD del all error: %s", err.Error())
+	}
+
+	lip := link.lip()
+	err = balancerServiceDel(lip)
+	if err != nil {
+		return err
+	}
+
+	putLocalIp <- lip
+
+	err = dbBalancerLinkDel(link)
+	if err != nil {
+		return fmt.Errorf("Del error: %s", err.Error())
+	}
+
+	ctxlog(ctx).Debugf("Removed balancer for %s (ip %s)", depname, lip)
+
 	return nil
 }
 
