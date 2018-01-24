@@ -98,6 +98,8 @@ func (bucket *S3Bucket)dbSetState(state uint32) (error) {
 	if err != nil {
 		log.Errorf("s3: Can't set state %d %s: %s",
 			state, bucket.infoLong(), err.Error())
+	} else {
+		bucket.State = state
 	}
 	return err
 }
@@ -117,6 +119,7 @@ func (bucket *S3Bucket)dbAddObj(size int64) (error) {
 		log.Errorf("s3: Can't +account %d bytes %s: %s",
 			size, bucket.infoLong(), err.Error())
 	}
+
 	return err
 }
 
