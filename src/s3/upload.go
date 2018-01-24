@@ -29,15 +29,16 @@ type S3Upload struct {
 	ObjID				bson.ObjectId	`bson:"_id,omitempty"`
 	BucketObjID			bson.ObjectId	`bson:"bucket-id,omitempty"`
 	UploadID			string		`json:"uid" bson:"uid"`
+	Ref				int64		`json:"ref" bson:"ref"`
 	State				uint32		`json:"state" bson:"state"`
 
 	S3ObjectPorps					`json:",inline" bson:",inline"`
 }
 
 func (upload *S3Upload)infoLong() (string) {
-	return fmt.Sprintf("{ S3Upload: %s/%s/%s/%d/%s }",
+	return fmt.Sprintf("{ S3Upload: %s/%s/%s/%d/%d/%s }",
 			upload.ObjID, upload.BucketObjID,
-			upload.UploadID, upload.Key)
+			upload.UploadID, upload.Ref, upload.Key)
 }
 
 func (part *S3UploadPart)infoLong() (string) {
@@ -85,6 +86,34 @@ func (part *S3UploadPart)dbSetState(state uint32) (error) {
 	return part.dbSet(state, bson.M{"state": state})
 }
 
+func (upload *S3Upload)dbRefInc() (error) {
+	err := dbS3Update(
+			bson.M{"_id": upload.ObjID,
+				"state": S3StateActive,
+			},
+			bson.M{"$inc": bson.M{"ref": 1}},
+			&S3Upload{})
+	if err != nil {
+		log.Errorf("s3: Can't +ref %s: %s",
+			upload.infoLong(), err.Error())
+	}
+	return err
+}
+
+func (upload *S3Upload)dbRefDec() (error) {
+	err := dbS3Update(
+			bson.M{"_id": upload.ObjID,
+				"state": S3StateActive,
+			},
+			bson.M{"$inc": bson.M{"ref": -1}},
+			&S3Upload{})
+	if err != nil {
+		log.Errorf("s3: Can't -ref %s: %s",
+			upload.infoLong(), err.Error())
+	}
+	return err
+}
+
 func (upload *S3Upload)dbRemoveF() (error) {
 	err := dbS3Remove(upload, bson.M{"_id": upload.ObjID})
 	if err != nil && err != mgo.ErrNotFound {
@@ -97,7 +126,8 @@ func (upload *S3Upload)dbRemoveF() (error) {
 func (upload *S3Upload)dbRemove() (error) {
 	err := dbS3RemoveCond(
 			bson.M{	"_id": upload.ObjID,
-				"state": S3StateInactive},
+				"state": S3StateInactive,
+				"ref": 0},
 			&S3Upload{})
 	if err != nil && err != mgo.ErrNotFound {
 		log.Errorf("s3: Can't remove %s: %s",
@@ -169,12 +199,13 @@ func s3UploadInit(bucket *S3Bucket, oname, acl string) (*S3Upload, error) {
 
 		BucketObjID:	bucket.ObjID,
 		UploadID:	bucket.UploadUID(oname),
+		State:		S3StateActive,
 	}
 
 	err = dbS3Insert(upload)
 	if err != nil {
-		log.Errorf("s3: Can't insert upload %s: %s",
-				upload.UploadID, err.Error())
+		log.Errorf("s3: Can't insert %s: %s",
+				upload.infoLong(), err.Error())
 		return nil, err
 	}
 
@@ -184,8 +215,10 @@ func s3UploadInit(bucket *S3Bucket, oname, acl string) (*S3Upload, error) {
 
 func s3UploadPart(namespace string, bucket *S3Bucket, oname,
 			uid string, partno int, data []byte) (string, error) {
+	var objd *S3ObjectData
 	var part S3UploadPart
 	var upload S3Upload
+	var etag string
 	var err error
 
 	err = VerifyUploadUID(bucket, oname, uid)
@@ -193,39 +226,46 @@ func s3UploadPart(namespace string, bucket *S3Bucket, oname,
 		return "", err
 	}
 
-	err = dbS3FindOne(bson.M{"uid": uid}, &upload)
+	err = dbS3FindOne(bson.M{"uid": uid, "state": S3StateActive}, &upload)
 	if err != nil {
 		return "", err
 	}
 
-	if int64(len(data)) > S3StorageSizePerObj {
-		err = fmt.Errorf("upload part is too big")
-		log.Errorf("s3: Can't insert upload %s object %s part %d: %s",
-				upload.UploadID, oname, part.Part, err.Error())
-		return "", err
-	}
-
 	part = S3UploadPart{
+		ObjID:		bson.NewObjectId(),
 		S3ObjectPorps: S3ObjectPorps {
 			CreationTime:	time.Now().Format(time.RFC3339),
 		},
 		UploadObjID:	upload.ObjID,
 		BackendID:	upload.ObjectBID(oname, partno),
+		State:		S3StateNone,
 		Part:		partno,
 		Size:		int64(len(data)),
-		ETag:		md5sum(data),
-		Data:		data,
 	}
 
-	err = dbS3Insert(part)
+	objd, etag, err = s3ObjectDataAdd(part.ObjID, bucket.BackendID, part.BackendID, data)
 	if err != nil {
-		log.Errorf("s3: Can't insert upload %s object %s part %d: %s",
-				upload.UploadID, oname, part.Part, err.Error())
+		log.Errorf("s3: Can't store data %s: %s", part.infoLong(), err.Error())
 		return "", err
 	}
 
-	log.Debugf("s3: Inserted upload %s object %s part %d",
-			upload.UploadID, oname, part.Part)
+	part.ETag = etag
+
+	err = dbS3Insert(part)
+	if err != nil {
+		s3ObjectDataDel(objd)
+		log.Errorf("s3: Can't insert %s: %s", part.infoLong(), err.Error())
+		return "", err
+	}
+
+	err = part.dbSetState(S3StateActive)
+	if err != nil {
+		s3ObjectDataDel(objd)
+		log.Errorf("s3: Can't activate %s: %s", part.infoLong(), err.Error())
+		return "", err
+	}
+
+	log.Debugf("s3: Inserted %s", part.infoLong())
 	return part.ETag, nil
 }
 
