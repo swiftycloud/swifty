@@ -390,15 +390,8 @@ func dbBalancerLinkFind(q bson.M) (*BalancerLink, error) {
 
 	c := dbSession.DB(dbState).C(DBColBalancer)
 	err := c.Find(q).One(&link)
-	if err != nil {
-		if err == mgo.ErrNotFound {
-			return nil, nil
-		}
 
-		return nil, err
-	}
-
-	return &link, nil
+	return &link, err
 }
 
 func dbBalancerLinkFindByDepname(depname string) (*BalancerLink, error) {
@@ -406,7 +399,14 @@ func dbBalancerLinkFindByDepname(depname string) (*BalancerLink, error) {
 }
 
 func dbBalancerLinkFindByCookie(cookie string) (*BalancerLink, error) {
-	return dbBalancerLinkFind(bson.M{"fnid": cookie})
+	l, e := dbBalancerLinkFind(bson.M{"fnid": cookie})
+	if e == nil {
+		return l, nil
+	} else if e == mgo.ErrNotFound {
+		return nil, nil
+	} else {
+		return nil, e
+	}
 }
 
 func dbBalancerLinkFindAll() ([]BalancerLink, error) {

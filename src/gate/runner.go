@@ -83,7 +83,7 @@ func buildFunction(ctx context.Context, fn *FunctionDesc) error {
 	orig_state = fn.State
 	ctxlog(ctx).Debugf("build RUN %s", fn.SwoId.Str())
 	link, err := dbBalancerLinkFindByDepname(fn.InstBuild().DepName())
-	if link == nil {
+	if err != nil {
 		ctxlog(ctx).Errorf("Can't find build balancer: %s", err.Error())
 		err = fmt.Errorf("Can't find build balancer for %s", fn.SwoId.Str())
 		goto out

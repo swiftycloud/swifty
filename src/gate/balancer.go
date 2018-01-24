@@ -176,56 +176,52 @@ func balancerDelRS(link *BalancerLink, addr string) (error) {
 	return nil
 }
 
-func BalancerPodDel(ctx context.Context, pod *k8sPod) error {
+func BalancerPodDel(pod *k8sPod) error {
 	var link *BalancerLink
 	var rs *BalancerRS
 	var err error
 
 	link, err = dbBalancerLinkFindByDepname(pod.DepName)
-	if link != nil {
-		rs, err = dbBalancerPodFind(link, pod.UID)
-		if err != nil {
-			ctxlog(ctx).Errorf("balancer-db: Can't find pod %s/%s: %s",
-					link.DepName, pod.UID, err.Error())
-		} else if rs != nil {
-			err = dbBalancerPodDel(link, pod)
-			if err != nil {
-				ctxlog(ctx).Errorf("balancer-db: Can't del pod %s/%s: %s",
-					link.DepName, pod.UID, err.Error())
-				return err
-			}
-			err = balancerDelRS(link, rs.WdogAddr)
-			if err != nil {
-				return err
-			}
-		}
+	if err != nil {
+		return fmt.Errorf("No link: %s", err.Error())
+	}
+
+	rs, err = dbBalancerPodFind(link, pod.UID)
+	if err != nil {
+		return fmt.Errorf("No linkRS: %s", err.Error())
+	}
+
+	err = dbBalancerPodDel(link, pod)
+	if err != nil {
+		return fmt.Errorf("Del error: %s", err.Error())
+	}
+
+	err = balancerDelRS(link, rs.WdogAddr)
+	if err != nil {
+		return fmt.Errorf("IPVS error: %s", err.Error())
 	}
 
 	return nil
 }
 
-func BalancerPodAdd(ctx context.Context, pod *k8sPod) error {
+func BalancerPodAdd(pod *k8sPod) error {
 	var link *BalancerLink
 	var err error
 
 	link, err = dbBalancerLinkFindByDepname(pod.DepName)
-	if link != nil {
-		err = dbBalancerPodAdd(link, pod)
-		if err != nil {
-			ctxlog(ctx).Errorf("Can't add pod %s/%s/%s: %s",
-					link.DepName, pod.UID, pod.WdogAddr, err.Error())
-			return err
-		}
-		err = balancerAddRS(link, pod.WdogAddr)
-		if err != nil {
-			errdb := dbBalancerPodDel(link, pod)
-			if errdb != nil {
-				return fmt.Errorf("%s: %s", err.Error(), errdb.Error())
-			}
-			return err
-		}
-	} else {
-		return fmt.Errorf("No ")
+	if err != nil {
+		return fmt.Errorf("No link: %s", err.Error())
+	}
+
+	err = dbBalancerPodAdd(link, pod)
+	if err != nil {
+		return fmt.Errorf("Add error: %s", err.Error())
+	}
+
+	err = balancerAddRS(link, pod.WdogAddr)
+	if err != nil {
+		dbBalancerPodDel(link, pod)
+		return fmt.Errorf("IPVS error: %s", err.Error())
 	}
 
 	return nil

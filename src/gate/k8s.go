@@ -466,7 +466,7 @@ func swk8sPodUpd(obj_old, obj_new interface{}) {
 					podStates[pod_old.State], podStates[pod_new.State],
 					pod_new.DepName)
 
-			err = BalancerPodAdd(ctx, pod_new)
+			err = BalancerPodAdd(pod_new)
 			if err != nil {
 				ctxlog(ctx).Errorf("Can't add pod %s/%s/%s: %s",
 						pod_new.DepName, pod_new.UID,
@@ -484,8 +484,8 @@ func swk8sPodUpd(obj_old, obj_new interface{}) {
 					podStates[pod_old.State], podStates[pod_new.State],
 					pod_new.DepName)
 
-			err = BalancerPodDel(ctx, pod_new)
-			if err != nil  && err != mgo.ErrNotFound {
+			err = BalancerPodDel(pod_new)
+			if err != nil {
 				ctxlog(ctx).Errorf("Can't delete pod %s/%s/%s: %s",
 						pod_new.DepName, pod_new.UID,
 						pod_new.WdogAddr, err.Error())
