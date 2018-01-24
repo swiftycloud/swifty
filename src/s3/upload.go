@@ -16,6 +16,7 @@ type S3UploadPart struct {
 	ObjID				bson.ObjectId	`bson:"_id,omitempty"`
 	UploadObjID			bson.ObjectId	`bson:"upload-id,omitempty"`
 	BackendID			string		`json:"bid" bson:"bid"`
+	State				uint32		`json:"state" bson:"state"`
 
 	Part				int		`json:"part" bson:"part"`
 	Size				int64		`json:"size" bson:"size"`
@@ -28,6 +29,7 @@ type S3Upload struct {
 	ObjID				bson.ObjectId	`bson:"_id,omitempty"`
 	BucketObjID			bson.ObjectId	`bson:"bucket-id,omitempty"`
 	UploadID			string		`json:"uid" bson:"uid"`
+	State				uint32		`json:"state" bson:"state"`
 
 	S3ObjectPorps					`json:",inline" bson:",inline"`
 }
@@ -43,6 +45,98 @@ func (part *S3UploadPart)infoLong() (string) {
 			part.ObjID, part.UploadObjID,
 			part.BackendID, part.Part,
 			part.Key)
+}
+
+func (part *S3UploadPart)dbRemoveF() (error) {
+	var err error
+
+	err = dbS3Remove(part, bson.M{"_id": part.ObjID})
+	if err != nil && err != mgo.ErrNotFound {
+		log.Errorf("s3: Can't force remove %s: %s",
+			part.infoLong(), err.Error())
+	}
+	return err
+}
+
+func (part *S3UploadPart)dbRemove() (error) {
+	var res S3UploadPart
+	var err error
+
+	err = dbS3RemoveCond(
+			bson.M{	"_id": part.ObjID,
+				"state": S3StateInactive},
+			&res)
+	if err != nil && err != mgo.ErrNotFound {
+		log.Errorf("s3: Can't remove %s: %s",
+			part.infoLong(), err.Error())
+	}
+	return err
+}
+
+func (part *S3UploadPart)dbSet(state uint32, fields bson.M) (error) {
+	var res S3UploadPart
+	var err error
+
+	err = dbS3Update(
+			bson.M{"_id": part.ObjID,
+				"state": bson.M{"$in": s3StateTransition[state]}},
+			bson.M{"$set": fields},
+			&res)
+	if err != nil {
+		log.Errorf("s3: Can't set state %d %s: %s",
+			state, part.infoLong(), err.Error())
+	}
+	return err
+}
+
+func (part *S3UploadPart)dbSetState(state uint32) (error) {
+	return part.dbSet(state, bson.M{"state": state})
+}
+
+func (upload *S3Upload)dbRemoveF() (error) {
+	var err error
+
+	err = dbS3Remove(upload, bson.M{"_id": upload.ObjID})
+	if err != nil && err != mgo.ErrNotFound {
+		log.Errorf("s3: Can't force remove %s: %s",
+			upload.infoLong(), err.Error())
+	}
+	return err
+}
+
+func (upload *S3Upload)dbRemove() (error) {
+	var res S3Upload
+	var err error
+
+	err = dbS3RemoveCond(
+			bson.M{	"_id": upload.ObjID,
+				"state": S3StateInactive},
+			&res)
+	if err != nil && err != mgo.ErrNotFound {
+		log.Errorf("s3: Can't remove %s: %s",
+			upload.infoLong(), err.Error())
+	}
+	return err
+}
+
+func (upload *S3Upload)dbSet(state uint32, fields bson.M) (error) {
+	var res S3Upload
+	var err error
+
+	err = dbS3Update(
+			bson.M{"_id": upload.ObjID,
+				"state": bson.M{"$in": s3StateTransition[state]}},
+			bson.M{"$set": fields},
+			&res)
+	if err != nil {
+		log.Errorf("s3: Can't set state %d %s: %s",
+			state, upload.infoLong(), err.Error())
+	}
+	return err
+}
+
+func (upload *S3Upload)dbSetState(state uint32) (error) {
+	return upload.dbSet(state, bson.M{"state": state})
 }
 
 func VerifyUploadUID(bucket *S3Bucket, oname, uid string) error {
