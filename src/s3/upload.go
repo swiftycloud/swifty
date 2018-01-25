@@ -204,10 +204,7 @@ func s3UploadInit(bucket *S3Bucket, oname, acl string) (*S3Upload, error) {
 		State:		S3StateActive,
 	}
 
-	err = dbS3Insert(upload)
-	if err != nil {
-		log.Errorf("s3: Can't insert %s: %s",
-				infoLong(upload), err.Error())
+	if err = dbS3Insert(upload); err != nil {
 		return nil, err
 	}
 
@@ -259,8 +256,7 @@ func s3UploadPart(namespace string, bucket *S3Bucket, oname,
 
 	part.ETag = etag
 
-	err = dbS3Insert(part)
-	if err != nil {
+	if err = dbS3Insert(part); err != nil {
 		upload.dbRefDec()
 		s3ObjectDataDel(objd)
 		log.Errorf("s3: Can't insert %s: %s", infoLong(part), err.Error())

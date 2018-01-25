@@ -140,10 +140,7 @@ func s3InsertBucket(iam *S3Iam, akey *S3AccessKey, bname, acl string) error {
 		MaxBytes:	S3StorageMaxBytes,
 	}
 
-	err = dbS3Insert(bucket)
-	if err != nil {
-		log.Errorf("s3: Can't insert %s: %s",
-			infoLong(bucket), err.Error())
+	if err = dbS3Insert(bucket); err != nil {
 		return err
 	}
 

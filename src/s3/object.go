@@ -98,10 +98,7 @@ func s3AddObject(namespace string, bucket *S3Bucket, oname string,
 		State:		S3StateNone,
 	}
 
-	err = dbS3Insert(object)
-	if err != nil {
-		log.Errorf("s3: Can't insert %s: %s",
-			 infoLong(object), err.Error())
+	if err = dbS3Insert(object); err != nil {
 		return nil, err
 	}
 	log.Debugf("s3: Inserted %s", infoLong(object))

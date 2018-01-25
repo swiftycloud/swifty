@@ -157,7 +157,11 @@ func dbS3SetObjID(o interface{}, query bson.M) {
 }
 
 func dbS3Insert(o interface{}) (error) {
-	return dbSession.DB(dbName).C(dbColl(o)).Insert(o)
+	err := dbSession.DB(dbName).C(dbColl(o)).Insert(o)
+	if err != nil {
+		log.Errorf("dbS3Insert: %s: %s", infoLong(o), err.Error())
+	}
+	return err
 }
 
 func dbS3Remove(o interface{}, query bson.M) (error) {

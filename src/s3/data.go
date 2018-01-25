@@ -78,10 +78,7 @@ func s3ObjectDataAdd(refid bson.ObjectId, bucket_bid, object_bid string, data []
 
 		objd.Data = data
 
-		err = dbS3Insert(objd)
-		if err != nil {
-			log.Errorf("s3: Can't insert %s: %s",
-				infoLong(objd), err.Error())
+		if err = dbS3Insert(objd); err != nil {
 			goto out
 		}
 	} else {
