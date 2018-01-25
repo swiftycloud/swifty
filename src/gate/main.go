@@ -343,6 +343,7 @@ func handleFunctionWait(ctx context.Context, w http.ResponseWriter, r *http.Requ
 	var wi swyapi.FunctionWait
 	var err error
 	var tmo bool
+	var fn *FunctionDesc
 
 	err = swyhttp.ReadAndUnmarshalReq(r, &wi)
 	if err != nil {
@@ -350,10 +351,15 @@ func handleFunctionWait(ctx context.Context, w http.ResponseWriter, r *http.Requ
 	}
 
 	id = makeSwoId(fromContext(ctx).Tenant, wi.Project, wi.FuncName)
+	fn, err = dbFuncFind(id)
+	if err != nil {
+		goto out
+	}
 
 	if wi.Version != "" {
 		ctxlog(ctx).Debugf("function/wait %s -> version >= %s", id.Str(), wi.Version)
-		err, tmo = waitFunctionVersion(ctx, id, wi.Version, wi.Timeout)
+		err, tmo = waitFunctionVersion(ctx, fn, wi.Version,
+				time.Duration(wi.Timeout) * time.Millisecond)
 		if err != nil {
 			goto out
 		}

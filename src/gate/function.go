@@ -3,12 +3,14 @@ package main
 import (
 	"errors"
 	"fmt"
+	"time"
 	"context"
 	"gopkg.in/mgo.v2/bson"
 
 	"../apis/apps"
 	"../common"
 	"../common/xratelimit"
+	"../common/xwait"
 )
 
 /*
@@ -481,8 +483,40 @@ stalled:
 	return err
 }
 
-func waitFunctionVersion(ctx context.Context, id *SwoId, version string, tmo uint32) (error, bool) {
-	return nil, false
+func waitFunctionVersion(ctx context.Context, fn *FunctionDesc, version string, tmo time.Duration) (error, bool) {
+	var err error
+	var timeout bool
+
+	w := xwait.Prepare(fn.Cookie)
+
+	for {
+		ctxlog(ctx).Debugf("Check %s for %s", fn.SwoId.Str(), version)
+		vers, err := dbBalancerRSListVersions(fn)
+		if err != nil {
+			break
+		}
+
+		ctxlog(ctx).Debugf("Check %s for %s vs %v", fn.SwoId.Str(), version, vers)
+		if checkVersion(ctx, fn, version, vers) {
+			break
+		}
+
+		ctxlog(ctx).Debugf("Wait %s %s (%v)", fn.SwoId.Str(), fn.Cookie, tmo)
+		if w.Wait(tmo) {
+			ctxlog(ctx).Debugf(" `- Timeout %s", fn.SwoId.Str())
+			timeout = true
+			break
+		}
+	}
+
+	w.Done()
+
+	return err, timeout
+}
+
+func fnWaiterKick(cookie string) {
+	glog.Debugf("FnWaiter kick %s", cookie)
+	xwait.Event(cookie)
 }
 
 func notifyPodTmo(ctx context.Context, cookie, inst string) {

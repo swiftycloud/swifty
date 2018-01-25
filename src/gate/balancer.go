@@ -224,6 +224,7 @@ func BalancerPodAdd(pod *k8sPod) error {
 		return fmt.Errorf("IPVS error: %s", err.Error())
 	}
 
+	fnWaiterKick(link.FnId)
 	return nil
 }
 

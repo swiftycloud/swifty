@@ -77,6 +77,7 @@ co_err:
 var srcHandlers = map[string] struct {
 	get func (context.Context, *FunctionDesc) error
 	update func (context.Context, *FunctionDesc, *swyapi.FunctionUpdate) error
+	check func (string, []string) bool
 } {
 	"git": {
 		get:	cloneGitRepo,
@@ -86,7 +87,26 @@ var srcHandlers = map[string] struct {
 	"code": {
 		get:	getFileFromReq,
 		update:	updateFileFromReq,
+		check:	checkFileVersion,
 	},
+}
+
+func checkFileVersion(version string, versions []string) bool {
+	cver, _ := strconv.Atoi(version)
+	for _, v := range versions {
+		/* For files we just generate sequential numbers */
+		hver, _ := strconv.Atoi(v)
+		if cver <= hver {
+			return true
+		}
+	}
+
+	return false
+}
+
+func checkVersion(ctx context.Context, fn *FunctionDesc, version string, versions []string) bool {
+	srch, _ := srcHandlers[fn.Src.Type]
+	return srch.check(version, versions)
 }
 
 func getSources(ctx context.Context, fn *FunctionDesc) error {
