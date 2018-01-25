@@ -519,7 +519,7 @@ func waitFunctionVersion(ctx context.Context, fn *FunctionDesc, version string, 
 		}
 
 		ctxlog(ctx).Debugf("Wait %s %s (%v)", fn.SwoId.Str(), fn.Cookie, tmo)
-		if w.Wait(tmo) {
+		if w.Wait(&tmo) {
 			ctxlog(ctx).Debugf(" `- Timeout %s", fn.SwoId.Str())
 			timeout = true
 			break

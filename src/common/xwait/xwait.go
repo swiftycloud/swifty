@@ -55,15 +55,26 @@ func Prepare(key string) *Waiter {
 	return w
 }
 
-func (w *Waiter)Wait(tmo time.Duration) bool {
+func (w *Waiter)Wait(tmo *time.Duration) bool {
+	start := time.Now()
 	for {
 		select {
-		case <-time.After(tmo):
+		case <-time.After(*tmo):
 			return true
 		case e := <-w.s:
+			now := time.Now()
+			elapsed := now.Sub(start)
+			if elapsed >= *tmo {
+				*tmo = 0
+			} else {
+				*tmo -= elapsed
+			}
+
 			if e == w.k {
 				return false
 			}
+
+			start = now
 		}
 	}
 }
