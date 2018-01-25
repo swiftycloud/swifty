@@ -30,20 +30,6 @@ func (objd *S3ObjectData)dbRemoveF() (error) {
 	return err
 }
 
-func (objd *S3ObjectData)dbRemove() (error) {
-	var err error
-
-	err = dbS3RemoveCond(
-			bson.M{	"_id": objd.ObjID,
-				"state": S3StateInactive},
-			&S3ObjectData{})
-	if err != nil && err != mgo.ErrNotFound {
-		log.Errorf("s3: Can't remove %s: %s",
-			infoLong(objd), err.Error())
-	}
-	return err
-}
-
 func s3ObjectDataFind(refID bson.ObjectId) (*S3ObjectData, error) {
 	var res S3ObjectData
 
@@ -118,7 +104,7 @@ func s3ObjectDataDel(objd *S3ObjectData) (error) {
 		}
 	}
 
-	err = objd.dbRemove()
+	err = dbS3RemoveOnState(objd, S3StateInactive, nil)
 	if err != nil {
 		return err
 	}

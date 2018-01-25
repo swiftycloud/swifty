@@ -44,18 +44,6 @@ func (part *S3UploadPart)dbRemoveF() (error) {
 	return err
 }
 
-func (part *S3UploadPart)dbRemove() (error) {
-	err := dbS3RemoveCond(
-			bson.M{	"_id": part.ObjID,
-				"state": S3StateInactive},
-			&S3UploadPart{})
-	if err != nil && err != mgo.ErrNotFound {
-		log.Errorf("s3: Can't remove %s: %s",
-			infoLong(part), err.Error())
-	}
-	return err
-}
-
 func (upload *S3Upload)dbLock() (error) {
 	query := bson.M{ "state": S3StateActive, "lock": 0, "ref": 0 }
 	update := bson.M{ "$inc": bson.M{ "lock": 1 } }
@@ -113,19 +101,6 @@ func (upload *S3Upload)dbRemoveF() (error) {
 	return err
 }
 
-func (upload *S3Upload)dbRemove() (error) {
-	err := dbS3RemoveCond(
-			bson.M{	"_id": upload.ObjID,
-				"state": S3StateInactive,
-				"ref": 0},
-			&S3Upload{})
-	if err != nil && err != mgo.ErrNotFound {
-		log.Errorf("s3: Can't remove %s: %s",
-			infoLong(upload), err.Error())
-	}
-	return err
-}
-
 func VerifyUploadUID(bucket *S3Bucket, oname, uid string) error {
 	genuid := bucket.UploadUID(oname)
 	if genuid != uid {
@@ -168,7 +143,7 @@ func s3UploadRemoveLocked(upload *S3Upload) (error) {
 				return err
 			}
 
-			err = part.dbRemove()
+			err = dbS3RemoveOnState(&part, S3StateInactive, nil)
 			if err != nil {
 				return err
 			}
@@ -180,7 +155,7 @@ func s3UploadRemoveLocked(upload *S3Upload) (error) {
 		return err
 	}
 
-	err = upload.dbRemove()
+	err = dbS3RemoveOnState(upload, S3StateInactive, bson.M{ "ref": 0 })
 	if err != nil {
 		return err
 	}

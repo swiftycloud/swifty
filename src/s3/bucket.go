@@ -68,16 +68,8 @@ type S3Bucket struct {
 }
 
 func (bucket *S3Bucket)dbRemove() (error) {
-	err := dbS3RemoveCond(
-			bson.M{	"_id": bucket.ObjID,
-				"state": S3StateInactive,
-				"cnt-objects": 0},
-			&S3Bucket{})
-	if err != nil && err != mgo.ErrNotFound {
-		log.Errorf("s3: Can't remove %s: %s",
-			infoLong(bucket), err.Error())
-	}
-	return err
+	query := bson.M{ "cnt-objects": 0 }
+	return dbS3RemoveOnState(bucket, S3StateInactive, query)
 }
 
 func (bucket *S3Bucket)dbAddObj(size int64) (error) {

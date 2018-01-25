@@ -202,7 +202,9 @@ func dbS3SetState(o interface{}, state uint32, query bson.M) (error) {
 	return dbS3SetOnState(o, state, query, bson.M{"state": state})
 }
 
-func dbS3RemoveCond(query bson.M, o interface{}) (error) {
+func dbS3RemoveCond(o interface{}, query bson.M) (error) {
+	if query == nil { query = make(bson.M) }
+	dbS3SetObjID(o, query)
 	c := dbSession.DB(dbName).C(dbColl(o))
 	change := mgo.Change{
 		Upsert:		false,
@@ -210,7 +212,17 @@ func dbS3RemoveCond(query bson.M, o interface{}) (error) {
 		ReturnNew:	false,
 	}
 	_, err := c.Find(query).Apply(change, o)
+	if err != nil && err != mgo.ErrNotFound {
+		log.Errorf("dbS3RemoveCond: Can't remove %s: %s",
+			infoLong(o), err.Error())
+	}
 	return err
+}
+
+func dbS3RemoveOnState(o interface{}, state uint32, query bson.M) (error) {
+	if query == nil { query = make(bson.M) }
+	query["state"] = state
+	return dbS3RemoveCond(o, query)
 }
 
 func dbS3FindOne(query bson.M, o interface{}) (error) {
