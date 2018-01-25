@@ -151,8 +151,11 @@ func infoLong(o interface{}) (string) {
 
 func dbS3SetObjID(o interface{}, query bson.M) {
 	if _, ok := query["_id"]; ok == false {
-		val := reflect.ValueOf(o).Elem()
-		query["_id"] = val.FieldByName("ObjID").Interface().(bson.ObjectId)
+		elem := reflect.ValueOf(o).Elem()
+		val := elem.FieldByName("ObjID")
+		if val != reflect.ValueOf(nil) {
+			query["_id"] = val.Interface().(bson.ObjectId)
+		}
 	}
 }
 
