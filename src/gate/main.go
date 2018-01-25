@@ -5,6 +5,7 @@ import (
 
 	"github.com/gorilla/mux"
 
+	"encoding/json"
 	"encoding/hex"
 	"net/http"
 	"strings"
@@ -220,59 +221,56 @@ out:
 	http.Error(w, err.Error(), resp)
 }
 
-func handleProjectDel(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
+func handleProjectDel(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
 	var par swyapi.ProjectDel
 	var fns []FunctionDesc
 	var mws []MwareDesc
 	var id *SwoId
-	var ferr error
+	var ferr *swyapi.GateErr
 
 	err := swyhttp.ReadAndUnmarshalReq(r, &par)
 	if err != nil {
-		goto out
+		return GateErrE(swy.GateBadRequest, err)
 	}
 
 	id = makeSwoId(fromContext(ctx).Tenant, par.Project, "")
 
 	fns, err = dbFuncListProj(id)
 	if err != nil {
-		ferr = err
-		goto out
+		return GateErrD(err)
 	}
 	for _, fn := range fns {
 		id.Name = fn.SwoId.Name
-		err = removeFunction(ctx, &conf, id)
-		if err != nil {
-			ctxlog(ctx).Error("Funciton removal failed: %s", err.Error())
-			ferr = err
+		xerr := removeFunction(ctx, &conf, id)
+		if xerr != nil {
+			ctxlog(ctx).Error("Funciton removal failed: %s", xerr.Message)
+			ferr = GateErrM(xerr.Code, "Cannot remove " + id.Name + " function: " + xerr.Message)
 		}
 	}
 
 	mws, err = dbMwareGetAll(id)
 	if err != nil {
-		ferr = err
-		goto out
+		return GateErrD(err)
 	}
 
 	for _, mw := range mws {
 		id.Name = mw.SwoId.Name
-		err = mwareRemove(ctx, &conf.Mware, id)
-		if err != nil {
-			ctxlog(ctx).Error("Mware removal failed: %s", err.Error())
-			ferr = err
+		xerr := mwareRemove(ctx, &conf.Mware, id)
+		if xerr != nil {
+			ctxlog(ctx).Error("Mware removal failed: %s", xerr.Message)
+			ferr = GateErrM(xerr.Code, "Cannot remove " + id.Name + " mware: " + xerr.Message)
 		}
 	}
 
 	if ferr != nil {
-		goto out
+		return ferr
 	}
 
 	w.WriteHeader(http.StatusOK)
-out:
-	return ferr
+	return nil
 }
 
-func handleProjectList(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
+func handleProjectList(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
 	var result []swyapi.ProjectItem
 	var params swyapi.ProjectList
 	var fns, mws []string
@@ -281,13 +279,13 @@ func handleProjectList(ctx context.Context, w http.ResponseWriter, r *http.Reque
 
 	err := swyhttp.ReadAndUnmarshalReq(r, &params)
 	if err != nil {
-		goto out
+		return GateErrE(swy.GateBadRequest, err)
 	}
 
 	ctxlog(ctx).Debugf("List projects for %s", fromContext(ctx).Tenant)
 	fns, mws, err = dbProjectListAll(fromContext(ctx).Tenant)
 	if err != nil {
-		goto out
+		return GateErrD(err)
 	}
 
 	for _, v := range fns {
@@ -302,16 +300,19 @@ func handleProjectList(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	}
 
 	err = swyhttp.MarshalAndWrite(w, &result)
-out:
-	return err
+	if err != nil {
+		return GateErrE(swy.GateBadResp, err)
+	}
+
+	return nil
 }
 
-func handleFunctionAdd(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
+func handleFunctionAdd(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
 	var params swyapi.FunctionAdd
 
 	err := swyhttp.ReadAndUnmarshalReq(r, &params)
 	if err != nil {
-		goto out
+		return GateErrE(swy.GateBadRequest, err)
 	}
 
 	if params.Project == "" {
@@ -320,40 +321,40 @@ func handleFunctionAdd(ctx context.Context, w http.ResponseWriter, r *http.Reque
 
 	err = swyFixSize(&params.Size, &conf)
 	if err != nil {
-		goto out
+		return GateErrE(swy.GateBadRequest, err)
 	}
 
-	if params.FuncName == "" || params.Code.Lang == "" {
-		err = errors.New("Parameters are missed")
-		goto out
+	if params.FuncName == "" {
+		return GateErrM(swy.GateBadRequest, "No function name")
+	}
+	if params.Code.Lang == "" {
+		return GateErrM(swy.GateBadRequest, "No language specified")
 	}
 
-	err = addFunction(ctx, &conf, fromContext(ctx).Tenant, &params)
-	if err != nil {
-		goto out
+	cerr := addFunction(ctx, &conf, fromContext(ctx).Tenant, &params)
+	if cerr != nil {
+		return cerr
+
 	}
 
 	w.WriteHeader(http.StatusOK)
-out:
-	return err
+	return nil
 }
 
-func handleFunctionWait(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
-	var id *SwoId
+func handleFunctionWait(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
 	var wi swyapi.FunctionWait
 	var err error
 	var tmo bool
-	var fn *FunctionDesc
 
 	err = swyhttp.ReadAndUnmarshalReq(r, &wi)
 	if err != nil {
-		goto out
+		return GateErrE(swy.GateBadRequest, err)
 	}
 
-	id = makeSwoId(fromContext(ctx).Tenant, wi.Project, wi.FuncName)
-	fn, err = dbFuncFind(id)
+	id := makeSwoId(fromContext(ctx).Tenant, wi.Project, wi.FuncName)
+	fn, err := dbFuncFind(id)
 	if err != nil {
-		goto out
+		return GateErrD(err)
 	}
 
 	if wi.Version != "" {
@@ -361,7 +362,7 @@ func handleFunctionWait(ctx context.Context, w http.ResponseWriter, r *http.Requ
 		err, tmo = waitFunctionVersion(ctx, fn, wi.Version,
 				time.Duration(wi.Timeout) * time.Millisecond)
 		if err != nil {
-			goto out
+			return GateErrE(swy.GateGenErr, err)
 		}
 	}
 
@@ -370,94 +371,86 @@ func handleFunctionWait(ctx context.Context, w http.ResponseWriter, r *http.Requ
 	} else {
 		w.WriteHeader(524) /* CloudFlare's timeout */
 	}
-out:
-	return err
+
+	return nil
 }
 
-func handleFunctionState(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
-	var id *SwoId
+func handleFunctionState(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
 	var params swyapi.FunctionState
 
 	err := swyhttp.ReadAndUnmarshalReq(r, &params)
 	if err != nil {
-		goto out
+		return GateErrE(swy.GateBadRequest, err)
 	}
 
-	id = makeSwoId(fromContext(ctx).Tenant, params.Project, params.FuncName)
+	id := makeSwoId(fromContext(ctx).Tenant, params.Project, params.FuncName)
 	ctxlog(ctx).Debugf("function/state %s -> %s", id.Str(), params.State)
 
-	err = setFunctionState(ctx, &conf, id, &params)
-	if err != nil {
-		goto out
+	cerr := setFunctionState(ctx, &conf, id, &params)
+	if cerr != nil {
+		return cerr
 	}
 
 	w.WriteHeader(http.StatusOK)
-out:
-	return err
+	return nil
 }
 
-func handleFunctionUpdate(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
-	var id *SwoId
+func handleFunctionUpdate(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
 	var params swyapi.FunctionUpdate
 
 	err := swyhttp.ReadAndUnmarshalReq(r, &params)
 	if err != nil {
-		goto out
+		return GateErrE(swy.GateBadRequest, err)
 	}
 
-	id = makeSwoId(fromContext(ctx).Tenant, params.Project, params.FuncName)
+	id := makeSwoId(fromContext(ctx).Tenant, params.Project, params.FuncName)
 	ctxlog(ctx).Debugf("function/update %s", id.Str())
 
-	err = updateFunction(ctx, &conf, id, &params)
-	if err != nil {
-		goto out
+	cerr := updateFunction(ctx, &conf, id, &params)
+	if cerr != nil {
+		return cerr
 	}
 
 	w.WriteHeader(http.StatusOK)
-out:
-	return err
+	return nil
 }
 
-func handleFunctionRemove(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
-	var id *SwoId
+func handleFunctionRemove(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
 	var params swyapi.FunctionRemove
 
 	err := swyhttp.ReadAndUnmarshalReq(r, &params)
 	if err != nil {
-		goto out
+		return GateErrE(swy.GateBadRequest, err)
 	}
 
-	id = makeSwoId(fromContext(ctx).Tenant, params.Project, params.FuncName)
+	id := makeSwoId(fromContext(ctx).Tenant, params.Project, params.FuncName)
 	ctxlog(ctx).Debugf("function/remove %s", id.Str())
 
-	err = removeFunction(ctx, &conf, id)
-	if err != nil {
-		goto out
+	cerr := removeFunction(ctx, &conf, id)
+	if cerr != nil {
+		return cerr
 	}
 
 	w.WriteHeader(http.StatusOK)
-out:
-	return err
+	return nil
 }
 
-func handleFunctionCode(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
-	var id *SwoId
+func handleFunctionCode(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
 	var params swyapi.FunctionXID
-	var fn *FunctionDesc
 	var codeFile string
 	var fnCode []byte
 
 	err := swyhttp.ReadAndUnmarshalReq(r, &params)
 	if err != nil {
-		goto out
+		return GateErrE(swy.GateBadRequest, err)
 	}
 
-	id = makeSwoId(fromContext(ctx).Tenant, params.Project, params.FuncName)
+	id := makeSwoId(fromContext(ctx).Tenant, params.Project, params.FuncName)
 	ctxlog(ctx).Debugf("Get FN code %s:%s", id.Str(), params.Version)
 
-	fn, err = dbFuncFind(id)
+	fn, err := dbFuncFind(id)
 	if err != nil {
-		goto out
+		return GateErrD(err)
 	}
 
 	if params.Version == "" {
@@ -466,41 +459,42 @@ func handleFunctionCode(ctx context.Context, w http.ResponseWriter, r *http.Requ
 
 	codeFile, err = fnCodePath(&conf, fn, params.Version)
 	if err != nil {
-		goto out
+		return GateErrE(swy.GateWrongType, err)
 	}
 
 	fnCode, err = ioutil.ReadFile(codeFile)
 	if err != nil {
-		err = fmt.Errorf("Can't read file with code: %s", err.Error())
-		goto out
+		ctxlog(ctx).Errorf("Can't read file with code: %s", err.Error())
+		return GateErrC(swy.GateFsError)
 	}
 
 	err = swyhttp.MarshalAndWrite(w,  swyapi.FunctionSources {
 			Type: "code",
 			Code: base64.StdEncoding.EncodeToString(fnCode),
 		})
-out:
-	return err
+	if err != nil {
+		return GateErrE(swy.GateBadResp, err)
+	}
+
+	return nil
 }
 
-func handleFunctionStats(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
-	var id *SwoId
+func handleFunctionStats(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
 	var params swyapi.FunctionID
-	var fn *FunctionDesc
 	var stats *FnStats
 	var lcs string
 
 	err := swyhttp.ReadAndUnmarshalReq(r, &params)
 	if err != nil {
-		goto out
+		return GateErrE(swy.GateBadRequest, err)
 	}
 
-	id = makeSwoId(fromContext(ctx).Tenant, params.Project, params.FuncName)
+	id := makeSwoId(fromContext(ctx).Tenant, params.Project, params.FuncName)
 	ctxlog(ctx).Debugf("Get FN stats %s", id.Str())
 
-	fn, err = dbFuncFind(id)
+	fn, err := dbFuncFind(id)
 	if err != nil {
-		goto out
+		return GateErrD(err)
 	}
 
 	stats = statsGet(fn)
@@ -515,14 +509,15 @@ func handleFunctionStats(ctx context.Context, w http.ResponseWriter, r *http.Req
 			LastCall:	lcs,
 			Time:		uint64(stats.RunTime.Nanoseconds()/1000),
 		})
-out:
-	return err
+	if err != nil {
+		return GateErrE(swy.GateBadResp, err)
+	}
+
+	return nil
 }
 
-func handleFunctionInfo(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
-	var id *SwoId
+func handleFunctionInfo(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
 	var params swyapi.FunctionID
-	var fn *FunctionDesc
 	var fv []string
 	var url = ""
 	var stats *FnStats
@@ -531,15 +526,15 @@ func handleFunctionInfo(ctx context.Context, w http.ResponseWriter, r *http.Requ
 
 	err := swyhttp.ReadAndUnmarshalReq(r, &params)
 	if err != nil {
-		goto out
+		return GateErrE(swy.GateBadRequest, err)
 	}
 
-	id = makeSwoId(fromContext(ctx).Tenant, params.Project, params.FuncName)
+	id := makeSwoId(fromContext(ctx).Tenant, params.Project, params.FuncName)
 	ctxlog(ctx).Debugf("Get FN Info %s", id.Str())
 
-	fn, err = dbFuncFind(id)
+	fn, err := dbFuncFind(id)
 	if err != nil {
-		goto out
+		return GateErrD(err)
 	}
 
 	if (fn.URLCall) {
@@ -558,7 +553,7 @@ func handleFunctionInfo(ctx context.Context, w http.ResponseWriter, r *http.Requ
 
 	fv, err = dbBalancerRSListVersions(fn)
 	if err != nil {
-		goto out
+		return GateErrD(err)
 	}
 
 	err = swyhttp.MarshalAndWrite(w,  swyapi.FunctionInfo{
@@ -594,27 +589,29 @@ func handleFunctionInfo(ctx context.Context, w http.ResponseWriter, r *http.Requ
 				Burst:		fn.Size.Burst,
 			},
 		})
-out:
-	return err
+	if err != nil {
+		return GateErrE(swy.GateBadResp, err)
+	}
+
+	return nil
 }
 
-func handleFunctionLogs(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
-	var id *SwoId
+func handleFunctionLogs(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
 	var params swyapi.FunctionID
 	var resp []swyapi.FunctionLogEntry
 	var logs []DBLogRec
 
 	err := swyhttp.ReadAndUnmarshalReq(r, &params)
 	if err != nil {
-		goto out
+		return GateErrE(swy.GateBadRequest, err)
 	}
 
-	id = makeSwoId(fromContext(ctx).Tenant, params.Project, params.FuncName)
+	id := makeSwoId(fromContext(ctx).Tenant, params.Project, params.FuncName)
 	ctxlog(ctx).Debugf("Get logs for %s", fromContext(ctx).Tenant)
 
 	logs, err = logGetFor(id)
 	if err != nil {
-		goto out
+		return GateErrD(err)
 	}
 
 	for _, loge := range logs {
@@ -626,8 +623,11 @@ func handleFunctionLogs(ctx context.Context, w http.ResponseWriter, r *http.Requ
 	}
 
 	err = swyhttp.MarshalAndWrite(w, resp)
-out:
-	return err
+	if err != nil {
+		return GateErrE(swy.GateBadResp, err)
+	}
+
+	return nil
 }
 
 func fnCallable(fn *FunctionDesc) bool {
@@ -704,25 +704,22 @@ out:
 	http.Error(w, err.Error(), code)
 }
 
-func handleFunctionRun(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
-	var id *SwoId
+func handleFunctionRun(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
 	var params swyapi.FunctionRun
-	var fn *FunctionDesc
 	var lrs *BalancerRS
 	var res *swyapi.SwdFunctionRunResult
 
 	err := swyhttp.ReadAndUnmarshalReq(r, &params)
 	if err != nil {
-		goto out
+		return GateErrE(swy.GateBadRequest, err)
 	}
 
-	id = makeSwoId(fromContext(ctx).Tenant, params.Project, params.FuncName)
+	id := makeSwoId(fromContext(ctx).Tenant, params.Project, params.FuncName)
 	ctxlog(ctx).Debugf("function/run %s", id.Str())
 
-	fn, err = dbFuncFindStates(id, []int{swy.DBFuncStateRdy, swy.DBFuncStateUpd})
+	fn, err := dbFuncFindStates(id, []int{swy.DBFuncStateRdy, swy.DBFuncStateUpd})
 	if err != nil {
-		err = errors.New("No such function")
-		goto out
+		return GateErrD(err)
 	}
 
 	/*
@@ -732,18 +729,17 @@ func handleFunctionRun(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	lrs, err = dbBalancerPodFindExact(fn.Cookie, fn.Src.Version)
 	if lrs == nil {
 		if err == nil {
-			err = errors.New("Nothing to run (yet)")
-		} else {
-			ctxlog(ctx).Errorf("balancer-db: Can't find pod %s/%s: %s",
-					fn.Cookie, fn.Src.Version, err.Error())
-			err = errors.New("DB error")
+			return GateErrM(swy.GateGenErr, "Nothing to run (yet)")
 		}
-		goto out
+
+		ctxlog(ctx).Errorf("balancer-db: Can't find pod %s/%s: %s",
+				fn.Cookie, fn.Src.Version, err.Error())
+		return GateErrD(err)
 	}
 
 	res, err = doRunIp(ctx, lrs.VIP(), nil, fn.Cookie, "run", params.Args)
 	if err != nil {
-		goto out
+		return GateErrE(swy.GateGenErr, err)
 	}
 
 	err = swyhttp.MarshalAndWrite(w, swyapi.FunctionRunResult{
@@ -751,25 +747,27 @@ func handleFunctionRun(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		Stdout:		res.Stdout,
 		Stderr:		res.Stderr,
 	})
-out:
-	return err
+	if err != nil {
+		return GateErrE(swy.GateBadResp, err)
+	}
+
+	return nil
 }
 
-func handleFunctionList(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
-	var id *SwoId
+func handleFunctionList(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
 	var recs []FunctionDesc
 	var result []swyapi.FunctionItem
 	var params swyapi.FunctionList
 
 	err := swyhttp.ReadAndUnmarshalReq(r, &params)
 	if err != nil {
-		goto out
+		return GateErrE(swy.GateBadRequest, err)
 	}
 
-	id = makeSwoId(fromContext(ctx).Tenant, params.Project, "")
+	id := makeSwoId(fromContext(ctx).Tenant, params.Project, "")
 	recs, err = dbFuncListProj(id)
 	if err != nil {
-		goto out
+		return GateErrD(err)
 	}
 
 	for _, v := range recs {
@@ -789,33 +787,34 @@ func handleFunctionList(ctx context.Context, w http.ResponseWriter, r *http.Requ
 	}
 
 	err = swyhttp.MarshalAndWrite(w, &result)
-out:
-	return err
+	if err != nil {
+		return GateErrE(swy.GateBadResp, err)
+	}
+
+	return nil
 }
 
-func handleMwareAdd(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
-	var id *SwoId
+func handleMwareAdd(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
 	var params swyapi.MwareAdd
 
 	err := swyhttp.ReadAndUnmarshalReq(r, &params)
 	if err != nil {
-		goto out
+		return GateErrE(swy.GateBadRequest, err)
 	}
 
-	id = makeSwoId(fromContext(ctx).Tenant, params.Project, params.ID)
+	id := makeSwoId(fromContext(ctx).Tenant, params.Project, params.ID)
 	ctxlog(ctx).Debugf("mware/add: %s params %v", fromContext(ctx).Tenant, params)
 
-	err = mwareSetup(ctx, &conf.Mware, id, params.Type)
-	if err != nil {
-		goto out
+	cerr := mwareSetup(ctx, &conf.Mware, id, params.Type)
+	if cerr != nil {
+		return cerr
 	}
 
 	w.WriteHeader(http.StatusOK)
-out:
-	return err
+	return nil
 }
 
-func handleLanguages(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
+func handleLanguages(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
 	var ret []string
 
 	for l, lh := range rt_handlers {
@@ -826,10 +825,15 @@ func handleLanguages(ctx context.Context, w http.ResponseWriter, r *http.Request
 		ret = append(ret, l)
 	}
 
-	return swyhttp.MarshalAndWrite(w, ret)
+	err := swyhttp.MarshalAndWrite(w, ret)
+	if err != nil {
+		return GateErrE(swy.GateBadResp, err)
+	}
+
+	return nil
 }
 
-func handleMwareTypes(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
+func handleMwareTypes(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
 	var ret []string
 
 	for mw, mt := range mwareHandlers {
@@ -840,26 +844,30 @@ func handleMwareTypes(ctx context.Context, w http.ResponseWriter, r *http.Reques
 		ret = append(ret, mw)
 	}
 
-	return swyhttp.MarshalAndWrite(w, ret)
+	err := swyhttp.MarshalAndWrite(w, ret)
+	if err != nil {
+		return GateErrE(swy.GateBadResp, err)
+	}
+
+	return nil
 }
 
-func handleMwareList(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
-	var id *SwoId
+func handleMwareList(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
 	var result []swyapi.MwareItem
 	var params swyapi.MwareList
 	var mwares []MwareDesc
 
 	err := swyhttp.ReadAndUnmarshalReq(r, &params)
 	if err != nil {
-		goto out
+		return GateErrE(swy.GateBadRequest, err)
 	}
 
-	id = makeSwoId(fromContext(ctx).Tenant, params.Project, "")
+	id := makeSwoId(fromContext(ctx).Tenant, params.Project, "")
 	ctxlog(ctx).Debugf("list mware for %s", fromContext(ctx).Tenant)
 
 	mwares, err = dbMwareGetAll(id)
 	if err != nil {
-		goto out
+		return GateErrD(err)
 	}
 
 	for _, mware := range mwares {
@@ -871,31 +879,31 @@ func handleMwareList(ctx context.Context, w http.ResponseWriter, r *http.Request
 	}
 
 	err = swyhttp.MarshalAndWrite(w, &result)
-out:
-	return err
+	if err != nil {
+		return GateErrE(swy.GateBadResp, err)
+	}
+
+	return nil
 }
 
-func handleMwareRemove(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
-	var id *SwoId
+func handleMwareRemove(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
 	var params swyapi.MwareRemove
 
 	err := swyhttp.ReadAndUnmarshalReq(r, &params)
 	if err != nil {
-		goto out
+		return GateErrE(swy.GateBadRequest, err)
 	}
 
-	id = makeSwoId(fromContext(ctx).Tenant, params.Project, params.ID)
+	id := makeSwoId(fromContext(ctx).Tenant, params.Project, params.ID)
 	ctxlog(ctx).Debugf("mware/remove: %s params %v", fromContext(ctx).Tenant, params)
 
-	err = mwareRemove(ctx, &conf.Mware, id)
-	if err != nil {
-		err = fmt.Errorf("Unable to setup middleware: %s", err.Error())
-		goto out
+	cerr := mwareRemove(ctx, &conf.Mware, id)
+	if cerr != nil {
+		return cerr
 	}
 
 	w.WriteHeader(http.StatusOK)
-out:
-	return err
+	return nil
 }
 
 func handleGenericReq(ctx context.Context, r *http.Request) (string, int, error) {
@@ -933,7 +941,7 @@ func handleGenericReq(ctx context.Context, r *http.Request) (string, int, error)
 	return tennant, 0, nil
 }
 
-func genReqHandler(cb func(ctx context.Context, w http.ResponseWriter, r *http.Request) error) http.Handler {
+func genReqHandler(cb func(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var ctx context.Context
 		var cancel context.CancelFunc
@@ -944,16 +952,23 @@ func genReqHandler(cb func(ctx context.Context, w http.ResponseWriter, r *http.R
 		defer cancel()
 
 		tennant, code, err := handleGenericReq(ctx, r)
-		if err == nil {
-			ctx = mkContext(ctx, tennant)
-			code = http.StatusBadRequest
-			err = cb(ctx, w, r)
-			if err != nil {
-				ctxlog(ctx).Errorf("Error in callback: %s", err.Error())
-			}
-		}
 		if err != nil {
 			http.Error(w, err.Error(), code)
+			return
+		}
+
+		ctx = mkContext(ctx, tennant)
+		cerr := cb(ctx, w, r)
+		if cerr != nil {
+			ctxlog(ctx).Errorf("Error in callback: %s", cerr.Message)
+
+			jdata, err := json.Marshal(cerr)
+			if err != nil {
+				ctxlog(ctx).Errorf("Can't marshal back gate error: %s", err.Error())
+				jdata = []byte("")
+			}
+
+			http.Error(w, string(jdata), http.StatusBadRequest)
 		}
 	})
 }

@@ -87,14 +87,29 @@ again:
 			fatal(err)
 		}
 
-		resp.Body.Close()
 		if (resp.StatusCode == http.StatusUnauthorized) && first_attempt {
+			resp.Body.Close()
 			first_attempt = false
 			refresh_token("")
 			goto again
 		}
 
-		fatal(fmt.Errorf("Bad responce from server: " + string(resp.Status)))
+		if resp.StatusCode == http.StatusBadRequest {
+			var gerr swyapi.GateErr
+
+			err = swyhttp.ReadAndUnmarshalResp(resp, &gerr)
+			resp.Body.Close()
+
+			if err == nil {
+				err = fmt.Errorf("Operation failed (%d): %s", gerr.Code, gerr.Message)
+			} else {
+				err = fmt.Errorf("Operation failed with no details")
+			}
+		} else {
+			err = fmt.Errorf("Bad responce: %s", string(resp.Status))
+		}
+
+		fatal(err)
 	}
 
 	/* Here we have http.StatusOK */

@@ -51,6 +51,8 @@ paths:
                   $ref: '#/definitions/ProjectItem'
         '400':
           description: Bad request
+          schema:
+            $ref: '#/definitions/GateError'
         '401':
           description: Need to authenticate
         '403':
@@ -74,6 +76,8 @@ paths:
           description: OK
         '400':
           description: Bad request
+          schema:
+            $ref: '#/definitions/GateError'
         '401':
           description: Need to authenticate
         '403':
@@ -104,6 +108,8 @@ paths:
                   $ref: '#/definitions/FunctionItem'
         '400':
           description: Bad request
+          schema:
+            $ref: '#/definitions/GateError'
         '401':
           description: Need to authenticate
         '403':
@@ -127,6 +133,8 @@ paths:
           description: Function added
         '400':
           description: Some error occurred
+          schema:
+            $ref: '#/definitions/GateError'
         '401':
           description: Need to authenticate
         '403':
@@ -150,6 +158,8 @@ paths:
           description: Function updated
         '400':
           description: Something went wrong
+          schema:
+            $ref: '#/definitions/GateError'
         '401':
           description: Need to authenticate
         '403':
@@ -198,6 +208,8 @@ paths:
           description: Function removed
         '400':
           description: Something went wrong
+          schema:
+            $ref: '#/definitions/GateError'
         '401':
           description: Need to authenticate
         '403':
@@ -223,6 +235,8 @@ paths:
             $ref: '#/definitions/FunctionRunResult'
         '400':
           description: Bad request
+          schema:
+            $ref: '#/definitions/GateError'
         '401':
           description: Need to authenticate
         '403':
@@ -252,6 +266,8 @@ paths:
                   $ref: '#/definitions/FunctionLogEntry'
         '400':
           description: Something went wrong
+          schema:
+            $ref: '#/definitions/GateError'
         '401':
           description: Need to authenticate
         '403':
@@ -277,6 +293,8 @@ paths:
             $ref: '#/definitions/FunctionInfo'
         '400':
           description: Bad request
+          schema:
+            $ref: '#/definitions/GateError'
         '401':
           description: Need to authenticate
         '403':
@@ -302,6 +320,8 @@ paths:
             $ref: '#/definitions/FunctionStats'
         '400':
           description: Bad request
+          schema:
+            $ref: '#/definitions/GateError'
         '401':
           description: Need to authenticate
         '403':
@@ -327,6 +347,8 @@ paths:
             $ref: '#/definitions/FunctionSources'
         '400':
           description: Bad request
+          schema:
+            $ref: '#/definitions/GateError'
         '401':
           description: Need to authenticate
         '403':
@@ -356,6 +378,8 @@ paths:
                   $ref: '#/definitions/MwareItem'
         '400':
           description: Bad request
+          schema:
+            $ref: '#/definitions/GateError'
         '401':
           description: Need to authenticate
         '403':
@@ -379,6 +403,8 @@ paths:
           description: Middleware added
         '400':
           description: Bad request
+          schema:
+            $ref: '#/definitions/GateError'
         '401':
           description: Need to authenticate
         '403':
@@ -402,6 +428,8 @@ paths:
           description: Middleware removed
         '400':
           description: Bad request
+          schema:
+            $ref: '#/definitions/GateError'
         '401':
           description: Need to authenticate
         '403':
@@ -425,6 +453,8 @@ paths:
                   type: string
         '400':
           description: Bad request
+          schema:
+            $ref: '#/definitions/GateError'
         '401':
           description: Need to authenticate
         '403':
@@ -448,6 +478,8 @@ paths:
                   type: string
         '400':
           description: Bad request
+          schema:
+            $ref: '#/definitions/GateError'
         '401':
           description: Need to authenticate
         '403':
@@ -464,6 +496,14 @@ definitions:
       password:
         type: string
         example: secretpass123
+  GateError:
+    properties:
+      code:
+        type: integer
+        description: Error code
+      message:
+        type: string
+        description: Error text
   ProjectItem:
     properties:
       project:

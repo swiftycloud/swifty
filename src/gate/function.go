@@ -198,7 +198,7 @@ func validateProjectAndFuncName(params *swyapi.FunctionAdd) error {
 	return err
 }
 
-func addFunction(ctx context.Context, conf *YAMLConf, tennant string, params *swyapi.FunctionAdd) error {
+func addFunction(ctx context.Context, conf *YAMLConf, tennant string, params *swyapi.FunctionAdd) *swyapi.GateErr {
 	var err, erc error
 	var fn *FunctionDesc
 	var fi *FnInst
@@ -221,8 +221,7 @@ func addFunction(ctx context.Context, conf *YAMLConf, tennant string, params *sw
 	err = dbFuncAdd(fn)
 	if err != nil {
 		ctxlog(ctx).Errorf("Can't add function %s: %s", fn.SwoId.Str(), err.Error())
-		err = errors.New("DB error")
-		goto out
+		return GateErrD(err)
 	}
 
 	err = eventSetup(ctx, conf, fn, true)
@@ -274,7 +273,7 @@ out_clean_func:
 		goto stalled
 	}
 out:
-	return err
+	return GateErrE(swy.GateGenErr, err)
 
 stalled:
 	dbFuncSetState(ctx, fn, swy.DBFuncStateStl)
@@ -298,7 +297,7 @@ func swyFixSize(sz *swyapi.FunctionSize, conf *YAMLConf) error {
 	return nil
 }
 
-func updateFunction(ctx context.Context, conf *YAMLConf, id *SwoId, params *swyapi.FunctionUpdate) error {
+func updateFunction(ctx context.Context, conf *YAMLConf, id *SwoId, params *swyapi.FunctionUpdate) *swyapi.GateErr {
 	var err error
 	var rebuild bool
 	var mfix, rlfix bool
@@ -417,15 +416,19 @@ func updateFunction(ctx context.Context, conf *YAMLConf, id *SwoId, params *swya
 
 	logSaveEvent(fn, "updated", fmt.Sprintf("to: %s", fn.Src.Version))
 out:
-	return err
+	if err != nil {
+		return GateErrE(swy.GateGenErr, err)
+	}
+
+	return nil
 }
 
-func removeFunction(ctx context.Context, conf *YAMLConf, id *SwoId) error {
+func removeFunction(ctx context.Context, conf *YAMLConf, id *SwoId) *swyapi.GateErr {
 	var err error
 
 	fn, err := dbFuncFind(id)
 	if err != nil {
-		return err
+		return GateErrD(err)
 	}
 
 	// Allow to remove function if only we're in known state,
@@ -434,7 +437,7 @@ func removeFunction(ctx context.Context, conf *YAMLConf, id *SwoId) error {
 			swy.DBFuncStateRdy, swy.DBFuncStateStl, swy.DBFuncStateDea})
 	if err != nil {
 		ctxlog(ctx).Errorf("Can't terminate function %s: %s", id.Name, err.Error())
-		return errors.New("Cannot terminate fn")
+		return GateErrM(swy.GateGenErr, "Cannot terminate fn")
 	}
 
 	ctxlog(ctx).Debugf("Forget function %s", fn.SwoId.Str())
@@ -480,7 +483,7 @@ func removeFunction(ctx context.Context, conf *YAMLConf, id *SwoId) error {
 
 stalled:
 	dbFuncSetState(ctx, fn, swy.DBFuncStateStl)
-	return err
+	return GateErrE(swy.GateGenErr, err)
 }
 
 func waitFunctionVersion(ctx context.Context, fn *FunctionDesc, version string, tmo time.Duration) (error, bool) {
@@ -563,36 +566,36 @@ out:
 	ctxlog(ctx).Errorf("POD update notify: %s", err.Error())
 }
 
-func deactivateFunction(ctx context.Context, conf *YAMLConf, id *SwoId) error {
+func deactivateFunction(ctx context.Context, conf *YAMLConf, id *SwoId) *swyapi.GateErr {
 	var err error
 
 	fn, err := dbFuncFind(id)
 	if err != nil {
-		goto out
+		return GateErrD(err)
 	}
 
 	err = dbFuncSetStateCond(id, swy.DBFuncStateDea, []int{swy.DBFuncStateRdy})
 	if err != nil {
 		ctxlog(ctx).Errorf("Can't deactivate function %s: %s", id.Name, err.Error())
-		err = errors.New("Cannot deactivate function")
-		goto out
+		return GateErrM(swy.GateGenErr, "Cannot deactivate function")
 	}
 
 	err = swk8sRemove(ctx, conf, fn, fn.Inst())
 	if err != nil {
-		ctxlog(ctx).Errorf("Can't deactivate FN")
+		ctxlog(ctx).Errorf("Can't remove deployment: %s", err.Error())
 		dbFuncSetState(ctx, fn, swy.DBFuncStateRdy)
+		return GateErrM(swy.GateGenErr, "Cannot deactivate function")
 	}
-out:
-	return err
+
+	return nil
 }
 
-func activateFunction(ctx context.Context, conf *YAMLConf, id *SwoId) error {
+func activateFunction(ctx context.Context, conf *YAMLConf, id *SwoId) *swyapi.GateErr {
 	var err error
 
 	fn, err := dbFuncFindStates(id, []int{swy.DBFuncStateDea})
 	if err != nil {
-		goto out
+		return GateErrD(err)
 	}
 
 	dbFuncSetState(ctx, fn, swy.DBFuncStateStr)
@@ -600,14 +603,14 @@ func activateFunction(ctx context.Context, conf *YAMLConf, id *SwoId) error {
 	err = swk8sRun(ctx, conf, fn, fn.Inst())
 	if err != nil {
 		dbFuncSetState(ctx, fn, swy.DBFuncStateDea)
-		ctxlog(ctx).Errorf("Can't activate FN: %s", err.Error())
-		goto out
+		ctxlog(ctx).Errorf("Can't start deployment: %s", err.Error())
+		return GateErrM(swy.GateGenErr, "Cannot activate FN")
 	}
-out:
-	return err
+
+	return nil
 }
 
-func setFunctionState(ctx context.Context, conf *YAMLConf, id *SwoId, st *swyapi.FunctionState) error {
+func setFunctionState(ctx context.Context, conf *YAMLConf, id *SwoId, st *swyapi.FunctionState) *swyapi.GateErr {
 	switch st.State {
 	case fnStates[swy.DBFuncStateDea]:
 		return deactivateFunction(ctx, conf, id)
@@ -615,5 +618,5 @@ func setFunctionState(ctx context.Context, conf *YAMLConf, id *SwoId, st *swyapi
 		return activateFunction(ctx, conf, id)
 	}
 
-	return fmt.Errorf("Can't set state %s", st.State)
+	return GateErrM(swy.GateWrongType, "Cannot set this state")
 }

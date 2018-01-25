@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 
+	"../apis/apps"
 	"../common"
 	"../common/crypto"
 )
@@ -79,22 +80,21 @@ var mwareHandlers = map[string]*MwareOps {
 	"s3":		&MwareS3,
 }
 
-func mwareRemove(ctx context.Context, conf *YAMLConfMw, id *SwoId) error {
+func mwareRemove(ctx context.Context, conf *YAMLConfMw, id *SwoId) *swyapi.GateErr {
 	item, err := dbMwareGetItem(id)
 	if err != nil {
-		ctxlog(ctx).Errorf("Can't find mware %s", id.Str())
-		return err
+		return GateErrD(err)
 	}
 
 	handler, ok := mwareHandlers[item.MwareType]
 	if !ok {
-		return fmt.Errorf("no handler for %s", id.Str())
+		return GateErrC(swy.GateGenErr) /* Shouldn't happen */
 	}
 
 	err = dbMwareTerminate(&item)
 	if err != nil {
 		ctxlog(ctx).Errorf("Can't terminate mware %s", id.Str())
-		return err
+		return GateErrM(swy.GateGenErr, "Cannot terminate mware")
 	}
 
 	err = handler.Fini(ctx, conf, &item)
@@ -119,7 +119,7 @@ func mwareRemove(ctx context.Context, conf *YAMLConfMw, id *SwoId) error {
 
 stalled:
 	dbMwareSetStalled(&item)
-	return err
+	return GateErrE(swy.GateGenErr, err)
 }
 
 func getMwareDesc(id *SwoId, mwType string) *MwareDesc {
@@ -137,7 +137,7 @@ func getMwareDesc(id *SwoId, mwType string) *MwareDesc {
 	return ret
 }
 
-func mwareSetup(ctx context.Context, conf *YAMLConfMw, id *SwoId, mwType string) error {
+func mwareSetup(ctx context.Context, conf *YAMLConfMw, id *SwoId, mwType string) *swyapi.GateErr {
 	var handler *MwareOps
 	var ok bool
 	var err, erc error
@@ -148,8 +148,7 @@ func mwareSetup(ctx context.Context, conf *YAMLConfMw, id *SwoId, mwType string)
 	err = dbMwareAdd(mwd)
 	if err != nil {
 		ctxlog(ctx).Errorf("Can't add mware %s: %s", mwd.SwoId.Str(), err.Error())
-		err = errors.New("DB error")
-		goto out
+		return GateErrD(err)
 	}
 
 	handler, ok = mwareHandlers[mwType]
@@ -207,7 +206,7 @@ outdb:
 	}
 out:
 	ctxlog(ctx).Errorf("mwareSetup: %s", err.Error())
-	return err
+	return GateErrE(swy.GateGenErr, err)
 
 stalled:
 	dbMwareSetStalled(mwd)
