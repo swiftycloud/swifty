@@ -677,6 +677,7 @@ var S3ModeDevel bool
 
 func main() {
 	var config_path string
+	var showVersion bool
 	var err error
 
 	flag.BoolVar(&S3ModeDevel, "devel", false, "launch in development mode")
@@ -688,7 +689,16 @@ func main() {
 			"no-rados",
 				false,
 				"disable rados")
+	flag.BoolVar(&showVersion,
+			"version",
+				false,
+				"show version and exit")
 	flag.Parse()
+
+	if showVersion {
+		fmt.Printf("Version %s\n", Version)
+		return
+	}
 
 	if _, err := os.Stat(config_path); err == nil {
 		swy.ReadYamlConfig(config_path, &conf)
