@@ -6,6 +6,7 @@ import (
 
 	"reflect"
 	"time"
+	"fmt"
 )
 
 var dbColMap map[reflect.Type]string
@@ -113,6 +114,48 @@ func dbColl(object interface{}) (string) {
 	return ""
 }
 
+func infoLong(o interface{}) (string) {
+	switch (reflect.TypeOf(o)) {
+	case reflect.TypeOf(&S3Bucket{}):
+		bucket := o.(*S3Bucket)
+		return fmt.Sprintf("{ S3Bucket: %s/%s/%s/%d/%s }",
+			bucket.ObjID, bucket.BackendID,
+			bucket.NamespaceID, bucket.State,
+			bucket.Name)
+	case reflect.TypeOf(&S3ObjectData{}):
+		objd := o.(*S3ObjectData)
+		return fmt.Sprintf("{ S3ObjectData: %s/%s/%s/%s/%d/%d }",
+			objd.ObjID, objd.RefID,
+			objd.BucketBID, objd.ObjectBID,
+			objd.State, objd.Size)
+	case reflect.TypeOf(&S3Object{}):
+		object := o.(*S3Object)
+		return fmt.Sprintf("{ S3Object: %s/%s/%s/%d/%s }",
+			object.ObjID, object.BucketObjID,
+			object.BackendID, object.State,
+			object.Key)
+	case reflect.TypeOf(&S3Upload{}):
+		upload := o.(*S3Upload)
+		return fmt.Sprintf("{ S3Upload: %s/%s/%s/%d/%d/%s }",
+			upload.ObjID, upload.BucketObjID,
+			upload.UploadID, upload.Ref, upload.Key)
+	case reflect.TypeOf(&S3UploadPart{}):
+		part := o.(*S3UploadPart)
+		return fmt.Sprintf("{ S3UploadPart: %s/%s/%s/%d/%s }",
+			part.ObjID, part.UploadObjID,
+			part.BackendID, part.Part,
+			part.Key)
+	}
+	return "{ Unknown type }"
+}
+
+func dbS3SetObjID(o interface{}, query bson.M) {
+	if _, ok := query["_id"]; ok == false {
+		val := reflect.ValueOf(o).Elem()
+		query["_id"] = val.FieldByName("ObjID").Interface().(bson.ObjectId)
+	}
+}
+
 func dbS3Insert(o interface{}) (error) {
 	return dbSession.DB(dbName).C(dbColl(o)).Insert(o)
 }
@@ -122,15 +165,34 @@ func dbS3Remove(o interface{}, query bson.M) (error) {
 }
 
 func dbS3Update(query bson.M, update bson.M, o interface{}) (error) {
+	dbS3SetObjID(o, query)
 	c := dbSession.DB(dbName).C(dbColl(o))
 	change := mgo.Change{
 		Upsert:		false,
 		Remove:		false,
 		Update:		update,
-		ReturnNew:	false,
+		ReturnNew:	true,
 	}
 	_, err := c.Find(query).Apply(change, o)
 	return err
+}
+
+func dbS3SetOnState(o interface{}, state uint32, query bson.M, fields bson.M) (error) {
+	if query == nil { query = make(bson.M) }
+
+	query["state"] = bson.M{"$in": s3StateTransition[state]}
+	update := bson.M{"$set": fields}
+
+	err := dbS3Update(query, update, o)
+	if err != nil {
+		log.Errorf("s3: Can't set state %d on %s: %s",
+			state, infoLong(o), err.Error())
+	}
+	return err
+}
+
+func dbS3SetState(o interface{}, state uint32, query bson.M) (error) {
+	return dbS3SetOnState(o, state, query, bson.M{"state": state})
 }
 
 func dbS3RemoveCond(query bson.M, o interface{}) (error) {

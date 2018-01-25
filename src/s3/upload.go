@@ -35,24 +35,11 @@ type S3Upload struct {
 	S3ObjectPorps					`json:",inline" bson:",inline"`
 }
 
-func (upload *S3Upload)infoLong() (string) {
-	return fmt.Sprintf("{ S3Upload: %s/%s/%s/%d/%d/%s }",
-			upload.ObjID, upload.BucketObjID,
-			upload.UploadID, upload.Ref, upload.Key)
-}
-
-func (part *S3UploadPart)infoLong() (string) {
-	return fmt.Sprintf("{ S3UploadPart: %s/%s/%s/%d/%s }",
-			part.ObjID, part.UploadObjID,
-			part.BackendID, part.Part,
-			part.Key)
-}
-
 func (part *S3UploadPart)dbRemoveF() (error) {
 	err := dbS3Remove(part, bson.M{"_id": part.ObjID})
 	if err != nil && err != mgo.ErrNotFound {
 		log.Errorf("s3: Can't force remove %s: %s",
-			part.infoLong(), err.Error())
+			infoLong(part), err.Error())
 	}
 	return err
 }
@@ -64,44 +51,18 @@ func (part *S3UploadPart)dbRemove() (error) {
 			&S3UploadPart{})
 	if err != nil && err != mgo.ErrNotFound {
 		log.Errorf("s3: Can't remove %s: %s",
-			part.infoLong(), err.Error())
-	}
-	return err
-}
-
-func (part *S3UploadPart)dbSet(state uint32, fields bson.M) (error) {
-	err := dbS3Update(
-			bson.M{"_id": part.ObjID,
-				"state": bson.M{"$in": s3StateTransition[state]}},
-			bson.M{"$set": fields},
-			&S3UploadPart{})
-	if err != nil {
-		log.Errorf("s3: Can't set state %d %s: %s",
-			state, part.infoLong(), err.Error())
-	}
-	return err
-}
-
-func (part *S3UploadPart)dbSetState(state uint32) (error) {
-	err := part.dbSet(state, bson.M{"state": state})
-	if err == nil {
-		part.State = state
+			infoLong(part), err.Error())
 	}
 	return err
 }
 
 func (upload *S3Upload)dbLock() (error) {
-	err := dbS3Update(
-			bson.M{"_id": upload.ObjID,
-				"state": S3StateActive,
-				"lock": 0,
-				"ref": 0,
-			},
-			bson.M{"$inc": bson.M{"lock": 1}},
-			&S3Upload{})
+	query := bson.M{ "state": S3StateActive, "lock": 0, "ref": 0 }
+	update := bson.M{ "$inc": bson.M{ "lock": 1 } }
+	err := dbS3Update(query, update, upload)
 	if err != nil {
 		log.Errorf("s3: Can't lock %s: %s",
-			upload.infoLong(), err.Error())
+			infoLong(upload), err.Error())
 	} else {
 		upload.Lock = 1
 	}
@@ -109,17 +70,12 @@ func (upload *S3Upload)dbLock() (error) {
 }
 
 func (upload *S3Upload)dbUnlock() (error) {
-	err := dbS3Update(
-			bson.M{"_id": upload.ObjID,
-				"state": S3StateActive,
-				"lock": 1,
-				"ref": 0,
-			},
-			bson.M{"$inc": bson.M{"lock": -1}},
-			&S3Upload{})
+	query := bson.M{ "state": S3StateActive, "lock": 1, "ref": 0 }
+	update := bson.M{ "$inc": bson.M{ "lock": -1 } }
+	err := dbS3Update(query, update, upload)
 	if err != nil {
 		log.Errorf("s3: Can't unclock %s: %s",
-			upload.infoLong(), err.Error())
+			infoLong(upload), err.Error())
 	} else {
 		upload.Lock = 0
 	}
@@ -127,31 +83,23 @@ func (upload *S3Upload)dbUnlock() (error) {
 }
 
 func (upload *S3Upload)dbRefInc() (error) {
-	err := dbS3Update(
-			bson.M{"_id": upload.ObjID,
-				"state": S3StateActive,
-				"lock": 0,
-			},
-			bson.M{"$inc": bson.M{"ref": 1}},
-			&S3Upload{})
+	query := bson.M{ "state": S3StateActive, "lock": 0 }
+	update := bson.M{ "$inc": bson.M{ "ref": 1 } }
+	err := dbS3Update(query, update, upload)
 	if err != nil {
 		log.Errorf("s3: Can't +ref %s: %s",
-			upload.infoLong(), err.Error())
+			infoLong(upload), err.Error())
 	}
 	return err
 }
 
 func (upload *S3Upload)dbRefDec() (error) {
-	err := dbS3Update(
-			bson.M{"_id": upload.ObjID,
-				"state": S3StateActive,
-				"lock": 0,
-			},
-			bson.M{"$inc": bson.M{"ref": -1}},
-			&S3Upload{})
+	query := bson.M{ "state": S3StateActive, "lock": 0 }
+	update := bson.M{ "$inc": bson.M{ "ref": -1 } }
+	err := dbS3Update(query, update, upload)
 	if err != nil {
 		log.Errorf("s3: Can't -ref %s: %s",
-			upload.infoLong(), err.Error())
+			infoLong(upload), err.Error())
 	}
 	return err
 }
@@ -160,7 +108,7 @@ func (upload *S3Upload)dbRemoveF() (error) {
 	err := dbS3Remove(upload, bson.M{"_id": upload.ObjID})
 	if err != nil && err != mgo.ErrNotFound {
 		log.Errorf("s3: Can't force remove %s: %s",
-			upload.infoLong(), err.Error())
+			infoLong(upload), err.Error())
 	}
 	return err
 }
@@ -173,28 +121,7 @@ func (upload *S3Upload)dbRemove() (error) {
 			&S3Upload{})
 	if err != nil && err != mgo.ErrNotFound {
 		log.Errorf("s3: Can't remove %s: %s",
-			upload.infoLong(), err.Error())
-	}
-	return err
-}
-
-func (upload *S3Upload)dbSet(state uint32, fields bson.M) (error) {
-	err := dbS3Update(
-			bson.M{"_id": upload.ObjID,
-				"state": bson.M{"$in": s3StateTransition[state]}},
-			bson.M{"$set": fields},
-			&S3Upload{})
-	if err != nil {
-		log.Errorf("s3: Can't set state %d %s: %s",
-			state, upload.infoLong(), err.Error())
-	}
-	return err
-}
-
-func (upload *S3Upload)dbSetState(state uint32) (error) {
-	err := upload.dbSet(state, bson.M{"state": state})
-	if err == nil {
-		upload.State = state
+			infoLong(upload), err.Error())
 	}
 	return err
 }
@@ -218,7 +145,7 @@ func s3UploadRemoveLocked(upload *S3Upload) (error) {
 	if err != nil {
 		if err != mgo.ErrNotFound {
 			log.Errorf("s3: Can't find parts %s: %s",
-				upload.infoLong(), err.Error())
+				infoLong(upload), err.Error())
 			return err
 		}
 	} else {
@@ -227,7 +154,7 @@ func s3UploadRemoveLocked(upload *S3Upload) (error) {
 			if err != nil {
 				if err != mgo.ErrNotFound {
 					log.Errorf("s3: Can't find data on part %s: %s",
-						part.infoLong(), err.Error())
+						infoLong(&part), err.Error())
 					return err
 				}
 			}
@@ -236,7 +163,7 @@ func s3UploadRemoveLocked(upload *S3Upload) (error) {
 				return err
 			}
 
-			err = part.dbSetState(S3StateInactive)
+			err = dbS3SetState(&part, S3StateInactive, nil)
 			if err != nil {
 				return err
 			}
@@ -248,7 +175,7 @@ func s3UploadRemoveLocked(upload *S3Upload) (error) {
 		}
 	}
 
-	err = upload.dbSetState(S3StateInactive)
+	err = dbS3SetState(upload, S3StateInactive, nil)
 	if err != nil {
 		return err
 	}
@@ -258,7 +185,7 @@ func s3UploadRemoveLocked(upload *S3Upload) (error) {
 		return err
 	}
 
-	log.Debugf("s3: Removed %s", upload.infoLong())
+	log.Debugf("s3: Removed %s", infoLong(upload))
 	return nil
 }
 
@@ -280,7 +207,7 @@ func s3UploadInit(bucket *S3Bucket, oname, acl string) (*S3Upload, error) {
 	err = dbS3Insert(upload)
 	if err != nil {
 		log.Errorf("s3: Can't insert %s: %s",
-				upload.infoLong(), err.Error())
+				infoLong(upload), err.Error())
 		return nil, err
 	}
 
@@ -291,7 +218,7 @@ func s3UploadInit(bucket *S3Bucket, oname, acl string) (*S3Upload, error) {
 func s3UploadPart(namespace string, bucket *S3Bucket, oname,
 			uid string, partno int, data []byte) (string, error) {
 	var objd *S3ObjectData
-	var part S3UploadPart
+	var part *S3UploadPart
 	var upload S3Upload
 	var etag string
 	var err error
@@ -311,7 +238,7 @@ func s3UploadPart(namespace string, bucket *S3Bucket, oname,
 		return "", err
 	}
 
-	part = S3UploadPart{
+	part = &S3UploadPart{
 		ObjID:		bson.NewObjectId(),
 		S3ObjectPorps: S3ObjectPorps {
 			CreationTime:	time.Now().Format(time.RFC3339),
@@ -326,7 +253,7 @@ func s3UploadPart(namespace string, bucket *S3Bucket, oname,
 	objd, etag, err = s3ObjectDataAdd(part.ObjID, bucket.BackendID, part.BackendID, data)
 	if err != nil {
 		upload.dbRefDec()
-		log.Errorf("s3: Can't store data %s: %s", part.infoLong(), err.Error())
+		log.Errorf("s3: Can't store data %s: %s", infoLong(part), err.Error())
 		return "", err
 	}
 
@@ -336,21 +263,20 @@ func s3UploadPart(namespace string, bucket *S3Bucket, oname,
 	if err != nil {
 		upload.dbRefDec()
 		s3ObjectDataDel(objd)
-		log.Errorf("s3: Can't insert %s: %s", part.infoLong(), err.Error())
+		log.Errorf("s3: Can't insert %s: %s", infoLong(part), err.Error())
 		return "", err
 	}
 
-	err = part.dbSetState(S3StateActive)
-	if err != nil {
+	if err = dbS3SetState(part, S3StateActive, nil); err != nil {
 		upload.dbRefDec()
 		s3ObjectDataDel(objd)
-		log.Errorf("s3: Can't activate %s: %s", part.infoLong(), err.Error())
+		log.Errorf("s3: Can't activate %s: %s", infoLong(part), err.Error())
 		return "", err
 	}
 
 	upload.dbRefDec()
 
-	log.Debugf("s3: Inserted %s", part.infoLong())
+	log.Debugf("s3: Inserted %s", infoLong(part))
 	return part.ETag, nil
 }
 
@@ -390,7 +316,7 @@ func s3UploadFini(namespace string, bucket *S3Bucket, uid string,
 			goto out_empty
 		}
 		log.Errorf("s3: Can't find parts %s: %s",
-			upload.infoLong(), err.Error())
+			infoLong(&upload), err.Error())
 		goto out
 	} else {
 		sort.Sort(S3UploadByPart(parts))
@@ -404,7 +330,7 @@ func s3UploadFini(namespace string, bucket *S3Bucket, uid string,
 			if partno >= part.Part {
 				err = fmt.Errorf("upload %s unexpected part %d", uid, part.Part)
 				log.Errorf("s3: Upload part sequence failed %s: %s",
-					upload.infoLong(), err.Error())
+					infoLong(&upload), err.Error())
 				goto out
 			}
 			partno = part.Part
@@ -417,7 +343,7 @@ func s3UploadFini(namespace string, bucket *S3Bucket, uid string,
 	object, err = s3AddObject(namespace, bucket, upload.Key, upload.Acl, size, data)
 	if err != nil {
 		log.Errorf("s3: Can't insert object on %s: %s",
-			upload.infoLong(), err.Error())
+			infoLong(&upload), err.Error())
 		upload.dbUnlock()
 		return nil, err
 	}
@@ -426,7 +352,7 @@ func s3UploadFini(namespace string, bucket *S3Bucket, uid string,
 	if err != nil {
 		// Don't fail here since object is already committed
 		log.Errorf("s3: Can't remove %s: %s",
-				upload.infoLong(), err.Error())
+				infoLong(&upload), err.Error())
 	}
 
 	res.ETag = object.ETag
@@ -514,7 +440,7 @@ func s3UploadList(bucket *S3Bucket, oname, uid string) (*swys3api.S3MpuPartList,
 			goto out
 		}
 		log.Errorf("s3: Can't find parts %s: %s",
-			upload.infoLong(), err.Error())
+			infoLong(&upload), err.Error())
 		return nil, err
 	} else {
 		for _, part := range parts {
@@ -558,6 +484,6 @@ func s3UploadAbort(bucket *S3Bucket, oname, uid string) error {
 		return err
 	}
 
-	log.Debugf("s3: Aborted %s", upload.infoLong())
+	log.Debugf("s3: Aborted %s", infoLong(&upload))
 	return nil
 }

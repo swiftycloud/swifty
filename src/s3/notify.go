@@ -36,34 +36,48 @@ out:
 	return ret, nil
 }
 
+func notifyFindBucket(params *swys3api.S3Subscribe) (*S3Bucket, error) {
+	var bucket S3Bucket
+
+	bid := BIDFromNames(params.Namespace, params.Bucket)
+	err := dbS3FindOne(bson.M{ "bid": bid, "state": S3StateActive }, &bucket)
+	if err != nil {
+		return nil, err
+	}
+
+	return &bucket, nil
+}
+
 func s3Subscribe(params *swys3api.S3Subscribe) error {
 	var ops uint64
+
 	ops, err := genOpsMask(params.Ops)
 	if err != nil {
 		return err
 	}
 
-	var res S3Bucket
-	return dbS3Update(
-			bson.M {"bid": BIDFromNames(params.Namespace, params.Bucket),
-				"state": S3StateActive,
-			},
-			bson.M {"$set": bson.M {
-					"notify": bson.M {
-						"events": ops,
-						"queue": params.Queue,
-					},
-				},
-			}, &res)
+	bucket, err := notifyFindBucket(params)
+	if err != nil {
+		return err
+	}
+
+	query := bson.M{ "state": S3StateActive }
+	notify := bson.M{ "events": ops, "queue": params.Queue }
+	update := bson.M{ "$set": bson.M{ "notify": notify }}
+
+	return dbS3Update(query, update, bucket)
 }
 
 func s3Unsubscribe(params *swys3api.S3Subscribe) error {
-	var res S3Bucket
-	return dbS3Update(
-			bson.M {"bid": BIDFromNames(params.Namespace, params.Bucket),
-				"state": S3StateActive,
-			},
-			bson.M {"$unset": bson.M { "notify": "" }, }, &res)
+	bucket, err := notifyFindBucket(params)
+	if err != nil {
+		return err
+	}
+
+	query := bson.M{ "state": S3StateActive }
+	update := bson.M{"$unset": bson.M{ "notify": "" }}
+
+	return dbS3Update(query, update, bucket)
 }
 
 var nChan *amqp.Channel

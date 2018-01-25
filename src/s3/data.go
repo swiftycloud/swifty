@@ -19,44 +19,13 @@ type S3ObjectData struct {
 	Data				[]byte		`bson:"data,omitempty"`
 }
 
-func (objd *S3ObjectData)infoLong() (string) {
-	return fmt.Sprintf("{ S3ObjectData: %s/%s/%s/%s/%d/%d }",
-			objd.ObjID, objd.RefID,
-			objd.BucketBID, objd.ObjectBID,
-			objd.State, objd.Size)
-}
-
-func (objd *S3ObjectData)dbSet(state uint32, fields bson.M) (error) {
-	var res S3ObjectData
-	var err error
-
-	err = dbS3Update(
-			bson.M{"_id": objd.ObjID,
-				"state": bson.M{"$in": s3StateTransition[state]}},
-			bson.M{"$set": fields},
-			&res)
-	if err != nil {
-		log.Errorf("s3: Can't set state %d %s: %s",
-			state, objd.infoLong(), err.Error())
-	}
-	return err
-}
-
-func (objd *S3ObjectData)dbSetState(state uint32) (error) {
-	err := objd.dbSet(state, bson.M{"state": state})
-	if err == nil {
-		objd.State = state
-	}
-	return err
-}
-
 func (objd *S3ObjectData)dbRemoveF() (error) {
 	var err error
 
 	err = dbS3Remove(objd, bson.M{"_id": objd.ObjID})
 	if err != nil && err != mgo.ErrNotFound {
 		log.Errorf("s3: Can't force remove %s: %s",
-			objd.infoLong(), err.Error())
+			infoLong(objd), err.Error())
 	}
 	return err
 }
@@ -70,7 +39,7 @@ func (objd *S3ObjectData)dbRemove() (error) {
 			&S3ObjectData{})
 	if err != nil && err != mgo.ErrNotFound {
 		log.Errorf("s3: Can't remove %s: %s",
-			objd.infoLong(), err.Error())
+			infoLong(objd), err.Error())
 	}
 	return err
 }
@@ -100,7 +69,7 @@ func s3ObjectDataAdd(refid bson.ObjectId, bucket_bid, object_bid string, data []
 
 	if radosDisabled || objd.Size <= S3StorageSizePerObj {
 		if objd.Size > S3StorageSizePerObj {
-			log.Errorf("s3: Too big %s", objd.infoLong())
+			log.Errorf("s3: Too big %s", infoLong(objd))
 			err = fmt.Errorf("s3: Object is too big")
 			return nil, "", err
 		}
@@ -110,7 +79,7 @@ func s3ObjectDataAdd(refid bson.ObjectId, bucket_bid, object_bid string, data []
 		err = dbS3Insert(objd)
 		if err != nil {
 			log.Errorf("s3: Can't insert %s: %s",
-				objd.infoLong(), err.Error())
+				infoLong(objd), err.Error())
 			goto out
 		}
 	} else {
@@ -120,15 +89,14 @@ func s3ObjectDataAdd(refid bson.ObjectId, bucket_bid, object_bid string, data []
 		}
 	}
 
-	err = objd.dbSetState(S3StateActive)
-	if err != nil {
+	if err = dbS3SetState(&objd, S3StateActive, nil); err != nil {
 		if objd.Data != nil {
 			radosDeleteObject(objd.BucketBID, objd.ObjectBID)
 		}
 		goto out
 	}
 
-	log.Debugf("s3: Added %s", objd.infoLong())
+	log.Debugf("s3: Added %s", infoLong(objd))
 	return &objd, fmt.Sprintf("%x", md5.Sum(data)), nil
 
 out:
@@ -139,7 +107,7 @@ out:
 func s3ObjectDataDel(objd *S3ObjectData) (error) {
 	var err error
 
-	err = objd.dbSetState(S3StateInactive)
+	err = dbS3SetState(objd, S3StateInactive, nil)
 	if err != nil {
 		return err
 	}
@@ -156,7 +124,7 @@ func s3ObjectDataDel(objd *S3ObjectData) (error) {
 		return err
 	}
 
-	log.Debugf("s3: Deleted %s", objd.infoLong())
+	log.Debugf("s3: Deleted %s", infoLong(objd))
 	return nil
 }
 

@@ -4,7 +4,6 @@ import (
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 	"time"
-	"fmt"
 
 	"../apis/apps/s3"
 )
@@ -46,18 +45,11 @@ type S3Object struct {
 	S3ObjectPorps					`json:",inline" bson:",inline"`
 }
 
-func (object *S3Object)infoLong() (string) {
-	return fmt.Sprintf("{ S3Object: %s/%s/%s/%d/%s }",
-			object.ObjID, object.BucketObjID,
-			object.BackendID, object.State,
-			object.Key)
-}
-
 func (object *S3Object)dbRemoveF() (error) {
 	err := dbS3Remove(object, bson.M{"_id": object.ObjID})
 	if err != nil && err != mgo.ErrNotFound {
 		log.Errorf("s3: Can't force remove %s: %s",
-			object.infoLong(), err.Error())
+			infoLong(object), err.Error())
 	}
 	return err
 }
@@ -69,37 +61,7 @@ func (object *S3Object)dbRemove() (error) {
 			&S3Object{})
 	if err != nil && err != mgo.ErrNotFound {
 		log.Errorf("s3: Can't remove %s: %s",
-			object.infoLong(), err.Error())
-	}
-	return err
-}
-
-func (object *S3Object)dbSet(state uint32, fields bson.M) (error) {
-	err := dbS3Update(
-			bson.M{"_id": object.ObjID,
-				"state": bson.M{"$in": s3StateTransition[state]}},
-			bson.M{"$set": fields},
-			&S3Object{})
-	if err != nil {
-		log.Errorf("s3: Can't set state %d %s: %s",
-			state, object.infoLong(), err.Error())
-	}
-	return err
-}
-
-func (object *S3Object)dbSetState(state uint32) (error) {
-	err := object.dbSet(state, bson.M{"state": state})
-	if err == nil {
-		object.State = state
-	}
-	return err
-}
-
-func (object *S3Object)dbSetStateEtag(state uint32, etag string) (error) {
-	err := object.dbSet(state, bson.M{"state": state, "etag": etag})
-	if err == nil {
-		object.State = state
-		object.ETag = etag
+			infoLong(object), err.Error())
 	}
 	return err
 }
@@ -139,10 +101,10 @@ func s3AddObject(namespace string, bucket *S3Bucket, oname string,
 	err = dbS3Insert(object)
 	if err != nil {
 		log.Errorf("s3: Can't insert %s: %s",
-			 object.infoLong(), err.Error())
+			 infoLong(object), err.Error())
 		return nil, err
 	}
-	log.Debugf("s3: Inserted %s", object.infoLong())
+	log.Debugf("s3: Inserted %s", infoLong(object))
 
 	err = bucket.dbAddObj(object.Size)
 	if err != nil {
@@ -155,7 +117,8 @@ func s3AddObject(namespace string, bucket *S3Bucket, oname string,
 		goto out_obj
 	}
 
-	err = object.dbSetStateEtag(S3StateActive, etag)
+	err = dbS3SetOnState(object, S3StateActive, nil,
+		bson.M{ "state": S3StateActive, "etag": etag })
 	if err != nil {
 		goto out
 	}
@@ -164,7 +127,7 @@ func s3AddObject(namespace string, bucket *S3Bucket, oname string,
 		s3Notify(namespace, bucket, object, S3NotifyPut)
 	}
 
-	log.Debugf("s3: Added %s", object.infoLong())
+	log.Debugf("s3: Added %s", infoLong(object))
 	return object, nil
 
 out:
@@ -180,7 +143,7 @@ func s3DeleteObjectFound(bucket *S3Bucket, objectFound *S3Object) error {
 	var objdFound *S3ObjectData
 	var err error
 
-	err = objectFound.dbSetState(S3StateInactive)
+	err = dbS3SetState(objectFound, S3StateInactive, nil)
 	if err != nil {
 		if err == mgo.ErrNotFound {
 			return nil
@@ -192,7 +155,7 @@ func s3DeleteObjectFound(bucket *S3Bucket, objectFound *S3Object) error {
 	if err != nil {
 		if err != mgo.ErrNotFound {
 			log.Errorf("s3: Can't find object data %s: %s",
-				objectFound.infoLong(), err.Error())
+				infoLong(objectFound), err.Error())
 			return err
 		}
 	} else {
@@ -212,7 +175,7 @@ func s3DeleteObjectFound(bucket *S3Bucket, objectFound *S3Object) error {
 		return err
 	}
 
-	log.Debugf("s3: Deleted %s", objectFound.infoLong())
+	log.Debugf("s3: Deleted %s", infoLong(objectFound))
 	return nil
 }
 
@@ -226,7 +189,7 @@ func s3DeleteObject(bucket *S3Bucket, oname string, version int) error {
 			return nil
 		}
 		log.Errorf("s3: Can't find object %s on %s: %s",
-			oname, bucket.infoLong(), err.Error())
+			oname, infoLong(bucket), err.Error())
 		return err
 	}
 
@@ -242,7 +205,7 @@ func s3ReadObjectData(bucket *S3Bucket, object *S3Object) ([]byte, error) {
 	if err != nil {
 		if err != mgo.ErrNotFound {
 			log.Errorf("s3: Can't find object data %s: %s",
-				object.infoLong(), err.Error())
+				infoLong(object), err.Error())
 			return nil, err
 		}
 		return nil, err
@@ -253,7 +216,7 @@ func s3ReadObjectData(bucket *S3Bucket, object *S3Object) ([]byte, error) {
 		return nil, err
 	}
 
-	log.Debugf("s3: Read %s", object.infoLong())
+	log.Debugf("s3: Read %s", infoLong(object))
 	return res, err
 }
 
@@ -267,7 +230,7 @@ func s3ReadObject(bucket *S3Bucket, oname string, part, version int) ([]byte, er
 			return nil, err
 		}
 		log.Errorf("s3: Can't find object %s on %s: %s",
-				oname, bucket.infoLong(), err.Error())
+				oname, infoLong(bucket), err.Error())
 		return nil, err
 	}
 
