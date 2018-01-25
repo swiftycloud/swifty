@@ -36,7 +36,7 @@ func fatal(err error) {
 	os.Exit(1)
 }
 
-func make_faas_req_x(url string, in interface{}, succ_code int) (*http.Response, error) {
+func make_faas_req_x(url string, in interface{}, succ_code int, tmo uint) (*http.Response, error) {
 	var address string = "http://" + conf.Login.Host + ":" + conf.Login.Port + "/v1/" + url
 
 	h := make(map[string]string)
@@ -49,13 +49,14 @@ func make_faas_req_x(url string, in interface{}, succ_code int) (*http.Response,
 				Address:	address,
 				Headers:	h,
 				Success:	succ_code,
+				Timeout:	tmo,
 			}, in)
 }
 
 func faas_login() string {
 	resp, err := make_faas_req_x("login", swyapi.UserLogin {
 			UserName: conf.Login.User, Password: conf.Login.Pass,
-		}, http.StatusOK)
+		}, http.StatusOK, 0)
 	if err != nil {
 		fatal(err)
 	}
@@ -74,13 +75,13 @@ func faas_login() string {
 }
 
 func make_faas_req(url string, in interface{}, out interface{}) {
-	make_faas_req2(url, in, out, http.StatusOK)
+	make_faas_req2(url, in, out, http.StatusOK, 0)
 }
 
-func make_faas_req2(url string, in interface{}, out interface{}, succ_code int) {
+func make_faas_req2(url string, in interface{}, out interface{}, succ_code int, tmo uint) {
 	first_attempt := true
 again:
-	resp, err := make_faas_req_x(url, in, succ_code)
+	resp, err := make_faas_req_x(url, in, succ_code, tmo)
 	if err != nil {
 		if resp == nil {
 			fatal(err)
@@ -118,16 +119,16 @@ func list_users(args []string, opts [8]string) {
 
 func add_user(args []string, opts [8]string) {
 	make_faas_req2("adduser", swyapi.AddUser{Id: args[0], Pass: opts[1], Name: opts[0]},
-		nil, http.StatusCreated)
+		nil, http.StatusCreated, 0)
 }
 
 func del_user(args []string, opts [8]string) {
-	make_faas_req2("deluser", swyapi.UserInfo{Id: args[0]}, nil, http.StatusNoContent)
+	make_faas_req2("deluser", swyapi.UserInfo{Id: args[0]}, nil, http.StatusNoContent, 0)
 }
 
 func set_password(args []string, opts [8]string) {
 	make_faas_req2("setpass", swyapi.UserLogin{UserName: args[0], Password: opts[0]},
-		nil, http.StatusCreated)
+		nil, http.StatusCreated, 0)
 }
 
 func show_user_info(args []string, opts [8]string) {
@@ -403,6 +404,34 @@ func off_fn(project string, args []string, opts [8]string) {
 		swyapi.FunctionState{ Project: project, FuncName: args[0], State: "deactivated" }, nil)
 }
 
+func wait_fn(project string, args []string, opts[8]string) {
+	req := swyapi.FunctionWait{
+		Project: project,
+		FuncName: args[0],
+	}
+
+	if opts[0] != "" {
+		req.Version = opts[0]
+	}
+
+	if opts[1] != "" {
+		tmo, err := strconv.ParseUint(opts[1], 10, 32)
+		if err != nil {
+			fatal(fmt.Errorf("Bad timeout value"))
+		}
+
+		req.Timeout = uint32(tmo)
+	}
+
+	var httpTmo uint /* seconds */
+	httpTmo = uint((time.Duration(req.Timeout) * time.Millisecond) / time.Second)
+	if httpTmo <= 1 {
+		httpTmo = 1
+	}
+
+	make_faas_req2("function/wait", req, nil, http.StatusOK, httpTmo + 10)
+}
+
 func show_code(project string, args []string, opts [8]string) {
 	var res swyapi.FunctionSources
 	make_faas_req("function/code",
@@ -526,6 +555,7 @@ const (
 	CMD_CODE string		= "code"
 	CMD_ON string		= "on"
 	CMD_OFF string		= "off"
+	CMD_WAIT string		= "wait"
 	CMD_MLS string		= "mls"
 	CMD_MADD string		= "madd"
 	CMD_MDEL string		= "mdel"
@@ -551,6 +581,7 @@ var cmdOrder = []string {
 	CMD_CODE,
 	CMD_ON,
 	CMD_OFF,
+	CMD_WAIT,
 	CMD_MLS,
 	CMD_MADD,
 	CMD_MDEL,
@@ -584,6 +615,7 @@ var cmdMap = map[string]*cmdDesc {
 	CMD_CODE:	&cmdDesc{ pcall: show_code,	  opts: flag.NewFlagSet(CMD_CODE, flag.ExitOnError) },
 	CMD_ON:		&cmdDesc{ pcall: on_fn,		  opts: flag.NewFlagSet(CMD_ON, flag.ExitOnError) },
 	CMD_OFF:	&cmdDesc{ pcall: off_fn,	  opts: flag.NewFlagSet(CMD_OFF, flag.ExitOnError) },
+	CMD_WAIT:	&cmdDesc{ pcall: wait_fn,	  opts: flag.NewFlagSet(CMD_WAIT, flag.ExitOnError) },
 	CMD_MLS:	&cmdDesc{ pcall: list_mware,	  opts: flag.NewFlagSet(CMD_MLS, flag.ExitOnError) },
 	CMD_MADD:	&cmdDesc{ pcall: add_mware,	  opts: flag.NewFlagSet(CMD_MADD, flag.ExitOnError) },
 	CMD_MDEL:	&cmdDesc{ pcall: del_mware,	  opts: flag.NewFlagSet(CMD_MDEL, flag.ExitOnError) },
@@ -641,6 +673,10 @@ func main() {
 	bindCmdUsage(CMD_CODE,  []string{"NAME"}, "Show function code", true)
 	bindCmdUsage(CMD_ON,	[]string{"NAME"}, "Activate function", true)
 	bindCmdUsage(CMD_OFF,	[]string{"NAME"}, "Deactivate function", true)
+
+	cmdMap[CMD_WAIT].opts.StringVar(&opts[0], "version", "", "Version")
+	cmdMap[CMD_WAIT].opts.StringVar(&opts[1], "tmo", "", "Timeout")
+	bindCmdUsage(CMD_WAIT,	[]string{"NAME"}, "Wait function event", true)
 
 	bindCmdUsage(CMD_MLS,	[]string{}, "List middleware", true)
 	bindCmdUsage(CMD_MADD,	[]string{"ID", "TYPE"}, "Add middleware", true)
