@@ -216,29 +216,29 @@ func (bucket *S3Bucket)dbFindAll() ([]S3Object, error) {
 
 func s3ListBucket(iam *S3Iam, akey *S3AccessKey, bname, acl string) (*swys3api.S3Bucket, error) {
 	var bucketList swys3api.S3Bucket
-	var bucketFound *S3Bucket
+	var bucket *S3Bucket
 	var err error
 
-	bucketFound, err = iam.FindBucket(akey, bname)
+	bucket, err = iam.FindBucket(akey, bname)
 	if err != nil {
 		log.Errorf("s3: Can't find bucket %s: %s", bname, err.Error())
 		return nil, err
 	}
 
-	bucketList.Name		= bucketFound.Name
+	bucketList.Name		= bucket.Name
 	bucketList.KeyCount	= 0
-	bucketList.MaxKeys	= bucketFound.MaxObjects
+	bucketList.MaxKeys	= bucket.MaxObjects
 	bucketList.IsTruncated	= false
 
 
-	objects, err := bucketFound.dbFindAll()
+	objects, err := bucket.dbFindAll()
 	if err != nil {
 		if err == mgo.ErrNotFound {
 			return &bucketList, nil
 		}
 
 		log.Errorf("s3: Can't find objects %s: %s",
-			infoLong(bucketFound), err.Error())
+			infoLong(bucket), err.Error())
 		return nil, err
 	}
 
