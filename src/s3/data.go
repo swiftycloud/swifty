@@ -1,7 +1,6 @@
 package main
 
 import (
-	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 	"crypto/md5"
 	"time"
@@ -17,17 +16,6 @@ type S3ObjectData struct {
 	State				uint32		`json:"state" bson:"state"`
 	Size				int64		`json:"size" bson:"size"`
 	Data				[]byte		`bson:"data,omitempty"`
-}
-
-func (objd *S3ObjectData)dbRemoveF() (error) {
-	var err error
-
-	err = dbS3Remove(objd, bson.M{"_id": objd.ObjID})
-	if err != nil && err != mgo.ErrNotFound {
-		log.Errorf("s3: Can't force remove %s: %s",
-			infoLong(objd), err.Error())
-	}
-	return err
 }
 
 func s3ObjectDataFind(refID bson.ObjectId) (*S3ObjectData, error) {
@@ -85,7 +73,7 @@ func s3ObjectDataAdd(refid bson.ObjectId, bucket_bid, object_bid string, data []
 	return objd, fmt.Sprintf("%x", md5.Sum(data)), nil
 
 out:
-	objd.dbRemoveF()
+	dbS3Remove(objd)
 	return nil, "", nil
 }
 

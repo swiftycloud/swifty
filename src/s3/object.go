@@ -45,15 +45,6 @@ type S3Object struct {
 	S3ObjectPorps					`json:",inline" bson:",inline"`
 }
 
-func (object *S3Object)dbRemoveF() (error) {
-	err := dbS3Remove(object, bson.M{"_id": object.ObjID})
-	if err != nil && err != mgo.ErrNotFound {
-		log.Errorf("s3: Can't force remove %s: %s",
-			infoLong(object), err.Error())
-	}
-	return err
-}
-
 func (bucket *S3Bucket)FindObject(oname string, version int) (*S3Object, error) {
 	var res S3Object
 
@@ -120,7 +111,7 @@ out:
 out_obj:
 	bucket.dbDelObj(object.Size)
 out_no_size:
-	object.dbRemoveF()
+	dbS3Remove(object)
 	return nil, err
 }
 

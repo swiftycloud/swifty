@@ -167,10 +167,6 @@ func dbS3Insert(o interface{}) (error) {
 	return err
 }
 
-func dbS3Remove(o interface{}, query bson.M) (error) {
-	return dbSession.DB(dbName).C(dbColl(o)).Remove(query)
-}
-
 func dbS3Update(query bson.M, update bson.M, o interface{}) (error) {
 	dbS3SetObjID(o, query)
 	c := dbSession.DB(dbName).C(dbColl(o))
@@ -223,6 +219,10 @@ func dbS3RemoveOnState(o interface{}, state uint32, query bson.M) (error) {
 	if query == nil { query = make(bson.M) }
 	query["state"] = state
 	return dbS3RemoveCond(o, query)
+}
+
+func dbS3Remove(o interface{}) (error) {
+	return dbS3RemoveCond(o, nil)
 }
 
 func dbS3FindOne(query bson.M, o interface{}) (error) {

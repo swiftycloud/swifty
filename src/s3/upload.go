@@ -35,15 +35,6 @@ type S3Upload struct {
 	S3ObjectPorps					`json:",inline" bson:",inline"`
 }
 
-func (part *S3UploadPart)dbRemoveF() (error) {
-	err := dbS3Remove(part, bson.M{"_id": part.ObjID})
-	if err != nil && err != mgo.ErrNotFound {
-		log.Errorf("s3: Can't force remove %s: %s",
-			infoLong(part), err.Error())
-	}
-	return err
-}
-
 func (upload *S3Upload)dbLock() (error) {
 	query := bson.M{ "state": S3StateActive, "lock": 0, "ref": 0 }
 	update := bson.M{ "$inc": bson.M{ "lock": 1 } }
@@ -87,15 +78,6 @@ func (upload *S3Upload)dbRefDec() (error) {
 	err := dbS3Update(query, update, upload)
 	if err != nil {
 		log.Errorf("s3: Can't -ref %s: %s",
-			infoLong(upload), err.Error())
-	}
-	return err
-}
-
-func (upload *S3Upload)dbRemoveF() (error) {
-	err := dbS3Remove(upload, bson.M{"_id": upload.ObjID})
-	if err != nil && err != mgo.ErrNotFound {
-		log.Errorf("s3: Can't force remove %s: %s",
 			infoLong(upload), err.Error())
 	}
 	return err

@@ -51,14 +51,6 @@ func (iam *S3Iam)NamespaceID() string {
 	return sha256sum([]byte(iam.Namespace))
 }
 
-func (iam *S3Iam)s3IamRemove() error {
-	return dbS3Remove(iam, bson.M{"_id": iam.ObjID})
-}
-
-func (akey *S3AccessKey)s3IamRemove() error {
-	return dbS3Remove(&S3Iam{}, bson.M{"_id": akey.IamID})
-}
-
 type iamResp struct {
 	iam *S3Iam
 	err error
