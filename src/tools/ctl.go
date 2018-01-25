@@ -230,6 +230,10 @@ func info_function(project string, args []string, opts [8]string) {
 			fmt.Printf("Time gate:   %d (avg %d) usec\n", ifo.Stats.TimeG, ifo.Stats.TimeG / ifo.Stats.Called)
 		}
 	}
+
+	if ifo.UserData != "" {
+		fmt.Printf("Data:        %s\n", ifo.UserData)
+	}
 }
 
 func detect_language(repo string) string {
@@ -343,6 +347,10 @@ func add_function(project string, args []string, opts [8]string) {
 		req.Size.Rate, req.Size.Burst = parse_rate(opts[5])
 	}
 
+	if opts[6] != "" {
+		req.UserData = opts[6]
+	}
+
 	make_faas_req("function/add", req, nil)
 
 }
@@ -398,6 +406,10 @@ func update_function(project string, args []string, opts [8]string) {
 			mw := strings.Split(opts[3], ",")
 			req.Mware = &mw
 		}
+	}
+
+	if opts[4] != "" {
+		req.UserData = opts[4]
 	}
 
 	make_faas_req("function/update", req, nil)
@@ -675,12 +687,14 @@ func main() {
 	cmdMap[CMD_ADD].opts.StringVar(&opts[3], "event", "", "Event this fn is to start")
 	cmdMap[CMD_ADD].opts.StringVar(&opts[4], "tmo", "", "Timeout")
 	cmdMap[CMD_ADD].opts.StringVar(&opts[5], "rl", "", "Rate (rate[:burst])")
+	cmdMap[CMD_ADD].opts.StringVar(&opts[6], "data", "", "Any text associated with fn")
 	bindCmdUsage(CMD_ADD,	[]string{"NAME"}, "Add a function", true)
 	bindCmdUsage(CMD_RUN,	[]string{"NAME", "ARGUMENTS..."}, "Run a function", true)
 	cmdMap[CMD_UPD].opts.StringVar(&opts[0], "src", "", "Source file")
 	cmdMap[CMD_UPD].opts.StringVar(&opts[1], "tmo", "", "Timeout")
 	cmdMap[CMD_UPD].opts.StringVar(&opts[2], "rl", "", "Rate (rate[:burst])")
 	cmdMap[CMD_UPD].opts.StringVar(&opts[3], "mw", "", "Mware to use, comma-separated")
+	cmdMap[CMD_UPD].opts.StringVar(&opts[4], "data", "", "Associated text")
 	bindCmdUsage(CMD_UPD,	[]string{"NAME"}, "Update a function", true)
 	bindCmdUsage(CMD_DEL,	[]string{"NAME"}, "Delete a function", true)
 	bindCmdUsage(CMD_LOGS,	[]string{"NAME"}, "Show function logs", true)

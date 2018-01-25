@@ -588,6 +588,7 @@ func handleFunctionInfo(ctx context.Context, w http.ResponseWriter, r *http.Requ
 				Rate:		fn.Size.Rate,
 				Burst:		fn.Size.Burst,
 			},
+			UserData:	fn.UserData,
 		})
 	if err != nil {
 		return GateErrE(swy.GateBadResp, err)

@@ -99,6 +99,7 @@ type FunctionDesc struct {
 	Src		FnSrcDesc	`bson:"src"`
 	Size		FnSizeDesc	`bson:"size"`
 	OneShot		bool		`bson:"oneshot"`
+	UserData	string		`bson:"userdata,omitempty"`
 }
 
 var zeroVersion = "0"
@@ -181,6 +182,7 @@ func getFunctionDesc(tennant string, p_add *swyapi.FunctionAdd) *FunctionDesc {
 			Env:		p_add.Code.Env,
 		},
 		Mware:	p_add.Mware,
+		UserData:	p_add.UserData,
 	}
 
 	fn.Cookie = fn.SwoId.Cookie()
@@ -299,6 +301,7 @@ func swyFixSize(sz *swyapi.FunctionSize, conf *YAMLConf) error {
 
 func updateFunction(ctx context.Context, conf *YAMLConf, id *SwoId, params *swyapi.FunctionUpdate) *swyapi.GateErr {
 	var err error
+	var restart bool
 	var rebuild bool
 	var mfix, rlfix bool
 
@@ -320,6 +323,7 @@ func updateFunction(ctx context.Context, conf *YAMLConf, id *SwoId, params *swya
 
 		update["src.version"] = fn.Src.Version
 		rebuild = RtBuilding(&fn.Code)
+		restart = true
 	}
 
 	if params.Size != nil {
@@ -350,11 +354,19 @@ func updateFunction(ctx context.Context, conf *YAMLConf, id *SwoId, params *swya
 			update["size.burst"] = params.Size.Burst
 			rlfix = true
 		}
+
+		restart = true
 	}
 
 	if params.Mware != nil {
 		fn.Mware = *params.Mware
 		update["mware"] = fn.Mware
+		restart = true
+	}
+
+	if params.UserData != "" {
+		fn.UserData = params.UserData
+		update["userdata"] = fn.UserData
 	}
 
 	if len(update) == 0 {
@@ -401,12 +413,14 @@ func updateFunction(ctx context.Context, conf *YAMLConf, id *SwoId, params *swya
 		}
 	}
 
-	if rebuild {
-		ctxlog(ctx).Debugf("Starting build dep")
-		err = swk8sRun(ctx, conf, fn, fn.InstBuild())
-	} else {
-		ctxlog(ctx).Debugf("Updating deploy")
-		err = swk8sUpdate(ctx, conf, fn)
+	if restart {
+		if rebuild {
+			ctxlog(ctx).Debugf("Starting build dep")
+			err = swk8sRun(ctx, conf, fn, fn.InstBuild())
+		} else {
+			ctxlog(ctx).Debugf("Updating deploy")
+			err = swk8sUpdate(ctx, conf, fn)
+		}
 	}
 
 	if err != nil {

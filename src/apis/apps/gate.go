@@ -43,6 +43,7 @@ type FunctionInfo struct {
 	URL		string			`json:"url"`
 	Stats		FunctionStats		`json:"stats"`
 	Size		FunctionSize		`json:"size"`
+	UserData	string			`json:"userdata"`
 }
 
 type RunCmd struct {
@@ -113,6 +114,7 @@ type FunctionAdd struct {
 	Event		FunctionEvent		`json:"event"`
 	Size		FunctionSize		`json:"size"`
 	Mware		[]string		`json:"mware"`
+	UserData	string			`json:"userdata"`
 }
 
 type FunctionState struct {
@@ -127,6 +129,7 @@ type FunctionUpdate struct {
 	Code		string			`json:"code"`
 	Size		*FunctionSize		`json:"size,omitempty"`
 	Mware		*[]string		`json:"mware,omitempty"`
+	UserData	string			`json:"userdata"`
 }
 
 type FunctionRemove struct {

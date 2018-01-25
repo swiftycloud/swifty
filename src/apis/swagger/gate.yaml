@@ -543,6 +543,9 @@ definitions:
         $ref: '#/definitions/FunctionSize'
       stats:
         $ref: '#/definitions/FunctionStats'
+      userdata:
+        type: string
+        description: The data provided during /add call
       mware:
         type: array
         items:
@@ -676,6 +679,9 @@ definitions:
       name:
         type: string
         example: my-function
+      userdata:
+        type: string
+        description: And string user wishes to keep with this FN
       sources:
         $ref: '#/definitions/FunctionSources'
       code:
@@ -705,6 +711,9 @@ definitions:
         example: 'cHJpbnQoIkhlbGxvIHdvcmxkIikK'
       size:
         $ref: '#/definitions/FunctionSize'
+      userdata:
+        type: string
+        description: And string user wishes to keep with this FN
       mware:
         type: array
         description: 'No value means "leave as is", any other value, even empty list, means "set to this"'
