@@ -56,16 +56,18 @@ func s3ObjectDataFind(refID bson.ObjectId) (*S3ObjectData, error) {
 }
 
 func s3ObjectDataAdd(refid bson.ObjectId, bucket_bid, object_bid string, data []byte) (*S3ObjectData, string, error) {
-	var objd S3ObjectData
+	var objd *S3ObjectData
 	var err error
 
-	objd.ObjID		= bson.NewObjectId()
-	objd.RefID		= refid
-	objd.BucketBID		= bucket_bid
-	objd.ObjectBID		= object_bid
-	objd.State		= S3StateNone
-	objd.Size		= int64(len(data))
-	objd.CreationTime	= time.Now().Format(time.RFC3339)
+	objd = &S3ObjectData {
+		ObjID:		bson.NewObjectId(),
+		RefID:		refid,
+		BucketBID:	bucket_bid,
+		ObjectBID:	object_bid,
+		State:		S3StateNone,
+		Size:		int64(len(data)),
+		CreationTime:	time.Now().Format(time.RFC3339),
+	}
 
 	if radosDisabled || objd.Size <= S3StorageSizePerObj {
 		if objd.Size > S3StorageSizePerObj {
@@ -89,7 +91,7 @@ func s3ObjectDataAdd(refid bson.ObjectId, bucket_bid, object_bid string, data []
 		}
 	}
 
-	if err = dbS3SetState(&objd, S3StateActive, nil); err != nil {
+	if err = dbS3SetState(objd, S3StateActive, nil); err != nil {
 		if objd.Data != nil {
 			radosDeleteObject(objd.BucketBID, objd.ObjectBID)
 		}
@@ -97,7 +99,7 @@ func s3ObjectDataAdd(refid bson.ObjectId, bucket_bid, object_bid string, data []
 	}
 
 	log.Debugf("s3: Added %s", infoLong(objd))
-	return &objd, fmt.Sprintf("%x", md5.Sum(data)), nil
+	return objd, fmt.Sprintf("%x", md5.Sum(data)), nil
 
 out:
 	objd.dbRemoveF()
