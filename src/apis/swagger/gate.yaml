@@ -154,6 +154,31 @@ paths:
           description: Need to authenticate
         '403':
           description: Bad authentication token
+  /function/wait:
+    post:
+      summary: Wait for an event on a function
+      parameters:
+        - in: header
+          name: X-Auth-Token
+          type: string
+          required: true
+        - name: data
+          in: body
+          description: Event to wait
+          required: true
+          schema:
+            $ref: '#/definitions/FunctionWait'
+      responses:
+        '200':
+          description: Event occurred
+        '400':
+          description: Something went wrong
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad authentication token
+        '524':
+          description: Timout while waiting for event
   /function/remove:
     post:
       summary: Remove a function
@@ -501,6 +526,29 @@ definitions:
         type: integer
         description: Total time spent in function code (in microseconds)
         example: 123000
+  FunctionWait:
+    type: object
+    description: What to wait on a function
+    required:
+      - name
+      - timeout
+    properties:
+      project:
+        type: string
+      name:
+        type: string
+        description: Function name
+      timeout:
+        type: integer
+        description: Timtout on milliseconds
+        example: '1000'
+      version:
+        type: string
+        example: '42'
+        description: >-
+          When a function version equals or (!) greater than this becomes
+          available for execution, the event occurs. Note, that older versions
+          may still be there when the event happens.
   FunctionEvent:
     type: object
     description: Event specification
