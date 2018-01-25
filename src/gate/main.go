@@ -1036,6 +1036,7 @@ func setupLogger(conf *YAMLConf) {
 
 func main() {
 	var config_path string
+	var showVersion bool
 	var err error
 
 	flag.StringVar(&config_path,
@@ -1043,7 +1044,13 @@ func main() {
 				"/etc/swifty/conf/gate.yaml",
 				"path to a config file")
 	flag.BoolVar(&SwyModeDevel, "devel", false, "launch in development mode")
+	flag.BoolVar(&showVersion, "version", false, "show version and exit")
 	flag.Parse()
+
+	if showVersion {
+		fmt.Printf("Version %s\n", Version)
+		return
+	}
 
 	if _, err := os.Stat(config_path); err == nil {
 		swy.ReadYamlConfig(config_path, &conf)
