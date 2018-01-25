@@ -48,7 +48,13 @@ func memdGetOrInit(cookie string, fn *FunctionDesc) *FnMemData {
 	nret.mem = fn.Size.Mem
 
 	ret, _ = fdmd.LoadOrStore(fn.Cookie, nret)
-	return ret.(*FnMemData)
+	lret := ret.(*FnMemData)
+
+	if lret != nret {
+		statsStop(&nret.stats)
+	}
+
+	return lret
 }
 
 func memdGone(fn *FunctionDesc) {

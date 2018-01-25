@@ -79,12 +79,16 @@ func statsInit(conf *YAMLConf) error {
 	return nil
 }
 
+func statsStop(st *FnStats) {
+	done := make(chan bool)
+	st.done <-done
+	<-done
+}
+
 func statsDrop(fn *FunctionDesc) error {
 	md := memdGetCond(fn.Cookie)
 	if md != nil {
-		done := make(chan bool)
-		md.stats.done <-done
-		<-done
+		statsStop(&md.stats)
 	}
 
 	return dbStatsDrop(fn.Cookie)
