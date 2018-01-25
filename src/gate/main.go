@@ -33,7 +33,7 @@ var gateSecPas []byte
 
 const (
 	SwyDefaultProject string	= "default"
-	SwyPodStartTmo time.Duration	= 30 * time.Second
+	SwyPodStartTmo time.Duration	= 24 * time.Second
 )
 
 var glog *zap.SugaredLogger

@@ -493,6 +493,7 @@ func removeFunction(ctx context.Context, conf *YAMLConf, id *SwoId) *swyapi.Gate
 		goto stalled
 	}
 
+	ctxlog(ctx).Debugf("Removed function %s", fn.SwoId.Str())
 	return nil
 
 stalled:
