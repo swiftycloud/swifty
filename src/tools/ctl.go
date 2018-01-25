@@ -414,6 +414,15 @@ func update_function(project string, args []string, opts [8]string) {
 
 	make_faas_req("function/update", req, nil)
 
+	if opts[5] != "" {
+		fmt.Printf("Wait FN %s\n", opts[5])
+		wait_fn(project, []string{args[0]}, [8]string{opts[5], "15000"})
+	}
+
+	if opts[6] != "" {
+		fmt.Printf("Run FN %s\n", opts[6])
+		run_function(project, []string{args[0], opts[6]}, [8]string{})
+	}
 }
 
 func del_function(project string, args []string, opts [8]string) {
@@ -695,6 +704,8 @@ func main() {
 	cmdMap[CMD_UPD].opts.StringVar(&opts[2], "rl", "", "Rate (rate[:burst])")
 	cmdMap[CMD_UPD].opts.StringVar(&opts[3], "mw", "", "Mware to use, comma-separated")
 	cmdMap[CMD_UPD].opts.StringVar(&opts[4], "data", "", "Associated text")
+	cmdMap[CMD_UPD].opts.StringVar(&opts[5], "ver", "", "Version")
+	cmdMap[CMD_UPD].opts.StringVar(&opts[6], "arg", "", "Args")
 	bindCmdUsage(CMD_UPD,	[]string{"NAME"}, "Update a function", true)
 	bindCmdUsage(CMD_DEL,	[]string{"NAME"}, "Delete a function", true)
 	bindCmdUsage(CMD_LOGS,	[]string{"NAME"}, "Show function logs", true)
