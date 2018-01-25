@@ -460,23 +460,23 @@ func swk8sPodUpd(obj_old, obj_new interface{}) {
 
 	if pod_old.State != swy.DBPodStateRdy {
 		if pod_new.State == swy.DBPodStateRdy {
-			go func() {
+			if xtimer.Cancel(pod_new.SwoId.Cookie()) {
 				ctxlog(ctx).Debugf("POD %s (%s) up (%s->%s) deploy %s", pod_new.UID, pod_new.WdogAddr,
 						podStates[pod_old.State], podStates[pod_new.State],
 						pod_new.DepName)
 
-				err = BalancerPodAdd(pod_new)
-				if err != nil {
-					ctxlog(ctx).Errorf("Can't add pod %s/%s/%s: %s",
-							pod_new.DepName, pod_new.UID,
-							pod_new.WdogAddr, err.Error())
-					return
-				}
+				go func() {
+					err = BalancerPodAdd(pod_new)
+					if err != nil {
+						ctxlog(ctx).Errorf("Can't add pod %s/%s/%s: %s",
+								pod_new.DepName, pod_new.UID,
+								pod_new.WdogAddr, err.Error())
+						return
+					}
 
-				if xtimer.Cancel(pod_new.SwoId.Cookie()) {
 					notifyPodUp(ctx, pod_new)
-				}
-			}()
+				}()
+			}
 		}
 	} else {
 		if pod_new.State != swy.DBPodStateRdy {
