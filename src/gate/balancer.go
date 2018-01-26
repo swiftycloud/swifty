@@ -104,18 +104,9 @@ type BalancerRS struct {
 	Version		string		`bson:"fnversion"`
 }
 
-func (rs *BalancerRS)VIP() string {
-	return rs.WdogAddr
-}
-
 type BalancerConn struct {
-	Addr	string
-	Port	int
-	Public	bool
-}
-
-func (conn *BalancerConn) VIP() string {
-	return conn.Addr + ":" + strconv.Itoa(conn.Port)
+	AddrPort	string
+	Public		bool
 }
 
 type BalancerLink struct {
@@ -125,6 +116,10 @@ type BalancerLink struct {
 	Addr		string		`bson:"addr"`
 	Port		uint		`bson:"port"`
 	Public		bool		`bson:"public"`
+}
+
+func (link *BalancerLink) VIP() string {
+	return link.Addr + ":" + strconv.Itoa(int(link.Port))
 }
 
 func (link *BalancerLink) lip() (*LocalIp) {

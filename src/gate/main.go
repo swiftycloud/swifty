@@ -703,7 +703,7 @@ out:
 
 func handleFunctionRun(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
 	var params swyapi.FunctionRun
-	var lrs *BalancerRS
+	var conn *BalancerConn
 	var res *swyapi.SwdFunctionRunResult
 
 	err := swyhttp.ReadAndUnmarshalReq(r, &params)
@@ -723,8 +723,8 @@ func handleFunctionRun(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	 * We can lookup id.Cookie() here, but ... it's manual run,
 	 * let's also make sure the FN exists at all
 	 */
-	lrs, err = dbBalancerPodFindExact(fn.Cookie, fn.Src.Version)
-	if lrs == nil {
+	conn, err = dbBalancerGetConnExact(fn.Cookie, fn.Src.Version)
+	if conn == nil {
 		if err == nil {
 			return GateErrM(swy.GateGenErr, "Nothing to run (yet)")
 		}
@@ -734,7 +734,7 @@ func handleFunctionRun(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		return GateErrD(err)
 	}
 
-	res, err = doRunIp(ctx, lrs.VIP(), nil, fn.Cookie, "run", params.Args)
+	res, err = doRunConn(ctx, conn, nil, fn.Cookie, "run", params.Args)
 	if err != nil {
 		return GateErrE(swy.GateGenErr, err)
 	}

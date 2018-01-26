@@ -252,7 +252,7 @@ func dbBalancerRSListVersions(fn *FunctionDesc) ([]string, error) {
 	return fv, err
 }
 
-func dbBalancerPodFindExact(fnid, version string) (*BalancerRS, error) {
+func dbBalancerGetConnExact(fnid, version string) (*BalancerConn, error) {
 	var v BalancerRS
 
 	c := dbSession.DB(dbState).C(DBColBalancerRS)
@@ -268,7 +268,7 @@ func dbBalancerPodFindExact(fnid, version string) (*BalancerRS, error) {
 		return nil, err
 	}
 
-	return &v, nil
+	return &BalancerConn{ AddrPort: v.WdogAddr }, nil
 }
 
 func dbBalancerPodAdd(link *BalancerLink, pod *k8sPod) error {
@@ -357,8 +357,7 @@ func dbBalancerGetConnInfo(field, value string) (*BalancerConn, error) {
 	}
 
 	return &BalancerConn{
-		Addr: link.Addr,
-		Port: int(link.Port),
+		AddrPort: link.VIP(),
 		Public: link.Public,
 	}, nil
 }

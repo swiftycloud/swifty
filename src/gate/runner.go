@@ -20,12 +20,7 @@ func doRun(ctx context.Context, fn *FunctionDesc, event string, args map[string]
 	return doRunConn(ctx, conn, nil, fn.Cookie, event, args)
 }
 
-func doRunConn(ctx context.Context, conn *BalancerConn, fmd *FnMemData,
-		cookie, event string, args map[string]string) (*swyapi.SwdFunctionRunResult, error) {
-	return doRunIp(ctx, conn.VIP(), fmd, cookie, event, args)
-}
-
-func doRunIp(ctx context.Context, VIP string, fmd *FnMemData, cookie, event string, args map[string]string) (*swyapi.SwdFunctionRunResult, error) {
+func doRunConn(ctx context.Context, conn *BalancerConn, fmd *FnMemData, cookie, event string, args map[string]string) (*swyapi.SwdFunctionRunResult, error) {
 	ctxlog(ctx).Debugf("RUN %s %s (%v)", cookie, event, args)
 
 	var wd_result swyapi.SwdFunctionRunResult
@@ -37,7 +32,7 @@ func doRunIp(ctx context.Context, VIP string, fmd *FnMemData, cookie, event stri
 
 	resp, err = swyhttp.MarshalAndPost(
 			&swyhttp.RestReq{
-				Address: "http://" + VIP + "/v1/run",
+				Address: "http://" + conn.AddrPort + "/v1/run",
 				Timeout: uint(conf.Runtime.Timeout.Max),
 			},
 			&swyapi.SwdFunctionRun{
