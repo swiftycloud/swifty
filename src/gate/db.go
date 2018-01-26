@@ -252,25 +252,6 @@ func dbBalancerRSListVersions(fn *FunctionDesc) ([]string, error) {
 	return fv, err
 }
 
-func dbBalancerGetConnExact(fnid, version string) (*BalancerConn, error) {
-	var v BalancerRS
-
-	c := dbSession.DB(dbState).C(DBColBalancerRS)
-	err := c.Find(bson.M{
-			"fnid":		fnid,
-			"instance":	swy.SwyPodInstRun,
-			"fnversion":	version,
-		}).One(&v)
-	if err != nil {
-		if err == mgo.ErrNotFound {
-			return nil, nil
-		}
-		return nil, err
-	}
-
-	return &BalancerConn{ AddrPort: v.WdogAddr }, nil
-}
-
 func dbBalancerPodAdd(link *BalancerLink, pod *k8sPod) error {
 	c := dbSession.DB(dbState).C(DBColBalancerRS)
 	err := c.Insert(bson.M{
@@ -368,6 +349,25 @@ func dbBalancerGetConnByDep(depname string) (*BalancerConn, error) {
 
 func dbBalancerGetConnByCookie(cookie string) (*BalancerConn, error) {
 	return dbBalancerGetConnInfo("fnid", cookie)
+}
+
+func dbBalancerGetConnExact(fnid, version string) (*BalancerConn, error) {
+	var v BalancerRS
+
+	c := dbSession.DB(dbState).C(DBColBalancerRS)
+	err := c.Find(bson.M{
+			"fnid":		fnid,
+			"instance":	swy.SwyPodInstRun,
+			"fnversion":	version,
+		}).One(&v)
+	if err != nil {
+		if err == mgo.ErrNotFound {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	return &BalancerConn{ AddrPort: v.WdogAddr }, nil
 }
 
 func dbBalancerLinkFindByDepname(depname string) (*BalancerLink, error) {
