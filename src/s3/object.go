@@ -144,16 +144,14 @@ func s3DeleteObject(bucket *S3Bucket, oname string) error {
 
 	objd, err = s3ObjectDataFind(object.ObjID)
 	if err != nil {
-		if err != mgo.ErrNotFound {
-			log.Errorf("s3: Can't find object data %s: %s",
-				infoLong(object), err.Error())
-			return err
-		}
-	} else {
-		err = s3ObjectDataDel(objd)
-		if err != nil {
-			return err
-		}
+		log.Errorf("s3: Can't find object data %s: %s",
+			infoLong(object), err.Error())
+		return err
+	}
+
+	err = s3ObjectDataDel(objd)
+	if err != nil {
+		return err
 	}
 
 	err = bucket.dbDelObj(object.Size)
@@ -161,7 +159,7 @@ func s3DeleteObject(bucket *S3Bucket, oname string) error {
 		return err
 	}
 
-	err = dbS3RemoveOnState(objd, S3StateInactive, nil)
+	err = dbS3RemoveOnState(object, S3StateInactive, nil)
 	if err != nil {
 		return err
 	}

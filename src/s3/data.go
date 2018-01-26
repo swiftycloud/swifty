@@ -46,16 +46,20 @@ func s3ObjectDataAdd(refid bson.ObjectId, bucket_bid, object_bid string, data []
 		CreationTime:	time.Now().Format(time.RFC3339),
 	}
 
+	if err = dbS3Insert(objd); err != nil {
+		goto out
+	}
+
 	if radosDisabled || objd.Size <= S3StorageSizePerObj {
 		if objd.Size > S3StorageSizePerObj {
 			log.Errorf("s3: Too big %s", infoLong(objd))
 			err = fmt.Errorf("s3: Object is too big")
-			return nil, "", err
+			goto out
 		}
 
-		objd.Data = data
-
-		if err = dbS3Insert(objd); err != nil {
+		update := bson.M{ "$set": bson.M{ "data": data }}
+		err = dbS3Update(nil, update, objd)
+		if err != nil {
 			goto out
 		}
 	} else {
@@ -66,7 +70,7 @@ func s3ObjectDataAdd(refid bson.ObjectId, bucket_bid, object_bid string, data []
 	}
 
 	if err = dbS3SetState(objd, S3StateActive, nil); err != nil {
-		if objd.Data != nil {
+		if objd.Data == nil {
 			radosDeleteObject(objd.BucketBID, objd.ObjectBID)
 		}
 		goto out

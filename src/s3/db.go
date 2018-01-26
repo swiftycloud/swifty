@@ -217,6 +217,7 @@ func dbS3SetMTime(o interface{}) {
 
 func dbS3Insert(o interface{}) (error) {
 	dbS3SetMTime(o)
+
 	err := dbSession.DB(dbName).C(dbColl(o)).Insert(o)
 	if err != nil {
 		log.Errorf("dbS3Insert: %s: %s", infoLong(o), err.Error())
@@ -225,8 +226,11 @@ func dbS3Insert(o interface{}) (error) {
 }
 
 func dbS3Update(query bson.M, update bson.M, o interface{}) (error) {
+	if query == nil { query = make(bson.M) }
+
 	dbS3SetObjID(o, query)
 	dbS3UpdateMTime(update)
+
 	c := dbSession.DB(dbName).C(dbColl(o))
 	change := mgo.Change{
 		Upsert:		false,
@@ -258,7 +262,9 @@ func dbS3SetState(o interface{}, state uint32, query bson.M) (error) {
 
 func dbS3RemoveCond(o interface{}, query bson.M) (error) {
 	if query == nil { query = make(bson.M) }
+
 	dbS3SetObjID(o, query)
+
 	c := dbSession.DB(dbName).C(dbColl(o))
 	change := mgo.Change{
 		Upsert:		false,
@@ -275,7 +281,9 @@ func dbS3RemoveCond(o interface{}, query bson.M) (error) {
 
 func dbS3RemoveOnState(o interface{}, state uint32, query bson.M) (error) {
 	if query == nil { query = make(bson.M) }
+
 	query["state"] = state
+
 	return dbS3RemoveCond(o, query)
 }
 
