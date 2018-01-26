@@ -121,7 +121,8 @@ func s3RepairBucket() error {
 
 	log.Debugf("s3: Running buckets consistency test")
 
-	err = dbS3FindAll(bson.M{ "state": S3StateNone }, &buckets)
+	states := bson.M{ "$in": []uint32{ S3StateNone, S3StateInactive } }
+	err = dbS3FindAll(bson.M{ "state": states }, &buckets)
 	if err != nil {
 		if err == mgo.ErrNotFound {
 			return nil
