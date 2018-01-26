@@ -156,10 +156,10 @@ out_nopool:
 }
 
 func s3DeleteBucket(iam *S3Iam, akey *S3AccessKey, bname, acl string) error {
-	var bucketFound *S3Bucket
+	var bucket *S3Bucket
 	var err error
 
-	bucketFound, err = iam.FindBucket(akey, bname)
+	bucket, err = iam.FindBucket(akey, bname)
 	if err != nil {
 		if err == mgo.ErrNotFound {
 			return nil
@@ -168,7 +168,7 @@ func s3DeleteBucket(iam *S3Iam, akey *S3AccessKey, bname, acl string) error {
 		return err
 	}
 
-	err = dbS3SetState(bucketFound, S3StateInactive, bson.M{"cnt-objects": 0})
+	err = dbS3SetState(bucket, S3StateInactive, bson.M{"cnt-objects": 0})
 	if err != nil {
 		if err == mgo.ErrNotFound {
 			return nil
@@ -176,17 +176,17 @@ func s3DeleteBucket(iam *S3Iam, akey *S3AccessKey, bname, acl string) error {
 		return err
 	}
 
-	err = radosDeletePool(bucketFound.BackendID)
+	err = radosDeletePool(bucket.BackendID)
 	if err != nil {
 		return err
 	}
 
-	err = bucketFound.dbRemove()
+	err = bucket.dbRemove()
 	if err != nil {
 		return err
 	}
 
-	log.Debugf("s3: Deleted %s", infoLong(bucketFound))
+	log.Debugf("s3: Deleted %s", infoLong(bucket))
 	return nil
 }
 
