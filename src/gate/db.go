@@ -306,28 +306,6 @@ func dbBalancerPodDelAll(link *BalancerLink) (error) {
 	return err
 }
 
-func dbBalancerOpRS(link *BalancerLink, update bson.M) (error) {
-	var v BalancerLink
-	c := dbSession.DB(dbState).C(DBColBalancer)
-	change := mgo.Change{
-		Upsert:		false,
-		Remove:		false,
-		Update:		update,
-		ReturnNew:	false,
-	}
-	querier := bson.M{ "_id": link.ObjID, }
-	_, err := c.Find(querier).Apply(change, &v)
-	if err != nil {
-		if err == mgo.ErrNotFound {
-			return nil
-		}
-
-		return fmt.Errorf("oprs: %s", err.Error())
-	}
-
-	return nil
-}
-
 func dbBalancerGetConnInfo(field, value string) (*BalancerConn, error) {
 	var link BalancerLink
 
