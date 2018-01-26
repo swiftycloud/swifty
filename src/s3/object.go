@@ -115,48 +115,9 @@ out_no_size:
 	return nil, err
 }
 
-func s3DeleteObjectFound(bucket *S3Bucket, object *S3Object) error {
-	var objdFound *S3ObjectData
-	var err error
-
-	err = dbS3SetState(object, S3StateInactive, nil)
-	if err != nil {
-		if err == mgo.ErrNotFound {
-			return nil
-		}
-		return err
-	}
-
-	objdFound, err = s3ObjectDataFind(object.ObjID)
-	if err != nil {
-		if err != mgo.ErrNotFound {
-			log.Errorf("s3: Can't find object data %s: %s",
-				infoLong(object), err.Error())
-			return err
-		}
-	} else {
-		err = s3ObjectDataDel(objdFound)
-		if err != nil {
-			return err
-		}
-	}
-
-	err = bucket.dbDelObj(object.Size)
-	if err != nil {
-		return err
-	}
-
-	err = dbS3RemoveOnState(objdFound, S3StateInactive, nil)
-	if err != nil {
-		return err
-	}
-
-	log.Debugf("s3: Deleted %s", infoLong(object))
-	return nil
-}
-
 func s3DeleteObject(bucket *S3Bucket, oname string, version int) error {
 	var object *S3Object
+	var objd *S3ObjectData
 	var err error
 
 	object, err = bucket.FindObject(oname, version)
@@ -169,7 +130,40 @@ func s3DeleteObject(bucket *S3Bucket, oname string, version int) error {
 		return err
 	}
 
-	return s3DeleteObjectFound(bucket, object)
+	err = dbS3SetState(object, S3StateInactive, nil)
+	if err != nil {
+		if err == mgo.ErrNotFound {
+			return nil
+		}
+		return err
+	}
+
+	objd, err = s3ObjectDataFind(object.ObjID)
+	if err != nil {
+		if err != mgo.ErrNotFound {
+			log.Errorf("s3: Can't find object data %s: %s",
+				infoLong(object), err.Error())
+			return err
+		}
+	} else {
+		err = s3ObjectDataDel(objd)
+		if err != nil {
+			return err
+		}
+	}
+
+	err = bucket.dbDelObj(object.Size)
+	if err != nil {
+		return err
+	}
+
+	err = dbS3RemoveOnState(objd, S3StateInactive, nil)
+	if err != nil {
+		return err
+	}
+
+	log.Debugf("s3: Deleted %s", infoLong(object))
+	return nil
 }
 
 func s3ReadObjectData(bucket *S3Bucket, object *S3Object) ([]byte, error) {
