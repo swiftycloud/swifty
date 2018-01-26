@@ -35,9 +35,11 @@ type S3ObjectPorps struct {
 
 type S3Object struct {
 	ObjID				bson.ObjectId	`bson:"_id,omitempty"`
+	MTime				int64		`json:"mtime,omitempty" bson:"mtime,omitempty"`
+	State				uint32		`json:"state" bson:"state"`
+
 	BucketObjID			bson.ObjectId	`bson:"bucket-id,omitempty"`
 	BackendID			string		`json:"bid" bson:"bid"`
-	State				uint32		`json:"state" bson:"state"`
 	Version				int		`json:"version" bson:"version"`
 	Size				int64		`json:"size" bson:"size"`
 	ETag				string		`json:"etag" bson:"etag"`
@@ -63,6 +65,9 @@ func s3AddObject(namespace string, bucket *S3Bucket, oname string,
 	var err error
 
 	object := &S3Object {
+		ObjID:		bson.NewObjectId(),
+		State:		S3StateNone,
+
 		S3ObjectPorps: S3ObjectPorps {
 			Key:		oname,
 			Acl:		acl,
@@ -71,10 +76,8 @@ func s3AddObject(namespace string, bucket *S3Bucket, oname string,
 
 		Version:	1,
 		Size:		size,
-		ObjID:		bson.NewObjectId(),
 		BucketObjID:	bucket.ObjID,
 		BackendID:	bucket.ObjectBID(oname, 1),
-		State:		S3StateNone,
 	}
 
 	if err = dbS3Insert(object); err != nil {

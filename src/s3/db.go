@@ -171,7 +171,17 @@ func dbS3SetObjID(o interface{}, query bson.M) {
 	}
 }
 
+func dbS3SetMTime(o interface{}) {
+	elem := reflect.ValueOf(o).Elem()
+	val := elem.FieldByName("MTime")
+	t := time.Now().Unix()
+	if val != reflect.ValueOf(nil) {
+		val.SetInt(t)
+	}
+}
+
 func dbS3Insert(o interface{}) (error) {
+	dbS3SetMTime(o)
 	err := dbSession.DB(dbName).C(dbColl(o)).Insert(o)
 	if err != nil {
 		log.Errorf("dbS3Insert: %s: %s", infoLong(o), err.Error())

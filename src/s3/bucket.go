@@ -32,6 +32,9 @@ type S3BucketEncrypt struct {
 
 type S3Bucket struct {
 	ObjID				bson.ObjectId	`bson:"_id,omitempty"`
+	MTime				int64		`json:"mtime,omitempty" bson:"mtime,omitempty"`
+	State				uint32		`json:"state" bson:"state"`
+
 	BackendID			string		`json:"bid,omitempty" bson:"bid,omitempty"`
 	NamespaceID			string		`json:"nsid,omitempty" bson:"nsid,omitempty"`
 	CreationTime			string		`json:"creation-time,omitempty" bson:"creation-time,omitempty"`
@@ -56,7 +59,6 @@ type S3Bucket struct {
 	// inventory
 	// notification
 
-	State				uint32		`json:"state" bson:"state"`
 	CntObjects			int64		`json:"cnt-objects" bson:"cnt-objects"`
 	CntBytes			int64		`json:"cnt-bytes" bson:"cnt-bytes"`
 	Name				string		`json:"name" bson:"name"`
@@ -121,13 +123,14 @@ func s3InsertBucket(iam *S3Iam, akey *S3AccessKey, bname, acl string) error {
 	}
 
 	bucket := &S3Bucket{
+		ObjID:		bson.NewObjectId(),
+		State:		S3StateNone,
+
 		Name:		bname,
 		Acl:		acl,
-		ObjID:		bson.NewObjectId(),
 		BackendID:	iam.BucketBID(bname),
 		NamespaceID:	iam.NamespaceID(),
 		CreationTime:	time.Now().Format(time.RFC3339),
-		State:		S3StateNone,
 		MaxObjects:	S3StorageMaxObjects,
 		MaxBytes:	S3StorageMaxBytes,
 	}

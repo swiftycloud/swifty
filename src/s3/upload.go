@@ -13,9 +13,11 @@ import (
 
 type S3UploadPart struct {
 	ObjID				bson.ObjectId	`bson:"_id,omitempty"`
+	MTime				int64		`json:"mtime,omitempty" bson:"mtime,omitempty"`
+	State				uint32		`json:"state" bson:"state"`
+
 	UploadObjID			bson.ObjectId	`bson:"upload-id,omitempty"`
 	BackendID			string		`json:"bid" bson:"bid"`
-	State				uint32		`json:"state" bson:"state"`
 
 	Part				int		`json:"part" bson:"part"`
 	Size				int64		`json:"size" bson:"size"`
@@ -26,11 +28,12 @@ type S3UploadPart struct {
 
 type S3Upload struct {
 	ObjID				bson.ObjectId	`bson:"_id,omitempty"`
+	MTime				int64		`json:"mtime,omitempty" bson:"mtime,omitempty"`
+	State				uint32		`json:"state" bson:"state"`
 	BucketObjID			bson.ObjectId	`bson:"bucket-id,omitempty"`
 	UploadID			string		`json:"uid" bson:"uid"`
 	Ref				int64		`json:"ref" bson:"ref"`
 	Lock				uint32		`json:"lock" bson:"lock"`
-	State				uint32		`json:"state" bson:"state"`
 
 	S3ObjectPorps					`json:",inline" bson:",inline"`
 }
@@ -146,6 +149,9 @@ func s3UploadInit(bucket *S3Bucket, oname, acl string) (*S3Upload, error) {
 	var err error
 
 	upload := S3Upload{
+		ObjID:		bson.NewObjectId(),
+		State:		S3StateActive,
+
 		S3ObjectPorps: S3ObjectPorps {
 			Key:		oname,
 			Acl:		acl,
@@ -154,7 +160,6 @@ func s3UploadInit(bucket *S3Bucket, oname, acl string) (*S3Upload, error) {
 
 		BucketObjID:	bucket.ObjID,
 		UploadID:	bucket.UploadUID(oname),
-		State:		S3StateActive,
 	}
 
 	if err = dbS3Insert(upload); err != nil {
@@ -190,12 +195,13 @@ func s3UploadPart(namespace string, bucket *S3Bucket, oname,
 
 	part = &S3UploadPart{
 		ObjID:		bson.NewObjectId(),
+		State:		S3StateNone,
+
 		S3ObjectPorps: S3ObjectPorps {
 			CreationTime:	time.Now().Format(time.RFC3339),
 		},
 		UploadObjID:	upload.ObjID,
 		BackendID:	upload.ObjectBID(oname, partno),
-		State:		S3StateNone,
 		Part:		partno,
 		Size:		int64(len(data)),
 	}

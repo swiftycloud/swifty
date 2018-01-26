@@ -9,11 +9,13 @@ import (
 
 type S3ObjectData struct {
 	ObjID				bson.ObjectId	`bson:"_id,omitempty"`
+	MTime				int64		`json:"mtime,omitempty" bson:"mtime,omitempty"`
+	State				uint32		`json:"state" bson:"state"`
+
 	RefID				bson.ObjectId	`bson:"ref-id,omitempty"`
 	BucketBID			string		`json:"bucket-bid,omitempty" bson:"bucket-bid,omitempty"`
 	ObjectBID			string		`json:"object-bid,omitempty" bson:"object-bid,omitempty"`
 	CreationTime			string		`json:"creation-time,omitempty" bson:"creation-time,omitempty"`
-	State				uint32		`json:"state" bson:"state"`
 	Size				int64		`json:"size" bson:"size"`
 	Data				[]byte		`bson:"data,omitempty"`
 }
@@ -35,10 +37,11 @@ func s3ObjectDataAdd(refid bson.ObjectId, bucket_bid, object_bid string, data []
 
 	objd = &S3ObjectData {
 		ObjID:		bson.NewObjectId(),
+		State:		S3StateNone,
+
 		RefID:		refid,
 		BucketBID:	bucket_bid,
 		ObjectBID:	object_bid,
-		State:		S3StateNone,
 		Size:		int64(len(data)),
 		CreationTime:	time.Now().Format(time.RFC3339),
 	}
