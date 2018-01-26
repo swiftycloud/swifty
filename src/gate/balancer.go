@@ -126,7 +126,7 @@ func (link *BalancerLink) lip() (*LocalIp) {
 	return &LocalIp{Addr: link.Addr, Port: link.Port}
 }
 
-func balancerServiceAdd(lip *LocalIp) (error) {
+func ipvsCreate(lip *LocalIp) (error) {
 	args := fmt.Sprintf("-A -t %s:%d -s rr", lip.Addr, lip.Port)
 	_, stderr, err := swy.Exec("ipvsadm", strings.Split(args, " "))
 	if stderr.String() != "" {
@@ -139,7 +139,7 @@ func balancerServiceAdd(lip *LocalIp) (error) {
 	return nil
 }
 
-func balancerServiceDel(lip *LocalIp) (error) {
+func ipvsDelete(lip *LocalIp) (error) {
 	args := fmt.Sprintf("-D -t %s:%d", lip.Addr, lip.Port)
 	_, stderr, err := swy.Exec("ipvsadm", strings.Split(args, " "))
 	if stderr.String() != "" {
@@ -152,7 +152,7 @@ func balancerServiceDel(lip *LocalIp) (error) {
 	return nil
 }
 
-func balancerAddRS(link *BalancerLink, addr string) (error) {
+func ipvsRAttach(link *BalancerLink, addr string) (error) {
 	args := fmt.Sprintf("-a -t %s:%d -m -r %s", link.Addr, link.Port, addr)
 	_, stderr, err := swy.Exec("ipvsadm", strings.Split(args, " "))
 	if stderr.String() != "" {
@@ -165,7 +165,7 @@ func balancerAddRS(link *BalancerLink, addr string) (error) {
 	return nil
 }
 
-func balancerDelRS(link *BalancerLink, addr string) (error) {
+func ipvsRDetach(link *BalancerLink, addr string) (error) {
 	args := fmt.Sprintf("-d -t %s:%d -r %s", link.Addr, link.Port, addr)
 	_, stderr, err := swy.Exec("ipvsadm", strings.Split(args, " "))
 	if stderr.String() != "" {
@@ -192,14 +192,19 @@ func BalancerPodDel(pod *k8sPod) error {
 		return fmt.Errorf("No link: %s", err.Error())
 	}
 
-	rs, err = dbBalancerPodPop(link, pod)
+	rs, err = dbBalancerPodFind(link, pod)
 	if err != nil {
 		return fmt.Errorf("Pop error: %s", err.Error())
 	}
 
-	err = balancerDelRS(link, rs.WdogAddr)
+	err = ipvsRDetach(link, rs.WdogAddr)
 	if err != nil {
 		return fmt.Errorf("IPVS error: %s", err.Error())
+	}
+
+	err = dbBalancerPodDel(link, pod)
+	if err != nil {
+		return fmt.Errorf("Pod del error: %s", err.Error())
 	}
 
 	return nil
@@ -257,7 +262,7 @@ func BalancerPodAdd(pod *k8sPod) error {
 		return fmt.Errorf("Add error: %s", err.Error())
 	}
 
-	err = balancerAddRS(link, pod.WdogAddr)
+	err = ipvsRAttach(link, pod.WdogAddr)
 	if err != nil {
 		dbBalancerPodDel(link, pod)
 		return fmt.Errorf("IPVS error: %s", err.Error())
@@ -280,24 +285,23 @@ func BalancerDelete(ctx context.Context, depname string) (error) {
 		return fmt.Errorf("Link get err: %s", err.Error())
 	}
 
-	err = dbBalancerPodDelAll(link)
-	if err != nil {
-		return fmt.Errorf("POD del all error: %s", err.Error())
-	}
-
 	lip := link.lip()
-	err = balancerServiceDel(lip)
+	err = ipvsDelete(lip)
 	if err != nil {
 		return err
 	}
 
-	putLocalIp <- lip
+	err = dbBalancerPodDelAll(link)
+	if err != nil {
+		return fmt.Errorf("POD del all error: %s", err.Error())
+	}
 
 	err = dbBalancerLinkDel(link)
 	if err != nil {
 		return fmt.Errorf("Del error: %s", err.Error())
 	}
 
+	putLocalIp <- lip
 	ctxlog(ctx).Debugf("Removed balancer for %s (ip %s)", depname, lip)
 
 	return nil
@@ -322,19 +326,16 @@ func BalancerCreate(ctx context.Context, cookie, depname string, public bool) (e
 		Public:	 public,
 	}
 
-	err = balancerServiceAdd(lip)
+	err = dbBalancerLinkAdd(link)
 	if err != nil {
 		putLocalIp <- lip
+		ctxlog(ctx).Errorf("balancer-db: Can't insert link %v: %s", link, err.Error())
 		return err
 	}
 
-	err = dbBalancerLinkAdd(link)
+	err = ipvsCreate(lip)
 	if err != nil {
-		ctxlog(ctx).Errorf("balancer-db: Can't insert link %v: %s", link, err.Error())
-		errdel := balancerServiceDel(lip)
-		if errdel != nil {
-			err = fmt.Errorf("%s: %s", err.Error(), errdel.Error())
-		}
+		dbBalancerLinkDel(link)
 		putLocalIp <- lip
 		return err
 	}

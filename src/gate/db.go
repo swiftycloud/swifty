@@ -283,11 +283,11 @@ func dbBalancerPodDel(link *BalancerLink, pod *k8sPod) (error) {
 	return nil
 }
 
-func dbBalancerPodPop(link *BalancerLink, pod *k8sPod) (*BalancerRS, error) {
+func dbBalancerPodFind(link *BalancerLink, pod *k8sPod) (*BalancerRS, error) {
 	var v BalancerRS
 
 	c := dbSession.DB(dbState).C(DBColBalancerRS)
-	_, err := c.Find(bson.M{ "uid":	pod.UID }).Apply(mgo.Change{Remove: true}, &v)
+	err := c.Find(bson.M{ "uid": pod.UID }).One(&v)
 	if err != nil {
 		return nil, fmt.Errorf("pop: %s", err.Error())
 	}
