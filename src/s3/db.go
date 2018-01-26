@@ -202,7 +202,9 @@ func current_timestamp() int64 {
 }
 
 func dbS3UpdateMTime(query bson.M) {
-	query["mtime"] = current_timestamp()
+	if val, ok := query["$set"]; ok {
+		val.(bson.M)["mtime"] = current_timestamp()
+	}
 }
 
 func dbS3SetMTime(o interface{}) {
