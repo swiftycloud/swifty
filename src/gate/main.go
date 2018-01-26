@@ -660,16 +660,12 @@ func handleFunctionCall(w http.ResponseWriter, r *http.Request) {
 	fnId := mux.Vars(r)["fnid"]
 
 	code := http.StatusServiceUnavailable
-	link, err := dbBalancerLinkFindByCookie(fnId)
+	conn, err := dbBalancerGetConnByCookie(fnId)
 	if err != nil {
 		err = errors.New("DB error")
 		goto out
 	}
-	if link == nil {
-		err = errors.New("No such function")
-		goto out
-	}
-	if !link.Public {
+	if !conn.Public {
 		err = errors.New("No API for function")
 		goto out
 	}
@@ -685,7 +681,7 @@ func handleFunctionCall(w http.ResponseWriter, r *http.Request) {
 
 	arg_map = makeArgMap(r)
 	code = http.StatusInternalServerError
-	res, err = doRunLink(ctx, link, fmd, fnId, "run", arg_map)
+	res, err = doRunLink(ctx, conn, fmd, fnId, "run", arg_map)
 	if err != nil {
 		goto out
 	}

@@ -11,22 +11,22 @@ import (
 )
 
 func doRun(ctx context.Context, fn *FunctionDesc, event string, args map[string]string) (*swyapi.SwdFunctionRunResult, error) {
-	link, err := dbBalancerLinkFindByCookie(fn.Cookie)
-	if link == nil {
+	conn, err := dbBalancerGetConnByCookie(fn.Cookie)
+	if conn == nil {
 		ctxlog(ctx).Errorf("Can't find %s cookie balancer: %s", fn.Cookie, err.Error())
 		return nil, fmt.Errorf("Can't find balancer for %s", fn.Cookie)
 	}
 
-	return doRunLink(ctx, link, nil, fn.Cookie, event, args)
+	return doRunLink(ctx, conn, nil, fn.Cookie, event, args)
 }
 
-func doRunLink(ctx context.Context, link *BalancerLink, fmd *FnMemData,
+func doRunLink(ctx context.Context, conn *BalancerConn, fmd *FnMemData,
 		cookie, event string, args map[string]string) (*swyapi.SwdFunctionRunResult, error) {
-	if link.CntRS == 0 {
+	if conn.CntRS == 0 {
 		return nil, fmt.Errorf("No available pods found")
 	}
 
-	return doRunIp(ctx, link.VIP(), fmd, cookie, event, args)
+	return doRunIp(ctx, conn.VIP(), fmd, cookie, event, args)
 }
 
 func doRunIp(ctx context.Context, VIP string, fmd *FnMemData, cookie, event string, args map[string]string) (*swyapi.SwdFunctionRunResult, error) {
@@ -82,14 +82,14 @@ func buildFunction(ctx context.Context, fn *FunctionDesc) error {
 
 	orig_state = fn.State
 	ctxlog(ctx).Debugf("build RUN %s", fn.SwoId.Str())
-	link, err := dbBalancerLinkFindByDepname(fn.InstBuild().DepName())
+	conn, err := dbBalancerGetConnByDep(fn.InstBuild().DepName())
 	if err != nil {
 		ctxlog(ctx).Errorf("Can't find build balancer: %s", err.Error())
 		err = fmt.Errorf("Can't find build balancer for %s", fn.SwoId.Str())
 		goto out
 	}
 
-	res, err = doRunLink(ctx, link, nil, fn.Cookie, "build", map[string]string{})
+	res, err = doRunLink(ctx, conn, nil, fn.Cookie, "build", map[string]string{})
 	ctxlog(ctx).Debugf("build %s finished", fn.SwoId.Str())
 	logSaveEvent(fn, "built", "")
 	if err != nil {

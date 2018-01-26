@@ -108,6 +108,17 @@ func (rs *BalancerRS)VIP() string {
 	return rs.WdogAddr
 }
 
+type BalancerConn struct {
+	Addr	string
+	Port	int
+	CntRS	int
+	Public	bool
+}
+
+func (conn *BalancerConn) VIP() string {
+	return conn.Addr + ":" + strconv.Itoa(conn.Port)
+}
+
 type BalancerLink struct {
 	ObjID		bson.ObjectId	`bson:"_id,omitempty"`
 	FnId		string		`bson:"fnid"`
@@ -117,10 +128,6 @@ type BalancerLink struct {
 	NumRS		uint		`bson:"numrs"`
 	CntRS		uint		`bson:"cntrs"`
 	Public		bool		`bson:"public"`
-}
-
-func (link *BalancerLink) VIP() string {
-	return link.Addr + ":" + strconv.Itoa(int(link.Port))
 }
 
 func (link *BalancerLink) lip() (*LocalIp) {

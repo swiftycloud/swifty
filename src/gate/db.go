@@ -372,6 +372,39 @@ func dbBalancerRefDecRS(link *BalancerLink) (error) {
 		bson.M{"$inc": bson.M{"cntrs": -1}})
 }
 
+func dbBalancerGetConnInfo(field, value string) (*BalancerConn, error) {
+	var resp []bson.M
+
+	c := dbSession.DB(dbState).C(DBColBalancerRS)
+	err := c.Pipe([]bson.M{
+		bson.M{"$match":bson.M{field: value}},
+		bson.M{"$count":"cntrs"},
+		bson.M{"$addFields":bson.M{field:value}},
+		bson.M{"$lookup":bson.M{"from":"Balancer","localField":"depname","foreignField":"depname","as":"link"}},
+	}).All(&resp)
+	if err != nil {
+		fmt.Errorf("No pipe %s", err.Error())
+		return nil, err
+	}
+
+	l := resp[0]["link"].([]interface{})[0].(bson.M)
+
+	return &BalancerConn{
+		Addr: l["addr"].(string),
+		Port: l["port"].(int),
+		CntRS: resp[0]["cntrs"].(int),
+		Public: l["public"].(bool),
+	}, nil
+}
+
+func dbBalancerGetConnByDep(depname string) (*BalancerConn, error) {
+	return dbBalancerGetConnInfo("depname", depname)
+}
+
+func dbBalancerGetConnByCookie(cookie string) (*BalancerConn, error) {
+	return dbBalancerGetConnInfo("fnid", cookie)
+}
+
 func dbBalancerLinkFind(q bson.M) (*BalancerLink, error) {
 	var link BalancerLink
 
