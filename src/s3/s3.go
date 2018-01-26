@@ -16,24 +16,6 @@ func verifyAclValue(acl string, acls []string) bool {
 	return false
 }
 
-const (
-	S3StateNone			= 0
-	S3StateActive			= 1
-	S3StateInactive			= 2
-)
-
-const (
-	S3StorageMaxObjects		= int64(10000)
-	S3StorageMaxBytes		= int64(100 << 20)
-	S3StorageSizePerObj		= int64(16 << 20)
-)
-
-var s3StateTransition = map[uint32][]uint32 {
-	S3StateNone:		[]uint32{ S3StateNone, },
-	S3StateActive:		[]uint32{ S3StateNone, },
-	S3StateInactive:	[]uint32{ S3StateActive, },
-}
-
 func s3VerifyAdmin(r *http.Request) error {
 	access_token := r.Header.Get("X-SwyS3-Token")
 
