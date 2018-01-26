@@ -42,8 +42,6 @@ func (upload *S3Upload)dbLock() (error) {
 	if err != nil {
 		log.Errorf("s3: Can't lock %s: %s",
 			infoLong(upload), err.Error())
-	} else {
-		upload.Lock = 1
 	}
 	return err
 }
@@ -55,8 +53,6 @@ func (upload *S3Upload)dbUnlock() (error) {
 	if err != nil {
 		log.Errorf("s3: Can't unclock %s: %s",
 			infoLong(upload), err.Error())
-	} else {
-		upload.Lock = 0
 	}
 	return err
 }
