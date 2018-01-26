@@ -348,27 +348,18 @@ func dbBalancerOpRS(link *BalancerLink, update bson.M) (error) {
 }
 
 func dbBalancerGetConnInfo(field, value string) (*BalancerConn, error) {
-	var resp []bson.M
+	var link BalancerLink
 
-	c := dbSession.DB(dbState).C(DBColBalancerRS)
-	err := c.Pipe([]bson.M{
-		bson.M{"$match":bson.M{field: value}},
-		bson.M{"$count":"cntrs"},
-		bson.M{"$addFields":bson.M{field:value}},
-		bson.M{"$lookup":bson.M{"from":"Balancer","localField":"depname","foreignField":"depname","as":"link"}},
-	}).All(&resp)
+	c := dbSession.DB(dbState).C(DBColBalancer)
+	err := c.Find(bson.M{field: value}).One(&link)
 	if err != nil {
-		fmt.Errorf("No pipe %s", err.Error())
 		return nil, err
 	}
 
-	l := resp[0]["link"].([]interface{})[0].(bson.M)
-
 	return &BalancerConn{
-		Addr: l["addr"].(string),
-		Port: l["port"].(int),
-		CntRS: resp[0]["cntrs"].(int),
-		Public: l["public"].(bool),
+		Addr: link.Addr,
+		Port: int(link.Port),
+		Public: link.Public,
 	}, nil
 }
 

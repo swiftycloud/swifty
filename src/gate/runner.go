@@ -17,15 +17,11 @@ func doRun(ctx context.Context, fn *FunctionDesc, event string, args map[string]
 		return nil, fmt.Errorf("Can't find balancer for %s", fn.Cookie)
 	}
 
-	return doRunLink(ctx, conn, nil, fn.Cookie, event, args)
+	return doRunConn(ctx, conn, nil, fn.Cookie, event, args)
 }
 
-func doRunLink(ctx context.Context, conn *BalancerConn, fmd *FnMemData,
+func doRunConn(ctx context.Context, conn *BalancerConn, fmd *FnMemData,
 		cookie, event string, args map[string]string) (*swyapi.SwdFunctionRunResult, error) {
-	if conn.CntRS == 0 {
-		return nil, fmt.Errorf("No available pods found")
-	}
-
 	return doRunIp(ctx, conn.VIP(), fmd, cookie, event, args)
 }
 
@@ -89,7 +85,7 @@ func buildFunction(ctx context.Context, fn *FunctionDesc) error {
 		goto out
 	}
 
-	res, err = doRunLink(ctx, conn, nil, fn.Cookie, "build", map[string]string{})
+	res, err = doRunConn(ctx, conn, nil, fn.Cookie, "build", map[string]string{})
 	ctxlog(ctx).Debugf("build %s finished", fn.SwoId.Str())
 	logSaveEvent(fn, "built", "")
 	if err != nil {

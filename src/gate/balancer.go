@@ -111,7 +111,6 @@ func (rs *BalancerRS)VIP() string {
 type BalancerConn struct {
 	Addr	string
 	Port	int
-	CntRS	int
 	Public	bool
 }
 
