@@ -88,6 +88,10 @@ func dbConnect(conf *YAMLConf) error {
 	dbColMap[reflect.TypeOf(&S3Iam{})] = DBColS3Iams
 	dbColMap[reflect.TypeOf([]S3Iam{})] = DBColS3Iams
 	dbColMap[reflect.TypeOf(&[]S3Iam{})] = DBColS3Iams
+	dbColMap[reflect.TypeOf(S3AccessKey{})] = DBColS3AccessKeys
+	dbColMap[reflect.TypeOf(&S3AccessKey{})] = DBColS3AccessKeys
+	dbColMap[reflect.TypeOf([]S3AccessKey{})] = DBColS3AccessKeys
+	dbColMap[reflect.TypeOf(&[]S3AccessKey{})] = DBColS3AccessKeys
 	dbColMap[reflect.TypeOf(S3Bucket{})] = DBColS3Buckets
 	dbColMap[reflect.TypeOf(&S3Bucket{})] = DBColS3Buckets
 	dbColMap[reflect.TypeOf([]S3Bucket{})] = DBColS3Buckets
@@ -171,12 +175,19 @@ func dbS3SetObjID(o interface{}, query bson.M) {
 	}
 }
 
+func current_timestamp() int64 {
+	return time.Now().Unix()
+}
+
+func dbS3UpdateMTime(query bson.M) {
+	query["mtime"] = current_timestamp()
+}
+
 func dbS3SetMTime(o interface{}) {
 	elem := reflect.ValueOf(o).Elem()
 	val := elem.FieldByName("MTime")
-	t := time.Now().Unix()
 	if val != reflect.ValueOf(nil) {
-		val.SetInt(t)
+		val.SetInt(current_timestamp())
 	}
 }
 
@@ -191,6 +202,7 @@ func dbS3Insert(o interface{}) (error) {
 
 func dbS3Update(query bson.M, update bson.M, o interface{}) (error) {
 	dbS3SetObjID(o, query)
+	dbS3UpdateMTime(update)
 	c := dbSession.DB(dbName).C(dbColl(o))
 	change := mgo.Change{
 		Upsert:		false,
