@@ -445,59 +445,64 @@ func removeFunction(ctx context.Context, conf *YAMLConf, id *SwoId) *swyapi.Gate
 		return GateErrD(err)
 	}
 
+	ctxlog(ctx).Debugf("Forget function %s", fn.SwoId.Str())
 	// Allow to remove function if only we're in known state,
 	// otherwise wait for function building to complete
 	err = dbFuncSetStateCond(id, swy.DBFuncStateTrm, []int{
-			swy.DBFuncStateRdy, swy.DBFuncStateStl, swy.DBFuncStateDea})
+			swy.DBFuncStateRdy, swy.DBFuncStateStl,
+			swy.DBFuncStateDea, swy.DBFuncStateTrm})
 	if err != nil {
 		ctxlog(ctx).Errorf("Can't terminate function %s: %s", id.Name, err.Error())
 		return GateErrM(swy.GateGenErr, "Cannot terminate fn")
 	}
 
-	ctxlog(ctx).Debugf("Forget function %s", fn.SwoId.Str())
-
 	if !fn.OneShot && (fn.State != swy.DBFuncStateDea) {
+		ctxlog(ctx).Debugf("`- delete deploy")
 		err = swk8sRemove(ctx, conf, fn, fn.Inst())
 		if err != nil {
 			ctxlog(ctx).Errorf("remove deploy error: %s", err.Error())
-			goto stalled
+			goto later
 		}
 	}
 
-
+	ctxlog(ctx).Debugf("`- setdown events")
 	err = eventSetup(ctx, conf, fn, false)
 	if err != nil {
-		goto stalled
+		goto later
 	}
 
+	ctxlog(ctx).Debugf("`- drop stats")
 	err = statsDrop(fn)
 	if err != nil {
-		goto stalled
+		goto later
 	}
 
+	ctxlog(ctx).Debugf("`- remove logs")
 	err = logRemove(fn)
 	if err != nil {
 		ctxlog(ctx).Errorf("logs %s remove error: %s", fn.SwoId.Str(), err.Error())
-		goto stalled
+		goto later
 	}
 
+	ctxlog(ctx).Debugf("`- clean sources")
 	err = cleanRepo(fn)
 	if err != nil {
-		goto stalled
+		goto later
 	}
 
+	ctxlog(ctx).Debugf("`- gone fdmd")
 	memdGone(fn)
 
+	ctxlog(ctx).Debugf("`- and ...")
 	err = dbFuncRemove(fn)
 	if err != nil {
-		goto stalled
+		goto later
 	}
 
-	ctxlog(ctx).Debugf("Removed function %s", fn.SwoId.Str())
+	ctxlog(ctx).Debugf("Removed function %s!", fn.SwoId.Str())
 	return nil
 
-stalled:
-	dbFuncSetState(ctx, fn, swy.DBFuncStateStl)
+later:
 	return GateErrE(swy.GateGenErr, err)
 }
 
