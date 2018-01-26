@@ -115,6 +115,43 @@ func (iam *S3Iam)FindBucket(key *S3AccessKey, bname string) (*S3Bucket, error) {
 	return &res, nil
 }
 
+func s3RepairBucket() error {
+	var buckets []S3Bucket
+	var err error
+
+	log.Debugf("s3: Running buckets consistency test")
+
+	err = dbS3FindAll(bson.M{ "state": S3StateNone }, &buckets)
+	if err != nil {
+		if err == mgo.ErrNotFound {
+			return nil
+		}
+		log.Errorf("s3: s3RepairBucket failed: %s", err.Error())
+		return err
+	}
+
+	for _, bucket := range buckets {
+		log.Debugf("s3: Detected stale bucket %s", infoLong(&bucket))
+
+		err = radosDeletePool(bucket.BackendID)
+		if err != nil {
+			log.Errorf("s3: %s backend bucket may stale",
+				bucket.BackendID)
+		}
+
+		err = dbS3Remove(&bucket)
+		if err != nil {
+			log.Debugf("s3: Can't remove bucket %s", infoLong(&bucket))
+			return err
+		}
+
+		log.Debugf("s3: Removed stale bucket %s", infoLong(&bucket))
+	}
+
+	log.Debugf("s3: Buckets consistency passed")
+	return nil
+}
+
 func s3InsertBucket(iam *S3Iam, akey *S3AccessKey, bname, acl string) error {
 	var err error
 

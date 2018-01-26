@@ -122,6 +122,18 @@ func dbDisconnect() {
 	dbName = ""
 }
 
+func dbRepair() error {
+	var err error
+
+	log.Debugf("s3: Running db consistency test/repair")
+
+	if err = s3RepairBucket(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func dbColl(object interface{}) (string) {
 	if name, ok := dbColMap[reflect.TypeOf(object)]; ok {
 		return name

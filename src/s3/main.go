@@ -755,6 +755,11 @@ func main() {
 		log.Fatalf("Can't setup notifications: %s", err.Error())
 	}
 
+	err = dbRepair()
+	if err != nil {
+		log.Fatalf("Can't process db test/repair: %s", err.Error())
+	}
+
 	go func() {
 		adminsrv = &http.Server{
 			Handler:      radminsrv,
