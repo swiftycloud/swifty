@@ -106,7 +106,8 @@ func (iam *S3Iam)FindBucket(key *S3AccessKey, bname string) (*S3Bucket, error) {
 		return nil, err
 	}
 
-	err = dbS3FindOne(bson.M{"bid": iam.BucketBID(bname)}, &res)
+	query := bson.M{ "bid": iam.BucketBID(bname), "state": S3StateActive }
+	err = dbS3FindOne(query, &res)
 	if err != nil {
 		return nil, err
 	}
@@ -196,9 +197,8 @@ func s3DeleteBucket(iam *S3Iam, akey *S3AccessKey, bname, acl string) error {
 func (bucket *S3Bucket)dbFindAll() ([]S3Object, error) {
 	var res []S3Object
 
-	err := dbS3FindAll(
-			bson.M{"bucket-id": bucket.ObjID},
-			&res)
+	query := bson.M{ "bucket-id": bucket.ObjID, "state": S3StateActive }
+	err := dbS3FindAll(query, &res)
 	if err != nil {
 		return nil, err
 	}

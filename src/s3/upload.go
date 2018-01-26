@@ -183,7 +183,8 @@ func s3UploadPart(namespace string, bucket *S3Bucket, oname,
 		return "", err
 	}
 
-	err = dbS3FindOne(bson.M{"uid": uid, "state": S3StateActive}, &upload)
+	query := bson.M{"uid": uid, "state": S3StateActive}
+	err = dbS3FindOne(query, &upload)
 	if err != nil {
 		return "", err
 	}
@@ -252,7 +253,8 @@ func s3UploadFini(namespace string, bucket *S3Bucket, uid string,
 	var data []byte
 	var err error
 
-	err = dbS3FindOne(bson.M{"uid": uid}, &upload)
+	query := bson.M{"uid": uid, "state": S3StateActive}
+	err = dbS3FindOne(query, &upload)
 	if err != nil {
 		return nil, err
 	}

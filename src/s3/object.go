@@ -50,7 +50,8 @@ type S3Object struct {
 func (bucket *S3Bucket)FindObject(oname string, version int) (*S3Object, error) {
 	var res S3Object
 
-	err := dbS3FindOne(bson.M{"bid": bucket.ObjectBID(oname, version)}, &res)
+	query := bson.M{ "bid": bucket.ObjectBID(oname, version), "state": S3StateActive }
+	err := dbS3FindOne(query, &res)
 	if err != nil {
 		return nil, err
 	}
