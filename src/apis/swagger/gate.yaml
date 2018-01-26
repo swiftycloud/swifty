@@ -801,8 +801,12 @@ definitions:
             baz: fuz
   FunctionRunResult:
     required:
+      - code
       - return
     properties:
+      code:
+        type: integer
+        description: Result of the execution (0 == all went OK)
       return:
         type: string
         description: JSON-encoded function return object

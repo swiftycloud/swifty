@@ -740,6 +740,7 @@ func handleFunctionRun(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	}
 
 	err = swyhttp.MarshalAndWrite(w, swyapi.FunctionRunResult{
+		Code:		res.Code,
 		Return:		res.Return,
 		Stdout:		res.Stdout,
 		Stderr:		res.Stderr,
