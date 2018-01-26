@@ -150,7 +150,7 @@ func dbInsertAccessKey(akey *S3AccessKey) (error) {
 	akey_encoded := *akey
 	akey_encoded.AccessKeySecret = AccessKeySecret
 
-	err = dbSession.DB(dbName).C(DBColS3AccessKeys).Insert(&akey_encoded)
+	err = dbS3Insert(&akey_encoded)
 	if err != nil {
 		log.Errorf("dbInsertAccessKey: Can't insert akey %v: %s",
 				akey, err.Error())
@@ -170,8 +170,7 @@ func dbRemoveAccessKey(AccessKeyID string) (error) {
 		return err
 	}
 
-	id := bson.M{"_id": akey.ObjID}
-	err = dbSession.DB(dbName).C(DBColS3AccessKeys).Remove(id)
+	err = dbS3Remove(akey)
 	if err != nil {
 		log.Debugf("dbRemoveAccessKey: Can't remove akey %v: %s",
 				akey, err.Error())
