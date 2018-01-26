@@ -405,28 +405,13 @@ func dbBalancerGetConnByCookie(cookie string) (*BalancerConn, error) {
 	return dbBalancerGetConnInfo("fnid", cookie)
 }
 
-func dbBalancerLinkFind(q bson.M) (*BalancerLink, error) {
+func dbBalancerLinkFindByDepname(depname string) (*BalancerLink, error) {
 	var link BalancerLink
 
 	c := dbSession.DB(dbState).C(DBColBalancer)
-	err := c.Find(q).One(&link)
+	err := c.Find(bson.M{"depname": depname}).One(&link)
 
 	return &link, err
-}
-
-func dbBalancerLinkFindByDepname(depname string) (*BalancerLink, error) {
-	return dbBalancerLinkFind(bson.M{"depname": depname})
-}
-
-func dbBalancerLinkFindByCookie(cookie string) (*BalancerLink, error) {
-	l, e := dbBalancerLinkFind(bson.M{"fnid": cookie})
-	if e == nil {
-		return l, nil
-	} else if e == mgo.ErrNotFound {
-		return nil, nil
-	} else {
-		return nil, e
-	}
 }
 
 func dbBalancerLinkFindAll() ([]BalancerLink, error) {
