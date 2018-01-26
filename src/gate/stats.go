@@ -29,6 +29,7 @@ type FnStats struct {
 	RunCost		uint64		`bson:"runcost"`
 
 	dirty		bool
+	closed		bool
 	done		chan chan bool
 	flushed		chan bool
 }
@@ -87,7 +88,7 @@ func statsStop(st *FnStats) {
 
 func statsDrop(fn *FunctionDesc) error {
 	md := memdGetCond(fn.Cookie)
-	if md != nil {
+	if md != nil && !md.stats.closed {
 		statsStop(&md.stats)
 	}
 
@@ -103,7 +104,8 @@ func fnStatsInit(st *FnStats, fn *FunctionDesc) {
 		for {
 			select {
 			case done := <-st.done:
-				done <- true
+				st.closed = true
+				close(done)
 				return
 			case <-time.After(statsFlushPeriod * time.Second):
 				if st.dirty {
