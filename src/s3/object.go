@@ -47,10 +47,10 @@ type S3Object struct {
 	S3ObjectPorps					`json:",inline" bson:",inline"`
 }
 
-func (bucket *S3Bucket)FindObject(oname string, version int) (*S3Object, error) {
+func (bucket *S3Bucket)FindObject(oname string) (*S3Object, error) {
 	var res S3Object
 
-	query := bson.M{ "bid": bucket.ObjectBID(oname, version), "state": S3StateActive }
+	query := bson.M{ "bid": bucket.ObjectBID(oname, 1), "state": S3StateActive }
 	err := dbS3FindOne(query, &res)
 	if err != nil {
 		return nil, err
@@ -119,12 +119,12 @@ out_no_size:
 	return nil, err
 }
 
-func s3DeleteObject(bucket *S3Bucket, oname string, version int) error {
+func s3DeleteObject(bucket *S3Bucket, oname string) error {
 	var object *S3Object
 	var objd *S3ObjectData
 	var err error
 
-	object, err = bucket.FindObject(oname, version)
+	object, err = bucket.FindObject(oname)
 	if err != nil {
 		if err == mgo.ErrNotFound {
 			return nil
@@ -198,7 +198,7 @@ func s3ReadObject(bucket *S3Bucket, oname string, part, version int) ([]byte, er
 	var object *S3Object
 	var err error
 
-	object, err = bucket.FindObject(oname, version)
+	object, err = bucket.FindObject(oname)
 	if err != nil {
 		if err == mgo.ErrNotFound {
 			return nil, err

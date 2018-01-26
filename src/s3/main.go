@@ -467,7 +467,7 @@ func handleObject(w http.ResponseWriter, r *http.Request) {
 			}
 		} else {
 			// Delete a bucket
-			err = s3DeleteObject(bucket, oname, 0)
+			err = s3DeleteObject(bucket, oname)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusBadRequest)
 				return
