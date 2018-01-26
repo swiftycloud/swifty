@@ -274,10 +274,10 @@ func dbBalancerPodFindExact(fnid, version string) (*BalancerRS, error) {
 func dbBalancerPodAdd(link *BalancerLink, pod *k8sPod) error {
 	c := dbSession.DB(dbState).C(DBColBalancerRS)
 	err := c.Insert(bson.M{
-			"balancerid":	link.ObjID,
+			"fnid":		link.FnId,
+			"depname":	pod.DepName,
 			"uid":		pod.UID,
 			"wdogaddr":	pod.WdogAddr,
-			"fnid":		link.FnId,
 			"instance":	pod.Instance,
 			"fnversion":	pod.Version,
 		})
@@ -295,10 +295,7 @@ func dbBalancerPodAdd(link *BalancerLink, pod *k8sPod) error {
 
 func dbBalancerPodDel(link *BalancerLink, pod *k8sPod) (error) {
 	c := dbSession.DB(dbState).C(DBColBalancerRS)
-	err := c.Remove(bson.M{
-			"balancerid":	link.ObjID,
-			"uid":	pod.UID,
-		})
+	err := c.Remove(bson.M{ "uid":	pod.UID, })
 	if err != nil {
 		if err == mgo.ErrNotFound {
 			return nil
@@ -319,10 +316,7 @@ func dbBalancerPodPop(link *BalancerLink, pod *k8sPod) (*BalancerRS, error) {
 	var v BalancerRS
 
 	c := dbSession.DB(dbState).C(DBColBalancerRS)
-	_, err := c.Find(bson.M{
-			"balancerid":	link.ObjID,
-			"uid":	pod.UID,
-		}).Apply(mgo.Change{Remove: true}, &v)
+	_, err := c.Find(bson.M{ "uid":	pod.UID }).Apply(mgo.Change{Remove: true}, &v)
 	if err != nil {
 		return nil, fmt.Errorf("pop: %s", err.Error())
 	}
@@ -338,9 +332,7 @@ func dbBalancerPodPop(link *BalancerLink, pod *k8sPod) (*BalancerRS, error) {
 
 func dbBalancerPodDelAll(link *BalancerLink) (error) {
 	c := dbSession.DB(dbState).C(DBColBalancerRS)
-	err := c.Remove(bson.M{
-			"balancerid":	link.ObjID,
-		})
+	err := c.Remove(bson.M{ "depname": link.DepName })
 	if err == mgo.ErrNotFound {
 		err = nil
 	}

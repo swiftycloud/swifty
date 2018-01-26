@@ -97,10 +97,10 @@ func manageLocalIps() {
 
 type BalancerRS struct {
 	ObjID		bson.ObjectId	`bson:"_id,omitempty"`
-	BalancerId	bson.ObjectId	`bson:"balancerid,omitempty"`
+	FnId		string		`bson:"fnid"`
+	DepName		string		`bson:"depname"`
 	UID		string		`bson:"uid"`
 	WdogAddr	string		`bson:"wdogaddr"`
-	FnId		string		`bson:"fnid"`
 	Version		string		`bson:"fnversion"`
 }
 
