@@ -252,24 +252,6 @@ func dbBalancerRSListVersions(fn *FunctionDesc) ([]string, error) {
 	return fv, err
 }
 
-func dbBalancerPodFind(link *BalancerLink, uid string) (*BalancerRS, error) {
-	var v BalancerRS
-
-	c := dbSession.DB(dbState).C(DBColBalancerRS)
-	err := c.Find(bson.M{
-			"balancerid":	link.ObjID,
-			"uid":		uid,
-		}).One(&v)
-	if err != nil {
-		if err == mgo.ErrNotFound {
-			return nil, nil
-		}
-		return nil, err
-	}
-
-	return &v, nil
-}
-
 func dbBalancerPodFindExact(fnid, version string) (*BalancerRS, error) {
 	var v BalancerRS
 
