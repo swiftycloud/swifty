@@ -23,7 +23,6 @@ import (
 	"fmt"
 
 	"../common"
-	"../common/xtimer"
 )
 
 var swk8sClientSet *kubernetes.Clientset
@@ -342,18 +341,13 @@ func swk8sRun(ctx context.Context, conf *YAMLConf, fn *FunctionDesc, fi *FnInst)
 		},
 	}
 
-	xtimer.Create(fn.Cookie)
-
 	deploy := swk8sClientSet.Extensions().Deployments(v1.NamespaceDefault)
 	_, err = deploy.Create(&deployspec)
 	if err != nil {
-		xtimer.Cancel(fn.Cookie)
 		BalancerDelete(ctx, depname)
 		ctxlog(ctx).Errorf("Can't start deployment %s: %s", fn.SwoId.Str(), err.Error())
 		return errors.New("K8S error")
 	}
-
-	xtimer.Start(fn.Cookie, fi.Str(), SwyPodStartTmo, swk8sPodTmo)
 
 	return nil
 }
@@ -460,23 +454,21 @@ func swk8sPodUpd(obj_old, obj_new interface{}) {
 
 	if pod_old.State != swy.DBPodStateRdy {
 		if pod_new.State == swy.DBPodStateRdy {
-			if xtimer.Cancel(pod_new.SwoId.Cookie()) {
-				ctxlog(ctx).Debugf("POD %s (%s) up (%s->%s) deploy %s", pod_new.UID, pod_new.WdogAddr,
-						podStates[pod_old.State], podStates[pod_new.State],
-						pod_new.DepName)
+			ctxlog(ctx).Debugf("POD %s (%s) up (%s->%s) deploy %s", pod_new.UID, pod_new.WdogAddr,
+					podStates[pod_old.State], podStates[pod_new.State],
+					pod_new.DepName)
 
-				go func() {
-					err = BalancerPodAdd(pod_new)
-					if err != nil {
-						ctxlog(ctx).Errorf("Can't add pod %s/%s/%s: %s",
-								pod_new.DepName, pod_new.UID,
-								pod_new.WdogAddr, err.Error())
-						return
-					}
+			go func() {
+				err = BalancerPodAdd(pod_new)
+				if err != nil {
+					ctxlog(ctx).Errorf("Can't add pod %s/%s/%s: %s",
+							pod_new.DepName, pod_new.UID,
+							pod_new.WdogAddr, err.Error())
+					return
+				}
 
-					notifyPodUp(ctx, pod_new)
-				}()
-			}
+				notifyPodUp(ctx, pod_new)
+			}()
 		}
 	} else {
 		if pod_new.State != swy.DBPodStateRdy {
