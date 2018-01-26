@@ -301,7 +301,7 @@ func swk8sRun(ctx context.Context, conf *YAMLConf, fn *FunctionDesc, fi *FnInst)
 			HostNetwork:	false,
 			Containers:	[]v1.Container{
 				{
-					Name:		fn.Name,
+					Name:		"wdog",
 					Image:		img,
 					Env:		envs,
 					VolumeMounts:	[]v1.VolumeMount{
