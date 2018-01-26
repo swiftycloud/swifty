@@ -322,7 +322,7 @@ func swk8sRun(ctx context.Context, conf *YAMLConf, fn *FunctionDesc, fi *FnInst)
 
 	nr_replicas := fi.Replicas()
 
-	err = BalancerCreate(ctx, fn.Cookie, depname, uint(nr_replicas), fn.URLCall)
+	err = BalancerCreate(ctx, fn.Cookie, depname, fn.URLCall)
 	if err != nil {
 		ctxlog(ctx).Errorf("Can't create balancer %s for %s: %s", depname, fn.SwoId.Str(), err.Error())
 		return errors.New("Net error")

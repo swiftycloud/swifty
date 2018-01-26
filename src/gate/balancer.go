@@ -125,8 +125,6 @@ type BalancerLink struct {
 	DepName		string		`bson:"depname"`
 	Addr		string		`bson:"addr"`
 	Port		uint		`bson:"port"`
-	NumRS		uint		`bson:"numrs"`
-	CntRS		uint		`bson:"cntrs"`
 	Public		bool		`bson:"public"`
 }
 
@@ -311,7 +309,7 @@ func BalancerDelete(ctx context.Context, depname string) (error) {
 	return nil
 }
 
-func BalancerCreate(ctx context.Context, cookie, depname string, numrs uint, public bool) (error) {
+func BalancerCreate(ctx context.Context, cookie, depname string, public bool) (error) {
 	var err error
 
 	resp := make(chan *LocalIp)
@@ -327,7 +325,6 @@ func BalancerCreate(ctx context.Context, cookie, depname string, numrs uint, pub
 		Port:	 lip.Port,
 		DepName: depname,
 		FnId:	 cookie,
-		NumRS:	 numrs,
 		Public:	 public,
 	}
 

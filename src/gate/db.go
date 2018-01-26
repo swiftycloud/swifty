@@ -285,11 +285,6 @@ func dbBalancerPodAdd(link *BalancerLink, pod *k8sPod) error {
 		return fmt.Errorf("add: %s", err.Error())
 	}
 
-	err = dbBalancerRefIncRS(link)
-	if err != nil {
-		return fmt.Errorf("inc rs: %s", err.Error())
-	}
-
 	return nil
 }
 
@@ -304,11 +299,6 @@ func dbBalancerPodDel(link *BalancerLink, pod *k8sPod) (error) {
 		return fmt.Errorf("del: %s", err.Error())
 	}
 
-	err = dbBalancerRefDecRS(link)
-	if err != nil {
-		return fmt.Errorf("dec rs: %s", err.Error())
-	}
-
 	return nil
 }
 
@@ -319,11 +309,6 @@ func dbBalancerPodPop(link *BalancerLink, pod *k8sPod) (*BalancerRS, error) {
 	_, err := c.Find(bson.M{ "uid":	pod.UID }).Apply(mgo.Change{Remove: true}, &v)
 	if err != nil {
 		return nil, fmt.Errorf("pop: %s", err.Error())
-	}
-
-	err = dbBalancerRefDecRS(link)
-	if err != nil {
-		return &v, fmt.Errorf("dec rs: %s", err.Error())
 	}
 
 	return &v, nil
@@ -360,16 +345,6 @@ func dbBalancerOpRS(link *BalancerLink, update bson.M) (error) {
 	}
 
 	return nil
-}
-
-func dbBalancerRefIncRS(link *BalancerLink) (error) {
-	return dbBalancerOpRS(link,
-		bson.M{"$inc": bson.M{"cntrs": 1}})
-}
-
-func dbBalancerRefDecRS(link *BalancerLink) (error) {
-	return dbBalancerOpRS(link,
-		bson.M{"$inc": bson.M{"cntrs": -1}})
 }
 
 func dbBalancerGetConnInfo(field, value string) (*BalancerConn, error) {
