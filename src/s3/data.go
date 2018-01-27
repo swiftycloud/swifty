@@ -1,6 +1,7 @@
 package main
 
 import (
+	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 	"crypto/md5"
 	"time"
@@ -19,6 +20,46 @@ type S3ObjectData struct {
 	CreationTime			string		`json:"creation-time,omitempty" bson:"creation-time,omitempty"`
 	Size				int64		`json:"size" bson:"size"`
 	Data				[]byte		`bson:"data,omitempty"`
+}
+
+func s3RepairObjectData() error {
+	var objds []S3ObjectData
+	var err error
+
+	log.Debugf("s3: Running object data consistency test")
+
+	states := bson.M{ "$in": []uint32{ S3StateNone, S3StateInactive } }
+	err = dbS3FindAll(bson.M{ "state": states }, &objds)
+	if err != nil {
+		if err == mgo.ErrNotFound {
+			return nil
+		}
+		log.Errorf("s3: s3RepairObjectData failed: %s", err.Error())
+		return err
+	}
+
+	for _, objd := range objds {
+		log.Debugf("s3: Detected stale object data %s", infoLong(&objd))
+
+		if objd.Data == nil {
+			err = radosDeleteObject(objd.BucketBID, objd.ObjectBID)
+			if err != nil {
+				log.Errorf("s3: %s/%s backend object data may stale",
+					objd.BucketBID, objd.ObjectBID)
+			}
+		}
+
+		err = dbS3Remove(&objd)
+		if err != nil {
+			log.Debugf("s3: Can't remove object data %s", infoLong(&objd))
+			return err
+		}
+
+		log.Debugf("s3: Removed stale object data %s", infoLong(&objd))
+	}
+
+	log.Debugf("s3: Object data consistency passed")
+	return nil
 }
 
 func s3ObjectDataFind(refID bson.ObjectId) (*S3ObjectData, error) {

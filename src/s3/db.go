@@ -134,6 +134,11 @@ func dbRepair() error {
 		return err
 	}
 
+	if err = s3RepairObjectData(); err != nil {
+		return err
+	}
+
+	log.Debugf("s3: Finished db consistency test/repair")
 	return nil
 }
 
@@ -165,8 +170,8 @@ func infoLong(o interface{}) (string) {
 			bucket.Name)
 	case reflect.TypeOf(&S3ObjectData{}):
 		objd := o.(*S3ObjectData)
-		return fmt.Sprintf("{ S3ObjectData: %s/%s/%s/%s/%d/%d }",
-			objd.ObjID, objd.RefID,
+		return fmt.Sprintf("{ S3ObjectData: %s/%s/%s/%s/%s/%d/%d }",
+			objd.ObjID, objd.RefID, objd.BackendID,
 			objd.BucketBID, objd.ObjectBID,
 			objd.State, objd.Size)
 	case reflect.TypeOf(&S3Object{}):
