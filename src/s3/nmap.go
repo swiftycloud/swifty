@@ -73,3 +73,8 @@ func (bucket *S3Bucket)ObjectBID(oname string, version int) string {
 func (upload *S3Upload)ObjectBID(oname string, part int) string {
 	return sha256sum([]byte(upload.UploadID + oname + strconv.Itoa(part)))
 }
+
+// Object data mapped to object/bucket or part/upload pairs
+func ObjdBID(bucket_bid, object_bid string) string {
+	return sha256sum([]byte(bucket_bid + object_bid))
+}

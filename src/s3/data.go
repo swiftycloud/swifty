@@ -13,6 +13,7 @@ type S3ObjectData struct {
 	State				uint32		`json:"state" bson:"state"`
 
 	RefID				bson.ObjectId	`bson:"ref-id,omitempty"`
+	BackendID			string		`json:"bid" bson:"bid"`
 	BucketBID			string		`json:"bucket-bid,omitempty" bson:"bucket-bid,omitempty"`
 	ObjectBID			string		`json:"object-bid,omitempty" bson:"object-bid,omitempty"`
 	CreationTime			string		`json:"creation-time,omitempty" bson:"creation-time,omitempty"`
@@ -40,6 +41,7 @@ func s3ObjectDataAdd(refid bson.ObjectId, bucket_bid, object_bid string, data []
 		State:		S3StateNone,
 
 		RefID:		refid,
+		BackendID:	ObjdBID(bucket_bid, object_bid),
 		BucketBID:	bucket_bid,
 		ObjectBID:	object_bid,
 		Size:		int64(len(data)),
