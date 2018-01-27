@@ -94,7 +94,7 @@ func s3ObjectDataDel(objd *S3ObjectData) (error) {
 		return err
 	}
 
-	if objd.Data != nil {
+	if objd.Data == nil {
 		err = radosDeleteObject(objd.BucketBID, objd.ObjectBID)
 		if err != nil {
 			return err
