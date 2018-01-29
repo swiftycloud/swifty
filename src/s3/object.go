@@ -47,6 +47,74 @@ type S3Object struct {
 	S3ObjectPorps					`json:",inline" bson:",inline"`
 }
 
+func s3RepairObjectInactive() error {
+	var objects []S3Object
+	var err error
+
+	log.Debugf("s3: Processing inactive objects")
+
+	states := bson.M{ "$in": []uint32{ S3StateNone, S3StateInactive } }
+	err = dbS3FindAll(bson.M{ "state": states }, &objects)
+	if err != nil {
+		if err == mgo.ErrNotFound {
+			return nil
+		}
+		log.Errorf("s3: s3RepairObjectInactive failed: %s", err.Error())
+		return err
+	}
+
+	for _, object := range objects {
+		log.Debugf("s3: Detected stale object %s", infoLong(&object))
+
+		objd, err := s3ObjectDataFind(object.ObjID)
+		if err != nil {
+			if err != mgo.ErrNotFound {
+				log.Errorf("s3: Can't find object data %s: %s",
+					infoLong(object), err.Error())
+				return err
+			}
+		} else {
+			if objd.Data == nil {
+				err = radosDeleteObject(objd.BucketBID, objd.ObjectBID)
+				if err != nil {
+					return err
+				}
+			}
+
+			err = dbS3Remove(objd)
+			if err != nil {
+				log.Errorf("s3: Can't delete object data %s: %s",
+					infoLong(objd), err.Error())
+				return err
+			}
+		}
+
+		err = dbS3Remove(&object)
+		if err != nil {
+			log.Errorf("s3: Can't delete object %s: %s",
+				infoLong(&object), err.Error())
+			return err
+		}
+
+		log.Debugf("s3: Removed stale object %s", infoLong(&object))
+	}
+
+	return nil
+}
+
+func s3RepairObject() error {
+	var err error
+
+	log.Debugf("s3: Running objects consistency test")
+
+	if err = s3RepairObjectInactive(); err != nil {
+		return err
+	}
+
+	log.Debugf("s3: Objects consistency passed")
+	return nil
+}
+
 func (bucket *S3Bucket)FindObject(oname string) (*S3Object, error) {
 	var res S3Object
 
