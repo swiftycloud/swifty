@@ -94,9 +94,7 @@ func s3RepairPartsInactive() error {
 	for _, part := range parts {
 		log.Debugf("s3: Detected stale part %s", infoLong(&part))
 
-		update := bson.M{ "$set": bson.M{ "state": S3StateInactive } }
-		query  := bson.M{ "ref-id": part.ObjID }
-		if err = dbS3Update(query, update, false, &S3ObjectData{}); err != nil {
+		if err = s3DeactivateObjectData(part.ObjID); err != nil {
 			if err != mgo.ErrNotFound {
 				log.Errorf("s3: Can't deactivate data on part %s: %s",
 					infoLong(&part), err.Error())

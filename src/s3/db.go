@@ -134,11 +134,11 @@ func dbRepair() error {
 		return err
 	}
 
-	if err = s3RepairObjectData(); err != nil {
+	if err = s3RepairObject(); err != nil {
 		return err
 	}
 
-	if err = s3RepairObject(); err != nil {
+	if err = s3RepairObjectData(); err != nil {
 		return err
 	}
 

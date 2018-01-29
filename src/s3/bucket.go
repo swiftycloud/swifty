@@ -70,6 +70,13 @@ type S3Bucket struct {
 	MaxBytes			int64		`json:"max-bytes" bson:"max-bytes"`
 }
 
+func s3DirtifyBucket(id bson.ObjectId) error {
+	query := bson.M{ "_id": id, "ref": bson.M{ "$eq":  0 } }
+	update := bson.M{ "$set": bson.M{ "ref": 1 } }
+
+	return dbS3Update(query, update, false, &S3Bucket{})
+}
+
 func (bucket *S3Bucket)dbRemove() (error) {
 	query := bson.M{ "cnt-objects": 0 }
 	return dbS3RemoveOnState(bucket, S3StateInactive, query)

@@ -38,15 +38,15 @@ func s3RepairObjectData() error {
 	}
 
 	for _, objd := range objds {
-		var object S3Object
 		var part S3UploadPart
+		var object S3Object
+		var bucket S3Bucket
 
 		log.Debugf("s3: Detected stale object data %s", infoLong(&objd))
 
-		update := bson.M{ "$set": bson.M{ "state": S3StateInactive } }
-		query := bson.M{ "_id": objd.RefID }
+		query_ref := bson.M{ "_id": objd.RefID }
 
-		err = dbS3FindOne(query, &object)
+		err = dbS3FindOne(query_ref, &object)
 		if err != nil {
 			if err != mgo.ErrNotFound {
 				log.Errorf("s3: Can't find object on data %s: %s",
@@ -54,7 +54,7 @@ func s3RepairObjectData() error {
 				return err
 			}
 
-			err = dbS3FindOne(query, &part)
+			err = dbS3FindOne(query_ref, &part)
 			if err != nil {
 				if err != mgo.ErrNotFound {
 					log.Errorf("s3: Can't find part on data %s: %s",
@@ -62,24 +62,46 @@ func s3RepairObjectData() error {
 					return err
 				}
 			} else {
-				if err = dbS3Update(nil, update, true, &part); err != nil {
-					log.Errorf("s3: Can't deactivate part on data %s: %s",
-						infoLong(&part), infoLong(&objd), err.Error())
-					return err
+				if err = dbS3Remove(&part); err != nil {
+					if err != mgo.ErrNotFound {
+						log.Errorf("s3: Can't remove part on data %s: %s",
+							infoLong(&objd), err.Error())
+						return err
+					}
 				}
-
-				log.Debugf("s3: Deactivated part on data %s: %s",
+				log.Debugf("s3: Removed part on data %s: %s",
 					infoLong(&part), infoLong(&objd), err.Error())
 			}
 		} else {
-			if err = dbS3Update(nil, update, true, &object); err != nil {
-				log.Errorf("s3: Can't deactivate object on data %s: %s",
-					infoLong(&object), infoLong(&objd), err.Error())
-				return err
+			query_bucket := bson.M{ "_id": object.BucketObjID }
+			err = dbS3FindOne(query_bucket, &bucket)
+			if err != nil {
+				if err != mgo.ErrNotFound {
+					log.Errorf("s3: Can't find bucket on object %s: %s",
+						infoLong(&object), err.Error())
+					return err
+				}
+			} else {
+				err = s3DirtifyBucket(bucket.ObjID)
+				if err != nil {
+					if err != mgo.ErrNotFound {
+						log.Errorf("s3: Can't dirtify bucket on object %s: %s",
+						infoLong(&bucket), err.Error())
+						return err
+					}
+				}
 			}
 
-			log.Debugf("s3: Deactivated object on data %s: %s",
-				infoLong(&object), infoLong(&objd), err.Error())
+			if err = dbS3Remove(&object); err != nil {
+				if err != mgo.ErrNotFound {
+					log.Errorf("s3: Can't remove object on data %s: %s",
+						infoLong(&objd), err.Error())
+					return err
+				}
+			}
+			log.Debugf("s3: Removed object on data %s: %s",
+				infoLong(&part), infoLong(&objd), err.Error())
+
 		}
 
 		if objd.Data == nil {
@@ -101,6 +123,13 @@ func s3RepairObjectData() error {
 
 	log.Debugf("s3: Object data consistency passed")
 	return nil
+}
+
+func s3DeactivateObjectData(refID bson.ObjectId) error {
+	update := bson.M{ "$set": bson.M{ "state": S3StateInactive } }
+	query  := bson.M{ "ref-id": refID }
+
+	return dbS3Update(query, update, false, &S3ObjectData{})
 }
 
 func s3ObjectDataFind(refID bson.ObjectId) (*S3ObjectData, error) {

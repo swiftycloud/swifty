@@ -65,25 +65,10 @@ func s3RepairObjectInactive() error {
 	for _, object := range objects {
 		log.Debugf("s3: Detected stale object %s", infoLong(&object))
 
-		objd, err := s3ObjectDataFind(object.ObjID)
-		if err != nil {
+		if err = s3DeactivateObjectData(object.ObjID); err != nil {
 			if err != mgo.ErrNotFound {
 				log.Errorf("s3: Can't find object data %s: %s",
 					infoLong(object), err.Error())
-				return err
-			}
-		} else {
-			if objd.Data == nil {
-				err = radosDeleteObject(objd.BucketBID, objd.ObjectBID)
-				if err != nil {
-					return err
-				}
-			}
-
-			err = dbS3Remove(objd)
-			if err != nil {
-				log.Errorf("s3: Can't delete object data %s: %s",
-					infoLong(objd), err.Error())
 				return err
 			}
 		}
