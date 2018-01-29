@@ -244,7 +244,7 @@ func dbS3Insert(o interface{}) (error) {
 	return err
 }
 
-func dbS3Update(query bson.M, update bson.M, o interface{}) (error) {
+func dbS3Update(query bson.M, update bson.M, retnew bool, o interface{}) (error) {
 	if query == nil { query = make(bson.M) }
 
 	dbS3SetObjID(o, query)
@@ -255,7 +255,7 @@ func dbS3Update(query bson.M, update bson.M, o interface{}) (error) {
 		Upsert:		false,
 		Remove:		false,
 		Update:		update,
-		ReturnNew:	true,
+		ReturnNew:	retnew,
 	}
 	_, err := c.Find(query).Apply(change, o)
 	return err
@@ -267,7 +267,7 @@ func dbS3SetOnState(o interface{}, state uint32, query bson.M, fields bson.M) (e
 	query["state"] = bson.M{"$in": s3StateTransition[state]}
 	update := bson.M{"$set": fields}
 
-	err := dbS3Update(query, update, o)
+	err := dbS3Update(query, update, true, o)
 	if err != nil {
 		log.Errorf("s3: Can't set state %d on %s: %s",
 			state, infoLong(o), err.Error())

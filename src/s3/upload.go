@@ -58,7 +58,7 @@ func s3RepairUploadsInactive() error {
 
 		update := bson.M{ "$set": bson.M{ "state": S3StateInactive } }
 		query := bson.M{ "upload-id": upload.ObjID }
-		if err = dbS3Update(query, update, &S3UploadPart{}); err != nil {
+		if err = dbS3Update(query, update, false, &S3UploadPart{}); err != nil {
 			if err != mgo.ErrNotFound {
 				log.Errorf("s3: Can't deactivate parts on upload %s: %s",
 					infoLong(&upload), err.Error())
@@ -98,7 +98,7 @@ func s3RepairPartsInactive() error {
 
 		update := bson.M{ "$set": bson.M{ "state": S3StateInactive } }
 		query  := bson.M{ "ref-id": part.ObjID }
-		if err = dbS3Update(query, update, &part); err != nil {
+		if err = dbS3Update(query, update, true, &part); err != nil {
 			if err != mgo.ErrNotFound {
 				log.Errorf("s3: Can't deactivate data on part %s: %s",
 					infoLong(&part), err.Error())
@@ -138,7 +138,7 @@ func s3RepairUpload() error {
 func (upload *S3Upload)dbLock() (error) {
 	query := bson.M{ "state": S3StateActive, "lock": 0, "ref": 0 }
 	update := bson.M{ "$inc": bson.M{ "lock": 1 } }
-	err := dbS3Update(query, update, upload)
+	err := dbS3Update(query, update, true, upload)
 	if err != nil {
 		log.Errorf("s3: Can't lock %s: %s",
 			infoLong(upload), err.Error())
@@ -149,7 +149,7 @@ func (upload *S3Upload)dbLock() (error) {
 func (upload *S3Upload)dbUnlock() (error) {
 	query := bson.M{ "state": S3StateActive, "lock": 1, "ref": 0 }
 	update := bson.M{ "$inc": bson.M{ "lock": -1 } }
-	err := dbS3Update(query, update, upload)
+	err := dbS3Update(query, update, true, upload)
 	if err != nil {
 		log.Errorf("s3: Can't unclock %s: %s",
 			infoLong(upload), err.Error())
@@ -160,7 +160,7 @@ func (upload *S3Upload)dbUnlock() (error) {
 func (upload *S3Upload)dbRefInc() (error) {
 	query := bson.M{ "state": S3StateActive, "lock": 0 }
 	update := bson.M{ "$inc": bson.M{ "ref": 1 } }
-	err := dbS3Update(query, update, upload)
+	err := dbS3Update(query, update, true, upload)
 	if err != nil {
 		log.Errorf("s3: Can't +ref %s: %s",
 			infoLong(upload), err.Error())
@@ -171,7 +171,7 @@ func (upload *S3Upload)dbRefInc() (error) {
 func (upload *S3Upload)dbRefDec() (error) {
 	query := bson.M{ "state": S3StateActive, "lock": 0 }
 	update := bson.M{ "$inc": bson.M{ "ref": -1 } }
-	err := dbS3Update(query, update, upload)
+	err := dbS3Update(query, update, true, upload)
 	if err != nil {
 		log.Errorf("s3: Can't -ref %s: %s",
 			infoLong(upload), err.Error())

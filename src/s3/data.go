@@ -63,7 +63,7 @@ func s3RepairObjectData() error {
 					return err
 				}
 			} else {
-				if err = dbS3Update(nil, update, &part); err != nil {
+				if err = dbS3Update(nil, update, true, &part); err != nil {
 					log.Errorf("s3: Can't deactivate part on data %s: %s",
 						infoLong(&part), infoLong(&objd), err.Error())
 					return err
@@ -73,7 +73,7 @@ func s3RepairObjectData() error {
 					infoLong(&part), infoLong(&objd), err.Error())
 			}
 		} else {
-			if err = dbS3Update(nil, update, &object); err != nil {
+			if err = dbS3Update(nil, update, true, &object); err != nil {
 				log.Errorf("s3: Can't deactivate object on data %s: %s",
 					infoLong(&object), infoLong(&objd), err.Error())
 				return err
@@ -143,7 +143,7 @@ func s3ObjectDataAdd(refid bson.ObjectId, bucket_bid, object_bid string, data []
 		}
 
 		update := bson.M{ "$set": bson.M{ "data": data }}
-		err = dbS3Update(nil, update, objd)
+		err = dbS3Update(nil, update, true, objd)
 		if err != nil {
 			goto out
 		}

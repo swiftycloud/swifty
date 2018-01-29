@@ -65,7 +65,7 @@ func s3Subscribe(params *swys3api.S3Subscribe) error {
 	notify := bson.M{ "events": ops, "queue": params.Queue }
 	update := bson.M{ "$set": bson.M{ "notify": notify }}
 
-	return dbS3Update(query, update, bucket)
+	return dbS3Update(query, update, false, bucket)
 }
 
 func s3Unsubscribe(params *swys3api.S3Subscribe) error {
@@ -77,7 +77,7 @@ func s3Unsubscribe(params *swys3api.S3Subscribe) error {
 	query := bson.M{ "state": S3StateActive }
 	update := bson.M{"$unset": bson.M{ "notify": "" }}
 
-	return dbS3Update(query, update, bucket)
+	return dbS3Update(query, update, false, bucket)
 }
 
 var nChan *amqp.Channel

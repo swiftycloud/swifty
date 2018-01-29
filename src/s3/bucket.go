@@ -78,7 +78,7 @@ func (bucket *S3Bucket)dbRemove() (error) {
 func (bucket *S3Bucket)dbCmtObj(size, ref int64) (error) {
 	m := bson.M{ "ref": ref }
 	err := dbS3Update(bson.M{ "state": S3StateActive },
-		bson.M{ "$inc": m }, bucket)
+		bson.M{ "$inc": m }, true, bucket)
 	if err != nil {
 		log.Errorf("s3: Can't !account %d bytes %s: %s",
 			size, infoLong(bucket), err.Error())
@@ -92,7 +92,7 @@ func (bucket *S3Bucket)dbCmtObj(size, ref int64) (error) {
 func (bucket *S3Bucket)dbAddObj(size, ref int64) (error) {
 	m := bson.M{ "cnt-objects": 1, "cnt-bytes": size, "ref": ref }
 	err := dbS3Update(bson.M{ "state": S3StateActive },
-		bson.M{ "$inc": m }, bucket)
+		bson.M{ "$inc": m }, true, bucket)
 	if err != nil {
 		log.Errorf("s3: Can't +account %d bytes %s: %s",
 			size, infoLong(bucket), err.Error())
@@ -106,7 +106,7 @@ func (bucket *S3Bucket)dbAddObj(size, ref int64) (error) {
 func (bucket *S3Bucket)dbDelObj(size, ref int64) (error) {
 	m := bson.M{ "cnt-objects": -1, "cnt-bytes": -size, "ref": ref  }
 	err := dbS3Update(bson.M{ "state": S3StateActive },
-		bson.M{ "$inc": m }, bucket)
+		bson.M{ "$inc": m }, true, bucket)
 	if err != nil {
 		log.Errorf("s3: Can't -account %d bytes %s: %s",
 			size, infoLong(bucket), err.Error())
@@ -158,7 +158,7 @@ func s3RepairBucketReference(bucket *S3Bucket) error {
 
 	update := bson.M{ "$set": bson.M{ "cnt-objects": cnt_objects,
 			"cnt-bytes": cnt_bytes, "ref": 0} }
-	err = dbS3Update(nil, update, bucket)
+	err = dbS3Update(nil, update, false, bucket)
 	if err != nil {
 		log.Errorf("s3: Can't repair bucket %s: %s",
 			infoLong(bucket), err.Error())
