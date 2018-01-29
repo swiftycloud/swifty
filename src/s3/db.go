@@ -208,7 +208,10 @@ func dbS3SetObjID(o interface{}, query bson.M) {
 		elem := reflect.ValueOf(o).Elem()
 		val := elem.FieldByName("ObjID")
 		if val != reflect.ValueOf(nil) {
-			query["_id"] = val.Interface().(bson.ObjectId)
+			id := val.Interface().(bson.ObjectId)
+			if id != "" {
+				query["_id"] = id
+			}
 		}
 	}
 }
