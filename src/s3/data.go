@@ -39,7 +39,49 @@ func s3RepairObjectData() error {
 	}
 
 	for _, objd := range objds {
+		var object S3Object
+		var part S3UploadPart
+
 		log.Debugf("s3: Detected stale object data %s", infoLong(&objd))
+
+		update := bson.M{ "$set": bson.M{ "state": S3StateInactive } }
+		query := bson.M{ "_id": objd.RefID }
+
+		err = dbS3FindOne(query, &object)
+		if err != nil {
+			if err != mgo.ErrNotFound {
+				log.Errorf("s3: Can't find object on data %s: %s",
+					infoLong(&objd), err.Error())
+				return err
+			}
+
+			err = dbS3FindOne(query, &part)
+			if err != nil {
+				if err != mgo.ErrNotFound {
+					log.Errorf("s3: Can't find part on data %s: %s",
+						infoLong(&objd), err.Error())
+					return err
+				}
+			} else {
+				if err = dbS3Update(nil, update, &part); err != nil {
+					log.Errorf("s3: Can't deactivate part on data %s: %s",
+						infoLong(&part), infoLong(&objd), err.Error())
+					return err
+				}
+
+				log.Debugf("s3: Deactivated part on data %s: %s",
+					infoLong(&part), infoLong(&objd), err.Error())
+			}
+		} else {
+			if err = dbS3Update(nil, update, &object); err != nil {
+				log.Errorf("s3: Can't deactivate object on data %s: %s",
+					infoLong(&object), infoLong(&objd), err.Error())
+				return err
+			}
+
+			log.Debugf("s3: Deactivated object on data %s: %s",
+				infoLong(&object), infoLong(&objd), err.Error())
+		}
 
 		if objd.Data == nil {
 			err = radosDeleteObject(objd.BucketBID, objd.ObjectBID)
