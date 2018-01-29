@@ -201,8 +201,7 @@ func s3RepairBucketInactive() error {
 
 	log.Debugf("s3: Processing inactive buckets")
 
-	states := bson.M{ "$in": []uint32{ S3StateNone, S3StateInactive } }
-	err = dbS3FindAll(bson.M{ "state": states }, &buckets)
+	err = dbS3FindAllInactive(&buckets)
 	if err != nil {
 		if err == mgo.ErrNotFound {
 			return nil

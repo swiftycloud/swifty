@@ -317,3 +317,10 @@ func dbS3FindOne(query bson.M, o interface{}) (error) {
 func dbS3FindAll(query bson.M, o interface{}) (error) {
 	return dbSession.DB(dbName).C(dbColl(o)).Find(query).All(o)
 }
+
+func dbS3FindAllInactive(o interface{}) (error) {
+	states := bson.M{ "$in": []uint32{ S3StateNone, S3StateInactive } }
+	query := bson.M{ "state": states }
+
+	return dbS3FindAll(query, o)
+}

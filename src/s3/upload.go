@@ -44,8 +44,7 @@ func s3RepairUploadsInactive() error {
 
 	log.Debugf("s3: Processing inactive uploads")
 
-	states := bson.M{ "$in": []uint32{ S3StateNone, S3StateInactive } }
-	if err = dbS3FindAll(bson.M{ "state": states }, &uploads); err != nil {
+	if err = dbS3FindAllInactive(&uploads); err != nil {
 		if err == mgo.ErrNotFound {
 			return nil
 		}
@@ -84,8 +83,7 @@ func s3RepairPartsInactive() error {
 
 	log.Debugf("s3: Processing inactive parts")
 
-	states := bson.M{ "$in": []uint32{ S3StateNone, S3StateInactive } }
-	if err = dbS3FindAll(bson.M{ "state": states }, &parts); err != nil {
+	if err = dbS3FindAllInactive(&parts); err != nil {
 		if err == mgo.ErrNotFound {
 			return nil
 		}

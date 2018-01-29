@@ -28,8 +28,7 @@ func s3RepairObjectData() error {
 
 	log.Debugf("s3: Running object data consistency test")
 
-	states := bson.M{ "$in": []uint32{ S3StateNone, S3StateInactive } }
-	err = dbS3FindAll(bson.M{ "state": states }, &objds)
+	err = dbS3FindAllInactive(&objds)
 	if err != nil {
 		if err == mgo.ErrNotFound {
 			return nil
