@@ -98,7 +98,7 @@ func s3RepairPartsInactive() error {
 
 		update := bson.M{ "$set": bson.M{ "state": S3StateInactive } }
 		query  := bson.M{ "ref-id": part.ObjID }
-		if err = dbS3Update(query, update, true, &part); err != nil {
+		if err = dbS3Update(query, update, false, &S3ObjectData{}); err != nil {
 			if err != mgo.ErrNotFound {
 				log.Errorf("s3: Can't deactivate data on part %s: %s",
 					infoLong(&part), err.Error())
@@ -123,11 +123,11 @@ func s3RepairUpload() error {
 
 	log.Debugf("s3: Running uploads consistency test")
 
-	if err = s3RepairPartsInactive(); err != nil {
+	if err = s3RepairUploadsInactive(); err != nil {
 		return err
 	}
 
-	if err = s3RepairUploadsInactive(); err != nil {
+	if err = s3RepairPartsInactive(); err != nil {
 		return err
 	}
 
