@@ -59,6 +59,7 @@ type S3Bucket struct {
 	// inventory
 	// notification
 
+	Ref				int64		`json:"ref" bson:"ref"`
 	CntObjects			int64		`json:"cnt-objects" bson:"cnt-objects"`
 	CntBytes			int64		`json:"cnt-bytes" bson:"cnt-bytes"`
 	Name				string		`json:"name" bson:"name"`
@@ -74,25 +75,44 @@ func (bucket *S3Bucket)dbRemove() (error) {
 	return dbS3RemoveOnState(bucket, S3StateInactive, query)
 }
 
-func (bucket *S3Bucket)dbAddObj(size int64) (error) {
-	m := bson.M{ "cnt-objects": 1, "cnt-bytes": size }
+func (bucket *S3Bucket)dbCmtObj(size, ref int64) (error) {
+	m := bson.M{ "ref": ref }
+	err := dbS3Update(bson.M{ "state": S3StateActive },
+		bson.M{ "$inc": m }, bucket)
+	if err != nil {
+		log.Errorf("s3: Can't !account %d bytes %s: %s",
+			size, infoLong(bucket), err.Error())
+	} else {
+		log.Debugf("s3: !account %d bytes %s",
+			size, infoLong(bucket))
+	}
+	return err
+}
+
+func (bucket *S3Bucket)dbAddObj(size, ref int64) (error) {
+	m := bson.M{ "cnt-objects": 1, "cnt-bytes": size, "ref": ref }
 	err := dbS3Update(bson.M{ "state": S3StateActive },
 		bson.M{ "$inc": m }, bucket)
 	if err != nil {
 		log.Errorf("s3: Can't +account %d bytes %s: %s",
 			size, infoLong(bucket), err.Error())
+	} else {
+		log.Debugf("s3: +account %d bytes %s",
+			size, infoLong(bucket))
 	}
-
 	return err
 }
 
-func (bucket *S3Bucket)dbDelObj(size int64) (error) {
-	m := bson.M{ "cnt-objects": -1, "cnt-bytes": -size }
+func (bucket *S3Bucket)dbDelObj(size, ref int64) (error) {
+	m := bson.M{ "cnt-objects": -1, "cnt-bytes": -size, "ref": ref  }
 	err := dbS3Update(bson.M{ "state": S3StateActive },
 		bson.M{ "$inc": m }, bucket)
 	if err != nil {
 		log.Errorf("s3: Can't -account %d bytes %s: %s",
 			size, infoLong(bucket), err.Error())
+	} else {
+		log.Debugf("s3: -account %d bytes %s",
+			size, infoLong(bucket))
 	}
 	return err
 }
@@ -115,11 +135,71 @@ func (iam *S3Iam)FindBucket(key *S3AccessKey, bname string) (*S3Bucket, error) {
 	return &res, nil
 }
 
-func s3RepairBucket() error {
+func s3RepairBucketReference(bucket *S3Bucket) error {
+	var cnt_objects int64 = 0
+	var cnt_bytes int64 = 0
+	var objects []S3Object
+
+	query := bson.M{ "bucket-id": bucket.ObjID, "state": S3StateActive }
+	err := dbS3FindAll(query, &objects)
+	if err != nil {
+		if err != mgo.ErrNotFound {
+			log.Errorf("s3: Can't find objects on bucket %s: %s",
+				infoLong(bucket), err.Error())
+			return err
+		}
+
+	} else {
+		cnt_objects = int64(len(objects))
+		for _, object := range objects {
+			cnt_bytes += object.Size
+		}
+	}
+
+	update := bson.M{ "$set": bson.M{ "cnt-objects": cnt_objects,
+			"cnt-bytes": cnt_bytes, "ref": 0} }
+	err = dbS3Update(nil, update, bucket)
+	if err != nil {
+		log.Errorf("s3: Can't repair bucket %s: %s",
+			infoLong(bucket), err.Error())
+		return err
+	}
+
+	log.Debugf("s3: Repaired reference on %s", infoLong(bucket))
+	return nil
+}
+
+func s3RepairBucketReferenced() error {
 	var buckets []S3Bucket
 	var err error
 
-	log.Debugf("s3: Running buckets consistency test")
+	log.Debugf("s3: Processing referenced buckets")
+
+	err = dbS3FindAll(bson.M{ "ref":  bson.M{ "$ne": 0 } }, &buckets)
+	if err != nil {
+		if err == mgo.ErrNotFound {
+			return nil
+		}
+		log.Errorf("s3: s3RepairReferenced failed: %s", err.Error())
+		return err
+	}
+
+	for _, bucket := range buckets {
+		log.Debugf("s3: Detected referenced bucket %s", infoLong(&bucket))
+		err = s3RepairBucketReference(&bucket)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func s3RepairBucketInactive() error {
+	var buckets []S3Bucket
+	var err error
+
+	log.Debugf("s3: Processing inactive buckets")
 
 	states := bson.M{ "$in": []uint32{ S3StateNone, S3StateInactive } }
 	err = dbS3FindAll(bson.M{ "state": states }, &buckets)
@@ -147,6 +227,22 @@ func s3RepairBucket() error {
 		}
 
 		log.Debugf("s3: Removed stale bucket %s", infoLong(&bucket))
+	}
+
+	return nil
+}
+
+func s3RepairBucket() error {
+	var err error
+
+	log.Debugf("s3: Running buckets consistency test")
+
+	if err = s3RepairBucketInactive(); err != nil {
+		return err
+	}
+
+	if err = s3RepairBucketReferenced(); err != nil {
+		return err
 	}
 
 	log.Debugf("s3: Buckets consistency passed")

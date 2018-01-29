@@ -86,19 +86,24 @@ func s3AddObject(namespace string, bucket *S3Bucket, oname string,
 	}
 	log.Debugf("s3: Inserted %s", infoLong(object))
 
-	err = bucket.dbAddObj(object.Size)
+	err = bucket.dbAddObj(object.Size, 1)
 	if err != nil {
-		goto out_no_size
+		goto out_remove
 	}
 
 	objd, etag, err = s3ObjectDataAdd(object.ObjID, bucket.BackendID,
 					object.BackendID, data)
 	if err != nil {
-		goto out_obj
+		goto out_acc
 	}
 
 	err = dbS3SetOnState(object, S3StateActive, nil,
 		bson.M{ "state": S3StateActive, "etag": etag })
+	if err != nil {
+		goto out
+	}
+
+	bucket.dbCmtObj(object.Size, -1)
 	if err != nil {
 		goto out
 	}
@@ -112,9 +117,9 @@ func s3AddObject(namespace string, bucket *S3Bucket, oname string,
 
 out:
 	s3ObjectDataDel(objd)
-out_obj:
-	bucket.dbDelObj(object.Size)
-out_no_size:
+out_acc:
+	bucket.dbDelObj(object.Size, -1)
+out_remove:
 	dbS3Remove(object)
 	return nil, err
 }
@@ -154,7 +159,7 @@ func s3DeleteObject(bucket *S3Bucket, oname string) error {
 		return err
 	}
 
-	err = bucket.dbDelObj(object.Size)
+	err = bucket.dbDelObj(object.Size, 0)
 	if err != nil {
 		return err
 	}
