@@ -38,6 +38,103 @@ type S3Upload struct {
 	S3ObjectPorps					`json:",inline" bson:",inline"`
 }
 
+func s3RepairUploadsInactive() error {
+	var uploads []S3Upload
+	var err error
+
+	log.Debugf("s3: Processing inactive uploads")
+
+	states := bson.M{ "$in": []uint32{ S3StateNone, S3StateInactive } }
+	if err = dbS3FindAll(bson.M{ "state": states }, &uploads); err != nil {
+		if err == mgo.ErrNotFound {
+			return nil
+		}
+		log.Errorf("s3: s3RepairUploadsInactive failed: %s", err.Error())
+		return err
+	}
+
+	for _, upload := range uploads {
+		log.Debugf("s3: Detected stale upload %s", infoLong(&upload))
+
+		update := bson.M{ "$set": bson.M{ "state": S3StateInactive } }
+		query := bson.M{ "upload-id": upload.ObjID }
+		if err = dbS3Update(query, update, &S3UploadPart{}); err != nil {
+			if err != mgo.ErrNotFound {
+				log.Errorf("s3: Can't deactivate parts on upload %s: %s",
+					infoLong(&upload), err.Error())
+				return err
+			}
+		}
+
+		err = dbS3Remove(&upload)
+		if err != nil {
+			log.Debugf("s3: Can't remove upload %s", infoLong(&upload))
+			return err
+		}
+
+		log.Debugf("s3: Removed stale upload %s", infoLong(&upload))
+	}
+
+	return nil
+}
+
+func s3RepairPartsInactive() error {
+	var parts []S3UploadPart
+	var err error
+
+	log.Debugf("s3: Processing inactive parts")
+
+	states := bson.M{ "$in": []uint32{ S3StateNone, S3StateInactive } }
+	if err = dbS3FindAll(bson.M{ "state": states }, &parts); err != nil {
+		if err == mgo.ErrNotFound {
+			return nil
+		}
+		log.Errorf("s3: s3RepairPartsInactive failed: %s", err.Error())
+		return err
+	}
+
+	for _, part := range parts {
+		log.Debugf("s3: Detected stale part %s", infoLong(&part))
+
+		update := bson.M{ "$set": bson.M{ "state": S3StateInactive } }
+		query  := bson.M{ "ref-id": part.ObjID }
+		if err = dbS3Update(query, update, &part); err != nil {
+			if err != mgo.ErrNotFound {
+				log.Errorf("s3: Can't deactivate data on part %s: %s",
+					infoLong(&part), err.Error())
+				return err
+			}
+		}
+
+		err = dbS3Remove(&part)
+		if err != nil {
+			log.Debugf("s3: Can't remove part %s", infoLong(&part))
+			return err
+		}
+
+		log.Debugf("s3: Removed stale part %s", infoLong(&part))
+	}
+
+	return nil
+}
+
+func s3RepairUpload() error {
+	var err error
+
+	log.Debugf("s3: Running uploads consistency test")
+
+	if err = s3RepairPartsInactive(); err != nil {
+		return err
+	}
+
+	if err = s3RepairUploadsInactive(); err != nil {
+		return err
+	}
+
+	log.Debugf("s3: Uploads consistency passed")
+	return nil
+}
+
 func (upload *S3Upload)dbLock() (error) {
 	query := bson.M{ "state": S3StateActive, "lock": 0, "ref": 0 }
 	update := bson.M{ "$inc": bson.M{ "lock": 1 } }
