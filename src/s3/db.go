@@ -130,7 +130,7 @@ func dbRepair() error {
 
 	log.Debugf("s3: Running db consistency test/repair")
 
-	if err = s3RepairBucket(); err != nil {
+	if err = s3RepairObjectData(); err != nil {
 		return err
 	}
 
@@ -138,7 +138,7 @@ func dbRepair() error {
 		return err
 	}
 
-	if err = s3RepairObjectData(); err != nil {
+	if err = s3RepairBucket(); err != nil {
 		return err
 	}
 
