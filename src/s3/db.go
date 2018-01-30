@@ -190,7 +190,7 @@ func infoLong(o interface{}) (string) {
 			object.Key)
 	case reflect.TypeOf(&S3Upload{}):
 		upload := o.(*S3Upload)
-		return fmt.Sprintf("{ S3Upload: %s/%s/%s/%d/%d/%s }",
+		return fmt.Sprintf("{ S3Upload: %s/%s/%s/%d/%s }",
 			upload.ObjID, upload.BucketObjID,
 			upload.UploadID, upload.Ref, upload.Key)
 	case reflect.TypeOf(&S3UploadPart{}):
@@ -323,4 +323,8 @@ func dbS3FindAllInactive(o interface{}) (error) {
 	query := bson.M{ "state": states }
 
 	return dbS3FindAll(query, o)
+}
+
+func dbS3Pipe(o interface{}, pipeline interface{}) (*mgo.Pipe) {
+	return dbSession.DB(dbName).C(dbColl(o)).Pipe(pipeline)
 }

@@ -4,7 +4,6 @@ import (
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 
-	"sort"
 	"time"
 	"fmt"
 
@@ -329,21 +328,16 @@ func s3UploadPart(namespace string, bucket *S3Bucket, oname,
 	return part.ETag, nil
 }
 
-type S3UploadByPart []S3UploadPart
-
-func (o S3UploadByPart) Len() int           { return len(o) }
-func (o S3UploadByPart) Swap(i, j int)      { o[i], o[j] = o[j], o[i] }
-func (o S3UploadByPart) Less(i, j int) bool { return o[i].Part < o[j].Part }
-
 func s3UploadFini(namespace string, bucket *S3Bucket, uid string,
 			compete *swys3api.S3MpuFiniParts) (*swys3api.S3MpuFini, error) {
 	var res swys3api.S3MpuFini
-	var parts []S3UploadPart
+	var part S3UploadPart
 	var object *S3Object
 	var upload S3Upload
-	var size int64
-	var partno int
+	var pipe *mgo.Pipe
+	var iter *mgo.Iter
 	var data []byte
+	var size int64
 	var err error
 
 	query := bson.M{"uid": uid, "state": S3StateActive}
@@ -352,42 +346,20 @@ func s3UploadFini(namespace string, bucket *S3Bucket, uid string,
 		return nil, err
 	}
 
-	err = upload.dbLock()
-	if err != nil {
-		return nil, err
+	pipe = dbS3Pipe(&upload,
+		[]bson.M{{"$match": bson.M{"upload-id": upload.ObjID}},
+			{"$sort": bson.M{"part": 1} }})
+	iter = pipe.Iter()
+	for iter.Next(&part) {
+		if part.State != S3StateActive { continue }
+
+		size += part.Size
+		data = append(data, part.Data ...)
 	}
-
-	res.Bucket	= bucket.Name
-	res.Key		= upload.Key
-
-	err = dbS3FindAll(bson.M{"upload-id": upload.ObjID}, &parts)
-	if err != nil {
-		if err == mgo.ErrNotFound {
-			goto out_empty
-		}
-		log.Errorf("s3: Can't find parts %s: %s",
+	if err = iter.Close(); err != nil {
+		log.Errorf("s3: Can't close iter on %s: %s",
 			infoLong(&upload), err.Error())
-		goto out
-	} else {
-		sort.Sort(S3UploadByPart(parts))
-		partno = 0
-
-		for _, part := range parts {
-			// FIXME: Overwritten parts?
-			if part.State != S3StateActive {
-				continue
-			}
-			if partno >= part.Part {
-				err = fmt.Errorf("upload %s unexpected part %d", uid, part.Part)
-				log.Errorf("s3: Upload part sequence failed %s: %s",
-					infoLong(&upload), err.Error())
-				goto out
-			}
-			partno = part.Part
-			size += part.Size
-
-			data = append(data, part.Data ...)
-		}
+		return nil, err
 	}
 
 	object, err = s3AddObject(namespace, bucket, upload.Key, upload.Acl, size, data)
@@ -407,13 +379,8 @@ func s3UploadFini(namespace string, bucket *S3Bucket, uid string,
 
 	res.ETag = object.ETag
 
-out_empty:
 	log.Debugf("s3: Complete upload %v", res)
 	return &res, nil
-
-out:
-	upload.dbUnlock()
-	return nil, err
 }
 
 func s3Uploads(iam *S3Iam, akey *S3AccessKey, bname string) (*swys3api.S3MpuList, error) {
