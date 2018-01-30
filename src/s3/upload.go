@@ -189,6 +189,11 @@ func s3UploadRemoveLocked(upload *S3Upload) (error) {
 	var objd *S3ObjectData
 	var err error
 
+	err = dbS3SetState(upload, S3StateInactive, nil)
+	if err != nil {
+		return err
+	}
+
 	err = dbS3FindAll(bson.M{"upload-id": upload.ObjID}, &parts)
 	if err != nil {
 		if err != mgo.ErrNotFound {
@@ -221,11 +226,6 @@ func s3UploadRemoveLocked(upload *S3Upload) (error) {
 				return err
 			}
 		}
-	}
-
-	err = dbS3SetState(upload, S3StateInactive, nil)
-	if err != nil {
-		return err
 	}
 
 	err = dbS3RemoveOnState(upload, S3StateInactive, bson.M{ "ref": 0 })
