@@ -241,7 +241,7 @@ func s3UploadRemoveLocked(upload *S3Upload) (error) {
 func s3UploadInit(bucket *S3Bucket, oname, acl string) (*S3Upload, error) {
 	var err error
 
-	upload := S3Upload{
+	upload := &S3Upload{
 		ObjID:		bson.NewObjectId(),
 		State:		S3StateActive,
 
@@ -260,7 +260,7 @@ func s3UploadInit(bucket *S3Bucket, oname, acl string) (*S3Upload, error) {
 	}
 
 	log.Debugf("s3: Inserted upload %s", upload.UploadID)
-	return &upload, err
+	return upload, err
 }
 
 func s3UploadPart(namespace string, bucket *S3Bucket, oname,
