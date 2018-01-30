@@ -346,6 +346,11 @@ func s3UploadFini(namespace string, bucket *S3Bucket, uid string,
 		return nil, err
 	}
 
+	err = upload.dbLock()
+	if err != nil {
+		return nil, err
+	}
+
 	pipe = dbS3Pipe(&upload,
 		[]bson.M{{"$match": bson.M{"upload-id": upload.ObjID}},
 			{"$sort": bson.M{"part": 1} }})
@@ -359,6 +364,7 @@ func s3UploadFini(namespace string, bucket *S3Bucket, uid string,
 	if err = iter.Close(); err != nil {
 		log.Errorf("s3: Can't close iter on %s: %s",
 			infoLong(&upload), err.Error())
+		upload.dbUnlock()
 		return nil, err
 	}
 
