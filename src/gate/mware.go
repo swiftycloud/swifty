@@ -122,6 +122,32 @@ stalled:
 	return GateErrE(swy.GateGenErr, err)
 }
 
+func mwareInfo(conf *YAMLConfMw, id *SwoId, params *swyapi.MwareID,
+		resp *swyapi.MwareInfo) (*swyapi.GateErr) {
+	var handler *MwareOps
+	var item MwareDesc
+	var err error
+
+	if item, err = dbMwareGetItem(id); err != nil {
+		return GateErrD(err)
+	}
+
+	handler, ok := mwareHandlers[item.MwareType]
+	if !ok {
+		return GateErrC(swy.GateGenErr) /* Shouldn't happen */
+	}
+
+	resp.MwareID = *params
+	resp.Type = item.MwareType
+	resp.Envs = make(map[string]string)
+
+	envs := handler.GetEnv(conf, &item)
+	for _, env := range envs {
+		resp.Envs[env[0]] = env[1]
+	}
+	return nil
+}
+
 func getMwareDesc(id *SwoId, mwType string) *MwareDesc {
 	ret := &MwareDesc {
 		SwoId: SwoId {

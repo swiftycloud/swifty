@@ -88,13 +88,15 @@ type MwareRemove struct {
 	ID		string			`json:"id"`
 }
 
-type MwareCinfo struct {
+type MwareID struct {
 	Project		string			`json:"project"`
-	MwId		string			`json:"id"`
+	ID		string			`json:"id"`
 }
 
-type MwareCinfoResp struct {
-	Envs		[][2]string		`json:"envs"`
+type MwareInfo struct {
+	MwareID					`json:",inline"`
+	Type		string			`json:"type"`
+	Envs		map[string]string	`json:"envs"`
 }
 
 type MwareItem struct {

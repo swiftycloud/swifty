@@ -904,6 +904,30 @@ func handleMwareRemove(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	return nil
 }
 
+func handleMwareInfo(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
+	var params swyapi.MwareID
+	var resp swyapi.MwareInfo
+
+	err := swyhttp.ReadAndUnmarshalReq(r, &params)
+	if err != nil {
+		return GateErrE(swy.GateBadRequest, err)
+	}
+
+	id := makeSwoId(fromContext(ctx).Tenant, params.Project, params.ID)
+	ctxlog(ctx).Debugf("mware/info: %s params %v", fromContext(ctx).Tenant, params)
+
+	cerr := mwareInfo(&conf.Mware, id, &params, &resp)
+	if cerr != nil {
+		return cerr
+	}
+
+	err = swyhttp.MarshalAndWrite(w, &resp)
+	if err != nil {
+		return GateErrE(swy.GateBadResp, err)
+	}
+	return nil
+}
+
 func handleGenericReq(ctx context.Context, r *http.Request) (string, int, error) {
 	token := r.Header.Get("X-Auth-Token")
 	if token == "" {
@@ -1089,6 +1113,7 @@ func main() {
 	r.Handle("/v1/function/state",		genReqHandler(handleFunctionState))
 	r.Handle("/v1/function/wait",		genReqHandler(handleFunctionWait))
 	r.Handle("/v1/mware/add",		genReqHandler(handleMwareAdd))
+	r.Handle("/v1/mware/info",		genReqHandler(handleMwareInfo))
 	r.Handle("/v1/mware/list",		genReqHandler(handleMwareList))
 	r.Handle("/v1/mware/remove",		genReqHandler(handleMwareRemove))
 

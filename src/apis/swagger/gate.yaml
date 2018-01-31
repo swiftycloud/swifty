@@ -409,6 +409,33 @@ paths:
           description: Need to authenticate
         '403':
           description: Bad authentication token
+  /mware/info:
+    post:
+      summary: Show information about middleware
+      parameters:
+        - in: header
+          name: X-Auth-Token
+          type: string
+          required: true
+        - name: data
+          in: body
+          description: Middleware to inspect
+          required: true
+          schema:
+            $ref: '#/definitions/MwareID'
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/MwareInfo'
+        '400':
+          description: Bad request
+          schema:
+            $ref: '#/definitions/GateError'
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad authentication token
   /mware/remove:
     post:
       summary: Remove middleware
@@ -850,6 +877,43 @@ definitions:
         type: string
         description: Middleware type
         example: maria
+  MwareID:
+    type: object
+    description: Middleware ID
+    required:
+      - id
+    properties:
+      project:
+        type: string
+        example: my-project
+      id:
+        type: string
+        description: Just an identifier
+        example: mymariadb
+  MwareInfo:
+    type: object
+    description: Middleware inforamtion
+    properties:
+      project:
+        type: string
+        example: my-project
+      id:
+        type: string
+        description: Just an identifier
+        example: mymariadb
+      type:
+        type: string
+        description: Middleware type
+        example: maria
+      envs:
+        $ref: '#/definitions/MwareInfoEnvs'
+  MwareInfoEnvs:
+    type: object
+    description: Middleware environment variables
+    properties:
+      key:
+        type: string
+        example: value
   MwareRemove:
     type: object
     description: Middleware specification
