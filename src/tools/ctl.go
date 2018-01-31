@@ -500,6 +500,23 @@ func list_mware(project string, args []string, opts [8]string) {
 	}
 }
 
+func info_mware(project string, args []string, opts [8]string) {
+	var resp swyapi.MwareInfo
+	var n int = 1
+	make_faas_req("mware/info",
+		swyapi.MwareID{ Project: project, ID: args[0], }, &resp)
+
+	fmt.Printf("%-20s%-10s%s\n", "NAME", "TYPE", "ENV")
+	for k, v := range resp.Envs {
+		if n == 1 {
+			fmt.Printf("%-20s%-10s%s=%s\n", args[0], resp.Type, k, v)
+		} else {
+			fmt.Printf("%-20s%-10s%s=%s\n", "", "", k, v)
+		}
+		n++
+	}
+}
+
 func add_mware(project string, args []string, opts [8]string) {
 	req := swyapi.MwareAdd { Project: project, ID: args[0], Type: args[1] }
 	make_faas_req("mware/add", req, nil)
@@ -593,6 +610,7 @@ const (
 	CMD_OFF string		= "off"
 	CMD_WAIT string		= "wait"
 	CMD_MLS string		= "mls"
+	CMD_MINF string		= "minf"
 	CMD_MADD string		= "madd"
 	CMD_MDEL string		= "mdel"
 	CMD_LUSR string		= "uls"
@@ -619,6 +637,7 @@ var cmdOrder = []string {
 	CMD_OFF,
 	CMD_WAIT,
 	CMD_MLS,
+	CMD_MINF,
 	CMD_MADD,
 	CMD_MDEL,
 	CMD_LUSR,
@@ -653,6 +672,7 @@ var cmdMap = map[string]*cmdDesc {
 	CMD_OFF:	&cmdDesc{ pcall: off_fn,	  opts: flag.NewFlagSet(CMD_OFF, flag.ExitOnError) },
 	CMD_WAIT:	&cmdDesc{ pcall: wait_fn,	  opts: flag.NewFlagSet(CMD_WAIT, flag.ExitOnError) },
 	CMD_MLS:	&cmdDesc{ pcall: list_mware,	  opts: flag.NewFlagSet(CMD_MLS, flag.ExitOnError) },
+	CMD_MINF:	&cmdDesc{ pcall: info_mware,	  opts: flag.NewFlagSet(CMD_INF, flag.ExitOnError) },
 	CMD_MADD:	&cmdDesc{ pcall: add_mware,	  opts: flag.NewFlagSet(CMD_MADD, flag.ExitOnError) },
 	CMD_MDEL:	&cmdDesc{ pcall: del_mware,	  opts: flag.NewFlagSet(CMD_MDEL, flag.ExitOnError) },
 	CMD_LUSR:	&cmdDesc{  call: list_users,	  opts: flag.NewFlagSet(CMD_LUSR, flag.ExitOnError) },
@@ -719,6 +739,7 @@ func main() {
 	bindCmdUsage(CMD_WAIT,	[]string{"NAME"}, "Wait function event", true)
 
 	bindCmdUsage(CMD_MLS,	[]string{}, "List middleware", true)
+	bindCmdUsage(CMD_MINF,	[]string{"ID"}, "Middleware info", true)
 	bindCmdUsage(CMD_MADD,	[]string{"ID", "TYPE"}, "Add middleware", true)
 	bindCmdUsage(CMD_MDEL,	[]string{"ID"}, "Delete middleware", true)
 
