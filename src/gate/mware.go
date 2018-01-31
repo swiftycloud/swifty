@@ -137,6 +137,11 @@ func mwareInfo(conf *YAMLConfMw, id *SwoId, params *swyapi.MwareID,
 		return GateErrC(swy.GateGenErr) /* Shouldn't happen */
 	}
 
+	if handler != &MwareS3 {
+		return GateErrE(swy.GateWrongType,
+			errors.New("Only s3 middleware supported"))
+	}
+
 	resp.MwareID = *params
 	resp.Type = item.MwareType
 	resp.Envs = make(map[string]string)
