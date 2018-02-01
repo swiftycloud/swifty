@@ -12,6 +12,7 @@ type S3Iam struct {
 	MTime				int64		`bson:"mtime,omitempty"`
 	State				uint32		`bson:"state,omitempty"`
 
+	AccountObjID			bson.ObjectId	`bson:"account-id,omitempty"`
 	IamID				string		`bson:"iam-id,omitempty"`
 	Namespace			string		`bson:"namespace,omitempty"`
 	CreationTime			string		`bson:"creation-time,omitempty"`
@@ -80,6 +81,7 @@ func s3IamGet(namespace, user, email string) (*S3Iam, error) {
 }
 
 func iamGetter(rq *iamReq) *iamResp {
+	var ObjectId bson.ObjectId
 	var err error
 
 	if rq.namespace == "" {
@@ -103,9 +105,11 @@ func iamGetter(rq *iamReq) *iamResp {
 		}
 	}
 
+	ObjectId = bson.NewObjectId()
 	// FIXME Add counter so namespace would be shareable
 	iam = &S3Iam{
-		ObjID:		bson.NewObjectId(),
+		ObjID:		ObjectId,
+		AccountObjID:	ObjectId,
 		State:		S3StateActive,
 
 		IamID:		sha256sum([]byte(rq.email)),
