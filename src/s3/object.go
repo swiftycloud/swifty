@@ -19,14 +19,14 @@ var ObjectAcls = []string {
 }
 
 type S3ObjectPorps struct {
-	CreationTime			string		`json:"creation-time,omitempty" bson:"creation-time,omitempty"`
-	Acl				string		`json:"acl,omitempty" bson:"acl,omitempty"`
-	Key				string		`json:"key" bson:"key"`
+	CreationTime			string		`bson:"creation-time,omitempty"`
+	Acl				string		`bson:"acl,omitempty"`
+	Key				string		`bson:"key"`
 
 	// Todo
-	Meta				[]S3Tag		`json:"meta,omitempty" bson:"meta,omitempty"`
-	TagSet				[]S3Tag		`json:"tags,omitempty" bson:"tags,omitempty"`
-	Policy				string		`json:"policy,omitempty" bson:"policy,omitempty"`
+	Meta				[]S3Tag		`bson:"meta,omitempty"`
+	TagSet				[]S3Tag		`bson:"tags,omitempty"`
+	Policy				string		`bson:"policy,omitempty"`
 
 	// Not supported props
 	// torrent
@@ -35,16 +35,16 @@ type S3ObjectPorps struct {
 
 type S3Object struct {
 	ObjID				bson.ObjectId	`bson:"_id,omitempty"`
-	MTime				int64		`json:"mtime,omitempty" bson:"mtime,omitempty"`
-	State				uint32		`json:"state" bson:"state"`
+	MTime				int64		`bson:"mtime,omitempty"`
+	State				uint32		`bson:"state"`
 
 	BucketObjID			bson.ObjectId	`bson:"bucket-id,omitempty"`
-	BackendID			string		`json:"bid" bson:"bid"`
-	Version				int		`json:"version" bson:"version"`
-	Size				int64		`json:"size" bson:"size"`
-	ETag				string		`json:"etag" bson:"etag"`
+	BackendID			string		`bson:"bid"`
+	Version				int		`bson:"version"`
+	Size				int64		`bson:"size"`
+	ETag				string		`bson:"etag"`
 
-	S3ObjectPorps					`json:",inline" bson:",inline"`
+	S3ObjectPorps					`bson:",inline"`
 }
 
 func s3RepairObjectInactive() error {

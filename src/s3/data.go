@@ -10,15 +10,15 @@ import (
 
 type S3ObjectData struct {
 	ObjID				bson.ObjectId	`bson:"_id,omitempty"`
-	MTime				int64		`json:"mtime,omitempty" bson:"mtime,omitempty"`
-	State				uint32		`json:"state" bson:"state"`
+	MTime				int64		`bson:"mtime,omitempty"`
+	State				uint32		`bson:"state"`
 
 	RefID				bson.ObjectId	`bson:"ref-id,omitempty"`
-	BackendID			string		`json:"bid" bson:"bid"`
-	BucketBID			string		`json:"bucket-bid,omitempty" bson:"bucket-bid,omitempty"`
-	ObjectBID			string		`json:"object-bid,omitempty" bson:"object-bid,omitempty"`
-	CreationTime			string		`json:"creation-time,omitempty" bson:"creation-time,omitempty"`
-	Size				int64		`json:"size" bson:"size"`
+	BackendID			string		`bson:"bid"`
+	BucketBID			string		`bson:"bucket-bid,omitempty"`
+	ObjectBID			string		`bson:"object-bid,omitempty"`
+	CreationTime			string		`bson:"creation-time,omitempty"`
+	Size				int64		`bson:"size"`
 	Data				[]byte		`bson:"data,omitempty"`
 }
 

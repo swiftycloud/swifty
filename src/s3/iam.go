@@ -8,15 +8,15 @@ import (
 )
 
 type S3Iam struct {
-	ObjID				bson.ObjectId	`json:"_id,omitempty" bson:"_id,omitempty"`
-	MTime				int64		`json:"mtime,omitempty" bson:"mtime,omitempty"`
-	State				uint32		`json:"state,omitempty" bson:"state,omitempty"`
+	ObjID				bson.ObjectId	`bson:"_id,omitempty"`
+	MTime				int64		`bson:"mtime,omitempty"`
+	State				uint32		`bson:"state,omitempty"`
 
-	IamID				string		`json:"iam-id,omitempty" bson:"iam-id,omitempty"`
-	Namespace			string		`json:"namespace,omitempty" bson:"namespace,omitempty"`
-	CreationTime			string		`json:"creation-time,omitempty" bson:"creation-time,omitempty"`
-	User				string		`json:"user,omitempty" bson:"user,omitempty"`
-	Email				string		`json:"email,omitempty" bson:"email,omitempty"`
+	IamID				string		`bson:"iam-id,omitempty"`
+	Namespace			string		`bson:"namespace,omitempty"`
+	CreationTime			string		`bson:"creation-time,omitempty"`
+	User				string		`bson:"user,omitempty"`
+	Email				string		`bson:"email,omitempty"`
 }
 
 func s3LookupIam(query bson.M) (*S3Iam, error) {

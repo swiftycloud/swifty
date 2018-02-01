@@ -21,33 +21,33 @@ type S3BucketNotify struct {
 }
 
 type S3Tag struct {
-	Key				string		`json:"key" bson:"key"`
-	Value				string		`json:"value,omitempty" bson:"value,omitempty"`
+	Key				string		`bson:"key"`
+	Value				string		`bson:"value,omitempty"`
 }
 
 type S3BucketEncrypt struct {
-	Algo				string		`json:"algo" bson:"algo"`
-	MasterKeyID			string		`json:"algo,omitempty" bson:"algo,omitempty"`
+	Algo				string		`bson:"algo"`
+	MasterKeyID			string		`bson:"algo,omitempty"`
 }
 
 type S3Bucket struct {
 	ObjID				bson.ObjectId	`bson:"_id,omitempty"`
-	MTime				int64		`json:"mtime,omitempty" bson:"mtime,omitempty"`
-	State				uint32		`json:"state" bson:"state"`
+	MTime				int64		`bson:"mtime,omitempty"`
+	State				uint32		`bson:"state"`
 
-	BackendID			string		`json:"bid,omitempty" bson:"bid,omitempty"`
-	NamespaceID			string		`json:"nsid,omitempty" bson:"nsid,omitempty"`
-	CreationTime			string		`json:"creation-time,omitempty" bson:"creation-time,omitempty"`
+	BackendID			string		`bson:"bid,omitempty"`
+	NamespaceID			string		`bson:"nsid,omitempty"`
+	CreationTime			string		`bson:"creation-time,omitempty"`
 
 	// Todo
-	Versioning			bool		`json:"versioning,omitempty" bson:"versioning,omitempty"`
-	TagSet				[]S3Tag		`json:"tags,omitempty" bson:"tags,omitempty"`
-	Encrypt				S3BucketEncrypt	`json:"encrypt,omitempty" bson:"encrypt,omitempty"`
-	Location			string		`json:"location,omitempty" bson:"location,omitempty"`
-	Policy				string		`json:"policy,omitempty" bson:"policy,omitempty"`
-	Logging				bool		`json:"logging,omitempty" bson:"logging,omitempty"`
-	Lifecycle			string		`json:"lifecycle,omitempty" bson:"lifecycle,omitempty"`
-	RequestPayment			string		`json:"request-payment,omitempty" bson:"request-payment,omitempty"`
+	Versioning			bool		`bson:"versioning,omitempty"`
+	TagSet				[]S3Tag		`bson:"tags,omitempty"`
+	Encrypt				S3BucketEncrypt	`bson:"encrypt,omitempty"`
+	Location			string		`bson:"location,omitempty"`
+	Policy				string		`bson:"policy,omitempty"`
+	Logging				bool		`bson:"logging,omitempty"`
+	Lifecycle			string		`bson:"lifecycle,omitempty"`
+	RequestPayment			string		`bson:"request-payment,omitempty"`
 
 	// Not supported props
 	// analytics
@@ -59,15 +59,15 @@ type S3Bucket struct {
 	// inventory
 	// notification
 
-	Ref				int64		`json:"ref" bson:"ref"`
-	CntObjects			int64		`json:"cnt-objects" bson:"cnt-objects"`
-	CntBytes			int64		`json:"cnt-bytes" bson:"cnt-bytes"`
-	Name				string		`json:"name" bson:"name"`
-	CannedAcl			string		`json:"canned-acl" bson:"canned-acl"`
+	Ref				int64		`bson:"ref"`
+	CntObjects			int64		`bson:"cnt-objects"`
+	CntBytes			int64		`bson:"cnt-bytes"`
+	Name				string		`bson:"name"`
+	CannedAcl			string		`bson:"canned-acl"`
 	BasicNotify			*S3BucketNotify	`bson:"notify,omitempty"`
 
-	MaxObjects			int64		`json:"max-objects" bson:"max-objects"`
-	MaxBytes			int64		`json:"max-bytes" bson:"max-bytes"`
+	MaxObjects			int64		`bson:"max-objects"`
+	MaxBytes			int64		`bson:"max-bytes"`
 }
 
 func s3DirtifyBucket(id bson.ObjectId) error {

@@ -8,15 +8,15 @@ import (
 )
 
 type S3AccessKey struct {
-	ObjID				bson.ObjectId	`json:"_id,omitempty" bson:"_id,omitempty"`
-	MTime				int64		`json:"mtime,omitempty" bson:"mtime,omitempty"`
-	State				uint32		`json:"state" bson:"state"`
+	ObjID				bson.ObjectId	`bson:"_id,omitempty"`
+	MTime				int64		`bson:"mtime,omitempty"`
+	State				uint32		`bson:"state"`
 
-	IamID				bson.ObjectId	`json:"iam_id,omitempty" bson:"iam_id,omitempty"`
-	AccessKeyID			string		`json:"access-key-id" bson:"access-key-id"`
-	AccessKeySecret			string		`json:"access-key-secret" bson:"access-key-secret"`
-	Status				uint32		`json:"status,omitempty" bson:"status,omitempty"`
-	Bucket				string		`json:"bucket,omitempty" bson:"bucket,omitempty"`
+	IamID				bson.ObjectId	`bson:"iam_id,omitempty"`
+	AccessKeyID			string		`bson:"access-key-id"`
+	AccessKeySecret			string		`bson:"access-key-secret"`
+	Status				uint32		`bson:"status,omitempty"`
+	Bucket				string		`bson:"bucket,omitempty"`
 }
 
 const (

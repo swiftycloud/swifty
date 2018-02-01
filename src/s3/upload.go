@@ -12,29 +12,29 @@ import (
 
 type S3UploadPart struct {
 	ObjID				bson.ObjectId	`bson:"_id,omitempty"`
-	MTime				int64		`json:"mtime,omitempty" bson:"mtime,omitempty"`
-	State				uint32		`json:"state" bson:"state"`
+	MTime				int64		`bson:"mtime,omitempty"`
+	State				uint32		`bson:"state"`
 
 	UploadObjID			bson.ObjectId	`bson:"upload-id,omitempty"`
-	BackendID			string		`json:"bid" bson:"bid"`
+	BackendID			string		`bson:"bid"`
 
-	Part				int		`json:"part" bson:"part"`
-	Size				int64		`json:"size" bson:"size"`
-	ETag				string		`json:"etag" bson:"etag"`
-	Data				[]byte		`json:"data,omitempty" bson:"data,omitempty"`
-	S3ObjectPorps					`json:",inline" bson:",inline"`
+	Part				int		`bson:"part"`
+	Size				int64		`bson:"size"`
+	ETag				string		`bson:"etag"`
+	Data				[]byte		`bson:"data,omitempty"`
+	S3ObjectPorps					`bson:",inline"`
 }
 
 type S3Upload struct {
 	ObjID				bson.ObjectId	`bson:"_id,omitempty"`
-	MTime				int64		`json:"mtime,omitempty" bson:"mtime,omitempty"`
-	State				uint32		`json:"state" bson:"state"`
+	MTime				int64		`bson:"mtime,omitempty"`
+	State				uint32		`bson:"state"`
 	BucketObjID			bson.ObjectId	`bson:"bucket-id,omitempty"`
-	UploadID			string		`json:"uid" bson:"uid"`
-	Ref				int64		`json:"ref" bson:"ref"`
-	Lock				uint32		`json:"lock" bson:"lock"`
+	UploadID			string		`bson:"uid"`
+	Ref				int64		`bson:"ref"`
+	Lock				uint32		`bson:"lock"`
 
-	S3ObjectPorps					`json:",inline" bson:",inline"`
+	S3ObjectPorps					`bson:",inline"`
 }
 
 func s3RepairUploadsInactive() error {
