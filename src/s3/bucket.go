@@ -35,6 +35,8 @@ type S3Bucket struct {
 	MTime				int64		`bson:"mtime,omitempty"`
 	State				uint32		`bson:"state"`
 
+	IamObjID			bson.ObjectId	`bson:"iam-id,omitempty"`
+
 	BackendID			string		`bson:"bid,omitempty"`
 	NamespaceID			string		`bson:"nsid,omitempty"`
 	CreationTime			string		`bson:"creation-time,omitempty"`
@@ -267,6 +269,7 @@ func s3InsertBucket(iam *S3Iam, akey *S3AccessKey, bname, canned_acl string) err
 		ObjID:		bson.NewObjectId(),
 		State:		S3StateNone,
 
+		IamObjID:	iam.ObjID,
 		Name:		bname,
 		CannedAcl:	canned_acl,
 		BackendID:	iam.BucketBID(bname),
