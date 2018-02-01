@@ -63,7 +63,7 @@ type S3Bucket struct {
 	CntObjects			int64		`json:"cnt-objects" bson:"cnt-objects"`
 	CntBytes			int64		`json:"cnt-bytes" bson:"cnt-bytes"`
 	Name				string		`json:"name" bson:"name"`
-	Acl				string		`json:"acl" bson:"acl"`
+	CannedAcl			string		`json:"canned-acl" bson:"canned-acl"`
 	BasicNotify			*S3BucketNotify	`bson:"notify,omitempty"`
 
 	MaxObjects			int64		`json:"max-objects" bson:"max-objects"`
@@ -255,7 +255,7 @@ func s3RepairBucket() error {
 	return nil
 }
 
-func s3InsertBucket(iam *S3Iam, akey *S3AccessKey, bname, acl string) error {
+func s3InsertBucket(iam *S3Iam, akey *S3AccessKey, bname, canned_acl string) error {
 	var err error
 
 	err = akey.CheckBucketAccess(bname)
@@ -268,7 +268,7 @@ func s3InsertBucket(iam *S3Iam, akey *S3AccessKey, bname, acl string) error {
 		State:		S3StateNone,
 
 		Name:		bname,
-		Acl:		acl,
+		CannedAcl:	canned_acl,
 		BackendID:	iam.BucketBID(bname),
 		NamespaceID:	iam.NamespaceID(),
 		CreationTime:	time.Now().Format(time.RFC3339),
