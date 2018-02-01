@@ -12,7 +12,7 @@ type S3AccessKey struct {
 	MTime				int64		`bson:"mtime,omitempty"`
 	State				uint32		`bson:"state"`
 
-	IamID				bson.ObjectId	`bson:"iam_id,omitempty"`
+	IamID				bson.ObjectId	`bson:"iam-id,omitempty"`
 	AccessKeyID			string		`bson:"access-key-id"`
 	AccessKeySecret			string		`bson:"access-key-secret"`
 	Status				uint32		`bson:"status,omitempty"`
