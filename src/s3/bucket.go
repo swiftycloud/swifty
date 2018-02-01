@@ -8,11 +8,11 @@ import (
 	"../apis/apps/s3"
 )
 
-var BucketAcls = []string {
-	swys3api.S3BucketAclPrivate,
-	swys3api.S3BucketAclPublicRead,
-	swys3api.S3BucketAclPublicReadWrite,
-	swys3api.S3BucketAclAuthenticatedRead,
+var BucketCannedAcls = []string {
+	swys3api.S3BucketAclCannedPrivate,
+	swys3api.S3BucketAclCannedPublicRead,
+	swys3api.S3BucketAclCannedPublicReadWrite,
+	swys3api.S3BucketAclCannedAuthenticatedRead,
 }
 
 type S3BucketNotify struct {

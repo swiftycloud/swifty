@@ -204,8 +204,8 @@ func handleBucket(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Setup default ACL
-	if verifyAclValue(r.Header.Get("x-amz-acl"), BucketAcls) == false {
-		r.Header.Set("x-amz-acl", swys3api.S3BucketAclPrivate)
+	if verifyAclValue(r.Header.Get("x-amz-acl"), BucketCannedAcls) == false {
+		r.Header.Set("x-amz-acl", swys3api.S3BucketAclCannedPrivate)
 	}
 
 	acl = r.Header.Get("x-amz-acl")
@@ -575,7 +575,7 @@ func handleBreq(w http.ResponseWriter, r *http.Request, op string) {
 	}
 
 	if breq.Acl == "" {
-		breq.Acl = swys3api.S3BucketAclPrivate
+		breq.Acl = swys3api.S3BucketAclCannedPrivate
 	}
 
 	key = iam.MakeBucketKey(breq.Bucket, breq.Acl)

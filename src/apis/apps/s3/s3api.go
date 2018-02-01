@@ -47,10 +47,10 @@ const (
 )
 
 const (
-	S3BucketAclPrivate			= "private"
-	S3BucketAclPublicRead			= "public-read"
-	S3BucketAclPublicReadWrite		= "public-read-write"
-	S3BucketAclAuthenticatedRead		= "authenticated-read"
+	S3BucketAclCannedPrivate		= "private"
+	S3BucketAclCannedPublicRead		= "public-read"
+	S3BucketAclCannedPublicReadWrite	= "public-read-write"
+	S3BucketAclCannedAuthenticatedRead	= "authenticated-read"
 )
 
 type S3Error struct {
