@@ -449,6 +449,7 @@ func removeFunction(ctx context.Context, conf *YAMLConf, id *SwoId) *swyapi.Gate
 	// Allow to remove function if only we're in known state,
 	// otherwise wait for function building to complete
 	err = dbFuncSetStateCond(id, swy.DBFuncStateTrm, []int{
+			swy.DBFuncStateStr,
 			swy.DBFuncStateRdy, swy.DBFuncStateStl,
 			swy.DBFuncStateDea, swy.DBFuncStateTrm})
 	if err != nil {
