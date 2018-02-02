@@ -12,7 +12,7 @@ type S3AccessKey struct {
 	MTime				int64		`bson:"mtime,omitempty"`
 	State				uint32		`bson:"state"`
 
-	IamID				bson.ObjectId	`bson:"iam-id,omitempty"`
+	IamObjID			bson.ObjectId	`bson:"iam-id,omitempty"`
 	AccessKeyID			string		`bson:"access-key-id"`
 	AccessKeySecret			string		`bson:"access-key-secret"`
 	Status				uint32		`bson:"status,omitempty"`
@@ -79,7 +79,7 @@ func genNewAccessKey(namespace, bucket string) (*S3AccessKey, error) {
 		return nil, err
 	}
 
-	akey.IamID = iam.ObjID
+	akey.IamObjID = iam.ObjID
 
 	// The secret key will be encoded here
 	err = dbInsertAccessKey(&akey)

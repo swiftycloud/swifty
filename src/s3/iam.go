@@ -37,14 +37,14 @@ func s3IamFindByNamespace(namespace string) (*S3Iam, error) {
 }
 
 func (akey *S3AccessKey)s3IamFind() (*S3Iam, error) {
-	return s3LookupIam(bson.M{"_id": akey.IamID,
+	return s3LookupIam(bson.M{"_id": akey.IamObjID,
 				"state": S3StateActive})
 }
 
 /* Key, that gives access to bucket */
 func (iam *S3Iam)MakeBucketKey(bucket, act string) *S3AccessKey {
 	return &S3AccessKey{
-		IamID: iam.ObjID,
+		IamObjID: iam.ObjID,
 		Bucket: bucket,
 	}
 }

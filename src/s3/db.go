@@ -163,7 +163,7 @@ func infoLong(o interface{}) (string) {
 	case reflect.TypeOf(&S3AccessKey{}):
 		akey := o.(*S3AccessKey)
 		return fmt.Sprintf("{ S3AccessKey: %s/%s/%s/%d }",
-			akey.ObjID, akey.IamID,
+			akey.ObjID, akey.IamObjID,
 			akey.AccessKeyID, akey.Status)
 	case reflect.TypeOf(&S3Iam{}):
 		iam := o.(*S3Iam)
