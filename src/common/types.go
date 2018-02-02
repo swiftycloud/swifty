@@ -8,14 +8,6 @@ const (
 )
 
 const (
-	DBPodStateNak	int = 0		// No state
-	DBPodStateQue	int = 1		// Queued
-	DBPodStateRdy	int = 2		// Ready
-	DBPodStateTrm	int = 4		// Terminating
-	DBPodStateBsy	int = 8		// Busy
-)
-
-const (
 	DBFuncStateIni	int = 1		// Initializing for add -> Bld/Str
 	DBFuncStateStr	int = 2		// Starting -> Rdy
 	DBFuncStateRdy	int = 3		// Ready

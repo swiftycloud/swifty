@@ -21,8 +21,6 @@ import (
 	"flag"
 	"time"
 	"fmt"
-
-	"../common"
 )
 
 var swk8sClientSet *kubernetes.Clientset
@@ -352,21 +350,12 @@ func swk8sRun(ctx context.Context, conf *YAMLConf, fn *FunctionDesc, fi *FnInst)
 	return nil
 }
 
-var podStates = map[int]string {
-	swy.DBPodStateNak: "Nak",
-	swy.DBPodStateQue: "Que",
-	swy.DBPodStateRdy: "Rdy",
-	swy.DBPodStateTrm: "Trm",
-	swy.DBPodStateBsy: "Bsy",
-}
-
 type k8sPod struct {
 	SwoId
 	Version		string
 	DepName		string
 	WdogAddr	string
 	UID		string
-	State		int
 	Instance	string
 }
 
@@ -375,7 +364,6 @@ func genBalancerPod(pod *v1.Pod) (*k8sPod) {
 		DepName:	pod.ObjectMeta.Labels["deployment"],
 		UID:		string(pod.ObjectMeta.UID),
 		WdogAddr:	pod.Status.PodIP,
-		State:		swy.DBPodStateNak,
 	}
 
 	for _, c := range pod.Spec.Containers {
@@ -398,38 +386,6 @@ func genBalancerPod(pod *v1.Pod) (*k8sPod) {
 		}
 	}
 
-	for _, v := range pod.Status.Conditions {
-		if v.Type == v1.PodScheduled {
-			if v.Status == v1.ConditionTrue {
-				if r.State != swy.DBPodStateRdy {
-					r.State = swy.DBPodStateQue
-				}
-			}
-		} else if v.Type == v1.PodReady {
-			if v.Status == v1.ConditionTrue {
-				r.State = swy.DBPodStateRdy
-			}
-		}
-	}
-
-	if pod.Status.Phase != v1.PodRunning {
-		if pod.Status.Phase == v1.PodPending {
-			r.State = swy.DBPodStateQue
-		} else if pod.Status.Phase == v1.PodSucceeded {
-			r.State = swy.DBPodStateTrm
-		} else if pod.Status.Phase == v1.PodFailed {
-			r.State = swy.DBPodStateTrm
-		} else {
-			r.State = swy.DBPodStateNak
-		}
-	}
-
-	if r.WdogAddr == "" || r.UID == "" ||
-			r.Tennant == "" || r.Project == "" || r.Name == "" ||
-			r.Version == "" || r.DepName == "" || r.Instance == "" {
-		r.State = swy.DBPodStateNak
-	}
-
 	return r
 }
 
@@ -445,44 +401,44 @@ func swk8sPodTmo(cookie, inst string) {
 	notifyPodTmo(ctx, cookie, inst)
 }
 
-func swk8sPodUpd(obj_old, obj_new interface{}) {
-	var err error = nil
+func swk8sPodUp(ctx context.Context, pod *k8sPod) {
+	ctxlog(ctx).Debugf("POD %s (%s) up deploy %s", pod.UID, pod.WdogAddr, pod.DepName)
 
-	ctx := context.Background()
-	pod_old := genBalancerPod(obj_old.(*v1.Pod))
-	pod_new := genBalancerPod(obj_new.(*v1.Pod))
-
-	if pod_old.State != swy.DBPodStateRdy {
-		if pod_new.State == swy.DBPodStateRdy {
-			ctxlog(ctx).Debugf("POD %s (%s) up (%s->%s) deploy %s", pod_new.UID, pod_new.WdogAddr,
-					podStates[pod_old.State], podStates[pod_new.State],
-					pod_new.DepName)
-
-			go func() {
-				err = BalancerPodAdd(pod_new)
-				if err != nil {
-					ctxlog(ctx).Errorf("Can't add pod %s/%s/%s: %s",
-							pod_new.DepName, pod_new.UID,
-							pod_new.WdogAddr, err.Error())
-					return
-				}
-
-				notifyPodUp(ctx, pod_new)
-			}()
+	go func() {
+		err := BalancerPodAdd(pod)
+		if err != nil {
+			ctxlog(ctx).Errorf("Can't add pod %s/%s/%s: %s",
+					pod.DepName, pod.UID,
+					pod.WdogAddr, err.Error())
+			return
 		}
-	} else {
-		if pod_new.State != swy.DBPodStateRdy {
-			ctxlog(ctx).Debugf("POD %s down (%s->%s) deploy %s", pod_new.UID,
-					podStates[pod_old.State], podStates[pod_new.State],
-					pod_new.DepName)
 
-			err = BalancerPodDel(pod_new)
-			if err != nil {
-				ctxlog(ctx).Errorf("Can't delete pod %s/%s/%s: %s",
-						pod_new.DepName, pod_new.UID,
-						pod_new.WdogAddr, err.Error())
-				return
-			}
+		notifyPodUp(ctx, pod)
+	}()
+}
+
+func swk8sPodDown(ctx context.Context, pod *k8sPod) {
+	ctxlog(ctx).Debugf("POD %s down deploy %s", pod.UID, pod.DepName)
+
+	err := BalancerPodDel(pod)
+	if err != nil {
+		ctxlog(ctx).Errorf("Can't delete pod %s/%s/%s: %s",
+				pod.DepName, pod.UID,
+				pod.WdogAddr, err.Error())
+	}
+}
+
+func swk8sPodUpd(obj_old, obj_new interface{}) {
+	po := obj_old.(*v1.Pod)
+	pn := obj_new.(*v1.Pod)
+
+	if po.Status.PodIP == "" && pn.Status.PodIP != "" {
+		swk8sPodUp(context.Background(), genBalancerPod(pn))
+	} else if po.Status.PodIP != "" && pn.Status.PodIP == "" {
+		swk8sPodDown(context.Background(), genBalancerPod(po))
+	} else if po.Status.PodIP != "" && pn.Status.PodIP != "" {
+		if po.Status.PodIP != pn.Status.PodIP {
+			glog.Errorf("BAD news: POD IP has changed, while shouldn't")
 		}
 	}
 }
