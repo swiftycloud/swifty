@@ -96,10 +96,10 @@ func statsDrop(fn *FunctionDesc) error {
 }
 
 func fnStatsInit(st *FnStats, fn *FunctionDesc) {
+	dbStatsGet(fn.Cookie, st)
 	st.Cookie = fn.Cookie
 	st.done = make(chan chan bool)
 	st.flushed = make(chan bool)
-	dbStatsGet(fn.Cookie, st)
 	go func() {
 		for {
 			select {
