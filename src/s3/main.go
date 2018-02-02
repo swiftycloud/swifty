@@ -212,6 +212,7 @@ func handleBucket(w http.ResponseWriter, r *http.Request) {
 
 	if bname == "" {
 		if r.Method == http.MethodGet {
+			// List all buckets belonging to us
 			handleListBuckets(w, iam, akey)
 			return
 		} else {
@@ -230,6 +231,7 @@ func handleBucket(w http.ResponseWriter, r *http.Request) {
 		}
 		break
 	case http.MethodGet:
+		// List active uploads on a bucket
 		if _, ok = r.URL.Query()["uploads"]; ok {
 			resp, err := s3Uploads(iam, akey, bname)
 			if err != nil {
@@ -352,6 +354,7 @@ func handleObject(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodPost:
 		if _, ok = r.URL.Query()["uploads"]; ok {
+			// Initialize an upload
 			upload, err = s3UploadInit(bucket, oname, acl)
 			if err != nil {
 				HTTPRespError(w, S3ErrInternalError,
@@ -367,6 +370,8 @@ func handleObject(w http.ResponseWriter, r *http.Request) {
 			HTTPRespXML(w, resp)
 			return
 		} else if _, ok = r.URL.Query()["uploadId"]; ok {
+			// Finalize an upload
+
 			var complete swys3api.S3MpuFiniParts
 
 			body, err = ioutil.ReadAll(r.Body)
@@ -407,6 +412,8 @@ func handleObject(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if _, ok = r.URL.Query()["uploadId"]; ok {
+			// Upload a part of an object
+
 			var etag string
 			var part int
 
@@ -440,6 +447,8 @@ func handleObject(w http.ResponseWriter, r *http.Request) {
 		break
 	case http.MethodGet:
 		if _, ok = r.URL.Query()["uploadId"]; ok {
+			// List parts of object in the upload
+
 			resp, err := s3UploadList(bucket, oname,
 						r.URL.Query()["uploadId"][0])
 			if err != nil {
@@ -450,7 +459,7 @@ func handleObject(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// List all objects
+		// Read an object
 		body, err = s3ReadObject(bucket, oname, 0, 1)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
@@ -462,6 +471,7 @@ func handleObject(w http.ResponseWriter, r *http.Request) {
 		break
 	case http.MethodDelete:
 		if _, ok = r.URL.Query()["uploadId"]; ok {
+			// Delete upload and all parts
 			err = s3UploadAbort(bucket, oname, r.URL.Query()["uploadId"][0])
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusBadRequest)
@@ -477,11 +487,11 @@ func handleObject(w http.ResponseWriter, r *http.Request) {
 		}
 		break
 	case http.MethodHead:
-		// Check if we can access a bucket
+		// Check if we can access an object
 		err = s3CheckAccess(akey, bname, oname)
 		if err != nil {
 			if err == mgo.ErrNotFound {
-				http.Error(w, "No bucket/object found", http.StatusBadRequest)
+				http.Error(w, "No object found", http.StatusBadRequest)
 			} else {
 				http.Error(w, err.Error(), http.StatusBadRequest)
 			}
