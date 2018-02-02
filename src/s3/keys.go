@@ -99,7 +99,7 @@ func (iam *S3Iam)FindBuckets(akey *S3AccessKey) ([]S3Bucket, error) {
 
 	if akey.Bucket != "" {
 		var b S3Bucket
-		err = dbS3FindOne(bson.M{"nsid": iam.NamespaceID, "name": akey.Bucket}, &b)
+		err = dbS3FindOne(bson.M{"nsid": iam.NamespaceID(), "name": akey.Bucket}, &b)
 		res = []S3Bucket{b}
 	} else {
 		err = dbS3FindAll(bson.M{"nsid": iam.NamespaceID()}, &res)
