@@ -35,6 +35,7 @@ type S3ObjectPorps struct {
 
 type S3Object struct {
 	ObjID				bson.ObjectId	`bson:"_id,omitempty"`
+	IamObjID			bson.ObjectId	`bson:"iam-id,omitempty"`
 	MTime				int64		`bson:"mtime,omitempty"`
 	State				uint32		`bson:"state"`
 
@@ -111,7 +112,7 @@ func (bucket *S3Bucket)FindObject(oname string) (*S3Object, error) {
 	return &res,nil
 }
 
-func s3AddObject(namespace string, bucket *S3Bucket, oname string,
+func s3AddObject(iam *S3Iam, bucket *S3Bucket, oname string,
 		acl string, size int64, data []byte) (*S3Object, error) {
 	var objd *S3ObjectData
 	var etag string
@@ -119,6 +120,7 @@ func s3AddObject(namespace string, bucket *S3Bucket, oname string,
 
 	object := &S3Object {
 		ObjID:		bson.NewObjectId(),
+		IamObjID:	iam.ObjID,
 		State:		S3StateNone,
 
 		S3ObjectPorps: S3ObjectPorps {
@@ -143,7 +145,7 @@ func s3AddObject(namespace string, bucket *S3Bucket, oname string,
 		goto out_remove
 	}
 
-	objd, etag, err = s3ObjectDataAdd(object.ObjID, bucket.BackendID,
+	objd, etag, err = s3ObjectDataAdd(iam, object.ObjID, bucket.BackendID,
 					object.BackendID, data)
 	if err != nil {
 		goto out_acc
@@ -161,7 +163,7 @@ func s3AddObject(namespace string, bucket *S3Bucket, oname string,
 	}
 
 	if bucket.BasicNotify != nil {
-		s3Notify(namespace, bucket, object, S3NotifyPut)
+		s3Notify(iam.Namespace, bucket, object, S3NotifyPut)
 	}
 
 	log.Debugf("s3: Added %s", infoLong(object))

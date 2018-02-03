@@ -10,6 +10,7 @@ import (
 
 type S3ObjectData struct {
 	ObjID				bson.ObjectId	`bson:"_id,omitempty"`
+	IamObjID			bson.ObjectId	`bson:"iam-id,omitempty"`
 	MTime				int64		`bson:"mtime,omitempty"`
 	State				uint32		`bson:"state"`
 
@@ -143,12 +144,13 @@ func s3ObjectDataFind(refID bson.ObjectId) (*S3ObjectData, error) {
 	return &res, nil
 }
 
-func s3ObjectDataAdd(refid bson.ObjectId, bucket_bid, object_bid string, data []byte) (*S3ObjectData, string, error) {
+func s3ObjectDataAdd(iam *S3Iam, refid bson.ObjectId, bucket_bid, object_bid string, data []byte) (*S3ObjectData, string, error) {
 	var objd *S3ObjectData
 	var err error
 
 	objd = &S3ObjectData {
 		ObjID:		bson.NewObjectId(),
+		IamObjID:	iam.ObjID,
 		State:		S3StateNone,
 
 		RefID:		refid,

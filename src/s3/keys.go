@@ -9,10 +9,10 @@ import (
 
 type S3AccessKey struct {
 	ObjID				bson.ObjectId	`bson:"_id,omitempty"`
+	IamObjID			bson.ObjectId	`bson:"iam-id,omitempty"`
 	MTime				int64		`bson:"mtime,omitempty"`
 	State				uint32		`bson:"state"`
 
-	IamObjID			bson.ObjectId	`bson:"iam-id,omitempty"`
 	AccessKeyID			string		`bson:"access-key-id"`
 	AccessKeySecret			string		`bson:"access-key-secret"`
 	Status				uint32		`bson:"status,omitempty"`

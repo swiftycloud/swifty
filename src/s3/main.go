@@ -356,7 +356,7 @@ func handleObject(w http.ResponseWriter, r *http.Request) {
 	case http.MethodPost:
 		if _, ok = r.URL.Query()["uploads"]; ok {
 			// Initialize an upload
-			upload, err = s3UploadInit(bucket, oname, acl)
+			upload, err = s3UploadInit(iam, bucket, oname, acl)
 			if err != nil {
 				HTTPRespError(w, S3ErrInternalError,
 					"Failed to initiate multipart upload")
@@ -387,7 +387,7 @@ func handleObject(w http.ResponseWriter, r *http.Request) {
 					"Failed to unmarshal body")
 				return
 			}
-			resp, err := s3UploadFini(iam.Namespace, bucket,
+			resp, err := s3UploadFini(iam, bucket,
 					r.URL.Query()["uploadId"][0], &complete)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusBadRequest)
@@ -428,7 +428,7 @@ func handleObject(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
-			etag, err = s3UploadPart(iam.Namespace, bucket,
+			etag, err = s3UploadPart(iam, bucket,
 				oname, r.URL.Query()["uploadId"][0],
 				part, body)
 			if err != nil {
@@ -440,7 +440,7 @@ func handleObject(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Create new object
-		_, err = s3AddObject(iam.Namespace, bucket, oname, acl, object_size, body)
+		_, err = s3AddObject(iam, bucket, oname, acl, object_size, body)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return

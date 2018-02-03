@@ -12,6 +12,7 @@ import (
 
 type S3UploadPart struct {
 	ObjID				bson.ObjectId	`bson:"_id,omitempty"`
+	IamObjID			bson.ObjectId	`bson:"iam-id,omitempty"`
 	MTime				int64		`bson:"mtime,omitempty"`
 	State				uint32		`bson:"state"`
 
@@ -27,8 +28,10 @@ type S3UploadPart struct {
 
 type S3Upload struct {
 	ObjID				bson.ObjectId	`bson:"_id,omitempty"`
+	IamObjID			bson.ObjectId	`bson:"iam-id,omitempty"`
 	MTime				int64		`bson:"mtime,omitempty"`
 	State				uint32		`bson:"state"`
+
 	BucketObjID			bson.ObjectId	`bson:"bucket-id,omitempty"`
 	UploadID			string		`bson:"uid"`
 	Ref				int64		`bson:"ref"`
@@ -237,11 +240,12 @@ func s3UploadRemoveLocked(upload *S3Upload) (error) {
 	return nil
 }
 
-func s3UploadInit(bucket *S3Bucket, oname, acl string) (*S3Upload, error) {
+func s3UploadInit(iam *S3Iam, bucket *S3Bucket, oname, acl string) (*S3Upload, error) {
 	var err error
 
 	upload := &S3Upload{
 		ObjID:		bson.NewObjectId(),
+		IamObjID:	iam.ObjID,
 		State:		S3StateActive,
 
 		S3ObjectPorps: S3ObjectPorps {
@@ -262,7 +266,7 @@ func s3UploadInit(bucket *S3Bucket, oname, acl string) (*S3Upload, error) {
 	return upload, err
 }
 
-func s3UploadPart(namespace string, bucket *S3Bucket, oname,
+func s3UploadPart(iam *S3Iam, bucket *S3Bucket, oname,
 			uid string, partno int, data []byte) (string, error) {
 	var objd *S3ObjectData
 	var part *S3UploadPart
@@ -288,6 +292,7 @@ func s3UploadPart(namespace string, bucket *S3Bucket, oname,
 
 	part = &S3UploadPart{
 		ObjID:		bson.NewObjectId(),
+		IamObjID:	iam.ObjID,
 		State:		S3StateNone,
 
 		S3ObjectPorps: S3ObjectPorps {
@@ -299,7 +304,7 @@ func s3UploadPart(namespace string, bucket *S3Bucket, oname,
 		Size:		int64(len(data)),
 	}
 
-	objd, etag, err = s3ObjectDataAdd(part.ObjID, bucket.BackendID, part.BackendID, data)
+	objd, etag, err = s3ObjectDataAdd(iam, part.ObjID, bucket.BackendID, part.BackendID, data)
 	if err != nil {
 		upload.dbRefDec()
 		log.Errorf("s3: Can't store data %s: %s", infoLong(part), err.Error())
@@ -328,7 +333,7 @@ func s3UploadPart(namespace string, bucket *S3Bucket, oname,
 	return part.ETag, nil
 }
 
-func s3UploadFini(namespace string, bucket *S3Bucket, uid string,
+func s3UploadFini(iam *S3Iam, bucket *S3Bucket, uid string,
 			compete *swys3api.S3MpuFiniParts) (*swys3api.S3MpuFini, error) {
 	var res swys3api.S3MpuFini
 	var part S3UploadPart
@@ -368,7 +373,7 @@ func s3UploadFini(namespace string, bucket *S3Bucket, uid string,
 		return nil, err
 	}
 
-	object, err = s3AddObject(namespace, bucket, upload.Key, upload.Acl, size, data)
+	object, err = s3AddObject(iam, bucket, upload.Key, upload.Acl, size, data)
 	if err != nil {
 		log.Errorf("s3: Can't insert object on %s: %s",
 			infoLong(&upload), err.Error())
