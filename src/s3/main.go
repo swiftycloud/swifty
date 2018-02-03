@@ -26,6 +26,7 @@ import (
 
 var s3Secrets map[string]string
 var s3SecKey []byte
+var S3ModeDevel bool
 
 type YAMLConfCeph struct {
 	ConfigPath	string			`yaml:"config-path"`
@@ -684,8 +685,6 @@ func handleNotifyAdd(w http.ResponseWriter, r *http.Request) {
 func handleNotifyDel(w http.ResponseWriter, r *http.Request) {
 	handleNotify(w, r, false)
 }
-
-var S3ModeDevel bool
 
 func main() {
 	var config_path string
