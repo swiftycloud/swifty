@@ -512,8 +512,10 @@ func HTTPRespError(w http.ResponseWriter, errcode int, params ...string) {
 		switch len(params) {
 		case 3:
 			e.RequestID = params[2]
+			fallthrough
 		case 2:
 			e.Resource = params[1]
+			fallthrough
 		case 1:
 			e.Message = params[0]
 		}
