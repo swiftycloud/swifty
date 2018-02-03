@@ -263,7 +263,7 @@ func handleBucket(w http.ResponseWriter, r *http.Request) {
 		break
 	case http.MethodHead:
 		// Check if we can access a bucket
-		err = s3CheckAccess(akey, bname, "")
+		err = s3CheckAccess(iam, bname, "")
 		if err != nil {
 			if err == mgo.ErrNotFound {
 				HTTPRespError(w, S3ErrNoSuchBucket, "No bucket found")
@@ -489,7 +489,7 @@ func handleObject(w http.ResponseWriter, r *http.Request) {
 		break
 	case http.MethodHead:
 		// Check if we can access an object
-		err = s3CheckAccess(akey, bname, oname)
+		err = s3CheckAccess(iam, bname, oname)
 		if err != nil {
 			if err == mgo.ErrNotFound {
 				http.Error(w, "No object found", http.StatusBadRequest)
