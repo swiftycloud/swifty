@@ -396,9 +396,6 @@ func s3ListBuckets(iam *S3Iam, akey *S3AccessKey) (*swys3api.S3BucketList, error
 
 	buckets, err = iam.FindBuckets(akey)
 	if err != nil {
-		if err == mgo.ErrNotFound {
-			err = nil
-		}
 		return nil, err
 	}
 

@@ -106,9 +106,10 @@ func setupLogger(conf *YAMLConf) {
 }
 
 var CORS_Headers = []string {
+	swys3api.SwyS3_AccessKey,
+	swys3api.SwyS3_AdminToken,
 	"Content-Type",
 	"Content-Length",
-	"X-SwyS3-Token",
 	"Authorization",
 	"X-Amz-Date",
 	"x-amz-acl",
@@ -124,12 +125,11 @@ var CORS_Methods = []string {
 	http.MethodHead,
 }
 
-func formatRequest(prefix string, r *http.Request) string {
+func logRequest(r *http.Request) {
 	var request []string
 
 	url := fmt.Sprintf("%v %v %v", r.Method, r.URL, r.Proto)
-	request = append(request, prefix)
-	request = append(request, "---")
+	request = append(request, "\n---")
 	request = append(request, url)
 	request = append(request, fmt.Sprintf("Host: %v", r.Host))
 
@@ -148,364 +148,332 @@ func formatRequest(prefix string, r *http.Request) string {
 	}
 
 	request = append(request, "---")
-	return strings.Join(request, "\n")
-//	return prefix
+	log.Debug(strings.Join(request, "\n"))
 }
 
-func handleListBuckets(w http.ResponseWriter, iam *S3Iam, akey *S3AccessKey) {
-	var list *swys3api.S3BucketList
-	var err error
-
-	list, err = s3ListBuckets(iam, akey)
+// List all buckets belonging to an account
+func handleListBuckets(iam *S3Iam, akey *S3AccessKey, w http.ResponseWriter, r *http.Request) *S3Error {
+	buckets, err := s3ListBuckets(iam, akey)
 	if err != nil {
 		if err == mgo.ErrNotFound {
-			HTTPRespError(w, S3ErrNoSuchBucket, err.Error())
-		} else {
-			HTTPRespError(w, S3ErrInternalError, err.Error())
+			return &S3Error{ ErrorCode: S3ErrNoSuchBucket }
 		}
-		return
+		return &S3Error{ ErrorCode: S3ErrInternalError, Message: err.Error() }
 	}
 
-	HTTPRespXML(w, list)
+	HTTPRespXML(w, buckets)
+	return nil
 }
 
-func handleBucket(w http.ResponseWriter, r *http.Request) {
-	var bname string = mux.Vars(r)["BucketName"]
-	var acl string
-	var akey *S3AccessKey
-	var iam *S3Iam
-	var err error
-	var ok bool
-
-	log.Debug(formatRequest(fmt.Sprintf("handleBucket: bucket %v",
-						bname), r))
-
-	if swyhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
-
-	akey, err = s3VerifyAuthorization(r)
-	if err == nil {
-		iam, err = akey.s3IamFind()
+func handleListUploads(bname string, iam *S3Iam, akey *S3AccessKey, w http.ResponseWriter, r *http.Request) *S3Error {
+	uploads, err := s3Uploads(iam, akey, bname)
+	if err != nil {
+		return &S3Error{ ErrorCode: S3ErrInvalidRequest, Message: err.Error() }
 	}
 
-	if akey == nil || iam == nil || err != nil {
-		HTTPRespError(w, S3ErrAccessDenied, err.Error())
-		return
+	HTTPRespXML(w, uploads)
+	return nil
+}
+
+func handleListObjects(bname string, iam *S3Iam, akey *S3AccessKey, w http.ResponseWriter, r *http.Request) *S3Error {
+	objects, err := s3ListBucket(iam, akey, bname, "")
+	if err != nil {
+		return &S3Error{ ErrorCode: S3ErrInvalidRequest, Message: err.Error() }
 	}
 
-	switch r.Method {
-	case http.MethodPut:
-	case http.MethodGet:
-	case http.MethodDelete:
-	case http.MethodHead:
-		break
-	default:
-		HTTPRespError(w, S3ErrMethodNotAllowed)
-		return
-		break
+	HTTPRespXML(w, objects)
+	return nil
+}
+
+func handlePutBucket(bname string, iam *S3Iam, akey *S3AccessKey, w http.ResponseWriter, r *http.Request) *S3Error {
+
+	canned_acl := r.Header.Get("x-amz-acl")
+	if verifyAclValue(canned_acl, BucketCannedAcls) == false {
+		canned_acl = swys3api.S3BucketAclCannedPrivate
 	}
 
-	// Setup default ACL
-	if verifyAclValue(r.Header.Get("x-amz-acl"), BucketCannedAcls) == false {
-		r.Header.Set("x-amz-acl", swys3api.S3BucketAclCannedPrivate)
-	}
-
-	acl = r.Header.Get("x-amz-acl")
-
-	if bname == "" {
-		if r.Method == http.MethodGet {
-			// List all buckets belonging to us
-			handleListBuckets(w, iam, akey)
-			return
-		} else {
-			HTTPRespError(w, S3ErrInvalidBucketName)
-			return
-		}
-	}
-
-	switch r.Method {
-	case http.MethodPut:
-		// Create a new bucket
-		err = s3InsertBucket(iam, akey, bname, acl)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-		break
-	case http.MethodGet:
-		// List active uploads on a bucket
-		if _, ok = r.URL.Query()["uploads"]; ok {
-			resp, err := s3Uploads(iam, akey, bname)
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusBadRequest)
-				return
-			}
-
-			HTTPRespXML(w, resp)
-			return
-		}
-		// List all objects
-		objects, err := s3ListBucket(iam, akey, bname, acl)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-
-		HTTPRespXML(w, objects)
-		return
-		break
-	case http.MethodDelete:
-		// Delete a bucket
-		err = s3DeleteBucket(iam, akey, bname, acl)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-		break
-	case http.MethodHead:
-		// Check if we can access a bucket
-		err = s3CheckAccess(iam, bname, "")
-		if err != nil {
-			if err == mgo.ErrNotFound {
-				HTTPRespError(w, S3ErrNoSuchBucket, "No bucket found")
-			} else {
-				HTTPRespError(w, S3ErrInternalError, err.Error())
-			}
-			return
-		}
-		break
-	default:
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		return
-		break
+	err := s3InsertBucket(iam, akey, bname, canned_acl)
+	if err != nil {
+		return &S3Error{ ErrorCode: S3ErrInvalidRequest, Message: err.Error() }
 	}
 
 	w.WriteHeader(http.StatusOK)
+	return nil
 }
 
-
-func handleObject(w http.ResponseWriter, r *http.Request) {
-	var bname string = mux.Vars(r)["BucketName"]
-	var oname string = mux.Vars(r)["ObjName"]
-	var acl string
-	var object_size int64
-	var akey *S3AccessKey
-	var iam *S3Iam
-	var bucket *S3Bucket
-	var upload *S3Upload
-	var body []byte
-	var err error
-	var ok bool
-
-	defer r.Body.Close()
-
-	log.Debug(formatRequest(fmt.Sprintf("handleObject: bucket %v object %v",
-						bname, oname), r))
-
-	if swyhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
-
-	akey, err = s3VerifyAuthorization(r)
-	if err == nil {
-		iam, err = akey.s3IamFind()
+func handleDeleteBucket(bname string, iam *S3Iam, akey *S3AccessKey, w http.ResponseWriter, r *http.Request) *S3Error {
+	err := s3DeleteBucket(iam, akey, bname, "")
+	if err != nil {
+		return &S3Error{ ErrorCode: S3ErrInvalidRequest, Message: err.Error() }
 	}
 
-	if akey == nil || iam == nil || err != nil {
-		HTTPRespError(w, S3ErrAccessDenied, err.Error())
-		return
+	w.WriteHeader(http.StatusOK)
+	return nil
+}
+
+func handleAccessBucket(bname string, iam *S3Iam, w http.ResponseWriter, r *http.Request) *S3Error {
+	err := s3CheckAccess(iam, bname, "")
+	if err != nil {
+		return &S3Error{ ErrorCode: S3ErrInvalidRequest, Message: err.Error() }
+	}
+
+	w.WriteHeader(http.StatusOK)
+	return nil
+}
+
+func handleBucket(iam *S3Iam, akey *S3AccessKey, w http.ResponseWriter, r *http.Request) *S3Error {
+	var bname string = mux.Vars(r)["BucketName"]
+
+	if bname == "" && r.Method != http.MethodGet {
+		return &S3Error{ ErrorCode: S3ErrInvalidBucketName }
 	}
 
 	switch r.Method {
-	case http.MethodPost:
-	case http.MethodPut:
 	case http.MethodGet:
+		if bname == "" {
+			return handleListBuckets(iam, akey, w, r)
+		}
+		if _, ok := getURLParam(r, "uploads"); ok {
+			return handleListUploads(bname, iam, akey, w, r)
+		}
+		return handleListObjects(bname, iam, akey, w, r)
+	case http.MethodPut:
+		return handlePutBucket(bname, iam, akey, w, r)
 	case http.MethodDelete:
+		return handleDeleteBucket(bname, iam, akey, w, r)
 	case http.MethodHead:
-		break
+		return handleAccessBucket(bname, iam, w, r)
 	default:
-		HTTPRespError(w, S3ErrMethodNotAllowed)
-		return
-		break
+		return &S3Error{ ErrorCode: S3ErrMethodNotAllowed }
 	}
 
-	if bname == "" {
-		HTTPRespError(w, S3ErrInvalidBucketName)
-		return
-	} else if oname == "" {
-		HTTPRespError(w, S3ErrInvalidObjectName)
-		return
-	}
+	return nil
+}
 
-	// Setup default ACL
-	if verifyAclValue(r.Header.Get("x-amz-acl"), ObjectAcls) == false {
-		r.Header.Set("x-amz-acl", swys3api.S3ObjectAclPrivate)
-	}
+func handleUploadFini(uploadId string, iam *S3Iam, bucket *S3Bucket, w http.ResponseWriter, r *http.Request) *S3Error {
+	var complete swys3api.S3MpuFiniParts
 
-	bucket, err = iam.FindBucket(akey, bname)
+	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
+		return &S3Error{ ErrorCode: S3ErrIncompleteBody }
 	}
 
-	object_size, err = strconv.ParseInt(r.Header.Get("Content-Length"), 10, 64)
+	err = xml.Unmarshal(body, &complete)
+	if err != nil {
+		return &S3Error{ ErrorCode: S3ErrMissingRequestBodyError }
+	}
+
+	resp, err := s3UploadFini(iam, bucket, uploadId, &complete)
+	if err != nil {
+		return &S3Error{ ErrorCode: S3ErrInvalidRequest, Message: err.Error() }
+	}
+
+	HTTPRespXML(w, resp)
+	return nil
+}
+
+func handleUploadInit(oname string, iam *S3Iam, bucket *S3Bucket, w http.ResponseWriter, r *http.Request) *S3Error {
+
+	canned_acl := r.Header.Get("x-amz-acl")
+	if verifyAclValue(canned_acl, BucketCannedAcls) == false {
+		canned_acl = swys3api.S3BucketAclCannedPrivate
+	}
+
+	upload, err := s3UploadInit(iam, bucket, oname, canned_acl)
+	if err != nil {
+		return &S3Error{ ErrorCode: S3ErrInvalidRequest, Message: err.Error() }
+	}
+
+	resp := swys3api.S3MpuInit{
+		Bucket:		bucket.Name,
+		Key:		oname,
+		UploadId:	upload.UploadID,
+	}
+
+	HTTPRespXML(w, resp)
+	return nil
+}
+
+func handleUploadListParts(uploadId, oname string, iam *S3Iam, bucket *S3Bucket, w http.ResponseWriter, r *http.Request) *S3Error {
+	resp, err := s3UploadList(bucket, oname, uploadId)
+	if err != nil {
+		return &S3Error{ ErrorCode: S3ErrInvalidRequest, Message: err.Error() }
+	}
+
+	HTTPRespXML(w, resp)
+	return nil
+}
+
+func handleUploadPart(uploadId, oname string, iam *S3Iam, bucket *S3Bucket, w http.ResponseWriter, r *http.Request) *S3Error {
+	var etag string
+	var partno int
+
+	if part, ok := getURLParam(r, "partNumber"); ok {
+		partno, _ = strconv.Atoi(part)
+	} else {
+		return &S3Error{ ErrorCode: S3ErrInvalidArgument }
+	}
+
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		return &S3Error{ ErrorCode: S3ErrIncompleteBody }
+	}
+
+	etag, err = s3UploadPart(iam, bucket, oname, uploadId, partno, body)
+	if err != nil {
+		return &S3Error{ ErrorCode: S3ErrInvalidRequest, Message: err.Error() }
+	}
+	w.Header().Set("ETag", etag)
+
+	w.WriteHeader(http.StatusOK)
+	return nil
+}
+
+func handleUploadAbort(uploadId, oname string, iam *S3Iam, bucket *S3Bucket, w http.ResponseWriter, r *http.Request) *S3Error {
+	err := s3UploadAbort(bucket, oname, uploadId)
+	if err != nil {
+		return &S3Error{ ErrorCode: S3ErrInvalidRequest, Message: err.Error() }
+	}
+
+	w.WriteHeader(http.StatusOK)
+	return nil
+}
+
+func handleGetObject(oname string, iam *S3Iam, bucket *S3Bucket, w http.ResponseWriter, r *http.Request) *S3Error {
+	body, err := s3ReadObject(bucket, oname, 0, 1)
+	if err != nil {
+		return &S3Error{ ErrorCode: S3ErrInvalidRequest, Message: err.Error() }
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write(body)
+	return nil
+}
+
+func handlePutObject(oname string, iam *S3Iam, bucket *S3Bucket, w http.ResponseWriter, r *http.Request) *S3Error {
+	object_size, err := strconv.ParseInt(r.Header.Get("Content-Length"), 10, 64)
 	if err != nil {
 		object_size = 0
 	}
 
-	acl = r.Header.Get("x-amz-acl")
+	canned_acl := r.Header.Get("x-amz-acl")
+	if verifyAclValue(canned_acl, BucketCannedAcls) == false {
+		canned_acl = swys3api.S3BucketAclCannedPrivate
+	}
 
-	switch r.Method {
-	case http.MethodPost:
-		if _, ok = r.URL.Query()["uploads"]; ok {
-			// Initialize an upload
-			upload, err = s3UploadInit(iam, bucket, oname, acl)
-			if err != nil {
-				HTTPRespError(w, S3ErrInternalError,
-					"Failed to initiate multipart upload")
-				return
-			}
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		return &S3Error{ ErrorCode: S3ErrIncompleteBody }
+	}
 
-			resp := swys3api.S3MpuInit{
-				Bucket:		bucket.Name,
-				Key:		oname,
-				UploadId:	upload.UploadID,
-			}
-			HTTPRespXML(w, resp)
-			return
-		} else if _, ok = r.URL.Query()["uploadId"]; ok {
-			// Finalize an upload
-
-			var complete swys3api.S3MpuFiniParts
-
-			body, err = ioutil.ReadAll(r.Body)
-			if err != nil {
-				HTTPRespError(w, S3ErrIncompleteBody,
-					"Failed to read body")
-				return
-			}
-			err = xml.Unmarshal(body, &complete)
-			if err != nil {
-				HTTPRespError(w, S3ErrIncompleteBody,
-					"Failed to unmarshal body")
-				return
-			}
-			resp, err := s3UploadFini(iam, bucket,
-					r.URL.Query()["uploadId"][0], &complete)
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusBadRequest)
-				return
-			}
-			HTTPRespXML(w, resp)
-			return
-		} else if _, ok = r.URL.Query()["restore"]; ok {
-			HTTPRespError(w, S3ErrNotImplemented,
-				"Version restore not yet implemented")
-		} else {
-			HTTPRespError(w, S3ErrNotImplemented,
-				"Form post not yet implemented")
-		}
-		return
-		break
-	case http.MethodPut:
-		body, err = ioutil.ReadAll(r.Body)
-		if err != nil {
-			log.Errorf("Can't read data: %s", err.Error())
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-
-		if _, ok = r.URL.Query()["uploadId"]; ok {
-			// Upload a part of an object
-
-			var etag string
-			var part int
-
-			if _, ok = r.URL.Query()["partNumber"]; ok {
-				part, _ = strconv.Atoi(r.URL.Query()["partNumber"][0])
-			}
-
-			if !ok || part == 0 {
-				HTTPRespError(w, S3ErrInvalidArgument,
-						"Invalid part number")
-				return
-			}
-
-			etag, err = s3UploadPart(iam, bucket,
-				oname, r.URL.Query()["uploadId"][0],
-				part, body)
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusBadRequest)
-			}
-			w.Header().Set("ETag", etag)
-			w.WriteHeader(http.StatusOK)
-			return
-		}
-
-		// Create new object
-		_, err = s3AddObject(iam, bucket, oname, acl, object_size, body)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-		break
-	case http.MethodGet:
-		if _, ok = r.URL.Query()["uploadId"]; ok {
-			// List parts of object in the upload
-
-			resp, err := s3UploadList(bucket, oname,
-						r.URL.Query()["uploadId"][0])
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusBadRequest)
-				return
-			}
-			HTTPRespXML(w, resp)
-			return
-		}
-
-		// Read an object
-		body, err = s3ReadObject(bucket, oname, 0, 1)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-		w.WriteHeader(http.StatusOK)
-		w.Write(body)
-		return
-		break
-	case http.MethodDelete:
-		if _, ok = r.URL.Query()["uploadId"]; ok {
-			// Delete upload and all parts
-			err = s3UploadAbort(bucket, oname, r.URL.Query()["uploadId"][0])
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusBadRequest)
-				return
-			}
-		} else {
-			// Delete a bucket
-			err = s3DeleteObject(bucket, oname)
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusBadRequest)
-				return
-			}
-		}
-		break
-	case http.MethodHead:
-		// Check if we can access an object
-		err = s3CheckAccess(iam, bname, oname)
-		if err != nil {
-			if err == mgo.ErrNotFound {
-				http.Error(w, "No object found", http.StatusBadRequest)
-			} else {
-				http.Error(w, err.Error(), http.StatusBadRequest)
-			}
-			return
-		}
-		break
-	default:
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		return
-		break
+	_, err = s3AddObject(iam, bucket, oname, canned_acl, object_size, body)
+	if err != nil {
+		return &S3Error{ ErrorCode: S3ErrInvalidRequest, Message: err.Error() }
 	}
 
 	w.WriteHeader(http.StatusOK)
+	return nil
+}
+
+func handleDeleteObject(oname string, iam *S3Iam, bucket *S3Bucket, w http.ResponseWriter, r *http.Request) *S3Error {
+	err := s3DeleteObject(bucket, oname)
+	if err != nil {
+		return &S3Error{ ErrorCode: S3ErrInvalidRequest, Message: err.Error() }
+	}
+
+	w.WriteHeader(http.StatusOK)
+	return nil
+}
+
+func handleAccessObject(bname, oname string, iam *S3Iam, w http.ResponseWriter, r *http.Request) *S3Error {
+	err := s3CheckAccess(iam, bname, oname)
+	if err != nil {
+		return &S3Error{ ErrorCode: S3ErrInvalidRequest, Message: err.Error() }
+	}
+
+	w.WriteHeader(http.StatusOK)
+	return nil
+}
+
+func handleObject(iam *S3Iam, akey *S3AccessKey, w http.ResponseWriter, r *http.Request) *S3Error {
+	var bname string = mux.Vars(r)["BucketName"]
+	var oname string = mux.Vars(r)["ObjName"]
+	var bucket *S3Bucket
+
+	if bname == "" {
+		return &S3Error{ ErrorCode: S3ErrInvalidBucketName }
+	} else if oname == "" {
+		return &S3Error{ ErrorCode: S3ErrSwyInvalidObjectName }
+	}
+
+	bucket, err := iam.FindBucket(akey, bname)
+	if err != nil {
+		return &S3Error{ ErrorCode: S3ErrInvalidBucketName }
+	}
+
+	switch r.Method {
+	case http.MethodPost:
+		if uploadId, ok := getURLParam(r, "uploadId"); ok {
+			return handleUploadFini(uploadId, iam, bucket, w, r)
+		} else if _, ok := getURLParam(r, "uploads"); ok {
+			return handleUploadInit(oname, iam, bucket, w, r)
+		}
+		return &S3Error{ ErrorCode: S3ErrMethodNotAllowed }
+	case http.MethodGet:
+		if uploadId, ok := getURLParam(r, "uploadId"); ok {
+			return handleUploadListParts(uploadId, oname, iam, bucket, w, r)
+		}
+		return handleGetObject(oname, iam, bucket, w, r)
+	case http.MethodPut:
+		if uploadId, ok := getURLParam(r, "uploadId"); ok {
+			return handleUploadPart(uploadId, oname, iam, bucket, w, r)
+		}
+		return handlePutObject(oname, iam, bucket, w, r)
+	case http.MethodDelete:
+		if uploadId, ok := getURLParam(r, "uploadId"); ok {
+			return handleUploadAbort(uploadId, oname, iam, bucket, w, r)
+		}
+		return handleDeleteObject(oname, iam, bucket, w, r)
+	case http.MethodHead:
+		return handleAccessObject(bname, oname, iam, w, r)
+	default:
+		return &S3Error{ ErrorCode: S3ErrMethodNotAllowed }
+	}
+
+	w.WriteHeader(http.StatusOK)
+	return nil
+}
+
+func handleS3API(cb func(iam *S3Iam, akey *S3AccessKey, w http.ResponseWriter, r *http.Request) *S3Error) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var akey *S3AccessKey
+		var iam *S3Iam
+		var err error
+
+		defer r.Body.Close()
+
+		if swyhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
+
+		logRequest(r)
+
+		// Admin is allowed to process without signing a request
+		if s3VerifyAdmin(r) == nil {
+			access_key := r.Header.Get(swys3api.SwyS3_AccessKey)
+			akey, err = dbLookupAccessKey(access_key)
+		} else {
+			akey, err = s3VerifyAuthorization(r)
+		}
+
+		if err == nil {
+			iam, err = akey.s3IamFind()
+		}
+
+		if akey == nil || iam == nil || err != nil {
+			HTTPRespError(w, S3ErrAccessDenied, err.Error())
+		} else if e := cb(iam, akey, w, r); e != nil {
+			HTTPRespS3Error(w, e)
+		}
+	})
 }
 
 func handleKeygen(w http.ResponseWriter, r *http.Request) {
@@ -740,8 +708,8 @@ func main() {
 	match_bucket := "/{BucketName:[a-zA-Z0-9-.]*}"
 	match_object := "/{BucketName:[a-zA-Z0-9-.]+}/{ObjName:[a-zA-Z0-9-./]+}"
 
-	rgatesrv.HandleFunc(match_bucket,	handleBucket)
-	rgatesrv.HandleFunc(match_object,	handleObject)
+	rgatesrv.Handle(match_bucket,	handleS3API(handleBucket))
+	rgatesrv.Handle(match_object,	handleS3API(handleObject))
 
 	// Admin operations
 	radminsrv := mux.NewRouter()

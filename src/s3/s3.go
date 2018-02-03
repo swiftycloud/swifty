@@ -3,6 +3,8 @@ package main
 import (
 	"net/http"
 	"fmt"
+
+	"../apis/apps/s3"
 )
 
 
@@ -17,7 +19,7 @@ func verifyAclValue(acl string, acls []string) bool {
 }
 
 func s3VerifyAdmin(r *http.Request) error {
-	access_token := r.Header.Get("X-SwyS3-Token")
+	access_token := r.Header.Get(swys3api.SwyS3_AdminToken)
 
 	if access_token != s3Secrets[conf.Daemon.Token] {
 		if S3ModeDevel {

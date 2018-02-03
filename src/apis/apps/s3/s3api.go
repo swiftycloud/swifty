@@ -4,6 +4,11 @@ import (
 	"encoding/xml"
 )
 
+const (
+	SwyS3_AdminToken	= "X-SwyS3-Token"
+	SwyS3_AccessKey		= "X-SwyS3-AccessKey"
+)
+
 // All entries exported by Amazon S3
 //
 // AnalyticsConfiguration

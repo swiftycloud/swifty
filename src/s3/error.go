@@ -7,6 +7,12 @@ import (
 	"../apis/apps/s3"
 )
 
+// Internal type
+type S3Error struct {
+	ErrorCode	int
+	Message		string
+}
+
 // Some of error codes we use, the
 // complete list is at Amazon S3 manual
 type s3RespErrorMap struct {
@@ -114,7 +120,7 @@ const (
 	S3ErrValidationError				int = 94
 
 	// Own error codes
-	S3ErrInvalidObjectName				int = 1024
+	S3ErrSwyInvalidObjectName			int = 1024
 )
 
 var s3RespErrorMapData = map[int]s3RespErrorMap {
@@ -600,10 +606,24 @@ var s3RespErrorMapData = map[int]s3RespErrorMap {
 	},
 
 	// The specified object is not valid
-	S3ErrInvalidObjectName: s3RespErrorMap {
+	S3ErrSwyInvalidObjectName: s3RespErrorMap {
 		HttpStatus:	http.StatusBadRequest,
 		ErrorCode:	"InvalidObjectName",
 	},
+}
+
+func HTTPRespS3Error(w http.ResponseWriter, e *S3Error) {
+	if m, ok := s3RespErrorMapData[e.ErrorCode]; ok {
+		HTTPMarshalXMLAndWrite(w, m.HttpStatus,
+			&swys3api.S3Error{
+				Code:		m.ErrorCode,
+				Message:	e.Message,
+			})
+		return
+	}
+
+	http.Error(w, fmt.Sprintf("Unknown error %d", e.ErrorCode),
+		http.StatusInternalServerError)
 }
 
 func HTTPRespError(w http.ResponseWriter, errcode int, params ...string) {
@@ -621,16 +641,10 @@ func HTTPRespError(w http.ResponseWriter, errcode int, params ...string) {
 			e.Message = params[0]
 		}
 
-		err := HTTPMarshalXMLAndWrite(w, m.HttpStatus, &e)
-		if err != nil {
-			goto out
-		}
+		HTTPMarshalXMLAndWrite(w, m.HttpStatus, &e)
 		return
 	}
-out:
-	// Either error is unmapped, or some other internal
-	// problem: just setup header and that's all
-	http.Error(w,
-		fmt.Sprintf("Internal error %d", errcode),
+
+	http.Error(w, fmt.Sprintf("Unknown error %d", errcode),
 		http.StatusInternalServerError)
 }
