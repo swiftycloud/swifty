@@ -15,6 +15,7 @@ type s3RespErrorMap struct {
 }
 
 const (
+	// Common error codes
 	S3ErrAccessDenied				int =  1
 	S3ErrAccountProblem				int =  2
 	S3ErrAmbiguousGrantByEmailAddress		int =  3
@@ -94,8 +95,26 @@ const (
 	S3ErrUnresolvableGrantByEmailAddress		int = 77
 	S3ErrUserKeyMustBeSpecified			int = 78
 
+	// IAM error codes
+	S3ErrAccessDeniedException			int = 79
+	S3ErrIncompleteSignature			int = 80
+	S3ErrInternalFailure				int = 81
+	S3ErrInvalidAction				int = 82
+	S3ErrInvalidClientTokenId			int = 83
+	S3ErrInvalidParameterCombination		int = 84
+	S3ErrInvalidParameterValue			int = 85
+	S3ErrInvalidQueryParameter			int = 86
+	S3ErrMalformedQueryString			int = 87
+	S3ErrMissingAction				int = 88
+	S3ErrMissingAuthenticationToken			int = 89
+	S3ErrMissingParameter				int = 90
+	S3ErrOptInRequired				int = 91
+	S3ErrRequestExpired				int = 92
+	S3ErrThrottlingException			int = 93
+	S3ErrValidationError				int = 94
+
 	// Own error codes
-	S3ErrInvalidObjectName				int = 79
+	S3ErrInvalidObjectName				int = 1024
 )
 
 var s3RespErrorMapData = map[int]s3RespErrorMap {
@@ -498,6 +517,88 @@ var s3RespErrorMapData = map[int]s3RespErrorMap {
 		HttpStatus:	http.StatusBadRequest,
 		ErrorCode:	"UserKeyMustBeSpecified",
 	},
+
+	// You do not have sufficient access to perform this action
+	S3ErrAccessDeniedException: s3RespErrorMap {
+		HttpStatus:	http.StatusBadRequest,
+		ErrorCode:	"AccessDeniedException",
+	},
+	// The request signature does not conform to standards
+	S3ErrIncompleteSignature: s3RespErrorMap {
+		HttpStatus:	http.StatusBadRequest,
+		ErrorCode:	"IncompleteSignature",
+	},
+	// The request processing has failed because of an unknown error, exception or failure
+	S3ErrInternalFailure: s3RespErrorMap {
+		HttpStatus:	http.StatusInternalServerError,
+		ErrorCode:	"InternalFailure",
+	},
+	// The action or operation requested is invalid. Verify that the action is typed correctly
+	S3ErrInvalidAction: s3RespErrorMap {
+		HttpStatus:	http.StatusBadRequest,
+		ErrorCode:	"InvalidAction",
+	},
+	// The X.509 certificate or access key ID provided does not exist in our records
+	S3ErrInvalidClientTokenId: s3RespErrorMap {
+		HttpStatus:	http.StatusForbidden,
+		ErrorCode:	"InvalidClientTokenId",
+	},
+	// Parameters that must not be used together were used together
+	S3ErrInvalidParameterCombination: s3RespErrorMap {
+		HttpStatus:	http.StatusBadRequest,
+		ErrorCode:	"InvalidParameterCombination",
+	},
+	// An invalid or out-of-range value was supplied for the input parameter
+	S3ErrInvalidParameterValue: s3RespErrorMap {
+		HttpStatus:	http.StatusBadRequest,
+		ErrorCode:	"InvalidParameterValue",
+	},
+	// The query string is malformed or does not adhere to standards
+	S3ErrInvalidQueryParameter: s3RespErrorMap {
+		HttpStatus:	http.StatusBadRequest,
+		ErrorCode:	"InvalidQueryParameter",
+	},
+	// The query string contains a syntax error
+	S3ErrMalformedQueryString: s3RespErrorMap {
+		HttpStatus:	http.StatusNotFound,
+		ErrorCode:	"MalformedQueryString",
+	},
+	// The request is missing an action or a required parameter
+	S3ErrMissingAction: s3RespErrorMap {
+		HttpStatus:	http.StatusBadRequest,
+		ErrorCode:	"MissingAction",
+	},
+	// The request must contain either a valid (registered) access key ID or X.509 certificate
+	S3ErrMissingAuthenticationToken: s3RespErrorMap {
+		HttpStatus:	http.StatusForbidden,
+		ErrorCode:	"MissingAuthenticationToken",
+	},
+	// A required parameter for the specified action is not supplied
+	S3ErrMissingParameter: s3RespErrorMap {
+		HttpStatus:	http.StatusBadRequest,
+		ErrorCode:	"MissingParameter",
+	},
+	// The access key ID needs a subscription for the service
+	S3ErrOptInRequired: s3RespErrorMap {
+		HttpStatus:	http.StatusForbidden,
+		ErrorCode:	"OptInRequired",
+	},
+	// The request reached the service more than 15 minutes after the date stamp
+	S3ErrRequestExpired: s3RespErrorMap {
+		HttpStatus:	http.StatusBadRequest,
+		ErrorCode:	"RequestExpired",
+	},
+	// The request was denied due to request throttling
+	S3ErrThrottlingException: s3RespErrorMap {
+		HttpStatus:	http.StatusBadRequest,
+		ErrorCode:	"ThrottlingException",
+	},
+	// The input fails to satisfy the constraints specified by a service
+	S3ErrValidationError: s3RespErrorMap {
+		HttpStatus:	http.StatusBadRequest,
+		ErrorCode:	"ValidationError",
+	},
+
 	// The specified object is not valid
 	S3ErrInvalidObjectName: s3RespErrorMap {
 		HttpStatus:	http.StatusBadRequest,
