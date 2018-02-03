@@ -53,6 +53,14 @@ const (
 	S3BucketAclCannedAuthenticatedRead	= "authenticated-read"
 )
 
+const (
+	S3PermRead				= "READ"
+	S3PermWrite				= "WRITE"
+	S3PermReadACP				= "READ_ACP"
+	S3PermWriteACP				= "WRITE_ACP"
+	S3PermFull				= "FULL_CONTROL"
+)
+
 type S3Error struct {
 	XMLName			xml.Name			`xml:"Error"`
 	Code			string				`xml:"Code,omitempy"`
