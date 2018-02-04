@@ -163,7 +163,7 @@ func s3AddObject(iam *S3Iam, bucket *S3Bucket, oname string,
 	}
 
 	if bucket.BasicNotify != nil {
-		s3Notify(iam.Namespace, bucket, object, S3NotifyPut)
+		s3Notify(iam, bucket, object, S3NotifyPut)
 	}
 
 	log.Debugf("s3: Added %s", infoLong(object))

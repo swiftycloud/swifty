@@ -51,8 +51,8 @@ func BIDFromNames(namespace, bucket string) string {
 }
 
 // Bucket pool name and index in DB for lookup
-func (iam *S3Iam)BucketBID(bname string) string {
-	return BIDFromNames(iam.Namespace, bname)
+func (account *S3Account)BucketBID(bname string) string {
+	return BIDFromNames(account.Namespace, bname)
 }
 
 // UploadID for DB lookup

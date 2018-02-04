@@ -14,6 +14,10 @@ type S3CtlKeyDel struct {
 	AccessKeyID		string		`json:"access-key-id"`
 }
 
+type S3CtlKeyGetRoot struct {
+	AccessKeyID		string		`json:"access-key-id"`
+}
+
 type S3CtlBucketReq struct {
 	Namespace		string		`json:"namespace,omitempty"`
 	Bucket			string		`json:"bucket,omitempty"`

@@ -65,6 +65,9 @@ func dbConnect(conf *YAMLConf) error {
 	index.Key = []string{"namespace"}
 	dbSession.DB(dbName).C(DBColS3Iams).EnsureIndex(index)
 
+	index.Key = []string{"email"}
+	dbSession.DB(dbName).C(DBColS3Iams).EnsureIndex(index)
+
 	index.Key = []string{"bid"}
 	dbSession.DB(dbName).C(DBColS3Buckets).EnsureIndex(index)
 
@@ -88,6 +91,10 @@ func dbConnect(conf *YAMLConf) error {
 	dbColMap[reflect.TypeOf(&S3Iam{})] = DBColS3Iams
 	dbColMap[reflect.TypeOf([]S3Iam{})] = DBColS3Iams
 	dbColMap[reflect.TypeOf(&[]S3Iam{})] = DBColS3Iams
+	dbColMap[reflect.TypeOf(S3Account{})] = DBColS3Iams
+	dbColMap[reflect.TypeOf(&S3Account{})] = DBColS3Iams
+	dbColMap[reflect.TypeOf([]S3Account{})] = DBColS3Iams
+	dbColMap[reflect.TypeOf(&[]S3Account{})] = DBColS3Iams
 	dbColMap[reflect.TypeOf(S3AccessKey{})] = DBColS3AccessKeys
 	dbColMap[reflect.TypeOf(&S3AccessKey{})] = DBColS3AccessKeys
 	dbColMap[reflect.TypeOf([]S3AccessKey{})] = DBColS3AccessKeys
@@ -161,11 +168,17 @@ func infoLong(o interface{}) (string) {
 		akey := o.(*S3AccessKey)
 		return fmt.Sprintf("{ S3AccessKey: %s/%s/%s/%d }",
 			akey.ObjID, akey.IamObjID,
-			akey.AccessKeyID, akey.Status)
+			akey.AccessKeyID, akey.State)
+	case reflect.TypeOf(&S3Account{}):
+		account := o.(*S3Account)
+		return fmt.Sprintf("{ S3Account: %s/%s/%d/%d }",
+			account.ObjID, account.Namespace,
+			account.State, account.Ref)
 	case reflect.TypeOf(&S3Iam{}):
 		iam := o.(*S3Iam)
-		return fmt.Sprintf("{ S3Iam: %s/%s/%d }",
-			iam.ObjID, iam.Namespace, iam.State)
+		return fmt.Sprintf("{ S3Iam: %s/%s/%d/%s }",
+			iam.ObjID, iam.AccountObjID, iam.State,
+			iam.Policy)
 	case reflect.TypeOf(&S3Bucket{}):
 		bucket := o.(*S3Bucket)
 		return fmt.Sprintf("{ S3Bucket: %s/%s/%s/%d/%s }",

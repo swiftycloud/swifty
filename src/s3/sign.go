@@ -244,13 +244,13 @@ func s3VerifyAuthorizationHeaders(r *http.Request, authHeader string) (*S3Access
 		return nil, err
 	}
 
-	akey, err = dbLookupAccessKey(ctx.AccessKey)
+	akey, err = dbLookupAccessKey(ctx.AccessKey, false)
 	if err != nil {
 		log.Error(err.Error())
 		return nil, err
 	}
 
-	ctx.BuildSigningKey(akey.AccessKeySecret)
+	ctx.BuildSigningKey(s3DecryptAccessKeySecret(akey))
 	ctx.LongTimeStamp = getHeader(r, "X-Amz-Date")
 
 	err = ctx.BuildBodyDigest(r)

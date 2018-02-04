@@ -43,10 +43,38 @@ const (
 // Most permissive mode
 const (
 	PermS3_Any				= "s3:*"
+	Resourse_Any				= "*"
 )
 
 type S3Policy struct {
 	Effect				string		`bson:"effect,omitempty"`
 	Action				[]string	`bson:"action,omitempty"`
 	Resource			[]string	`bson:"resource,omitempty"`
+}
+
+func isEmptyPolicy(policy *S3Policy) bool {
+	if policy != nil {
+		if policy.Effect != "" &&
+			len(policy.Action) > 0 &&
+			len(policy.Resource) > 0 {
+			return false
+		}
+	}
+	return true
+}
+
+func isDenyOnBucket(policy *S3Policy, bname string) bool {
+	if bname == "" {
+		return false
+	}
+
+	if !isEmptyPolicy(policy) {
+		if policy.Effect == Policy_Allow {
+			if len(policy.Resource) > 0 &&
+				policy.Resource[0] == bname {
+				return false
+			}
+		}
+	}
+	return true
 }

@@ -82,13 +82,16 @@ func s3Unsubscribe(params *swys3api.S3Subscribe) error {
 
 var nChan *amqp.Channel
 
-func s3Notify(namespace string, bucket *S3Bucket, object *S3Object, op uint) {
+func s3Notify(iam *S3Iam, bucket *S3Bucket, object *S3Object, op uint) {
 	if bucket.BasicNotify.Events & (uint64(1) << op) == 0 {
 		return
 	}
 
+	account, err := iam.s3AccountLookup()
+	if err != nil { return }
+
 	data, err := json.Marshal(&swys3api.S3Event{
-			Namespace: namespace,
+			Namespace: account.Namespace,
 			Bucket: bucket.Name,
 			Object: object.Key,
 			Op: eventNames[op],

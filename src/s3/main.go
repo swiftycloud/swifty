@@ -153,6 +153,10 @@ func logRequest(r *http.Request) {
 
 // List all buckets belonging to an account
 func handleListBuckets(iam *S3Iam, akey *S3AccessKey, w http.ResponseWriter, r *http.Request) *S3Error {
+	if !isEmptyPolicy(&iam.Policy) {
+		return &S3Error{ ErrorCode: S3ErrAccessDenied }
+	}
+
 	buckets, err := s3ListBuckets(iam, akey)
 	if err != nil {
 		if err == mgo.ErrNotFound {
@@ -186,7 +190,6 @@ func handleListObjects(bname string, iam *S3Iam, akey *S3AccessKey, w http.Respo
 }
 
 func handlePutBucket(bname string, iam *S3Iam, akey *S3AccessKey, w http.ResponseWriter, r *http.Request) *S3Error {
-
 	canned_acl := r.Header.Get("x-amz-acl")
 	if verifyAclValue(canned_acl, BucketCannedAcls) == false {
 		canned_acl = swys3api.S3BucketAclCannedPrivate
@@ -226,6 +229,10 @@ func handleBucket(iam *S3Iam, akey *S3AccessKey, w http.ResponseWriter, r *http.
 
 	if bname == "" && r.Method != http.MethodGet {
 		return &S3Error{ ErrorCode: S3ErrInvalidBucketName }
+	}
+
+	if isDenyOnBucket(&iam.Policy, bname) {
+		return &S3Error{ ErrorCode: S3ErrAccessDenied }
 	}
 
 	switch r.Method {
@@ -411,6 +418,10 @@ func handleObject(iam *S3Iam, akey *S3AccessKey, w http.ResponseWriter, r *http.
 		return &S3Error{ ErrorCode: S3ErrInvalidBucketName }
 	}
 
+	if isDenyOnBucket(&iam.Policy, bname) {
+		return &S3Error{ ErrorCode: S3ErrAccessDenied }
+	}
+
 	switch r.Method {
 	case http.MethodPost:
 		if uploadId, ok := getURLParam(r, "uploadId"); ok {
@@ -459,7 +470,7 @@ func handleS3API(cb func(iam *S3Iam, akey *S3AccessKey, w http.ResponseWriter, r
 		// Admin is allowed to process without signing a request
 		if s3VerifyAdmin(r) == nil {
 			access_key := r.Header.Get(swys3api.SwyS3_AccessKey)
-			akey, err = dbLookupAccessKey(access_key)
+			akey, err = dbLookupAccessKey(access_key, false)
 		} else {
 			akey, err = s3VerifyAuthorization(r)
 		}
@@ -499,7 +510,7 @@ func handleKeygen(w http.ResponseWriter, r *http.Request) {
 
 	err = swyhttp.MarshalAndWrite(w, &swys3api.S3CtlKeyGenResult{
 			AccessKeyID:	akey.AccessKeyID,
-			AccessKeySecret:akey.AccessKeySecret,
+			AccessKeySecret:s3DecryptAccessKeySecret(akey),
 		})
 	if err != nil {
 		goto out
@@ -536,6 +547,38 @@ out:
 	http.Error(w, err.Error(), http.StatusBadRequest)
 }
 
+func handleGetRootKey(w http.ResponseWriter, r *http.Request) {
+	var ka swys3api.S3CtlKeyGetRoot
+	var akey *S3AccessKey
+	var err error
+
+	err = swyhttp.ReadAndUnmarshalReq(r, &ka)
+	if err != nil {
+		goto out
+	}
+
+	if ka.AccessKeyID == "" {
+		err = errors.New("Missing key")
+		goto out
+	}
+
+	akey, err = dbLookupAccessKey(ka.AccessKeyID, true)
+	if err != nil {
+		goto out
+	}
+
+	err = swyhttp.MarshalAndWrite(w, &swys3api.S3CtlKeyGenResult{
+			AccessKeyID:	akey.AccessKeyID,
+			AccessKeySecret:s3DecryptAccessKeySecret(akey),
+		})
+	if err != nil {
+		goto out
+	}
+	return
+out:
+	http.Error(w, err.Error(), http.StatusBadRequest)
+}
+
 func handleBreq(w http.ResponseWriter, r *http.Request, op string) {
 	var err error
 	var breq swys3api.S3CtlBucketReq
@@ -548,7 +591,7 @@ func handleBreq(w http.ResponseWriter, r *http.Request, op string) {
 		goto out
 	}
 
-	iam, err = s3IamFindByNamespace(breq.Namespace)
+	iam, err = s3IamFindByNamespace(breq.Namespace, true)
 	if err != nil {
 		goto out
 	}
@@ -557,7 +600,10 @@ func handleBreq(w http.ResponseWriter, r *http.Request, op string) {
 		breq.Acl = swys3api.S3BucketAclCannedPrivate
 	}
 
-	key = iam.MakeBucketKey(breq.Bucket, breq.Acl)
+	key, err = iam.s3IamFindKey()
+	if err != nil {
+		goto out
+	}
 
 	if op == "badd" {
 		err = s3InsertBucket(iam, key, breq.Bucket, breq.Acl)
@@ -600,6 +646,9 @@ func handleAdminOp(w http.ResponseWriter, r *http.Request) {
 		return
 	case "keydel":
 		handleKeydel(w, r)
+		return
+	case "keygetroot":
+		handleGetRootKey(w, r)
 		return
 	case "badd":
 		handleBreq(w, r, op)

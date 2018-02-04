@@ -129,7 +129,10 @@ func (iam *S3Iam)FindBucket(key *S3AccessKey, bname string) (*S3Bucket, error) {
 	var res S3Bucket
 	var err error
 
-	query := bson.M{ "bid": iam.BucketBID(bname), "state": S3StateActive }
+	account, err := iam.s3AccountLookup()
+	if err != nil { return nil, err }
+
+	query := bson.M{ "bid": account.BucketBID(bname), "state": S3StateActive }
 	err = dbS3FindOne(query, &res)
 	if err != nil {
 		return nil, err
@@ -254,6 +257,9 @@ func s3RepairBucket() error {
 func s3InsertBucket(iam *S3Iam, akey *S3AccessKey, bname, canned_acl string) error {
 	var err error
 
+	account, err := iam.s3AccountLookup()
+	if err != nil { return err }
+
 	bucket := &S3Bucket{
 		ObjID:		bson.NewObjectId(),
 		IamObjID:	iam.ObjID,
@@ -261,8 +267,8 @@ func s3InsertBucket(iam *S3Iam, akey *S3AccessKey, bname, canned_acl string) err
 
 		Name:		bname,
 		CannedAcl:	canned_acl,
-		BackendID:	iam.BucketBID(bname),
-		NamespaceID:	iam.NamespaceID(),
+		BackendID:	account.BucketBID(bname),
+		NamespaceID:	account.NamespaceID(),
 		CreationTime:	time.Now().Format(time.RFC3339),
 		MaxObjects:	S3StorageMaxObjects,
 		MaxBytes:	S3StorageMaxBytes,
