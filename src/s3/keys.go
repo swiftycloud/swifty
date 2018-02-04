@@ -16,7 +16,6 @@ type S3AccessKey struct {
 	AccessKeyID			string		`bson:"access-key-id"`
 	AccessKeySecret			string		`bson:"access-key-secret"`
 	Status				uint32		`bson:"status,omitempty"`
-	Bucket				string		`bson:"bucket,omitempty"`
 }
 
 const (
@@ -44,14 +43,6 @@ func genKey(length int, dict []byte) (string) {
 	return string(pass)
 }
 
-func (key *S3AccessKey)CheckBucketAccess(bname string) error {
-	if key.Bucket == "" || key.Bucket == bname {
-		return nil
-	}
-
-	return fmt.Errorf("Access to bucket %s prohibited", bname)
-}
-
 //
 // Keys operation should not report any errors,
 // for security reason.
@@ -65,7 +56,6 @@ func genNewAccessKey(namespace, bucket string) (*S3AccessKey, error) {
 		AccessKeyID:		genKey(20, AccessKeyLetters),
 		AccessKeySecret:	genKey(40, SecretKeyLetters),
 		Status:			S3KeyStatusActive,
-		Bucket:			bucket,
 	}
 
 	if akey.AccessKeyID == "" ||
@@ -97,14 +87,7 @@ func (iam *S3Iam)FindBuckets(akey *S3AccessKey) ([]S3Bucket, error) {
 	var res []S3Bucket
 	var err error
 
-	if akey.Bucket != "" {
-		var b S3Bucket
-		err = dbS3FindOne(bson.M{"nsid": iam.NamespaceID(), "name": akey.Bucket}, &b)
-		res = []S3Bucket{b}
-	} else {
-		err = dbS3FindAll(bson.M{"nsid": iam.NamespaceID()}, &res)
-	}
-
+	err = dbS3FindAll(bson.M{"nsid": iam.NamespaceID()}, &res)
 	if err != nil {
 		return nil, err
 	}

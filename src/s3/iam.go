@@ -41,14 +41,9 @@ func (akey *S3AccessKey)s3IamFind() (*S3Iam, error) {
 				"state": S3StateActive})
 }
 
-/* Key, that gives access to bucket */
 func (iam *S3Iam)MakeBucketKey(bucket, act string) *S3AccessKey {
-	return &S3AccessKey{
-		IamObjID: iam.ObjID,
-		Bucket: bucket,
-	}
+	return &S3AccessKey{ IamObjID: iam.ObjID, }
 }
-
 
 func (iam *S3Iam)NamespaceID() string {
 	return sha256sum([]byte(iam.Namespace))
