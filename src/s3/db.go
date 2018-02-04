@@ -167,9 +167,8 @@ func infoLong(o interface{}) (string) {
 			akey.AccessKeyID, akey.Status)
 	case reflect.TypeOf(&S3Iam{}):
 		iam := o.(*S3Iam)
-		return fmt.Sprintf("{ S3Iam: %s/%s/%s/%d }",
-			iam.ObjID, iam.IamID,
-			iam.Namespace, iam.State)
+		return fmt.Sprintf("{ S3Iam: %s/%s/%d }",
+			iam.ObjID, iam.Namespace, iam.State)
 	case reflect.TypeOf(&S3Bucket{}):
 		bucket := o.(*S3Bucket)
 		return fmt.Sprintf("{ S3Bucket: %s/%s/%s/%d/%s }",

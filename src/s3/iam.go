@@ -14,7 +14,6 @@ type S3Iam struct {
 
 	AccountObjID			bson.ObjectId	`bson:"account-id,omitempty"`
 	Policy				S3Policy	`bson:"policy,omitempty"`
-	IamID				string		`bson:"iam-id,omitempty"`
 	Namespace			string		`bson:"namespace,omitempty"`
 	CreationTime			string		`bson:"creation-time,omitempty"`
 	User				string		`bson:"user,omitempty"`
@@ -113,7 +112,6 @@ func iamGetter(rq *iamReq) *iamResp {
 		AccountObjID:	ObjectId,
 		State:		S3StateActive,
 
-		IamID:		sha256sum([]byte(rq.email)),
 		Namespace:	rq.namespace,
 		CreationTime:	time.Now().Format(time.RFC3339),
 		User:		rq.user,
