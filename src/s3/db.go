@@ -62,9 +62,6 @@ func dbConnect(conf *YAMLConf) error {
 			Background:	true,
 			Sparse:		true}
 
-	index.Key = []string{"iam"}
-	dbSession.DB(dbName).C(DBColS3Iams).EnsureIndex(index)
-
 	index.Key = []string{"namespace"}
 	dbSession.DB(dbName).C(DBColS3Iams).EnsureIndex(index)
 
