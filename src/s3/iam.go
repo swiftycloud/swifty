@@ -13,6 +13,7 @@ type S3Iam struct {
 	State				uint32		`bson:"state,omitempty"`
 
 	AccountObjID			bson.ObjectId	`bson:"account-id,omitempty"`
+	Policy				S3Policy	`bson:"policy,omitempty"`
 	IamID				string		`bson:"iam-id,omitempty"`
 	Namespace			string		`bson:"namespace,omitempty"`
 	CreationTime			string		`bson:"creation-time,omitempty"`

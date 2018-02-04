@@ -42,5 +42,11 @@ const (
 
 // Most permissive mode
 const (
-	PermS3_Any				= "*"
+	PermS3_Any				= "s3:*"
 )
+
+type S3Policy struct {
+	Effect				string		`bson:"effect,omitempty"`
+	Action				[]string	`bson:"action,omitempty"`
+	Resource			[]string	`bson:"resource,omitempty"`
+}
