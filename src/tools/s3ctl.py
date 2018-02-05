@@ -40,8 +40,13 @@ for cmd in ['keygen']:
     spp = sp.add_parser(cmd, help = 'Generate keys')
     spp.add_argument('--namespace', dest = 'namespace',
                      help = 'Unique namespace', required = True)
+    spp.add_argument('--name', dest = 'name',
+                     help = 'Bucket name', required = False)
     spp.add_argument('--save', dest = 'save',
                      help = 'Save creds in file', action = 'store_true')
+
+for cmd in ['keygetroot']:
+    spp = sp.add_parser(cmd, help = 'Get root account keys')
 
 for cmd in ['keydel']:
     spp = sp.add_parser(cmd, help = 'Delete keys')
@@ -217,13 +222,14 @@ def make_s3(endpoint_url, access_key, secret_key):
     except:
         return None
 
-if args.cmd not in ['keygen', 'keydel', 'notify']:
+if args.cmd not in ['keygen', 'keydel', 'keygetroot', 'notify']:
     s3 = make_s3(args.endpoint_url, args.access_key_id, args.secret_key_id)
     if s3 == None:
          resp_error(args.cmd, None)
 
 if args.cmd == 'keygen':
-    resp = request_admin(args.cmd, {"namespace": args.namespace})
+    resp = request_admin(args.cmd, {"namespace": args.namespace,
+                                    "bucket": args.name })
     if resp != None and resp.status == 200:
         akey = json.loads(resp.read().decode('utf-8'))
         print("Access Key %s\nSecret Key %s" % \
@@ -239,6 +245,15 @@ if args.cmd == 'keydel':
     resp = request_admin(args.cmd, {"access-key-id": args.access_key_id})
     if resp != None and resp.status == 200:
         print("Access Key %s deleted" % (args.access_key_id))
+    else:
+        resp_error(args.cmd, resp)
+
+if args.cmd == 'keygetroot':
+    resp = request_admin(args.cmd, {"access-key-id": args.access_key_id})
+    if resp != None and resp.status == 200:
+        akey = json.loads(resp.read().decode('utf-8'))
+        print("Access Key %s\nSecret Key %s" % \
+              (akey['access-key-id'], akey['access-key-secret']))
     else:
         resp_error(args.cmd, resp)
 
