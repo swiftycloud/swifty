@@ -562,7 +562,6 @@ func handleBreq(w http.ResponseWriter, r *http.Request, op string) {
 	var err error
 	var breq swys3api.S3CtlBucketReq
 	var iam *S3Iam
-	var key *S3AccessKey
 	var code int
 
 	err = swyhttp.ReadAndUnmarshalReq(r, &breq)
@@ -574,11 +573,7 @@ func handleBreq(w http.ResponseWriter, r *http.Request, op string) {
 		breq.Acl = swys3api.S3BucketAclCannedPrivate
 	}
 
-	key, err = LookupAccessKey(breq.AccessKeyID)
-	if err == nil {
-		iam, err = key.s3IamFind()
-	}
-
+	iam, err = s3FindFullAccessIam(breq.Namespace)
 	if err != nil {
 		goto out
 	}

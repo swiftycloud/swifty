@@ -91,21 +91,33 @@ func (iam *S3Iam) s3AccountLookup() (*S3Account, error) {
 	return &account, nil
 }
 
-func s3AccountFind(namespace string) (*S3Account, error) {
+func s3FindFullAccessIam(namespace string) (*S3Iam, error) {
 	var account S3Account
+	var iams []S3Iam
+	var query bson.M
 	var err error
 
 	if namespace == "" {
 		return nil, fmt.Errorf("s3: Empty namespace")
 	}
 
-	query := bson.M{ "namespace": namespace, "state": S3StateActive }
+	query = bson.M{ "namespace": namespace, "state": S3StateActive }
 	err = dbS3FindOne(query, &account)
 	if err != nil {
 		return nil, err
 	}
 
-	return &account, nil
+	query = bson.M{ "account-id" : account.ObjID, "state": S3StateActive }
+	err = dbS3FindAll(query, &iams)
+	if err == nil {
+		for _, iam := range iams {
+			if iam.Policy.isRoot() {
+				return &iam, nil
+			}
+		}
+		err = fmt.Errorf("No root iam found")
+	}
+	return nil, err
 }
 
 func s3AccountDelete(account *S3Account) (error) {
