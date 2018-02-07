@@ -205,18 +205,6 @@ func (akey *S3AccessKey) s3IamFind() (*S3Iam, error) {
 	return &iams[0], nil
 }
 
-func (iam *S3Iam) s3IamFindKey() (*S3AccessKey, error) {
-	var akey S3AccessKey
-
-	query := bson.M{"iam-id": iam.ObjID, "state": S3StateActive }
-	err := dbS3FindOne(query, &akey)
-	if err != nil {
-		return nil, err
-	}
-
-	return &akey, nil
-}
-
 func (account *S3Account) NamespaceID() string {
 	return sha256sum([]byte(account.Namespace))
 }
