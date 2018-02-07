@@ -395,8 +395,8 @@ func s3ListBuckets(iam *S3Iam) (*swys3api.S3BucketList, error) {
 		return nil, err
 	}
 
-	list.Owner.DisplayName	= "Unknown"
-	list.Owner.ID		= "Unknown"
+	list.Owner.DisplayName	= iam.User
+	list.Owner.ID		= iam.AwsID[:16]
 
 	for _, b := range buckets {
 		list.Buckets.Bucket = append(list.Buckets.Bucket,
