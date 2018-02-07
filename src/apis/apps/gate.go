@@ -97,7 +97,6 @@ type MwareID struct {
 type MwareInfo struct {
 	MwareID					`json:",inline"`
 	Type		string			`json:"type"`
-	Envs		map[string]string	`json:"envs"`
 }
 
 type MwareItem struct {

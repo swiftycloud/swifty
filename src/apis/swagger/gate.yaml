@@ -923,15 +923,6 @@ definitions:
         type: string
         description: Middleware type
         example: maria
-      envs:
-        $ref: '#/definitions/MwareInfoEnvs'
-  MwareInfoEnvs:
-    type: object
-    description: Middleware environment variables
-    properties:
-      key:
-        type: string
-        example: value
   MwareRemove:
     type: object
     description: Middleware specification

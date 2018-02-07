@@ -502,19 +502,10 @@ func list_mware(project string, args []string, opts [8]string) {
 
 func info_mware(project string, args []string, opts [8]string) {
 	var resp swyapi.MwareInfo
-	var n int = 1
+
 	make_faas_req("mware/info",
 		swyapi.MwareID{ Project: project, ID: args[0], }, &resp)
-
-	fmt.Printf("%-20s%-10s%s\n", "NAME", "TYPE", "ENV")
-	for k, v := range resp.Envs {
-		if n == 1 {
-			fmt.Printf("%-20s%-10s%s=%s\n", args[0], resp.Type, k, v)
-		} else {
-			fmt.Printf("%-20s%-10s%s=%s\n", "", "", k, v)
-		}
-		n++
-	}
+	fmt.Printf("Type:      %s", resp.Type)
 }
 
 func add_mware(project string, args []string, opts [8]string) {

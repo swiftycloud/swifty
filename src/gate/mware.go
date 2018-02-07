@@ -142,7 +142,6 @@ stalled:
 
 func mwareInfo(conf *YAMLConfMw, id *SwoId, params *swyapi.MwareID,
 		resp *swyapi.MwareInfo) (*swyapi.GateErr) {
-	var handler *MwareOps
 	var item MwareDesc
 	var err error
 
@@ -150,24 +149,9 @@ func mwareInfo(conf *YAMLConfMw, id *SwoId, params *swyapi.MwareID,
 		return GateErrD(err)
 	}
 
-	handler, ok := mwareHandlers[item.MwareType]
-	if !ok {
-		return GateErrC(swy.GateGenErr) /* Shouldn't happen */
-	}
-
-	if handler != &MwareS3 {
-		return GateErrE(swy.GateWrongType,
-			errors.New("Only s3 middleware supported"))
-	}
-
 	resp.MwareID = *params
 	resp.Type = item.MwareType
-	resp.Envs = make(map[string]string)
 
-	envs := handler.GetEnv(conf, &item)
-	for _, env := range envs {
-		resp.Envs[env[0]] = env[1]
-	}
 	return nil
 }
 
