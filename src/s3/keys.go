@@ -174,7 +174,7 @@ func (akey *S3AccessKey) LookupAccountAccessKey() (*S3AccessKey, error) {
 	}
 
 	query := bson.M{"account-id": iam.AccountObjID, "state": S3StateActive }
-	if err := dbS3FindOne(query, &res); err != nil {
+	if err = dbS3FindOne(query, &res); err != nil {
 		return nil, err
 	}
 
@@ -182,9 +182,10 @@ func (akey *S3AccessKey) LookupAccountAccessKey() (*S3AccessKey, error) {
 }
 
 func LookupAccessKey(AccessKeyId string) (*S3AccessKey, error) {
+	var akey *S3AccessKey
 	var err error
 
-	if akey, err := dbLookupAccessKey(AccessKeyId); err == nil {
+	if akey, err = dbLookupAccessKey(AccessKeyId); err == nil {
 		if akey.Expired() {
 			return nil, fmt.Errorf("Expired key")
 		}
