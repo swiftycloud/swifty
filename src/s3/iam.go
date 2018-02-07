@@ -196,31 +196,6 @@ func s3LookupIam(query bson.M) ([]S3Iam, error) {
 	return res, nil
 }
 
-func s3IamFindByNamespace(namespace string, internal bool) (*S3Iam, error) {
-	var account *S3Account
-	var iams []S3Iam
-	var err error
-
-	if account, err = s3AccountFind(namespace); err != nil {
-		return nil, err
-	}
-
-	query := bson.M{"account-id" : account.ObjID, "state": S3StateActive }
-	iams, err = s3LookupIam(query)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, iam := range iams {
-		if (internal && isEmptyPolicy(&iam.Policy)) ||
-			(!internal && !isEmptyPolicy(&iam.Policy)) {
-				return &iam, nil
-			}
-	}
-
-	return nil, fmt.Errorf("Not found")
-}
-
 func (akey *S3AccessKey) s3IamFind() (*S3Iam, error) {
 	query := bson.M{"_id": akey.IamObjID, "state": S3StateActive }
 	iams, err := s3LookupIam(query)

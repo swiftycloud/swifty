@@ -470,7 +470,7 @@ func handleS3API(cb func(iam *S3Iam, akey *S3AccessKey, w http.ResponseWriter, r
 		// Admin is allowed to process without signing a request
 		if s3VerifyAdmin(r) == nil {
 			access_key := r.Header.Get(swys3api.SwyS3_AccessKey)
-			akey, err = dbLookupAccessKey(access_key, false)
+			akey, err = dbLookupAccessKey(access_key)
 		} else {
 			akey, err = s3VerifyAuthorization(r)
 		}
@@ -551,38 +551,6 @@ out:
 	http.Error(w, err.Error(), http.StatusBadRequest)
 }
 
-func handleGetRootKey(w http.ResponseWriter, r *http.Request) {
-	var ka swys3api.S3CtlKeyGetRoot
-	var akey *S3AccessKey
-	var err error
-
-	err = swyhttp.ReadAndUnmarshalReq(r, &ka)
-	if err != nil {
-		goto out
-	}
-
-	if ka.AccessKeyID == "" {
-		err = errors.New("Missing key")
-		goto out
-	}
-
-	akey, err = dbLookupAccessKey(ka.AccessKeyID, true)
-	if err != nil {
-		goto out
-	}
-
-	err = swyhttp.MarshalAndWrite(w, &swys3api.S3CtlKeyGenResult{
-			AccessKeyID:	akey.AccessKeyID,
-			AccessKeySecret:s3DecryptAccessKeySecret(akey),
-		})
-	if err != nil {
-		goto out
-	}
-	return
-out:
-	http.Error(w, err.Error(), http.StatusBadRequest)
-}
-
 func handleBreq(w http.ResponseWriter, r *http.Request, op string) {
 	var err error
 	var breq swys3api.S3CtlBucketReq
@@ -595,16 +563,15 @@ func handleBreq(w http.ResponseWriter, r *http.Request, op string) {
 		goto out
 	}
 
-	iam, err = s3IamFindByNamespace(breq.Namespace, true)
-	if err != nil {
-		goto out
-	}
-
 	if breq.Acl == "" {
 		breq.Acl = swys3api.S3BucketAclCannedPrivate
 	}
 
-	key, err = iam.s3IamFindKey()
+	key, err = dbLookupAccessKey(breq.AccessKeyID)
+	if err == nil {
+		iam, err = key.s3IamFind()
+	}
+
 	if err != nil {
 		goto out
 	}
@@ -650,9 +617,6 @@ func handleAdminOp(w http.ResponseWriter, r *http.Request) {
 		return
 	case "keydel":
 		handleKeydel(w, r)
-		return
-	case "keygetroot":
-		handleGetRootKey(w, r)
 		return
 	case "badd":
 		handleBreq(w, r, op)

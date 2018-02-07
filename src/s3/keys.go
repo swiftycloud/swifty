@@ -58,10 +58,10 @@ func (akey *S3AccessKey) Expired() bool {
 //
 
 func genNewAccessKey(namespace, bucket string, lifetime uint32) (*S3AccessKey, error) {
-	var akey, akey_root *S3AccessKey
 	var timestamp_now int64
-	var iam, iam_root *S3Iam
+	var akey *S3AccessKey
 	var policy *S3Policy
+	var iam *S3Iam
 	var err error
 
 	account, err := s3AccountInsert(namespace)
@@ -79,16 +79,21 @@ func genNewAccessKey(namespace, bucket string, lifetime uint32) (*S3AccessKey, e
 				bucket,
 			},
 		}
+	} else {
+		policy = &S3Policy {
+			Effect:	Policy_Allow,
+			Action: []string {
+				PermS3_Any,
+			},
+			Resource: []string {
+				Resourse_Any,
+			},
+		}
 	}
 
 	iam, err = s3IamInsert(account, policy)
 	if err != nil {
 		goto out_1
-	}
-
-	iam_root, err = s3IamInsert(account, nil)
-	if err != nil {
-		goto out_2
 	}
 
 	timestamp_now = time.Now().Unix()
@@ -97,20 +102,8 @@ func genNewAccessKey(namespace, bucket string, lifetime uint32) (*S3AccessKey, e
 		ObjID:			bson.NewObjectId(),
 		State:			S3StateNone,
 
-		IamObjID:		iam.ObjID,
-
-		CreationTimestamp:	timestamp_now,
-
-		AccessKeyID:		genKey(20, AccessKeyLetters),
-		AccessKeySecret:	genKey(40, SecretKeyLetters),
-	}
-
-	akey_root = &S3AccessKey {
-		ObjID:			bson.NewObjectId(),
-		State:			S3StateNone,
-
 		AccountObjID:		account.ObjID,
-		IamObjID:		iam_root.ObjID,
+		IamObjID:		iam.ObjID,
 
 		CreationTimestamp:	timestamp_now,
 
@@ -120,13 +113,11 @@ func genNewAccessKey(namespace, bucket string, lifetime uint32) (*S3AccessKey, e
 
 	if lifetime != 0 {
 		akey.ExpirationTimestamp = timestamp_now + int64(lifetime)
-		akey_root.ExpirationTimestamp = timestamp_now + int64(lifetime)
 	}
 
-	if akey.AccessKeyID == "" || akey.AccessKeySecret == "" ||
-		akey_root.AccessKeyID == "" || akey_root.AccessKeySecret == "" {
+	if akey.AccessKeyID == "" || akey.AccessKeySecret == "" {
 		err = fmt.Errorf("s3: Can't generate keys")
-		goto out_3
+		goto out_2
 	}
 
 	if err = dbInsertAccessKey(akey); err != nil {
@@ -134,30 +125,13 @@ func genNewAccessKey(namespace, bucket string, lifetime uint32) (*S3AccessKey, e
 	}
 
 	if err = dbS3SetState(akey, S3StateActive, nil); err != nil {
-		goto out_4
-	}
-
-	if err = dbInsertAccessKey(akey_root); err != nil {
-		goto out_4
-	}
-
-	if err = dbS3SetState(akey_root, S3StateActive, nil); err != nil {
-		goto out_5
-	}
-
-	if S3ModeDevel {
-		log.Debugf("s3: generated %s %s",
-			infoLong(akey), infoLong(akey_root))
+		goto out_3
 	}
 
 	return akey, nil
 
-out_5:
-	dbS3Remove(akey_root)
-out_4:
-	dbS3Remove(akey)
 out_3:
-	s3IamDelete(iam_root)
+	dbS3Remove(akey)
 out_2:
 	s3IamDelete(iam)
 out_1:
@@ -209,15 +183,12 @@ func (akey *S3AccessKey) LookupAccountAccessKey() (*S3AccessKey, error) {
 	return &res, nil
 }
 
-func dbLookupAccessKey(AccessKeyId string, fetch_account bool) (*S3AccessKey, error) {
+func dbLookupAccessKey(AccessKeyId string) (*S3AccessKey, error) {
 	var akey S3AccessKey
 	var err error
 
 	err = dbS3FindOne(bson.M{"access-key-id": AccessKeyId, "state": S3StateActive }, &akey)
 	if err == nil {
-		if fetch_account {
-			return akey.LookupAccountAccessKey()
-		}
 		return &akey, nil
 	}
 
@@ -247,7 +218,7 @@ func dbInsertAccessKey(akey *S3AccessKey) (error) {
 func dbRemoveAccessKey(AccessKeyID string) (error) {
 	var err error
 
-	akey, err := dbLookupAccessKey(AccessKeyID, false)
+	akey, err := dbLookupAccessKey(AccessKeyID)
 	if err != nil {
 		log.Debugf("s3: Can't find akey %s", AccessKeyID)
 		return err
