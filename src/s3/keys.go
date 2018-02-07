@@ -2,8 +2,11 @@ package main
 
 import (
 	"gopkg.in/mgo.v2/bson"
-	"fmt"
+
 	"crypto/rand"
+	"fmt"
+	"time"
+
 	"../common/crypto"
 )
 
@@ -14,6 +17,9 @@ type S3AccessKey struct {
 
 	AccountObjID			bson.ObjectId	`bson:"account-id,omitempty"`
 	IamObjID			bson.ObjectId	`bson:"iam-id,omitempty"`
+
+	CreationTimestamp		int64		`bson:"creation-timestamp,omitempty"`
+	ExpirationTimestamp		int64		`bson:"expiration-timestamp,omitempty"`
 
 	AccessKeyID			string		`bson:"access-key-id"`
 	AccessKeySecret			string		`bson:"access-key-secret"`
@@ -43,8 +49,9 @@ func genKey(length int, dict []byte) (string) {
 // for security reason.
 //
 
-func genNewAccessKey(namespace, bucket string) (*S3AccessKey, error) {
+func genNewAccessKey(namespace, bucket string, lifetime uint32) (*S3AccessKey, error) {
 	var akey, akey_root *S3AccessKey
+	var timestamp_now int64
 	var iam, iam_root *S3Iam
 	var policy *S3Policy
 	var err error
@@ -76,11 +83,15 @@ func genNewAccessKey(namespace, bucket string) (*S3AccessKey, error) {
 		goto out_2
 	}
 
+	timestamp_now = time.Now().Unix()
+
 	akey = &S3AccessKey {
 		ObjID:			bson.NewObjectId(),
 		State:			S3StateNone,
 
 		IamObjID:		iam.ObjID,
+
+		CreationTimestamp:	timestamp_now,
 
 		AccessKeyID:		genKey(20, AccessKeyLetters),
 		AccessKeySecret:	genKey(40, SecretKeyLetters),
@@ -93,8 +104,15 @@ func genNewAccessKey(namespace, bucket string) (*S3AccessKey, error) {
 		AccountObjID:		account.ObjID,
 		IamObjID:		iam_root.ObjID,
 
+		CreationTimestamp:	timestamp_now,
+
 		AccessKeyID:		genKey(20, AccessKeyLetters),
 		AccessKeySecret:	genKey(40, SecretKeyLetters),
+	}
+
+	if lifetime != 0 {
+		akey.ExpirationTimestamp = timestamp_now + int64(lifetime)
+		akey_root.ExpirationTimestamp = timestamp_now + int64(lifetime)
 	}
 
 	if akey.AccessKeyID == "" || akey.AccessKeySecret == "" ||
