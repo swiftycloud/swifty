@@ -15,8 +15,16 @@ import (
 	"../apis/apps"
 )
 
+func fnCodeSubPath(fn *FunctionDesc) string {
+	return fn.Tennant + "/" + fn.Project + "/" + fn.Name
+}
+
+func fnCodePathV(fn *FunctionDesc) string {
+	return fnCodeSubPath(fn) + "/" + fn.Src.Version
+}
+
 func fnRepoClone(fn *FunctionDesc, prefix string) string {
-	return prefix + "/" + fn.Tennant + "/" + fn.Project + "/" + fn.Name
+	return prefix + "/" + fnCodeSubPath(fn)
 }
 
 func fnRepoCheckoutC(conf *YAMLConf, fn *FunctionDesc, version string) string {

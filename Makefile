@@ -101,6 +101,7 @@ go-gate-y	+= src/gate/funcurl.go
 go-gate-y	+= src/gate/stats.go
 go-gate-y	+= src/gate/swoid.go
 go-gate-y	+= src/gate/fdmdat.go
+go-gate-y	+= src/gate/build.go
 go-gate-y	+= src/gate/error.go
 
 go-admd-y	+= src/admd/main.go

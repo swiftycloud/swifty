@@ -48,8 +48,6 @@ var fnStates = map[int]string {
 	swy.DBFuncStateIni: "initializing",
 	swy.DBFuncStateStr: "starting",
 	swy.DBFuncStateRdy: "ready",
-	swy.DBFuncStateBld: "building",
-	swy.DBFuncStateUpd: "updating",
 	swy.DBFuncStateDea: "deactivated",
 	swy.DBFuncStateTrm: "terminating",
 	swy.DBFuncStateStl: "stalled",
@@ -83,6 +81,10 @@ type FnSizeDesc struct {
 	Rate		uint		`bson:"rate"`
 }
 
+func (fn *FunctionDesc)DepName() string {
+	return "swd-" + fn.Cookie[:32]
+}
+
 type FunctionDesc struct {
 	// These objects are kept in Mongo, which requires the below two
 	// fields to be present...
@@ -103,53 +105,6 @@ type FunctionDesc struct {
 }
 
 var zeroVersion = "0"
-
-func (fi *FnInst)DepName() string {
-	dn := "swd-" + fi.fn.Cookie[:32]
-	if fi.Build {
-		dn += "-bld"
-	}
-	return dn
-}
-
-func (fi *FnInst)Str() string {
-	if !fi.Build {
-		return swy.SwyPodInstRun
-	} else {
-		return swy.SwyPodInstBld
-	}
-}
-
-func (fi *FnInst)Replicas() int32 {
-	if fi.Build {
-		return 1
-	} else {
-		return int32(fi.fn.Size.Replicas)
-	}
-}
-
-/*
- * We may have several instances of Fn running
- * Regular -- this one is up-n-running with the fn ready to run
- * Build -- this is a single replica deployment building the fn
- * Old -- this is Regular, but with the sources of previous version.
- *        In parallel to the Old one we may have one Build instance
- *        running building an Fn from new sources.
- * At some point in time the Old instance gets replaced with the
- * new Regular one.
- */
-type FnInst struct {
-	Build		bool
-	fn		*FunctionDesc
-}
-
-func (fn *FunctionDesc) Inst() *FnInst {
-	return &FnInst { Build: false, fn: fn }
-}
-
-func (fn *FunctionDesc) InstBuild() *FnInst {
-	return &FnInst { Build: true, fn: fn }
-}
 
 func getFunctionDesc(tennant string, p_add *swyapi.FunctionAdd) *FunctionDesc {
 	fn := &FunctionDesc {
@@ -203,7 +158,6 @@ func validateProjectAndFuncName(params *swyapi.FunctionAdd) error {
 func addFunction(ctx context.Context, conf *YAMLConf, tennant string, params *swyapi.FunctionAdd) *swyapi.GateErr {
 	var err, erc error
 	var fn *FunctionDesc
-	var fi *FnInst
 
 	err = validateProjectAndFuncName(params)
 	if err != nil {
@@ -236,13 +190,12 @@ func addFunction(ctx context.Context, conf *YAMLConf, tennant string, params *sw
 		goto out_clean_evt
 	}
 
-	if RtBuilding(&fn.Code) {
-		fn.State = swy.DBFuncStateBld
-		fi = fn.InstBuild()
-	} else {
-		fn.State = swy.DBFuncStateStr
-		fi = fn.Inst()
+	err = buildFunction(ctx, conf, fn)
+	if err != nil {
+		goto out_clean_repo
 	}
+
+	fn.State = swy.DBFuncStateStr
 
 	err = dbFuncUpdateAdded(fn)
 	if err != nil {
@@ -251,7 +204,7 @@ func addFunction(ctx context.Context, conf *YAMLConf, tennant string, params *sw
 		goto out_clean_repo
 	}
 
-	err = swk8sRun(ctx, conf, fn, fi)
+	err = swk8sRun(ctx, conf, fn)
 	if err != nil {
 		goto out_clean_repo
 	}
@@ -302,7 +255,6 @@ func swyFixSize(sz *swyapi.FunctionSize, conf *YAMLConf) error {
 func updateFunction(ctx context.Context, conf *YAMLConf, id *SwoId, params *swyapi.FunctionUpdate) *swyapi.GateErr {
 	var err error
 	var restart bool
-	var rebuild bool
 	var mfix, rlfix bool
 
 	update := make(bson.M)
@@ -321,8 +273,12 @@ func updateFunction(ctx context.Context, conf *YAMLConf, id *SwoId, params *swya
 			goto out
 		}
 
+		err = buildFunction(ctx, conf, fn)
+		if err != nil {
+			goto out
+		}
+
 		update["src.version"] = fn.Src.Version
-		rebuild = RtBuilding(&fn.Code)
 		restart = true
 	}
 
@@ -374,14 +330,6 @@ func updateFunction(ctx context.Context, conf *YAMLConf, id *SwoId, params *swya
 		goto out
 	}
 
-	if rebuild {
-		if fn.State == swy.DBFuncStateRdy {
-			fn.State = swy.DBFuncStateUpd
-		} else {
-			fn.State = swy.DBFuncStateBld
-		}
-	}
-
 	update["state"] = fn.State
 
 	err = dbFuncUpdatePulled(fn, update)
@@ -414,18 +362,12 @@ func updateFunction(ctx context.Context, conf *YAMLConf, id *SwoId, params *swya
 	}
 
 	if restart {
-		if rebuild {
-			ctxlog(ctx).Debugf("Starting build dep")
-			err = swk8sRun(ctx, conf, fn, fn.InstBuild())
-		} else {
-			ctxlog(ctx).Debugf("Updating deploy")
-			err = swk8sUpdate(ctx, conf, fn)
+		ctxlog(ctx).Debugf("Updating deploy")
+		err = swk8sUpdate(ctx, conf, fn)
+		if err != nil {
+			/* FIXME -- stalled? */
+			goto out
 		}
-	}
-
-	if err != nil {
-		/* FIXME -- stalled? */
-		goto out
 	}
 
 	logSaveEvent(fn, "updated", fmt.Sprintf("to: %s", fn.Src.Version))
@@ -459,7 +401,7 @@ func removeFunction(ctx context.Context, conf *YAMLConf, id *SwoId) *swyapi.Gate
 
 	if !fn.OneShot && (fn.State != swy.DBFuncStateDea) {
 		ctxlog(ctx).Debugf("`- delete deploy")
-		err = swk8sRemove(ctx, conf, fn, fn.Inst())
+		err = swk8sRemove(ctx, conf, fn)
 		if err != nil {
 			ctxlog(ctx).Errorf("remove deploy error: %s", err.Error())
 			goto later
@@ -543,22 +485,15 @@ func fnWaiterKick(cookie string) {
 	xwait.Event(cookie)
 }
 
-func notifyPodTmo(ctx context.Context, cookie, inst string) {
+func notifyPodTmo(ctx context.Context, cookie string) {
 	fn, err := dbFuncFindByCookie(cookie)
 	if err != nil {
-		ctxlog(ctx).Errorf("POD timeout %s.%s error: %s", cookie, inst, err.Error())
+		ctxlog(ctx).Errorf("POD timeout %s error: %s", cookie, err.Error())
 		return
 	}
 
-	var fi *FnInst
-	if inst == swy.SwyPodInstRun {
-		fi = fn.Inst()
-	} else {
-		fi = fn.InstBuild()
-	}
-
 	logSaveEvent(fn, "POD", "Start timeout")
-	swk8sRemove(ctx, &conf, fn, fi)
+	swk8sRemove(ctx, &conf, fn)
 	dbFuncSetState(ctx, fn, swy.DBFuncStateStl)
 }
 
@@ -569,16 +504,9 @@ func notifyPodUp(ctx context.Context, pod *k8sPod) {
 	}
 
 	logSaveEvent(fn, "POD", fmt.Sprintf("state: %s", fnStates[fn.State]))
-	if pod.Instance == swy.SwyPodInstBld {
-		err = buildFunction(ctx, fn)
-		if err != nil {
-			goto out
-		}
-	} else {
-		dbFuncSetState(ctx, fn, swy.DBFuncStateRdy)
-		if fn.OneShot {
-			runFunctionOnce(ctx, fn)
-		}
+	dbFuncSetState(ctx, fn, swy.DBFuncStateRdy)
+	if fn.OneShot {
+		runFunctionOnce(ctx, fn)
 	}
 
 	return
@@ -601,7 +529,7 @@ func deactivateFunction(ctx context.Context, conf *YAMLConf, id *SwoId) *swyapi.
 		return GateErrM(swy.GateGenErr, "Cannot deactivate function")
 	}
 
-	err = swk8sRemove(ctx, conf, fn, fn.Inst())
+	err = swk8sRemove(ctx, conf, fn)
 	if err != nil {
 		ctxlog(ctx).Errorf("Can't remove deployment: %s", err.Error())
 		dbFuncSetState(ctx, fn, swy.DBFuncStateRdy)
@@ -621,7 +549,7 @@ func activateFunction(ctx context.Context, conf *YAMLConf, id *SwoId) *swyapi.Ga
 
 	dbFuncSetState(ctx, fn, swy.DBFuncStateStr)
 
-	err = swk8sRun(ctx, conf, fn, fn.Inst())
+	err = swk8sRun(ctx, conf, fn)
 	if err != nil {
 		dbFuncSetState(ctx, fn, swy.DBFuncStateDea)
 		ctxlog(ctx).Errorf("Can't start deployment: %s", err.Error())

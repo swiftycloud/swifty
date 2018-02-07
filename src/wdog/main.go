@@ -196,8 +196,18 @@ func doRun(params *swyapi.SwdFunctionRun) (*swyapi.SwdFunctionRunResult, int, er
 	}, 0, nil
 }
 
-func doBuild() (*swyapi.SwdFunctionRunResult, error) {
-	err := os.Chdir("/go/src/swyrunner")
+func doBuild(params *swyapi.SwdFunctionRun) (*swyapi.SwdFunctionRunResult, error) {
+	runlock.Lock()
+	defer runlock.Unlock()
+
+	os.Remove("/go/src/swyfunc")
+	srcdir := params.Args["sources"]
+	err := os.Symlink("/go/src/swycode/" + srcdir, "/go/src/swyfunc")
+	if err != nil {
+		return nil, fmt.Errorf("Can't symlink code: %s", err.Error())
+	}
+
+	err = os.Chdir("/go/src/swyrunner")
 	if err != nil {
 		return nil, fmt.Errorf("Can't chdir to swywdog: %s", err.Error())
 	}
@@ -205,11 +215,13 @@ func doBuild() (*swyapi.SwdFunctionRunResult, error) {
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 
-	log.Debugf("Run go build in /go/src/swyrunner")
-	cmd := exec.Command("go", "build", "-o", "../swycode/function")
+	log.Debugf("Run go build on %s", srcdir)
+	cmd := exec.Command("go", "build", "-o", "../swycode/" + srcdir + "/function")
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	err = cmd.Run()
+	os.Remove("/go/src/swyfunc") /* Just an attempt */
+
 	if err != nil {
 		if exit, code := get_exit_code(err); exit {
 			return &swyapi.SwdFunctionRunResult{Code: code, Stdout: stdout.String(), Stderr: stderr.String()}, nil
@@ -241,7 +253,10 @@ func handleRun(w http.ResponseWriter, r *http.Request) {
 	if !build {
 		result, code, err = doRun(&params)
 	} else {
-		result, err = doBuild()
+		result, err = doBuild(&params)
+		if err != nil {
+			log.Errorf("Error building FN: %s", err.Error())
+		}
 	}
 	if err != nil {
 		goto out
@@ -290,11 +305,6 @@ func main() {
 		log.Fatal("SWD_POD_TOKEN not set")
 	}
 
-	inst := swy.SafeEnv("SWD_INSTANCE", "")
-	if inst == "" {
-		log.Fatal("SWD_INSTANCE not set")
-	}
-
 	tmos := swy.SafeEnv("SWD_FN_TMO", "")
 	if tmos == "" {
 		log.Fatal("SWD_FN_TMO not set")
@@ -305,7 +315,8 @@ func main() {
 		log.Fatal("Bad timeout value")
 	}
 
-	if inst == swy.SwyPodInstRun {
+	inst := swy.SafeEnv("SWD_INSTANCE", "")
+	if inst == "" {
 		err = startRunner()
 		if err != nil {
 			log.Fatal("Can't start runner")

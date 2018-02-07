@@ -248,7 +248,7 @@ func logRemove(fn *FunctionDesc) error {
 func dbBalancerRSListVersions(fn *FunctionDesc) ([]string, error) {
 	var fv []string
 	c := dbSession.DB(dbState).C(DBColBalancerRS)
-	err := c.Find(bson.M{"fnid": fn.Cookie, "instance": swy.SwyPodInstRun}).Distinct("fnversion", &fv)
+	err := c.Find(bson.M{"fnid": fn.Cookie }).Distinct("fnversion", &fv)
 	return fv, err
 }
 
@@ -259,7 +259,6 @@ func dbBalancerPodAdd(link *BalancerLink, pod *k8sPod) error {
 			"depname":	pod.DepName,
 			"uid":		pod.UID,
 			"wdogaddr":	pod.WdogAddr,
-			"instance":	pod.Instance,
 			"fnversion":	pod.Version,
 		})
 	if err != nil {
@@ -306,11 +305,11 @@ func dbBalancerPodDelAll(link *BalancerLink) (error) {
 	return err
 }
 
-func dbBalancerGetConnInfo(field, value string) (*BalancerConn, error) {
+func dbBalancerGetConnByCookie(cookie string) (*BalancerConn, error) {
 	var link BalancerLink
 
 	c := dbSession.DB(dbState).C(DBColBalancer)
-	err := c.Find(bson.M{field: value}).One(&link)
+	err := c.Find(bson.M{"fnid": cookie}).One(&link)
 	if err != nil {
 		return nil, err
 	}
@@ -321,21 +320,12 @@ func dbBalancerGetConnInfo(field, value string) (*BalancerConn, error) {
 	}, nil
 }
 
-func dbBalancerGetConnByDep(depname string) (*BalancerConn, error) {
-	return dbBalancerGetConnInfo("depname", depname)
-}
-
-func dbBalancerGetConnByCookie(cookie string) (*BalancerConn, error) {
-	return dbBalancerGetConnInfo("fnid", cookie)
-}
-
 func dbBalancerGetConnExact(fnid, version string) (*BalancerConn, error) {
 	var v BalancerRS
 
 	c := dbSession.DB(dbState).C(DBColBalancerRS)
 	err := c.Find(bson.M{
 			"fnid":		fnid,
-			"instance":	swy.SwyPodInstRun,
 			"fnversion":	version,
 		}).One(&v)
 	if err != nil {

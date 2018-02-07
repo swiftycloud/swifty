@@ -632,7 +632,7 @@ func handleFunctionLogs(ctx context.Context, w http.ResponseWriter, r *http.Requ
 }
 
 func fnCallable(fn *FunctionDesc) bool {
-	return fn.URLCall && (fn.State == swy.DBFuncStateRdy || fn.State == swy.DBFuncStateUpd)
+	return fn.URLCall && (fn.State == swy.DBFuncStateRdy)
 }
 
 func makeArgMap(r *http.Request) map[string]string {
@@ -714,7 +714,7 @@ func handleFunctionRun(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	id := makeSwoId(fromContext(ctx).Tenant, params.Project, params.FuncName)
 	ctxlog(ctx).Debugf("function/run %s", id.Str())
 
-	fn, err := dbFuncFindStates(id, []int{swy.DBFuncStateRdy, swy.DBFuncStateUpd})
+	fn, err := dbFuncFindStates(id, []int{swy.DBFuncStateRdy})
 	if err != nil {
 		return GateErrD(err)
 	}
@@ -1147,6 +1147,11 @@ func main() {
 	err = BalancerInit(&conf)
 	if err != nil {
 		glog.Fatalf("Can't setup: %s", err.Error())
+	}
+
+	err = BuilderInit(&conf)
+	if err != nil {
+		glog.Fatalf("Can't set up builder: %s", err.Error())
 	}
 
 	gatesrv = &http.Server{

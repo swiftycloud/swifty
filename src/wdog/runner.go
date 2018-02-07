@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"swycode"
+	"swyfunc"
 	"encoding/json"
 	"xqueue"
 	"os"

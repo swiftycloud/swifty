@@ -5,6 +5,7 @@ type rt_info struct {
 	Ext		string
 	Build		bool
 	Devel		bool
+	BuildIP		string
 }
 
 var py_info = rt_info {
@@ -16,7 +17,6 @@ var golang_info = rt_info {
 	Ext:		"go",
 	CodePath:	"/go/src/swycode",
 	Build:		true,
-	Devel:		true,
 }
 
 var swift_info = rt_info {
@@ -44,8 +44,9 @@ func RtLangEnabled(lang string) bool {
 	return ok && (SwyModeDevel || !h.Devel)
 }
 
-func RtBuilding(scr *FnCodeDesc) bool {
-	return rt_handlers[scr.Lang].Build
+func RtNeedToBuild(scr *FnCodeDesc) (bool, string) {
+	rh := rt_handlers[scr.Lang]
+	return rh.Build, rh.BuildIP
 }
 
 /* Path where the sources would appear in container */

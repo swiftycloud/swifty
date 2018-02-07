@@ -43,13 +43,13 @@ func swk8sPodDelete(podname string) error {
 	return nil
 }
 
-func swk8sRemove(ctx context.Context, conf *YAMLConf, fn *FunctionDesc, fi *FnInst) error {
+func swk8sRemove(ctx context.Context, conf *YAMLConf, fn *FunctionDesc) error {
 	var nr_replicas int32 = 0
 	var orphan bool = false
 	var grace int64 = 0
 	var err error
 
-	depname := fi.DepName()
+	depname := fn.DepName()
 
 	err = BalancerDelete(ctx, depname)
 	if err != nil {
@@ -95,7 +95,7 @@ func swk8sRemove(ctx context.Context, conf *YAMLConf, fn *FunctionDesc, fi *FnIn
 	return nil
 }
 
-func swk8sGenEnvVar(ctx context.Context, fn *FunctionDesc, fi *FnInst, wd_port int) []v1.EnvVar {
+func swk8sGenEnvVar(ctx context.Context, fn *FunctionDesc, wd_port int) []v1.EnvVar {
 	var s []v1.EnvVar
 
 	for _, v := range fn.Code.Env {
@@ -114,9 +114,6 @@ func swk8sGenEnvVar(ctx context.Context, fn *FunctionDesc, fi *FnInst, wd_port i
 	s = append(s, v1.EnvVar{
 			Name:	"SWD_FN_TMO",
 			Value:	strconv.Itoa(int(fn.Size.Tmo)), })
-	s = append(s, v1.EnvVar{
-			Name:	"SWD_INSTANCE",
-			Value:	fi.Str(), })
 	s = append(s, v1.EnvVar{
 			Name:	"SWD_PORT",
 			Value:	strconv.Itoa(int(wd_port)), })
@@ -201,7 +198,7 @@ func swk8sGenLabels(depname string) map[string]string {
 }
 
 func swk8sUpdate(ctx context.Context, conf *YAMLConf, fn *FunctionDesc) error {
-	depname := fn.Inst().DepName()
+	depname := fn.DepName()
 
 	deploy := swk8sClientSet.Extensions().Deployments(v1.NamespaceDefault)
 	this, err := deploy.Get(depname)
@@ -220,7 +217,7 @@ func swk8sUpdate(ctx context.Context, conf *YAMLConf, fn *FunctionDesc) error {
 	 * Tune up SWD_FUNCTION_DESC to make wdog keep up with
 	 * updated Tmo value and MWARE_* secrets
 	 */
-	this.Spec.Template.Spec.Containers[0].Env = swk8sGenEnvVar(ctx, fn, fn.Inst(), conf.Wdog.Port)
+	this.Spec.Template.Spec.Containers[0].Env = swk8sGenEnvVar(ctx, fn, conf.Wdog.Port)
 
 	specSetRes(&this.Spec.Template.Spec.Containers[0].Resources, fn)
 
@@ -267,10 +264,10 @@ func specSetRes(res *v1.ResourceRequirements, fn *FunctionDesc) {
 	}
 }
 
-func swk8sRun(ctx context.Context, conf *YAMLConf, fn *FunctionDesc, fi *FnInst) error {
+func swk8sRun(ctx context.Context, conf *YAMLConf, fn *FunctionDesc) error {
 	var err error
 
-	depname := fi.DepName()
+	depname := fn.DepName()
 	ctxlog(ctx).Debugf("Start %s deployment for %s", depname, fn.SwoId.Str())
 
 	img, ok := conf.Runtime.Images[fn.Code.Lang]
@@ -278,7 +275,7 @@ func swk8sRun(ctx context.Context, conf *YAMLConf, fn *FunctionDesc, fi *FnInst)
 		return errors.New("Bad lang selected") /* cannot happen actually */
 	}
 
-	envs := swk8sGenEnvVar(ctx, fn, fi, conf.Wdog.Port)
+	envs := swk8sGenEnvVar(ctx, fn, conf.Wdog.Port)
 
 	podspec := v1.PodTemplateSpec{
 		ObjectMeta:	v1.ObjectMeta {
@@ -317,7 +314,7 @@ func swk8sRun(ctx context.Context, conf *YAMLConf, fn *FunctionDesc, fi *FnInst)
 
 	specSetRes(&podspec.Spec.Containers[0].Resources, fn)
 
-	nr_replicas := fi.Replicas()
+	nr_replicas := int32(fn.Size.Replicas)
 
 	err = BalancerCreate(ctx, fn.Cookie, depname, fn.URLCall)
 	if err != nil {
@@ -356,7 +353,6 @@ type k8sPod struct {
 	DepName		string
 	WdogAddr	string
 	UID		string
-	Instance	string
 }
 
 func genBalancerPod(pod *v1.Pod) (*k8sPod) {
@@ -380,8 +376,6 @@ func genBalancerPod(pod *v1.Pod) (*k8sPod) {
 				if r.WdogAddr != "" {
 					r.WdogAddr += ":" + v.Value
 				}
-			} else if v.Name == "SWD_INSTANCE" {
-				r.Instance = v.Value
 			}
 		}
 	}
@@ -395,14 +389,18 @@ func swk8sPodAdd(obj interface{}) {
 func swk8sPodDel(obj interface{}) {
 }
 
-func swk8sPodTmo(cookie, inst string) {
+func swk8sPodTmo(cookie string) {
 	ctx := context.Background()
-	ctxlog(ctx).Errorf("POD %s.%s start timeout", cookie, inst)
-	notifyPodTmo(ctx, cookie, inst)
+	ctxlog(ctx).Errorf("POD %s start timeout", cookie)
+	notifyPodTmo(ctx, cookie)
 }
 
 func swk8sPodUp(ctx context.Context, pod *k8sPod) {
 	ctxlog(ctx).Debugf("POD %s (%s) up deploy %s", pod.UID, pod.WdogAddr, pod.DepName)
+
+	if pod.DepName == "swd-builder" {
+		return
+	}
 
 	go func() {
 		err := BalancerPodAdd(pod)
@@ -419,6 +417,10 @@ func swk8sPodUp(ctx context.Context, pod *k8sPod) {
 
 func swk8sPodDown(ctx context.Context, pod *k8sPod) {
 	ctxlog(ctx).Debugf("POD %s down deploy %s", pod.UID, pod.DepName)
+
+	if pod.DepName == "swd-builder" {
+		return
+	}
 
 	err := BalancerPodDel(pod)
 	if err != nil {
@@ -488,6 +490,29 @@ func swk8sMwSecretRemove(ctx context.Context, id string) error {
 	}
 
 	return err
+}
+
+func swk8sGetBuildPods() (map[string]string, error) {
+	rv := make(map[string]string)
+
+	podiface := swk8sClientSet.Pods(v1.NamespaceDefault)
+	pods, err := podiface.List(v1.ListOptions{ LabelSelector: "swdbuild" })
+	if err != nil {
+		glog.Errorf("Error listing PODs: %s", err.Error())
+		return nil, errors.New("Error listing PODs")
+	}
+
+	for _, pod := range pods.Items {
+		build, ok := pod.ObjectMeta.Labels["swdbuild"]
+		if !ok {
+			glog.Errorf("Badly listed POD")
+			continue
+		}
+
+		rv[build] = pod.Status.PodIP
+	}
+
+	return rv, nil
 }
 
 func swk8sInit(conf *YAMLConf) error {
