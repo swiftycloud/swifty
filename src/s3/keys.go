@@ -234,6 +234,10 @@ func dbRemoveAccessKey(AccessKeyID string) (error) {
 		return err
 	}
 
+	if iam, err := akey.s3IamFind(); err == nil {
+		s3IamDelete(iam)
+	}
+
 	err = dbS3Remove(akey)
 	if err != nil {
 		log.Errorf("s3: Can't remove %s: %s",
