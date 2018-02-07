@@ -101,12 +101,13 @@ func (policy *S3Policy) isRoot() bool {
 }
 
 func (policy *S3Policy) Match(resource string) bool {
-	if policy.isCanned() {
+	if !policy.isRoot() {
 		for _, x := range policy.Resource {
-			if x != resource {
-				return false
+			if x == resource {
+				return true
 			}
 		}
+		return false
 	}
-	return false
+	return true
 }
