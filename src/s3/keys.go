@@ -80,9 +80,7 @@ func genNewAccessKey(namespace, bucket string, lifetime uint32) (*S3AccessKey, e
 	} else {
 		policy = &S3Policy {
 			Effect:	Policy_Allow,
-			Action: []string {
-				PermS3_Any,
-			},
+			Action: PolicyRootActions,
 			Resource: []string {
 				Resourse_Any,
 			},

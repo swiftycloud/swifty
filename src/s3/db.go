@@ -179,7 +179,7 @@ func infoLong(o interface{}) (string) {
 		iam := o.(*S3Iam)
 		return fmt.Sprintf("{ S3Iam: %s/%s/%d/%s }",
 			iam.ObjID, iam.AccountObjID, iam.State,
-			iam.Policy)
+			iam.Policy.infoLong())
 	case reflect.TypeOf(&S3Bucket{}):
 		bucket := o.(*S3Bucket)
 		return fmt.Sprintf("{ S3Bucket: %s/%s/%s/%d/%s }",

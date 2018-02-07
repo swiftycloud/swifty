@@ -1,81 +1,127 @@
 package main
 
+import (
+	"fmt"
+)
+
 // Effect element
 const (
 	Policy_Allow		= "Allow"
 	Policy_Deny		= "Deny"
 )
 
-// Permissions for object operations
 const (
-	PermS3_AbortMultipartUpload		= "s3:AbortMultipartUpload"
-	PermS3_DeleteObject			= "s3:DeleteObject"
-	PermS3_DeleteObjectTagging		= "s3:DeleteObjectTagging"
-	PermS3_DeleteObjectVersion		= "s3:DeleteObjectVersion"
-	PermS3_DeleteObjectVersionTagging	= "s3:DeleteObjectVersionTagging"
-	PermS3_GetObject			= "s3:GetObject"
-	PermS3_GetObjectAcl			= "s3:GetObjectAcl"
-	PermS3_GetObjectTagging			= "s3:GetObjectTagging"
-	PermS3_GetObjectTorrent			= "s3:GetObjectTorrent"
-	PermS3_GetObjectVersion			= "s3:GetObjectVersion"
-	PermS3_GetObjectVersionAcl		= "s3:GetObjectVersionAcl"
-	PermS3_GetObjectVersionTagging		= "s3:GetObjectVersionTagging"
-	PermS3_GetObjectVersionTorrent		= "s3:GetObjectVersionTorrent"
-	PermS3_ListMultipartUploadParts		= "s3:ListMultipartUploadParts"
-	PermS3_PutObject			= "s3:PutObject"
-	PermS3_PutObjectAcl			= "s3:PutObjectAcl"
-	PermS3_PutObjectTagging			= "s3:PutObjectTagging"
-	PermS3_PutObjectVersionAcl		= "s3:PutObjectVersionAcl"
-	PermS3_PutObjectVersionTagging		= "s3:PutObjectVersionTagging"
-	PermS3_RestoreObject			= "s3:RestoreObject"
+	S3PolicyAction_AbortMultipartUpload		= uint64(1 <<  0)
+	S3PolicyAction_DeleteObject			= uint64(1 <<  1)
+	S3PolicyAction_DeleteObjectTagging		= uint64(1 <<  2)
+	S3PolicyAction_DeleteObjectVersion		= uint64(1 <<  3)
+	S3PolicyAction_DeleteObjectVersionTagging	= uint64(1 <<  4)
+	S3PolicyAction_GetObject			= uint64(1 <<  5)
+	S3PolicyAction_GetObjectAcl			= uint64(1 <<  6)
+	S3PolicyAction_GetObjectTagging			= uint64(1 <<  7)
+	S3PolicyAction_GetObjectTorrent			= uint64(1 <<  8)
+	S3PolicyAction_GetObjectVersion			= uint64(1 <<  9)
+	S3PolicyAction_GetObjectVersionAcl		= uint64(1 << 10)
+	S3PolicyAction_GetObjectVersionTagging		= uint64(1 << 11)
+	S3PolicyAction_GetObjectVersionTorrent		= uint64(1 << 12)
+	S3PolicyAction_ListMultipartUploadParts		= uint64(1 << 13)
+	S3PolicyAction_PutObject			= uint64(1 << 14)
+	S3PolicyAction_PutObjectAcl			= uint64(1 << 15)
+	S3PolicyAction_PutObjectTagging			= uint64(1 << 16)
+	S3PolicyAction_PutObjectVersionAcl		= uint64(1 << 17)
+	S3PolicyAction_PutObjectVersionTagging		= uint64(1 << 18)
+	S3PolicyAction_RestoreObject			= uint64(1 << 19)
+
+	S3PolicyAction_CreateBucket			= uint64(1 << 32)
+	S3PolicyAction_DeleteBucket			= uint64(1 << 33)
+	S3PolicyAction_ListBucket			= uint64(1 << 34)
+	S3PolicyAction_ListBucketVersions		= uint64(1 << 35)
+	S3PolicyAction_ListAllMyBuckets			= uint64(1 << 36)
+	S3PolicyAction_ListBucketMultipartUploads	= uint64(1 << 37)
+
+	S3PolicyAction_All				= uint64((1 << 63) - 1)
+	S3PolicyAction_Mask				= uint64((1 << 63) - 1)
 )
 
-// Permissions related to bucket operations
-const (
-	PermS3_CreateBucket			= "s3:CreateBucket"
-	PermS3_DeleteBucket			= "s3:DeleteBucket"
-	PermS3_ListBucket			= "s3:ListBucket"
-	PermS3_ListBucketVersions		= "s3:ListBucketVersions"
-	PermS3_ListAllMyBuckets			= "s3:ListAllMyBuckets"
-	PermS3_ListBucketMultipartUploads	= "s3:ListBucketMultipartUploads"
-)
+var S3PolicyAction_Map = map[string]uint64 {
+	"s3:AbortMultipartUpload":	S3PolicyAction_AbortMultipartUpload,
+	"s3:DeleteObject":		S3PolicyAction_DeleteObject,
+	"s3:DeleteObjectTagging":	S3PolicyAction_DeleteObjectTagging,
+	"s3:DeleteObjectVersion":	S3PolicyAction_DeleteObjectVersion,
+	"s3:DeleteObjectVersionTagging":S3PolicyAction_DeleteObjectVersionTagging,
+	"s3:GetObject":			S3PolicyAction_GetObject,
+	"s3:GetObjectAcl":		S3PolicyAction_GetObjectAcl,
+	"s3:GetObjectTagging":		S3PolicyAction_GetObjectTagging,
+	"s3:GetObjectTorrent":		S3PolicyAction_GetObjectTorrent,
+	"s3:GetObjectVersion":		S3PolicyAction_GetObjectVersion,
+	"s3:GetObjectVersionAcl":	S3PolicyAction_GetObjectVersionAcl,
+	"s3:GetObjectVersionTagging":	S3PolicyAction_GetObjectVersionTagging,
+	"s3:GetObjectVersionTorrent":	S3PolicyAction_GetObjectVersionTorrent,
+	"s3:ListMultipartUploadParts":	S3PolicyAction_ListMultipartUploadParts,
+	"s3:PutObject":			S3PolicyAction_PutObject,
+	"s3:PutObjectAcl":		S3PolicyAction_PutObjectAcl,
+	"s3:PutObjectTagging":		S3PolicyAction_PutObjectTagging,
+	"s3:PutObjectVersionAcl":	S3PolicyAction_PutObjectVersionAcl,
+	"s3:PutObjectVersionTagging":	S3PolicyAction_PutObjectVersionTagging,
+	"s3:RestoreObject":		S3PolicyAction_RestoreObject,
+
+	"s3:CreateBucket":		S3PolicyAction_CreateBucket,
+	"s3:DeleteBucket":		S3PolicyAction_DeleteBucket,
+	"s3:ListBucket":		S3PolicyAction_ListBucket,
+	"s3:ListBucketVersions":	S3PolicyAction_ListBucketVersions,
+	"s3:ListAllMyBuckets":		S3PolicyAction_ListAllMyBuckets,
+	"s3:ListBucketMultipartUploads":S3PolicyAction_ListBucketMultipartUploads,
+
+	"s3:*":				S3PolicyAction_All,
+}
 
 // Most permissive mode
 const (
-	PermS3_Any				= "s3:*"
 	Resourse_Any				= "*"
 )
 
 type S3Policy struct {
 	Effect				string		`bson:"effect,omitempty"`
-	Action				[]string	`bson:"action,omitempty"`
+	Action				[]uint64	`bson:"action,omitempty"`
 	Resource			[]string	`bson:"resource,omitempty"`
 }
 
-var PolicyBucketActions = []string {
-	PermS3_AbortMultipartUpload,
-	PermS3_DeleteObject,
-	PermS3_DeleteObjectTagging,
-	PermS3_DeleteObjectVersion,
-	PermS3_DeleteObjectVersionTagging,
-	PermS3_GetObject,
-	PermS3_GetObjectAcl,
-	PermS3_GetObjectTagging,
-	PermS3_GetObjectTorrent,
-	PermS3_GetObjectVersion,
-	PermS3_GetObjectVersionAcl,
-	PermS3_GetObjectVersionTagging,
-	PermS3_GetObjectVersionTorrent,
-	PermS3_ListMultipartUploadParts,
-	PermS3_PutObject,
-	PermS3_PutObjectAcl,
-	PermS3_PutObjectTagging,
-	PermS3_PutObjectVersionAcl,
-	PermS3_PutObjectVersionTagging,
-	PermS3_RestoreObject,
-	PermS3_ListBucket,
-	PermS3_ListBucketVersions,
-	PermS3_ListBucketMultipartUploads,
+func (policy *S3Policy) infoLong() string {
+	if policy != nil {
+		if len(policy.Action) > 0 && len(policy.Resource) > 0 {
+			return fmt.Sprintf("%x/%s",
+				policy.Action[0],
+				policy.Resource[0])
+		}
+	}
+	return "nil"
+}
+
+var PolicyRootActions = []uint64 { S3PolicyAction_All }
+var PolicyBucketActions = []uint64 {
+	S3PolicyAction_AbortMultipartUpload		|
+	S3PolicyAction_DeleteObject			|
+	S3PolicyAction_DeleteObjectTagging		|
+	S3PolicyAction_DeleteObjectVersion		|
+	S3PolicyAction_DeleteObjectVersionTagging	|
+	S3PolicyAction_GetObject			|
+	S3PolicyAction_GetObjectAcl			|
+	S3PolicyAction_GetObjectTagging			|
+	S3PolicyAction_GetObjectTorrent			|
+	S3PolicyAction_GetObjectVersion			|
+	S3PolicyAction_GetObjectVersionAcl		|
+	S3PolicyAction_GetObjectVersionTagging		|
+	S3PolicyAction_GetObjectVersionTorrent		|
+	S3PolicyAction_ListMultipartUploadParts		|
+	S3PolicyAction_PutObject			|
+	S3PolicyAction_PutObjectAcl			|
+	S3PolicyAction_PutObjectTagging			|
+	S3PolicyAction_PutObjectVersionAcl		|
+	S3PolicyAction_PutObjectVersionTagging		|
+	S3PolicyAction_RestoreObject			|
+	S3PolicyAction_ListBucket			|
+	S3PolicyAction_ListBucketVersions		|
+	S3PolicyAction_ListBucketMultipartUploads,
 }
 
 func (policy *S3Policy) isCanned() bool {
@@ -91,7 +137,7 @@ func (policy *S3Policy) isCanned() bool {
 func (policy *S3Policy) isRoot() bool {
 	if policy.isCanned() {
 		// Root key, can do everything
-		if policy.Action[0] == PermS3_Any {
+		if policy.Action[0] == S3PolicyAction_All {
 			if policy.Resource[0] == Resourse_Any {
 				return true
 			}
