@@ -153,10 +153,6 @@ func logRequest(r *http.Request) {
 
 // List all buckets belonging to an account
 func handleListBuckets(iam *S3Iam, akey *S3AccessKey, w http.ResponseWriter, r *http.Request) *S3Error {
-	if !isEmptyPolicy(&iam.Policy) {
-		return &S3Error{ ErrorCode: S3ErrAccessDenied }
-	}
-
 	buckets, err := s3ListBuckets(iam, akey)
 	if err != nil {
 		if err == mgo.ErrNotFound {
@@ -226,35 +222,41 @@ func handleAccessBucket(bname string, iam *S3Iam, w http.ResponseWriter, r *http
 
 func handleBucket(iam *S3Iam, akey *S3AccessKey, w http.ResponseWriter, r *http.Request) *S3Error {
 	var bname string = mux.Vars(r)["BucketName"]
+	var policy = &iam.Policy
 
 	if bname == "" && r.Method != http.MethodGet {
 		return &S3Error{ ErrorCode: S3ErrInvalidBucketName }
 	}
 
-	if isDenyOnBucket(&iam.Policy, bname) {
-		return &S3Error{ ErrorCode: S3ErrAccessDenied }
-	}
-
 	switch r.Method {
 	case http.MethodGet:
 		if bname == "" {
+			if !policy.isRoot() { goto e_access }
 			return handleListBuckets(iam, akey, w, r)
 		}
 		if _, ok := getURLParam(r, "uploads"); ok {
+			if !policy.Match(bname) { goto e_access }
 			return handleListUploads(bname, iam, akey, w, r)
 		}
+		if !policy.Match(bname) { goto e_access }
 		return handleListObjects(bname, iam, akey, w, r)
 	case http.MethodPut:
+		if !policy.isRoot() { goto e_access }
 		return handlePutBucket(bname, iam, akey, w, r)
 	case http.MethodDelete:
+		if !policy.isRoot() { goto e_access }
 		return handleDeleteBucket(bname, iam, akey, w, r)
 	case http.MethodHead:
+		if !policy.Match(bname) { goto e_access }
 		return handleAccessBucket(bname, iam, w, r)
 	default:
 		return &S3Error{ ErrorCode: S3ErrMethodNotAllowed }
 	}
 
 	return nil
+
+e_access:
+	return &S3Error{ ErrorCode: S3ErrAccessDenied }
 }
 
 func handleUploadFini(uploadId string, iam *S3Iam, bucket *S3Bucket, w http.ResponseWriter, r *http.Request) *S3Error {
@@ -405,7 +407,9 @@ func handleAccessObject(bname, oname string, iam *S3Iam, w http.ResponseWriter, 
 func handleObject(iam *S3Iam, akey *S3AccessKey, w http.ResponseWriter, r *http.Request) *S3Error {
 	var bname string = mux.Vars(r)["BucketName"]
 	var oname string = mux.Vars(r)["ObjName"]
+	var policy = &iam.Policy
 	var bucket *S3Bucket
+	var err error
 
 	if bname == "" {
 		return &S3Error{ ErrorCode: S3ErrInvalidBucketName }
@@ -413,13 +417,13 @@ func handleObject(iam *S3Iam, akey *S3AccessKey, w http.ResponseWriter, r *http.
 		return &S3Error{ ErrorCode: S3ErrSwyInvalidObjectName }
 	}
 
-	bucket, err := iam.FindBucket(akey, bname)
-	if err != nil {
-		return &S3Error{ ErrorCode: S3ErrInvalidBucketName }
+	if !policy.Match(bname) {
+		goto e_access
 	}
 
-	if isDenyOnBucket(&iam.Policy, bname) {
-		return &S3Error{ ErrorCode: S3ErrAccessDenied }
+	bucket, err = iam.FindBucket(akey, bname)
+	if err != nil {
+		return &S3Error{ ErrorCode: S3ErrInvalidBucketName }
 	}
 
 	switch r.Method {
@@ -453,6 +457,9 @@ func handleObject(iam *S3Iam, akey *S3AccessKey, w http.ResponseWriter, r *http.
 
 	w.WriteHeader(http.StatusOK)
 	return nil
+
+e_access:
+	return &S3Error{ ErrorCode: S3ErrAccessDenied }
 }
 
 func handleS3API(cb func(iam *S3Iam, akey *S3AccessKey, w http.ResponseWriter, r *http.Request) *S3Error) http.Handler {

@@ -130,12 +130,11 @@ func s3IamInsert(account *S3Account, policy *S3Policy) (*S3Iam, error) {
 		State:		S3StateNone,
 
 		AccountObjID:	account.ObjID,
+		Policy:		*policy,
 
 		CreationTime:	time.Now().Format(time.RFC3339),
 		User:		"user" + genKey(8, AccessKeyLetters),
 	}
-
-	if policy != nil { iam.Policy = *policy }
 
 	if err = account.RefInc(); err != nil {
 		return nil, err

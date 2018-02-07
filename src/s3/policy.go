@@ -52,29 +52,61 @@ type S3Policy struct {
 	Resource			[]string	`bson:"resource,omitempty"`
 }
 
-func isEmptyPolicy(policy *S3Policy) bool {
-	if policy != nil {
-		if policy.Effect != "" &&
-			len(policy.Action) > 0 &&
-			len(policy.Resource) > 0 {
-			return false
-		}
-	}
-	return true
+var PolicyBucketActions = []string {
+	PermS3_AbortMultipartUpload,
+	PermS3_DeleteObject,
+	PermS3_DeleteObjectTagging,
+	PermS3_DeleteObjectVersion,
+	PermS3_DeleteObjectVersionTagging,
+	PermS3_GetObject,
+	PermS3_GetObjectAcl,
+	PermS3_GetObjectTagging,
+	PermS3_GetObjectTorrent,
+	PermS3_GetObjectVersion,
+	PermS3_GetObjectVersionAcl,
+	PermS3_GetObjectVersionTagging,
+	PermS3_GetObjectVersionTorrent,
+	PermS3_ListMultipartUploadParts,
+	PermS3_PutObject,
+	PermS3_PutObjectAcl,
+	PermS3_PutObjectTagging,
+	PermS3_PutObjectVersionAcl,
+	PermS3_PutObjectVersionTagging,
+	PermS3_RestoreObject,
+	PermS3_ListBucket,
+	PermS3_ListBucketVersions,
+	PermS3_ListBucketMultipartUploads,
 }
 
-func isDenyOnBucket(policy *S3Policy, bname string) bool {
-	if bname == "" {
-		return false
-	}
-
-	if !isEmptyPolicy(policy) {
+func (policy *S3Policy) isCanned() bool {
+	if policy != nil {
 		if policy.Effect == Policy_Allow {
-			if len(policy.Resource) > 0 &&
-				policy.Resource[0] == bname {
+			return len(policy.Action) > 0 &&
+				len(policy.Resource) > 0
+		}
+	}
+	return false
+}
+
+func (policy *S3Policy) isRoot() bool {
+	if policy.isCanned() {
+		// Root key, can do everything
+		if policy.Action[0] == PermS3_Any {
+			if policy.Resource[0] == Resourse_Any {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func (policy *S3Policy) Match(resource string) bool {
+	if policy.isCanned() {
+		for _, x := range policy.Resource {
+			if x != resource {
 				return false
 			}
 		}
 	}
-	return true
+	return false
 }
