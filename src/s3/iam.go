@@ -12,6 +12,7 @@ type S3Account struct {
 	MTime				int64		`bson:"mtime,omitempty"`
 	State				uint32		`bson:"state"`
 
+	AwsID				string		`bson:"aws-id,omitempty"`
 	Namespace			string		`bson:"namespace,omitempty"`
 	Ref				int64		`bson:"ref"`
 
@@ -25,6 +26,7 @@ type S3Iam struct {
 	MTime				int64		`bson:"mtime,omitempty"`
 	State				uint32		`bson:"state"`
 
+	AwsID				string		`bson:"aws-id,omitempty"`
 	AccountObjID			bson.ObjectId	`bson:"account-id,omitempty"`
 
 	Policy				S3Policy	`bson:"policy,omitempty"`
@@ -40,11 +42,14 @@ func s3AccountInsert(namespace string) (*S3Account, error) {
 		return nil, fmt.Errorf("s3: Empty namespace")
 	}
 
+	id := bson.NewObjectId()
 	timestamp := current_timestamp()
 	insert := bson.M{
+		"_id":			id,
 		"mtime":		timestamp,
 		"state":		S3StateActive,
 
+		"aws-id":		sha256sum([]byte(id.String())),
 		"namespace":		namespace,
 		"ref":			0,
 
@@ -137,8 +142,9 @@ func s3AccountDelete(account *S3Account) (error) {
 func s3IamInsert(account *S3Account, policy *S3Policy) (*S3Iam, error) {
 	var err error
 
+	id := bson.NewObjectId()
 	iam := &S3Iam {
-		ObjID:		bson.NewObjectId(),
+		ObjID:		id,
 		State:		S3StateNone,
 
 		AccountObjID:	account.ObjID,
@@ -146,6 +152,7 @@ func s3IamInsert(account *S3Account, policy *S3Policy) (*S3Iam, error) {
 
 		CreationTime:	time.Now().Format(time.RFC3339),
 		User:		"user" + genKey(8, AccessKeyLetters),
+		AwsID:		sha256sum([]byte(id.String())),
 	}
 
 	if err = account.RefInc(); err != nil {
