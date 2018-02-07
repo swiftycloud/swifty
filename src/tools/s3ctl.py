@@ -267,7 +267,6 @@ if args.cmd == 'notify':
 if args.cmd == 'list-buckets':
     try:
         resp = s3.list_buckets()
-        print(resp)
         print("Buckets list")
         print("\tOwner: DisplayName '%s' ID '%s'" % \
               (resp['Owner']['DisplayName'], resp['Owner']['ID']))
