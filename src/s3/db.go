@@ -171,9 +171,10 @@ func infoLong(o interface{}) (string) {
 			akey.AccessKeyID, akey.State)
 	case reflect.TypeOf(&S3Account{}):
 		account := o.(*S3Account)
-		return fmt.Sprintf("{ S3Account: %s/%s/%d/%d }",
+		return fmt.Sprintf("{ S3Account: %s/%s/%d/%d/%s/%s }",
 			account.ObjID, account.Namespace,
-			account.State, account.Ref)
+			account.State, account.Ref,
+			account.User, account.Email)
 	case reflect.TypeOf(&S3Iam{}):
 		iam := o.(*S3Iam)
 		return fmt.Sprintf("{ S3Iam: %s/%s/%d/%s }",
@@ -265,6 +266,20 @@ func dbS3Update(query bson.M, update bson.M, retnew bool, o interface{}) (error)
 		Remove:		false,
 		Update:		update,
 		ReturnNew:	retnew,
+	}
+	_, err := c.Find(query).Apply(change, o)
+	return err
+}
+
+func dbS3Upsert(query bson.M, update bson.M, o interface{}) (error) {
+	if query == nil { query = make(bson.M) }
+
+	c := dbSession.DB(dbName).C(dbColl(o))
+	change := mgo.Change{
+		Upsert:		true,
+		Remove:		false,
+		Update:		update,
+		ReturnNew:	true,
 	}
 	_, err := c.Find(query).Apply(change, o)
 	return err

@@ -33,35 +33,35 @@ type S3Iam struct {
 }
 
 func s3AccountInsert(namespace string) (*S3Account, error) {
+	var account S3Account
 	var err error
 
 	if namespace == "" {
 		return nil, fmt.Errorf("s3: Empty namespace")
 	}
 
-	account := &S3Account {
-		ObjID:		bson.NewObjectId(),
-		State:		S3StateNone,
+	timestamp := current_timestamp()
+	insert := bson.M{
+		"mtime":		timestamp,
+		"state":		S3StateActive,
 
-		Namespace:	namespace,
-		Ref:		0,
-		CreationTime:	time.Now().Format(time.RFC3339),
-		User:		"user" + genKey(8, AccessKeyLetters),
-		Email:		"email" + genKey(8, AccessKeyLetters) + "@fake.mail",
+		"namespace":		namespace,
+		"ref":			0,
+
+		"creation-time":	time.Now().Format(time.RFC3339),
+		"user":			"user" + genKey(8, AccessKeyLetters),
+		"email":		"email" + genKey(8, AccessKeyLetters) + "@fake.mail",
 	}
+	query := bson.M{ "namespace": namespace, "state": S3StateActive }
+	update := bson.M{ "$setOnInsert": insert }
 
-	log.Debugf("s3: Inserting %s", infoLong(account))
-	if err = dbS3Insert(account); err != nil {
+	log.Debugf("s3: Upserting namespace %s", namespace)
+	if err = dbS3Upsert(query, update, &account); err != nil {
 		return nil, err
 	}
 
-	if err = dbS3SetState(account, S3StateActive, nil); err != nil {
-		dbS3Remove(account)
-		return nil, err
-	}
-
-	log.Debugf("s3: Inserted %s", infoLong(account))
-	return account, nil
+	log.Debugf("s3: Upserted %s", infoLong(&account))
+	return &account, nil
 }
 
 func (account *S3Account) RefAdd(ref int64) (error) {
