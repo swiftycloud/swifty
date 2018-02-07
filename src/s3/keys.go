@@ -44,6 +44,14 @@ func genKey(length int, dict []byte) (string) {
 	return string(pass)
 }
 
+func (akey *S3AccessKey) Expired() bool {
+	if akey.ExpirationTimestamp > 0 {
+		now := time.Now().Unix()
+		return now > akey.ExpirationTimestamp
+	}
+	return false
+}
+
 //
 // Keys operation should not report any errors,
 // for security reason.

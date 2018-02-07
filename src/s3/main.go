@@ -476,7 +476,11 @@ func handleS3API(cb func(iam *S3Iam, akey *S3AccessKey, w http.ResponseWriter, r
 		}
 
 		if err == nil {
-			iam, err = akey.s3IamFind()
+			if !akey.Expired() {
+				iam, err = akey.s3IamFind()
+			} else {
+				err = fmt.Errorf("The access key is expired")
+			}
 		}
 
 		if akey == nil || iam == nil || err != nil {
