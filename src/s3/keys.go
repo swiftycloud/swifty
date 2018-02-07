@@ -183,6 +183,18 @@ func (akey *S3AccessKey) LookupAccountAccessKey() (*S3AccessKey, error) {
 	return &res, nil
 }
 
+func LookupAccessKey(AccessKeyId string) (*S3AccessKey, error) {
+	var err error
+
+	if akey, err := dbLookupAccessKey(AccessKeyId); err == nil {
+		if akey.Expired() {
+			return nil, fmt.Errorf("Expired key")
+		}
+		return akey, nil
+	}
+	return nil, err
+}
+
 func dbLookupAccessKey(AccessKeyId string) (*S3AccessKey, error) {
 	var akey S3AccessKey
 	var err error

@@ -470,7 +470,7 @@ func handleS3API(cb func(iam *S3Iam, akey *S3AccessKey, w http.ResponseWriter, r
 		// Admin is allowed to process without signing a request
 		if s3VerifyAdmin(r) == nil {
 			access_key := r.Header.Get(swys3api.SwyS3_AccessKey)
-			akey, err = dbLookupAccessKey(access_key)
+			akey, err = LookupAccessKey(access_key)
 		} else {
 			akey, err = s3VerifyAuthorization(r)
 		}
@@ -567,7 +567,7 @@ func handleBreq(w http.ResponseWriter, r *http.Request, op string) {
 		breq.Acl = swys3api.S3BucketAclCannedPrivate
 	}
 
-	key, err = dbLookupAccessKey(breq.AccessKeyID)
+	key, err = LookupAccessKey(breq.AccessKeyID)
 	if err == nil {
 		iam, err = key.s3IamFind()
 	}
