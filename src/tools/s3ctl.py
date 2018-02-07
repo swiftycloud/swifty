@@ -45,9 +45,6 @@ for cmd in ['keygen']:
     spp.add_argument('--save', dest = 'save',
                      help = 'Save creds in file', action = 'store_true')
 
-for cmd in ['keygetroot']:
-    spp = sp.add_parser(cmd, help = 'Get root account keys')
-
 for cmd in ['keydel']:
     spp = sp.add_parser(cmd, help = 'Delete keys')
 
@@ -245,15 +242,6 @@ if args.cmd == 'keydel':
     resp = request_admin(args.cmd, {"access-key-id": args.access_key_id})
     if resp != None and resp.status == 200:
         print("Access Key %s deleted" % (args.access_key_id))
-    else:
-        resp_error(args.cmd, resp)
-
-if args.cmd == 'keygetroot':
-    resp = request_admin(args.cmd, {"access-key-id": args.access_key_id})
-    if resp != None and resp.status == 200:
-        akey = json.loads(resp.read().decode('utf-8'))
-        print("Access Key %s\nSecret Key %s" % \
-              (akey['access-key-id'], akey['access-key-secret']))
     else:
         resp_error(args.cmd, resp)
 
