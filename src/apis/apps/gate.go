@@ -35,6 +35,7 @@ type FunctionWait struct {
 
 type FunctionInfo struct {
 	Mware		[]string		`json:"mware"`
+	S3Buckets	[]string		`json:"s3buckets"`
 	State		string			`json:"state"`
 	Version		string			`json:"version"`
 	RdyVersions	[]string		`json:"rversions"`
@@ -116,6 +117,7 @@ type FunctionAdd struct {
 	Event		FunctionEvent		`json:"event"`
 	Size		FunctionSize		`json:"size"`
 	Mware		[]string		`json:"mware"`
+	S3Buckets	[]string		`json:"s3buckets"`
 	UserData	string			`json:"userdata"`
 }
 
@@ -131,6 +133,7 @@ type FunctionUpdate struct {
 	Code		string			`json:"code"`
 	Size		*FunctionSize		`json:"size,omitempty"`
 	Mware		*[]string		`json:"mware,omitempty"`
+	S3Buckets	*[]string		`json:"s3buckets,omitempty"`
 	UserData	string			`json:"userdata"`
 }
 

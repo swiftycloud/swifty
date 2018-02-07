@@ -559,6 +559,7 @@ func handleFunctionInfo(ctx context.Context, w http.ResponseWriter, r *http.Requ
 	err = swyhttp.MarshalAndWrite(w,  swyapi.FunctionInfo{
 			State:          fnStates[fn.State],
 			Mware:          fn.Mware,
+			S3Buckets:	fn.S3Buckets,
 			Version:        fn.Src.Version,
 			RdyVersions:    fv,
 			URL:		url,

@@ -97,6 +97,7 @@ type FunctionDesc struct {
 	URLCall		bool		`bson:"urlcall"`	// Function is callable via direct URL
 	Event		FnEventDesc	`bson:"event"`
 	Mware		[]string	`bson:"mware"`
+	S3Buckets	[]string	`bson:"s3buckets"`
 	Code		FnCodeDesc	`bson:"code"`
 	Src		FnSrcDesc	`bson:"src"`
 	Size		FnSizeDesc	`bson:"size"`
@@ -136,7 +137,8 @@ func getFunctionDesc(tennant string, p_add *swyapi.FunctionAdd) *FunctionDesc {
 			Lang:		p_add.Code.Lang,
 			Env:		p_add.Code.Env,
 		},
-		Mware:	p_add.Mware,
+		Mware:		p_add.Mware,
+		S3Buckets:	p_add.S3Buckets,
 		UserData:	p_add.UserData,
 	}
 
@@ -317,6 +319,12 @@ func updateFunction(ctx context.Context, conf *YAMLConf, id *SwoId, params *swya
 	if params.Mware != nil {
 		fn.Mware = *params.Mware
 		update["mware"] = fn.Mware
+		restart = true
+	}
+
+	if params.S3Buckets != nil {
+		fn.S3Buckets = *params.S3Buckets
+		update["s3buckets"] = fn.S3Buckets
 		restart = true
 	}
 

@@ -580,6 +580,13 @@ definitions:
           example:
             - mymariadb
               mys3strg
+      s3buckets:
+        type: array
+        items:
+          type: string
+          example:
+            - foobucket
+              barbucket
   FunctionStats:
     type: object
     description: Statistics about function
@@ -722,6 +729,11 @@ definitions:
         items:
           type: string
           example: mymariadb
+      s3buckets:
+        type: array
+        items:
+          type: string
+          example: foobucket
   FunctionUpdate:
     required:
       - name
@@ -747,6 +759,12 @@ definitions:
         items:
           type: string
           example: mymariadb
+      s3buckets:
+        type: array
+        description: 'Works same as mware does'
+        items:
+          type: string
+          example: foobucket
   FunctionRemove:
     required:
       - name

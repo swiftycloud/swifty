@@ -221,12 +221,24 @@ func EventS3(ctx context.Context, conf *YAMLConfMw, source *FnEventDesc, mwd *Mw
 	}
 }
 
-func GetEnvS3(conf *YAMLConfMw, mwd *MwareDesc) ([][2]string) {
+func makeS3Envs(conf *YAMLConfS3, bucket, key, skey string) [][2]string {
 	var ret [][2]string
-	ret = append(ret, mkEnv(mwd, "ADDR", conf.S3.Addr))
-	ret = append(ret, mkEnv(mwd, "S3KEY", mwd.Client))
-	ret = append(ret, mkEnv(mwd, "S3SEC", mwd.Secret))
+	ret = append(ret, mkEnvId(bucket, "s3", "ADDR", conf.Addr))
+	ret = append(ret, mkEnvId(bucket, "s3", "S3KEY", key))
+	ret = append(ret, mkEnvId(bucket, "s3", "S3SEC", skey))
 	return ret
+}
+
+func GetEnvS3(conf *YAMLConfMw, mwd *MwareDesc) ([][2]string) {
+	return makeS3Envs(&conf.S3, mwd.Name, mwd.Client, mwd.Secret)
+}
+
+func GenBucketKeysS3(ctx context.Context, conf *YAMLConfMw, bucket string) ([][2]string, error) {
+	var key, skey string
+
+	/* FIXME -- get the keys from s3 daemon by bucket */
+
+	return makeS3Envs(&conf.S3, bucket, key, skey), nil
 }
 
 var MwareS3 = MwareOps {
@@ -234,4 +246,5 @@ var MwareS3 = MwareOps {
 	Fini:	FiniS3,
 	Event:	EventS3,
 	GetEnv:	GetEnvS3,
+	GenSec:	GenBucketKeysS3,
 }
