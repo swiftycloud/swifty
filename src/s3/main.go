@@ -152,8 +152,8 @@ func logRequest(r *http.Request) {
 }
 
 // List all buckets belonging to an account
-func handleListBuckets(iam *S3Iam, akey *S3AccessKey, w http.ResponseWriter, r *http.Request) *S3Error {
-	buckets, err := s3ListBuckets(iam, akey)
+func handleListBuckets(iam *S3Iam, w http.ResponseWriter, r *http.Request) *S3Error {
+	buckets, err := s3ListBuckets(iam)
 	if err != nil {
 		if err == mgo.ErrNotFound {
 			return &S3Error{ ErrorCode: S3ErrNoSuchBucket }
@@ -165,8 +165,8 @@ func handleListBuckets(iam *S3Iam, akey *S3AccessKey, w http.ResponseWriter, r *
 	return nil
 }
 
-func handleListUploads(bname string, iam *S3Iam, akey *S3AccessKey, w http.ResponseWriter, r *http.Request) *S3Error {
-	uploads, err := s3Uploads(iam, akey, bname)
+func handleListUploads(bname string, iam *S3Iam, w http.ResponseWriter, r *http.Request) *S3Error {
+	uploads, err := s3Uploads(iam, bname)
 	if err != nil {
 		return &S3Error{ ErrorCode: S3ErrInvalidRequest, Message: err.Error() }
 	}
@@ -175,8 +175,8 @@ func handleListUploads(bname string, iam *S3Iam, akey *S3AccessKey, w http.Respo
 	return nil
 }
 
-func handleListObjects(bname string, iam *S3Iam, akey *S3AccessKey, w http.ResponseWriter, r *http.Request) *S3Error {
-	objects, err := s3ListBucket(iam, akey, bname, "")
+func handleListObjects(bname string, iam *S3Iam, w http.ResponseWriter, r *http.Request) *S3Error {
+	objects, err := s3ListBucket(iam, bname, "")
 	if err != nil {
 		return &S3Error{ ErrorCode: S3ErrInvalidRequest, Message: err.Error() }
 	}
@@ -185,13 +185,13 @@ func handleListObjects(bname string, iam *S3Iam, akey *S3AccessKey, w http.Respo
 	return nil
 }
 
-func handlePutBucket(bname string, iam *S3Iam, akey *S3AccessKey, w http.ResponseWriter, r *http.Request) *S3Error {
+func handlePutBucket(bname string, iam *S3Iam, w http.ResponseWriter, r *http.Request) *S3Error {
 	canned_acl := r.Header.Get("x-amz-acl")
 	if verifyAclValue(canned_acl, BucketCannedAcls) == false {
 		canned_acl = swys3api.S3BucketAclCannedPrivate
 	}
 
-	err := s3InsertBucket(iam, akey, bname, canned_acl)
+	err := s3InsertBucket(iam, bname, canned_acl)
 	if err != nil {
 		return &S3Error{ ErrorCode: S3ErrInvalidRequest, Message: err.Error() }
 	}
@@ -200,8 +200,8 @@ func handlePutBucket(bname string, iam *S3Iam, akey *S3AccessKey, w http.Respons
 	return nil
 }
 
-func handleDeleteBucket(bname string, iam *S3Iam, akey *S3AccessKey, w http.ResponseWriter, r *http.Request) *S3Error {
-	err := s3DeleteBucket(iam, akey, bname, "")
+func handleDeleteBucket(bname string, iam *S3Iam, w http.ResponseWriter, r *http.Request) *S3Error {
+	err := s3DeleteBucket(iam, bname, "")
 	if err != nil {
 		return &S3Error{ ErrorCode: S3ErrInvalidRequest, Message: err.Error() }
 	}
@@ -232,20 +232,20 @@ func handleBucket(iam *S3Iam, akey *S3AccessKey, w http.ResponseWriter, r *http.
 	case http.MethodGet:
 		if bname == "" {
 			if !policy.isRoot() { goto e_access }
-			return handleListBuckets(iam, akey, w, r)
+			return handleListBuckets(iam, w, r)
 		}
 		if _, ok := getURLParam(r, "uploads"); ok {
 			if !policy.Match(bname) { goto e_access }
-			return handleListUploads(bname, iam, akey, w, r)
+			return handleListUploads(bname, iam, w, r)
 		}
 		if !policy.Match(bname) { goto e_access }
-		return handleListObjects(bname, iam, akey, w, r)
+		return handleListObjects(bname, iam, w, r)
 	case http.MethodPut:
 		if !policy.isRoot() { goto e_access }
-		return handlePutBucket(bname, iam, akey, w, r)
+		return handlePutBucket(bname, iam, w, r)
 	case http.MethodDelete:
 		if !policy.isRoot() { goto e_access }
-		return handleDeleteBucket(bname, iam, akey, w, r)
+		return handleDeleteBucket(bname, iam, w, r)
 	case http.MethodHead:
 		if !policy.Match(bname) { goto e_access }
 		return handleAccessBucket(bname, iam, w, r)
@@ -421,7 +421,7 @@ func handleObject(iam *S3Iam, akey *S3AccessKey, w http.ResponseWriter, r *http.
 		goto e_access
 	}
 
-	bucket, err = iam.FindBucket(akey, bname)
+	bucket, err = iam.FindBucket(bname)
 	if err != nil {
 		return &S3Error{ ErrorCode: S3ErrInvalidBucketName }
 	}
@@ -584,14 +584,14 @@ func handleBreq(w http.ResponseWriter, r *http.Request, op string) {
 	}
 
 	if op == "badd" {
-		err = s3InsertBucket(iam, key, breq.Bucket, breq.Acl)
+		err = s3InsertBucket(iam, breq.Bucket, breq.Acl)
 		if err != nil {
 			goto out
 		}
 
 		code = http.StatusCreated
 	} else {
-		err = s3DeleteBucket(iam, key, breq.Bucket, breq.Acl)
+		err = s3DeleteBucket(iam, breq.Bucket, breq.Acl)
 		if err != nil {
 			goto out
 		}

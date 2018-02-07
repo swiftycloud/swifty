@@ -394,13 +394,13 @@ func s3UploadFini(iam *S3Iam, bucket *S3Bucket, uid string,
 	return &res, nil
 }
 
-func s3Uploads(iam *S3Iam, akey *S3AccessKey, bname string) (*swys3api.S3MpuList, error) {
+func s3Uploads(iam *S3Iam, bname string) (*swys3api.S3MpuList, error) {
 	var res swys3api.S3MpuList
 	var bucket *S3Bucket
 	var uploads []S3Upload
 	var err error
 
-	bucket, err = iam.FindBucket(akey, bname)
+	bucket, err = iam.FindBucket(bname)
 	if err != nil {
 		log.Errorf("s3: Can't find bucket %s: %s", bname, err.Error())
 		return nil, err

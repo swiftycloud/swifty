@@ -137,7 +137,7 @@ out_1:
 	return nil, err
 }
 
-func (iam *S3Iam) FindBuckets(akey *S3AccessKey) ([]S3Bucket, error) {
+func (iam *S3Iam) FindBuckets() ([]S3Bucket, error) {
 	var res []S3Bucket
 	var err error
 
