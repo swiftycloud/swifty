@@ -54,6 +54,8 @@ else
         endif
 endif
 
+export GITID
+
 $(GITID_FILE):
 	$(call msg-gen, $@)
 	$(Q) echo "$(GITID)" > $(GITID_FILE)
