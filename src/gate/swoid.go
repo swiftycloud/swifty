@@ -30,8 +30,16 @@ func (id *SwoId) Str() string {
 	return rv
 }
 
-func (id *SwoId) Cookie() string {
+func cookify(val string) string {
 	h := sha256.New()
-	h.Write([]byte(id.Tennant + "/" + id.Project + "/" + id.Name))
+	h.Write([]byte(val))
 	return hex.EncodeToString(h.Sum(nil))
+}
+
+func (id *SwoId) Cookie() string {
+	return cookify(id.Tennant + "/" + id.Project + "/" + id.Name)
+}
+
+func (id *SwoId) Namespace() string {
+	return cookify(id.Tennant + "/" + id.Project)
 }
