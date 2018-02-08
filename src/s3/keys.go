@@ -45,7 +45,7 @@ func genKey(length int, dict []byte) (string) {
 }
 
 func (akey *S3AccessKey) Expired() bool {
-	if akey.ExpirationTimestamp > 0 {
+	if akey.ExpirationTimestamp < S3TimeStampMax {
 		return current_timestamp() > akey.ExpirationTimestamp
 	}
 	return false
@@ -108,6 +108,8 @@ func genNewAccessKey(namespace, bucket string, lifetime uint32) (*S3AccessKey, e
 
 	if lifetime != 0 {
 		akey.ExpirationTimestamp = timestamp_now + int64(lifetime)
+	} else {
+		akey.ExpirationTimestamp = S3TimeStampMax
 	}
 
 	if akey.AccessKeyID == "" || akey.AccessKeySecret == "" {
