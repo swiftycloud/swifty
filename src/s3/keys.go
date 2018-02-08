@@ -6,7 +6,6 @@ import (
 
 	"crypto/rand"
 	"fmt"
-	"time"
 
 	"../common/crypto"
 )
@@ -47,8 +46,7 @@ func genKey(length int, dict []byte) (string) {
 
 func (akey *S3AccessKey) Expired() bool {
 	if akey.ExpirationTimestamp > 0 {
-		now := time.Now().Unix()
-		return now > akey.ExpirationTimestamp
+		return current_timestamp() > akey.ExpirationTimestamp
 	}
 	return false
 }
@@ -93,7 +91,7 @@ func genNewAccessKey(namespace, bucket string, lifetime uint32) (*S3AccessKey, e
 		goto out_1
 	}
 
-	timestamp_now = time.Now().Unix()
+	timestamp_now = current_timestamp()
 
 	akey = &S3AccessKey {
 		ObjID:			bson.NewObjectId(),

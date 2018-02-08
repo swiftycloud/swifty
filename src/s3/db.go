@@ -226,10 +226,6 @@ func dbS3SetObjID(o interface{}, query bson.M) {
 	}
 }
 
-func current_timestamp() int64 {
-	return time.Now().Unix()
-}
-
 func dbS3UpdateMTime(query bson.M) {
 	if val, ok := query["$set"]; ok {
 		val.(bson.M)["mtime"] = current_timestamp()

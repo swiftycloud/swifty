@@ -6,7 +6,12 @@ import (
 	"encoding/xml"
 	"encoding/hex"
 	"net/http"
+	"time"
 )
+
+func current_timestamp() int64 {
+	return time.Now().Unix()
+}
 
 func md5sum(s []byte) string {
 	h := md5.New()
