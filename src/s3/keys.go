@@ -56,7 +56,7 @@ func (akey *S3AccessKey) Expired() bool {
 // for security reason.
 //
 
-func getActiveAccessKey(account *S3Account, policy *S3Policy, expired_when int64) (*S3AccessKey, error) {
+func getEndlessKey(account *S3Account, policy *S3Policy) (*S3AccessKey, error) {
 	query := bson.M{ "account-id" : account.ObjID, "state": S3StateActive }
 	if iams, err := s3LookupIam(query); err == nil {
 		for _, iam := range iams {
@@ -67,7 +67,7 @@ func getActiveAccessKey(account *S3Account, policy *S3Policy, expired_when int64
 			}
 
 			query = bson.M{"iam-id": iam.ObjID, "state": S3StateActive,
-				"expiration-timestamp": bson.M{ "$lte": expired_when }}
+				"expiration-timestamp": bson.M{ "$eq": S3TimeStampMax }}
 			if err = dbS3FindOne(query, &akey); err == nil {
 				return &akey, nil
 			}
@@ -88,13 +88,6 @@ func genNewAccessKey(namespace, bucket string, lifetime uint32) (*S3AccessKey, e
 		return nil, err
 	}
 
-	timestamp_now = current_timestamp()
-	if lifetime != 0 {
-		expired_when = timestamp_now + int64(lifetime)
-	} else {
-		expired_when = S3TimeStampMax
-	}
-
 	if bucket != "" {
 		policy = &S3Policy {
 			Effect:	Policy_Allow,
@@ -113,9 +106,16 @@ func genNewAccessKey(namespace, bucket string, lifetime uint32) (*S3AccessKey, e
 		}
 	}
 
-	if akey, err = getActiveAccessKey(account, policy, expired_when); err == nil {
-		log.Debugf("s3: Found active key %s", infoLong(akey))
-		return akey, nil
+	timestamp_now = current_timestamp()
+	if lifetime != 0 {
+		expired_when = timestamp_now + int64(lifetime)
+	} else {
+		expired_when = S3TimeStampMax
+
+		if akey, err = getEndlessKey(account, policy); err == nil {
+			log.Debugf("s3: Found active key %s", infoLong(akey))
+			return akey, nil
+		}
 	}
 
 	iam, err = s3IamInsert(account, policy)
