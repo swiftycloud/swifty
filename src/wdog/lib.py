@@ -2,35 +2,39 @@ import pymysql.cursors
 from pymongo import MongoClient
 import os
 
-_swiftyMariaConn = None
+_swiftyMariaConns = {}
 
 def MariaConn(mwname):
-    global _swiftyMariaConn
-    if _swiftyMariaConn == None:
+    global _swiftyMariaConns
+    conn = _swiftyMariaConns.get(mwname, None)
+    if conn == None:
         mwn = mwname.upper()
-        x = os.getenv('MWARE_' + mwn + '_ADDR').split(":")
+        x = os.getenv('MWARE_MARIA' + mwn + '_ADDR').split(":")
         dbaddr = x[0]
         dbport = int(x[1])
-        dbuser = os.getenv('MWARE_' + mwn + '_USER')
-        dbpass = os.getenv('MWARE_' + mwn + '_PASS')
-        dbname = os.getenv('MWARE_' + mwn + '_DBNAME')
-        _swiftyMariaConn = pymysql.connect(host=dbaddr, port=dbport,
+        dbuser = os.getenv('MWARE_MARIA' + mwn + '_USER')
+        dbpass = os.getenv('MWARE_MARIA' + mwn + '_PASS')
+        dbname = os.getenv('MWARE_MARIA' + mwn + '_DBNAME')
+        conn = pymysql.connect(host=dbaddr, port=dbport,
                 user=dbuser, password=dbpass, db=dbname,
                 cursorclass=pymysql.cursors.DictCursor)
+        _swiftyMariaConns[mwname] = conn
 
-    return _swiftyMariaConn
+    return conn
 
-_swiftyMongoClient = None
+_swiftyMongoClients = {}
 
 def MongoDatabase(mwname):
-    global _swiftyMongoClient
+    global _swiftyMongoClients
     mwn = mwname.upper()
-    dbname = os.getenv('MWARE_' + mwn + '_DBNAME')
-    if _swiftyMongoClient == None:
-        dbaddr = os.getenv('MWARE_' + mwn + '_ADDR')
-        dbuser = os.getenv('MWARE_' + mwn + '_USER')
-        dbpass = os.getenv('MWARE_' + mwn + '_PASS')
+    dbname = os.getenv('MWARE_MONGO' + mwn + '_DBNAME')
+    clnt = _swiftyMongoClients.get(mwname, None)
+    if clnt == None:
+        dbaddr = os.getenv('MWARE_MONGO' + mwn + '_ADDR')
+        dbuser = os.getenv('MWARE_MONGO' + mwn + '_USER')
+        dbpass = os.getenv('MWARE_MONGO' + mwn + '_PASS')
         connstr = 'mongodb://%s:%s@%s/%s' % (dbuser, dbpass, dbaddr, dbname)
-        _swiftyMongoClient = MongoClient(connstr)
+        clnt = MongoClient(connstr)
+        _swiftyMongoClients[mwname] = clnt
 
-    return _swiftyMongoClient[dbname]
+    return clnt[dbname]
