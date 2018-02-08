@@ -171,10 +171,9 @@ func infoLong(o interface{}) (string) {
 			akey.AccessKeyID, akey.State)
 	case reflect.TypeOf(&S3Account{}):
 		account := o.(*S3Account)
-		return fmt.Sprintf("{ S3Account: %s/%s/%d/%d/%s/%s }",
+		return fmt.Sprintf("{ S3Account: %s/%s/%d/%s/%s }",
 			account.ObjID, account.Namespace,
-			account.State, account.Ref,
-			account.User, account.Email)
+			account.State, account.User, account.Email)
 	case reflect.TypeOf(&S3Iam{}):
 		iam := o.(*S3Iam)
 		return fmt.Sprintf("{ S3Iam: %s/%s/%d/%s }",

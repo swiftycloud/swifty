@@ -14,7 +14,6 @@ type S3Account struct {
 
 	AwsID				string		`bson:"aws-id,omitempty"`
 	Namespace			string		`bson:"namespace,omitempty"`
-	Ref				int64		`bson:"ref"`
 
 	CreationTime			string		`bson:"creation-time,omitempty"`
 	User				string		`bson:"user,omitempty"`
@@ -69,20 +68,6 @@ func s3AccountInsert(namespace string) (*S3Account, error) {
 	return &account, nil
 }
 
-func (account *S3Account) RefAdd(ref int64) (error) {
-	m := bson.M{ "ref": ref }
-	return dbS3Update(bson.M{ "state": S3StateActive },
-		bson.M{ "$inc": m }, true, account)
-}
-
-func (account *S3Account) RefInc() (error) {
-	return account.RefAdd(1)
-}
-
-func (account *S3Account) RefDec() (error) {
-	return account.RefAdd(-1)
-}
-
 func (iam *S3Iam) s3AccountLookup() (*S3Account, error) {
 	var account S3Account
 	var err error
@@ -126,13 +111,15 @@ func s3FindFullAccessIam(namespace string) (*S3Iam, error) {
 }
 
 func s3AccountDelete(account *S3Account) (error) {
-	err := dbS3SetState(account, S3StateInactive, bson.M{"ref": 0})
+	err := dbS3SetState(account, S3StateInactive, nil)
 	if err != nil {
 		if err == mgo.ErrNotFound {
 			return nil
 		}
 		return err
 	}
+
+	// FIXME Delete related iams/keys/buckets
 
 	dbS3Remove(account)
 	log.Debugf("s3: Deleted %s", infoLong(account))
@@ -155,17 +142,11 @@ func s3IamInsert(account *S3Account, policy *S3Policy) (*S3Iam, error) {
 		AwsID:		sha256sum([]byte(id.String())),
 	}
 
-	if err = account.RefInc(); err != nil {
-		return nil, err
-	}
-
 	if err = dbS3Insert(iam); err != nil {
-		account.RefDec()
 		return nil, err
 	}
 
 	if err = dbS3SetState(iam, S3StateActive, nil); err != nil {
-		account.RefDec()
 		dbS3Remove(iam)
 		return nil, err
 	}
@@ -175,27 +156,11 @@ func s3IamInsert(account *S3Account, policy *S3Policy) (*S3Iam, error) {
 }
 
 func s3IamDelete(iam *S3Iam) (error) {
-	var account S3Account
-	var err error
-
-	err = dbS3SetState(iam, S3StateInactive, nil)
-	if err != nil {
+	if err := dbS3SetState(iam, S3StateInactive, nil); err != nil {
 		if err == mgo.ErrNotFound {
 			return nil
 		}
 		return err
-	}
-
-	query := bson.M{ "_id": iam.AccountObjID, "state": S3StateActive }
-	err = dbS3FindOne(query, &account)
-	if err != nil {
-		if err != mgo.ErrNotFound {
-			return err
-		}
-	} else {
-		if err = account.RefDec(); err != nil {
-			return err
-		}
 	}
 
 	dbS3Remove(iam)
