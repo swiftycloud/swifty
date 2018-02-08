@@ -208,8 +208,8 @@ func EventS3(ctx context.Context, conf *YAMLConfMw, source *FnEventDesc, mwd *Mw
 func makeS3Envs(conf *YAMLConfS3, bucket, key, skey string) [][2]string {
 	var ret [][2]string
 	ret = append(ret, mkEnvId(bucket, "s3", "ADDR", conf.Addr))
-	ret = append(ret, mkEnvId(bucket, "s3", "S3KEY", key))
-	ret = append(ret, mkEnvId(bucket, "s3", "S3SEC", skey))
+	ret = append(ret, mkEnvId(bucket, "s3", "KEY", key))
+	ret = append(ret, mkEnvId(bucket, "s3", "SECRET", skey))
 	return ret
 }
 
