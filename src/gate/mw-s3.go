@@ -8,7 +8,12 @@ import (
 	"gopkg.in/mgo.v2/bson"
 	"../common"
 	"../common/http"
+	"../apis/apps"
 	"../apis/apps/s3"
+)
+
+const (
+	s3HiddenKeyTimeout uint32 = 16
 )
 
 func s3KeyGen(conf *YAMLConfS3, namespace, bucket string, lifetime uint32) (string, string, error) {
@@ -207,10 +212,6 @@ func makeS3Envs(conf *YAMLConfS3, bucket, key, skey string) [][2]string {
 	return ret
 }
 
-func GetEnvS3(conf *YAMLConfMw, mwd *MwareDesc) ([][2]string) {
-	return makeS3Envs(&conf.S3, mwd.Name, mwd.Client, mwd.Secret)
-}
-
 func GenBucketKeysS3(ctx context.Context, conf *YAMLConfMw, fid *SwoId, bucket string) ([][2]string, error) {
 	var key, skey string
 	var err error
@@ -224,10 +225,38 @@ func GenBucketKeysS3(ctx context.Context, conf *YAMLConfMw, fid *SwoId, bucket s
 	return makeS3Envs(&conf.S3, bucket, key, skey), nil
 }
 
+func mwareGetS3Creds(ctx context.Context, conf *YAMLConfMw, acc *swyapi.MwareS3Access) (*swyapi.MwareS3Creds, *swyapi.GateErr) {
+	creds := &swyapi.MwareS3Creds{}
+
+	creds.Expires = acc.Lifetime
+
+	for _, acc := range(acc.Access) {
+		if acc == "hidden" {
+			creds.Expires = s3HiddenKeyTimeout
+			continue
+		}
+
+		return nil, GateErrM(swy.GateBadRequest, "Unknown access option " + acc)
+	}
+
+	if creds.Expires == 0 {
+		return nil, GateErrM(swy.GateBadRequest, "Perpetual keys not allowed")
+	}
+
+	var err error
+	id := makeSwoId(fromContext(ctx).Tenant, acc.Project, "")
+	creds.Key, creds.Secret, err = s3KeyGen(&conf.S3, id.Namespace(), acc.Bucket, creds.Expires)
+	if err != nil {
+		ctxlog(ctx).Errorf("Can't get S3 keys for %s.%s", id.Str(), acc.Bucket, err.Error())
+		return nil, GateErrM(swy.GateGenErr, "Error getting S3 keys")
+	}
+
+	return creds, nil
+}
+
 var MwareS3 = MwareOps {
-	Init:	InitS3,
-	Fini:	FiniS3,
-	Event:	EventS3,
-	GetEnv:	GetEnvS3,
-	GenSec:	GenBucketKeysS3,
+	Init:		InitS3,
+	Fini:		FiniS3,
+	Event:		EventS3,
+	GenSec:		GenBucketKeysS3,
 }

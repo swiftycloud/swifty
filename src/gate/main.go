@@ -908,6 +908,27 @@ func handleMwareRemove(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	return nil
 }
 
+func handleMwareS3Access(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
+	var params swyapi.MwareS3Access
+
+	err := swyhttp.ReadAndUnmarshalReq(r, &params)
+	if err != nil {
+		return GateErrE(swy.GateBadRequest, err)
+	}
+
+	creds, cerr := mwareGetS3Creds(ctx, &conf.Mware, &params)
+	if cerr != nil {
+		return cerr
+	}
+
+	err = swyhttp.MarshalAndWrite(w, creds)
+	if err != nil {
+		return GateErrE(swy.GateBadResp, err)
+	}
+
+	return nil
+}
+
 func handleMwareInfo(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
 	var params swyapi.MwareID
 	var resp swyapi.MwareInfo
@@ -1120,6 +1141,7 @@ func main() {
 	r.Handle("/v1/mware/info",		genReqHandler(handleMwareInfo))
 	r.Handle("/v1/mware/list",		genReqHandler(handleMwareList))
 	r.Handle("/v1/mware/remove",		genReqHandler(handleMwareRemove))
+	r.Handle("/v1/mware/access/s3",		genReqHandler(handleMwareS3Access))
 
 	r.Handle("/v1/info/langs",		genReqHandler(handleLanguages))
 	r.Handle("/v1/info/mwares",		genReqHandler(handleMwareTypes))

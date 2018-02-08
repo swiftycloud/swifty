@@ -518,6 +518,21 @@ func del_mware(project string, args []string, opts [8]string) {
 		swyapi.MwareRemove{ Project: project, ID: args[0], }, nil)
 }
 
+func s3_access(project string, args []string, opts[8]string) {
+	lt, err := strconv.Atoi(opts[0])
+	if err != nil {
+		fatal(fmt.Errorf("Bad lifetie value: %s", err.Error()))
+	}
+
+	var creds swyapi.MwareS3Creds
+
+	make_faas_req("mware/access/s3",
+		swyapi.MwareS3Access{ Project: project, Bucket: args[0], Lifetime: uint32(lt)}, &creds)
+	fmt.Printf("Key:     %s\n", creds.Key)
+	fmt.Printf("Secret:  %s\n", creds.Secret)
+	fmt.Printf("Expires: in %d seconds\n", creds.Expires)
+}
+
 func req_list(url string) {
 	var r []string
 
@@ -604,6 +619,7 @@ const (
 	CMD_MINF string		= "minf"
 	CMD_MADD string		= "madd"
 	CMD_MDEL string		= "mdel"
+	CMD_S3ACC string	= "s3acc"
 	CMD_LUSR string		= "uls"
 	CMD_UADD string		= "uadd"
 	CMD_UDEL string		= "udel"
@@ -631,6 +647,7 @@ var cmdOrder = []string {
 	CMD_MINF,
 	CMD_MADD,
 	CMD_MDEL,
+	CMD_S3ACC,
 	CMD_LUSR,
 	CMD_UADD,
 	CMD_UDEL,
@@ -666,6 +683,7 @@ var cmdMap = map[string]*cmdDesc {
 	CMD_MINF:	&cmdDesc{ pcall: info_mware,	  opts: flag.NewFlagSet(CMD_INF, flag.ExitOnError) },
 	CMD_MADD:	&cmdDesc{ pcall: add_mware,	  opts: flag.NewFlagSet(CMD_MADD, flag.ExitOnError) },
 	CMD_MDEL:	&cmdDesc{ pcall: del_mware,	  opts: flag.NewFlagSet(CMD_MDEL, flag.ExitOnError) },
+	CMD_S3ACC:	&cmdDesc{ pcall: s3_access,	  opts: flag.NewFlagSet(CMD_S3ACC, flag.ExitOnError) },
 	CMD_LUSR:	&cmdDesc{  call: list_users,	  opts: flag.NewFlagSet(CMD_LUSR, flag.ExitOnError) },
 	CMD_UADD:	&cmdDesc{  call: add_user,	  opts: flag.NewFlagSet(CMD_UADD, flag.ExitOnError) },
 	CMD_UDEL:	&cmdDesc{  call: del_user,	  opts: flag.NewFlagSet(CMD_UDEL, flag.ExitOnError) },
@@ -733,6 +751,9 @@ func main() {
 	bindCmdUsage(CMD_MINF,	[]string{"ID"}, "Middleware info", true)
 	bindCmdUsage(CMD_MADD,	[]string{"ID", "TYPE"}, "Add middleware", true)
 	bindCmdUsage(CMD_MDEL,	[]string{"ID"}, "Delete middleware", true)
+
+	cmdMap[CMD_S3ACC].opts.StringVar(&opts[0], "life", "60", "Lifetime (default 1 min)")
+	bindCmdUsage(CMD_S3ACC,	[]string{"BUCKET"}, "Get keys for S3", true)
 
 	bindCmdUsage(CMD_LUSR,	[]string{}, "List users", false)
 	cmdMap[CMD_UADD].opts.StringVar(&opts[0], "name", "", "User name")

@@ -99,6 +99,19 @@ type MwareInfo struct {
 	Type		string			`json:"type"`
 }
 
+type MwareS3Access struct {
+	Project		string			`json:"project"`
+	Bucket		string			`json:"bucket"`
+	Lifetime	uint32			`json:"lifetime"` /* seconds */
+	Access		[]string		`json:"access"`
+}
+
+type MwareS3Creds struct {
+	Key		string			`json:"key"`
+	Secret		string			`json:"secret"`
+	Expires		uint32			`json:"expires"` /* in seconds */
+}
+
 type MwareItem struct {
 	ID		string			`json:"id"`
 	Type		string			`json:"type"`
