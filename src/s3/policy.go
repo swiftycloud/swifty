@@ -98,7 +98,13 @@ func (policy *S3Policy) infoLong() string {
 	return "nil"
 }
 
-var PolicyRootActions = []uint64 { S3PolicyAction_All }
+// If changing modify isRoot as well
+var PolicyRoot = &S3Policy {
+	Effect: Policy_Allow,
+	Action: []uint64{ S3PolicyAction_All },
+	Resource: []string{ Resourse_Any },
+}
+
 var PolicyBucketActions = []uint64 {
 	S3PolicyAction_AbortMultipartUpload		|
 	S3PolicyAction_DeleteObject			|
