@@ -115,14 +115,20 @@ func genNewAccessKey(namespace, bucket string, lifetime uint32) (*S3AccessKey, e
 		goto out_2
 	}
 
-	if err = dbInsertAccessKey(akey); err != nil {
-		goto out_3
+	akey.AccessKeySecret, err = swycrypt.EncryptString(s3SecKey, akey.AccessKeySecret)
+	if err != nil {
+		goto out_2
+	}
+
+	if err = dbS3Insert(akey); err != nil {
+		goto out_2
 	}
 
 	if err = dbS3SetState(akey, S3StateActive, nil); err != nil {
 		goto out_3
 	}
 
+	log.Debugf("s3: Inserted %s", infoLong(akey))
 	return akey, nil
 
 out_3:
@@ -180,26 +186,6 @@ func dbLookupAccessKey(AccessKeyId string) (*S3AccessKey, error) {
 	}
 
 	return nil, err
-}
-
-func dbInsertAccessKey(akey *S3AccessKey) (error) {
-	AccessKeySecret, err := swycrypt.EncryptString(s3SecKey, akey.AccessKeySecret)
-	if err != nil {
-		return err
-	}
-
-	akey_encoded := *akey
-	akey_encoded.AccessKeySecret = AccessKeySecret
-
-	err = dbS3Insert(&akey_encoded)
-	if err != nil {
-		log.Errorf("s3: Can't insert akey %s: %s",
-				infoLong(&akey_encoded), err.Error())
-		return err
-	}
-
-	log.Debugf("s3: Inserted %s", infoLong(&akey_encoded))
-	return nil
 }
 
 func dbRemoveAccessKey(AccessKeyID string) (error) {
