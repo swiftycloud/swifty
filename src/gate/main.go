@@ -459,7 +459,7 @@ func handleFunctionCode(ctx context.Context, w http.ResponseWriter, r *http.Requ
 
 	codeFile, err = fnCodePath(&conf, fn, params.Version)
 	if err != nil {
-		return GateErrE(swy.GateWrongType, err)
+		return GateErrE(swy.GateNotAvail, err)
 	}
 
 	fnCode, err = ioutil.ReadFile(codeFile)
@@ -715,9 +715,12 @@ func handleFunctionRun(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	id := makeSwoId(fromContext(ctx).Tenant, params.Project, params.FuncName)
 	ctxlog(ctx).Debugf("function/run %s", id.Str())
 
-	fn, err := dbFuncFindStates(id, []int{swy.DBFuncStateRdy})
+	fn, err := dbFuncFind(id)
 	if err != nil {
 		return GateErrD(err)
+	}
+	if fn.State != swy.DBFuncStateRdy {
+		return GateErrM(swy.GateNotAvail, "Function not ready (yet)")
 	}
 
 	/*

@@ -25,5 +25,5 @@ const (
 	GateDuplicate	uint = 5	// ID duplication
 	GateNotFound	uint = 6	// No resource found
 	GateFsError	uint = 7	// Error accessing file(s)
-	GateWrongType	uint = 8	// Object of wong type
+	GateNotAvail	uint = 8	// Operation not available on selected object
 )

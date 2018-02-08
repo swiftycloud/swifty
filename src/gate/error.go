@@ -14,7 +14,7 @@ var gateErrMsg = map[uint]string {
 	swy.GateDuplicate:	"ID already exists",
 	swy.GateNotFound:	"ID not found",
 	swy.GateFsError:	"Files access failed",
-	swy.GateWrongType:	"Wrong object type for request",
+	swy.GateNotAvail:	"Operation not (yet) available",
 }
 
 func GateErrC(code uint) *swyapi.GateErr {

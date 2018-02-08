@@ -575,5 +575,5 @@ func setFunctionState(ctx context.Context, conf *YAMLConf, id *SwoId, st *swyapi
 		return activateFunction(ctx, conf, id)
 	}
 
-	return GateErrM(swy.GateWrongType, "Cannot set this state")
+	return GateErrM(swy.GateNotAvail, "Cannot set this state")
 }
