@@ -118,6 +118,7 @@ src/s3/version.go: $(GITID_FILE)
 	$(Q) echo 'var Version string = "$(S3_VERSION)-$(GITID)"'	>> $@
 
 go-s3-y	+= src/s3/version.go
+go-s3-y	+= src/s3/gc.go
 go-s3-y	+= src/s3/limits.go
 go-s3-y	+= src/s3/policy.go
 go-s3-y	+= src/s3/main.go

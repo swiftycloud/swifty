@@ -1,6 +1,7 @@
 package main
 
 import (
+	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 
 	"crypto/rand"
@@ -246,4 +247,32 @@ func dbRemoveAccessKey(AccessKeyID string) (error) {
 
 	log.Debugf("s3: Removed akey %s", infoLong(akey))
 	return nil
+}
+
+func gc_keys() {
+	var akey S3AccessKey
+	var pipe *mgo.Pipe
+	var iter *mgo.Iter
+	var err error
+
+	log.Debugf("s3: Run keys gc")
+
+	query := bson.M{ "expiration-timestamp": bson.M{"$lt": current_timestamp()}}
+	pipe = dbS3Pipe(&akey, []bson.M{{"$match": query}})
+
+	iter = pipe.Iter()
+	for iter.Next(&akey) {
+		if iam, err := akey.s3IamFind(); err == nil {
+			s3IamDelete(iam)
+		}
+		err = dbS3Remove(&akey)
+		if err != nil {
+			log.Errorf("s3: Can't remove %s: %s",
+				infoLong(&akey), err.Error())
+		} else {
+			log.Debugf("s3: Removed expired akey %s",
+				infoLong(&akey))
+		}
+	}
+	iter.Close()
 }

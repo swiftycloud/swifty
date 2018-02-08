@@ -758,6 +758,11 @@ func main() {
 		log.Fatalf("Can't process db test/repair: %s", err.Error())
 	}
 
+	err = gcInit(0)
+	if err != nil {
+		log.Fatalf("Can't setup garbage collector: %s", err.Error())
+	}
+
 	go func() {
 		adminsrv = &http.Server{
 			Handler:      radminsrv,
