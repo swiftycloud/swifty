@@ -39,7 +39,10 @@ def add_fn(name, lang, mw = [], evt = "url", tmo = None):
 		cmd += [ "-tmo", "%d" % tmo ]
 	swyrun(cmd)
 
-	return _wait_fn(name)
+	return _wait_fn(name, "0")
+
+def _version(inf):
+	return int(inf['Version'].split()[0])
 
 def upd_fn(inf, lang):
 	swyrun([ "upd", inf['name'], "-src", "test/functions/" + lang + "/" + inf['name'] + "2" + lext[lang] ])
@@ -59,15 +62,13 @@ def _get_inf_fn(name):
 def inf_fn(inf):
 	return _get_inf_fn(inf['name'])
 
-def _wait_fn(name):
-	tmo = 1
+def _wait_fn(name, ver):
 	while True:
-		time.sleep(tmo)
+		swyrun(["wait", name, "-tmo", "60000", "-version", ver])
 		inf = _get_inf_fn(name)
 		if inf['State'] == 'ready':
 			return inf
 		print("  `- %s" % inf['State'])
-		tmo *= 2
 
 def run_fn(inf, args):
 	url = inf['URL'].split('/', 3)
@@ -113,12 +114,14 @@ def update(lang, opts):
 	print(ret)
 	if ret['message'] == 'hw:%s:%s' % (lang, cookie):
 		upd_fn(inf, lang)
+		_wait_fn(inf['name'], "%d" % (_version(inf) + 1))
+		# Older versions may STILL be there, wait only wakes up when new just
+		# pops up. So poke the function for some time
 		tmo = 0.5
 		while tmo < 32.0:
 			ret = run_fn(inf, {'name': cookie})
 			print(ret)
 			if ret['message'] == 'hw:%s:%s' % (lang, cookie):
-				print("Updating")
 				time.sleep(tmo)
 				tmo *= 2.0
 				continue
