@@ -1,6 +1,7 @@
 package main
 
 import (
+	"reflect"
 	"fmt"
 )
 
@@ -144,6 +145,10 @@ func (policy *S3Policy) isRoot() bool {
 		}
 	}
 	return false
+}
+
+func (policy *S3Policy) isEqual(dst *S3Policy) bool {
+	return reflect.DeepEqual(policy, dst)
 }
 
 func (policy *S3Policy) Match(resource string) bool {
