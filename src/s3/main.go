@@ -235,10 +235,10 @@ func handleBucket(iam *S3Iam, akey *S3AccessKey, w http.ResponseWriter, r *http.
 			return handleListBuckets(iam, w, r)
 		}
 		if _, ok := getURLParam(r, "uploads"); ok {
-			if !policy.Match(bname) { goto e_access }
+			if !policy.mayAccess(bname) { goto e_access }
 			return handleListUploads(bname, iam, w, r)
 		}
-		if !policy.Match(bname) { goto e_access }
+		if !policy.mayAccess(bname) { goto e_access }
 		return handleListObjects(bname, iam, w, r)
 	case http.MethodPut:
 		if !policy.isRoot() { goto e_access }
@@ -247,7 +247,7 @@ func handleBucket(iam *S3Iam, akey *S3AccessKey, w http.ResponseWriter, r *http.
 		if !policy.isRoot() { goto e_access }
 		return handleDeleteBucket(bname, iam, w, r)
 	case http.MethodHead:
-		if !policy.Match(bname) { goto e_access }
+		if !policy.mayAccess(bname) { goto e_access }
 		return handleAccessBucket(bname, iam, w, r)
 	default:
 		return &S3Error{ ErrorCode: S3ErrMethodNotAllowed }
@@ -417,7 +417,7 @@ func handleObject(iam *S3Iam, akey *S3AccessKey, w http.ResponseWriter, r *http.
 		return &S3Error{ ErrorCode: S3ErrSwyInvalidObjectName }
 	}
 
-	if !policy.Match(bname) {
+	if !policy.mayAccess(bname) {
 		goto e_access
 	}
 

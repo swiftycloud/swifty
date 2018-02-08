@@ -151,7 +151,7 @@ func (policy *S3Policy) isEqual(dst *S3Policy) bool {
 	return reflect.DeepEqual(policy, dst)
 }
 
-func (policy *S3Policy) Match(resource string) bool {
+func (policy *S3Policy) mayAccess(resource string) bool {
 	if !policy.isRoot() {
 		for _, x := range policy.Resource {
 			if x == resource {
