@@ -219,8 +219,10 @@ func (akey *S3AccessKey) s3IamFind() (*S3Iam, error) {
 	iams, err := s3LookupIam(query)
 	if err != nil {
 		return nil, err
+	} else if len(iams) > 0 {
+		return &iams[0], nil
 	}
-	return &iams[0], nil
+	return nil, mgo.ErrNotFound
 }
 
 func (account *S3Account) NamespaceID() string {
