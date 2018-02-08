@@ -56,8 +56,28 @@ func (akey *S3AccessKey) Expired() bool {
 // for security reason.
 //
 
+func getActiveAccessKey(account *S3Account, policy *S3Policy, expired_when int64) (*S3AccessKey, error) {
+	query := bson.M{ "account-id" : account.ObjID, "state": S3StateActive }
+	if iams, err := s3LookupIam(query); err == nil {
+		for _, iam := range iams {
+			var akey S3AccessKey
+
+			if !policy.isEqual(&iam.Policy) {
+				continue
+			}
+
+			query = bson.M{"iam-id": iam.ObjID, "state": S3StateActive,
+				"expiration-timestamp": bson.M{ "$lte": expired_when }}
+			if err = dbS3FindOne(query, &akey); err == nil {
+				return &akey, nil
+			}
+		}
+	}
+	return nil, fmt.Errorf("No suitable iam found")
+}
+
 func genNewAccessKey(namespace, bucket string, lifetime uint32) (*S3AccessKey, error) {
-	var timestamp_now int64
+	var timestamp_now, expired_when int64
 	var akey *S3AccessKey
 	var policy *S3Policy
 	var iam *S3Iam
@@ -66,6 +86,13 @@ func genNewAccessKey(namespace, bucket string, lifetime uint32) (*S3AccessKey, e
 	account, err := s3AccountInsert(namespace)
 	if err != nil {
 		return nil, err
+	}
+
+	timestamp_now = current_timestamp()
+	if lifetime != 0 {
+		expired_when = timestamp_now + int64(lifetime)
+	} else {
+		expired_when = S3TimeStampMax
 	}
 
 	if bucket != "" {
@@ -86,12 +113,15 @@ func genNewAccessKey(namespace, bucket string, lifetime uint32) (*S3AccessKey, e
 		}
 	}
 
+	if akey, err = getActiveAccessKey(account, policy, expired_when); err == nil {
+		log.Debugf("s3: Found active key %s", infoLong(akey))
+		return akey, nil
+	}
+
 	iam, err = s3IamInsert(account, policy)
 	if err != nil {
 		goto out_1
 	}
-
-	timestamp_now = current_timestamp()
 
 	akey = &S3AccessKey {
 		ObjID:			bson.NewObjectId(),
@@ -101,15 +131,10 @@ func genNewAccessKey(namespace, bucket string, lifetime uint32) (*S3AccessKey, e
 		IamObjID:		iam.ObjID,
 
 		CreationTimestamp:	timestamp_now,
+		ExpirationTimestamp:	expired_when,
 
 		AccessKeyID:		genKey(20, AccessKeyLetters),
 		AccessKeySecret:	genKey(40, SecretKeyLetters),
-	}
-
-	if lifetime != 0 {
-		akey.ExpirationTimestamp = timestamp_now + int64(lifetime)
-	} else {
-		akey.ExpirationTimestamp = S3TimeStampMax
 	}
 
 	if akey.AccessKeyID == "" || akey.AccessKeySecret == "" {
