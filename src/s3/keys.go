@@ -157,27 +157,6 @@ func s3DecryptAccessKeySecret(akey *S3AccessKey) string {
 	return sec
 }
 
-func (akey *S3AccessKey) LookupAccountAccessKey() (*S3AccessKey, error) {
-	var res S3AccessKey
-	var iam *S3Iam
-	var err error
-
-	if akey.AccountObjID != "" {
-		return akey, nil
-	}
-
-	if iam, err = akey.s3IamFind(); err != nil {
-		return nil, err
-	}
-
-	query := bson.M{"account-id": iam.AccountObjID, "state": S3StateActive }
-	if err = dbS3FindOne(query, &res); err != nil {
-		return nil, err
-	}
-
-	return &res, nil
-}
-
 func LookupAccessKey(AccessKeyId string) (*S3AccessKey, error) {
 	var akey *S3AccessKey
 	var err error
