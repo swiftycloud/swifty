@@ -30,7 +30,7 @@ type MwareOps struct {
 	Init	func(ctx context.Context, conf *YAMLConfMw, mwd *MwareDesc) (error)
 	Fini	func(ctx context.Context, conf *YAMLConfMw, mwd *MwareDesc) (error)
 	Event	func(ctx context.Context, conf *YAMLConfMw, source *FnEventDesc, mwd *MwareDesc, on bool) (error)
-	GenSec	func(ctx context.Context, conf *YAMLConfMw, id string)([][2]string, error)
+	GenSec	func(ctx context.Context, conf *YAMLConfMw, fid *SwoId, id string)([][2]string, error)
 	GetEnv	func(conf *YAMLConfMw, mwd *MwareDesc) ([][2]string)
 	Devel	bool
 }
@@ -85,7 +85,7 @@ var mwareHandlers = map[string]*MwareOps {
 	"s3":		&MwareS3,
 }
 
-func mwareGenerateSecret(ctx context.Context, typ, id string) ([][2]string, error) {
+func mwareGenerateSecret(ctx context.Context, fid *SwoId, typ, id string) ([][2]string, error) {
 	handler, ok := mwareHandlers[typ]
 	if !ok {
 		return nil, fmt.Errorf("No handler for %s mware", typ)
@@ -95,7 +95,7 @@ func mwareGenerateSecret(ctx context.Context, typ, id string) ([][2]string, erro
 		return nil, fmt.Errorf("No secrets generator for %s", typ)
 	}
 
-	return handler.GenSec(ctx, &conf.Mware, id)
+	return handler.GenSec(ctx, &conf.Mware, fid, id)
 }
 
 func mwareRemove(ctx context.Context, conf *YAMLConfMw, id *SwoId) *swyapi.GateErr {

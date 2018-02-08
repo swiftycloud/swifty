@@ -11,7 +11,9 @@ import (
 	"../apis/apps/s3"
 )
 
-func s3KeyGen(conf *YAMLConfS3, addr, namespace, bucket string) (string, string, error) {
+func s3KeyGen(conf *YAMLConfS3, namespace, bucket string, lifetime uint32) (string, string, error) {
+	addr := swy.MakeAdminURL(conf.Addr, conf.AdminPort)
+
 	resp, err := swyhttp.MarshalAndPost(
 		&swyhttp.RestReq{
 			Address: "http://" + addr + "/v1/api/admin/keygen",
@@ -21,6 +23,7 @@ func s3KeyGen(conf *YAMLConfS3, addr, namespace, bucket string) (string, string,
 		&swys3api.S3CtlKeyGen{
 			Namespace: namespace,
 			Bucket: bucket,
+			Lifetime: lifetime,
 		})
 	if err != nil {
 		return "", "", fmt.Errorf("Error requesting NS from S3: %s", err.Error())
@@ -41,7 +44,9 @@ func s3KeyGen(conf *YAMLConfS3, addr, namespace, bucket string) (string, string,
 	return out.AccessKeyID, out.AccessKeySecret, nil
 }
 
-func s3KeyDel(conf *YAMLConfS3, addr, key string) error {
+func s3KeyDel(conf *YAMLConfS3, key string) error {
+	addr := swy.MakeAdminURL(conf.Addr, conf.AdminPort)
+
 	_, err := swyhttp.MarshalAndPost(
 		&swyhttp.RestReq{
 			Address: "http://" + addr + "/v1/api/admin/keydel",
@@ -85,38 +90,11 @@ func s3BucketReq(conf *YAMLConfS3, addr, req, namespace, bucket string) error {
 }
 
 func InitS3(ctx context.Context, conf *YAMLConfMw, mwd *MwareDesc) (error) {
-	/* There can be only one s3 namespace per project */
-	pns := mwd.SwoId.Tennant + "::" + mwd.SwoId.Project
-	addr := swy.MakeAdminURL(conf.S3.Addr, conf.S3.AdminPort)
-
-	key, secret, err := s3KeyGen(&conf.S3, addr, pns, mwd.SwoId.Name)
-	if err != nil {
-		return err
-	}
-
-	err = s3BucketReq(&conf.S3, addr, "badd", pns, mwd.SwoId.Name)
-	if err != nil {
-		s3KeyDel(&conf.S3, addr, key)
-		return err
-	}
-
-	ctxlog(ctx).Debugf("Added S3 client: %s:%s", key, pns)
-	mwd.Client = key
-	mwd.Secret = secret
-	mwd.Namespace = pns
-	return nil
+	return fmt.Errorf("S3 mware is external")
 }
 
 func FiniS3(ctx context.Context, conf *YAMLConfMw, mwd *MwareDesc) error {
-	pns := mwd.Namespace
-	addr := swy.MakeAdminURL(conf.S3.Addr, conf.S3.AdminPort)
-
-	er1 := s3BucketReq(&conf.S3, addr, "bdel", pns, mwd.SwoId.Name)
-	er2 := s3KeyDel(&conf.S3, addr, mwd.Client)
-	if er1 == nil {
-		er1 = er2
-	}
-	return er1
+	return fmt.Errorf("S3 mware is external")
 }
 
 const (
@@ -233,10 +211,15 @@ func GetEnvS3(conf *YAMLConfMw, mwd *MwareDesc) ([][2]string) {
 	return makeS3Envs(&conf.S3, mwd.Name, mwd.Client, mwd.Secret)
 }
 
-func GenBucketKeysS3(ctx context.Context, conf *YAMLConfMw, bucket string) ([][2]string, error) {
+func GenBucketKeysS3(ctx context.Context, conf *YAMLConfMw, fid *SwoId, bucket string) ([][2]string, error) {
 	var key, skey string
+	var err error
 
-	/* FIXME -- get the keys from s3 daemon by bucket */
+	key, skey, err = s3KeyGen(&conf.S3, fid.Namespace(), bucket, 0)
+	if err != nil {
+		ctxlog(ctx).Errorf("Error generating key for %s/%s: %s", fid.Str(), bucket, err.Error())
+		return nil, fmt.Errorf("Key generation error")
+	}
 
 	return makeS3Envs(&conf.S3, bucket, key, skey), nil
 }
