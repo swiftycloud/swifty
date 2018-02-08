@@ -972,6 +972,9 @@ definitions:
     type: object
     description: Keys to access S3
     properties:
+      endpoint:
+        type: string
+        description: Addr:Port pair to talk S3 protocol to
       key:
         type: string
       secret:

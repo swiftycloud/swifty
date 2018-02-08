@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"context"
+	"strings"
 	"net/http"
 	"encoding/json"
 	"gopkg.in/mgo.v2/bson"
@@ -225,8 +226,13 @@ func GenBucketKeysS3(ctx context.Context, conf *YAMLConfMw, fid *SwoId, bucket s
 	return makeS3Envs(&conf.S3, bucket, key, skey), nil
 }
 
-func mwareGetS3Creds(ctx context.Context, conf *YAMLConfMw, acc *swyapi.MwareS3Access) (*swyapi.MwareS3Creds, *swyapi.GateErr) {
+func mwareGetS3Creds(ctx context.Context, conf *YAMLConf, acc *swyapi.MwareS3Access) (*swyapi.MwareS3Creds, *swyapi.GateErr) {
 	creds := &swyapi.MwareS3Creds{}
+
+	/* XXX -- for now pretend, that s3 listens on the same address as gate does */
+	gateAP := strings.Split(conf.Daemon.Addr, ":")
+	s3AP := strings.Split(conf.Mware.S3.Addr, ":")
+	creds.Endpoint = gateAP[0] + ":" + s3AP[1]
 
 	creds.Expires = acc.Lifetime
 
@@ -245,7 +251,7 @@ func mwareGetS3Creds(ctx context.Context, conf *YAMLConfMw, acc *swyapi.MwareS3A
 
 	var err error
 	id := makeSwoId(fromContext(ctx).Tenant, acc.Project, "")
-	creds.Key, creds.Secret, err = s3KeyGen(&conf.S3, id.Namespace(), acc.Bucket, creds.Expires)
+	creds.Key, creds.Secret, err = s3KeyGen(&conf.Mware.S3, id.Namespace(), acc.Bucket, creds.Expires)
 	if err != nil {
 		ctxlog(ctx).Errorf("Can't get S3 keys for %s.%s", id.Str(), acc.Bucket, err.Error())
 		return nil, GateErrM(swy.GateGenErr, "Error getting S3 keys")

@@ -107,6 +107,7 @@ type MwareS3Access struct {
 }
 
 type MwareS3Creds struct {
+	Endpoint	string			`json:"endpoint"`
 	Key		string			`json:"key"`
 	Secret		string			`json:"secret"`
 	Expires		uint32			`json:"expires"` /* in seconds */

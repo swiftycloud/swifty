@@ -916,7 +916,7 @@ func handleMwareS3Access(ctx context.Context, w http.ResponseWriter, r *http.Req
 		return GateErrE(swy.GateBadRequest, err)
 	}
 
-	creds, cerr := mwareGetS3Creds(ctx, &conf.Mware, &params)
+	creds, cerr := mwareGetS3Creds(ctx, &conf, &params)
 	if cerr != nil {
 		return cerr
 	}

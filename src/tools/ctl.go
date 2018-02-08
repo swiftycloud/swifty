@@ -528,6 +528,7 @@ func s3_access(project string, args []string, opts[8]string) {
 
 	make_faas_req("mware/access/s3",
 		swyapi.MwareS3Access{ Project: project, Bucket: args[0], Lifetime: uint32(lt)}, &creds)
+	fmt.Printf("Endpoint %s\n", creds.Endpoint)
 	fmt.Printf("Key:     %s\n", creds.Key)
 	fmt.Printf("Secret:  %s\n", creds.Secret)
 	fmt.Printf("Expires: in %d seconds\n", creds.Expires)
