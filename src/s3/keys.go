@@ -255,8 +255,6 @@ func gc_keys() {
 	var iter *mgo.Iter
 	var err error
 
-	log.Debugf("s3: Run keys gc")
-
 	query := bson.M{ "expiration-timestamp": bson.M{"$lt": current_timestamp()}}
 	pipe = dbS3Pipe(&akey, []bson.M{{"$match": query}})
 
