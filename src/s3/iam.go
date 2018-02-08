@@ -224,7 +224,3 @@ func (akey *S3AccessKey) s3IamFind() (*S3Iam, error) {
 	}
 	return nil, mgo.ErrNotFound
 }
-
-func (account *S3Account) NamespaceID() string {
-	return sha256sum([]byte(account.Namespace))
-}

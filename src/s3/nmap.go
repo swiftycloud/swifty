@@ -50,6 +50,11 @@ func BIDFromNames(namespace, bucket string) string {
 	return sha256sum([]byte(namespace + bucket))
 }
 
+// Bucket grouping by namespace in DB for lookup
+func (account *S3Account) NamespaceID() string {
+	return sha256sum([]byte(account.Namespace))
+}
+
 // Bucket pool name and index in DB for lookup
 func (account *S3Account)BucketBID(bname string) string {
 	return BIDFromNames(account.Namespace, bname)
