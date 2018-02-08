@@ -436,6 +436,33 @@ paths:
           description: Need to authenticate
         '403':
           description: Bad authentication token
+  /mware/access/s3:
+    post:
+      summary: Request keys for S3 access
+      parameters:
+        - in: header
+          name: X-Auth-Token
+          type: string
+          required: true
+        - name: data
+          in: body
+          description: Middleware to remove
+          required: true
+          schema:
+            $ref: '#/definitions/MwareS3Access'
+      responses:
+        '200':
+          description: Middleware removed
+          schema:
+            $ref: '#/definitions/MwareS3Creds'
+        '400':
+          description: Bad request
+          schema:
+            $ref: '#/definitions/GateError'
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad authentication token
   /mware/remove:
     post:
       summary: Remove middleware
@@ -923,6 +950,35 @@ definitions:
         type: string
         description: Middleware type
         example: maria
+  MwareS3Access:
+    type: object
+    description: Description of the access requested
+    properties:
+      project:
+        type: string
+      bucket:
+        type: string
+        description: if empty, access to "the whole s3" within the project is requested
+      lifetime:
+        type: integer
+        description: Key validity period in seconds
+      access:
+        type: array
+        description: List of options. The "hidden" one is to be set for keys that are not planned to be shown to user (e.g. -- used by UI for itself).
+        items:
+          type: string
+          example: hidden
+  MwareS3Creds:
+    type: object
+    description: Keys to access S3
+    properties:
+      key:
+        type: string
+      secret:
+        type: string
+      expires:
+        type: integer
+        description: Lifetime in seconds
   MwareRemove:
     type: object
     description: Middleware specification
