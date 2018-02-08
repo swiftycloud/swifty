@@ -40,6 +40,8 @@ for cmd in ['keygen']:
     spp = sp.add_parser(cmd, help = 'Generate keys')
     spp.add_argument('--namespace', dest = 'namespace',
                      help = 'Unique namespace', required = True)
+    spp.add_argument('--lifetime', dest = 'lifetime', type = int,
+                     help = 'Key lifetime', default = 0, required = False)
     spp.add_argument('--name', dest = 'name',
                      help = 'Bucket name', required = False)
     spp.add_argument('--save', dest = 'save',
@@ -226,6 +228,7 @@ if args.cmd not in ['keygen', 'keydel', 'keygetroot', 'notify']:
 
 if args.cmd == 'keygen':
     resp = request_admin(args.cmd, {"namespace": args.namespace,
+                                    "lifetime": args.lifetime,
                                     "bucket": args.name })
     if resp != None and resp.status == 200:
         akey = json.loads(resp.read().decode('utf-8'))
