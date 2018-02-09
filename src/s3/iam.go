@@ -126,7 +126,7 @@ func s3AccountDelete(account *S3Account) (error) {
 	return nil
 }
 
-func s3IamInsert(account *S3Account, policy *S3Policy) (*S3Iam, error) {
+func s3IamInsert(account *S3Account, policy *S3Policy, user string) (*S3Iam, error) {
 	var err error
 
 	id := bson.NewObjectId()
@@ -138,7 +138,7 @@ func s3IamInsert(account *S3Account, policy *S3Policy) (*S3Iam, error) {
 		Policy:		*policy,
 
 		CreationTime:	time.Now().Format(time.RFC3339),
-		User:		"user" + genKey(8, AccessKeyLetters),
+		User:		user,
 		AwsID:		sha256sum([]byte(id.String())),
 	}
 

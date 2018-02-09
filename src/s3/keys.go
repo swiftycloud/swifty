@@ -110,7 +110,7 @@ func genNewAccessKey(namespace, bucket string, lifetime uint32) (*S3AccessKey, e
 		}
 	}
 
-	iam, err = s3IamInsert(account, policy)
+	iam, err = s3IamInsert(account, policy, account.User)
 	if err != nil {
 		goto out_1
 	}
