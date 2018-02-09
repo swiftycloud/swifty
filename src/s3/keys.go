@@ -83,7 +83,9 @@ func genNewAccessKey(namespace, bucket string, lifetime uint32) (*S3AccessKey, e
 	var iam *S3Iam
 	var err error
 
-	account, err := s3AccountInsert(namespace)
+	user := "user::" + namespace
+	email := "email::" + namespace
+	account, err := s3AccountInsert(namespace, user, email)
 	if err != nil {
 		return nil, err
 	}

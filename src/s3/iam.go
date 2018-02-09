@@ -33,7 +33,7 @@ type S3Iam struct {
 	User				string		`bson:"user,omitempty"`
 }
 
-func s3AccountInsert(namespace string) (*S3Account, error) {
+func s3AccountInsert(namespace, user, email string) (*S3Account, error) {
 	var account S3Account
 	var err error
 
@@ -52,8 +52,8 @@ func s3AccountInsert(namespace string) (*S3Account, error) {
 		"namespace":		namespace,
 
 		"creation-time":	time.Now().Format(time.RFC3339),
-		"user":			"user" + genKey(8, AccessKeyLetters),
-		"email":		"email" + genKey(8, AccessKeyLetters) + "@fake.mail",
+		"user":			user,
+		"email":		email,
 	}
 	query := bson.M{ "namespace": namespace, "state": S3StateActive }
 	update := bson.M{ "$setOnInsert": insert }
