@@ -91,13 +91,9 @@ func genNewAccessKey(namespace, bucket string, lifetime uint32) (*S3AccessKey, e
 	}
 
 	if bucket != "" {
-		policy = &S3Policy {
-			Effect: Policy_Allow,
-			Action: []ActionBitsMgo{ S3PolicyAction_PerBucket.toMgo() },
-			Resource: []string{ bucket },
-		}
+		policy = getBucketPolicy(bucket)
 	} else {
-		policy = PolicyRoot
+		policy = getRootPolicy()
 	}
 
 	timestamp_now = current_timestamp()

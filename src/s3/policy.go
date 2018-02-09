@@ -236,11 +236,21 @@ func (policy *S3Policy) infoLong() string {
 	return "nil"
 }
 
-// If changing modify isRoot as well
-var PolicyRoot = &S3Policy {
-	Effect: Policy_Allow,
-	Action: []ActionBitsMgo{ S3PolicyAction_AllSet.toMgo() },
-	Resource: []string{ Resourse_Any },
+func getRootPolicy() *S3Policy {
+	// If changing modify isRoot as well
+	return &S3Policy {
+		Effect: Policy_Allow,
+		Action: []ActionBitsMgo{ S3PolicyAction_AllSet.toMgo() },
+		Resource: []string{ Resourse_Any },
+	}
+}
+
+func getBucketPolicy(bname string) *S3Policy {
+	return &S3Policy {
+		Effect: Policy_Allow,
+		Action: []ActionBitsMgo{ S3PolicyAction_PerBucket.toMgo() },
+		Resource: []string{ bname },
+	}
 }
 
 func (policy *S3Policy) isCanned() bool {
