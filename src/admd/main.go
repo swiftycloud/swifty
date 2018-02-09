@@ -117,7 +117,7 @@ func checkAdminOrOwner(user, target string, td *swyks.KeystoneTokenData) (string
 
 func handleUserInfo(w http.ResponseWriter, r *http.Request) {
 	var ui swyapi.UserInfo
-	var kui *swyks.KeystoneUser
+	var kud *ksUserDesc
 
 	if swyhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
 
@@ -133,15 +133,16 @@ func handleUserInfo(w http.ResponseWriter, r *http.Request) {
 	}
 
 	code = http.StatusBadRequest
-	kui, err = ksGetUserInfo(&conf.Keystone, ui.Id)
+	kud, err = ksGetUserDesc(&conf.Keystone, ui.Id)
 	if err != nil {
+		log.Errorf("GetUserDesc: %s", err.Error())
 		goto out
 	}
 
-	log.Debugf("USER: %s/%s/%s", kui.Id, kui.Name, kui.Description)
+	log.Debugf("USER: %s/%s/%s", ui.Id, kud.Name, kud.Email)
 	err = swyhttp.MarshalAndWrite(w, swyapi.UserInfo{
 				Id: ui.Id,
-				Name: kui.Description,
+				Name: kud.Name,
 			})
 	if err != nil {
 		goto out
@@ -168,6 +169,7 @@ func handleListUsers(w http.ResponseWriter, r *http.Request) {
 	/* Listing users is only possible for admin */
 	code = http.StatusForbidden
 	if !swyks.KeystoneRoleHas(td, swyks.SwyAdminRole) {
+		err = errors.New("Not admin cannot list users")
 		goto out
 	}
 
@@ -298,6 +300,7 @@ func handleAddUser(w http.ResponseWriter, r *http.Request) {
 	/* User can be added by admin or UI */
 	code = http.StatusForbidden
 	if !swyks.KeystoneRoleHas(td, swyks.SwyAdminRole) && !swyks.KeystoneRoleHas(td, swyks.SwyUIRole) {
+		err = errors.New("Only admin or UI may add users")
 		goto out
 	}
 

@@ -3,9 +3,15 @@ package main
 import (
 	"net/http"
 	"fmt"
+	"encoding/json"
 	"../apis/apps"
 	"../common/keystone"
 )
+
+type ksUserDesc struct {
+	Name	string	`json:"name"`
+	Email	string	`json:"email"`
+}
 
 var ksClient *swyks.KsClient
 var ksSwyDomainId string
@@ -81,7 +87,12 @@ func ksListUsers(conf *YAMLConfKeystone) (*[]swyapi.UserInfo, error) {
 func ksAddUserAndProject(conf *YAMLConfKeystone, user *swyapi.AddUser) error {
 	var presp swyks.KeystoneProjectAdd
 
-	err := ksClient.MakeReq(
+	udesc, err := json.Marshal(&ksUserDesc{ Name: user.Name, Email: user.Id })
+	if err != nil {
+		return fmt.Errorf("Can't marshal user desc: %s", err.Error())
+	}
+
+	err = ksClient.MakeReq(
 		&swyks.KeystoneReq {
 			Type:	"POST",
 			URL:	"projects",
@@ -112,7 +123,7 @@ func ksAddUserAndProject(conf *YAMLConfKeystone, user *swyapi.AddUser) error {
 				Password: user.Pass,
 				DefProject: presp.Project.Id,
 				DomainId: ksSwyDomainId,
-				Description: user.Name,
+				Description: string(udesc),
 			},
 		}, &uresp)
 	if err != nil {
@@ -130,6 +141,23 @@ func ksAddUserAndProject(conf *YAMLConfKeystone, user *swyapi.AddUser) error {
 	}
 
 	return nil
+}
+
+func ksGetUserDesc(conf *YAMLConfKeystone, user string) (*ksUserDesc, error) {
+	kui, err := ksGetUserInfo(conf, user)
+	if err != nil {
+		return nil, err
+	}
+
+	var kud ksUserDesc
+	if kui.Description != "" {
+		err = json.Unmarshal([]byte(kui.Description), &kud)
+		if err != nil {
+			return nil, fmt.Errorf("Can't unmarshal user desc: %s", err.Error())
+		}
+	}
+
+	return &kud, nil
 }
 
 func ksGetUserInfo(conf *YAMLConfKeystone, user string) (*swyks.KeystoneUser, error) {
