@@ -91,7 +91,7 @@ func genNewAccessKey(namespace, bucket string, lifetime uint32) (*S3AccessKey, e
 	if bucket != "" {
 		policy = &S3Policy {
 			Effect: Policy_Allow,
-			Action: PolicyBucketActions,
+			Action: []ActionBitsMgo{ S3PolicyAction_PerBucket.toMgo() },
 			Resource: []string{ bucket },
 		}
 	} else {
