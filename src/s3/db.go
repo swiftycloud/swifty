@@ -65,7 +65,7 @@ func dbConnect(conf *YAMLConf) error {
 	index.Key = []string{"namespace"}
 	dbSession.DB(dbName).C(DBColS3Iams).EnsureIndex(index)
 
-	index.Key = []string{"email"}
+	index.Key = []string{"user"}
 	dbSession.DB(dbName).C(DBColS3Iams).EnsureIndex(index)
 
 	index.Key = []string{"bid"}

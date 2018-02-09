@@ -46,6 +46,15 @@ import (
 // - S3UploadPart (FIXME)
 // - S3Upload (FIXME)
 
+// To distingush iam users as an index
+func AccountUser(namespace, user string) string {
+	return namespace + ":" + user
+}
+
+func (account *S3Account) IamUser(user string) string {
+	return account.User + ":" + user
+}
+
 func BIDFromNames(namespace, bucket string) string {
 	return sha256sum([]byte(namespace + bucket))
 }

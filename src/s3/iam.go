@@ -33,7 +33,7 @@ type S3Iam struct {
 	User				string		`bson:"user,omitempty"`
 }
 
-func s3AccountInsert(namespace, user, email string) (*S3Account, error) {
+func s3AccountInsert(namespace, user string) (*S3Account, error) {
 	var account S3Account
 	var err error
 
@@ -52,8 +52,8 @@ func s3AccountInsert(namespace, user, email string) (*S3Account, error) {
 		"namespace":		namespace,
 
 		"creation-time":	time.Now().Format(time.RFC3339),
-		"user":			user,
-		"email":		email,
+		"user":			AccountUser(namespace, user),
+		"email":		user + "@mail",
 	}
 	query := bson.M{ "namespace": namespace, "state": S3StateActive }
 	update := bson.M{ "$setOnInsert": insert }
@@ -126,32 +126,32 @@ func s3AccountDelete(account *S3Account) (error) {
 }
 
 func s3IamInsert(account *S3Account, policy *S3Policy, user string) (*S3Iam, error) {
+	var iam S3Iam
 	var err error
 
 	id := bson.NewObjectId()
-	iam := &S3Iam {
-		ObjID:		id,
-		State:		S3StateNone,
+	insert := bson.M{
+		"_id":			id,
+		"mtime":		current_timestamp(),
+		"state":		S3StateActive,
 
-		AccountObjID:	account.ObjID,
-		Policy:		*policy,
+		"aws-id":		sha256sum([]byte(id.String())),
+		"account-id":		account.ObjID,
 
-		CreationTime:	time.Now().Format(time.RFC3339),
-		User:		user,
-		AwsID:		sha256sum([]byte(id.String())),
+		"policy":		*policy,
+		"creation-time":	time.Now().Format(time.RFC3339),
+		"user":			account.IamUser(user),
 	}
+	query := bson.M{ "user": account.IamUser(user), "state": S3StateActive }
+	update := bson.M{ "$setOnInsert": insert }
 
-	if err = dbS3Insert(iam); err != nil {
+	log.Debugf("s3: Upserting iam %s", account.IamUser(user))
+	if err = dbS3Upsert(query, update, &iam); err != nil {
 		return nil, err
 	}
 
-	if err = dbS3SetState(iam, S3StateActive, nil); err != nil {
-		dbS3Remove(iam)
-		return nil, err
-	}
-
-	log.Debugf("s3: Inserted %s", infoLong(iam))
-	return iam, nil
+	log.Debugf("s3: Upserted %s", infoLong(&iam))
+	return &iam, nil
 }
 
 func s3IamDelete(iam *S3Iam) (error) {

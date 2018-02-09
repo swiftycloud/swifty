@@ -76,22 +76,20 @@ func getEndlessKey(account *S3Account, policy *S3Policy) (*S3AccessKey, error) {
 	return nil, fmt.Errorf("No suitable iam found")
 }
 
-func genNewAccessKey(namespace, bucket string, lifetime uint32) (*S3AccessKey, error) {
+func genNewAccessKey(namespace, bname string, lifetime uint32) (*S3AccessKey, error) {
 	var timestamp_now, expired_when int64
 	var akey *S3AccessKey
 	var policy *S3Policy
 	var iam *S3Iam
 	var err error
 
-	user := "user::" + namespace
-	email := "email::" + namespace
-	account, err := s3AccountInsert(namespace, user, email)
+	account, err := s3AccountInsert(namespace, "user")
 	if err != nil {
 		return nil, err
 	}
 
-	if bucket != "" {
-		policy = getBucketPolicy(bucket)
+	if bname != "" {
+		policy = getBucketPolicy(bname)
 	} else {
 		policy = getRootPolicy()
 	}
@@ -108,9 +106,14 @@ func genNewAccessKey(namespace, bucket string, lifetime uint32) (*S3AccessKey, e
 		}
 	}
 
-	iam, err = s3IamInsert(account, policy, account.User)
+	iam, err = s3IamInsert(account, policy, bname)
 	if err != nil {
 		goto out_1
+	}
+
+	if iam.Policy.isEqual(policy) == false {
+		err = fmt.Errorf("s3: Can't genarate iam with policy changed")
+		goto out_2
 	}
 
 	akey = &S3AccessKey {
