@@ -50,7 +50,6 @@ func s3AccountInsert(namespace string) (*S3Account, error) {
 
 		"aws-id":		sha256sum([]byte(id.String())),
 		"namespace":		namespace,
-		"ref":			0,
 
 		"creation-time":	time.Now().Format(time.RFC3339),
 		"user":			"user" + genKey(8, AccessKeyLetters),
