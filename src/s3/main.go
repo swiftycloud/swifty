@@ -470,9 +470,9 @@ func handleS3API(cb func(iam *S3Iam, akey *S3AccessKey, w http.ResponseWriter, r
 
 		defer r.Body.Close()
 
-		if swyhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
-
 		logRequest(r)
+
+		if swyhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
 
 		// Admin is allowed to process without signing a request
 		if s3VerifyAdmin(r) == nil {
