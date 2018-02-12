@@ -161,9 +161,7 @@ func handleListBuckets(iam *S3Iam, w http.ResponseWriter, r *http.Request) *S3Er
 
 func handleListUploads(bname string, iam *S3Iam, w http.ResponseWriter, r *http.Request) *S3Error {
 	uploads, err := s3Uploads(iam, bname)
-	if err != nil {
-		return &S3Error{ ErrorCode: S3ErrInvalidRequest, Message: err.Error() }
-	}
+	if err != nil { return err }
 
 	HTTPRespXML(w, uploads)
 	return nil

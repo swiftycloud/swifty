@@ -394,7 +394,7 @@ func s3UploadFini(iam *S3Iam, bucket *S3Bucket, uid string,
 	return &res, nil
 }
 
-func s3Uploads(iam *S3Iam, bname string) (*swys3api.S3MpuList, error) {
+func s3Uploads(iam *S3Iam, bname string) (*swys3api.S3MpuList,  *S3Error) {
 	var res swys3api.S3MpuList
 	var bucket *S3Bucket
 	var uploads []S3Upload
@@ -402,8 +402,12 @@ func s3Uploads(iam *S3Iam, bname string) (*swys3api.S3MpuList, error) {
 
 	bucket, err = iam.FindBucket(bname)
 	if err != nil {
-		log.Errorf("s3: Can't find bucket %s: %s", bname, err.Error())
-		return nil, err
+		if err == mgo.ErrNotFound {
+			return nil, &S3Error{ ErrorCode: S3ErrNoSuchBucket }
+		}
+
+		log.Errorf("s3: Can't find buckets on %s: %s", infoLong(iam), err.Error())
+		return nil, &S3Error{ ErrorCode: S3ErrInternalError }
 	}
 
 	res.Bucket		= bucket.Name
@@ -414,12 +418,11 @@ func s3Uploads(iam *S3Iam, bname string) (*swys3api.S3MpuList, error) {
 				"state": S3StateActive,
 				"lock": 0}, &uploads)
 	if err != nil {
-		if err == mgo.ErrNotFound {
-			goto out
+		if err != mgo.ErrNotFound {
+			log.Errorf("s3: Can't find uploads on %s: %s",
+				infoLong(bucket), err.Error())
+			return nil, &S3Error{ ErrorCode: S3ErrInternalError }
 		}
-		log.Errorf("s3: Can't find uploads on bucket %s: %s",
-				bucket.Name, err.Error())
-		return nil, err
 	} else {
 		for _, u := range uploads {
 			res.Upload = append(res.Upload,
@@ -431,7 +434,6 @@ func s3Uploads(iam *S3Iam, bname string) (*swys3api.S3MpuList, error) {
 		}
 	}
 
-out:
 	log.Debugf("s3: List upload %v", res)
 	return &res, nil
 }
