@@ -713,8 +713,9 @@ func main() {
 	// Service operations
 	rgatesrv := mux.NewRouter()
 
-	match_bucket := "/{BucketName:[a-zA-Z0-9-.]*}"
-	match_object := "/{BucketName:[a-zA-Z0-9-.]+}/{ObjName:[a-zA-Z0-9-./]+}"
+	name_regex := `[a-zA-Z0-9\!\-\_\.\*\'\(\)]`
+	match_bucket := fmt.Sprintf("/{BucketName:%s*}", name_regex)
+	match_object := fmt.Sprintf("/{BucketName:%s+}/{ObjName:%s+}", name_regex, name_regex)
 
 	rgatesrv.Handle(match_bucket,	handleS3API(handleBucket))
 	rgatesrv.Handle(match_object,	handleS3API(handleObject))
