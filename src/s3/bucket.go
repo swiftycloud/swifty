@@ -130,11 +130,21 @@ func (iam *S3Iam)FindBucket(bname string) (*S3Bucket, error) {
 	var err error
 
 	account, err := iam.s3AccountLookup()
-	if err != nil { return nil, err }
+	if err != nil {
+		if err != mgo.ErrNotFound {
+			log.Errorf("s3: Can't find account %s: %s",
+				infoLong(iam), err.Error())
+		}
+		return nil, err
+	}
 
 	query := bson.M{ "bid": account.BucketBID(bname), "state": S3StateActive }
 	err = dbS3FindOne(query, &res)
 	if err != nil {
+		if err != mgo.ErrNotFound {
+			log.Errorf("s3: Can't find bucket %s/%s: %s",
+				infoLong(account), infoLong(iam), err.Error())
+		}
 		return nil, err
 	}
 
@@ -297,35 +307,37 @@ out_nopool:
 	return err
 }
 
-func s3DeleteBucket(iam *S3Iam, bname, acl string) error {
+func s3DeleteBucket(iam *S3Iam, bname, acl string) (*S3Error) {
 	var bucket *S3Bucket
 	var err error
 
 	bucket, err = iam.FindBucket(bname)
 	if err != nil {
 		if err == mgo.ErrNotFound {
-			return nil
+			return &S3Error{ ErrorCode: S3ErrNoSuchBucket }
 		}
-		log.Errorf("s3: Can't find bucket %s: %s", bname, err.Error())
-		return err
+		return &S3Error{ ErrorCode: S3ErrInternalError }
 	}
 
 	err = dbS3SetState(bucket, S3StateInactive, bson.M{"cnt-objects": 0})
 	if err != nil {
 		if err == mgo.ErrNotFound {
-			return nil
+			if bucket.CntObjects > 0 {
+				return &S3Error{ ErrorCode: S3ErrBucketNotEmpty }
+			}
 		}
-		return err
+		log.Errorf("s3: Can't delete %s: %s", infoLong(bucket), err.Error())
+		return &S3Error{ ErrorCode: S3ErrInternalError }
 	}
 
 	err = radosDeletePool(bucket.BackendID)
 	if err != nil {
-		return err
+		return &S3Error{ ErrorCode: S3ErrInternalError }
 	}
 
 	err = bucket.dbRemove()
 	if err != nil {
-		return err
+		return &S3Error{ ErrorCode: S3ErrInternalError }
 	}
 
 	log.Debugf("s3: Deleted %s", infoLong(bucket))
@@ -344,15 +356,17 @@ func (bucket *S3Bucket)dbFindAll() ([]S3Object, error) {
 	return res, nil
 }
 
-func s3ListBucket(iam *S3Iam, bname, acl string) (*swys3api.S3Bucket, error) {
+func s3ListBucket(iam *S3Iam, bname, acl string) (*swys3api.S3Bucket, *S3Error) {
 	var bucketList swys3api.S3Bucket
 	var bucket *S3Bucket
 	var err error
 
 	bucket, err = iam.FindBucket(bname)
 	if err != nil {
-		log.Errorf("s3: Can't find bucket %s: %s", bname, err.Error())
-		return nil, err
+		if err == mgo.ErrNotFound {
+			return nil, &S3Error{ ErrorCode: S3ErrNoSuchBucket }
+		}
+		return nil, &S3Error{ ErrorCode: S3ErrInternalError }
 	}
 
 	bucketList.Name		= bucket.Name
@@ -369,7 +383,7 @@ func s3ListBucket(iam *S3Iam, bname, acl string) (*swys3api.S3Bucket, error) {
 
 		log.Errorf("s3: Can't find objects %s: %s",
 			infoLong(bucket), err.Error())
-		return nil, err
+		return nil, &S3Error{ ErrorCode: S3ErrInternalError }
 	}
 
 	for _, k := range objects {
@@ -396,7 +410,7 @@ func s3ListBuckets(iam *S3Iam) (*swys3api.S3BucketList, *S3Error) {
 			return nil, &S3Error{ ErrorCode: S3ErrNoSuchBucket }
 		}
 
-		log.Errorf("s3: Can't find buckets on %s: %s", infoLong(iam), err.Error())
+		log.Errorf("s3: Can't find buckets %s: %s", infoLong(iam), err.Error())
 		return nil, &S3Error{ ErrorCode: S3ErrInternalError }
 	}
 

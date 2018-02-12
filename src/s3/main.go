@@ -169,9 +169,7 @@ func handleListUploads(bname string, iam *S3Iam, w http.ResponseWriter, r *http.
 
 func handleListObjects(bname string, iam *S3Iam, w http.ResponseWriter, r *http.Request) *S3Error {
 	objects, err := s3ListBucket(iam, bname, "")
-	if err != nil {
-		return &S3Error{ ErrorCode: S3ErrInvalidRequest, Message: err.Error() }
-	}
+	if err != nil { return err }
 
 	HTTPRespXML(w, objects)
 	return nil
@@ -194,9 +192,7 @@ func handlePutBucket(bname string, iam *S3Iam, w http.ResponseWriter, r *http.Re
 
 func handleDeleteBucket(bname string, iam *S3Iam, w http.ResponseWriter, r *http.Request) *S3Error {
 	err := s3DeleteBucket(iam, bname, "")
-	if err != nil {
-		return &S3Error{ ErrorCode: S3ErrInvalidRequest, Message: err.Error() }
-	}
+	if err != nil { return err }
 
 	w.WriteHeader(http.StatusOK)
 	return nil
@@ -578,8 +574,9 @@ func handleBreq(w http.ResponseWriter, r *http.Request, op string) {
 
 		code = http.StatusCreated
 	} else {
-		err = s3DeleteBucket(iam, breq.Bucket, breq.Acl)
-		if err != nil {
+		err1 := s3DeleteBucket(iam, breq.Bucket, breq.Acl)
+		if err1 != nil {
+			err = fmt.Errorf("%v", err1.ErrorCode)
 			goto out
 		}
 

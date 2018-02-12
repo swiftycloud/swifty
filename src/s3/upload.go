@@ -405,8 +405,6 @@ func s3Uploads(iam *S3Iam, bname string) (*swys3api.S3MpuList,  *S3Error) {
 		if err == mgo.ErrNotFound {
 			return nil, &S3Error{ ErrorCode: S3ErrNoSuchBucket }
 		}
-
-		log.Errorf("s3: Can't find buckets on %s: %s", infoLong(iam), err.Error())
 		return nil, &S3Error{ ErrorCode: S3ErrInternalError }
 	}
 
