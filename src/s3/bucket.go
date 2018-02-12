@@ -385,14 +385,19 @@ func s3ListBucket(iam *S3Iam, bname, acl string) (*swys3api.S3Bucket, error) {
 	return &bucketList, nil
 }
 
-func s3ListBuckets(iam *S3Iam) (*swys3api.S3BucketList, error) {
+func s3ListBuckets(iam *S3Iam) (*swys3api.S3BucketList, *S3Error) {
 	var list swys3api.S3BucketList
 	var buckets []S3Bucket
 	var err error
 
 	buckets, err = iam.FindBuckets()
 	if err != nil {
-		return nil, err
+		if err == mgo.ErrNotFound {
+			return nil, &S3Error{ ErrorCode: S3ErrNoSuchBucket }
+		}
+
+		log.Errorf("s3: Can't find buckets on %s: %s", infoLong(iam), err.Error())
+		return nil, &S3Error{ ErrorCode: S3ErrInternalError }
 	}
 
 	list.Owner.DisplayName	= iam.User

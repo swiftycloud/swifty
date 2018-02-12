@@ -5,7 +5,6 @@ import (
 
 	"github.com/gorilla/mux"
 
-	"gopkg.in/mgo.v2"
 	"io/ioutil"
 	"encoding/hex"
 	"encoding/xml"
@@ -154,12 +153,7 @@ func logRequest(r *http.Request) {
 // List all buckets belonging to an account
 func handleListBuckets(iam *S3Iam, w http.ResponseWriter, r *http.Request) *S3Error {
 	buckets, err := s3ListBuckets(iam)
-	if err != nil {
-		if err == mgo.ErrNotFound {
-			return &S3Error{ ErrorCode: S3ErrNoSuchBucket }
-		}
-		return &S3Error{ ErrorCode: S3ErrInternalError, Message: err.Error() }
-	}
+	if err != nil { return err }
 
 	HTTPRespXML(w, buckets)
 	return nil
