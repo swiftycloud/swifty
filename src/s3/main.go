@@ -181,9 +181,8 @@ func handlePutBucket(bname string, iam *S3Iam, w http.ResponseWriter, r *http.Re
 		canned_acl = swys3api.S3BucketAclCannedPrivate
 	}
 
-	err := s3InsertBucket(iam, bname, canned_acl)
-	if err != nil {
-		return &S3Error{ ErrorCode: S3ErrInvalidRequest, Message: err.Error() }
+	if err := s3InsertBucket(iam, bname, canned_acl); err != nil {
+		return err
 	}
 
 	w.WriteHeader(http.StatusOK)
@@ -567,8 +566,9 @@ func handleBreq(w http.ResponseWriter, r *http.Request, op string) {
 	}
 
 	if op == "badd" {
-		err = s3InsertBucket(iam, breq.Bucket, breq.Acl)
-		if err != nil {
+		err1 := s3InsertBucket(iam, breq.Bucket, breq.Acl)
+		if err1 != nil {
+			err = fmt.Errorf("%v", err1.ErrorCode)
 			goto out
 		}
 

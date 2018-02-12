@@ -258,11 +258,16 @@ func s3RepairBucket() error {
 	return nil
 }
 
-func s3InsertBucket(iam *S3Iam, bname, canned_acl string) error {
+func s3InsertBucket(iam *S3Iam, bname, canned_acl string) (*S3Error) {
 	var err error
 
 	account, err := iam.s3AccountLookup()
-	if err != nil { return err }
+	if err != nil {
+		if err == mgo.ErrNotFound {
+			return &S3Error{ ErrorCode: S3ErrNoSuchBucket }
+		}
+		return &S3Error{ ErrorCode: S3ErrInternalError }
+	}
 
 	bucket := &S3Bucket{
 		ObjID:		bson.NewObjectId(),
@@ -279,7 +284,7 @@ func s3InsertBucket(iam *S3Iam, bname, canned_acl string) error {
 	}
 
 	if err = dbS3Insert(bucket); err != nil {
-		return err
+		return &S3Error{ ErrorCode: S3ErrInternalError }
 	}
 
 	err = radosCreatePool(bucket.BackendID, uint64(bucket.MaxObjects), uint64(bucket.MaxBytes))
@@ -298,7 +303,7 @@ out:
 	radosDeletePool(bucket.BackendID)
 out_nopool:
 	bucket.dbRemove()
-	return err
+	return &S3Error{ ErrorCode: S3ErrInternalError }
 }
 
 func s3DeleteBucket(iam *S3Iam, bname, acl string) (*S3Error) {
