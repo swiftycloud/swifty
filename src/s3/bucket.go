@@ -130,13 +130,7 @@ func (iam *S3Iam)FindBucket(bname string) (*S3Bucket, error) {
 	var err error
 
 	account, err := iam.s3AccountLookup()
-	if err != nil {
-		if err != mgo.ErrNotFound {
-			log.Errorf("s3: Can't find account %s: %s",
-				infoLong(iam), err.Error())
-		}
-		return nil, err
-	}
+	if err != nil { return nil, err }
 
 	query := bson.M{ "bid": account.BucketBID(bname), "state": S3StateActive }
 	err = dbS3FindOne(query, &res)

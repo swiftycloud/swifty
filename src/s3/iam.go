@@ -74,6 +74,10 @@ func (iam *S3Iam) s3AccountLookup() (*S3Account, error) {
 	query := bson.M{ "_id": iam.AccountObjID, "state": S3StateActive }
 	err = dbS3FindOne(query, &account)
 	if err != nil {
+		if err != mgo.ErrNotFound {
+			log.Errorf("s3: Can't find account %s: %s",
+				infoLong(iam), err.Error())
+		}
 		return nil, err
 	}
 
