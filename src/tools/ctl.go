@@ -61,7 +61,7 @@ func faas_login() string {
 		fatal(err)
 	}
 
-	resp.Body.Close()
+	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		fatal(fmt.Errorf("Bad responce from server: " + string(resp.Status)))
 	}
@@ -70,6 +70,14 @@ func faas_login() string {
 	if token == "" {
 		fatal(fmt.Errorf("No auth token from server"))
 	}
+
+	var td swyapi.UserToken
+	err = swyhttp.ReadAndUnmarshalResp(resp, &td)
+	if err != nil {
+		fatal(fmt.Errorf("Can't unmarshal login resp: %s", err.Error()))
+	}
+
+	fmt.Printf("Logged in, token till %s\n", td.Expires)
 
 	return token
 }

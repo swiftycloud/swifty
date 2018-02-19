@@ -69,6 +69,7 @@ type KeystoneRole struct {
 type KeystoneTokenData struct {
 	Project		KeystoneProject		`json:"project"`
 	Roles		[]KeystoneRole		`json:"roles"`
+	Expires		string			`json:"expires_at"`
 }
 
 type KeystoneAuthResp struct {
@@ -126,7 +127,7 @@ func tryRefreshToken(kc *KsClient, token string) error {
 
 	/* We might have raced with another updater */
 	if kc.Token == token {
-		token, err = KeystoneAuthWithPass(kc.addr, kc.domain,
+		token, _, err = KeystoneAuthWithPass(kc.addr, kc.domain,
 				&swyapi.UserLogin{ UserName: kc.user, Password: kc.pass })
 		if err == nil {
 			kc.Token = token
@@ -202,7 +203,9 @@ func KeystoneGetTokenData(addr, token string) (*KeystoneTokenData, int) {
 	return &out.Token, 0
 }
 
-func KeystoneAuthWithPass(addr, domain string, up *swyapi.UserLogin) (string, error) {
+func KeystoneAuthWithPass(addr, domain string, up *swyapi.UserLogin) (string, string, error) {
+	var out KeystoneAuthResp
+
 	kc := &KsClient { addr: addr, }
 
 	req := KeystoneReq {
@@ -223,13 +226,13 @@ func KeystoneAuthWithPass(addr, domain string, up *swyapi.UserLogin) (string, er
 						Name: up.UserName,
 						Password: up.Password,
 					}, }, }, },
-				}, nil)
+				}, &out)
 
-	return req.outToken, err
+	return req.outToken, out.Token.Expires, err
 }
 
 func KeystoneConnect(addr, domain string, up *swyapi.UserLogin) (*KsClient, error) {
-	token, err := KeystoneAuthWithPass(addr, domain, up)
+	token, _, err := KeystoneAuthWithPass(addr, domain, up)
 	if err != nil {
 		return nil, err
 	}

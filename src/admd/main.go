@@ -54,6 +54,7 @@ func handleUserLogin(w http.ResponseWriter, r *http.Request) {
 	var params swyapi.UserLogin
 	var token string
 	var resp = http.StatusBadRequest
+	var td swyapi.UserToken
 
 	if swyhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
 
@@ -64,16 +65,20 @@ func handleUserLogin(w http.ResponseWriter, r *http.Request) {
 
 	log.Debugf("Try to login user %s", params.UserName)
 
-	token, err = swyks.KeystoneAuthWithPass(conf.Keystone.Addr, conf.Keystone.Domain, &params)
+	token, td.Expires, err = swyks.KeystoneAuthWithPass(conf.Keystone.Addr, conf.Keystone.Domain, &params)
 	if err != nil {
 		resp = http.StatusUnauthorized
 		goto out
 	}
 
-	log.Debugf("Login passed, token %s", token[:16])
+	log.Debugf("Login passed, token %s (exp %s)", token[:16], td.Expires)
 
 	w.Header().Set("X-Subject-Token", token)
-	w.WriteHeader(http.StatusOK)
+	err = swyhttp.MarshalAndWrite(w, &td)
+	if err != nil {
+		resp = http.StatusInternalServerError
+		goto out
+	}
 
 	return
 

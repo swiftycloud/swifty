@@ -5,6 +5,10 @@ type UserLogin struct {
 	Password	string			`json:"password"`
 }
 
+type UserToken struct {
+	Expires		string			`json:"expires,omitempty"`
+}
+
 type PgRequest struct {
         Token   string  `json:"token"`
         User    string  `json:"user"`
