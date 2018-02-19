@@ -543,7 +543,7 @@ func handleFunctionInfo(ctx context.Context, w http.ResponseWriter, r *http.Requ
 	}
 
 	if (fn.URLCall) {
-		url = "/call/" + fn.Cookie
+		url = conf.Daemon.Addr + "/call/" + fn.Cookie
 	}
 
 	stats = statsGet(fn)

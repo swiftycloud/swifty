@@ -218,7 +218,7 @@ func info_function(project string, args []string, opts [8]string) {
 		fmt.Printf("Event:       %s\n", estr)
 	}
 	if ifo.URL != "" {
-		fmt.Printf("URL:         http://%s:%s%s\n", conf.Login.Host, conf.Login.Port, ifo.URL)
+		fmt.Printf("URL:         http://%s\n", ifo.URL)
 	}
 	fmt.Printf("Timeout:     %dms\n", ifo.Size.Timeout)
 	if ifo.Size.Rate != 0 {
