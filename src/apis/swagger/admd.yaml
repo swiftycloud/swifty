@@ -28,6 +28,8 @@ paths:
             X-Subject-Token:
               type: string
               description: Auth token for further requests
+          schema:
+            $ref: '#/definitions/UserToken'
         '400':
           description: Something went wrong
         '401':
@@ -148,6 +150,11 @@ definitions:
       password:
         type: string
         example: secretpass123
+  UserToken:
+    properties:
+      expires:
+        type: string
+        description: UnixDate time of Token expiration
   UserInfo:
     properties:
       id:
