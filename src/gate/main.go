@@ -1155,7 +1155,7 @@ func main() {
 
 	err = dbConnect(&conf)
 	if err != nil {
-		glog.Fatalf("Can't setup connection to backend: %s",
+		glog.Fatalf("Can't setup mongo: %s",
 				err.Error())
 	}
 

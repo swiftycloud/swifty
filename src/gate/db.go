@@ -382,6 +382,8 @@ func dbProjectListAll(ten string) (fn []string, mw []string, err error) {
 }
 
 func dbConnect(conf *YAMLConf) error {
+	var err error
+
 	info := mgo.DialInfo{
 		Addrs:		[]string{conf.DB.Addr},
 		Database:	conf.DB.StateDB,
@@ -410,7 +412,14 @@ func dbConnect(conf *YAMLConf) error {
 			Sparse:		true}
 
 	index.Key = []string{"cookie"}
-	dbSession.DB(dbState).C(DBColFunc).EnsureIndex(index)
+	err = dbSession.DB(dbState).C(DBColFunc).EnsureIndex(index)
+	if err != nil {
+		return fmt.Errorf("No cookie index for functions: %s", err.Error())
+	}
+	err = dbSession.DB(dbState).C(DBColMware).EnsureIndex(index)
+	if err != nil {
+		return fmt.Errorf("No cookie index for mware: %s", err.Error())
+	}
 
 	index.Key = []string{"addr", "depname"}
 	dbSession.DB(dbState).C(DBColBalancer).EnsureIndex(index)
