@@ -661,6 +661,8 @@ func handleFunctionCall(w http.ResponseWriter, r *http.Request) {
 	var err error
 	var fmd *FnMemData
 
+	if swyhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
+
 	ctx := context.Background()
 
 	fnId := mux.Vars(r)["fnid"]
