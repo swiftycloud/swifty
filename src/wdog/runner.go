@@ -10,6 +10,11 @@ import (
 	"strconv"
 )
 
+type runnerRes struct {
+	Code	int		`json:"code"`
+	Return	string		`json:"return"`
+}
+
 func main() {
 	q, err := xqueue.OpenQueue(os.Args[1])
 	if err != nil {
@@ -42,7 +47,7 @@ func main() {
 			return
 		}
 
-		err = q.SendBytes(resb)
+		err = q.Send(&runnerRes{Code: 0, Return: string(resb)})
 		if err != nil {
 			fmt.Printf("Can't send responce: %s", err.Error())
 			return

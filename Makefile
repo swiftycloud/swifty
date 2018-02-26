@@ -159,9 +159,10 @@ all: $(all-y)
 
 #
 # Docker images
-swifty/python: src/wdog/main.py kubectl/docker/images/python/Dockerfile
+swifty/python: swy-wdog-go src/wdog/runner.py kubectl/docker/images/python/Dockerfile
 	$(call msg-gen,$@)
-	$(Q) $(CP) src/wdog/main.py  kubectl/docker/images/python/swy-wdog
+	$(Q) $(CP) swy-wdog-go  kubectl/docker/images/python/swy-wdog
+	$(Q) $(CP) src/wdog/runner.py  kubectl/docker/images/python/swy-runner.py
 	$(Q) $(CP) src/wdog/lib.py kubectl/docker/images/python/swifty.py
 	$(Q) $(MAKE) -C kubectl/docker/images/python all
 .PHONY: swifty/python

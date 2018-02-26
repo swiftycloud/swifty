@@ -24,6 +24,7 @@ import (
 var podToken string
 var build bool
 var fnTmo int
+var lang string
 
 type Runner struct {
 	cmd	*exec.Cmd
@@ -90,6 +91,11 @@ func startRunner() error {
 	return startQnR()
 }
 
+var runners = map[string]string {
+	"golang": "/go/src/swycode/function",
+	"python": "/usr/bin/swy-runner.py",
+}
+
 func startQnR() error {
 	var err error
 
@@ -98,7 +104,7 @@ func startQnR() error {
 		return fmt.Errorf("Can't make queue: %s", err.Error())
 	}
 
-	runner.cmd = exec.Command("/go/src/swycode/function", runner.q.GetId(), runner.fout, runner.ferr)
+	runner.cmd = exec.Command(runners[lang], runner.q.GetId(), runner.fout, runner.ferr)
 	err = runner.cmd.Start()
 	if err != nil {
 		return fmt.Errorf("Can't start runner: %s", err.Error())
@@ -123,6 +129,11 @@ func readLines(f *os.File) string {
 }
 
 var runlock sync.Mutex
+
+type runnerRes struct {
+	Code	int		`json:"code"`
+	Return	string		`json:"return"`
+}
 
 func doRun(params *swyapi.SwdFunctionRun) (*swyapi.SwdFunctionRunResult, int, error) {
 	var err error
@@ -157,8 +168,8 @@ func doRun(params *swyapi.SwdFunctionRun) (*swyapi.SwdFunctionRunResult, int, er
 		}
 	}()
 
-	var res string
-	res, err = runner.q.RecvStr()
+	var rr runnerRes
+	err = runner.q.Recv(&rr)
 	done <-true
 
 	rout := readLines(runner.fin)
@@ -188,8 +199,8 @@ func doRun(params *swyapi.SwdFunctionRun) (*swyapi.SwdFunctionRunResult, int, er
 	}
 
 	return &swyapi.SwdFunctionRunResult{
-		Return: res,
-		Code: 0,
+		Code: rr.Code,
+		Return: rr.Return,
 		Stdout: rout,
 		Stderr: rerr,
 		/* FIXME -- calc Time and CTime */
@@ -317,6 +328,11 @@ func main() {
 
 	inst := swy.SafeEnv("SWD_INSTANCE", "")
 	if inst == "" {
+		lang = swy.SafeEnv("SWD_LANG", "")
+		if lang == "" {
+			log.Fatal("SWD_LANG not set")
+		}
+
 		err = startRunner()
 		if err != nil {
 			log.Fatal("Can't start runner")
