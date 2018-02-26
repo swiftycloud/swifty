@@ -109,6 +109,9 @@ func swk8sGenEnvVar(ctx context.Context, fn *FunctionDesc, wd_port int) []v1.Env
 	}
 
 	s = append(s, v1.EnvVar{
+			Name:	"SWD_LANG",
+			Value:	fn.Code.Lang, })
+	s = append(s, v1.EnvVar{
 			Name:	"SWD_POD_TOKEN",
 			Value:	fn.Cookie, })
 	s = append(s, v1.EnvVar{
