@@ -175,9 +175,10 @@ swifty/golang: swy-wdog-go kubectl/docker/images/golang/Dockerfile
 	$(Q) $(MAKE) -C kubectl/docker/images/golang all
 .PHONY: swifty/golang
 
-swifty/swift: swy-wdog kubectl/docker/images/swift/Dockerfile
+swifty/swift: swy-wdog-go kubectl/docker/images/swift/Dockerfile
 	$(call msg-gen,$@)
-	$(Q) $(CP) swy-wdog  kubectl/docker/images/swift/
+	$(Q) $(CP) swy-wdog-go  kubectl/docker/images/swift/swy-wdog
+	$(Q) $(CP) src/wdog/runner.swift kubectl/docker/images/swift/
 	$(Q) $(MAKE) -C kubectl/docker/images/swift all
 .PHONY: swifty/swift
 

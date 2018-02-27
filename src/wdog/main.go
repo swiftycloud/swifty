@@ -94,6 +94,7 @@ func startRunner() error {
 var runners = map[string]string {
 	"golang": "/go/src/swycode/function",
 	"python": "/usr/bin/swy-runner.py",
+	"swift": "/swift/swycode/debug/function",
 }
 
 func startQnR() error {
@@ -207,10 +208,28 @@ func doRun(params *swyapi.SwdFunctionRun) (*swyapi.SwdFunctionRunResult, int, er
 	}, 0, nil
 }
 
+var builders = map[string]func(*swyapi.SwdFunctionRun) (*swyapi.SwdFunctionRunResult, error) {
+	"golang": doBuildGo,
+	"swift": doBuildSwift,
+}
+
 func doBuild(params *swyapi.SwdFunctionRun) (*swyapi.SwdFunctionRunResult, error) {
 	runlock.Lock()
 	defer runlock.Unlock()
 
+	fn, ok := builders[lang]
+	if !ok {
+		return nil, fmt.Errorf("No builder for %s", lang)
+	}
+
+	return fn(params)
+}
+
+/*
+ * All functions sit at /go/src/swycode/
+ * Runner sits at /go/src/swyrunner/
+ */
+func doBuildGo(params *swyapi.SwdFunctionRun) (*swyapi.SwdFunctionRunResult, error) {
 	os.Remove("/go/src/swyfunc")
 	srcdir := params.Args["sources"]
 	err := os.Symlink("/go/src/swycode/" + srcdir, "/go/src/swyfunc")
@@ -232,6 +251,44 @@ func doBuild(params *swyapi.SwdFunctionRun) (*swyapi.SwdFunctionRunResult, error
 	cmd.Stderr = &stderr
 	err = cmd.Run()
 	os.Remove("/go/src/swyfunc") /* Just an attempt */
+
+	if err != nil {
+		if exit, code := get_exit_code(err); exit {
+			return &swyapi.SwdFunctionRunResult{Code: code, Stdout: stdout.String(), Stderr: stderr.String()}, nil
+		}
+
+		return nil, fmt.Errorf("Can't build: %s", err.Error())
+	}
+
+	return &swyapi.SwdFunctionRunResult{Code: 0, Stdout: stdout.String(), Stderr: stderr.String()}, nil
+}
+
+/*
+ * All functions sit at /swift/swycode/
+ * Runner sits at /swift/runner/
+ */
+func doBuildSwift(params *swyapi.SwdFunctionRun) (*swyapi.SwdFunctionRunResult, error) {
+	os.Remove("/swift/runner/Sources/script.swift")
+	srcdir := params.Args["sources"]
+	err := os.Symlink("/swift/swycode/" + srcdir + "/script.swift", "/swift/runner/Sources/script.swift")
+	if err != nil {
+		return nil, fmt.Errorf("Can't symlink code: %s", err.Error())
+	}
+
+	err = os.Chdir("/swift/runner")
+	if err != nil {
+		return nil, fmt.Errorf("Can't chdir to runner dir: %s", err.Error())
+	}
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+
+	log.Debugf("Run swift build on %s", srcdir)
+	cmd := exec.Command("swift", "build", "--build-path", "../swycode/" + srcdir)
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	err = cmd.Run()
+	os.Remove("/swift/runner/Sources/script.swift")
 
 	if err != nil {
 		if exit, code := get_exit_code(err); exit {
@@ -326,13 +383,13 @@ func main() {
 		log.Fatal("Bad timeout value")
 	}
 
+	lang = swy.SafeEnv("SWD_LANG", "")
+	if lang == "" {
+		log.Fatal("SWD_LANG not set")
+	}
+
 	inst := swy.SafeEnv("SWD_INSTANCE", "")
 	if inst == "" {
-		lang = swy.SafeEnv("SWD_LANG", "")
-		if lang == "" {
-			log.Fatal("SWD_LANG not set")
-		}
-
 		err = startRunner()
 		if err != nil {
 			log.Fatal("Can't start runner")
