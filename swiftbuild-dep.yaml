@@ -2,41 +2,43 @@ apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
   labels:
-    deployment: swd-builder
-  name: swd-builder
+    deployment: swy-swift-builder
+  name: swy-swift-builder
   namespace: default
 spec:
   replicas: 1
   selector:
     matchLabels:
-      deployment: swd-builder
+      deployment: swy-swift-builder
   template:
     metadata:
       labels:
-        deployment: swd-builder
-        swdbuild: golang
-      name: swd-builder
+        deployment: swy-swift-builder
+        swybuild: swift
+      name: swy-swift-builder
     spec:
       containers:
-      - name: golang-build
-        image: "swifty/golang"
+      - name: swift-build
+        image: "swifty/swift"
         imagePullPolicy: Never
         env:
         - name: SWD_POD_TOKEN
-          value: "golang-build"
+          value: "swift-build"
         - name: SWD_INSTANCE
           value: "build"
         - name: SWD_PORT
           value: "8687"
         - name: SWD_FN_TMO
           value: "1000"
+        - name: SWD_LANG
+          value: "swift"
         - name: SWD_POD_IP
           valueFrom:
             fieldRef:
               apiVersion: v1
               fieldPath: status.podIP
         volumeMounts:
-        - mountPath: /go/src/swycode
+        - mountPath: /swift/swycode
           name: code
       volumes:
       - hostPath:

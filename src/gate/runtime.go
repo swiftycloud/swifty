@@ -21,9 +21,8 @@ var golang_info = rt_info {
 
 var swift_info = rt_info {
 	Ext:		"swift",
-	CodePath:	"/function",
+	CodePath:	"/swift/swycode",
 	Build:		true,
-	Devel:		true,
 }
 
 var nodejs_info = rt_info {

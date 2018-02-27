@@ -511,14 +511,14 @@ func swk8sGetBuildPods() (map[string]string, error) {
 	rv := make(map[string]string)
 
 	podiface := swk8sClientSet.Pods(v1.NamespaceDefault)
-	pods, err := podiface.List(v1.ListOptions{ LabelSelector: "swdbuild" })
+	pods, err := podiface.List(v1.ListOptions{ LabelSelector: "swybuild" })
 	if err != nil {
 		glog.Errorf("Error listing PODs: %s", err.Error())
 		return nil, errors.New("Error listing PODs")
 	}
 
 	for _, pod := range pods.Items {
-		build, ok := pod.ObjectMeta.Labels["swdbuild"]
+		build, ok := pod.ObjectMeta.Labels["swybuild"]
 		if !ok {
 			glog.Errorf("Badly listed POD")
 			continue

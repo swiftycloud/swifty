@@ -83,7 +83,7 @@ func faas_login() string {
 }
 
 func make_faas_req(url string, in interface{}, out interface{}) {
-	make_faas_req2(url, in, out, http.StatusOK, 0)
+	make_faas_req2(url, in, out, http.StatusOK, 30)
 }
 
 func make_faas_req2(url string, in interface{}, out interface{}, succ_code int, tmo uint) {
