@@ -6,6 +6,7 @@ type UserLogin struct {
 }
 
 type UserToken struct {
+	Endpoint	string			`json:"endpoint"`
 	Expires		string			`json:"expires,omitempty"`
 }
 

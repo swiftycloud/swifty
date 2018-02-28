@@ -71,6 +71,7 @@ func handleUserLogin(w http.ResponseWriter, r *http.Request) {
 		goto out
 	}
 
+	td.Endpoint = conf.Gate
 	log.Debugf("Login passed, token %s (exp %s)", token[:16], td.Expires)
 
 	w.Header().Set("X-Subject-Token", token)

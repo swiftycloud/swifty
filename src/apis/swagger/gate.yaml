@@ -557,6 +557,9 @@ definitions:
       expires:
         type: string
         description: UnixDate time of Token expiration
+      endpoint:
+        type: string
+        description: Gate addr:port to talk to further
   GateError:
     properties:
       code:

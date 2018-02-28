@@ -155,6 +155,9 @@ definitions:
       expires:
         type: string
         description: UnixDate time of Token expiration
+      endpoint:
+        type: string
+        description: Gate address:port to talk to
   UserInfo:
     properties:
       id:
