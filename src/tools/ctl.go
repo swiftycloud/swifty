@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strings"
 	"strconv"
+	"regexp"
 	"time"
 	"flag"
 	"fmt"
@@ -244,8 +245,42 @@ func info_function(project string, args []string, opts [8]string) {
 	}
 }
 
-func detect_language(repo string) string {
-	fatal(fmt.Errorf("can't detect function language"))
+func check_lang(args []string, opts [8]string) {
+	l := detect_language(opts[0], "code")
+	fmt.Printf("%s\n", l)
+}
+
+func detect_language(path string, typ string) string {
+	if typ != "code" {
+		fatal(fmt.Errorf("can't detect repo language"))
+		return ""
+	}
+
+	cont, err := ioutil.ReadFile(path)
+	if err != nil {
+		fatal(fmt.Errorf("Can't read sources: %s", err.Error()))
+		return ""
+	}
+
+	pyr := regexp.MustCompile("^def\\s+main\\s*\\(")
+	gor := regexp.MustCompile("^func\\s+Main\\s*\\(.*interface\\s*{\\s*}")
+	swr := regexp.MustCompile("^func\\s+Main\\s*\\(.*->\\s*Encodable")
+
+	lines := strings.Split(string(cont), "\n")
+	for _, ln := range(lines) {
+		if pyr.MatchString(ln) {
+			return "python"
+		}
+
+		if gor.MatchString(ln) {
+			return "golang"
+		}
+
+		if swr.MatchString(ln) {
+			return "swift"
+		}
+	}
+
 	return ""
 }
 
@@ -302,7 +337,8 @@ func add_function(project string, args []string, opts [8]string) {
 	}
 
 	if opts[0] == "auto" {
-		opts[0] = detect_language(opts[1])
+		opts[0] = detect_language(opts[1], sources.Type)
+		fmt.Printf("Detected lang to %s", opts[0])
 	}
 
 	code.Lang = opts[0]
@@ -636,6 +672,7 @@ const (
 	CMD_UINF string		= "uinf"
 	CMD_MTYPES string	= "mt"
 	CMD_LANGS string	= "lng"
+	CMD_LANG string		= "ld"
 )
 
 var cmdOrder = []string {
@@ -664,6 +701,7 @@ var cmdOrder = []string {
 	CMD_UINF,
 	CMD_LANGS,
 	CMD_MTYPES,
+	CMD_LANG,
 }
 
 type cmdDesc struct {
@@ -700,6 +738,7 @@ var cmdMap = map[string]*cmdDesc {
 	CMD_UINF:	&cmdDesc{  call: show_user_info,  opts: flag.NewFlagSet(CMD_UINF, flag.ExitOnError) },
 	CMD_LANGS:	&cmdDesc{  call: languages,	  opts: flag.NewFlagSet(CMD_LANGS, flag.ExitOnError) },
 	CMD_MTYPES:	&cmdDesc{  call: mware_types,	  opts: flag.NewFlagSet(CMD_MTYPES, flag.ExitOnError) },
+	CMD_LANG:	&cmdDesc{  call: check_lang,	  opts: flag.NewFlagSet(CMD_LANG, flag.ExitOnError) },
 }
 
 func bindCmdUsage(cmd string, args []string, help string, wp bool) {
@@ -775,6 +814,9 @@ func main() {
 
 	bindCmdUsage(CMD_MTYPES, []string{}, "List middleware types", false)
 	bindCmdUsage(CMD_LANGS, []string{}, "List of supported languages", false)
+
+	cmdMap[CMD_LANG].opts.StringVar(&opts[0], "src", "", "File")
+	bindCmdUsage(CMD_LANG, []string{}, "Check source language", false)
 
 	flag.Usage = func() {
 		for _, v := range cmdOrder {
