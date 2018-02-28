@@ -34,6 +34,7 @@ var gateSecPas []byte
 const (
 	SwyDefaultProject string	= "default"
 	SwyPodStartTmo time.Duration	= 120 * time.Second
+	SwyBodyArg string		= "_SWY_BODY_"
 )
 
 var glog *zap.SugaredLogger
@@ -642,6 +643,8 @@ func fnCallable(fn *FunctionDesc) bool {
 }
 
 func makeArgMap(r *http.Request) map[string]string {
+	defer r.Body.Close()
+
 	args := make(map[string]string)
 
 	for k, v := range r.URL.Query() {
@@ -650,6 +653,11 @@ func makeArgMap(r *http.Request) map[string]string {
 		}
 
 		args[k] = v[0]
+	}
+
+	body, err := ioutil.ReadAll(r.Body)
+	if err == nil && len(body) > 0 {
+		args[SwyBodyArg] = string(body)
 	}
 
 	return args
