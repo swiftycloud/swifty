@@ -417,12 +417,12 @@ func main() {
 	}
 
 	r := mux.NewRouter()
-	r.HandleFunc("/v1/login", handleUserLogin).Methods("POST")
-	r.HandleFunc("/v1/users", handleListUsers).Methods("POST")
-	r.HandleFunc("/v1/userinfo", handleUserInfo).Methods("POST")
-	r.HandleFunc("/v1/adduser", handleAddUser).Methods("POST")
-	r.HandleFunc("/v1/deluser", handleDelUser).Methods("POST")
-	r.HandleFunc("/v1/setpass", handleSetPassword).Methods("POST")
+	r.HandleFunc("/v1/login", handleUserLogin).Methods("POST", "OPTIONS")
+	r.HandleFunc("/v1/users", handleListUsers).Methods("POST", "OPTIONS")
+	r.HandleFunc("/v1/userinfo", handleUserInfo).Methods("POST", "OPTIONS")
+	r.HandleFunc("/v1/adduser", handleAddUser).Methods("POST", "OPTIONS")
+	r.HandleFunc("/v1/deluser", handleDelUser).Methods("POST", "OPTIONS")
+	r.HandleFunc("/v1/setpass", handleSetPassword).Methods("POST", "OPTIONS")
 
 	gatesrv = &http.Server{
 			Handler:      r,
