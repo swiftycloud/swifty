@@ -73,6 +73,11 @@ for cmd in ['bucket-del']:
     spp.add_argument('--name', dest = 'name',
                      help = 'Bucket name', required = True)
 
+for cmd in ['folder-add']:
+    spp = sp.add_parser(cmd, help = 'Create directory')
+    spp.add_argument('--name', dest = 'name', help = 'Bucket name', required = True)
+    spp.add_argument('--key', dest = 'key', help = 'Directory name')
+
 for cmd in ['object-add']:
     spp = sp.add_parser(cmd, help = 'Create object')
     spp.add_argument('--name', dest = 'name', help = 'Bucket name', required = True)
@@ -304,6 +309,17 @@ if args.cmd == 'bucket-del':
         print("\tDone")
     except:
         print("ERROR: Can't delete bucket")
+
+if args.cmd == 'folder-add':
+    if args.key == None:
+        args.key = genObjectName()
+    args.key += "/"
+    print("Creating folder %s/%s" % (args.name, args.key))
+    try:
+        resp = s3.put_object(Bucket = args.name, Key = args.key, Body = "")
+        print("\tDone")
+    except:
+        print("ERROR: Can't create folder")
 
 if args.cmd == 'object-add':
     if args.key == None:
