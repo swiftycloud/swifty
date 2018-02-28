@@ -336,9 +336,9 @@ func add_function(project string, args []string, opts [8]string) {
 		sources.Code = encodeFile(opts[1])
 	}
 
-	if opts[0] == "auto" {
+	if opts[0] == "" {
 		opts[0] = detect_language(opts[1], sources.Type)
-		fmt.Printf("Detected lang to %s", opts[0])
+		fmt.Printf("Detected lang to %s\n", opts[0])
 	}
 
 	code.Lang = opts[0]
