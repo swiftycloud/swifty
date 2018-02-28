@@ -159,6 +159,8 @@ func validateProjectAndFuncName(params *swyapi.FunctionAdd) error {
 
 func addFunction(ctx context.Context, conf *YAMLConf, tennant string, params *swyapi.FunctionAdd) *swyapi.GateErr {
 	var err, erc error
+	var build bool
+	var bAddr string
 	var fn *FunctionDesc
 
 	err = validateProjectAndFuncName(params)
@@ -192,11 +194,6 @@ func addFunction(ctx context.Context, conf *YAMLConf, tennant string, params *sw
 		goto out_clean_evt
 	}
 
-	err = buildFunction(ctx, conf, fn)
-	if err != nil {
-		goto out_clean_repo
-	}
-
 	fn.State = swy.DBFuncStateStr
 
 	err = dbFuncUpdateAdded(fn)
@@ -206,9 +203,29 @@ func addFunction(ctx context.Context, conf *YAMLConf, tennant string, params *sw
 		goto out_clean_repo
 	}
 
-	err = swk8sRun(ctx, conf, fn)
-	if err != nil {
-		goto out_clean_repo
+	build, bAddr = RtNeedToBuild(&fn.Code)
+	if build {
+		go func() {
+			err = buildFunction(ctx, conf, bAddr, fn)
+			if err != nil {
+				goto bstalled
+			}
+
+			err = swk8sRun(ctx, conf, fn)
+			if err != nil {
+				goto bstalled
+			}
+
+			return
+
+		bstalled:
+			dbFuncSetState(ctx, fn, swy.DBFuncStateStl)
+		}()
+	} else {
+		err = swk8sRun(ctx, conf, fn)
+		if err != nil {
+			goto out_clean_repo
+		}
 	}
 
 	logSaveEvent(fn, "registered", "")
@@ -275,7 +292,7 @@ func updateFunction(ctx context.Context, conf *YAMLConf, id *SwoId, params *swya
 			goto out
 		}
 
-		err = buildFunction(ctx, conf, fn)
+		err = tryBuildFunction(ctx, conf, fn)
 		if err != nil {
 			goto out
 		}

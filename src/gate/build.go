@@ -8,13 +8,17 @@ import (
 	"../common/http"
 )
 
-func buildFunction(ctx context.Context, conf *YAMLConf, fn *FunctionDesc) error {
-	var wd_result swyapi.SwdFunctionRunResult
-
+func tryBuildFunction(ctx context.Context, conf *YAMLConf, fn *FunctionDesc) error {
 	b, addr := RtNeedToBuild(&fn.Code)
 	if !b {
 		return nil
 	}
+
+	return buildFunction(ctx, conf, addr, fn)
+}
+
+func buildFunction(ctx context.Context, conf *YAMLConf, addr string, fn *FunctionDesc) error {
+	var wd_result swyapi.SwdFunctionRunResult
 
 	ctxlog(ctx).Debugf("Building function in %s", fnRepoCheckout(conf, fn))
 
