@@ -273,7 +273,7 @@ func swyFixSize(sz *swyapi.FunctionSize, conf *YAMLConf) error {
 
 func updateFunction(ctx context.Context, conf *YAMLConf, id *SwoId, params *swyapi.FunctionUpdate) *swyapi.GateErr {
 	var err error
-	var restart bool
+	var stalled, restart bool
 	var mfix, rlfix bool
 
 	update := make(bson.M)
@@ -355,7 +355,11 @@ func updateFunction(ctx context.Context, conf *YAMLConf, id *SwoId, params *swya
 		goto out
 	}
 
-	update["state"] = fn.State
+	if restart && fn.State == swy.DBFuncStateStl {
+		stalled = true
+		fn.State = swy.DBFuncStateStr
+		update["state"] = fn.State
+	}
 
 	err = dbFuncUpdatePulled(fn, update)
 	if err != nil {
@@ -387,11 +391,20 @@ func updateFunction(ctx context.Context, conf *YAMLConf, id *SwoId, params *swya
 	}
 
 	if restart {
-		ctxlog(ctx).Debugf("Updating deploy")
-		err = swk8sUpdate(ctx, conf, fn)
-		if err != nil {
-			/* FIXME -- stalled? */
-			goto out
+		if !stalled {
+			ctxlog(ctx).Debugf("Updating deploy")
+			err = swk8sUpdate(ctx, conf, fn)
+			if err != nil {
+				/* FIXME -- stalled? */
+				goto out
+			}
+		} else {
+			ctxlog(ctx).Debugf("Starting deploy")
+			err = swk8sRun(ctx, conf, fn)
+			if err != nil {
+				dbFuncSetState(ctx, fn, swy.DBFuncStateStl)
+				goto out
+			}
 		}
 	}
 
