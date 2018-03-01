@@ -283,7 +283,7 @@ tests = [
 	(update,	["python", "golang"]),
 #	(pgsql,		["python"]),
 	(maria,		["python", "golang"]),
-	(mongo,		["python"]),
+	(mongo,		["python", "golang"]),
 	(s3,		["python"]),
 	(s3notify,	["python"]),
 	(timeout,	["python", "golang"]),
