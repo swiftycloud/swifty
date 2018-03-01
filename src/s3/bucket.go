@@ -15,6 +15,15 @@ var BucketCannedAcls = []string {
 	swys3api.S3BucketAclCannedAuthenticatedRead,
 }
 
+type S3ListObjectsRP struct {
+	Delimiter		string
+	MaxKeys			int
+	Prefix			string
+	ContToken		string
+	FetchOwner		bool
+	StartAfter		string
+}
+
 type S3BucketNotify struct {
 	Events				uint64		`bson:"events"`
 	Queue				string		`bson:"queue"`
@@ -343,10 +352,13 @@ func s3DeleteBucket(iam *S3Iam, bname, acl string) (*S3Error) {
 	return nil
 }
 
-func (bucket *S3Bucket)dbFindAll() ([]S3Object, error) {
+func (bucket *S3Bucket)dbFindAll(query bson.M) ([]S3Object, error) {
+	if query == nil { query = make(bson.M) }
 	var res []S3Object
 
-	query := bson.M{ "bucket-id": bucket.ObjID, "state": S3StateActive }
+	query["bucket-id"] = bucket.ObjID
+	query["state"] = S3StateActive
+
 	err := dbS3FindAll(query, &res)
 	if err != nil {
 		return nil, err
@@ -355,9 +367,12 @@ func (bucket *S3Bucket)dbFindAll() ([]S3Object, error) {
 	return res, nil
 }
 
-func s3ListBucket(iam *S3Iam, bname, acl string) (*swys3api.S3Bucket, *S3Error) {
-	var bucketList swys3api.S3Bucket
+func s3ListBucket(iam *S3Iam, bname string, params *S3ListObjectsRP) (*swys3api.S3Bucket, *S3Error) {
+	var list swys3api.S3Bucket
 	var bucket *S3Bucket
+	var object S3Object
+	var pipe *mgo.Pipe
+	var iter *mgo.Iter
 	var err error
 
 	bucket, err = iam.FindBucket(bname)
@@ -368,34 +383,57 @@ func s3ListBucket(iam *S3Iam, bname, acl string) (*swys3api.S3Bucket, *S3Error) 
 		return nil, &S3Error{ ErrorCode: S3ErrInternalError }
 	}
 
-	bucketList.Name		= bucket.Name
-	bucketList.KeyCount	= 0
-	bucketList.MaxKeys	= bucket.MaxObjects
-	bucketList.IsTruncated	= false
+	list.Name	= bucket.Name
+	list.KeyCount	= 0
+	list.MaxKeys	= bucket.MaxObjects
+	list.IsTruncated= false
 
+	query := bson.M{ "bucket-id": bucket.ObjID, "state": S3StateActive}
 
-	objects, err := bucket.dbFindAll()
-	if err != nil {
-		if err == mgo.ErrNotFound {
-			return &bucketList, nil
+	if params.Delimiter != "" || params.Prefix != "" {
+		if params.Delimiter != "" {
+			query["key"] = bson.M{ "$regex":
+				"^" + params.Prefix +
+				"([^" + params.Delimiter + "]+)?$",
+			}
+		} else {
+			query["key"] = bson.M{ "$regex":
+				"^" + params.Prefix + ".+",
+			}
 		}
-
-		log.Errorf("s3: Can't find objects %s: %s",
-			infoLong(bucket), err.Error())
-		return nil, &S3Error{ ErrorCode: S3ErrInternalError }
 	}
 
-	for _, k := range objects {
-		bucketList.Contents = append(bucketList.Contents,
-			swys3api.S3Object {
-				Key:		k.Key,
-				Size:		k.Size,
-				LastModified:	k.CreationTime,
-			})
-		bucketList.KeyCount++
+	pipe = dbS3Pipe(&object, []bson.M{{"$match": query}})
+	iter = pipe.Iter()
+	for iter.Next(&object) {
+		list.Contents = append(list.Contents,
+		swys3api.S3Object {
+			Key:		object.Key,
+			Size:		object.Size,
+			LastModified:	object.CreationTime,
+		})
+		list.KeyCount++
 	}
+	iter.Close()
 
-	return &bucketList, nil
+	if params.Delimiter != "" {
+		query["key"] = bson.M{ "$regex":
+			"^" + params.Prefix +
+			"([^" + params.Delimiter + "]+)?" +
+			params.Delimiter + "$",
+		}
+	}
+	pipe = dbS3Pipe(&object, []bson.M{{"$match": query}})
+	iter = pipe.Iter()
+	for iter.Next(&object) {
+		list.CommonPrefixes = append(list.CommonPrefixes,
+		swys3api.S3Prefix {
+			Prefix: object.Key,
+		})
+	}
+	iter.Close()
+
+	return &list, nil
 }
 
 func s3ListBuckets(iam *S3Iam) (*swys3api.S3BucketList, *S3Error) {

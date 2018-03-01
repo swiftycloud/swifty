@@ -88,6 +88,10 @@ type S3Object struct {
 	StorageClass		string				`xml:"StorageClass,omitempy"`
 }
 
+type S3Prefix struct {
+	Prefix			string				`xml:"Prefix"`
+}
+
 type S3Bucket struct {
 	XMLName			xml.Name			`xml:"ListBucketResult"`
 	Name			string				`xml:"Name,omitempy"`
@@ -96,7 +100,7 @@ type S3Bucket struct {
 	MaxKeys			int64				`xml:"MaxKeys,omitempy"`
 	IsTruncated		bool				`xml:"IsTruncated,omitempy"`
 	Contents		[]S3Object			`xml:"Contents,omitempy"`
-	CommonPrefixes		string				`xml:"CommonPrefixes,omitempy"`
+	CommonPrefixes		[]S3Prefix			`xml:"CommonPrefixes,omitempy"`
 	Delimiter		string				`xml:"Delimiter,omitempy"`
 	EncodingType		string				`xml:"Encoding-Type,omitempy"`
 	ContinuationToken	string				`xml:"ContinuationToken,omitempy"`

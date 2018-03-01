@@ -168,7 +168,30 @@ func handleListUploads(bname string, iam *S3Iam, w http.ResponseWriter, r *http.
 }
 
 func handleListObjects(bname string, iam *S3Iam, w http.ResponseWriter, r *http.Request) *S3Error {
-	objects, err := s3ListBucket(iam, bname, "")
+	listType := getURLValue(r, "list-type")
+	if listType != "2" {
+		return &S3Error{
+			ErrorCode: S3ErrInvalidArgument,
+			Message: "Invalid list-type",
+		}
+	}
+
+	params := &S3ListObjectsRP {
+		Delimiter:	getURLValue(r, "delimiter"),
+		Prefix:		getURLValue(r, "prefix"),
+		ContToken:	getURLValue(r, "continuation-token"),
+		StartAfter:	getURLValue(r, "start-after"),
+	}
+
+	if v, ok := getURLParam(r, "fetch-owner"); ok {
+		if v == "true" { params.FetchOwner = true }
+	}
+
+	if v, ok := getURLParam(r, "max-keys"); ok {
+		params.MaxKeys, _ = strconv.Atoi(v)
+	}
+
+	objects, err := s3ListBucket(iam, bname, params)
 	if err != nil { return err }
 
 	HTTPRespXML(w, objects)
