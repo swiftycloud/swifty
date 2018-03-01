@@ -73,10 +73,10 @@ def _wait_fn(name, ver):
 def run_fn(inf, args):
 	url = inf['URL'].split('/', 3)
 	conn = http.client.HTTPConnection(url[2])
-	conn.request('GET', '/' + url[3] + '?' + '&'.join([x[0]+'='+x[1] for x in args.items()]))
+	conn.request('POST', '/' + url[3] + '?' + '&'.join([x[0]+'='+x[1] for x in args.items()]))
 	resp = conn.getresponse()
 	if resp.status != 200:
-		return "ERROR:%d" % resp.status
+		return {'res': "ERROR:%d" % resp.status }
 
 	rv = resp.read()
 	return json.loads(rv)
@@ -195,7 +195,7 @@ def mongo(lang, opts):
 	args_s = { 'dbname': dbname, 'collection': 'tcol', 'action': 'select', 'key': 'foo' }
 
 	add_mw("mongo", dbname)
-	inf = add_fn("mongo", lang, mw = [ dbname ])
+	inf = add_fn("mongo", lang, mw = [ dbname ], tmo = 4000)
 	ret = run_fn(inf, args_i)
 	print(ret)
 	if ret.get('res', '') == 'done':
