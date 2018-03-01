@@ -6,6 +6,7 @@ RUN go get gopkg.in/mgo.v2
 COPY swy-wdog /usr/bin/
 RUN chmod +x /usr/bin/swy-wdog
 COPY runner.go /go/src/swyrunner/
+COPY lib.go /go/src/swifty/
 COPY queue.go /go/src/xqueue/
 
 EXPOSE 8687
