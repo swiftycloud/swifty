@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"errors"
 	"context"
 	"gopkg.in/robfig/cron.v2"
 )
@@ -37,11 +38,19 @@ func (cj faasCronJob) Run () {
 }
 
 func oneshotEventSetup(ctx context.Context, conf *YAMLConf, fn *FunctionDesc, on bool) error {
+	if !SwyModeDevel {
+		return errors.New("Cannot setup one-shot event")
+	}
+
 	fn.OneShot = true
 	return nil
 }
 
 func cronEventSetup(ctx context.Context, conf *YAMLConf, fn *FunctionDesc, on bool) error {
+	if !SwyModeDevel {
+		return errors.New("Cannot setup cron event")
+	}
+
 	if on {
 		id, err := cronRunner.AddJob(fn.Event.CronTab, faasCronJob{Id: fn.SwoId})
 		if err != nil {
