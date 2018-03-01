@@ -9,7 +9,10 @@ def MariaConn(mwname):
     conn = _swiftyMariaConns.get(mwname, None)
     if conn == None:
         mwn = mwname.upper()
-        x = os.getenv('MWARE_MARIA' + mwn + '_ADDR').split(":")
+        x = os.getenv('MWARE_MARIA' + mwn + '_ADDR')
+        if x == None:
+            raise Exception("Middleware not attached")
+        x = x.split(":")
         dbaddr = x[0]
         dbport = int(x[1])
         dbuser = os.getenv('MWARE_MARIA' + mwn + '_USER')
@@ -28,6 +31,8 @@ def MongoDatabase(mwname):
     global _swiftyMongoClients
     mwn = mwname.upper()
     dbname = os.getenv('MWARE_MONGO' + mwn + '_DBNAME')
+    if dbname == None:
+        raise Exception("Middleware not attached")
     clnt = _swiftyMongoClients.get(mwname, None)
     if clnt == None:
         dbaddr = os.getenv('MWARE_MONGO' + mwn + '_ADDR')
