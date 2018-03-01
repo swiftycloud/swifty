@@ -279,7 +279,7 @@ def checkempty(lang, opts):
 	return len(fns) == 0
 
 tests = [
-	(helloworld,	["python", "golang"]),
+	(helloworld,	["python", "golang", "swift"]),
 	(update,	["python", "golang"]),
 #	(pgsql,		["python"]),
 	(maria,		["python", "golang"]),
