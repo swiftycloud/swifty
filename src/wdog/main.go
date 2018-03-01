@@ -167,6 +167,7 @@ func doRun(params *swyapi.SwdFunctionRun) (*swyapi.SwdFunctionRunResult, int, er
 		if xerr != nil {
 			log.Errorf("Can't kill runner: %s", xerr.Error())
 		}
+		<-done
 	}()
 
 	var rr runnerRes
