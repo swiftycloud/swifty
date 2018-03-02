@@ -185,7 +185,7 @@ func fromContext(ctx context.Context) *gateContext {
 
 func ctxlog(ctx context.Context) *zap.SugaredLogger {
 	if gctx, ok := ctx.(*gateContext); ok {
-		return glog.With(zap.Int64("request", int64(gctx.ReqId)))
+		return glog.With(zap.Int64("req", int64(gctx.ReqId)))
 	}
 
 	return glog

@@ -404,12 +404,6 @@ func swk8sPodAdd(obj interface{}) {
 func swk8sPodDel(obj interface{}) {
 }
 
-func swk8sPodTmo(cookie string) {
-	ctx := context.Background()
-	ctxlog(ctx).Errorf("POD %s start timeout", cookie)
-	notifyPodTmo(ctx, cookie)
-}
-
 func swk8sPodUp(ctx context.Context, pod *k8sPod) {
 	ctxlog(ctx).Debugf("POD %s (%s) up deploy %s", pod.UID, pod.WdogAddr, pod.DepName)
 
@@ -449,10 +443,14 @@ func swk8sPodUpd(obj_old, obj_new interface{}) {
 	po := obj_old.(*v1.Pod)
 	pn := obj_new.(*v1.Pod)
 
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	ctx = mkContext(ctx, "::k8s-notify")
+
 	if po.Status.PodIP == "" && pn.Status.PodIP != "" {
-		swk8sPodUp(context.Background(), genBalancerPod(pn))
+		swk8sPodUp(ctx, genBalancerPod(pn))
 	} else if po.Status.PodIP != "" && pn.Status.PodIP == "" {
-		swk8sPodDown(context.Background(), genBalancerPod(po))
+		swk8sPodDown(ctx, genBalancerPod(po))
 	} else if po.Status.PodIP != "" && pn.Status.PodIP != "" {
 		if po.Status.PodIP != pn.Status.PodIP {
 			glog.Errorf("BAD news: POD IP has changed, while shouldn't")
