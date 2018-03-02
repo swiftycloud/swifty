@@ -57,6 +57,10 @@ for cmd in ['list-objects']:
     spp = sp.add_parser(cmd, help = 'List objects in bucket')
     spp.add_argument('--name', dest = 'name',
                      help = 'Bucket name', required = True)
+    spp.add_argument('--delimiter', dest = 'delimiter',
+                     help = 'Delimiter', default = "", required = False)
+    spp.add_argument('--prefix', dest = 'prefix',
+                     help = 'Prefix', default = "", required = False)
 
 for cmd in ['list-uploads']:
     spp = sp.add_parser(cmd, help = 'List object parts being uploaded')
@@ -275,11 +279,16 @@ if args.cmd == 'list-buckets':
         print("ERROR: Can't list bucket")
 
 if args.cmd == 'list-objects':
-    resp = s3.list_objects_v2(Bucket = args.name)
+    resp = s3.list_objects_v2(Bucket = args.name,
+                              Delimiter = args.delimiter,
+                              Prefix = args.prefix)
     print("Objects list (bucket %s count %d)" % (args.name, resp['KeyCount']))
     if 'Contents' in resp:
         for x in resp['Contents']:
             print("\tObject: Key %s Size %d" % (x['Key'], x['Size']))
+    if 'CommonPrefixes' in resp:
+        for x in resp['CommonPrefixes']:
+            print("\t\tPrefix: %s" % (x['Prefix']))
 
 if args.cmd == 'list-uploads':
     try:
