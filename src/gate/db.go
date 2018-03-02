@@ -297,7 +297,7 @@ func dbBalancerPodFind(link *BalancerLink, pod *k8sPod) (*BalancerRS, error) {
 
 func dbBalancerPodDelAll(link *BalancerLink) (error) {
 	c := dbSession.DB(dbState).C(DBColBalancerRS)
-	err := c.Remove(bson.M{ "depname": link.DepName })
+	_, err := c.RemoveAll(bson.M{ "depname": link.DepName })
 	if err == mgo.ErrNotFound {
 		err = nil
 	}
