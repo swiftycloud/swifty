@@ -1,2 +1,2 @@
 # swifty
-(С) Swifty Inc, 2017
+(С)SwiftyCloud OU, 2018
