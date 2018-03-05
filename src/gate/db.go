@@ -30,6 +30,31 @@ type DBLogRec struct {
 var dbSession *mgo.Session
 var dbState string
 
+func dbMwareCount() (map[string]int, error) {
+	var counts []struct {
+		Id	string	`bson:"_id"`
+		Count	int	`bson:"count"`
+	}
+
+	c := dbSession.DB(dbState).C(DBColMware)
+	err := c.Pipe([]bson.M{
+			bson.M{"$group": bson.M{
+				"_id":"$mwaretype",
+				"count":bson.M{"$sum": 1},
+			},
+		}}).All(&counts)
+	if err != nil {
+		return nil, err
+	}
+
+	ret := map[string]int{}
+	for _, cnt := range counts {
+		ret[cnt.Id] = cnt.Count
+	}
+
+	return ret, nil
+}
+
 func dbMwareAdd(desc *MwareDesc) error {
 	c := dbSession.DB(dbState).C(DBColMware)
 	return c.Insert(desc)
@@ -87,6 +112,9 @@ func dbMwareGetAll(id *SwoId) ([]MwareDesc, error) {
 	return recs, err
 }
 
+func dbFuncCount() (int, error) {
+	return dbSession.DB(dbState).C(DBColFunc).Count()
+}
 
 func dbFuncFindOne(q bson.M) (*FunctionDesc, error) {
 	c := dbSession.DB(dbState).C(DBColFunc)

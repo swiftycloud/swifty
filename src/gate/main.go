@@ -61,6 +61,7 @@ type YAMLConfDaemon struct {
 	Addr		string			`yaml:"address"`
 	Sources		YAMLConfSources		`yaml:"sources"`
 	LogLevel	string			`yaml:"loglevel"`
+	Prometheus	string			`yaml:"prometheus"`
 }
 
 type YAMLConfKeystone struct {
@@ -1194,6 +1195,11 @@ func main() {
 	err = BuilderInit(&conf)
 	if err != nil {
 		glog.Fatalf("Can't set up builder: %s", err.Error())
+	}
+
+	err = PrometheusInit(&conf)
+	if err != nil {
+		glog.Fatalf("Can't set up prometheus: %s", err.Error())
 	}
 
 	gatesrv = &http.Server{

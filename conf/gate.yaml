@@ -13,6 +13,7 @@ daemon:
                 share: "/home/swifty-volume"
                 clone: "/home/swifty/local-sources"
         loglevel: "debug"
+        prometheus: "swy0:9012"
 balancer:
         localips:
                 - ip: "10.8.0.1"

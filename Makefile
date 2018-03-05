@@ -105,6 +105,7 @@ go-gate-y	+= src/gate/swoid.go
 go-gate-y	+= src/gate/fdmdat.go
 go-gate-y	+= src/gate/build.go
 go-gate-y	+= src/gate/error.go
+go-gate-y	+= src/gate/promon.go
 
 go-admd-y	+= src/admd/main.go
 go-admd-y	+= src/admd/ks.go
@@ -140,6 +141,8 @@ go-s3-y	+= src/s3/rados.go
 go-s3-y	+= src/s3/helpers.go
 go-s3-y	+= src/s3/notify.go
 
+go-promon-y += src/promon/main.go
+
 go-ctl-y	+= src/tools/ctl.go
 go-sg-y		+= src/tools/sg.go
 
@@ -147,6 +150,7 @@ $(eval $(call gen-gobuild,gate))
 $(eval $(call gen-gobuild,admd))
 $(eval $(call gen-gobuild,pgrest))
 $(eval $(call gen-gobuild,mquotad))
+$(eval $(call gen-gobuild,promon))
 $(eval $(call gen-gobuild,s3))
 $(eval $(call gen-gobuild-t,ctl))
 $(eval $(call gen-gobuild-t,sg))

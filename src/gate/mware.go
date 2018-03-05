@@ -132,6 +132,7 @@ func mwareRemove(ctx context.Context, conf *YAMLConfMw, id *SwoId) *swyapi.GateE
 		ctxlog(ctx).Errorf("Can't remove mware %s: %s", item.SwoId.Str(), err.Error())
 		goto stalled
 	}
+	gateMwares.WithLabelValues(item.MwareType).Dec()
 
 	return nil
 
@@ -183,6 +184,8 @@ func mwareSetup(ctx context.Context, conf *YAMLConfMw, id *SwoId, mwType string)
 		ctxlog(ctx).Errorf("Can't add mware %s: %s", mwd.SwoId.Str(), err.Error())
 		return GateErrD(err)
 	}
+
+	gateMwares.WithLabelValues(mwType).Inc()
 
 	handler, ok = mwareHandlers[mwType]
 	if !ok {
@@ -237,6 +240,7 @@ outdb:
 	if erc != nil {
 		goto stalled
 	}
+	gateMwares.WithLabelValues(mwType).Dec()
 out:
 	ctxlog(ctx).Errorf("mwareSetup: %s", err.Error())
 	return GateErrE(swy.GateGenErr, err)

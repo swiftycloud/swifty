@@ -184,6 +184,8 @@ func addFunction(ctx context.Context, conf *YAMLConf, tennant string, params *sw
 		return GateErrD(err)
 	}
 
+	gateFunctions.Inc()
+
 	err = eventSetup(ctx, conf, fn, true)
 	if err != nil {
 		goto out_clean_func
@@ -246,6 +248,8 @@ out_clean_func:
 	if erc != nil {
 		goto stalled
 	}
+
+	gateFunctions.Dec()
 out:
 	return GateErrE(swy.GateGenErr, err)
 
@@ -480,6 +484,7 @@ func removeFunction(ctx context.Context, conf *YAMLConf, id *SwoId) *swyapi.Gate
 		goto later
 	}
 
+	gateFunctions.Dec()
 	ctxlog(ctx).Debugf("Removed function %s!", fn.SwoId.Str())
 	return nil
 
