@@ -172,39 +172,32 @@ func doRun(params *swyapi.SwdFunctionRun) (*swyapi.SwdFunctionRunResult, error) 
 	err = runner.q.Recv(&rr)
 	done <-true
 
-	rout := readLines(runner.fin)
-	rerr := readLines(runner.fine)
-
-	if err != nil {
-		if timeout {
-			restartRunner()
-			return &swyapi.SwdFunctionRunResult{
-				Return: "timeout",
-				Code: 524, /* A Timeout Occurred */
-			}, nil
-		}
-
-		if err == io.EOF {
-			restartRunner()
-			return &swyapi.SwdFunctionRunResult{
-				Return: "exited",
-				Code: 500,
-				Stdout: rout,
-				Stderr: rerr,
-			}, nil
-		}
-
-		err = fmt.Errorf("Can't get back the result: %s", err.Error())
-		return nil, err
+	ret := &swyapi.SwdFunctionRunResult{
+		Stdout: readLines(runner.fin),
+		Stderr: readLines(runner.fine),
 	}
 
-	return &swyapi.SwdFunctionRunResult{
-		Code: rr.Code,
-		Return: rr.Return,
-		Stdout: rout,
-		Stderr: rerr,
-		/* FIXME -- calc Time and CTime */
-	}, nil
+	if err != nil {
+		restartRunner()
+
+		switch {
+		case timeout:
+			rr.Code = 524 /* A timeout occurred */
+			rr.Return = "timeout"
+
+		case err == io.EOF:
+			rr.Code = http.StatusInternalServerError
+			rr.Return = "exited"
+
+		default:
+			return nil, fmt.Errorf("Can't get back the result: %s", err.Error())
+		}
+	}
+
+	ret.Code = rr.Code
+	ret.Return = rr.Return
+
+	return ret, nil
 }
 
 var builders = map[string]func(*swyapi.SwdFunctionRun) (*swyapi.SwdFunctionRunResult, error) {
