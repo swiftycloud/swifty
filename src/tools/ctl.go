@@ -228,7 +228,7 @@ func info_function(project string, args []string, opts [8]string) {
 	fmt.Printf("Memory:      %dMi\n", ifo.Size.Memory)
 	fmt.Printf("Called:      %d\n", ifo.Stats.Called)
 	if ifo.Stats.Called != 0 {
-		lc, _ := time.Parse(time.UnixDate, ifo.Stats.LastCall)
+		lc, _ := time.Parse(time.RFC1123Z, ifo.Stats.LastCall)
 		since := time.Since(lc)
 		since -= since % time.Second
 		fmt.Printf("Last run:    %s ago\n", since.String())

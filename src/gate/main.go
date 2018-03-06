@@ -507,7 +507,7 @@ func handleFunctionStats(ctx context.Context, w http.ResponseWriter, r *http.Req
 
 	stats = statsGet(fn)
 	if stats.Called != 0 {
-		lcs = stats.LastCall.Format(time.UnixDate)
+		lcs = stats.LastCall.Format(time.RFC1123Z)
 	}
 
 	err = swyhttp.MarshalAndWrite(w,  swyapi.FunctionStats{
@@ -550,7 +550,7 @@ func handleFunctionInfo(ctx context.Context, w http.ResponseWriter, r *http.Requ
 
 	stats = statsGet(fn)
 	if stats.Called != 0 {
-		lcs = stats.LastCall.Format(time.UnixDate)
+		lcs = stats.LastCall.Format(time.RFC1123Z)
 	}
 
 	fv, err = dbBalancerRSListVersions(fn)
@@ -799,7 +799,7 @@ func handleFunctionList(ctx context.Context, w http.ResponseWriter, r *http.Requ
 		var lcs string
 		stats := statsGet(&v)
 		if stats.Called != 0 {
-			lcs = stats.LastCall.Format(time.UnixDate)
+			lcs = stats.LastCall.Format(time.RFC1123Z)
 		}
 
 		result = append(result,

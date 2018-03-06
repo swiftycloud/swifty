@@ -634,7 +634,7 @@ definitions:
         example: 42
       lastcall:
         type: string
-        description: Time or last call in UnixDate format
+        description: Time or last call in RFC1123Z format
         example: 'Mon Dec 25 14:18:18 MSK 2017'
       time:
         type: integer
