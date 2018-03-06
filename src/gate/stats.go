@@ -77,7 +77,7 @@ func statsUpdate(fmd *FnMemData, op *statsOpaque, res *swyapi.SwdFunctionRunResu
 	}
 	fmd.stats.LastCall = op.ts
 
-	rt := time.Duration(res.Time) * time.Microsecond
+	rt := res.FnTime()
 	fmd.stats.RunTime += rt
 
 	rc := uint64(rt) * fmd.mem
