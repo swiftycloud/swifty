@@ -530,7 +530,7 @@ func handleFunctionInfo(ctx context.Context, w http.ResponseWriter, r *http.Requ
 	var url = ""
 	var stats *FnStats
 	var lcs string
-	var wtime, gtime uint64
+	var gtime uint64
 
 	err := swyhttp.ReadAndUnmarshalReq(r, &params)
 	if err != nil {
@@ -555,7 +555,6 @@ func handleFunctionInfo(ctx context.Context, w http.ResponseWriter, r *http.Requ
 	}
 
 	if SwyModeDevel {
-		wtime = uint64(stats.WdogTime.Nanoseconds()/1000)
 		gtime = uint64(stats.GateTime.Nanoseconds()/1000)
 	}
 
@@ -588,7 +587,6 @@ func handleFunctionInfo(ctx context.Context, w http.ResponseWriter, r *http.Requ
 				Errors:		stats.Errors,
 				LastCall:	lcs,
 				Time:		uint64(stats.RunTime.Nanoseconds()/1000),
-				TimeW:		wtime,
 				TimeG:		gtime,
 			},
 			Size:		swyapi.FunctionSize {

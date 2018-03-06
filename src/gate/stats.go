@@ -20,7 +20,6 @@ type FnStats struct {
 	Errors		uint64		`bson:"errors"`
 	LastCall	time.Time	`bson:"lastcall"`
 	RunTime		time.Duration	`bson:"rtime"`
-	WdogTime	time.Duration	`bson:"wtime"`
 	GateTime	time.Duration	`bson:"gtime"`
 
 	/* RunCost is a value that represents the amount of
@@ -64,7 +63,6 @@ func statsUpdate(fmd *FnMemData, op *statsOpaque, res *swyapi.SwdFunctionRunResu
 
 	rt := time.Duration(res.Time) * time.Microsecond
 	fmd.stats.RunTime += rt
-	fmd.stats.WdogTime += time.Duration(res.CTime) * time.Microsecond
 	fmd.stats.GateTime += time.Since(op.ts)
 
 	fmd.stats.RunCost += uint64(rt) * fmd.mem

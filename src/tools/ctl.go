@@ -234,8 +234,7 @@ func info_function(project string, args []string, opts [8]string) {
 		fmt.Printf("Last run:    %s ago\n", since.String())
 		fmt.Printf("Time:        %d (avg %d) usec\n", ifo.Stats.Time, ifo.Stats.Time / ifo.Stats.Called)
 
-		if ifo.Stats.TimeW != 0 {
-			fmt.Printf("Time wdog:   %d (avg %d) usec\n", ifo.Stats.TimeW, ifo.Stats.TimeW / ifo.Stats.Called)
+		if ifo.Stats.TimeG != 0 {
 			fmt.Printf("Time gate:   %d (avg %d) usec\n", ifo.Stats.TimeG, ifo.Stats.TimeG / ifo.Stats.Called)
 		}
 	}

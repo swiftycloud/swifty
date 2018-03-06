@@ -22,7 +22,6 @@ type FunctionStats struct {
 	Errors		uint64			`json:"errors"`
 	LastCall	string			`json:"lastcall,omitempty"`
 	Time		uint64			`json:"time"`
-	TimeW		uint64			`json:"timewdog,omitempty"`
 	TimeG		uint64			`json:"timegate,omitempty"`
 }
 
