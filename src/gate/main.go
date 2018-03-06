@@ -530,7 +530,6 @@ func handleFunctionInfo(ctx context.Context, w http.ResponseWriter, r *http.Requ
 	var url = ""
 	var stats *FnStats
 	var lcs string
-	var gtime uint64
 
 	err := swyhttp.ReadAndUnmarshalReq(r, &params)
 	if err != nil {
@@ -552,10 +551,6 @@ func handleFunctionInfo(ctx context.Context, w http.ResponseWriter, r *http.Requ
 	stats = statsGet(fn)
 	if stats.Called != 0 {
 		lcs = stats.LastCall.Format(time.UnixDate)
-	}
-
-	if SwyModeDevel {
-		gtime = uint64(stats.GateTime.Nanoseconds()/1000)
 	}
 
 	fv, err = dbBalancerRSListVersions(fn)
@@ -587,7 +582,6 @@ func handleFunctionInfo(ctx context.Context, w http.ResponseWriter, r *http.Requ
 				Errors:		stats.Errors,
 				LastCall:	lcs,
 				Time:		uint64(stats.RunTime.Nanoseconds()/1000),
-				TimeG:		gtime,
 			},
 			Size:		swyapi.FunctionSize {
 				Memory:		fn.Size.Mem,
