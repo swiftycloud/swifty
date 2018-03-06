@@ -657,6 +657,22 @@ func makeArgMap(r *http.Request) map[string]string {
 	return args
 }
 
+func ratelimited(fmd *FnMemData) bool {
+	/* Per-function RL first, as it's ... more likely to fail */
+	if fmd.crl != nil && !fmd.crl.Get() {
+		return true
+	}
+
+	if fmd.td.crl != nil && !fmd.td.crl.Get() {
+		if fmd.crl != nil {
+			fmd.crl.Put()
+		}
+		return true
+	}
+
+	return false
+}
+
 func handleFunctionCall(w http.ResponseWriter, r *http.Request) {
 	var arg_map map[string]string
 	var res *swyapi.SwdFunctionRunResult
@@ -681,12 +697,10 @@ func handleFunctionCall(w http.ResponseWriter, r *http.Request) {
 	}
 
 	fmd = memdGet(fnId)
-	if fmd.crl != nil {
-		if !fmd.crl.Get() {
-			code = http.StatusTooManyRequests
-			err = errors.New("Ratelimited")
-			goto out
-		}
+	if ratelimited(fmd) {
+		code = http.StatusTooManyRequests
+		err = errors.New("Ratelimited")
+		goto out
 	}
 
 	arg_map = makeArgMap(r)

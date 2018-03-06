@@ -5,10 +5,17 @@ import (
 )
 
 type RL struct {
+	/* FIXME -- locking */
 	used	uint
 	t	time.Time
 	burst	uint
 	eps	uint
+}
+
+func (rl *RL)Put() {
+	if rl.used > 0 {
+		rl.used--
+	}
 }
 
 func (rl *RL)Get() bool {

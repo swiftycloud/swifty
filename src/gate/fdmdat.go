@@ -16,6 +16,7 @@ type FnMemData struct {
 }
 
 type TenantMemData struct {
+	crl	*xratelimit.RL
 	stats	TenStats
 }
 
@@ -44,6 +45,7 @@ func tendatGetOrInit(tenant string) *TenantMemData {
 
 	nret := &TenantMemData{}
 	nret.stats.Init(tenant)
+	/* XXX -- init rate-limit here */
 	ret, _ = tdat.LoadOrStore(tenant, nret)
 	lret := ret.(*TenantMemData)
 
