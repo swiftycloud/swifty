@@ -46,6 +46,7 @@ type FnStats struct {
 
 type TenStats struct {
 	Tenant		string		`bson:"tenant"`
+	Called		uint64		`bsin:"called"`
 	RunCost		uint64		`bson:"runcost"`
 
 	statsFlush			`bson:"-"`
@@ -65,6 +66,11 @@ func statsStart() *statsOpaque {
 }
 
 func statsUpdate(fmd *FnMemData, op *statsOpaque, res *swyapi.SwdFunctionRunResult) {
+	/*
+	 * FIXME -- locking :( Go doesn't have per-cpu counters, so we have
+	 * a choise -- either N atomic-inc-s or one mutex-lock
+	 */
+
 	if res.Code == 0 {
 		atomic.AddUint64(&fmd.stats.Called, 1)
 		gateCalls.WithLabelValues("success").Inc()
@@ -88,6 +94,7 @@ func statsUpdate(fmd *FnMemData, op *statsOpaque, res *swyapi.SwdFunctionRunResu
 
 	td := fmd.td
 	td.stats.RunCost += rc
+	atomic.AddUint64(&td.stats.Called, 1)
 	td.stats.Dirty()
 }
 
