@@ -11,6 +11,20 @@ const (
 	statsFlushPeriod	= 8
 )
 
+type statsWriter interface {
+	Write()
+}
+
+type statsFlush struct {
+	id		string /* unused now, use it for logging/debugging */
+	dirty		bool
+	closed		bool
+	done		chan chan bool
+	flushed		chan bool
+
+	writer		statsWriter
+}
+
 type FnStats struct {
 //	ObjID		bson.ObjectId	`bson:"_id,omitempty"`
 	Cookie		string		`bson:"cookie"`
@@ -28,10 +42,14 @@ type FnStats struct {
 	 */
 	RunCost		uint64		`bson:"runcost"`
 
-	dirty		bool
-	closed		bool
-	done		chan chan bool
-	flushed		chan bool
+	statsFlush			`bson:"-"`
+}
+
+type TenStats struct {
+	Tenant		string		`bson:"tenant"`
+	RunCost		uint64		`bson:"runcost"`
+
+	statsFlush			`bson:"-"`
 }
 
 type statsOpaque struct {
@@ -48,7 +66,6 @@ func statsStart() *statsOpaque {
 }
 
 func statsUpdate(fmd *FnMemData, op *statsOpaque, res *swyapi.SwdFunctionRunResult) {
-	fmd.stats.dirty = true
 	if res.Code == 0 {
 		atomic.AddUint64(&fmd.stats.Called, 1)
 		gateCalls.WithLabelValues("success").Inc()
@@ -65,57 +82,89 @@ func statsUpdate(fmd *FnMemData, op *statsOpaque, res *swyapi.SwdFunctionRunResu
 	fmd.stats.RunTime += rt
 	fmd.stats.GateTime += time.Since(op.ts)
 
-	fmd.stats.RunCost += uint64(rt) * fmd.mem
+	rc := uint64(rt) * fmd.mem
+	fmd.stats.RunCost += rc
+	fmd.stats.Dirty()
+
+	td := fmd.td
+	td.stats.RunCost += rc
+	td.stats.Dirty()
 }
 
-var statsFlusher chan *FnStats
+var statsFlushReqs chan *statsFlush
 
 func statsInit(conf *YAMLConf) error {
-	statsFlusher = make(chan *FnStats)
+	statsFlushReqs = make(chan *statsFlush)
 	go func() {
 		for {
-			st := <-statsFlusher
-			dbStatsUpdate(st)
-			st.flushed <- true
+			fc := <-statsFlushReqs
+			fc.writer.Write()
+			fc.flushed <- true
 		}
 	}()
 	return nil
 }
 
-func statsStop(st *FnStats) {
-	done := make(chan bool)
-	st.done <-done
-	<-done
-}
-
 func statsDrop(fn *FunctionDesc) error {
 	md := memdGetCond(fn.Cookie)
 	if md != nil && !md.stats.closed {
-		statsStop(&md.stats)
+		md.stats.Stop()
 	}
 
-	return dbStatsDrop(fn.Cookie)
+	return dbFnStatsDrop(fn.Cookie)
 }
 
-func fnStatsInit(st *FnStats, fn *FunctionDesc) {
-	dbStatsGet(fn.Cookie, st)
+func (st *FnStats)Init(fn *FunctionDesc) {
+	dbFnStatsGet(fn.Cookie, st)
 	st.Cookie = fn.Cookie
-	st.done = make(chan chan bool)
-	st.flushed = make(chan bool)
+	st.Start(st, fn.Cookie)
+}
+
+func (st *FnStats)Write() {
+	dbFnStatsUpdate(st)
+}
+
+func (st *TenStats)Init(tenant string) {
+	dbTenStatsGet(tenant, st)
+	st.Tenant = tenant
+	st.Start(st, tenant)
+}
+
+func (st *TenStats)Write() {
+	dbTenStatsUpdate(st)
+}
+
+func (fc *statsFlush)Start(writer statsWriter, id string) {
+	fc.id = id
+	fc.writer = writer
+	fc.done = make(chan chan bool)
+	fc.flushed = make(chan bool)
+	fc.dirty = false
+
 	go func() {
 		for {
 			select {
-			case done := <-st.done:
-				st.closed = true
+			case done := <-fc.done:
+				fc.closed = true
 				close(done)
 				return
 			case <-time.After(statsFlushPeriod * time.Second):
-				if st.dirty {
-					st.dirty = false
-					statsFlusher <-st
-					<-st.flushed
+				if fc.dirty {
+					fc.dirty = false
+					statsFlushReqs <-fc
+					<-fc.flushed
 				}
 			}
 		}
 	}()
+}
+
+func (fc *statsFlush)Dirty() {
+	fc.dirty = true
+}
+
+func (fc *statsFlush)Stop() {
+	done := make(chan bool)
+	fc.done <-done
+	<-done
 }

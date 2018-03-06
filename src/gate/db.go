@@ -16,6 +16,7 @@ const (
 	DBColMware	= "Mware"
 	DBColLogs	= "Logs"
 	DBColFnStats	= "FnStats"
+	DBColTenStats	= "TenantStats"
 	DBColBalancer	= "Balancer"
 	DBColBalancerRS = "BalancerRS"
 )
@@ -212,17 +213,33 @@ func dbFuncRemove(fn *FunctionDesc) error {
 	return c.Remove(bson.M{"cookie": fn.Cookie});
 }
 
-func dbStatsGet(cookie string, st *FnStats) error {
+func dbTenStatsGet(tenant string, st *TenStats) error {
+	c := dbSession.DB(dbState).C(DBColTenStats)
+	return c.Find(bson.M{"tenant": tenant}).One(st)
+}
+
+func dbTenStatsUpdate(st *TenStats) {
+	c := dbSession.DB(dbState).C(DBColTenStats)
+	_, err := c.Upsert(bson.M{"tenant": st.Tenant}, st)
+	if err != nil {
+		glog.Errorf("Error upserting tenant stats: %s", err.Error())
+	}
+}
+
+func dbFnStatsGet(cookie string, st *FnStats) error {
 	c := dbSession.DB(dbState).C(DBColFnStats)
 	return c.Find(bson.M{"cookie": cookie}).One(st)
 }
 
-func dbStatsUpdate(st *FnStats) {
+func dbFnStatsUpdate(st *FnStats) {
 	c := dbSession.DB(dbState).C(DBColFnStats)
-	c.Upsert(bson.M{"cookie": st.Cookie}, st)
+	_, err := c.Upsert(bson.M{"cookie": st.Cookie}, st)
+	if err != nil {
+		glog.Errorf("Error upserting fn stats: %s", err.Error())
+	}
 }
 
-func dbStatsDrop(cookie string) error {
+func dbFnStatsDrop(cookie string) error {
 	c := dbSession.DB(dbState).C(DBColFnStats)
 	err := c.Remove(bson.M{"cookie": cookie})
 	if err == mgo.ErrNotFound {
