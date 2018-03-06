@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/gorilla/mux"
 	"net/http"
+	"time"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
@@ -30,6 +31,20 @@ var (
 		},
 		[]string { "result" },
 	)
+
+	gateCalLat = prometheus.NewHistogram(
+		prometheus.HistogramOpts{
+			Name: "swifty_gate_call_latency",
+			Help: "Call latency added by gate-wdog interaction",
+			Buckets: []float64{
+				(500 * time.Microsecond).Seconds(), /* Ethernet latency ~200 usec */
+				(  1 * time.Millisecond).Seconds(),
+				( 10 * time.Millisecond).Seconds(), /* Internet ping time ~10 msec */
+				(100 * time.Millisecond).Seconds(),
+				(500 * time.Millisecond).Seconds(), /* More than 0.5 sec overhead is ... too bad */
+			},
+		},
+	)
 )
 
 func PrometheusInit(conf *YAMLConf) error {
@@ -53,6 +68,7 @@ func PrometheusInit(conf *YAMLConf) error {
 
 	/* XXX: We can pick up the call-counts from the database, but ... */
 	prometheus.MustRegister(gateCalls)
+	prometheus.MustRegister(gateCalLat)
 
 	r := mux.NewRouter()
 	r.Handle("/metrics", promhttp.Handler())
