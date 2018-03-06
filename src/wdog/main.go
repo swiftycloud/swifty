@@ -144,6 +144,8 @@ func doRun(params *swyapi.SwdFunctionRun) (*swyapi.SwdFunctionRunResult, error) 
 	defer runlock.Unlock()
 
 	log.Debugf("Running FN (%v)", params.Args)
+
+	start := time.Now()
 	err = runner.q.Send(params.Args)
 	if err != nil {
 		return nil, fmt.Errorf("Can't send args: %s", err.Error())
@@ -170,11 +172,15 @@ func doRun(params *swyapi.SwdFunctionRun) (*swyapi.SwdFunctionRunResult, error) 
 
 	var rr runnerRes
 	err = runner.q.Recv(&rr)
+	rt := time.Since(start)
 	done <-true
 
 	ret := &swyapi.SwdFunctionRunResult{
+		Code: rr.Code,
+		Return: rr.Return,
 		Stdout: readLines(runner.fin),
 		Stderr: readLines(runner.fine),
+		Time: uint(rt / time.Microsecond),
 	}
 
 	if err != nil {
@@ -182,20 +188,17 @@ func doRun(params *swyapi.SwdFunctionRun) (*swyapi.SwdFunctionRunResult, error) 
 
 		switch {
 		case timeout:
-			rr.Code = swyhttp.StatusTimeoutOccurred
-			rr.Return = "timeout"
+			ret.Code = swyhttp.StatusTimeoutOccurred
+			ret.Return = "timeout"
 
 		case err == io.EOF:
-			rr.Code = http.StatusInternalServerError
-			rr.Return = "exited"
+			ret.Code = http.StatusInternalServerError
+			ret.Return = "exited"
 
 		default:
 			return nil, fmt.Errorf("Can't get back the result: %s", err.Error())
 		}
 	}
-
-	ret.Code = rr.Code
-	ret.Return = rr.Return
 
 	return ret, nil
 }
