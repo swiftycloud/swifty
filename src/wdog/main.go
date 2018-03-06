@@ -136,11 +136,9 @@ type runnerRes struct {
 	Return	string		`json:"return"`
 }
 
-func doRun(params *swyapi.SwdFunctionRun) (*swyapi.SwdFunctionRunResult, int, error) {
+func doRun(params *swyapi.SwdFunctionRun) (*swyapi.SwdFunctionRunResult, error) {
 	var err error
-
 	timeout := false
-	code := http.StatusInternalServerError
 
 	runlock.Lock()
 	defer runlock.Unlock()
@@ -148,7 +146,7 @@ func doRun(params *swyapi.SwdFunctionRun) (*swyapi.SwdFunctionRunResult, int, er
 	log.Debugf("Running FN (%v)", params.Args)
 	err = runner.q.Send(params.Args)
 	if err != nil {
-		return nil, code, fmt.Errorf("Can't send args: %s", err.Error())
+		return nil, fmt.Errorf("Can't send args: %s", err.Error())
 	}
 
 	done := make(chan bool)
@@ -183,7 +181,7 @@ func doRun(params *swyapi.SwdFunctionRun) (*swyapi.SwdFunctionRunResult, int, er
 			return &swyapi.SwdFunctionRunResult{
 				Return: "timeout",
 				Code: 524, /* A Timeout Occurred */
-			}, 0, nil
+			}, nil
 		}
 
 		if err == io.EOF {
@@ -193,11 +191,11 @@ func doRun(params *swyapi.SwdFunctionRun) (*swyapi.SwdFunctionRunResult, int, er
 				Code: 500,
 				Stdout: rout,
 				Stderr: rerr,
-			}, 0, nil
+			}, nil
 		}
 
 		err = fmt.Errorf("Can't get back the result: %s", err.Error())
-		return nil, code, err
+		return nil, err
 	}
 
 	return &swyapi.SwdFunctionRunResult{
@@ -206,7 +204,7 @@ func doRun(params *swyapi.SwdFunctionRun) (*swyapi.SwdFunctionRunResult, int, er
 		Stdout: rout,
 		Stderr: rerr,
 		/* FIXME -- calc Time and CTime */
-	}, 0, nil
+	}, nil
 }
 
 var builders = map[string]func(*swyapi.SwdFunctionRun) (*swyapi.SwdFunctionRunResult, error) {
@@ -308,7 +306,6 @@ func handleRun(w http.ResponseWriter, r *http.Request) {
 	var result *swyapi.SwdFunctionRunResult
 
 	code := http.StatusBadRequest
-
 	err := swyhttp.ReadAndUnmarshalReq(r, &params)
 	if err != nil {
 		goto out
@@ -320,13 +317,15 @@ func handleRun(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if !build {
-		result, code, err = doRun(&params)
+		result, err = doRun(&params)
 	} else {
 		result, err = doBuild(&params)
 		if err != nil {
 			log.Errorf("Error building FN: %s", err.Error())
 		}
 	}
+
+	code = http.StatusInternalServerError
 	if err != nil {
 		goto out
 	}
