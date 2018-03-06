@@ -182,7 +182,7 @@ func doRun(params *swyapi.SwdFunctionRun) (*swyapi.SwdFunctionRunResult, error) 
 
 		switch {
 		case timeout:
-			rr.Code = 524 /* A timeout occurred */
+			rr.Code = swyhttp.StatusTimeoutOccurred
 			rr.Return = "timeout"
 
 		case err == io.EOF:

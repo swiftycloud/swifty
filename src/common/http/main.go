@@ -11,6 +11,10 @@ import (
 	"io"
 )
 
+const (
+	StatusTimeoutOccurred = 524
+)
+
 type RestReq struct {
 	Method		string
 	Address		string

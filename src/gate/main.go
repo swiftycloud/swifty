@@ -377,7 +377,7 @@ func handleFunctionWait(ctx context.Context, w http.ResponseWriter, r *http.Requ
 	if !tmo {
 		w.WriteHeader(http.StatusOK)
 	} else {
-		w.WriteHeader(524) /* CloudFlare's timeout */
+		w.WriteHeader(swyhttp.StatusTimeoutOccurred) /* CloudFlare's timeout */
 	}
 
 	return nil

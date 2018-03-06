@@ -4,6 +4,7 @@ import (
 	"sync/atomic"
 	"time"
 	"../apis/apps"
+	"../common/http"
 )
 
 const (
@@ -52,7 +53,7 @@ func statsUpdate(fmd *FnMemData, op *statsOpaque, res *swyapi.SwdFunctionRunResu
 	if res.Code == 0 {
 		atomic.AddUint64(&fmd.stats.Called, 1)
 		gateCalls.WithLabelValues("success").Inc()
-	} else if res.Code == 524 {
+	} else if res.Code == swyhttp.StatusTimeoutOccurred {
 		atomic.AddUint64(&fmd.stats.Timeouts, 1)
 		gateCalls.WithLabelValues("timeout").Inc()
 	} else {
