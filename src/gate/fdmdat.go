@@ -13,11 +13,13 @@ type FnMemData struct {
 	crl	*xratelimit.RL
 	td	*TenantMemData
 	stats	FnStats
+	lock	sync.Mutex
 }
 
 type TenantMemData struct {
 	crl	*xratelimit.RL
 	stats	TenStats
+	lock	sync.Mutex
 }
 
 func memdGetFn(fn *FunctionDesc) *FnMemData {

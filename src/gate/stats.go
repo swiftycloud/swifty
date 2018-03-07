@@ -1,7 +1,6 @@
 package main
 
 import (
-	"sync/atomic"
 	"time"
 	"../apis/apps"
 	"../common/http"
@@ -71,35 +70,37 @@ func statsStart() *statsOpaque {
 }
 
 func statsUpdate(fmd *FnMemData, op *statsOpaque, res *swyapi.SwdFunctionRunResult) {
-	/*
-	 * FIXME -- locking :( Go doesn't have per-cpu counters, so we have
-	 * a choise -- either N atomic-inc-s or one mutex-lock
-	 */
+	rt := res.FnTime()
+	gatelat := time.Since(op.ts) - rt
 
+	fmd.lock.Lock()
 	if res.Code == 0 {
-		atomic.AddUint64(&fmd.stats.Called, 1)
+		fmd.stats.Called++
 		gateCalls.WithLabelValues("success").Inc()
 	} else if res.Code == swyhttp.StatusTimeoutOccurred {
-		atomic.AddUint64(&fmd.stats.Timeouts, 1)
+		fmd.stats.Timeouts++
 		gateCalls.WithLabelValues("timeout").Inc()
 	} else {
-		atomic.AddUint64(&fmd.stats.Errors, 1)
+		fmd.stats.Errors++
 		gateCalls.WithLabelValues("error").Inc()
 	}
 	fmd.stats.LastCall = op.ts
 
-	rt := res.FnTime()
 	fmd.stats.RunTime += rt
-	gatelat := time.Since(op.ts) - rt
 	gateCalLat.Observe(gatelat.Seconds())
 
 	rc := uint64(rt) * fmd.mem
 	fmd.stats.RunCost += rc
+	fmd.lock.Unlock()
+
 	fmd.stats.Dirty()
 
 	td := fmd.td
+	td.lock.Lock()
 	td.stats.RunCost += rc
-	atomic.AddUint64(&td.stats.Called, 1)
+	td.stats.Called++
+	td.lock.Unlock()
+
 	td.stats.Dirty()
 }
 
