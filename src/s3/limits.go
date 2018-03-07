@@ -14,3 +14,9 @@ const (
 	// Maximum ACL per bucket/object
 	S3BucketMaxACL			= int(100)
 )
+
+// Bucket and object names
+const (
+	S3BucketName_Letter = `[a-zA-Z0-9\-]`
+	S3ObjectName_Letter = `[a-zA-Z0-9\/\!\-\_\.\*\'\(\)]`
+)
