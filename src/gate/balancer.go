@@ -14,6 +14,7 @@ import (
 	"fmt"
 
 	"../common"
+	"../apis/apps"
 )
 
 var balancerMaxIPCount uint = 255
@@ -377,4 +378,23 @@ func BalancerInit(conf *YAMLConf) (error) {
 	go manageLocalIps()
 
 	return nil
+}
+
+func balancerGetConnExact(ctx context.Context, cookie, version string) (*BalancerConn, *swyapi.GateErr) {
+	/*
+	 * We can lookup id.Cookie() here, but ... it's manual run,
+	 * let's also make sure the FN exists at all
+	 */
+	conn, err := dbBalancerGetConnExact(cookie, version)
+	if conn == nil {
+		if err == nil {
+			return nil, GateErrM(swy.GateGenErr, "Nothing to run (yet)")
+		}
+
+		ctxlog(ctx).Errorf("balancer-db: Can't find pod %s/%s: %s",
+				cookie, version, err.Error())
+		return nil, GateErrD(err)
+	}
+
+	return conn, nil
 }

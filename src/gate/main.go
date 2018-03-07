@@ -748,19 +748,9 @@ func handleFunctionRun(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		return GateErrM(swy.GateNotAvail, "Function not ready (yet)")
 	}
 
-	/*
-	 * We can lookup id.Cookie() here, but ... it's manual run,
-	 * let's also make sure the FN exists at all
-	 */
-	conn, err = dbBalancerGetConnExact(fn.Cookie, fn.Src.Version)
-	if conn == nil {
-		if err == nil {
-			return GateErrM(swy.GateGenErr, "Nothing to run (yet)")
-		}
-
-		ctxlog(ctx).Errorf("balancer-db: Can't find pod %s/%s: %s",
-				fn.Cookie, fn.Src.Version, err.Error())
-		return GateErrD(err)
+	conn, errc := balancerGetConnExact(ctx, fn.Cookie, fn.Src.Version)
+	if errc != nil {
+		return errc
 	}
 
 	res, err = doRunConn(ctx, conn, nil, fn.Cookie, "run", params.Args)
