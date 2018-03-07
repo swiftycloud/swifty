@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"swifty"
 	"encoding/json"
 	"xqueue"
 	"os"
@@ -38,7 +37,7 @@ func main() {
 			return
 		}
 
-		res := swifty.Main(args)
+		res := Main(args)
 
 		var resb []byte
 		resb, err = json.Marshal(res)

@@ -1,4 +1,4 @@
-package swifty
+package main
 
 import (
 	"fmt"

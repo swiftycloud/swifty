@@ -1,12 +1,13 @@
-package swifty
+package main
 
 import (
 	"fmt"
+	"swifty"
 	"gopkg.in/mgo.v2/bson"
 )
 
 func Main(args map[string]string) interface{} {
-	db, err := MongoDatabase(args["dbname"])
+	db, err := swifty.MongoDatabase(args["dbname"])
 	if err != nil {
 		fmt.Println(err)
 		panic("Can't get mgo dbase")

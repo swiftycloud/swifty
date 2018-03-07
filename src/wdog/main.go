@@ -225,9 +225,9 @@ func doBuild(params *swyapi.SwdFunctionRun) (*swyapi.SwdFunctionRunResult, error
  * Runner sits at /go/src/swyrunner/
  */
 func doBuildGo(params *swyapi.SwdFunctionRun) (*swyapi.SwdFunctionRunResult, error) {
-	os.Remove("/go/src/swifty/script.go")
+	os.Remove("/go/src/swyrunner/script.go")
 	srcdir := params.Args["sources"]
-	err := os.Symlink("/go/src/swycode/" + srcdir + "/script.go", "/go/src/swifty/script.go")
+	err := os.Symlink("/go/src/swycode/" + srcdir + "/script.go", "/go/src/swyrunner/script.go")
 	if err != nil {
 		return nil, fmt.Errorf("Can't symlink code: %s", err.Error())
 	}
@@ -245,7 +245,7 @@ func doBuildGo(params *swyapi.SwdFunctionRun) (*swyapi.SwdFunctionRunResult, err
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	err = cmd.Run()
-	os.Remove("/go/src/swifty/script.go") /* Just an attempt */
+	os.Remove("/go/src/swyrunner/script.go") /* Just an attempt */
 
 	if err != nil {
 		if exit, code := get_exit_code(err); exit {
