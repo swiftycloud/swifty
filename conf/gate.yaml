@@ -14,12 +14,6 @@ daemon:
                 clone: "/home/swifty/local-sources"
         loglevel: "debug"
         prometheus: "swy0:9012"
-balancer:
-        localips:
-                - ip: "10.8.0.1"
-                  ports: "8680:8880"
-                - ip: "10.8.0.2"
-                  ports: "8780:8980"
 middleware:
         mwseckey: "MWSECPASS"
         maria:

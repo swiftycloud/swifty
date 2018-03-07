@@ -48,15 +48,6 @@ type YAMLConfSources struct {
 	Clone		string			`yaml:"clone"`
 }
 
-type YAMLConfBalancerIPS struct {
-	IP		string			`yaml:"ip"`
-	Ports		string			`yaml:"ports"`
-}
-
-type YAMLConfBalancer struct {
-	LocalIps	[]YAMLConfBalancerIPS	`yaml:"localips"`
-}
-
 type YAMLConfDaemon struct {
 	Addr		string			`yaml:"address"`
 	Sources		YAMLConfSources		`yaml:"sources"`
@@ -145,7 +136,6 @@ type YAMLConf struct {
 	DB		YAMLConfDB		`yaml:"db"`
 	Daemon		YAMLConfDaemon		`yaml:"daemon"`
 	Keystone	YAMLConfKeystone	`yaml:"keystone"`
-	Balancer	YAMLConfBalancer	`yaml:"balancer"`
 	Mware		YAMLConfMw		`yaml:"middleware"`
 	Runtime		YAMLConfRt		`yaml:"runtime"`
 	Wdog		YAMLConfSwd		`yaml:"wdog"`

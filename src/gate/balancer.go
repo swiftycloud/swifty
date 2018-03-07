@@ -1,101 +1,16 @@
 package main
 
 import (
-	"github.com/willf/bitset"
-
 	"gopkg.in/mgo.v2/bson"
-	"gopkg.in/mgo.v2"
-
 	"time"
 	"errors"
 	"net"
-	"strings"
-	"strconv"
 	"context"
 	"fmt"
 
 	"../common"
 	"../apis/apps"
 )
-
-var balancerMaxIPCount uint = 255
-var balancerIPCount uint = 0
-
-type PortRange struct {
-	From	uint
-	To	uint
-	Busy	*bitset.BitSet
-}
-
-type LocalIp struct {
-	Addr	string
-	Port	uint
-	Err	error
-}
-
-func makePortRange(ports string) (PortRange, error) {
-	ret := PortRange{}
-
-	pp := strings.Split(ports, ":")
-	if len(pp) != 2 {
-		return ret, fmt.Errorf("balancer: Bad port range in config")
-	}
-
-	p, _ := strconv.Atoi(pp[0])
-	ret.From = uint(p)
-	p, _ = strconv.Atoi(pp[1])
-	ret.To = uint(p)
-
-	if (ret.To < ret.From) {
-		return ret, fmt.Errorf("balancer: Negative port range")
-	}
-
-	ret.Busy = bitset.New(ret.To - ret.From + 1)
-	return ret, nil
-}
-
-var localIps map[string]PortRange
-var getLocalIp chan chan *LocalIp
-var putLocalIp chan *LocalIp
-
-func getIp() (*LocalIp) {
-	if balancerIPCount < balancerMaxIPCount {
-		for ip, ports := range localIps {
-			bit, ok := ports.Busy.NextClear(0)
-			if !ok {
-				continue
-			}
-
-			ports.Busy.Set(bit)
-			balancerIPCount += 1
-
-			return &LocalIp{ Addr: ip, Port: ports.From + bit }
-		}
-	}
-
-	return &LocalIp{ Err: fmt.Errorf("balancer: No space left to allocate virtual IP") }
-}
-
-func setIp(lip *LocalIp) {
-	ports := localIps[lip.Addr]
-	ports.Busy.Set(lip.Port - ports.From)
-	balancerIPCount += 1
-}
-
-func putIp(lip *LocalIp) {
-	ports := localIps[lip.Addr]
-	ports.Busy.Clear(lip.Port - ports.From)
-	balancerIPCount -= 1
-}
-
-func manageLocalIps() {
-	for {
-		select {
-		case getr := <-getLocalIp: getr <- getIp()
-		case putr := <-putLocalIp: putIp(putr)
-		}
-	}
-}
 
 type BalancerRS struct {
 	ObjID		bson.ObjectId	`bson:"_id,omitempty"`
@@ -106,99 +21,8 @@ type BalancerRS struct {
 	Version		string		`bson:"fnversion"`
 }
 
-type BalancerLink struct {
-	ObjID		bson.ObjectId	`bson:"_id,omitempty"`
-	FnId		string		`bson:"fnid"`
-	DepName		string		`bson:"depname"`
-	Addr		string		`bson:"addr"`
-	Port		uint		`bson:"port"`
-}
-
-func (link *BalancerLink) VIP() string {
-	return link.Addr + ":" + strconv.Itoa(int(link.Port))
-}
-
-func (link *BalancerLink) lip() (*LocalIp) {
-	return &LocalIp{Addr: link.Addr, Port: link.Port}
-}
-
-func ipvsCreate(lip *LocalIp) (error) {
-	args := fmt.Sprintf("-A -t %s:%d -s rr", lip.Addr, lip.Port)
-	_, stderr, err := swy.Exec("ipvsadm", strings.Split(args, " "))
-	if stderr.String() != "" {
-		return fmt.Errorf("balancer: Can't create service for %s:%d: stderr %s",
-				lip.Addr, lip.Port, stderr.String())
-	} else if err != nil {
-		return fmt.Errorf("balancer: Can't create service for %s:%d: %s",
-				lip.Addr, lip.Port, err.Error())
-	}
-	return nil
-}
-
-func ipvsDelete(lip *LocalIp) (error) {
-	args := fmt.Sprintf("-D -t %s:%d", lip.Addr, lip.Port)
-	_, stderr, err := swy.Exec("ipvsadm", strings.Split(args, " "))
-	if stderr.String() != "" {
-		return fmt.Errorf("balancer: Can't delete service for %s:%d: stderr %s",
-				lip.Addr, lip.Port, stderr.String())
-	} else if err != nil {
-		return fmt.Errorf("balancer: Can't delete service for %s:%d: %s",
-				lip.Addr, lip.Port, err.Error())
-	}
-	return nil
-}
-
-func ipvsRAttach(link *BalancerLink, addr string) (error) {
-	args := fmt.Sprintf("-a -t %s:%d -m -r %s", link.Addr, link.Port, addr)
-	_, stderr, err := swy.Exec("ipvsadm", strings.Split(args, " "))
-	if stderr.String() != "" {
-		return fmt.Errorf("balancer: Can't create RS for %s:%d/%s: stderr %s",
-				link.Addr, link.Port, addr, stderr.String())
-	} else if err != nil {
-		return fmt.Errorf("balancer: Can't create RS for %s:%d: %s",
-				link.Addr, link.Port, err.Error())
-	}
-	return nil
-}
-
-func ipvsRDetach(link *BalancerLink, addr string) (error) {
-	args := fmt.Sprintf("-d -t %s:%d -r %s", link.Addr, link.Port, addr)
-	_, stderr, err := swy.Exec("ipvsadm", strings.Split(args, " "))
-	if stderr.String() != "" {
-		return fmt.Errorf("balancer: Can't delete RS for %s:%d/%s: stderr %s",
-				link.Addr, link.Port, addr, stderr.String())
-	} else if err != nil {
-		return fmt.Errorf("balancer: Can't delete RS for %s:%d: %s",
-				link.Addr, link.Port, err.Error())
-	}
-	return nil
-}
-
 func BalancerPodDel(pod *k8sPod) error {
-	var link *BalancerLink
-	var rs *BalancerRS
-	var err error
-
-	link, err = dbBalancerLinkFindByDepname(pod.DepName)
-	if err != nil {
-		if err == mgo.ErrNotFound {
-			return nil
-		}
-
-		return fmt.Errorf("No link: %s", err.Error())
-	}
-
-	rs, err = dbBalancerPodFind(link, pod)
-	if err != nil {
-		return fmt.Errorf("Pop error: %s", err.Error())
-	}
-
-	err = ipvsRDetach(link, rs.WdogAddr)
-	if err != nil {
-		return fmt.Errorf("IPVS error: %s", err.Error())
-	}
-
-	err = dbBalancerPodDel(link, pod)
+	err := dbBalancerPodDel(pod)
 	if err != nil {
 		return fmt.Errorf("Pod del error: %s", err.Error())
 	}
@@ -240,137 +64,36 @@ func waitPort(addr_port string) error {
 }
 
 func BalancerPodAdd(pod *k8sPod) error {
-	var link *BalancerLink
-	var err error
-
-	err = waitPort(pod.WdogAddr)
+	fnid := pod.SwoId.Cookie()
+	err := waitPort(pod.WdogAddr)
 	if err != nil {
 		return err
 	}
 
-	link, err = dbBalancerLinkFindByDepname(pod.DepName)
-	if err != nil {
-		return fmt.Errorf("No link: %s", err.Error())
-	}
-
-	err = dbBalancerPodAdd(link, pod)
+	err = dbBalancerPodAdd(fnid, pod)
 	if err != nil {
 		return fmt.Errorf("Add error: %s", err.Error())
 	}
 
-	err = ipvsRAttach(link, pod.WdogAddr)
-	if err != nil {
-		dbBalancerPodDel(link, pod)
-		return fmt.Errorf("IPVS error: %s", err.Error())
-	}
-
-	fnWaiterKick(link.FnId)
+	fnWaiterKick(fnid)
 	return nil
 }
 
 func BalancerDelete(ctx context.Context, depname string) (error) {
-	var link *BalancerLink
-	var err error
-
-	link, err = dbBalancerLinkFindByDepname(depname)
-	if err != nil {
-		if err == mgo.ErrNotFound {
-			return nil
-		}
-
-		return fmt.Errorf("Link get err: %s", err.Error())
-	}
-
-	lip := link.lip()
-	err = ipvsDelete(lip)
-	if err != nil {
-		return err
-	}
-
-	err = dbBalancerPodDelAll(link)
+	err := dbBalancerPodDelAll(depname)
 	if err != nil {
 		return fmt.Errorf("POD del all error: %s", err.Error())
 	}
 
-	err = dbBalancerLinkDel(link)
-	if err != nil {
-		return fmt.Errorf("Del error: %s", err.Error())
-	}
-
-	putLocalIp <- lip
-	ctxlog(ctx).Debugf("Removed balancer for %s (ip %s)", depname, lip)
-
+	ctxlog(ctx).Debugf("Removed balancer for %s", depname)
 	return nil
 }
 
 func BalancerCreate(ctx context.Context, cookie, depname string) (error) {
-	var err error
-
-	resp := make(chan *LocalIp)
-	getLocalIp <- resp
-	lip := <-resp
-	if lip.Err != nil {
-		return lip.Err
-	}
-
-	ctxlog(ctx).Debugf("Allocated %s:%d address, deployment %s", lip.Addr, lip.Port, depname)
-	link := &BalancerLink{
-		Addr:	 lip.Addr,
-		Port:	 lip.Port,
-		DepName: depname,
-		FnId:	 cookie,
-	}
-
-	err = dbBalancerLinkAdd(link)
-	if err != nil {
-		putLocalIp <- lip
-		ctxlog(ctx).Errorf("balancer-db: Can't insert link %v: %s", link, err.Error())
-		return err
-	}
-
-	err = ipvsCreate(lip)
-	if err != nil {
-		dbBalancerLinkDel(link)
-		putLocalIp <- lip
-		return err
-	}
-
-	return nil
-}
-
-func BalancerLoad(conf *YAMLConf) (error) {
-	links, err := dbBalancerLinkFindAll()
-	if err != nil {
-		glog.Errorf("balancer-db: Can't find links %s/%s: %s", err.Error())
-		return err
-	}
-
-	for _, link := range links {
-		setIp(link.lip())
-	}
 	return nil
 }
 
 func BalancerInit(conf *YAMLConf) (error) {
-	var err error
-
-	localIps = make(map[string]PortRange)
-	for _, v := range conf.Balancer.LocalIps {
-		glog.Debugf("Got %s %s local IPs", v.IP, v.Ports);
-		localIps[v.IP], err = makePortRange(v.Ports)
-		if err != nil {
-			return err
-		}
-	}
-
-	if BalancerLoad(conf) != nil {
-		return fmt.Errorf("balancer: Can't load data from backend")
-	}
-
-	getLocalIp = make(chan chan *LocalIp)
-	putLocalIp = make(chan *LocalIp)
-	go manageLocalIps()
-
 	return nil
 }
 
@@ -394,6 +117,7 @@ func balancerGetConnExact(ctx context.Context, cookie, version string) (string, 
 }
 
 func balancerGetConnAny(ctx context.Context, cookie string, fdm *FnMemData) (string, error) {
+	/* FIXME -- get conns right from fdm, don't go to mongo every call */
 	aps, err := dbBalancerGetConnsByCookie(cookie)
 	if aps == nil {
 		if err == nil {

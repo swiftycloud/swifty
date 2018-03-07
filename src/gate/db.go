@@ -17,7 +17,6 @@ const (
 	DBColLogs	= "Logs"
 	DBColFnStats	= "FnStats"
 	DBColTenStats	= "TenantStats"
-	DBColBalancer	= "Balancer"
 	DBColBalancerRS = "BalancerRS"
 )
 
@@ -297,10 +296,10 @@ func dbBalancerRSListVersions(fn *FunctionDesc) ([]string, error) {
 	return fv, err
 }
 
-func dbBalancerPodAdd(link *BalancerLink, pod *k8sPod) error {
+func dbBalancerPodAdd(fnId string, pod *k8sPod) error {
 	c := dbSession.DB(dbState).C(DBColBalancerRS)
 	err := c.Insert(bson.M{
-			"fnid":		link.FnId,
+			"fnid":		fnId,
 			"depname":	pod.DepName,
 			"uid":		pod.UID,
 			"wdogaddr":	pod.WdogAddr,
@@ -313,7 +312,7 @@ func dbBalancerPodAdd(link *BalancerLink, pod *k8sPod) error {
 	return nil
 }
 
-func dbBalancerPodDel(link *BalancerLink, pod *k8sPod) (error) {
+func dbBalancerPodDel(pod *k8sPod) (error) {
 	c := dbSession.DB(dbState).C(DBColBalancerRS)
 	err := c.Remove(bson.M{ "uid":	pod.UID, })
 	if err != nil {
@@ -327,22 +326,9 @@ func dbBalancerPodDel(link *BalancerLink, pod *k8sPod) (error) {
 	return nil
 }
 
-func dbBalancerPodFind(link *BalancerLink, pod *k8sPod) (*BalancerRS, error) {
-	var v BalancerRS
-
+func dbBalancerPodDelAll(depname string) (error) {
 	c := dbSession.DB(dbState).C(DBColBalancerRS)
-	err := c.Find(bson.M{ "uid": pod.UID }).One(&v)
-	if err != nil {
-		return nil, fmt.Errorf("pop: %s", err.Error())
-	}
-
-	return &v, nil
-}
-
-
-func dbBalancerPodDelAll(link *BalancerLink) (error) {
-	c := dbSession.DB(dbState).C(DBColBalancerRS)
-	_, err := c.RemoveAll(bson.M{ "depname": link.DepName })
+	_, err := c.RemoveAll(bson.M{ "depname": depname })
 	if err == mgo.ErrNotFound {
 		err = nil
 	}
@@ -388,37 +374,6 @@ func dbBalancerGetConnExact(fnid, version string) (string, error) {
 	}
 
 	return v.WdogAddr, nil
-}
-
-func dbBalancerLinkFindByDepname(depname string) (*BalancerLink, error) {
-	var link BalancerLink
-
-	c := dbSession.DB(dbState).C(DBColBalancer)
-	err := c.Find(bson.M{"depname": depname}).One(&link)
-
-	return &link, err
-}
-
-func dbBalancerLinkFindAll() ([]BalancerLink, error) {
-	var links []BalancerLink
-
-	c := dbSession.DB(dbState).C(DBColBalancer)
-	err := c.Find(bson.M{}).All(&links)
-	if err != nil && err != mgo.ErrNotFound {
-		return nil, err
-	}
-
-	return links, nil
-}
-
-func dbBalancerLinkAdd(link *BalancerLink) (error) {
-	c := dbSession.DB(dbState).C(DBColBalancer)
-	return c.Insert(link)
-}
-
-func dbBalancerLinkDel(link *BalancerLink) (error) {
-	c := dbSession.DB(dbState).C(DBColBalancer)
-	return c.Remove(bson.M{"depname": link.DepName})
 }
 
 func dbProjectListAll(ten string) (fn []string, mw []string, err error) {
@@ -472,9 +427,6 @@ func dbConnect(conf *YAMLConf) error {
 	if err != nil {
 		return fmt.Errorf("No cookie index for mware: %s", err.Error())
 	}
-
-	index.Key = []string{"addr", "depname"}
-	dbSession.DB(dbState).C(DBColBalancer).EnsureIndex(index)
 
 	index.Key = []string{"uid"}
 	dbSession.DB(dbState).C(DBColBalancerRS).EnsureIndex(index)
