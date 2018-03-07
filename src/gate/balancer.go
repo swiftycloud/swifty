@@ -107,7 +107,6 @@ type BalancerRS struct {
 
 type BalancerConn struct {
 	AddrPort	string
-	Public		bool
 }
 
 type BalancerLink struct {
@@ -116,7 +115,6 @@ type BalancerLink struct {
 	DepName		string		`bson:"depname"`
 	Addr		string		`bson:"addr"`
 	Port		uint		`bson:"port"`
-	Public		bool		`bson:"public"`
 }
 
 func (link *BalancerLink) VIP() string {
@@ -308,7 +306,7 @@ func BalancerDelete(ctx context.Context, depname string) (error) {
 	return nil
 }
 
-func BalancerCreate(ctx context.Context, cookie, depname string, public bool) (error) {
+func BalancerCreate(ctx context.Context, cookie, depname string) (error) {
 	var err error
 
 	resp := make(chan *LocalIp)
@@ -324,7 +322,6 @@ func BalancerCreate(ctx context.Context, cookie, depname string, public bool) (e
 		Port:	 lip.Port,
 		DepName: depname,
 		FnId:	 cookie,
-		Public:	 public,
 	}
 
 	err = dbBalancerLinkAdd(link)
@@ -397,4 +394,8 @@ func balancerGetConnExact(ctx context.Context, cookie, version string) (*Balance
 	}
 
 	return conn, nil
+}
+
+func balancerGetConnAny(ctx context.Context, cookie string, fdm *FnMemData) (*BalancerConn, error) {
+	return dbBalancerGetConnByCookie(cookie)
 }

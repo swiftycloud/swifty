@@ -9,6 +9,7 @@ var fdmd sync.Map
 var tdat sync.Map
 
 type FnMemData struct {
+	public	bool
 	mem	uint64
 	crl	*xratelimit.RL
 	td	*TenantMemData
@@ -59,13 +60,18 @@ func tendatGetOrInit(tenant string) *TenantMemData {
 }
 
 func fndatGetOrInit(cookie string, fn *FunctionDesc) *FnMemData {
+	var err error
+
 	ret, ok := fdmd.Load(cookie)
 	if ok {
 		return ret.(*FnMemData)
 	}
 
 	if fn == nil {
-		fn, _ = dbFuncFindByCookie(cookie)
+		fn, err = dbFuncFindByCookie(cookie)
+		if err != nil {
+			return nil
+		}
 	}
 
 	nret := &FnMemData{}
@@ -76,6 +82,7 @@ func fndatGetOrInit(cookie string, fn *FunctionDesc) *FnMemData {
 	nret.stats.Init(fn)
 	nret.mem = fn.Size.Mem
 	nret.td = tendatGetOrInit(fn.SwoId.Tennant)
+	nret.public = fn.URLCall
 
 	ret, _ = fdmd.LoadOrStore(fn.Cookie, nret)
 	lret := ret.(*FnMemData)

@@ -359,10 +359,7 @@ func dbBalancerGetConnByCookie(cookie string) (*BalancerConn, error) {
 		return nil, err
 	}
 
-	return &BalancerConn{
-		AddrPort: link.VIP(),
-		Public: link.Public,
-	}, nil
+	return &BalancerConn{ AddrPort: link.VIP() }, nil
 }
 
 func dbBalancerGetConnExact(fnid, version string) (*BalancerConn, error) {

@@ -679,36 +679,40 @@ func handleFunctionCall(w http.ResponseWriter, r *http.Request) {
 	var arg_map map[string]string
 	var res *swyapi.SwdFunctionRunResult
 	var err error
+	var code int
 	var fmd *FnMemData
+	var conn *BalancerConn
 
 	if swyhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
 
 	ctx := context.Background()
-
 	fnId := mux.Vars(r)["fnid"]
 
-	code := http.StatusServiceUnavailable
-	conn, err := dbBalancerGetConnByCookie(fnId)
-	if err != nil {
-		err = errors.New("DB error")
-		goto out
-	}
-	if !conn.Public {
-		err = errors.New("No API for function")
+	fmd = memdGet(fnId)
+	if fmd == nil || !fmd.public {
+		code = http.StatusServiceUnavailable
+		err = errors.New("No such function")
 		goto out
 	}
 
-	fmd = memdGet(fnId)
 	if ratelimited(fmd) {
 		code = http.StatusTooManyRequests
 		err = errors.New("Ratelimited")
 		goto out
 	}
 
+	conn, err = balancerGetConnAny(ctx, fnId, fmd)
+	if err != nil {
+		code = http.StatusInternalServerError
+		err = errors.New("DB error")
+		goto out
+	}
+
+
 	arg_map = makeArgMap(r)
-	code = http.StatusInternalServerError
 	res, err = doRunConn(ctx, conn, fmd, fnId, "run", arg_map)
 	if err != nil {
+		code = http.StatusInternalServerError
 		goto out
 	}
 
