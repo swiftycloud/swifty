@@ -350,19 +350,19 @@ func dbBalancerPodDelAll(link *BalancerLink) (error) {
 	return err
 }
 
-func dbBalancerGetConnByCookie(cookie string) (*BalancerConn, error) {
+func dbBalancerGetConnByCookie(cookie string) (string, error) {
 	var link BalancerLink
 
 	c := dbSession.DB(dbState).C(DBColBalancer)
 	err := c.Find(bson.M{"fnid": cookie}).One(&link)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
-	return &BalancerConn{ AddrPort: link.VIP() }, nil
+	return link.VIP(), nil
 }
 
-func dbBalancerGetConnExact(fnid, version string) (*BalancerConn, error) {
+func dbBalancerGetConnExact(fnid, version string) (string, error) {
 	var v BalancerRS
 
 	c := dbSession.DB(dbState).C(DBColBalancerRS)
@@ -372,12 +372,12 @@ func dbBalancerGetConnExact(fnid, version string) (*BalancerConn, error) {
 		}).One(&v)
 	if err != nil {
 		if err == mgo.ErrNotFound {
-			return nil, nil
+			return "", nil
 		}
-		return nil, err
+		return "", err
 	}
 
-	return &BalancerConn{ AddrPort: v.WdogAddr }, nil
+	return v.WdogAddr, nil
 }
 
 func dbBalancerLinkFindByDepname(depname string) (*BalancerLink, error) {

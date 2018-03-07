@@ -105,10 +105,6 @@ type BalancerRS struct {
 	Version		string		`bson:"fnversion"`
 }
 
-type BalancerConn struct {
-	AddrPort	string
-}
-
 type BalancerLink struct {
 	ObjID		bson.ObjectId	`bson:"_id,omitempty"`
 	FnId		string		`bson:"fnid"`
@@ -377,25 +373,25 @@ func BalancerInit(conf *YAMLConf) (error) {
 	return nil
 }
 
-func balancerGetConnExact(ctx context.Context, cookie, version string) (*BalancerConn, *swyapi.GateErr) {
+func balancerGetConnExact(ctx context.Context, cookie, version string) (string, *swyapi.GateErr) {
 	/*
 	 * We can lookup id.Cookie() here, but ... it's manual run,
 	 * let's also make sure the FN exists at all
 	 */
-	conn, err := dbBalancerGetConnExact(cookie, version)
-	if conn == nil {
+	ap, err := dbBalancerGetConnExact(cookie, version)
+	if ap == "" {
 		if err == nil {
-			return nil, GateErrM(swy.GateGenErr, "Nothing to run (yet)")
+			return "", GateErrM(swy.GateGenErr, "Nothing to run (yet)")
 		}
 
 		ctxlog(ctx).Errorf("balancer-db: Can't find pod %s/%s: %s",
 				cookie, version, err.Error())
-		return nil, GateErrD(err)
+		return "", GateErrD(err)
 	}
 
-	return conn, nil
+	return ap, nil
 }
 
-func balancerGetConnAny(ctx context.Context, cookie string, fdm *FnMemData) (*BalancerConn, error) {
+func balancerGetConnAny(ctx context.Context, cookie string, fdm *FnMemData) (string, error) {
 	return dbBalancerGetConnByCookie(cookie)
 }

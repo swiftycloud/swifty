@@ -12,7 +12,7 @@ import (
 
 func doRun(ctx context.Context, fn *FunctionDesc, event string, args map[string]string) (*swyapi.SwdFunctionRunResult, error) {
 	conn, err := balancerGetConnAny(ctx, fn.Cookie, nil)
-	if conn == nil {
+	if conn == "" {
 		ctxlog(ctx).Errorf("Can't find %s cookie balancer: %s", fn.Cookie, err.Error())
 		return nil, fmt.Errorf("Can't find balancer for %s", fn.Cookie)
 	}
@@ -20,7 +20,7 @@ func doRun(ctx context.Context, fn *FunctionDesc, event string, args map[string]
 	return doRunConn(ctx, conn, nil, fn.Cookie, event, args)
 }
 
-func doRunConn(ctx context.Context, conn *BalancerConn, fmd *FnMemData, cookie, event string, args map[string]string) (*swyapi.SwdFunctionRunResult, error) {
+func doRunConn(ctx context.Context, conn string, fmd *FnMemData, cookie, event string, args map[string]string) (*swyapi.SwdFunctionRunResult, error) {
 	ctxlog(ctx).Debugf("RUN %s %s (%v)", cookie, event, args)
 
 	var wd_result swyapi.SwdFunctionRunResult
@@ -32,7 +32,7 @@ func doRunConn(ctx context.Context, conn *BalancerConn, fmd *FnMemData, cookie, 
 
 	resp, err = swyhttp.MarshalAndPost(
 			&swyhttp.RestReq{
-				Address: "http://" + conn.AddrPort + "/v1/run",
+				Address: "http://" + conn + "/v1/run",
 				Timeout: uint(conf.Runtime.Timeout.Max),
 			},
 			&swyapi.SwdFunctionRun{
