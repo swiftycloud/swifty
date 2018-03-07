@@ -516,6 +516,7 @@ func handleFunctionStats(ctx context.Context, w http.ResponseWriter, r *http.Req
 			Errors:		stats.Errors,
 			LastCall:	lcs,
 			Time:		uint64(stats.RunTime.Nanoseconds()/1000),
+			GBS:		stats.GBS(),
 		})
 	if err != nil {
 		return GateErrE(swy.GateBadResp, err)
@@ -582,6 +583,7 @@ func handleFunctionInfo(ctx context.Context, w http.ResponseWriter, r *http.Requ
 				Errors:		stats.Errors,
 				LastCall:	lcs,
 				Time:		uint64(stats.RunTime.Nanoseconds()/1000),
+				GBS:		stats.GBS(),
 			},
 			Size:		swyapi.FunctionSize {
 				Memory:		fn.Size.Mem,

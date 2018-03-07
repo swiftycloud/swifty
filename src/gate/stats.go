@@ -44,6 +44,11 @@ type FnStats struct {
 	statsFlush			`bson:"-"`
 }
 
+func (fs *FnStats)GBS() float64 {
+	/* RunCost is in fn.mem * Duration, i.e. -- MB * nanoseconds */
+	return float64(fs.RunCost) / float64(1024 * time.Second)
+}
+
 type TenStats struct {
 	Tenant		string		`bson:"tenant"`
 	Called		uint64		`bsin:"called"`
