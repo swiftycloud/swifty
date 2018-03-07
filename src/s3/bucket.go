@@ -3,6 +3,7 @@ package main
 import (
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
+	"regexp"
 	"time"
 
 	"../apis/apps/s3"
@@ -367,6 +368,19 @@ func (bucket *S3Bucket)dbFindAll(query bson.M) ([]S3Object, error) {
 	return res, nil
 }
 
+func (params *S3ListObjectsRP) Validate() (bool) {
+	re := regexp.MustCompile(S3ObjectName_Letter)
+
+	if params.Delimiter != "" { if !re.MatchString(params.Delimiter) { return false } }
+	if params.Prefix != "" { if !re.MatchString(params.Prefix) { return false } }
+	if params.ContToken != "" { if !re.MatchString(params.ContToken) { return false } }
+	if params.StartAfter != "" { if !re.MatchString(params.StartAfter) { return false } }
+
+	if len(params.Delimiter) > 1 { return false }
+
+	return true
+}
+
 func s3ListBucket(iam *S3Iam, bname string, params *S3ListObjectsRP) (*swys3api.S3Bucket, *S3Error) {
 	var list swys3api.S3Bucket
 	var bucket *S3Bucket
@@ -374,6 +388,10 @@ func s3ListBucket(iam *S3Iam, bname string, params *S3ListObjectsRP) (*swys3api.
 	var pipe *mgo.Pipe
 	var iter *mgo.Iter
 	var err error
+
+	if params.Validate() == false {
+		return nil, &S3Error{ ErrorCode: S3ErrInvalidArgument }
+	}
 
 	bucket, err = iam.FindBucket(bname)
 	if err != nil {
