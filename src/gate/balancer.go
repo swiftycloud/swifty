@@ -7,6 +7,7 @@ import (
 	"gopkg.in/mgo.v2"
 
 	"time"
+	"errors"
 	"net"
 	"strings"
 	"strconv"
@@ -393,5 +394,20 @@ func balancerGetConnExact(ctx context.Context, cookie, version string) (string, 
 }
 
 func balancerGetConnAny(ctx context.Context, cookie string, fdm *FnMemData) (string, error) {
-	return dbBalancerGetConnByCookie(cookie)
+	aps, err := dbBalancerGetConnsByCookie(cookie)
+	if aps == nil {
+		if err == nil {
+			return "", errors.New("No available PODs")
+		}
+
+		return "", err
+	}
+
+	if fdm == nil { /* FIXME -- balance here too */
+		return aps[0], nil
+	}
+
+	/* Emulate simple RR balancing -- each next call picks next POD */
+	idx := int(fdm.stats.Called % uint64(len(aps)))
+	return aps[idx], nil
 }
