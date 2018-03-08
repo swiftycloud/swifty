@@ -279,16 +279,19 @@ if args.cmd == 'list-buckets':
         print("ERROR: Can't list bucket")
 
 if args.cmd == 'list-objects':
-    resp = s3.list_objects_v2(Bucket = args.name,
-                              Delimiter = args.delimiter,
-                              Prefix = args.prefix)
-    print("Objects list (bucket %s count %d)" % (args.name, resp['KeyCount']))
-    if 'Contents' in resp:
-        for x in resp['Contents']:
-            print("\tObject: Key %s Size %d" % (x['Key'], x['Size']))
-    if 'CommonPrefixes' in resp:
-        for x in resp['CommonPrefixes']:
-            print("\t\tPrefix: %s" % (x['Prefix']))
+    try:
+        resp = s3.list_objects_v2(Bucket = args.name,
+                                  Delimiter = args.delimiter,
+                                  Prefix = args.prefix)
+        print("Objects list (bucket %s count %d)" % (args.name, resp['KeyCount']))
+        if 'Contents' in resp:
+            for x in resp['Contents']:
+                print("\tObject: Key %s Size %d" % (x['Key'], x['Size']))
+        if 'CommonPrefixes' in resp:
+            for x in resp['CommonPrefixes']:
+                print("\t\tPrefix: %s" % (x['Prefix']))
+    except:
+        print("ERROR: Can't list bucket")
 
 if args.cmd == 'list-uploads':
     try:
