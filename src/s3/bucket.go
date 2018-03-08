@@ -23,6 +23,9 @@ type S3ListObjectsRP struct {
 	ContToken		string
 	FetchOwner		bool
 	StartAfter		string
+
+	// Private fields
+	ContTokenDecoded	string
 }
 
 type S3BucketNotify struct {
@@ -373,8 +376,15 @@ func (params *S3ListObjectsRP) Validate() (bool) {
 
 	if params.Delimiter != "" { if !re.MatchString(params.Delimiter) { return false } }
 	if params.Prefix != "" { if !re.MatchString(params.Prefix) { return false } }
-	if params.ContToken != "" { if !re.MatchString(params.ContToken) { return false } }
 	if params.StartAfter != "" { if !re.MatchString(params.StartAfter) { return false } }
+
+	if params.ContToken != "" {
+		token := base64_decode(params.ContToken)
+		if token == nil { return false }
+		if !re.MatchString(string(token[:])) { return false }
+
+		params.ContTokenDecoded = string(token[:])
+	}
 
 	if len(params.Delimiter) > 1 { return false }
 
@@ -388,8 +398,8 @@ func (params *S3ListObjectsRP) Validate() (bool) {
 }
 
 func s3ListBucket(iam *S3Iam, bname string, params *S3ListObjectsRP) (*swys3api.S3Bucket, *S3Error) {
+	var start_after, cont_after bool
 	var list swys3api.S3Bucket
-	var start_after bool
 	var bucket *S3Bucket
 	var object S3Object
 	var pipe *mgo.Pipe
@@ -409,10 +419,11 @@ func s3ListBucket(iam *S3Iam, bname string, params *S3ListObjectsRP) (*swys3api.
 	}
 
 	if params.StartAfter != "" { start_after = true }
+	if params.ContTokenDecoded != "" { cont_after = true }
 
 	list.Name	= bucket.Name
 	list.KeyCount	= 0
-	list.MaxKeys	= S3StorageDefaultListObjects
+	list.MaxKeys	= params.MaxKeys
 	list.IsTruncated= false
 
 	query := bson.M{ "bucket-id": bucket.ObjID, "state": S3StateActive}
@@ -436,10 +447,13 @@ func s3ListBucket(iam *S3Iam, bname string, params *S3ListObjectsRP) (*swys3api.
 		// FIXME: Is there a chance to skip some entries
 		// by mongo itself via request?
 		if start_after {
-			if object.Key != params.StartAfter {
-				continue
-			}
+			if object.Key != params.StartAfter { continue }
 			start_after = false
+			continue
+		}
+		if cont_after {
+			if object.Key != params.ContTokenDecoded { continue }
+			cont_after = false
 			continue
 		}
 		o := swys3api.S3Object {
@@ -460,6 +474,8 @@ func s3ListBucket(iam *S3Iam, bname string, params *S3ListObjectsRP) (*swys3api.
 
 		if list.KeyCount >= list.MaxKeys {
 			list.IsTruncated = true
+			list.ContinuationToken = params.ContToken
+			list.NextContinuationToken = base64_encode([]byte(object.Key))
 			break
 		}
 	}

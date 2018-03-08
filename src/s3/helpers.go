@@ -3,6 +3,7 @@ package main
 import (
 	"crypto/sha256"
 	"crypto/md5"
+	"encoding/base64"
 	"encoding/xml"
 	"encoding/hex"
 	"net/http"
@@ -14,6 +15,15 @@ const S3TimeStampMax = int64(0x7fffffffffffffff)
 
 func current_timestamp() int64 {
 	return time.Now().Unix()
+}
+
+func base64_encode(s []byte) string {
+	return base64.StdEncoding.EncodeToString(s)
+}
+
+func base64_decode(s string) []byte {
+	d, _ := base64.StdEncoding.DecodeString(s)
+	return d
 }
 
 func md5sum(s []byte) string {
