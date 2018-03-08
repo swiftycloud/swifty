@@ -181,10 +181,7 @@ func handleListObjects(bname string, iam *S3Iam, w http.ResponseWriter, r *http.
 		Prefix:		getURLValue(r, "prefix"),
 		ContToken:	getURLValue(r, "continuation-token"),
 		StartAfter:	getURLValue(r, "start-after"),
-	}
-
-	if v, ok := getURLParam(r, "fetch-owner"); ok {
-		if v == "true" { params.FetchOwner = true }
+		FetchOwner:	getURLBool(r, "fetch-owner"),
 	}
 
 	if v, ok := getURLParam(r, "max-keys"); ok {

@@ -6,6 +6,7 @@ import (
 	"encoding/xml"
 	"encoding/hex"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -41,6 +42,12 @@ func getURLParam(r *http.Request, param string) (string, bool) {
 func getURLValue(r *http.Request, param string) (string) {
 	val, _ := getURLParam(r, param)
 	return val
+}
+
+func getURLBool(r *http.Request, param string) (bool) {
+	val, _ := getURLParam(r, param)
+	if strings.ToLower(val) == "true" { return true }
+	return false
 }
 
 func HTTPMarshalXMLAndWrite(w http.ResponseWriter, status int, data interface{}) error {

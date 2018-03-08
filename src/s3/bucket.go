@@ -430,12 +430,18 @@ func s3ListBucket(iam *S3Iam, bname string, params *S3ListObjectsRP) (*swys3api.
 	pipe = dbS3Pipe(&object, []bson.M{{"$match": query}})
 	iter = pipe.Iter()
 	for iter.Next(&object) {
-		list.Contents = append(list.Contents,
-		swys3api.S3Object {
+		o := swys3api.S3Object {
 			Key:		object.Key,
 			Size:		object.Size,
 			LastModified:	object.CreationTime,
-		})
+		}
+
+		if params.FetchOwner {
+			o.Owner.DisplayName = iam.User
+			o.Owner.ID = iam.AwsID
+		}
+
+		list.Contents = append(list.Contents, o)
 		list.KeyCount++
 
 		if list.KeyCount >= list.MaxKeys {
