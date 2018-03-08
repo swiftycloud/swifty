@@ -434,6 +434,7 @@ func s3ListBucket(iam *S3Iam, bname string, params *S3ListObjectsRP) (*swys3api.
 			Key:		object.Key,
 			Size:		object.Size,
 			LastModified:	object.CreationTime,
+			ETag:		object.ETag,
 		}
 
 		if params.FetchOwner {
