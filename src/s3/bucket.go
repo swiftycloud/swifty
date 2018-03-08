@@ -409,7 +409,7 @@ func s3ListBucket(iam *S3Iam, bname string, params *S3ListObjectsRP) (*swys3api.
 
 	list.Name	= bucket.Name
 	list.KeyCount	= 0
-	list.MaxKeys	= bucket.MaxObjects
+	list.MaxKeys	= S3StorageDefaultListObjects
 	list.IsTruncated= false
 
 	query := bson.M{ "bucket-id": bucket.ObjID, "state": S3StateActive}
@@ -437,6 +437,11 @@ func s3ListBucket(iam *S3Iam, bname string, params *S3ListObjectsRP) (*swys3api.
 			LastModified:	object.CreationTime,
 		})
 		list.KeyCount++
+
+		if list.KeyCount >= list.MaxKeys {
+			list.IsTruncated = true
+			break
+		}
 	}
 	iter.Close()
 
