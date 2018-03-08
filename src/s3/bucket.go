@@ -389,6 +389,7 @@ func (params *S3ListObjectsRP) Validate() (bool) {
 
 func s3ListBucket(iam *S3Iam, bname string, params *S3ListObjectsRP) (*swys3api.S3Bucket, *S3Error) {
 	var list swys3api.S3Bucket
+	var start_after bool
 	var bucket *S3Bucket
 	var object S3Object
 	var pipe *mgo.Pipe
@@ -406,6 +407,8 @@ func s3ListBucket(iam *S3Iam, bname string, params *S3ListObjectsRP) (*swys3api.
 		}
 		return nil, &S3Error{ ErrorCode: S3ErrInternalError }
 	}
+
+	if params.StartAfter != "" { start_after = true }
 
 	list.Name	= bucket.Name
 	list.KeyCount	= 0
@@ -427,9 +430,18 @@ func s3ListBucket(iam *S3Iam, bname string, params *S3ListObjectsRP) (*swys3api.
 		}
 	}
 
-	pipe = dbS3Pipe(&object, []bson.M{{"$match": query}})
+	pipe = dbS3Pipe(&object, []bson.M{{"$match": query}, {"$sort": bson.M{"key": 1}}})
 	iter = pipe.Iter()
 	for iter.Next(&object) {
+		// FIXME: Is there a chance to skip some entries
+		// by mongo itself via request?
+		if start_after {
+			if object.Key != params.StartAfter {
+				continue
+			}
+			start_after = false
+			continue
+		}
 		o := swys3api.S3Object {
 			Key:		object.Key,
 			Size:		object.Size,
