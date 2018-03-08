@@ -18,7 +18,7 @@ var BucketCannedAcls = []string {
 
 type S3ListObjectsRP struct {
 	Delimiter		string
-	MaxKeys			int
+	MaxKeys			int64
 	Prefix			string
 	ContToken		string
 	FetchOwner		bool
@@ -377,6 +377,12 @@ func (params *S3ListObjectsRP) Validate() (bool) {
 	if params.StartAfter != "" { if !re.MatchString(params.StartAfter) { return false } }
 
 	if len(params.Delimiter) > 1 { return false }
+
+	if params.MaxKeys <= 0 {
+		params.MaxKeys = S3StorageDefaultListObjects
+	} else if params.MaxKeys > S3StorageMaxObjects {
+		return false
+	}
 
 	return true
 }

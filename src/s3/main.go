@@ -188,7 +188,7 @@ func handleListObjects(bname string, iam *S3Iam, w http.ResponseWriter, r *http.
 	}
 
 	if v, ok := getURLParam(r, "max-keys"); ok {
-		params.MaxKeys, _ = strconv.Atoi(v)
+		params.MaxKeys, _ = strconv.ParseInt(v, 10, 64)
 	}
 
 	objects, err := s3ListBucket(iam, bname, params)

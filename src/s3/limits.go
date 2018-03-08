@@ -4,6 +4,9 @@ const (
 	// Maximum of objects in a bucket
 	S3StorageMaxObjects		= int64(10000)
 
+	// Default objects count for listing
+	S3StorageDefaultListObjects	= int64(1000)
+
 	// Maximum size of one object
 	S3StorageMaxBytes		= int64(100 << 20)
 
