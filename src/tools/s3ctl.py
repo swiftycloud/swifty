@@ -306,6 +306,10 @@ if args.cmd == 'list-objects':
         if 'CommonPrefixes' in resp:
             for x in resp['CommonPrefixes']:
                 print("\t\tPrefix: %s" % (x['Prefix']))
+        if 'NextContinuationToken' in resp and resp['NextContinuationToken'] != "":
+            print("\t\tNextContinuationToken: %s" % (resp['NextContinuationToken']))
+        if 'StartAfter' in resp and resp['StartAfter'] != "":
+            print("\t\tStartAfter: %s" % (resp['StartAfter']))
     except:
         print("ERROR: Can't list bucket")
 
