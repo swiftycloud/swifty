@@ -59,8 +59,16 @@ for cmd in ['list-objects']:
                      help = 'Bucket name', required = True)
     spp.add_argument('--delimiter', dest = 'delimiter',
                      help = 'Delimiter', default = "", required = False)
+    spp.add_argument('--maxkeys', dest = 'maxkeys', type = int,
+                     help = 'Maximum keys to fetch', default = 1000, required = False)
     spp.add_argument('--prefix', dest = 'prefix',
                      help = 'Prefix', default = "", required = False)
+    spp.add_argument('--token', dest = 'cont_token',
+                     help = 'Continuation token', default = "", required = False)
+    spp.add_argument('--owner', dest = 'fetch_owner', type = bool,
+                     help = 'Fetch object owner', default = False, required = False)
+    spp.add_argument('--after', dest = 'start_after',
+                     help = 'Start after the object specified', default = "", required = False)
 
 for cmd in ['list-uploads']:
     spp = sp.add_parser(cmd, help = 'List object parts being uploaded')
@@ -282,11 +290,19 @@ if args.cmd == 'list-objects':
     try:
         resp = s3.list_objects_v2(Bucket = args.name,
                                   Delimiter = args.delimiter,
-                                  Prefix = args.prefix)
+                                  MaxKeys = args.maxkeys,
+                                  Prefix = args.prefix,
+                                  ContinuationToken = args.cont_token,
+                                  FetchOwner = args.fetch_owner,
+                                  StartAfter = args.start_after)
         print("Objects list (bucket %s count %d)" % (args.name, resp['KeyCount']))
         if 'Contents' in resp:
             for x in resp['Contents']:
-                print("\tObject: Key %s Size %d" % (x['Key'], x['Size']))
+                owner = "None"
+                if 'Owner' in x and x['Owner']['DisplayName'] != "":
+                        owner = x['Owner']['DisplayName'] + "/" + x['Owner']['ID']
+                print("\tObject: Key %s Size %d ETag %s Owner %s" %
+                      (x['Key'], x['Size'], x['ETag'], owner))
         if 'CommonPrefixes' in resp:
             for x in resp['CommonPrefixes']:
                 print("\t\tPrefix: %s" % (x['Prefix']))
