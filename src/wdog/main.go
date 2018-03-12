@@ -143,8 +143,6 @@ func doRun(body []byte) (*swyapi.SwdFunctionRunResult, error) {
 	runlock.Lock()
 	defer runlock.Unlock()
 
-	log.Debugf("Running FN (%v)", string(body))
-
 	start := time.Now()
 	err = runner.q.SendBytes(body)
 	if err != nil {
@@ -159,8 +157,6 @@ func doRun(body []byte) (*swyapi.SwdFunctionRunResult, error) {
 		case <-time.After(time.Duration(fnTmo) * time.Millisecond):
 			break
 		}
-
-		log.Debugf("Timeout!")
 
 		timeout = true
 		xerr := runner.cmd.Process.Kill()
