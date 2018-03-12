@@ -675,6 +675,8 @@ func handleFunctionCall(w http.ResponseWriter, r *http.Request) {
 
 	if swyhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
 
+	sopq := statsStart()
+
 	ctx := context.Background()
 	fnId := mux.Vars(r)["fnid"]
 
@@ -700,7 +702,7 @@ func handleFunctionCall(w http.ResponseWriter, r *http.Request) {
 
 
 	arg_map = makeArgMap(r)
-	res, err = doRunConn(ctx, conn, fmd, fnId, "call", arg_map)
+	res, err = doRunConn(ctx, conn, fnId, "call", arg_map)
 	if err != nil {
 		code = http.StatusInternalServerError
 		goto out
@@ -715,6 +717,9 @@ func handleFunctionCall(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(res.Return))
+
+	statsUpdate(fmd, sopq, res)
+
 	return
 
 out:
@@ -747,7 +752,7 @@ func handleFunctionRun(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		return errc
 	}
 
-	res, err = doRunConn(ctx, conn, nil, fn.Cookie, "run", params.Args)
+	res, err = doRunConn(ctx, conn, fn.Cookie, "run", params.Args)
 	if err != nil {
 		return GateErrE(swy.GateGenErr, err)
 	}

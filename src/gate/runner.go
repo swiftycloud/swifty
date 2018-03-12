@@ -17,7 +17,7 @@ func doRun(ctx context.Context, fn *FunctionDesc, event string, args map[string]
 		return nil, fmt.Errorf("Can't find balancer for %s", fn.Cookie)
 	}
 
-	return doRunConn(ctx, conn, nil, fn.Cookie, event, args)
+	return doRunConn(ctx, conn, fn.Cookie, event, args)
 }
 
 func talkHTTP(conn, cookie string, args map[string]string, res *swyapi.SwdFunctionRunResult) error {
@@ -41,7 +41,7 @@ func talkHTTP(conn, cookie string, args map[string]string, res *swyapi.SwdFuncti
 	return nil
 }
 
-func doRunConn(ctx context.Context, conn string, fmd *FnMemData, cookie, event string, args map[string]string) (*swyapi.SwdFunctionRunResult, error) {
+func doRunConn(ctx context.Context, conn string, cookie, event string, args map[string]string) (*swyapi.SwdFunctionRunResult, error) {
 	if event != "call" {
 		ctxlog(ctx).Debugf("RUN %s %s (%v)", cookie, event, args)
 	}
@@ -49,18 +49,10 @@ func doRunConn(ctx context.Context, conn string, fmd *FnMemData, cookie, event s
 	var wd_result swyapi.SwdFunctionRunResult
 	var err error
 
-	sopq := statsStart()
-
 	err = talkHTTP(conn, cookie, args, &wd_result)
 	if err != nil {
 		goto out
 	}
-
-	if fmd == nil {
-		fmd = memdGet(cookie)
-	}
-
-	statsUpdate(fmd, sopq, &wd_result)
 
 	if wd_result.Stdout != "" || wd_result.Stderr != "" {
 		logSaveResult(cookie, event, wd_result.Stdout, wd_result.Stderr)

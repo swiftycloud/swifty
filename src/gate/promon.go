@@ -39,6 +39,8 @@ var (
 			Buckets: []float64{
 				(500 * time.Microsecond).Seconds(), /* Ethernet latency ~200 usec */
 				(  1 * time.Millisecond).Seconds(),
+				(  2 * time.Millisecond).Seconds(),
+				(  5 * time.Millisecond).Seconds(),
 				( 10 * time.Millisecond).Seconds(), /* Internet ping time ~10 msec */
 				(100 * time.Millisecond).Seconds(),
 				(500 * time.Millisecond).Seconds(), /* More than 0.5 sec overhead is ... too bad */
