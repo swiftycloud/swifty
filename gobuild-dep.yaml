@@ -22,8 +22,6 @@ spec:
         image: "swifty/golang"
         imagePullPolicy: Never
         env:
-        - name: SWD_POD_TOKEN
-          value: "golang-build"
         - name: SWD_INSTANCE
           value: "build"
         - name: SWD_PORT

@@ -20,15 +20,18 @@ func doRun(ctx context.Context, fn *FunctionDesc, event string, args map[string]
 	return doRunConn(ctx, conn, nil, fn.Cookie, event, args)
 }
 
-func talkHTTP(conn string, args *swyapi.SwdFunctionRun, res *swyapi.SwdFunctionRunResult) error {
+func talkHTTP(conn, cookie string, args map[string]string, res *swyapi.SwdFunctionRunResult) error {
 	var resp *http.Response
 	var err error
 
 	resp, err = swyhttp.MarshalAndPost(
 			&swyhttp.RestReq{
-				Address: "http://" + conn + "/v1/run",
+				Address: "http://" + conn + "/v1/run/" + cookie,
 				Timeout: uint(conf.Runtime.Timeout.Max),
-			}, args)
+			},
+			&swyapi.SwdFunctionRun{
+				Args: args,
+			})
 	if err != nil {
 		return err
 	}
@@ -51,12 +54,7 @@ func doRunConn(ctx context.Context, conn string, fmd *FnMemData, cookie, event s
 
 	sopq := statsStart()
 
-	rargs := &swyapi.SwdFunctionRun{
-		PodToken:	cookie,
-		Args:		args,
-	}
-
-	err = talkHTTP(conn, rargs, &wd_result)
+	err = talkHTTP(conn, cookie, args, &wd_result)
 	if err != nil {
 		goto out
 	}

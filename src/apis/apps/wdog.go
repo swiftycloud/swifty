@@ -5,7 +5,6 @@ import (
 )
 
 type SwdFunctionRun struct {
-	PodToken	string			`json:"podtoken"`
 	Args		map[string]string	`json:"args"`
 }
 

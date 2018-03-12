@@ -28,7 +28,6 @@ func buildFunction(ctx context.Context, conf *YAMLConf, addr string, fn *Functio
 				Timeout: 120,
 			},
 			&swyapi.SwdFunctionRun{
-				PodToken:	fn.Code.Lang + "-build",
 				Args:		map[string]string {
 					"sources": fnCodePathV(fn),
 				},
