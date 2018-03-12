@@ -16,7 +16,6 @@ import (
 type BalancerRS struct {
 	ObjID		bson.ObjectId	`bson:"_id,omitempty"`
 	FnId		string		`bson:"fnid"`
-	DepName		string		`bson:"depname"`
 	UID		string		`bson:"uid"`
 	WdogAddr	string		`bson:"wdogaddr"`
 	Version		string		`bson:"fnversion"`
@@ -80,17 +79,17 @@ func BalancerPodAdd(pod *k8sPod) error {
 	return nil
 }
 
-func BalancerDelete(ctx context.Context, depname string) (error) {
-	err := dbBalancerPodDelAll(depname)
+func BalancerDelete(ctx context.Context, fnid string) (error) {
+	err := dbBalancerPodDelAll(fnid)
 	if err != nil {
 		return fmt.Errorf("POD del all error: %s", err.Error())
 	}
 
-	ctxlog(ctx).Debugf("Removed balancer for %s", depname)
+	ctxlog(ctx).Debugf("Removed balancer for %s", fnid)
 	return nil
 }
 
-func BalancerCreate(ctx context.Context, cookie, depname string) (error) {
+func BalancerCreate(ctx context.Context, fnid string) (error) {
 	return nil
 }
 

@@ -300,7 +300,6 @@ func dbBalancerPodAdd(fnId string, pod *k8sPod) error {
 	c := dbSession.DB(dbState).C(DBColBalancerRS)
 	err := c.Insert(bson.M{
 			"fnid":		fnId,
-			"depname":	pod.DepName,
 			"uid":		pod.UID,
 			"wdogaddr":	pod.WdogAddr,
 			"fnversion":	pod.Version,
@@ -326,9 +325,9 @@ func dbBalancerPodDel(pod *k8sPod) (error) {
 	return nil
 }
 
-func dbBalancerPodDelAll(depname string) (error) {
+func dbBalancerPodDelAll(fnid string) (error) {
 	c := dbSession.DB(dbState).C(DBColBalancerRS)
-	_, err := c.RemoveAll(bson.M{ "depname": depname })
+	_, err := c.RemoveAll(bson.M{ "fnid": fnid })
 	if err == mgo.ErrNotFound {
 		err = nil
 	}

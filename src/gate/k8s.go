@@ -51,7 +51,7 @@ func swk8sRemove(ctx context.Context, conf *YAMLConf, fn *FunctionDesc) error {
 
 	depname := fn.DepName()
 
-	err = BalancerDelete(ctx, depname)
+	err = BalancerDelete(ctx, fn.Cookie)
 	if err != nil {
 		ctxlog(ctx).Errorf("Can't delete balancer %s : %s", depname, err.Error())
 		return err
@@ -331,7 +331,7 @@ func swk8sRun(ctx context.Context, conf *YAMLConf, fn *FunctionDesc) error {
 
 	nr_replicas := int32(fn.Size.Replicas)
 
-	err = BalancerCreate(ctx, fn.Cookie, depname)
+	err = BalancerCreate(ctx, fn.Cookie)
 	if err != nil {
 		ctxlog(ctx).Errorf("Can't create balancer %s for %s: %s", depname, fn.SwoId.Str(), err.Error())
 		return errors.New("Net error")
@@ -354,7 +354,7 @@ func swk8sRun(ctx context.Context, conf *YAMLConf, fn *FunctionDesc) error {
 	deploy := swk8sClientSet.Extensions().Deployments(v1.NamespaceDefault)
 	_, err = deploy.Create(&deployspec)
 	if err != nil {
-		BalancerDelete(ctx, depname)
+		BalancerDelete(ctx, fn.Cookie)
 		ctxlog(ctx).Errorf("Can't start deployment %s: %s", fn.SwoId.Str(), err.Error())
 		return errors.New("K8S error")
 	}
