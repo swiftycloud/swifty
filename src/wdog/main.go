@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"os/exec"
 	"strconv"
-	"errors"
 	"bytes"
 	"time"
 	"sync"
@@ -21,7 +20,6 @@ import (
 	"../apis/apps"
 )
 
-var podToken string
 var build bool
 var fnTmo int
 var lang string
@@ -307,11 +305,6 @@ func handleRun(w http.ResponseWriter, r *http.Request) {
 		goto out
 	}
 
-	if params.PodToken != podToken {
-		err = errors.New("Pod Token mismatch")
-		goto out
-	}
-
 	if !build {
 		result, err = doRun(&params)
 	} else {
@@ -364,11 +357,6 @@ func main() {
 		log.Fatal("No address specified")
 	}
 
-	podToken = swy.SafeEnv("SWD_POD_TOKEN", "")
-	if podToken == "" {
-		log.Fatal("SWD_POD_TOKEN not set")
-	}
-
 	tmos := swy.SafeEnv("SWD_FN_TMO", "")
 	if tmos == "" {
 		log.Fatal("SWD_FN_TMO not set")
@@ -384,16 +372,25 @@ func main() {
 		log.Fatal("SWD_LANG not set")
 	}
 
+	podToken := ""
+
 	inst := swy.SafeEnv("SWD_INSTANCE", "")
 	if inst == "" {
 		err = startRunner()
 		if err != nil {
 			log.Fatal("Can't start runner")
 		}
+
+		podToken = swy.SafeEnv("SWD_POD_TOKEN", "")
+		if podToken == "" {
+			log.Fatal("SWD_POD_TOKEN not set")
+		}
+
+		podToken = "/" + podToken
 	} else {
 		build = true
 	}
 
-	http.HandleFunc("/v1/run", handleRun)
+	http.HandleFunc("/v1/run" + podToken, handleRun)
 	log.Fatal(http.ListenAndServe(addr, nil))
 }
