@@ -3,6 +3,7 @@ package main
 import (
 	"go.uber.org/zap"
 
+	"encoding/json"
 	"net/http"
 	"os/exec"
 	"strconv"
@@ -12,6 +13,7 @@ import (
 	"syscall"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 
 	"../common"
@@ -134,17 +136,17 @@ type runnerRes struct {
 	Return	string		`json:"return"`
 }
 
-func doRun(params *swyapi.SwdFunctionRun) (*swyapi.SwdFunctionRunResult, error) {
+func doRun(body []byte) (*swyapi.SwdFunctionRunResult, error) {
 	var err error
 	timeout := false
 
 	runlock.Lock()
 	defer runlock.Unlock()
 
-	log.Debugf("Running FN (%v)", params.Args)
+	log.Debugf("Running FN (%v)", string(body))
 
 	start := time.Now()
-	err = runner.q.Send(params.Args)
+	err = runner.q.SendBytes(body)
 	if err != nil {
 		return nil, fmt.Errorf("Can't send args: %s", err.Error())
 	}
@@ -201,12 +203,12 @@ func doRun(params *swyapi.SwdFunctionRun) (*swyapi.SwdFunctionRunResult, error) 
 	return ret, nil
 }
 
-var builders = map[string]func(*swyapi.SwdFunctionRun) (*swyapi.SwdFunctionRunResult, error) {
+var builders = map[string]func(*swyapi.SwdFunctionBuild) (*swyapi.SwdFunctionRunResult, error) {
 	"golang": doBuildGo,
 	"swift": doBuildSwift,
 }
 
-func doBuild(params *swyapi.SwdFunctionRun) (*swyapi.SwdFunctionRunResult, error) {
+func doBuild(body []byte) (*swyapi.SwdFunctionRunResult, error) {
 	runlock.Lock()
 	defer runlock.Unlock()
 
@@ -215,16 +217,22 @@ func doBuild(params *swyapi.SwdFunctionRun) (*swyapi.SwdFunctionRunResult, error
 		return nil, fmt.Errorf("No builder for %s", lang)
 	}
 
-	return fn(params)
+	var params swyapi.SwdFunctionBuild
+	err := json.Unmarshal(body, &params)
+	if err != nil {
+		return nil, fmt.Errorf("Can't unmarshal params: %s", err.Error())
+	}
+
+	return fn(&params)
 }
 
 /*
  * All functions sit at /go/src/swycode/
  * Runner sits at /go/src/swyrunner/
  */
-func doBuildGo(params *swyapi.SwdFunctionRun) (*swyapi.SwdFunctionRunResult, error) {
+func doBuildGo(params *swyapi.SwdFunctionBuild) (*swyapi.SwdFunctionRunResult, error) {
 	os.Remove("/go/src/swyrunner/script.go")
-	srcdir := params.Args["sources"]
+	srcdir := params.Sources
 	err := os.Symlink("/go/src/swycode/" + srcdir + "/script.go", "/go/src/swyrunner/script.go")
 	if err != nil {
 		return nil, fmt.Errorf("Can't symlink code: %s", err.Error())
@@ -260,9 +268,9 @@ func doBuildGo(params *swyapi.SwdFunctionRun) (*swyapi.SwdFunctionRunResult, err
  * All functions sit at /swift/swycode/
  * Runner sits at /swift/runner/
  */
-func doBuildSwift(params *swyapi.SwdFunctionRun) (*swyapi.SwdFunctionRunResult, error) {
+func doBuildSwift(params *swyapi.SwdFunctionBuild) (*swyapi.SwdFunctionRunResult, error) {
 	os.Remove("/swift/runner/Sources/script.swift")
-	srcdir := params.Args["sources"]
+	srcdir := params.Sources
 	err := os.Symlink("/swift/swycode/" + srcdir + "/script.swift", "/swift/runner/Sources/script.swift")
 	if err != nil {
 		return nil, fmt.Errorf("Can't symlink code: %s", err.Error())
@@ -296,19 +304,18 @@ func doBuildSwift(params *swyapi.SwdFunctionRun) (*swyapi.SwdFunctionRunResult, 
 
 func handleRun(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
-	var params swyapi.SwdFunctionRun
 	var result *swyapi.SwdFunctionRunResult
 
 	code := http.StatusBadRequest
-	err := swyhttp.ReadAndUnmarshalReq(r, &params)
+	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		goto out
 	}
 
 	if !build {
-		result, err = doRun(&params)
+		result, err = doRun(body)
 	} else {
-		result, err = doBuild(&params)
+		result, err = doBuild(body)
 		if err != nil {
 			log.Errorf("Error building FN: %s", err.Error())
 		}

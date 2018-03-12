@@ -4,8 +4,8 @@ import (
 	"time"
 )
 
-type SwdFunctionRun struct {
-	Args		map[string]string	`json:"args"`
+type SwdFunctionBuild struct {
+	Sources		string		`json:"sources"`
 }
 
 type SwdFunctionRunResult struct {

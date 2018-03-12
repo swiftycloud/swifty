@@ -28,10 +28,7 @@ func talkHTTP(conn, cookie string, args map[string]string, res *swyapi.SwdFuncti
 			&swyhttp.RestReq{
 				Address: "http://" + conn + "/v1/run/" + cookie,
 				Timeout: uint(conf.Runtime.Timeout.Max),
-			},
-			&swyapi.SwdFunctionRun{
-				Args: args,
-			})
+			}, args)
 	if err != nil {
 		return err
 	}

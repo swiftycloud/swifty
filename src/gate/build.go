@@ -27,10 +27,8 @@ func buildFunction(ctx context.Context, conf *YAMLConf, addr string, fn *Functio
 				Address: "http://" + addr + ":" + strconv.Itoa(conf.Wdog.Port) + "/v1/run",
 				Timeout: 120,
 			},
-			&swyapi.SwdFunctionRun{
-				Args:		map[string]string {
-					"sources": fnCodePathV(fn),
-				},
+			&swyapi.SwdFunctionBuild{
+				Sources: fnCodePathV(fn),
 			})
 	if err != nil {
 		ctxlog(ctx).Errorf("Error building function: %s", err.Error())
