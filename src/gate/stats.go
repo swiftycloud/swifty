@@ -72,6 +72,7 @@ func statsStart() *statsOpaque {
 func statsUpdate(fmd *FnMemData, op *statsOpaque, res *swyapi.SwdFunctionRunResult) {
 	rt := res.FnTime()
 	gatelat := time.Since(op.ts) - rt
+	gateCalLat.Observe(gatelat.Seconds())
 
 	fmd.lock.Lock()
 	if res.Code == 0 {
@@ -87,7 +88,6 @@ func statsUpdate(fmd *FnMemData, op *statsOpaque, res *swyapi.SwdFunctionRunResu
 	fmd.stats.LastCall = op.ts
 
 	fmd.stats.RunTime += rt
-	gateCalLat.Observe(gatelat.Seconds())
 
 	rc := uint64(rt) * fmd.mem
 	fmd.stats.RunCost += rc

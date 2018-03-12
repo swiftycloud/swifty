@@ -3,6 +3,7 @@ package main
 import (
 	"gopkg.in/mgo.v2/bson"
 	"time"
+	"sync/atomic"
 	"errors"
 	"net"
 	"context"
@@ -132,6 +133,6 @@ func balancerGetConnAny(ctx context.Context, cookie string, fdm *FnMemData) (str
 	}
 
 	/* Emulate simple RR balancing -- each next call picks next POD */
-	idx := int(fdm.stats.Called % uint64(len(aps)))
-	return aps[idx], nil
+	cc := atomic.AddUint32(&fdm.rover, 1)
+	return aps[cc % uint32(len(aps))], nil
 }
