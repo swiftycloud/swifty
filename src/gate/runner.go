@@ -21,7 +21,9 @@ func doRun(ctx context.Context, fn *FunctionDesc, event string, args map[string]
 }
 
 func doRunConn(ctx context.Context, conn string, fmd *FnMemData, cookie, event string, args map[string]string) (*swyapi.SwdFunctionRunResult, error) {
-	ctxlog(ctx).Debugf("RUN %s %s (%v)", cookie, event, args)
+	if event != "call" {
+		ctxlog(ctx).Debugf("RUN %s %s (%v)", cookie, event, args)
+	}
 
 	var wd_result swyapi.SwdFunctionRunResult
 	var resp *http.Response
@@ -57,8 +59,11 @@ func doRunConn(ctx context.Context, conn string, fmd *FnMemData, cookie, event s
 	if wd_result.Stdout != "" || wd_result.Stderr != "" {
 		logSaveResult(cookie, event, wd_result.Stdout, wd_result.Stderr)
 	}
-	ctxlog(ctx).Debugf("RETurn %s: %d out[%s] err[%s]", cookie,
+
+	if event != "call" {
+		ctxlog(ctx).Debugf("RETurn %s: %d out[%s] err[%s]", cookie,
 			wd_result.Code, wd_result.Stdout, wd_result.Stderr)
+	}
 
 	return &wd_result, nil
 

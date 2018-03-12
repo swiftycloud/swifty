@@ -700,7 +700,7 @@ func handleFunctionCall(w http.ResponseWriter, r *http.Request) {
 
 
 	arg_map = makeArgMap(r)
-	res, err = doRunConn(ctx, conn, fmd, fnId, "run", arg_map)
+	res, err = doRunConn(ctx, conn, fmd, fnId, "call", arg_map)
 	if err != nil {
 		code = http.StatusInternalServerError
 		goto out
