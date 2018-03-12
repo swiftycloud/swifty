@@ -22,6 +22,8 @@ type BalancerRS struct {
 }
 
 func BalancerPodDel(pod *k8sPod) error {
+	balancerPodsFlush(pod.SwoId.Cookie())
+
 	err := dbBalancerPodDel(pod)
 	if err != nil {
 		return fmt.Errorf("Pod del error: %s", err.Error())
@@ -65,10 +67,13 @@ func waitPort(addr_port string) error {
 
 func BalancerPodAdd(pod *k8sPod) error {
 	fnid := pod.SwoId.Cookie()
+
 	err := waitPort(pod.WdogAddr)
 	if err != nil {
 		return err
 	}
+
+	balancerPodsFlush(fnid)
 
 	err = dbBalancerPodAdd(fnid, pod)
 	if err != nil {
@@ -80,6 +85,8 @@ func BalancerPodAdd(pod *k8sPod) error {
 }
 
 func BalancerDelete(ctx context.Context, fnid string) (error) {
+	balancerPodsFlush(fnid)
+
 	err := dbBalancerPodDelAll(fnid)
 	if err != nil {
 		return fmt.Errorf("POD del all error: %s", err.Error())
@@ -95,6 +102,13 @@ func BalancerCreate(ctx context.Context, fnid string) (error) {
 
 func BalancerInit(conf *YAMLConf) (error) {
 	return nil
+}
+
+func balancerPodsFlush(fnid string) {
+	fdm := memdGetCond(fnid)
+	if fdm != nil {
+		fdm.pods = []string{}
+	}
 }
 
 func balancerGetConnExact(ctx context.Context, cookie, version string) (string, *swyapi.GateErr) {
@@ -117,18 +131,30 @@ func balancerGetConnExact(ctx context.Context, cookie, version string) (string, 
 }
 
 func balancerGetConnAny(ctx context.Context, cookie string, fdm *FnMemData) (string, error) {
-	/* FIXME -- get conns right from fdm, don't go to mongo every call */
-	aps, err := dbBalancerGetConnsByCookie(cookie)
-	if aps == nil {
-		if err == nil {
-			return "", errors.New("No available PODs")
-		}
+	var aps []string
+	var err error
 
-		return "", err
+	if fdm != nil {
+		aps = fdm.pods
 	}
 
-	if fdm == nil { /* FIXME -- balance here too */
-		return aps[0], nil
+	if len(aps) == 0 {
+		aps, err = dbBalancerGetConnsByCookie(cookie)
+		if aps == nil {
+			if err == nil {
+				return "", errors.New("No available PODs")
+			}
+
+			return "", err
+		}
+
+		fdm.lock.Lock()
+		if len(fdm.pods) == 0 {
+			fdm.pods = aps
+		} else {
+			aps = fdm.pods
+		}
+		fdm.lock.Unlock()
 	}
 
 	/* Emulate simple RR balancing -- each next call picks next POD */
