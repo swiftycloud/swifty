@@ -20,32 +20,43 @@ func doRun(ctx context.Context, fn *FunctionDesc, event string, args map[string]
 	return doRunConn(ctx, conn, nil, fn.Cookie, event, args)
 }
 
+func talkHTTP(conn string, args *swyapi.SwdFunctionRun, res *swyapi.SwdFunctionRunResult) error {
+	var resp *http.Response
+	var err error
+
+	resp, err = swyhttp.MarshalAndPost(
+			&swyhttp.RestReq{
+				Address: "http://" + conn + "/v1/run",
+				Timeout: uint(conf.Runtime.Timeout.Max),
+			}, args)
+	if err != nil {
+		return err
+	}
+
+	err = swyhttp.ReadAndUnmarshalResp(resp, res)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func doRunConn(ctx context.Context, conn string, fmd *FnMemData, cookie, event string, args map[string]string) (*swyapi.SwdFunctionRunResult, error) {
 	if event != "call" {
 		ctxlog(ctx).Debugf("RUN %s %s (%v)", cookie, event, args)
 	}
 
 	var wd_result swyapi.SwdFunctionRunResult
-	var resp *http.Response
 	var err error
-	var sopq *statsOpaque
 
-	sopq = statsStart()
+	sopq := statsStart()
 
-	resp, err = swyhttp.MarshalAndPost(
-			&swyhttp.RestReq{
-				Address: "http://" + conn + "/v1/run",
-				Timeout: uint(conf.Runtime.Timeout.Max),
-			},
-			&swyapi.SwdFunctionRun{
-				PodToken:	cookie,
-				Args:		args,
-			})
-	if err != nil {
-		goto out
+	rargs := &swyapi.SwdFunctionRun{
+		PodToken:	cookie,
+		Args:		args,
 	}
 
-	err = swyhttp.ReadAndUnmarshalResp(resp, &wd_result)
+	err = talkHTTP(conn, rargs, &wd_result)
 	if err != nil {
 		goto out
 	}
