@@ -73,17 +73,18 @@ func statsUpdate(fmd *FnMemData, op *statsOpaque, res *swyapi.SwdFunctionRunResu
 	rt := res.FnTime()
 	gatelat := time.Since(op.ts) - rt
 	gateCalLat.Observe(gatelat.Seconds())
+	gateCalls.WithLabelValues("calls").Inc()
 
 	fmd.lock.Lock()
-	if res.Code == 0 {
-		fmd.stats.Called++
-		gateCalls.WithLabelValues("success").Inc()
-	} else if res.Code == swyhttp.StatusTimeoutOccurred {
-		fmd.stats.Timeouts++
-		gateCalls.WithLabelValues("timeout").Inc()
-	} else {
-		fmd.stats.Errors++
-		gateCalls.WithLabelValues("error").Inc()
+	fmd.stats.Called++
+	if res.Code != 0 {
+		if res.Code == swyhttp.StatusTimeoutOccurred {
+			fmd.stats.Timeouts++
+			gateCalls.WithLabelValues("timeout").Inc()
+		} else {
+			fmd.stats.Errors++
+			gateCalls.WithLabelValues("error").Inc()
+		}
 	}
 	fmd.stats.LastCall = op.ts
 
