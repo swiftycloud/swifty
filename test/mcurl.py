@@ -5,7 +5,7 @@ import sys
 import time
 from multiprocessing import Process
 
-def curl(nr, url):
+def curl(nr, d, url):
     ers = 0
     for i in range(0, nr):
         conn = http.client.HTTPConnection(url[2])
@@ -13,26 +13,28 @@ def curl(nr, url):
         resp = conn.getresponse()
         if resp.status != 200:
             ers += 1
+        time.sleep(d)
     if ers != 0:
         print("`- %d/%d ERRORs" % (ers, nr))
 
 url = sys.argv[1]
 nr = int(sys.argv[2])
 p = int(sys.argv[3])
+d = float(sys.argv[4])
 
-print("Call %s %d times %d threads" % (url, nr, p))
+print("Call %s %d times %.2f delay %d threads" % (url, nr, d, p))
 
 url = url.split('/', 3)
 if p == 1:
     start = time.time()
-    curl(nr, url)
+    curl(nr, d, url)
     dur = time.time() - start
     print("%.2f seconds" % dur)
     print("%.2f msec call lat" % (dur * 1000 / nr))
 else:
     ps = []
     for i in range(0, p):
-        t = Process(target=curl, args=(nr, url))
+        t = Process(target=curl, args=(nr, d, url))
         t.start()
         ps.append(t)
 
