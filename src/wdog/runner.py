@@ -56,15 +56,13 @@ while True:
         try:
             now = time.time()
             res = swycode.main(args)
+            res = "0:" + json.dumps(res)
         except:
             print("Exception running FN:")
             traceback.print_exc()
-            res = { "code": 500, "return": "Exception" }
-        else:
-            data = json.dumps(res)
-            res = {"code": 0, "return": data}
+            res = "1:Exception"
     else:
         print(swytb)
         res = swyres
 
-    sendmsg(q, json.dumps(res).encode('utf-8'))
+    sendmsg(q, res.encode('utf-8'))

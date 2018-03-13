@@ -46,7 +46,7 @@ func main() {
 			return
 		}
 
-		err = q.Send(&runnerRes{Code: 0, Return: string(resb)})
+		err = q.SendBytes([]byte("0:" + string(resb)))
 		if err != nil {
 			fmt.Printf("Can't send responce: %s", err.Error())
 			return

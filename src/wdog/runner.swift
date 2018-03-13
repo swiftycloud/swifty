@@ -20,16 +20,6 @@ func load(data: [Byte]) -> [String:String] {
 	return try! JSONDecoder().decode([String:String].self, from: Data(bytes: data))
 }
 
-struct swyResult : Encodable {
-	var Code: Int
-	var Return: String
-
-	enum CodingKeys: String, CodingKey {
-		case Code = "code"
-		case Return = "return"
-	}
-}
-
 func save(obj: Encodable) -> Data {
 	struct EncWrap: Encodable {
 		let o: Encodable
@@ -39,12 +29,8 @@ func save(obj: Encodable) -> Data {
 		}
 	}
 
-	let ret = swyResult(
-		Code: 0,
-		Return: String(data: try! JSONEncoder().encode(EncWrap(o:obj)), encoding: .utf8)!
-	)
-
-	return try! JSONEncoder().encode(ret)
+	let jstr = String(data: try! JSONEncoder().encode(EncWrap(o:obj)), encoding: .utf8)!
+	return ("0:" + jstr).data(using: String.Encoding.utf8)!
 }
 
 while true {

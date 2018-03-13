@@ -131,11 +131,6 @@ func readLines(f *os.File) string {
 
 var runlock sync.Mutex
 
-type runnerRes struct {
-	Code	int		`json:"code"`
-	Return	string		`json:"return"`
-}
-
 func doRun(body []byte) (*swyapi.SwdFunctionRunResult, error) {
 	var err error
 	timeout := false
@@ -166,14 +161,21 @@ func doRun(body []byte) (*swyapi.SwdFunctionRunResult, error) {
 		<-done
 	}()
 
-	var rr runnerRes
-	err = runner.q.Recv(&rr)
+	var res string
+	res, err = runner.q.RecvStr()
 	rt := time.Since(start)
 	done <-true
 
+	var code int
+	if res[0] == '0' {
+		code = 0
+	} else {
+		code = http.StatusInternalServerError
+	}
+
 	ret := &swyapi.SwdFunctionRunResult{
-		Code: rr.Code,
-		Return: rr.Return,
+		Code: code,
+		Return: res[2:],
 		Stdout: readLines(runner.fin),
 		Stderr: readLines(runner.fine),
 		Time: uint(rt / time.Microsecond),
