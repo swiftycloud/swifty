@@ -158,6 +158,6 @@ func balancerGetConnAny(ctx context.Context, cookie string, fdm *FnMemData) (str
 	}
 
 	/* Emulate simple RR balancing -- each next call picks next POD */
-	cc := atomic.AddUint32(&fdm.rover, 1)
+	cc := atomic.AddUint32(&fdm.rover[0], 1)
 	return aps[cc % uint32(len(aps))], nil
 }

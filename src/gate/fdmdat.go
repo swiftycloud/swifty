@@ -11,7 +11,7 @@ var tdat sync.Map
 type FnMemData struct {
 	public	bool
 	mem	uint64
-	rover	uint32
+	rover	[2]uint32
 	pods	[]string
 	crl	*xratelimit.RL
 	td	*TenantMemData

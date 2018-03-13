@@ -2,6 +2,7 @@ package xratelimit
 
 import (
 	"time"
+	"sync"
 )
 
 type RL struct {
@@ -10,12 +11,19 @@ type RL struct {
 	t	time.Time
 	burst	uint
 	eps	uint
+	l	sync.Mutex
 }
 
 func (rl *RL)Put() {
+	rl.l.Lock()
 	if rl.used > 0 {
 		rl.used--
 	}
+	rl.l.Unlock()
+}
+
+func (rl *RL)If() ([]uint) {
+	return []uint{rl.used, rl.eps, rl.burst}
 }
 
 func (rl *RL)Get() bool {
@@ -23,8 +31,10 @@ func (rl *RL)Get() bool {
 	d := t.Sub(rl.t)
 
 	/* Handle enormous overflow first */
+	rl.l.Lock()
 	if d >= time.Second {
 		rl.used = 0
+		rl.t = t
 	} else {
 		/*
 		 * Less than second passed. Let's calculate more
@@ -43,10 +53,12 @@ func (rl *RL)Get() bool {
 	}
 
 	if rl.used == rl.burst + 1 {
+		rl.l.Unlock()
 		return false
 	}
 
 	rl.used++
+	rl.l.Unlock()
 	return true
 }
 
