@@ -33,9 +33,6 @@ fd = int(sys.argv[3])
 os.dup2(fd, 2)
 os.close(fd)
 
-def durusec(start):
-    return int((time.time() - start) * 1000000)
-
 def readmsg(sk):
     data = b''
     while True:
@@ -59,7 +56,6 @@ while True:
         try:
             now = time.time()
             res = swycode.main(args)
-            dur = durusec(now)
         except:
             print("Exception running FN:")
             traceback.print_exc()
