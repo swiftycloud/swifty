@@ -6,12 +6,15 @@ import time
 from multiprocessing import Process
 
 def curl(nr, url):
+    ers = 0
     for i in range(0, nr):
         conn = http.client.HTTPConnection(url[2])
         conn.request('POST', '/' + url[3])
         resp = conn.getresponse()
         if resp.status != 200:
-            print("`- ERROR")
+            ers += 1
+    if ers != 0:
+        print("`- %d/%d ERRORs" % (ers, nr))
 
 url = sys.argv[1]
 nr = int(sys.argv[2])
