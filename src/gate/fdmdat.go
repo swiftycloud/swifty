@@ -11,6 +11,7 @@ var tdat sync.Map
 type FnMemData struct {
 	public	bool
 	mem	uint64
+	depname	string
 	bd	BalancerDat
 	crl	*xratelimit.RL
 	td	*TenantMemData
@@ -84,6 +85,7 @@ func fndatGetOrInit(cookie string, fn *FunctionDesc) *FnMemData {
 	nret.mem = fn.Size.Mem
 	nret.td = tendatGetOrInit(fn.SwoId.Tennant)
 	nret.public = fn.URLCall
+	nret.depname = fn.DepName()
 
 	ret, _ = fdmd.LoadOrStore(fn.Cookie, nret)
 	lret := ret.(*FnMemData)
