@@ -21,6 +21,15 @@ type BalancerRS struct {
 	Version		string		`bson:"fnversion"`
 }
 
+type BalancerDat struct {
+	rover	[2]uint32
+	pods	[]string
+}
+
+func (bd *BalancerDat)Flush() {
+	bd.pods = []string{}
+}
+
 func BalancerPodDel(pod *k8sPod) error {
 	balancerPodsFlush(pod.SwoId.Cookie())
 
@@ -107,7 +116,7 @@ func BalancerInit(conf *YAMLConf) (error) {
 func balancerPodsFlush(fnid string) {
 	fdm := memdGetCond(fnid)
 	if fdm != nil {
-		fdm.pods = []string{}
+		fdm.bd.Flush()
 	}
 }
 
@@ -135,7 +144,7 @@ func balancerGetConnAny(ctx context.Context, cookie string, fdm *FnMemData) (str
 	var err error
 
 	if fdm != nil {
-		aps = fdm.pods
+		aps = fdm.bd.pods
 	}
 
 	if len(aps) == 0 {
@@ -149,18 +158,18 @@ func balancerGetConnAny(ctx context.Context, cookie string, fdm *FnMemData) (str
 		}
 
 		fdm.lock.Lock()
-		if len(fdm.pods) == 0 {
-			fdm.pods = aps
+		if len(fdm.bd.pods) == 0 {
+			fdm.bd.pods = aps
 		} else {
-			aps = fdm.pods
+			aps = fdm.bd.pods
 		}
 		fdm.lock.Unlock()
 	}
 
 	/* Emulate simple RR balancing -- each next call picks next POD */
-	cc := atomic.AddUint32(&fdm.rover[0], 1)
-	if cc > fdm.rover[1] + 1 {
-		ctxlog(ctx).Debugf("Too fast, %d pods needed (req %d)", fdm.rover[0] - fdm.rover[1], cc)
+	cc := atomic.AddUint32(&fdm.bd.rover[0], 1)
+	if cc > fdm.bd.rover[1] + 1 {
+		ctxlog(ctx).Debugf("Too fast, %d pods needed (req %d)", fdm.bd.rover[0] - fdm.bd.rover[1], cc)
 	}
 	return aps[cc % uint32(len(aps))], nil
 }
