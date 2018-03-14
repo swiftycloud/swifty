@@ -77,6 +77,7 @@ func startRunner() error {
 
 	runner.fout = strconv.Itoa(p[1])
 	syscall.SetNonblock(p[0], true)
+	syscall.CloseOnExec(p[0])
 	runner.fin = os.NewFile(uintptr(p[0]), "runner.stdout")
 
 	err = syscall.Pipe(p)
@@ -86,6 +87,7 @@ func startRunner() error {
 
 	runner.ferr = strconv.Itoa(p[1])
 	syscall.SetNonblock(p[0], true)
+	syscall.CloseOnExec(p[0])
 	runner.fine = os.NewFile(uintptr(p[0]), "runner.stderr")
 
 	return startQnR()
