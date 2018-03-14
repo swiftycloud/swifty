@@ -63,8 +63,11 @@ func (rl *RL)Get() bool {
 }
 
 func (rl *RL)Update(burst, eps uint) {
+	rl.l.Lock()
 	rl.burst = burst
+	rl.used = 0
 	rl.eps = eps
+	rl.l.Unlock()
 }
 
 func MakeRL(burst, eps uint) *RL {
