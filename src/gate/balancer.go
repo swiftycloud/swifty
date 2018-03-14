@@ -139,6 +139,9 @@ func balancerGetConnExact(ctx context.Context, cookie, version string) (string, 
 	return ap, nil
 }
 
+func balancerScaleFnDeployment(depname string, goal uint) {
+}
+
 func balancerGetConnAny(ctx context.Context, cookie string, fdm *FnMemData) (string, error) {
 	var aps []string
 	var err error
@@ -167,9 +170,10 @@ func balancerGetConnAny(ctx context.Context, cookie string, fdm *FnMemData) (str
 	}
 
 	/* Emulate simple RR balancing -- each next call picks next POD */
-	cc := atomic.AddUint32(&fdm.bd.rover[0], 1)
-	if cc > fdm.bd.rover[1] + 1 {
-		ctxlog(ctx).Debugf("Too fast, %d pods needed (req %d)", fdm.bd.rover[0] - fdm.bd.rover[1], cc)
+	sc := atomic.AddUint32(&fdm.bd.rover[0], 1)
+	fc := fdm.bd.rover[1]
+	if sc > fc + 1 {
+		balancerScaleFnDeployment(fdm.depname, uint(sc - fc))
 	}
-	return aps[cc % uint32(len(aps))], nil
+	return aps[sc % uint32(len(aps))], nil
 }
