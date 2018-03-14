@@ -315,6 +315,7 @@ func updateFunction(ctx context.Context, conf *YAMLConf, id *SwoId, params *swya
 			ctxlog(ctx).Debugf("Will update tmo for %s", fn.SwoId.Str())
 			fn.Size.Tmo = params.Size.Timeout
 			update["size.timeout"] = params.Size.Timeout
+			restart = true
 		}
 
 		if fn.Size.Mem != params.Size.Memory {
@@ -322,10 +323,10 @@ func updateFunction(ctx context.Context, conf *YAMLConf, id *SwoId, params *swya
 			fn.Size.Mem = params.Size.Memory
 			update["size.mem"] = params.Size.Memory
 			mfix = true
+			restart = true
 		}
 
-		if params.Size.Rate != 0 && (params.Size.Rate != fn.Size.Rate ||
-						params.Size.Burst != fn.Size.Burst) {
+		if params.Size.Rate != fn.Size.Rate || params.Size.Burst != fn.Size.Burst {
 			ctxlog(ctx).Debugf("Will update ratelimit for %s", fn.SwoId.Str())
 			fn.Size.Burst = params.Size.Burst
 			fn.Size.Rate = params.Size.Rate
@@ -333,8 +334,6 @@ func updateFunction(ctx context.Context, conf *YAMLConf, id *SwoId, params *swya
 			update["size.burst"] = params.Size.Burst
 			rlfix = true
 		}
-
-		restart = true
 	}
 
 	if params.Mware != nil {
