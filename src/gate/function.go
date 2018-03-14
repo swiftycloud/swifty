@@ -523,7 +523,6 @@ func waitFunctionVersion(ctx context.Context, fn *FunctionDesc, version string, 
 }
 
 func fnWaiterKick(cookie string) {
-	glog.Debugf("FnWaiter kick %s", cookie)
 	xwait.Event(cookie)
 }
 
