@@ -3,7 +3,6 @@ package main
 import (
 	"go.uber.org/zap"
 
-	"encoding/json"
 	"net/http"
 	"os/exec"
 	"strconv"
@@ -22,7 +21,6 @@ import (
 	"../apis/apps"
 )
 
-var build bool
 var fnTmo int
 var lang string
 
@@ -208,7 +206,7 @@ var builders = map[string]func(*swyapi.SwdFunctionBuild) (*swyapi.SwdFunctionRun
 	"swift": doBuildSwift,
 }
 
-func doBuild(body []byte) (*swyapi.SwdFunctionRunResult, error) {
+func doBuild(params *swyapi.SwdFunctionBuild) (*swyapi.SwdFunctionRunResult, error) {
 	runlock.Lock()
 	defer runlock.Unlock()
 
@@ -217,13 +215,7 @@ func doBuild(body []byte) (*swyapi.SwdFunctionRunResult, error) {
 		return nil, fmt.Errorf("No builder for %s", lang)
 	}
 
-	var params swyapi.SwdFunctionBuild
-	err := json.Unmarshal(body, &params)
-	if err != nil {
-		return nil, fmt.Errorf("Can't unmarshal params: %s", err.Error())
-	}
-
-	return fn(&params)
+	return fn(params)
 }
 
 /*
@@ -312,17 +304,39 @@ func handleRun(w http.ResponseWriter, r *http.Request) {
 		goto out
 	}
 
-	if !build {
-		result, err = doRun(body)
-	} else {
-		result, err = doBuild(body)
-		if err != nil {
-			log.Errorf("Error building FN: %s", err.Error())
-		}
+	code = http.StatusInternalServerError
+	result, err = doRun(body)
+	if err != nil {
+		goto out
+	}
+
+	err = swyhttp.MarshalAndWrite(w, result)
+	if err != nil {
+		goto out
+	}
+
+	return
+
+out:
+	http.Error(w, err.Error(), code)
+	log.Errorf("%s", err.Error())
+}
+
+func handleBuild(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
+	var params swyapi.SwdFunctionBuild
+	var result *swyapi.SwdFunctionRunResult
+
+	code := http.StatusBadRequest
+	err := swyhttp.ReadAndUnmarshalReq(r, &params)
+	if err != nil {
+		goto out
 	}
 
 	code = http.StatusInternalServerError
+	result, err = doBuild(&params)
 	if err != nil {
+		log.Errorf("Error building FN: %s", err.Error())
 		goto out
 	}
 
@@ -379,8 +393,6 @@ func main() {
 		log.Fatal("SWD_LANG not set")
 	}
 
-	podToken := ""
-
 	inst := swy.SafeEnv("SWD_INSTANCE", "")
 	if inst == "" {
 		err = startRunner()
@@ -388,16 +400,15 @@ func main() {
 			log.Fatal("Can't start runner")
 		}
 
-		podToken = swy.SafeEnv("SWD_POD_TOKEN", "")
+		podToken := swy.SafeEnv("SWD_POD_TOKEN", "")
 		if podToken == "" {
 			log.Fatal("SWD_POD_TOKEN not set")
 		}
 
-		podToken = "/" + podToken
+		http.HandleFunc("/v1/run/" + podToken, handleRun)
 	} else {
-		build = true
+		http.HandleFunc("/v1/run", handleBuild)
 	}
 
-	http.HandleFunc("/v1/run" + podToken, handleRun)
 	log.Fatal(http.ListenAndServe(addr, nil))
 }
