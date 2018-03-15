@@ -378,26 +378,28 @@ func main() {
 		log.Fatal("No address specified")
 	}
 
-	tmos := swy.SafeEnv("SWD_FN_TMO", "")
-	if tmos == "" {
-		log.Fatal("SWD_FN_TMO not set")
-	}
-
-	fnTmo, err = strconv.Atoi(tmos)
-	if err != nil {
-		log.Fatal("Bad timeout value")
-	}
-
 	lang = swy.SafeEnv("SWD_LANG", "")
 	if lang == "" {
 		log.Fatal("SWD_LANG not set")
 	}
 
 	inst := swy.SafeEnv("SWD_INSTANCE", "")
-	if inst == "" {
+	if inst == "build" {
+		http.HandleFunc("/v1/run", handleBuild)
+	} else {
 		err = startRunner()
 		if err != nil {
 			log.Fatal("Can't start runner")
+		}
+
+		tmos := swy.SafeEnv("SWD_FN_TMO", "")
+		if tmos == "" {
+			log.Fatal("SWD_FN_TMO not set")
+		}
+
+		fnTmo, err = strconv.Atoi(tmos)
+		if err != nil {
+			log.Fatal("Bad timeout value")
 		}
 
 		podToken := swy.SafeEnv("SWD_POD_TOKEN", "")
@@ -406,8 +408,6 @@ func main() {
 		}
 
 		http.HandleFunc("/v1/run/" + podToken, handleRun)
-	} else {
-		http.HandleFunc("/v1/run", handleBuild)
 	}
 
 	log.Fatal(http.ListenAndServe(addr, nil))
