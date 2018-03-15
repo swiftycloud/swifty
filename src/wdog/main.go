@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net"
 	"os"
 
 	"../common"
@@ -352,20 +353,31 @@ out:
 	log.Errorf("%s", err.Error())
 }
 
-func getSwdAddr() string {
-	podIP := swy.SafeEnv("SWD_POD_IP", "")
-	if podIP == "" {
-		log.Debugf("NO POD_IP")
-		return ""
+func startCResponder(podip string) error {
+	addr, err := net.ResolveUnixAddr("unixpacket", "/var/run/swifty/" + podip)
+	if err != nil {
+		return err
 	}
 
-	podPort := swy.SafeEnv("SWD_PORT", "")
-	if podPort == "" {
-		log.Debugf("NO PORT")
-		return ""
+	sk, err := net.ListenUnix("unixpacket", addr)
+	if err != nil {
+		return err
 	}
 
-	return podIP + ":" + podPort
+	go func() {
+		for {
+			cln, err := sk.AcceptUnix()
+			if err != nil {
+				log.Errorf("Can't accept cresponder connection: %s", err.Error())
+				break
+			}
+
+			log.Debugf("CResponder accepted conn")
+			cln.Close()
+		}
+	}()
+
+	return nil
 }
 
 func main() {
@@ -373,9 +385,14 @@ func main() {
 
 	swy.InitLogger(log)
 
-	addr := getSwdAddr()
-	if addr == "" {
-		log.Fatal("No address specified")
+	podIP := swy.SafeEnv("SWD_POD_IP", "")
+	if podIP == "" {
+		log.Fatal("NO POD_IP")
+	}
+
+	podPort := swy.SafeEnv("SWD_PORT", "")
+	if podPort == "" {
+		log.Fatal("NO PORT")
 	}
 
 	lang = swy.SafeEnv("SWD_LANG", "")
@@ -390,6 +407,11 @@ func main() {
 		err = startRunner()
 		if err != nil {
 			log.Fatal("Can't start runner")
+		}
+
+		err = startCResponder(podIP)
+		if err != nil {
+			log.Fatal("Can't start cresponder: %s", err.Error())
 		}
 
 		tmos := swy.SafeEnv("SWD_FN_TMO", "")
@@ -410,5 +432,5 @@ func main() {
 		http.HandleFunc("/v1/run/" + podToken, handleRun)
 	}
 
-	log.Fatal(http.ListenAndServe(addr, nil))
+	log.Fatal(http.ListenAndServe(podIP + ":" + podPort, nil))
 }
