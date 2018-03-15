@@ -27,6 +27,7 @@ var fnTmoUsec int64
 var lang string
 
 type Runner struct {
+	lock	sync.Mutex
 	cmd	*exec.Cmd
 	q	*xqueue.Queue
 	fout	string
@@ -56,9 +57,9 @@ func get_exit_code(err error) (bool, int) {
 	}
 }
 
-var runner *Runner
+var glob_runner *Runner
 
-func restartRunner() {
+func restartRunner(runner *Runner) {
 	if runner.cmd.Process.Kill() != nil {
 		/* Nothing else, but kill outselves, the pod will exit
 		 * and k8s will restart us
@@ -68,18 +69,18 @@ func restartRunner() {
 
 	runner.cmd.Wait()
 	runner.q.Close()
-	startQnR()
+	startQnR(runner)
 }
 
-func startRunner() error {
+func startRunner() (*Runner, error) {
 	var err error
 	p := make([]int, 2)
 
-	runner = &Runner {}
+	runner := &Runner {}
 
 	err = syscall.Pipe(p)
 	if err != nil {
-		return fmt.Errorf("Can't make out pipe: %s", err.Error())
+		return nil, fmt.Errorf("Can't make out pipe: %s", err.Error())
 	}
 
 	runner.fout = strconv.Itoa(p[1])
@@ -89,7 +90,7 @@ func startRunner() error {
 
 	err = syscall.Pipe(p)
 	if err != nil {
-		return fmt.Errorf("Can't make err pipe: %s", err.Error())
+		return nil, fmt.Errorf("Can't make err pipe: %s", err.Error())
 	}
 
 	runner.ferr = strconv.Itoa(p[1])
@@ -97,7 +98,12 @@ func startRunner() error {
 	syscall.CloseOnExec(p[0])
 	runner.fine = os.NewFile(uintptr(p[0]), "runner.stderr")
 
-	return startQnR()
+	err = startQnR(runner)
+	if err != nil {
+		return nil, err
+	}
+
+	return runner, nil
 }
 
 var runners = map[string]string {
@@ -106,7 +112,7 @@ var runners = map[string]string {
 	"swift": "/swift/swycode/debug/function",
 }
 
-func startQnR() error {
+func startQnR(runner *Runner) error {
 	var err error
 
 	runner.q, err = xqueue.MakeQueue()
@@ -143,13 +149,11 @@ func readLines(f *os.File) string {
 	}
 }
 
-var runlock sync.Mutex
-
-func doRun(body []byte) (*swyapi.SwdFunctionRunResult, error) {
+func doRun(runner *Runner, body []byte) (*swyapi.SwdFunctionRunResult, error) {
 	var err error
 
-	runlock.Lock()
-	defer runlock.Unlock()
+	runner.lock.Lock()
+	defer runner.lock.Unlock()
 
 	start := time.Now()
 	err = runner.q.SendBytes(body)
@@ -174,7 +178,7 @@ func doRun(body []byte) (*swyapi.SwdFunctionRunResult, error) {
 		}
 		ret.Return = res[2:]
 	} else {
-		restartRunner()
+		restartRunner(runner)
 
 		switch {
 		case err == io.EOF:
@@ -198,9 +202,11 @@ var builders = map[string]func(*swyapi.SwdFunctionBuild) (*swyapi.SwdFunctionRun
 	"swift": doBuildSwift,
 }
 
+var buildlock sync.Mutex
+
 func doBuild(params *swyapi.SwdFunctionBuild) (*swyapi.SwdFunctionRunResult, error) {
-	runlock.Lock()
-	defer runlock.Unlock()
+	buildlock.Lock()
+	defer buildlock.Unlock()
 
 	fn, ok := builders[lang]
 	if !ok {
@@ -297,7 +303,7 @@ func handleRun(w http.ResponseWriter, r *http.Request) {
 	}
 
 	code = http.StatusInternalServerError
-	result, err = doRun(body)
+	result, err = doRun(glob_runner, body)
 	if err != nil {
 		goto out
 	}
@@ -412,7 +418,7 @@ func main() {
 
 		fnTmoUsec = int64((time.Duration(tmo) * time.Millisecond) / time.Microsecond)
 
-		err = startRunner()
+		glob_runner, err = startRunner()
 		if err != nil {
 			log.Fatal("Can't start runner")
 		}
