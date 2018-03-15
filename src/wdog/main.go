@@ -3,6 +3,7 @@ package main
 import (
 	"go.uber.org/zap"
 
+	"strings"
 	"net/http"
 	"os/exec"
 	"strconv"
@@ -22,7 +23,7 @@ import (
 	"../apis/apps"
 )
 
-var fnTmo int
+var fnTmoUsec int64
 var lang string
 
 type Runner struct {
@@ -58,6 +59,13 @@ func get_exit_code(err error) (bool, int) {
 var runner *Runner
 
 func restartRunner() {
+	if runner.cmd.Process.Kill() != nil {
+		/* Nothing else, but kill outselves, the pod will exit
+		 * and k8s will restart us
+		 */
+		os.Exit(1)
+	}
+
 	runner.cmd.Wait()
 	runner.q.Close()
 	startQnR()
@@ -106,6 +114,11 @@ func startQnR() error {
 		return fmt.Errorf("Can't make queue: %s", err.Error())
 	}
 
+	err = runner.q.RcvTimeout(fnTmoUsec)
+	if err != nil {
+		return fmt.Errorf("Can't set receive timeout: %s", err.Error())
+	}
+
 	runner.cmd = exec.Command(runners[lang], runner.q.GetId(), runner.fout, runner.ferr)
 	err = runner.cmd.Start()
 	if err != nil {
@@ -134,7 +147,6 @@ var runlock sync.Mutex
 
 func doRun(body []byte) (*swyapi.SwdFunctionRunResult, error) {
 	var err error
-	timeout := false
 
 	runlock.Lock()
 	defer runlock.Unlock()
@@ -145,57 +157,36 @@ func doRun(body []byte) (*swyapi.SwdFunctionRunResult, error) {
 		return nil, fmt.Errorf("Can't send args: %s", err.Error())
 	}
 
-	done := make(chan bool)
-	go func() {
-		select {
-		case <-done:
-			return
-		case <-time.After(time.Duration(fnTmo) * time.Millisecond):
-			break
-		}
-
-		timeout = true
-		xerr := runner.cmd.Process.Kill()
-		if xerr != nil {
-			log.Errorf("Can't kill runner: %s", xerr.Error())
-		}
-		<-done
-	}()
-
 	var res string
 	res, err = runner.q.RecvStr()
-	rt := time.Since(start)
-	done <-true
-
-	var code int
-	if res[0] == '0' {
-		code = 0
-	} else {
-		code = http.StatusInternalServerError
-	}
 
 	ret := &swyapi.SwdFunctionRunResult{
-		Code: code,
-		Return: res[2:],
 		Stdout: readLines(runner.fin),
 		Stderr: readLines(runner.fine),
-		Time: uint(rt / time.Microsecond),
+		Time: uint(time.Since(start) / time.Microsecond),
 	}
 
-	if err != nil {
+	if err == nil {
+		if res[0] == '0' {
+			ret.Code = 0
+		} else {
+			ret.Code = http.StatusInternalServerError
+		}
+		ret.Return = res[2:]
+	} else {
 		restartRunner()
 
 		switch {
-		case timeout:
-			ret.Code = swyhttp.StatusTimeoutOccurred
-			ret.Return = "timeout"
-
 		case err == io.EOF:
 			ret.Code = http.StatusInternalServerError
 			ret.Return = "exited"
-
+		case err == xqueue.TIMEOUT:
+			ret.Code = swyhttp.StatusTimeoutOccurred
+			ret.Return = "timeout"
 		default:
-			return nil, fmt.Errorf("Can't get back the result: %s", err.Error())
+			log.Errorf("Can't read data back: %s", err.Error())
+			ret.Code = http.StatusInternalServerError
+			ret.Return = "unknown"
 		}
 	}
 
@@ -354,7 +345,9 @@ out:
 }
 
 func startCResponder(podip string) error {
-	addr, err := net.ResolveUnixAddr("unixpacket", "/var/run/swifty/" + podip)
+	spath := "/var/run/swifty/" + strings.Replace(podip, ".", "_", -1)
+	os.Remove(spath)
+	addr, err := net.ResolveUnixAddr("unixpacket", spath)
 	if err != nil {
 		return err
 	}
@@ -381,8 +374,6 @@ func startCResponder(podip string) error {
 }
 
 func main() {
-	var err error
-
 	swy.InitLogger(log)
 
 	podIP := swy.SafeEnv("SWD_POD_IP", "")
@@ -404,22 +395,12 @@ func main() {
 	if inst == "build" {
 		http.HandleFunc("/v1/run", handleBuild)
 	} else {
-		err = startRunner()
-		if err != nil {
-			log.Fatal("Can't start runner")
-		}
-
-		err = startCResponder(podIP)
-		if err != nil {
-			log.Fatal("Can't start cresponder: %s", err.Error())
-		}
-
 		tmos := swy.SafeEnv("SWD_FN_TMO", "")
 		if tmos == "" {
 			log.Fatal("SWD_FN_TMO not set")
 		}
 
-		fnTmo, err = strconv.Atoi(tmos)
+		tmo, err := strconv.Atoi(tmos)
 		if err != nil {
 			log.Fatal("Bad timeout value")
 		}
@@ -428,6 +409,20 @@ func main() {
 		if podToken == "" {
 			log.Fatal("SWD_POD_TOKEN not set")
 		}
+
+		fnTmoUsec = int64((time.Duration(tmo) * time.Millisecond) / time.Microsecond)
+
+		err = startRunner()
+		if err != nil {
+			log.Fatal("Can't start runner")
+		}
+
+
+		err = startCResponder(podIP)
+		if err != nil {
+			log.Fatal("Can't start cresponder: %s", err.Error())
+		}
+
 
 		http.HandleFunc("/v1/run/" + podToken, handleRun)
 	}

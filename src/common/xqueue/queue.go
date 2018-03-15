@@ -2,6 +2,7 @@ package xqueue
 
 import (
 	"fmt"
+	"errors"
 	"os"
 	"io"
 	"strconv"
@@ -82,6 +83,8 @@ func (q *Queue)SendBytes(bts []byte) error {
 	return nil
 }
 
+var TIMEOUT = errors.New("Timeout")
+
 func (q *Queue)recvBytes() ([]byte, error) {
 	msg := make([]byte, 0, 4096)
 	bts := make([]byte, qChunk)
@@ -92,7 +95,15 @@ func (q *Queue)recvBytes() ([]byte, error) {
 			if err == io.EOF {
 				return nil, err /* Propagate EOF as is */
 			} else {
-				return nil, fmt.Errorf("recv message error: %s", err.Error())
+				if erx, ok := err.(*os.PathError); ok {
+					if errn, ok := erx.Err.(syscall.Errno); ok {
+						if errn.Timeout() {
+							return nil, TIMEOUT
+						}
+					}
+				}
+
+				return nil, fmt.Errorf("3: recv gen error: %s", err.Error())
 			}
 		}
 
@@ -131,6 +142,11 @@ func (q *Queue)Recv(in interface{}) error {
 	}
 
 	return nil
+}
+
+func (q *Queue)RcvTimeout(usec int64) error {
+	tv := syscall.Timeval{Sec: usec / int64(1000000), Usec: usec % int64(1000000)}
+	return syscall.SetsockoptTimeval(int(q.sk.Fd()), syscall.SOL_SOCKET, syscall.SO_RCVTIMEO, &tv)
 }
 
 func MakeQueue() (*Queue, error) {
