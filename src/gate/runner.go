@@ -4,6 +4,8 @@ import (
 	"net/http"
 	"fmt"
 	"context"
+	"strconv"
+	"strings"
 
 	"../apis/apps"
 	"../common"
@@ -53,9 +55,19 @@ func doRunConn(ctx context.Context, conn *podConn, cookie, event string, args ma
 		ctxlog(ctx).Debugf("RUN %s %s (%v)", cookie, event, args)
 	}
 
-	res, err := talkHTTP(conn.Addr, conn.Port, cookie, args)
-	if err != nil {
-		goto out
+	var res *swyapi.SwdFunctionRunResult
+	var err error
+
+	if SwdProxyOK {
+		res, err = talkHTTP(conn.Host, strconv.Itoa(conf.Wdog.Port),
+				cookie + "/" + strings.Replace(conn.Addr, ".", "_", -1), args)
+	}
+
+	if !SwdProxyOK || err != nil {
+		res, err = talkHTTP(conn.Addr, conn.Port, cookie, args)
+		if err != nil {
+			goto out
+		}
 	}
 
 	if res.Stdout != "" || res.Stderr != "" {

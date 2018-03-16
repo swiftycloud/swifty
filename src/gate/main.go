@@ -28,6 +28,7 @@ import (
 )
 
 var SwyModeDevel bool
+var SwdProxyOK bool
 var gateSecrets map[string]string
 var gateSecPas []byte
 
@@ -1104,6 +1105,7 @@ func main() {
 				"/etc/swifty/conf/gate.yaml",
 				"path to a config file")
 	flag.BoolVar(&SwyModeDevel, "devel", false, "launch in development mode")
+	flag.BoolVar(&SwdProxyOK, "proxy", false, "use wdog proxy")
 	flag.BoolVar(&showVersion, "version", false, "show version and exit")
 	flag.Parse()
 
@@ -1134,7 +1136,7 @@ func main() {
 		return
 	}
 
-	glog.Debugf("config: %v", &conf)
+	glog.Debugf("PROXY: %v", SwdProxyOK)
 
 	r := mux.NewRouter()
 	r.HandleFunc("/v1/login",		handleUserLogin).Methods("POST", "OPTIONS")
