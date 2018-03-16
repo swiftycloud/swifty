@@ -3,7 +3,8 @@ package main
 import (
 	"go.uber.org/zap"
 	"github.com/gorilla/mux"
-
+	"errors"
+	"encoding/json"
 	"strings"
 	"net/http"
 	"os/exec"
@@ -26,14 +27,29 @@ import (
 
 type Runner struct {
 	lock	sync.Mutex
-	cmd	*exec.Cmd
 	q	*xqueue.Queue
-	tmous	int64
-	lang	string
-	fout	string
-	ferr	string
 	fin	*os.File
 	fine	*os.File
+
+	run	func(*Runner, []byte) (*swyapi.SwdFunctionRunResult, error)
+	l	*localRunner
+	p	*proxyRunner
+}
+
+type localRunner struct {
+	cmd	*exec.Cmd
+	lang	string
+	tmous	int64
+	fout	int
+	fout_s	string
+	ferr	int
+	ferr_s	string
+	proxy	bool
+}
+
+type proxyRunner struct {
+	wc	*net.UnixConn
+	rkey	string
 }
 
 var zcfg zap.Config = zap.Config {
@@ -57,31 +73,48 @@ func get_exit_code(err error) (bool, int) {
 	}
 }
 
-func restartRunner(runner *Runner) {
-	if runner.cmd.Process.Kill() != nil {
+func restartLocal(runner *Runner) {
+	if runner.l.cmd.Process.Kill() != nil {
 		/* Nothing else, but kill outselves, the pod will exit
-		 * and k8s will restart us
-		 */
+		* and k8s will restart us
+		*/
 		os.Exit(1)
 	}
 
-	runner.cmd.Wait()
+	runner.l.cmd.Wait()
 	runner.q.Close()
 	startQnR(runner)
 }
 
-func startRunner(lang string, tmous int64) (*Runner, error) {
+func runLocal(runner *Runner, body []byte) (*swyapi.SwdFunctionRunResult, error) {
+	runner.lock.Lock()
+	if runner.l.proxy {
+		runner.lock.Unlock()
+		return nil, errors.New("Runner proxified")
+	}
+
+	res, err := doRun(runner, body)
+	if err != nil || res.Code != 0 {
+		restartLocal(runner)
+	}
+	runner.lock.Unlock()
+	return res, err
+}
+
+func makeLocalRunner(lang string, tmous int64) (*Runner, error) {
 	var err error
 	p := make([]int, 2)
 
-	runner := &Runner {lang: lang, tmous: tmous}
+	lr := &localRunner{lang: lang, tmous: tmous}
+	runner := &Runner {l: lr, run: runLocal}
 
 	err = syscall.Pipe(p)
 	if err != nil {
 		return nil, fmt.Errorf("Can't make out pipe: %s", err.Error())
 	}
 
-	runner.fout = strconv.Itoa(p[1])
+	lr.fout = p[1]
+	lr.fout_s = strconv.Itoa(p[1])
 	syscall.SetNonblock(p[0], true)
 	syscall.CloseOnExec(p[0])
 	runner.fin = os.NewFile(uintptr(p[0]), "runner.stdout")
@@ -91,7 +124,8 @@ func startRunner(lang string, tmous int64) (*Runner, error) {
 		return nil, fmt.Errorf("Can't make err pipe: %s", err.Error())
 	}
 
-	runner.ferr = strconv.Itoa(p[1])
+	lr.ferr = p[1]
+	lr.ferr_s = strconv.Itoa(p[1])
 	syscall.SetNonblock(p[0], true)
 	syscall.CloseOnExec(p[0])
 	runner.fine = os.NewFile(uintptr(p[0]), "runner.stderr")
@@ -118,13 +152,13 @@ func startQnR(runner *Runner) error {
 		return fmt.Errorf("Can't make queue: %s", err.Error())
 	}
 
-	err = runner.q.RcvTimeout(runner.tmous)
+	err = runner.q.RcvTimeout(runner.l.tmous)
 	if err != nil {
 		return fmt.Errorf("Can't set receive timeout: %s", err.Error())
 	}
 
-	runner.cmd = exec.Command(runners[runner.lang], runner.q.GetId(), runner.fout, runner.ferr)
-	err = runner.cmd.Start()
+	runner.l.cmd = exec.Command(runners[runner.l.lang], runner.q.GetId(), runner.l.fout_s, runner.l.ferr_s)
+	err = runner.l.cmd.Start()
 	if err != nil {
 		return fmt.Errorf("Can't start runner: %s", err.Error())
 	}
@@ -150,9 +184,6 @@ func readLines(f *os.File) string {
 func doRun(runner *Runner, body []byte) (*swyapi.SwdFunctionRunResult, error) {
 	var err error
 
-	runner.lock.Lock()
-	defer runner.lock.Unlock()
-
 	start := time.Now()
 	err = runner.q.SendBytes(body)
 	if err != nil {
@@ -176,8 +207,6 @@ func doRun(runner *Runner, body []byte) (*swyapi.SwdFunctionRunResult, error) {
 		}
 		ret.Return = res[2:]
 	} else {
-		restartRunner(runner)
-
 		switch {
 		case err == io.EOF:
 			ret.Code = http.StatusInternalServerError
@@ -302,7 +331,7 @@ func handleRun(runner *Runner, w http.ResponseWriter, r *http.Request) {
 	}
 
 	code = http.StatusInternalServerError
-	result, err = doRun(runner, body)
+	result, err = runner.run(runner, body)
 	if err != nil {
 		goto out
 	}
@@ -349,7 +378,144 @@ out:
 	log.Errorf("%s", err.Error())
 }
 
-func startCResponder(podip string) error {
+var prox_runners sync.Map
+var prox_lock sync.Mutex
+
+type runnerInfo struct {
+}
+
+func makeProxyRunner(rkey string) (*Runner, error) {
+	var c *net.UnixConn
+	var rfds []int
+	var rinf runnerInfo
+	var mn, cn int
+	var scms []syscall.SocketControlMessage
+	var pr *proxyRunner
+	var runner *Runner
+
+	msg := make([]byte, 1024)
+	cmsg := make([]byte, 1024)
+
+	wadd, err := net.ResolveUnixAddr("unixpacket", "/var/run/swifty/wdogconn/" + rkey)
+	if err != nil {
+		log.Errorf("Can't resolve wdogconn addr: %s", err.Error())
+		goto er
+	}
+
+	c, err = net.DialUnix("unixpacket", nil, wadd)
+	if err != nil {
+		log.Errorf("Can't connect wdogconn: %s", err.Error())
+		goto er
+	}
+
+	mn, cn, _, _, err = c.ReadMsgUnix(msg, cmsg)
+	if err != nil {
+		log.Errorf("Can't get runner creds: %s", err.Error())
+		goto erc
+	}
+
+	scms, err = syscall.ParseSocketControlMessage(cmsg[:cn])
+	if err != nil {
+		log.Errorf("Can't parse sk cmsg: %s", err.Error())
+		goto erc
+	}
+
+	if len(scms) != 1 {
+		log.Errorf("Need one scm, got %d", len(scms))
+		goto erc
+	}
+
+	rfds, err = syscall.ParseUnixRights(&scms[0])
+	if err != nil {
+		log.Errorf("Can't parse scm rights: %s", err.Error())
+		goto erc
+	}
+
+	err = json.Unmarshal(msg[:mn], &rinf)
+	if err != nil {
+		log.Errorf("Can't unmarshal runner info: %s", err.Error())
+		goto ercc
+	}
+
+	/* FIXME -- up above we might have leaked the received FDs... */
+
+	pr = &proxyRunner{rkey: rkey, wc: c}
+	runner = &Runner{p: pr, run: runProxy}
+	runner.fin = os.NewFile(uintptr(rfds[0]), "runner.stdout")
+	runner.fine = os.NewFile(uintptr(rfds[1]), "runner.stderr")
+	runner.q = xqueue.OpenQueueFd(rfds[2])
+
+	return runner, nil
+
+ercc:
+	for _, fd := range(rfds) {
+		syscall.Close(fd)
+	}
+erc:
+	c.Close()
+er:
+	return nil, err
+}
+
+func runProxy(runner *Runner, body []byte) (*swyapi.SwdFunctionRunResult, error) {
+	runner.lock.Lock()
+	if runner.p.wc == nil {
+		runner.lock.Unlock()
+		return nil, errors.New("Already closed")
+	}
+
+	res, err := doRun(runner, body)
+	if err != nil || res.Code != 0 {
+		runner.q.Close()
+		runner.fin.Close()
+		runner.fine.Close()
+		runner.p.wc.Close()
+		runner.p.wc = nil
+		runner.lock.Unlock()
+
+		prox_runners.Delete(runner.p.rkey)
+	} else {
+		runner.lock.Unlock()
+	}
+
+	return res, err
+}
+
+func handleProxy(w http.ResponseWriter, req *http.Request) {
+	var runner *Runner
+
+	v := mux.Vars(req)
+	fnid := v["fnid"]
+	podip := v["podip"]
+	rkey := fnid + "/" + podip
+
+	r, ok := prox_runners.Load(rkey)
+	if ok {
+		runner = r.(*Runner)
+	} else {
+		prox_lock.Lock()
+		r, ok := prox_runners.Load(rkey)
+		if ok {
+			runner = r.(*Runner)
+		} else {
+			var err error
+
+			runner, err = makeProxyRunner(rkey)
+			if err != nil {
+				prox_lock.Unlock()
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			prox_runners.Store(rkey, runner)
+		}
+		prox_lock.Unlock()
+	}
+
+	handleRun(runner, w, req)
+}
+
+func startCResponder(runner *Runner, podip string) error {
 	spath := "/var/run/swifty/" + strings.Replace(podip, ".", "_", -1)
 	os.Remove(spath)
 	addr, err := net.ResolveUnixAddr("unixpacket", spath)
@@ -363,6 +529,8 @@ func startCResponder(podip string) error {
 	}
 
 	go func() {
+		var msg, cmsg []byte
+		b := make([]byte, 1)
 		for {
 			cln, err := sk.AcceptUnix()
 			if err != nil {
@@ -371,6 +539,30 @@ func startCResponder(podip string) error {
 			}
 
 			log.Debugf("CResponder accepted conn")
+			runner.lock.Lock()
+			msg, err = json.Marshal(&runnerInfo{})
+			if err != nil {
+				goto skip
+			}
+
+			cmsg = syscall.UnixRights(runner.l.fout, runner.l.ferr, runner.q.Fd())
+			_, _, err = cln.WriteMsgUnix(msg, cmsg, nil)
+			if err != nil {
+				goto skip
+			}
+
+			runner.l.proxy = true
+			runner.lock.Unlock()
+
+			cln.Read(b)
+			log.Debugf("Proxy disconnected, restarting runner")
+
+			runner.lock.Lock()
+			runner.l.proxy = false
+			restartLocal(runner)
+
+		skip:
+			runner.lock.Unlock()
 			cln.Close()
 		}
 	}()
@@ -391,18 +583,25 @@ func main() {
 		log.Fatal("NO PORT")
 	}
 
-	lang := swy.SafeEnv("SWD_LANG", "")
-	if lang == "" {
-		log.Fatal("SWD_LANG not set")
-	}
-
 	r := mux.NewRouter()
 
 	inst := swy.SafeEnv("SWD_INSTANCE", "")
 	if inst == "build" {
+		lang := swy.SafeEnv("SWD_LANG", "")
+		if lang == "" {
+			log.Fatal("SWD_LANG not set")
+		}
+
 		buildlang = lang
 		r.HandleFunc("/v1/run", handleBuild)
+	} else if inst == "proxy" {
+		r.HandleFunc("/v1/run/{fnid}/{podip}", handleProxy)
 	} else {
+		lang := swy.SafeEnv("SWD_LANG", "")
+		if lang == "" {
+			log.Fatal("SWD_LANG not set")
+		}
+
 		tmos := swy.SafeEnv("SWD_FN_TMO", "")
 		if tmos == "" {
 			log.Fatal("SWD_FN_TMO not set")
@@ -419,16 +618,15 @@ func main() {
 		}
 
 		tmous := int64((time.Duration(tmo) * time.Millisecond) / time.Microsecond)
-		runner, err := startRunner(lang, tmous)
+		runner, err := makeLocalRunner(lang, tmous)
 		if err != nil {
 			log.Fatal("Can't start runner")
 		}
 
-		err = startCResponder(podIP)
+		err = startCResponder(runner, podIP)
 		if err != nil {
 			log.Fatal("Can't start cresponder: %s", err.Error())
 		}
-
 
 		r.HandleFunc("/v1/run/" + podToken,
 				func(w http.ResponseWriter, r *http.Request) {

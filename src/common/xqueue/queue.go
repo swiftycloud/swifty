@@ -23,6 +23,10 @@ func (q *Queue)GetId() string {
 	return strconv.Itoa(q.pfd)
 }
 
+func (q *Queue)Fd() int {
+	return int(q.sk.Fd())
+}
+
 func (q *Queue)FDS() string {
 	return fmt.Sprintf("%d:%d", q.pfd, q.sk.Fd())
 }
@@ -159,11 +163,15 @@ func MakeQueue() (*Queue, error) {
 	return &Queue{sk: os.NewFile(uintptr(fds[1]), "queue"), pfd: fds[0]}, nil
 }
 
+func OpenQueueFd(fd int) (*Queue) {
+	return &Queue{sk: os.NewFile(uintptr(fd), "queue"), pfd: -1}
+}
+
 func OpenQueue(id string) (*Queue, error) {
 	fd, err := strconv.Atoi(id)
 	if err != nil {
 		return nil, fmt.Errorf("bad qid: %s", err.Error())
 	}
 
-	return &Queue{sk: os.NewFile(uintptr(fd), "queue"), pfd: -1}, nil
+	return OpenQueueFd(fd), nil
 }
