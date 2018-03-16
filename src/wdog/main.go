@@ -2,6 +2,7 @@ package main
 
 import (
 	"go.uber.org/zap"
+	"github.com/gorilla/mux"
 
 	"strings"
 	"net/http"
@@ -395,10 +396,12 @@ func main() {
 		log.Fatal("SWD_LANG not set")
 	}
 
+	r := mux.NewRouter()
+
 	inst := swy.SafeEnv("SWD_INSTANCE", "")
 	if inst == "build" {
 		buildlang = lang
-		http.HandleFunc("/v1/run", handleBuild)
+		r.HandleFunc("/v1/run", handleBuild)
 	} else {
 		tmos := swy.SafeEnv("SWD_FN_TMO", "")
 		if tmos == "" {
@@ -427,11 +430,17 @@ func main() {
 		}
 
 
-		http.HandleFunc("/v1/run/" + podToken,
+		r.HandleFunc("/v1/run/" + podToken,
 				func(w http.ResponseWriter, r *http.Request) {
 					handleRun(runner, w, r)
 				})
 	}
 
-	log.Fatal(http.ListenAndServe(podIP + ":" + podPort, nil))
+	srv := &http.Server{
+		Handler:	r,
+		Addr:		podIP + ":" + podPort,
+		WriteTimeout:	60 * time.Second,
+		ReadTimeout:	60 * time.Second,
+	}
+	log.Fatal(srv.ListenAndServe())
 }
