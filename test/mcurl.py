@@ -8,10 +8,22 @@ from multiprocessing import Process
 def curl(nr, d, url):
     ers = {}
     oks = 0
+    minlat = 100.0
+    maxlat = 0.0
+    gist = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
     for i in range(0, nr):
         conn = http.client.HTTPConnection(url[2])
-        conn.request('POST', '/' + url[3])
+        s = time.time()
+        conn.request('POST', '/' + url[3], body = "{}")
         resp = conn.getresponse()
+        lat = time.time() - s
+        if lat < minlat:
+            minlat = lat
+        elif lat > maxlat:
+            maxlat = lat
+        lms = int(lat * 1000)
+        if lms < 15:
+            gist[lms] += 1
         if resp.status == 200:
             oks += 1
         else:
@@ -25,6 +37,7 @@ def curl(nr, d, url):
         for e in ers:
             m += ", %d/%d ERRs" % (ers[e], e)
         print(m)
+    return minlat, maxlat, gist
 
 url = sys.argv[1]
 nr = int(sys.argv[2])
@@ -36,10 +49,11 @@ print("Call %s %d times %.2f delay %d threads" % (url, nr, d, p))
 url = url.split('/', 3)
 if p == 1:
     start = time.time()
-    curl(nr, d, url)
+    mn, mx, gist = curl(nr, d, url)
     dur = time.time() - start
     print("%.2f seconds" % dur)
-    print("%.2f msec call lat" % (dur * 1000 / nr))
+    print("%.2f msec call lat (%.2f ... %.2f)" % (dur * 1000 / nr, mn * 1000, mx * 1000))
+    print("Gist: %r" % gist)
 else:
     ps = []
     for i in range(0, p):
