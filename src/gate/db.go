@@ -302,6 +302,7 @@ func dbBalancerPodAdd(fnId string, pod *k8sPod) error {
 			"fnid":		fnId,
 			"uid":		pod.UID,
 			"wdogaddr":	pod.WdogAddr,
+			"wdogport":	pod.WdogPort,
 			"host":		pod.Host,
 			"fnversion":	pod.Version,
 		})
@@ -341,6 +342,7 @@ type balancerEntry struct {
 	FnId		string		`bson:"fnid"`
 	UID		string		`bson:"uid"`
 	WdogAddr	string		`bson:"wdogaddr"`
+	WdogPort	string		`bson:"wdogport"`
 	Host		string		`bson:"host"`
 	Version		string		`bson:"fnversion"`
 }
@@ -361,7 +363,7 @@ func dbBalancerGetConnsByCookie(cookie string) ([]podConn, error) {
 
 	var ret []podConn
 	for _, b := range(v) {
-		ret = append(ret, podConn{AddrPort: b.WdogAddr, Host: b.Host})
+		ret = append(ret, podConn{Addr: b.WdogAddr, Port: b.WdogPort, Host: b.Host})
 	}
 
 	return ret, nil
@@ -382,7 +384,7 @@ func dbBalancerGetConnExact(fnid, version string) (*podConn, error) {
 		return nil, err
 	}
 
-	return &podConn{AddrPort: v.WdogAddr}, nil
+	return &podConn{Addr: v.WdogAddr, Port: v.WdogPort}, nil
 }
 
 func dbProjectListAll(ten string) (fn []string, mw []string, err error) {

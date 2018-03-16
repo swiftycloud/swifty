@@ -385,6 +385,7 @@ type k8sPod struct {
 	Version		string
 	DepName		string
 	WdogAddr	string
+	WdogPort	string
 	Host		string
 	UID		string
 }
@@ -408,9 +409,7 @@ func genBalancerPod(pod *v1.Pod) (*k8sPod) {
 			} else if v.Name == "SWD_VERSION" {
 				r.Version = v.Value
 			} else if v.Name == "SWD_PORT" {
-				if r.WdogAddr != "" {
-					r.WdogAddr += ":" + v.Value
-				}
+				r.WdogPort = v.Value
 			}
 		}
 	}

@@ -32,11 +32,11 @@ func BalancerPodDel(pod *k8sPod) error {
 	return nil
 }
 
-func waitPort(addr_port string) error {
+func waitPort(addr, port string) error {
 	wt := 100 * time.Millisecond
 	var slept time.Duration
 	for {
-		conn, err := net.Dial("tcp", addr_port)
+		conn, err := net.Dial("tcp", addr + ":" + port)
 		if err == nil {
 			conn.Close()
 			break
@@ -68,7 +68,7 @@ func waitPort(addr_port string) error {
 func BalancerPodAdd(pod *k8sPod) error {
 	fnid := pod.SwoId.Cookie()
 
-	err := waitPort(pod.WdogAddr)
+	err := waitPort(pod.WdogAddr, pod.WdogPort)
 	if err != nil {
 		return err
 	}

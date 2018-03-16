@@ -11,8 +11,9 @@ import (
 )
 
 type podConn struct {
-	AddrPort	string
-	Host		string
+	Addr	string
+	Host	string
+	Port	string
 }
 
 func doRun(ctx context.Context, fn *FunctionDesc, event string, args map[string]string) (*swyapi.SwdFunctionRunResult, error) {
@@ -25,25 +26,26 @@ func doRun(ctx context.Context, fn *FunctionDesc, event string, args map[string]
 	return doRunConn(ctx, conn, fn.Cookie, event, args)
 }
 
-func talkHTTP(conn *podConn, cookie string, args map[string]string, res *swyapi.SwdFunctionRunResult) error {
+func talkHTTP(addr, port, url string, args map[string]string) (*swyapi.SwdFunctionRunResult, error) {
 	var resp *http.Response
+	var res swyapi.SwdFunctionRunResult
 	var err error
 
 	resp, err = swyhttp.MarshalAndPost(
 			&swyhttp.RestReq{
-				Address: "http://" + conn.AddrPort + "/v1/run/" + cookie,
+				Address: "http://" + addr + ":" + port + "/v1/run/" + url,
 				Timeout: uint(conf.Runtime.Timeout.Max),
 			}, args)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	err = swyhttp.ReadAndUnmarshalResp(resp, res)
+	err = swyhttp.ReadAndUnmarshalResp(resp, &res)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	return &res, nil
 }
 
 func doRunConn(ctx context.Context, conn *podConn, cookie, event string, args map[string]string) (*swyapi.SwdFunctionRunResult, error) {
@@ -51,24 +53,21 @@ func doRunConn(ctx context.Context, conn *podConn, cookie, event string, args ma
 		ctxlog(ctx).Debugf("RUN %s %s (%v)", cookie, event, args)
 	}
 
-	var wd_result swyapi.SwdFunctionRunResult
-	var err error
-
-	err = talkHTTP(conn, cookie, args, &wd_result)
+	res, err := talkHTTP(conn.Addr, conn.Port, cookie, args)
 	if err != nil {
 		goto out
 	}
 
-	if wd_result.Stdout != "" || wd_result.Stderr != "" {
-		logSaveResult(cookie, event, wd_result.Stdout, wd_result.Stderr)
+	if res.Stdout != "" || res.Stderr != "" {
+		logSaveResult(cookie, event, res.Stdout, res.Stderr)
 	}
 
 	if event != "call" {
 		ctxlog(ctx).Debugf("RETurn %s: %d out[%s] err[%s]", cookie,
-			wd_result.Code, wd_result.Stdout, wd_result.Stderr)
+			res.Code, res.Stdout, res.Stderr)
 	}
 
-	return &wd_result, nil
+	return res, nil
 
 out:
 	return nil, fmt.Errorf("RUN error %s", err.Error())
