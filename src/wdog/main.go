@@ -56,8 +56,6 @@ func get_exit_code(err error) (bool, int) {
 	}
 }
 
-var glob_runner *Runner
-
 func restartRunner(runner *Runner) {
 	if runner.cmd.Process.Kill() != nil {
 		/* Nothing else, but kill outselves, the pod will exit
@@ -292,7 +290,7 @@ func doBuildSwift(params *swyapi.SwdFunctionBuild) (*swyapi.SwdFunctionRunResult
 	return &swyapi.SwdFunctionRunResult{Code: 0, Stdout: stdout.String(), Stderr: stderr.String()}, nil
 }
 
-func handleRun(w http.ResponseWriter, r *http.Request) {
+func handleRun(runner *Runner, w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	var result *swyapi.SwdFunctionRunResult
 
@@ -303,7 +301,7 @@ func handleRun(w http.ResponseWriter, r *http.Request) {
 	}
 
 	code = http.StatusInternalServerError
-	result, err = doRun(glob_runner, body)
+	result, err = doRun(runner, body)
 	if err != nil {
 		goto out
 	}
@@ -418,7 +416,7 @@ func main() {
 		}
 
 		tmous := int64((time.Duration(tmo) * time.Millisecond) / time.Microsecond)
-		glob_runner, err = startRunner(lang, tmous)
+		runner, err := startRunner(lang, tmous)
 		if err != nil {
 			log.Fatal("Can't start runner")
 		}
@@ -429,7 +427,10 @@ func main() {
 		}
 
 
-		http.HandleFunc("/v1/run/" + podToken, handleRun)
+		http.HandleFunc("/v1/run/" + podToken,
+				func(w http.ResponseWriter, r *http.Request) {
+					handleRun(runner, w, r)
+				})
 	}
 
 	log.Fatal(http.ListenAndServe(podIP + ":" + podPort, nil))
