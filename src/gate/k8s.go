@@ -367,6 +367,7 @@ type k8sPod struct {
 	Version		string
 	DepName		string
 	WdogAddr	string
+	Host		string
 	UID		string
 }
 
@@ -375,6 +376,7 @@ func genBalancerPod(pod *v1.Pod) (*k8sPod) {
 		DepName:	pod.ObjectMeta.Labels["deployment"],
 		UID:		string(pod.ObjectMeta.UID),
 		WdogAddr:	pod.Status.PodIP,
+		Host:		pod.Status.HostIP,
 	}
 
 	for _, c := range pod.Spec.Containers {

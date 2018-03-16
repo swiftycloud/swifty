@@ -302,6 +302,7 @@ func dbBalancerPodAdd(fnId string, pod *k8sPod) error {
 			"fnid":		fnId,
 			"uid":		pod.UID,
 			"wdogaddr":	pod.WdogAddr,
+			"host":		pod.Host,
 			"fnversion":	pod.Version,
 		})
 	if err != nil {
@@ -335,7 +336,7 @@ func dbBalancerPodDelAll(fnid string) (error) {
 	return err
 }
 
-func dbBalancerGetConnsByCookie(cookie string) ([]string, error) {
+func dbBalancerGetConnsByCookie(cookie string) ([]podConn, error) {
 	var v []BalancerRS
 
 	c := dbSession.DB(dbState).C(DBColBalancerRS)
@@ -349,15 +350,15 @@ func dbBalancerGetConnsByCookie(cookie string) ([]string, error) {
 		return nil, err
 	}
 
-	var ret []string
+	var ret []podConn
 	for _, b := range(v) {
-		ret = append(ret, b.WdogAddr)
+		ret = append(ret, podConn{AddrPort: b.WdogAddr, Host: b.Host})
 	}
 
 	return ret, nil
 }
 
-func dbBalancerGetConnExact(fnid, version string) (string, error) {
+func dbBalancerGetConnExact(fnid, version string) (*podConn, error) {
 	var v BalancerRS
 
 	c := dbSession.DB(dbState).C(DBColBalancerRS)
@@ -367,12 +368,12 @@ func dbBalancerGetConnExact(fnid, version string) (string, error) {
 		}).One(&v)
 	if err != nil {
 		if err == mgo.ErrNotFound {
-			return "", nil
+			return nil, nil
 		}
-		return "", err
+		return nil, err
 	}
 
-	return v.WdogAddr, nil
+	return &podConn{AddrPort: v.WdogAddr}, nil
 }
 
 func dbProjectListAll(ten string) (fn []string, mw []string, err error) {

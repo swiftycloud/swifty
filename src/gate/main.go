@@ -671,7 +671,7 @@ func handleFunctionCall(w http.ResponseWriter, r *http.Request) {
 	var err error
 	var code int
 	var fmd *FnMemData
-	var conn string
+	var conn *podConn
 
 	if swyhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
 
@@ -728,7 +728,7 @@ out:
 
 func handleFunctionRun(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
 	var params swyapi.FunctionRun
-	var conn string
+	var conn *podConn
 	var res *swyapi.SwdFunctionRunResult
 
 	err := swyhttp.ReadAndUnmarshalReq(r, &params)

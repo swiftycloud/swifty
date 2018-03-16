@@ -18,16 +18,17 @@ type BalancerRS struct {
 	FnId		string		`bson:"fnid"`
 	UID		string		`bson:"uid"`
 	WdogAddr	string		`bson:"wdogaddr"`
+	Host		string		`bson:"host"`
 	Version		string		`bson:"fnversion"`
 }
 
 type BalancerDat struct {
 	rover	[2]uint32
-	pods	[]string
+	pods	[]podConn
 }
 
 func (bd *BalancerDat)Flush() {
-	bd.pods = []string{}
+	bd.pods = []podConn{}
 }
 
 func BalancerPodDel(pod *k8sPod) error {
@@ -120,20 +121,20 @@ func balancerPodsFlush(fnid string) {
 	}
 }
 
-func balancerGetConnExact(ctx context.Context, cookie, version string) (string, *swyapi.GateErr) {
+func balancerGetConnExact(ctx context.Context, cookie, version string) (*podConn, *swyapi.GateErr) {
 	/*
 	 * We can lookup id.Cookie() here, but ... it's manual run,
 	 * let's also make sure the FN exists at all
 	 */
 	ap, err := dbBalancerGetConnExact(cookie, version)
-	if ap == "" {
+	if ap == nil {
 		if err == nil {
-			return "", GateErrM(swy.GateGenErr, "Nothing to run (yet)")
+			return nil, GateErrM(swy.GateGenErr, "Nothing to run (yet)")
 		}
 
 		ctxlog(ctx).Errorf("balancer-db: Can't find pod %s/%s: %s",
 				cookie, version, err.Error())
-		return "", GateErrD(err)
+		return nil, GateErrD(err)
 	}
 
 	return ap, nil
@@ -142,8 +143,8 @@ func balancerGetConnExact(ctx context.Context, cookie, version string) (string, 
 func balancerScaleFnDeployment(depname string, goal uint) {
 }
 
-func balancerGetConnAny(ctx context.Context, cookie string, fdm *FnMemData) (string, error) {
-	var aps []string
+func balancerGetConnAny(ctx context.Context, cookie string, fdm *FnMemData) (*podConn, error) {
+	var aps []podConn
 	var err error
 
 	if fdm != nil {
@@ -154,10 +155,10 @@ func balancerGetConnAny(ctx context.Context, cookie string, fdm *FnMemData) (str
 		aps, err = dbBalancerGetConnsByCookie(cookie)
 		if aps == nil {
 			if err == nil {
-				return "", errors.New("No available PODs")
+				return nil, errors.New("No available PODs")
 			}
 
-			return "", err
+			return nil, err
 		}
 
 		fdm.lock.Lock()
@@ -175,5 +176,6 @@ func balancerGetConnAny(ctx context.Context, cookie string, fdm *FnMemData) (str
 	if sc > fc + 1 {
 		balancerScaleFnDeployment(fdm.depname, uint(sc - fc))
 	}
-	return aps[sc % uint32(len(aps))], nil
+
+	return &aps[sc % uint32(len(aps))], nil
 }

@@ -10,9 +10,14 @@ import (
 	"../common/http"
 )
 
+type podConn struct {
+	AddrPort	string
+	Host		string
+}
+
 func doRun(ctx context.Context, fn *FunctionDesc, event string, args map[string]string) (*swyapi.SwdFunctionRunResult, error) {
 	conn, err := balancerGetConnAny(ctx, fn.Cookie, nil)
-	if conn == "" {
+	if conn == nil {
 		ctxlog(ctx).Errorf("Can't find %s cookie balancer: %s", fn.Cookie, err.Error())
 		return nil, fmt.Errorf("Can't find balancer for %s", fn.Cookie)
 	}
@@ -20,13 +25,13 @@ func doRun(ctx context.Context, fn *FunctionDesc, event string, args map[string]
 	return doRunConn(ctx, conn, fn.Cookie, event, args)
 }
 
-func talkHTTP(conn, cookie string, args map[string]string, res *swyapi.SwdFunctionRunResult) error {
+func talkHTTP(conn *podConn, cookie string, args map[string]string, res *swyapi.SwdFunctionRunResult) error {
 	var resp *http.Response
 	var err error
 
 	resp, err = swyhttp.MarshalAndPost(
 			&swyhttp.RestReq{
-				Address: "http://" + conn + "/v1/run/" + cookie,
+				Address: "http://" + conn.AddrPort + "/v1/run/" + cookie,
 				Timeout: uint(conf.Runtime.Timeout.Max),
 			}, args)
 	if err != nil {
@@ -41,7 +46,7 @@ func talkHTTP(conn, cookie string, args map[string]string, res *swyapi.SwdFuncti
 	return nil
 }
 
-func doRunConn(ctx context.Context, conn string, cookie, event string, args map[string]string) (*swyapi.SwdFunctionRunResult, error) {
+func doRunConn(ctx context.Context, conn *podConn, cookie, event string, args map[string]string) (*swyapi.SwdFunctionRunResult, error) {
 	if event != "call" {
 		ctxlog(ctx).Debugf("RUN %s %s (%v)", cookie, event, args)
 	}
