@@ -26,8 +26,6 @@ spec:
           value: "build"
         - name: SWD_PORT
           value: "8687"
-        - name: SWD_FN_TMO
-          value: "1000"
         - name: SWD_LANG
           value: "golang"
         - name: SWD_POD_IP
