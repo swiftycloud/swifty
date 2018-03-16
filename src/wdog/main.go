@@ -23,13 +23,12 @@ import (
 	"../apis/apps"
 )
 
-var fnTmoUsec int64
-var lang string
-
 type Runner struct {
 	lock	sync.Mutex
 	cmd	*exec.Cmd
 	q	*xqueue.Queue
+	tmous	int64
+	lang	string
 	fout	string
 	ferr	string
 	fin	*os.File
@@ -72,11 +71,11 @@ func restartRunner(runner *Runner) {
 	startQnR(runner)
 }
 
-func startRunner() (*Runner, error) {
+func startRunner(lang string, tmous int64) (*Runner, error) {
 	var err error
 	p := make([]int, 2)
 
-	runner := &Runner {}
+	runner := &Runner {lang: lang, tmous: tmous}
 
 	err = syscall.Pipe(p)
 	if err != nil {
@@ -120,12 +119,12 @@ func startQnR(runner *Runner) error {
 		return fmt.Errorf("Can't make queue: %s", err.Error())
 	}
 
-	err = runner.q.RcvTimeout(fnTmoUsec)
+	err = runner.q.RcvTimeout(runner.tmous)
 	if err != nil {
 		return fmt.Errorf("Can't set receive timeout: %s", err.Error())
 	}
 
-	runner.cmd = exec.Command(runners[lang], runner.q.GetId(), runner.fout, runner.ferr)
+	runner.cmd = exec.Command(runners[runner.lang], runner.q.GetId(), runner.fout, runner.ferr)
 	err = runner.cmd.Start()
 	if err != nil {
 		return fmt.Errorf("Can't start runner: %s", err.Error())
@@ -203,14 +202,15 @@ var builders = map[string]func(*swyapi.SwdFunctionBuild) (*swyapi.SwdFunctionRun
 }
 
 var buildlock sync.Mutex
+var buildlang string
 
 func doBuild(params *swyapi.SwdFunctionBuild) (*swyapi.SwdFunctionRunResult, error) {
 	buildlock.Lock()
 	defer buildlock.Unlock()
 
-	fn, ok := builders[lang]
+	fn, ok := builders[buildlang]
 	if !ok {
-		return nil, fmt.Errorf("No builder for %s", lang)
+		return nil, fmt.Errorf("No builder for %s", buildlang)
 	}
 
 	return fn(params)
@@ -392,13 +392,14 @@ func main() {
 		log.Fatal("NO PORT")
 	}
 
-	lang = swy.SafeEnv("SWD_LANG", "")
+	lang := swy.SafeEnv("SWD_LANG", "")
 	if lang == "" {
 		log.Fatal("SWD_LANG not set")
 	}
 
 	inst := swy.SafeEnv("SWD_INSTANCE", "")
 	if inst == "build" {
+		buildlang = lang
 		http.HandleFunc("/v1/run", handleBuild)
 	} else {
 		tmos := swy.SafeEnv("SWD_FN_TMO", "")
@@ -416,13 +417,11 @@ func main() {
 			log.Fatal("SWD_POD_TOKEN not set")
 		}
 
-		fnTmoUsec = int64((time.Duration(tmo) * time.Millisecond) / time.Microsecond)
-
-		glob_runner, err = startRunner()
+		tmous := int64((time.Duration(tmo) * time.Millisecond) / time.Microsecond)
+		glob_runner, err = startRunner(lang, tmous)
 		if err != nil {
 			log.Fatal("Can't start runner")
 		}
-
 
 		err = startCResponder(podIP)
 		if err != nil {
