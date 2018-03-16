@@ -466,19 +466,23 @@ func runProxy(runner *Runner, body []byte) (*swyapi.SwdFunctionRunResult, error)
 
 	res, err := doRun(runner, body)
 	if err != nil || res.Code != 0 {
-		runner.q.Close()
-		runner.fin.Close()
-		runner.fine.Close()
-		runner.p.wc.Close()
-		runner.p.wc = nil
+		restartProxy(runner)
 		runner.lock.Unlock()
-
-		prox_runners.Delete(runner.p.rkey)
 	} else {
 		runner.lock.Unlock()
 	}
 
 	return res, err
+}
+
+func restartProxy(runner *Runner) {
+	runner.q.Close()
+	runner.fin.Close()
+	runner.fine.Close()
+	runner.p.wc.Close()
+	prox_runners.Delete(runner.p.rkey)
+
+	runner.p.wc = nil
 }
 
 func handleProxy(w http.ResponseWriter, req *http.Request) {
@@ -508,6 +512,17 @@ func handleProxy(w http.ResponseWriter, req *http.Request) {
 			}
 
 			prox_runners.Store(rkey, runner)
+
+			/* Watchdog for wdog disappearing */
+			go func() {
+				b := make([]byte, 1)
+				runner.p.wc.Read(b)
+				runner.lock.Lock()
+				if runner.p.wc != nil {
+					restartProxy(runner)
+				}
+				runner.lock.Unlock()
+			}()
 		}
 		prox_lock.Unlock()
 	}
