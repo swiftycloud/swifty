@@ -336,8 +336,17 @@ func dbBalancerPodDelAll(fnid string) (error) {
 	return err
 }
 
+type balancerEntry struct {
+	ObjID		bson.ObjectId	`bson:"_id,omitempty"`
+	FnId		string		`bson:"fnid"`
+	UID		string		`bson:"uid"`
+	WdogAddr	string		`bson:"wdogaddr"`
+	Host		string		`bson:"host"`
+	Version		string		`bson:"fnversion"`
+}
+
 func dbBalancerGetConnsByCookie(cookie string) ([]podConn, error) {
-	var v []BalancerRS
+	var v []balancerEntry
 
 	c := dbSession.DB(dbState).C(DBColBalancerRS)
 	err := c.Find(bson.M{
@@ -359,7 +368,7 @@ func dbBalancerGetConnsByCookie(cookie string) ([]podConn, error) {
 }
 
 func dbBalancerGetConnExact(fnid, version string) (*podConn, error) {
-	var v BalancerRS
+	var v balancerEntry
 
 	c := dbSession.DB(dbState).C(DBColBalancerRS)
 	err := c.Find(bson.M{

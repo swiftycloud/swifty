@@ -1,7 +1,6 @@
 package main
 
 import (
-	"gopkg.in/mgo.v2/bson"
 	"time"
 	"sync/atomic"
 	"errors"
@@ -12,15 +11,6 @@ import (
 	"../common"
 	"../apis/apps"
 )
-
-type BalancerRS struct {
-	ObjID		bson.ObjectId	`bson:"_id,omitempty"`
-	FnId		string		`bson:"fnid"`
-	UID		string		`bson:"uid"`
-	WdogAddr	string		`bson:"wdogaddr"`
-	Host		string		`bson:"host"`
-	Version		string		`bson:"fnversion"`
-}
 
 type BalancerDat struct {
 	rover	[2]uint32
