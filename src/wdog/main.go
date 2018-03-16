@@ -40,10 +40,8 @@ type localRunner struct {
 	cmd	*exec.Cmd
 	lang	string
 	tmous	int64
-	fout	int
-	fout_s	string
-	ferr	int
-	ferr_s	string
+	fout	string
+	ferr	string
 	proxy	bool
 }
 
@@ -113,8 +111,7 @@ func makeLocalRunner(lang string, tmous int64) (*Runner, error) {
 		return nil, fmt.Errorf("Can't make out pipe: %s", err.Error())
 	}
 
-	lr.fout = p[1]
-	lr.fout_s = strconv.Itoa(p[1])
+	lr.fout = strconv.Itoa(p[1])
 	syscall.SetNonblock(p[0], true)
 	syscall.CloseOnExec(p[0])
 	runner.fin = os.NewFile(uintptr(p[0]), "runner.stdout")
@@ -124,8 +121,7 @@ func makeLocalRunner(lang string, tmous int64) (*Runner, error) {
 		return nil, fmt.Errorf("Can't make err pipe: %s", err.Error())
 	}
 
-	lr.ferr = p[1]
-	lr.ferr_s = strconv.Itoa(p[1])
+	lr.ferr = strconv.Itoa(p[1])
 	syscall.SetNonblock(p[0], true)
 	syscall.CloseOnExec(p[0])
 	runner.fine = os.NewFile(uintptr(p[0]), "runner.stderr")
@@ -157,7 +153,7 @@ func startQnR(runner *Runner) error {
 		return fmt.Errorf("Can't set receive timeout: %s", err.Error())
 	}
 
-	runner.l.cmd = exec.Command(runners[runner.l.lang], runner.q.GetId(), runner.l.fout_s, runner.l.ferr_s)
+	runner.l.cmd = exec.Command(runners[runner.l.lang], runner.q.GetId(), runner.l.fout, runner.l.ferr)
 	err = runner.l.cmd.Start()
 	if err != nil {
 		return fmt.Errorf("Can't start runner: %s", err.Error())
@@ -560,7 +556,7 @@ func startCResponder(runner *Runner, podip string) error {
 				goto skip
 			}
 
-			cmsg = syscall.UnixRights(runner.l.fout, runner.l.ferr, runner.q.Fd())
+			cmsg = syscall.UnixRights(int(runner.fin.Fd()), int(runner.fine.Fd()), runner.q.Fd())
 			_, _, err = cln.WriteMsgUnix(msg, cmsg, nil)
 			if err != nil {
 				goto skip
