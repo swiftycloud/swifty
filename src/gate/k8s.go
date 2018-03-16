@@ -225,8 +225,13 @@ func swk8sUpdate(ctx context.Context, conf *YAMLConf, fn *FunctionDesc) error {
 	/*
 	 * Function sources may be at the new location now
 	 */
-	vol := &this.Spec.Template.Spec.Volumes[0]
-	vol.VolumeSource.HostPath.Path = fnRepoCheckout(conf, fn)
+	for i := 0; i < len(this.Spec.Template.Spec.Volumes); i++ {
+		vol := &this.Spec.Template.Spec.Volumes[i]
+		if vol.Name == "code" {
+			vol.VolumeSource.HostPath.Path = fnRepoCheckout(conf, fn)
+			break
+		}
+	}
 
 	/*
 	 * Tune up SWD_FUNCTION_DESC to make wdog keep up with
@@ -307,6 +312,14 @@ func swk8sRun(ctx context.Context, conf *YAMLConf, fn *FunctionDesc) error {
 							},
 					},
 				},
+				{
+					Name:		"conn",
+					VolumeSource:	v1.VolumeSource {
+						HostPath: &v1.HostPathVolumeSource{
+								Path: "/var/run/swifty/wdogconn/" + fn.Cookie,
+							},
+					},
+				},
 			},
 			HostNetwork:	false,
 			Containers:	[]v1.Container{
@@ -319,6 +332,11 @@ func swk8sRun(ctx context.Context, conf *YAMLConf, fn *FunctionDesc) error {
 							Name:		"code",
 							ReadOnly:	false,
 							MountPath:	RtCodePath(&fn.Code),
+						},
+						{
+							Name:		"conn",
+							ReadOnly:	false,
+							MountPath:	"/var/run/swifty",
 						},
 					},
 					ImagePullPolicy: v1.PullNever,
