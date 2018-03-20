@@ -205,9 +205,13 @@ func swk8sGenEnvVar(ctx context.Context, fn *FunctionDesc, wd_port int) []v1.Env
 	return s
 }
 
-func swk8sGenLabels(depname string) map[string]string {
+func swk8sGenLabels(fn *FunctionDesc, depname string) map[string]string {
 	labels := map[string]string {
 		"deployment":	depname,
+		"swyrun":	fn.Cookie[:32],
+		"tenant":	fn.Tennant,
+		"project":	fn.Project,
+		"function":	fn.Name,
 	}
 	return labels
 }
@@ -300,7 +304,7 @@ func swk8sRun(ctx context.Context, conf *YAMLConf, fn *FunctionDesc) error {
 	podspec := v1.PodTemplateSpec{
 		ObjectMeta:	v1.ObjectMeta {
 			Name:	depname,
-			Labels:	swk8sGenLabels(depname),
+			Labels:	swk8sGenLabels(fn, depname),
 		},
 		Spec:			v1.PodSpec {
 			Volumes:	[]v1.Volume{
@@ -524,6 +528,40 @@ func swk8sMwSecretRemove(ctx context.Context, id string) error {
 	return err
 }
 
+func swk8sDepScale(depname string, replicas int32, up bool) int32 {
+	deps := swk8sClientSet.Extensions().Deployments(v1.NamespaceDefault)
+	dep, err := deps.Get(depname)
+	if err != nil {
+		return replicas /* Huh? */
+	}
+
+	if up {
+		if *dep.Spec.Replicas >= replicas {
+			return *dep.Spec.Replicas
+		}
+	} else {
+		if *dep.Spec.Replicas <= replicas {
+			return *dep.Spec.Replicas
+		}
+	}
+
+	dep.Spec.Replicas = &replicas
+	_, err = deps.Update(dep)
+	if err != nil {
+		return *dep.Spec.Replicas
+	}
+
+	return replicas
+}
+
+func swk8sDepScaleUp(depname string, replicas uint32) uint32 {
+	return uint32(swk8sDepScale(depname, int32(replicas), true))
+}
+
+func swk8sDepScaleDown(depname string, replicas uint32) uint32 {
+	return uint32(swk8sDepScale(depname, int32(replicas), false))
+}
+
 func swk8sGetBuildPods() (map[string]string, error) {
 	rv := make(map[string]string)
 
@@ -535,12 +573,7 @@ func swk8sGetBuildPods() (map[string]string, error) {
 	}
 
 	for _, pod := range pods.Items {
-		build, ok := pod.ObjectMeta.Labels["swybuild"]
-		if !ok {
-			glog.Errorf("Badly listed POD")
-			continue
-		}
-
+		build := pod.ObjectMeta.Labels["swybuild"]
 		rv[build] = pod.Status.PodIP
 	}
 
@@ -560,6 +593,12 @@ func swk8sInit(conf *YAMLConf) error {
 	swk8sClientSet, err = kubernetes.NewForConfig(config)
 	if err != nil {
 		glog.Error("NewForConfig: %s", err.Error())
+		return err
+	}
+
+	err = scalerInit()
+	if err != nil {
+		glog.Error("Can't sart scaler: %s", err.Error())
 		return err
 	}
 

@@ -2,6 +2,7 @@ package main
 
 import (
 	"time"
+	"sync"
 	"sync/atomic"
 	"errors"
 	"net"
@@ -13,8 +14,10 @@ import (
 )
 
 type BalancerDat struct {
-	rover	[2]uint32
-	pods	[]podConn
+	rover		[2]uint32
+	pods		[]podConn
+	goal		uint32
+	wakeup		*sync.Cond
 }
 
 func (bd *BalancerDat)Flush() {
@@ -85,7 +88,16 @@ func BalancerPodAdd(pod *k8sPod) error {
 }
 
 func BalancerDelete(ctx context.Context, fnid string) (error) {
-	balancerPodsFlush(fnid)
+	fdm := memdGetCond(fnid)
+	if fdm != nil {
+		fdm.bd.Flush()
+		fdm.lock.Lock()
+		if fdm.bd.wakeup != nil {
+			fdm.bd.goal = 0
+			fdm.bd.wakeup.Signal()
+		}
+		fdm.lock.Unlock()
+	}
 
 	err := dbBalancerPodDelAll(fnid)
 	if err != nil {
@@ -130,9 +142,6 @@ func balancerGetConnExact(ctx context.Context, cookie, version string) (*podConn
 	return ap, nil
 }
 
-func balancerScaleFnDeployment(depname string, goal uint) {
-}
-
 func balancerGetConnAny(ctx context.Context, cookie string, fdm *FnMemData) (*podConn, error) {
 	var aps []podConn
 	var err error
@@ -162,10 +171,7 @@ func balancerGetConnAny(ctx context.Context, cookie string, fdm *FnMemData) (*po
 
 	/* Emulate simple RR balancing -- each next call picks next POD */
 	sc := atomic.AddUint32(&fdm.bd.rover[0], 1)
-	fc := fdm.bd.rover[1]
-	if sc > fc + 1 {
-		balancerScaleFnDeployment(fdm.depname, uint(sc - fc))
-	}
+	balancerFnDepGrow(fdm, sc - fdm.bd.rover[1])
 
 	return &aps[sc % uint32(len(aps))], nil
 }

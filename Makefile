@@ -85,6 +85,7 @@ src/gate/version.go: $(GITID_FILE)
 go-gate-y	+= src/gate/version.go
 go-gate-y	+= src/gate/db.go
 go-gate-y	+= src/gate/k8s.go
+go-gate-y	+= src/gate/scaler.go
 go-gate-y	+= src/gate/function.go
 go-gate-y	+= src/gate/mware.go
 go-gate-y	+= src/gate/mw-maria.go

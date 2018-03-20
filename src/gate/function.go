@@ -544,8 +544,8 @@ func notifyPodUp(ctx context.Context, pod *k8sPod) {
 		goto out
 	}
 
-	logSaveEvent(fn, "+POD", fmt.Sprintf("state: %s", fnStates[fn.State]))
 	if fn.State != swy.DBFuncStateRdy {
+		logSaveEvent(fn, "Ready", "")
 		dbFuncSetState(ctx, fn, swy.DBFuncStateRdy)
 		if fn.OneShot {
 			runFunctionOnce(ctx, fn)

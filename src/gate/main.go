@@ -33,9 +33,11 @@ var gateSecrets map[string]string
 var gateSecPas []byte
 
 const (
-	SwyDefaultProject string	= "default"
-	SwyPodStartTmo time.Duration	= 120 * time.Second
-	SwyBodyArg string		= "_SWY_BODY_"
+	SwyDefaultProject string		= "default"
+	SwyPodStartTmo time.Duration		= 120 * time.Second
+	SwyBodyArg string			= "_SWY_BODY_"
+	SwyDepScaleupRelax time.Duration	= 16 * time.Second
+	SwyDepScaledownStep time.Duration	= 8 * time.Second
 )
 
 var glog *zap.SugaredLogger
