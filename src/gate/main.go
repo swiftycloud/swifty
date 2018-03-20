@@ -38,6 +38,7 @@ const (
 	SwyBodyArg string			= "_SWY_BODY_"
 	SwyDepScaleupRelax time.Duration	= 16 * time.Second
 	SwyDepScaledownStep time.Duration	= 8 * time.Second
+	SwyTenantLimitsUpdPeriod time.Duration	= 120 * time.Second
 )
 
 var glog *zap.SugaredLogger
@@ -653,13 +654,15 @@ func makeArgMap(r *http.Request) map[string]string {
 
 func ratelimited(fmd *FnMemData) bool {
 	/* Per-function RL first, as it's ... more likely to fail */
-	if fmd.crl != nil && !fmd.crl.Get() {
+	frl := fmd.crl
+	if frl != nil && !frl.Get() {
 		return true
 	}
 
-	if fmd.td.crl != nil && !fmd.td.crl.Get() {
-		if fmd.crl != nil {
-			fmd.crl.Put()
+	trl := fmd.td.crl
+	if trl != nil && !trl.Get() {
+		if frl != nil {
+			frl.Put()
 		}
 		return true
 	}

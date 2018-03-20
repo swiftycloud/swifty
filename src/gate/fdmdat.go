@@ -2,7 +2,9 @@ package main
 
 import (
 	"sync"
+	"time"
 	"../common/xratelimit"
+	"../apis/apps"
 )
 
 var fdmd sync.Map
@@ -42,6 +44,18 @@ func memdGetCond(cookie string) *FnMemData {
 	}
 }
 
+func setupLimits(td *TenantMemData, ul *swyapi.UserLimits) {
+	if ul.Fn == nil || ul.Fn.Rate == 0 {
+		td.crl = nil
+	} else {
+		if td.crl == nil {
+			td.crl = xratelimit.MakeRL(ul.Fn.Burst, ul.Fn.Rate)
+		} else {
+			td.crl.Update(ul.Fn.Burst, ul.Fn.Rate)
+		}
+	}
+}
+
 func tendatGetOrInit(tenant string) *TenantMemData {
 	ret, ok := tdat.Load(tenant)
 	if ok {
@@ -51,16 +65,22 @@ func tendatGetOrInit(tenant string) *TenantMemData {
 	nret := &TenantMemData{}
 	nret.stats.Init(tenant)
 	ul, _ := dbTenantGetLimits(tenant)
-	glog.Debugf("Picked up tenant limits: %v", ul)
-	if ul.Fn != nil && ul.Fn.Rate != 0 {
-		nret.crl = xratelimit.MakeRL(ul.Fn.Burst, ul.Fn.Rate)
-	}
+	setupLimits(nret, ul)
 
-	ret, _ = tdat.LoadOrStore(tenant, nret)
+	var loaded bool
+	ret, loaded = tdat.LoadOrStore(tenant, nret)
 	lret := ret.(*TenantMemData)
 
-	if lret != nret {
+	if loaded {
 		nret.stats.Stop()
+	} else {
+		go func() {
+			for {
+				time.Sleep(SwyTenantLimitsUpdPeriod)
+				ul, _ := dbTenantGetLimits(tenant)
+				setupLimits(lret, ul)
+			}
+		}()
 	}
 
 	return lret
