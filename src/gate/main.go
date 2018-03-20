@@ -125,7 +125,7 @@ type YAMLConfRt struct {
 
 type YAMLConfKuber struct {
 	ConfigPath	string			`yaml:"config-path"`
-	MaxReplicas	int			`yaml:"max-replicas"`
+	MaxReplicas	uint32			`yaml:"max-replicas"`
 }
 
 type YAMLConfDB struct {

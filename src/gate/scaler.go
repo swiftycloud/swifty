@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"context"
 	"k8s.io/client-go/pkg/api/v1"
 	"errors"
 	"sync"
@@ -29,9 +30,7 @@ up:
 		goto up
 	}
 relax:
-	glog.Debugf("Wait1 %s, %d/%d", fdm.depname, goal, fdm.bd.goal)
 	condWaitTmo(fdm.bd.wakeup, SwyDepScaleupRelax)
-	glog.Debugf("`--> %s, %d/%d", fdm.depname, goal, fdm.bd.goal)
 
 down:
 	if fdm.bd.goal <= 1 {
@@ -44,9 +43,7 @@ down:
 	}
 
 	fdm.bd.goal--
-	glog.Debugf("Wait2 %s, %d/%d", fdm.depname, goal, fdm.bd.goal)
 	condWaitTmo(fdm.bd.wakeup, SwyDepScaledownStep)
-	glog.Debugf("`--> %s, %d/%d", fdm.depname, goal, fdm.bd.goal)
 	if fdm.bd.goal == 0 {
 		goto fin
 	}
@@ -70,7 +67,7 @@ fin:
 	glog.Debugf("Scaler %s done", fdm.depname)
 }
 
-func balancerFnDepGrow(fdm *FnMemData, goal uint32) {
+func balancerFnDepGrow(ctx context.Context, fdm *FnMemData, goal uint32) {
 	if goal <= fdm.bd.goal {
 		return
 	}
@@ -78,6 +75,12 @@ func balancerFnDepGrow(fdm *FnMemData, goal uint32) {
 	fdm.lock.Lock()
 	if goal <= fdm.bd.goal {
 		fdm.lock.Unlock()
+		return
+	}
+
+	if goal > conf.Kuber.MaxReplicas {
+		fdm.lock.Unlock()
+		ctxlog(ctx).Debugf("Too many replicas (%d) needed for %s", goal, fdm.depname)
 		return
 	}
 

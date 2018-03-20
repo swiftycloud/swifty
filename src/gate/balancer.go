@@ -171,7 +171,7 @@ func balancerGetConnAny(ctx context.Context, cookie string, fdm *FnMemData) (*po
 
 	/* Emulate simple RR balancing -- each next call picks next POD */
 	sc := atomic.AddUint32(&fdm.bd.rover[0], 1)
-	balancerFnDepGrow(fdm, sc - fdm.bd.rover[1])
+	balancerFnDepGrow(ctx, fdm, sc - fdm.bd.rover[1])
 
 	return &aps[sc % uint32(len(aps))], nil
 }
