@@ -32,6 +32,14 @@ var (
 		[]string { "result" },
 	)
 
+	wdogErrors = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "swifty_gate_wdog_errs",
+			Help: "Number of errors talking to wdog",
+		},
+		[]string { "code" },
+	)
+
 	gateCalLat = prometheus.NewHistogram(
 		prometheus.HistogramOpts{
 			Name: "swifty_gate_call_latency",

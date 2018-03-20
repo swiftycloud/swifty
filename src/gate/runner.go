@@ -39,6 +39,11 @@ func talkHTTP(addr, port, url string, args map[string]string) (*swyapi.SwdFuncti
 				Timeout: uint(conf.Runtime.Timeout.Max),
 			}, args)
 	if err != nil {
+		if resp == nil {
+			wdogErrors.WithLabelValues("NOCODE").Inc()
+		} else {
+			wdogErrors.WithLabelValues(resp.Status).Inc()
+		}
 		return nil, err
 	}
 
