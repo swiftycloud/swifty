@@ -3,6 +3,8 @@ kind: Deployment
 metadata:
   labels:
     deployment: swy-swift-builder
+  annotations:
+    scheduler.alpha.kubernetes.io/critical-pod: /
   name: swy-swift-builder
   namespace: default
 spec:
