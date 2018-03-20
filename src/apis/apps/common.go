@@ -16,3 +16,13 @@ type PgRequest struct {
         Pass    string  `json:"pass,omitempty"`
         DbName  string  `json:"dbname"`
 }
+
+type FunctionLimits struct {
+	Rate	uint		`json:"rate,omitempty",bson:"rate,omitempty"`
+	Burst	uint		`json:"burst,omitempty",bson:"burst,omitempty"`
+}
+
+type UserLimits struct {
+	Id	string			`json:"id",bson:"id"`
+	Fn	*FunctionLimits		`json:"function,omitempty",bson:"function,omitempty"`
+}

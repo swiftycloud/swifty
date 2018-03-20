@@ -50,7 +50,12 @@ func tendatGetOrInit(tenant string) *TenantMemData {
 
 	nret := &TenantMemData{}
 	nret.stats.Init(tenant)
-	/* XXX -- init rate-limit here */
+	ul, _ := dbTenantGetLimits(tenant)
+	glog.Debugf("Picked up tenant limits: %v", ul)
+	if ul.Fn != nil && ul.Fn.Rate != 0 {
+		nret.crl = xratelimit.MakeRL(ul.Fn.Burst, ul.Fn.Rate)
+	}
+
 	ret, _ = tdat.LoadOrStore(tenant, nret)
 	lret := ret.(*TenantMemData)
 

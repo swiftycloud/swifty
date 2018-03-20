@@ -9,16 +9,19 @@ import (
 	"gopkg.in/mgo.v2/bson"
 
 	"../common"
+	"../apis/apps"
 )
 
 const (
 	DBStateDB	= "swifty"
+	DBTenantDB	= "swifty-tenant"
 	DBColFunc	= "Function"
 	DBColMware	= "Mware"
 	DBColLogs	= "Logs"
 	DBColFnStats	= "FnStats"
 	DBColTenStats	= "TenantStats"
 	DBColBalancerRS = "BalancerRS"
+	DBColLimits	= "Limits"
 )
 
 type DBLogRec struct {
@@ -29,6 +32,17 @@ type DBLogRec struct {
 }
 
 var dbSession *mgo.Session
+var dbTSession *mgo.Session /* XXX -- can I have two DBS in one session? */
+
+func dbTenantGetLimits(tenant string) (*swyapi.UserLimits, error) {
+	c := dbTSession.DB(DBTenantDB).C(DBColLimits)
+	var v swyapi.UserLimits
+	err := c.Find(bson.M{"id":tenant}).One(&v)
+	if err == mgo.ErrNotFound {
+		err = nil
+	}
+	return &v, err
+}
 
 func dbMwareCount() (map[string]int, error) {
 	var counts []struct {
@@ -420,6 +434,25 @@ func dbConnect(conf *YAMLConf) error {
 	session.SetMode(mgo.Monotonic, true)
 
 	dbSession = session.Copy()
+
+	info = mgo.DialInfo {
+		Addrs:		[]string{conf.DB.Addr},
+		Database:	DBTenantDB,
+		Timeout:	60 * time.Second,
+		Username:	conf.DB.User,
+		Password:	gateSecrets[conf.DB.Pass]}
+	session, err = mgo.DialWithInfo(&info);
+	if err != nil {
+		glog.Errorf("dbConnect: Can't dial to %s with db %s (%s)",
+				conf.DB.Addr, DBTenantDB, err.Error())
+		return err
+	}
+
+	defer session.Close()
+	session.SetMode(mgo.Monotonic, true)
+
+	dbTSession = session.Copy()
+
 
 	// Make sure the indices are present
 	index := mgo.Index{
