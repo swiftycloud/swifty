@@ -129,7 +129,6 @@ type YAMLConfKuber struct {
 }
 
 type YAMLConfDB struct {
-	StateDB		string		`yaml:"state"`
 	Addr		string		`yaml:"address"`
 	User		string		`yaml:"user"`
 	Pass		string		`yaml:"password"`

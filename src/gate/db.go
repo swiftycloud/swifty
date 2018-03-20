@@ -12,6 +12,7 @@ import (
 )
 
 const (
+	DBStateDB	= "swifty"
 	DBColFunc	= "Function"
 	DBColMware	= "Mware"
 	DBColLogs	= "Logs"
@@ -28,7 +29,6 @@ type DBLogRec struct {
 }
 
 var dbSession *mgo.Session
-var dbState string
 
 func dbMwareCount() (map[string]int, error) {
 	var counts []struct {
@@ -36,7 +36,7 @@ func dbMwareCount() (map[string]int, error) {
 		Count	int	`bson:"count"`
 	}
 
-	c := dbSession.DB(dbState).C(DBColMware)
+	c := dbSession.DB(DBStateDB).C(DBColMware)
 	err := c.Pipe([]bson.M{
 			bson.M{"$group": bson.M{
 				"_id":"$mwaretype",
@@ -56,13 +56,13 @@ func dbMwareCount() (map[string]int, error) {
 }
 
 func dbMwareAdd(desc *MwareDesc) error {
-	c := dbSession.DB(dbState).C(DBColMware)
+	c := dbSession.DB(DBStateDB).C(DBColMware)
 	return c.Insert(desc)
 }
 
 func dbMwareUpdateAdded(desc *MwareDesc) error {
 	desc.State = swy.DBMwareStateRdy
-	c := dbSession.DB(dbState).C(DBColMware)
+	c := dbSession.DB(DBStateDB).C(DBColMware)
 	return c.Update(bson.M{"cookie": desc.Cookie},
 		bson.M{"$set": bson.M{
 				"client":	desc.Client,
@@ -73,25 +73,25 @@ func dbMwareUpdateAdded(desc *MwareDesc) error {
 }
 
 func dbMwareTerminate(mwd *MwareDesc) error {
-	c := dbSession.DB(dbState).C(DBColMware)
+	c := dbSession.DB(DBStateDB).C(DBColMware)
 	return c.Update(
 		bson.M{"cookie": mwd.Cookie, "state": bson.M{"$in": []int{swy.DBMwareStateRdy, swy.DBMwareStateStl}}},
 		bson.M{"$set": bson.M{"state": swy.DBMwareStateTrm, }})
 }
 
 func dbMwareRemove(mwd *MwareDesc) error {
-	c := dbSession.DB(dbState).C(DBColMware)
+	c := dbSession.DB(DBStateDB).C(DBColMware)
 	return c.Remove(bson.M{"cookie": mwd.Cookie})
 }
 
 func dbMwareSetStalled(mwd *MwareDesc) error {
-	c := dbSession.DB(dbState).C(DBColMware)
+	c := dbSession.DB(DBStateDB).C(DBColMware)
 	return c.Update( bson.M{"cookie": mwd.Cookie, },
 		bson.M{"$set": bson.M{"state": swy.DBMwareStateStl, }})
 }
 
 func dbMwareGetOne(q bson.M) (MwareDesc, error) {
-	c := dbSession.DB(dbState).C(DBColMware)
+	c := dbSession.DB(DBStateDB).C(DBColMware)
 	v := MwareDesc{}
 	err := c.Find(q).One(&v)
 	return v, err
@@ -107,30 +107,30 @@ func dbMwareGetReady(id *SwoId) (MwareDesc, error) {
 
 func dbMwareGetAll(id *SwoId) ([]MwareDesc, error) {
 	var recs []MwareDesc
-	c := dbSession.DB(dbState).C(DBColMware)
+	c := dbSession.DB(DBStateDB).C(DBColMware)
 	err := c.Find(bson.M{"tennant": id.Tennant, "project": id.Project}).All(&recs)
 	return recs, err
 }
 
 func dbFuncCount() (int, error) {
-	return dbSession.DB(dbState).C(DBColFunc).Count()
+	return dbSession.DB(DBStateDB).C(DBColFunc).Count()
 }
 
 func dbFuncFindOne(q bson.M) (*FunctionDesc, error) {
-	c := dbSession.DB(dbState).C(DBColFunc)
+	c := dbSession.DB(DBStateDB).C(DBColFunc)
 	var v FunctionDesc
 	err := c.Find(q).One(&v)
 	return &v, err
 }
 
 func dbFuncFindAll(q bson.M) (vs []FunctionDesc, err error) {
-	c := dbSession.DB(dbState).C(DBColFunc)
+	c := dbSession.DB(DBStateDB).C(DBColFunc)
 	err = c.Find(q).All(&vs)
 	return
 }
 
 func dbFuncUpdate(q, ch bson.M) (error) {
-	c := dbSession.DB(dbState).C(DBColFunc)
+	c := dbSession.DB(DBStateDB).C(DBColFunc)
 	return c.Update(q, ch)
 }
 
@@ -203,22 +203,22 @@ func dbFuncUpdatePulled(fn *FunctionDesc, update bson.M) error {
 }
 
 func dbFuncAdd(desc *FunctionDesc) error {
-	c := dbSession.DB(dbState).C(DBColFunc)
+	c := dbSession.DB(DBStateDB).C(DBColFunc)
 	return c.Insert(desc)
 }
 
 func dbFuncRemove(fn *FunctionDesc) error {
-	c := dbSession.DB(dbState).C(DBColFunc)
+	c := dbSession.DB(DBStateDB).C(DBColFunc)
 	return c.Remove(bson.M{"cookie": fn.Cookie});
 }
 
 func dbTenStatsGet(tenant string, st *TenStats) error {
-	c := dbSession.DB(dbState).C(DBColTenStats)
+	c := dbSession.DB(DBStateDB).C(DBColTenStats)
 	return c.Find(bson.M{"tenant": tenant}).One(st)
 }
 
 func dbTenStatsUpdate(st *TenStats) {
-	c := dbSession.DB(dbState).C(DBColTenStats)
+	c := dbSession.DB(DBStateDB).C(DBColTenStats)
 	_, err := c.Upsert(bson.M{"tenant": st.Tenant}, st)
 	if err != nil {
 		glog.Errorf("Error upserting tenant stats: %s", err.Error())
@@ -226,12 +226,12 @@ func dbTenStatsUpdate(st *TenStats) {
 }
 
 func dbFnStatsGet(cookie string, st *FnStats) error {
-	c := dbSession.DB(dbState).C(DBColFnStats)
+	c := dbSession.DB(DBStateDB).C(DBColFnStats)
 	return c.Find(bson.M{"cookie": cookie}).One(st)
 }
 
 func dbFnStatsUpdate(st *FnStats) {
-	c := dbSession.DB(dbState).C(DBColFnStats)
+	c := dbSession.DB(DBStateDB).C(DBColFnStats)
 	_, err := c.Upsert(bson.M{"cookie": st.Cookie}, st)
 	if err != nil {
 		glog.Errorf("Error upserting fn stats: %s", err.Error())
@@ -239,7 +239,7 @@ func dbFnStatsUpdate(st *FnStats) {
 }
 
 func dbFnStatsDrop(cookie string) error {
-	c := dbSession.DB(dbState).C(DBColFnStats)
+	c := dbSession.DB(DBStateDB).C(DBColFnStats)
 	err := c.Remove(bson.M{"cookie": cookie})
 	if err == mgo.ErrNotFound {
 		err = nil
@@ -248,7 +248,7 @@ func dbFnStatsDrop(cookie string) error {
 }
 
 func logSaveResult(fnCookie, event, stdout, stderr string) {
-	c := dbSession.DB(dbState).C(DBColLogs)
+	c := dbSession.DB(DBStateDB).C(DBColLogs)
 	text := fmt.Sprintf("out: [%s], err: [%s]", stdout, stderr)
 	c.Insert(DBLogRec{
 		FnId:		fnCookie,
@@ -259,7 +259,7 @@ func logSaveResult(fnCookie, event, stdout, stderr string) {
 }
 
 func logSaveEvent(fn *FunctionDesc, event, text string) {
-	c := dbSession.DB(dbState).C(DBColLogs)
+	c := dbSession.DB(DBStateDB).C(DBColLogs)
 	c.Insert(DBLogRec{
 		FnId:		fn.Cookie,
 		Event:		event,
@@ -270,18 +270,18 @@ func logSaveEvent(fn *FunctionDesc, event, text string) {
 
 func logGetFor(id *SwoId) ([]DBLogRec, error) {
 	var logs []DBLogRec
-	c := dbSession.DB(dbState).C(DBColLogs)
+	c := dbSession.DB(DBStateDB).C(DBColLogs)
 	err := c.Find(bson.M{"fnid": id.Cookie()}).All(&logs)
 	return logs, err
 }
 
 func logGetCalls(id *SwoId) (int, error) {
-	c := dbSession.DB(dbState).C(DBColLogs)
+	c := dbSession.DB(DBStateDB).C(DBColLogs)
 	return c.Find(bson.M{"fnid": id.Cookie(), "event": "run"}).Count()
 }
 
 func logRemove(fn *FunctionDesc) error {
-	c := dbSession.DB(dbState).C(DBColLogs)
+	c := dbSession.DB(DBStateDB).C(DBColLogs)
 	_, err := c.RemoveAll(bson.M{"fnid": fn.Cookie})
 	if err == mgo.ErrNotFound {
 		err = nil
@@ -291,13 +291,13 @@ func logRemove(fn *FunctionDesc) error {
 
 func dbBalancerRSListVersions(fn *FunctionDesc) ([]string, error) {
 	var fv []string
-	c := dbSession.DB(dbState).C(DBColBalancerRS)
+	c := dbSession.DB(DBStateDB).C(DBColBalancerRS)
 	err := c.Find(bson.M{"fnid": fn.Cookie }).Distinct("fnversion", &fv)
 	return fv, err
 }
 
 func dbBalancerPodAdd(fnId string, pod *k8sPod) error {
-	c := dbSession.DB(dbState).C(DBColBalancerRS)
+	c := dbSession.DB(DBStateDB).C(DBColBalancerRS)
 	err := c.Insert(bson.M{
 			"fnid":		fnId,
 			"uid":		pod.UID,
@@ -314,7 +314,7 @@ func dbBalancerPodAdd(fnId string, pod *k8sPod) error {
 }
 
 func dbBalancerPodDel(pod *k8sPod) (error) {
-	c := dbSession.DB(dbState).C(DBColBalancerRS)
+	c := dbSession.DB(DBStateDB).C(DBColBalancerRS)
 	err := c.Remove(bson.M{ "uid":	pod.UID, })
 	if err != nil {
 		if err == mgo.ErrNotFound {
@@ -328,7 +328,7 @@ func dbBalancerPodDel(pod *k8sPod) (error) {
 }
 
 func dbBalancerPodDelAll(fnid string) (error) {
-	c := dbSession.DB(dbState).C(DBColBalancerRS)
+	c := dbSession.DB(DBStateDB).C(DBColBalancerRS)
 	_, err := c.RemoveAll(bson.M{ "fnid": fnid })
 	if err == mgo.ErrNotFound {
 		err = nil
@@ -350,7 +350,7 @@ type balancerEntry struct {
 func dbBalancerGetConnsByCookie(cookie string) ([]podConn, error) {
 	var v []balancerEntry
 
-	c := dbSession.DB(dbState).C(DBColBalancerRS)
+	c := dbSession.DB(DBStateDB).C(DBColBalancerRS)
 	err := c.Find(bson.M{
 			"fnid": cookie,
 		}).All(&v)
@@ -372,7 +372,7 @@ func dbBalancerGetConnsByCookie(cookie string) ([]podConn, error) {
 func dbBalancerGetConnExact(fnid, version string) (*podConn, error) {
 	var v balancerEntry
 
-	c := dbSession.DB(dbState).C(DBColBalancerRS)
+	c := dbSession.DB(DBStateDB).C(DBColBalancerRS)
 	err := c.Find(bson.M{
 			"fnid":		fnid,
 			"fnversion":	version,
@@ -388,13 +388,13 @@ func dbBalancerGetConnExact(fnid, version string) (*podConn, error) {
 }
 
 func dbProjectListAll(ten string) (fn []string, mw []string, err error) {
-	c := dbSession.DB(dbState).C(DBColFunc)
+	c := dbSession.DB(DBStateDB).C(DBColFunc)
 	err = c.Find(bson.M{"tennant": ten}).Distinct("project", &fn)
 	if err != nil {
 		return
 	}
 
-	c = dbSession.DB(dbState).C(DBColMware)
+	c = dbSession.DB(DBStateDB).C(DBColMware)
 	err = c.Find(bson.M{"tennant": ten}).Distinct("project", &mw)
 	return
 }
@@ -404,7 +404,7 @@ func dbConnect(conf *YAMLConf) error {
 
 	info := mgo.DialInfo{
 		Addrs:		[]string{conf.DB.Addr},
-		Database:	conf.DB.StateDB,
+		Database:	DBStateDB,
 		Timeout:	60 * time.Second,
 		Username:	conf.DB.User,
 		Password:	gateSecrets[conf.DB.Pass]}
@@ -412,7 +412,7 @@ func dbConnect(conf *YAMLConf) error {
 	session, err := mgo.DialWithInfo(&info);
 	if err != nil {
 		glog.Errorf("dbConnect: Can't dial to %s with db %s (%s)",
-				conf.DB.Addr, conf.DB.StateDB, err.Error())
+				conf.DB.Addr, DBStateDB, err.Error())
 		return err
 	}
 
@@ -420,7 +420,6 @@ func dbConnect(conf *YAMLConf) error {
 	session.SetMode(mgo.Monotonic, true)
 
 	dbSession = session.Copy()
-	dbState = conf.DB.StateDB
 
 	// Make sure the indices are present
 	index := mgo.Index{
@@ -430,17 +429,20 @@ func dbConnect(conf *YAMLConf) error {
 			Sparse:		true}
 
 	index.Key = []string{"cookie"}
-	err = dbSession.DB(dbState).C(DBColFunc).EnsureIndex(index)
+	err = dbSession.DB(DBStateDB).C(DBColFunc).EnsureIndex(index)
 	if err != nil {
 		return fmt.Errorf("No cookie index for functions: %s", err.Error())
 	}
-	err = dbSession.DB(dbState).C(DBColMware).EnsureIndex(index)
+	err = dbSession.DB(DBStateDB).C(DBColMware).EnsureIndex(index)
 	if err != nil {
 		return fmt.Errorf("No cookie index for mware: %s", err.Error())
 	}
 
 	index.Key = []string{"uid"}
-	dbSession.DB(dbState).C(DBColBalancerRS).EnsureIndex(index)
+	err = dbSession.DB(DBStateDB).C(DBColBalancerRS).EnsureIndex(index)
+	if err != nil {
+		return fmt.Errorf("No uid index for balancerrs: %s", err.Error())
+	}
 
 	return nil
 
