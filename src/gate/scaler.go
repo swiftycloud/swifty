@@ -100,6 +100,8 @@ func listSwyDeps() error {
 		return errors.New("Error listing PODs")
 	}
 
+	/* FIXME -- tune up the BalancerRS DB for this deployment */
+
 	for _, dep := range deps.Items {
 		if *dep.Spec.Replicas <= 1 {
 			continue
