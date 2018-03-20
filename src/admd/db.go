@@ -2,14 +2,33 @@ package main
 
 import (
 	"gopkg.in/mgo.v2"
+	"gopkg.in/mgo.v2/bson"
 	"time"
+	"../apis/apps"
 )
 
 const (
 	DBTenantDB	= "swifty-tenant"
+	DBColLimits	= "Limits"
 )
 
 var dbSession *mgo.Session
+
+func dbGetUserLimits(conf *YAMLConf, id string) (*swyapi.UserLimits, error) {
+	c := dbSession.DB(DBTenantDB).C(DBColLimits)
+	var v swyapi.UserLimits
+	err := c.Find(bson.M{"id":id}).One(&v)
+	if err == mgo.ErrNotFound {
+		err = nil
+	}
+	return &v, err
+}
+
+func dbSetUserLimits(conf *YAMLConf, limits *swyapi.UserLimits) error {
+	c := dbSession.DB(DBTenantDB).C(DBColLimits)
+	_, err := c.Upsert(bson.M{"id":limits.Id}, limits)
+	return err
+}
 
 func dbConnect(conf *YAMLConf) error {
 	var err error

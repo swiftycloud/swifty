@@ -332,6 +332,67 @@ out:
 	http.Error(w, err.Error(), code)
 }
 
+func handleSetLimits(w http.ResponseWriter, r *http.Request) {
+	if swyhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
+
+	var params swyapi.UserLimits
+
+	td, code, err := handleAdminReq(r, &params)
+	if err != nil {
+		goto out
+	}
+
+	code = http.StatusForbidden
+	if !swyks.KeystoneRoleHas(td, swyks.SwyAdminRole) {
+		err = errors.New("Only admin may change user limits")
+		goto out
+	}
+
+	err = dbSetUserLimits(&conf, &params)
+	if err != nil {
+		goto out
+	}
+
+	w.WriteHeader(http.StatusOK)
+	return
+
+out:
+	http.Error(w, err.Error(), code)
+}
+
+func handleGetLimits(w http.ResponseWriter, r *http.Request) {
+	if swyhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
+
+	var params swyapi.UserInfo
+	var ulim *swyapi.UserLimits
+
+	td, code, err := handleAdminReq(r, &params)
+	if err != nil {
+		goto out
+	}
+
+	code = http.StatusForbidden
+	params.Id, err = checkAdminOrOwner(td.Project.Name, params.Id, td)
+	if err != nil {
+		goto out
+	}
+
+	ulim, err = dbGetUserLimits(&conf, params.Id)
+	if err != nil {
+		goto out
+	}
+
+	err = swyhttp.MarshalAndWrite(w, ulim)
+	if err != nil {
+		goto out
+	}
+
+	return
+
+out:
+	http.Error(w, err.Error(), code)
+}
+
 func handleSetPassword(w http.ResponseWriter, r *http.Request) {
 	var params swyapi.UserLogin
 	var code = http.StatusBadRequest
@@ -436,6 +497,8 @@ func main() {
 	r.HandleFunc("/v1/adduser", handleAddUser).Methods("POST", "OPTIONS")
 	r.HandleFunc("/v1/deluser", handleDelUser).Methods("POST", "OPTIONS")
 	r.HandleFunc("/v1/setpass", handleSetPassword).Methods("POST", "OPTIONS")
+	r.HandleFunc("/v1/limits/set", handleSetLimits).Methods("POST", "OPTIONS")
+	r.HandleFunc("/v1/limits/get", handleGetLimits).Methods("POST", "OPTIONS")
 
 	gatesrv = &http.Server{
 			Handler:      r,

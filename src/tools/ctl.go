@@ -161,6 +161,28 @@ func show_user_info(args []string, opts [8]string) {
 	fmt.Printf("Name: %s\n", ui.Name)
 }
 
+func do_user_limits(args []string, opts [8]string) {
+	var l swyapi.UserLimits
+	chg := false
+
+	if opts[0] != "" {
+		chg = true
+		l.Fn = &swyapi.FunctionLimits{}
+		l.Fn.Rate, l.Fn.Burst = parse_rate(opts[0])
+	}
+
+	if chg {
+		l.Id = args[0]
+		make_faas_req("limits/set", &l, nil)
+	} else {
+		make_faas_req("limits/get", swyapi.UserInfo{Id: args[0]}, &l)
+		if l.Fn != nil {
+			fmt.Printf("Functions:\n")
+			fmt.Printf("    Rate:       %d:%d\n", l.Fn.Rate, l.Fn.Burst)
+		}
+	}
+}
+
 func list_projects(args []string, opts [8]string) {
 	var ps []swyapi.ProjectItem
 	make_faas_req("project/list", swyapi.ProjectList{}, &ps)
@@ -666,6 +688,7 @@ const (
 	CMD_UDEL string		= "udel"
 	CMD_PASS string		= "pass"
 	CMD_UINF string		= "uinf"
+	CMD_LIMITS string	= "limits"
 	CMD_MTYPES string	= "mt"
 	CMD_LANGS string	= "lng"
 	CMD_LANG string		= "ld"
@@ -695,6 +718,7 @@ var cmdOrder = []string {
 	CMD_UDEL,
 	CMD_PASS,
 	CMD_UINF,
+	CMD_LIMITS,
 	CMD_LANGS,
 	CMD_MTYPES,
 	CMD_LANG,
@@ -732,6 +756,7 @@ var cmdMap = map[string]*cmdDesc {
 	CMD_UDEL:	&cmdDesc{  call: del_user,	  opts: flag.NewFlagSet(CMD_UDEL, flag.ExitOnError) },
 	CMD_PASS:	&cmdDesc{  call: set_password,	  opts: flag.NewFlagSet(CMD_PASS, flag.ExitOnError) },
 	CMD_UINF:	&cmdDesc{  call: show_user_info,  opts: flag.NewFlagSet(CMD_UINF, flag.ExitOnError) },
+	CMD_LIMITS:	&cmdDesc{  call: do_user_limits,  opts: flag.NewFlagSet(CMD_LIMITS, flag.ExitOnError) },
 	CMD_LANGS:	&cmdDesc{  call: languages,	  opts: flag.NewFlagSet(CMD_LANGS, flag.ExitOnError) },
 	CMD_MTYPES:	&cmdDesc{  call: mware_types,	  opts: flag.NewFlagSet(CMD_MTYPES, flag.ExitOnError) },
 	CMD_LANG:	&cmdDesc{  call: check_lang,	  opts: flag.NewFlagSet(CMD_LANG, flag.ExitOnError) },
@@ -807,6 +832,8 @@ func main() {
 	cmdMap[CMD_PASS].opts.StringVar(&opts[0], "pass", "", "New password")
 	bindCmdUsage(CMD_PASS,	[]string{"UID"}, "Set password", false)
 	bindCmdUsage(CMD_UINF,	[]string{"UID"}, "Get user info", false)
+	cmdMap[CMD_LIMITS].opts.StringVar(&opts[0], "rl", "", "Rate (rate[:burst])")
+	bindCmdUsage(CMD_LIMITS, []string{"UID"}, "Get/Set limits for user", false)
 
 	bindCmdUsage(CMD_MTYPES, []string{}, "List middleware types", false)
 	bindCmdUsage(CMD_LANGS, []string{}, "List of supported languages", false)
