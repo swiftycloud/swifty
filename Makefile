@@ -110,6 +110,7 @@ go-gate-y	+= src/gate/promon.go
 
 go-admd-y	+= src/admd/main.go
 go-admd-y	+= src/admd/ks.go
+go-admd-y	+= src/admd/db.go
 
 go-pgrest-y	+= src/pgrest/main.go
 

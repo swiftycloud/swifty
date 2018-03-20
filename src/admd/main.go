@@ -28,10 +28,17 @@ type YAMLConfKeystone struct {
 	Pass		string			`yaml:"pass"`
 }
 
+type YAMLConfDB struct {
+	Addr		string		`yaml:"address"`
+	User		string		`yaml:"user"`
+	Pass		string		`yaml:"password"`
+}
+
 type YAMLConf struct {
 	Listen		string			`yaml:"listen"`
 	Gate		string			`yaml:"gate"`
 	Keystone	YAMLConfKeystone	`yaml:"keystone"`
+	DB		YAMLConfDB		`yaml:"db"`
 }
 
 var conf YAMLConf
@@ -414,6 +421,12 @@ func main() {
 	if err != nil {
 		log.Errorf("Can't init ks: %s", err.Error())
 		return
+	}
+
+	err = dbConnect(&conf)
+	if err != nil {
+		log.Fatalf("Can't setup mongo: %s",
+				err.Error())
 	}
 
 	r := mux.NewRouter()

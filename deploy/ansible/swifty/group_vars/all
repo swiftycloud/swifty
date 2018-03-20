@@ -64,9 +64,13 @@ ks_swyadmin_pass: 'choph5AhrieFooG6'
 mgo_master_db_admin: 'admin'
 mgo_master_db_admin_name: 'root'
 mgo_master_db_admin_pass: 'OechengaeHie0aiv'
-mgo_master_db_name: 'swifty'
-mgo_master_db_user: 'swifty'
-mgo_master_db_pass: 'woh0jee1eivaiR6A'
+mgo_master_db_state: 'swifty'
+mgo_master_db_tenant: 'swifty-tenant'
+
+mgo_master_db_gate: 'swifty'
+mgo_master_db_gpass: 'woh0jee1eivaiR6A'
+mgo_master_db_admd: 'swifty-admin'
+mgo_master_db_apass: 'woh0jee1eivaiR6A'
 #
 # mware
 mgo_mware_db_name: 'admin'
