@@ -10,8 +10,8 @@ import (
 )
 
 func rabbitConn(conf *YAMLConfMw) (*rabbithole.Client, error) {
-	addr := swy.MakeAdminURL(conf.Rabbit.Addr, conf.Rabbit.AdminPort)
-	return rabbithole.NewClient("http://" + addr, conf.Rabbit.Admin, gateSecrets[conf.Rabbit.Pass])
+	addr := swy.MakeAdminURL(conf.Rabbit.c.Host, conf.Rabbit.AdminPort)
+	return rabbithole.NewClient("http://" + addr, conf.Rabbit.c.User, gateSecrets[conf.Rabbit.c.Pass])
 }
 
 func rabbitErr(resp *http.Response, err error) error {
@@ -56,7 +56,7 @@ func InitRabbitMQ(ctx context.Context, conf *YAMLConfMw, mwd *MwareDesc) (error)
 	}
 
 	/* Add permissions for us as well, just in case event listening is required */
-	err = rabbitErr(rmqc.UpdatePermissionsIn(mwd.Namespace, conf.Rabbit.Admin,
+	err = rabbitErr(rmqc.UpdatePermissionsIn(mwd.Namespace, conf.Rabbit.c.User,
 			rabbithole.Permissions{Configure: ".*", Write: ".*", Read: ".*"}))
 	if err != nil {
 		return fmt.Errorf("Can't set permissions %s: %s", mwd.Client, err.Error())
@@ -115,21 +115,21 @@ func mqEvent(ctx context.Context, mwid, queue, userid, data string) {
 
 func EventRabbitMQ(ctx context.Context, conf *YAMLConfMw, source *FnEventDesc, mwd *MwareDesc, on bool) (error) {
 	if on {
-		return mqStartListener(conf.Rabbit.Admin, conf.Rabbit.Pass,
-			conf.Rabbit.Addr + "/" + mwd.Namespace, source.MQueue,
+		return mqStartListener(conf.Rabbit.c.User, conf.Rabbit.c.Pass,
+			conf.Rabbit.c.AddrPort() + "/" + mwd.Namespace, source.MQueue,
 			func(ctx context.Context, userid string, data []byte) {
 				if userid != "" {
 					mqEvent(ctx, mwd.SwoId.Name, source.MQueue, userid, string(data))
 				}
 			})
 	} else {
-		mqStopListener(conf.Rabbit.Addr + "/" + mwd.Namespace, source.MQueue)
+		mqStopListener(conf.Rabbit.c.AddrPort() + "/" + mwd.Namespace, source.MQueue)
 		return nil
 	}
 }
 
 func GetEnvRabbitMQ(conf *YAMLConfMw, mwd *MwareDesc) ([][2]string) {
-	return append(mwGenUserPassEnvs(mwd, conf.Rabbit.Addr), mkEnv(mwd, "VHOST", mwd.Namespace))
+	return append(mwGenUserPassEnvs(mwd, conf.Rabbit.c.AddrPort()), mkEnv(mwd, "VHOST", mwd.Namespace))
 }
 
 var MwareRabbitMQ = MwareOps {

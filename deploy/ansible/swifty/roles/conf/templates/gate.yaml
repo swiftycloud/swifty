@@ -15,9 +15,7 @@ middleware:
                 creds: "root:MARIAPASS@{{ groups['mware'][0] }}:3306"
                 quotdb: "swifty.quotas"
         rabbit:
-                address: "{{ groups['mware'][0] }}:5672"
-                admin: "root"
-                password: "RABBITPASS"
+                creds: "root:RABBITPASS@{{ groups['mware'][0] }}:5672"
                 admport: "15672"
         mongo:
                 address: "{{ groups['mware'][0] }}:27017"

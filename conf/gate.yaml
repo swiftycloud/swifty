@@ -16,9 +16,7 @@ middleware:
                 creds: "root:MARIAPASS@swy1:3306"
                 quotdb: "swifty.quotas"
         rabbit:
-                address: "swy1:5672"
-                admin: "root"
-                password: "RABBITPASS"
+                creds: "root:RABBITPASS@swy1:5672"
                 admport: "15672"
         mongo:
                 address: "swy1:27017"

@@ -71,8 +71,9 @@ type YAMLConfMWCreds struct {
 }
 
 type YAMLConfRabbit struct {
-	YAMLConfMWCreds				`yaml:",inline"`
+	Creds		string			`yaml:"creds"`
 	AdminPort	string			`yaml:"admport"`
+	c		*swy.XCreds
 }
 
 type YAMLConfMaria struct {
@@ -1042,7 +1043,9 @@ func setupMwareAddr(conf *YAMLConf) {
 	conf.Mware.Maria.c = swy.ParseXCreds(conf.Mware.Maria.Creds)
 	conf.Mware.Maria.c.Host = genAddrIP(conf.Mware.Maria.c.Host)
 
-	conf.Mware.Rabbit.Addr	= genAddrIP(conf.Mware.Rabbit.Addr)
+	conf.Mware.Rabbit.c = swy.ParseXCreds(conf.Mware.Rabbit.Creds)
+	conf.Mware.Rabbit.c.Host = genAddrIP(conf.Mware.Rabbit.c.Host)
+
 	conf.Mware.Mongo.Addr	= genAddrIP(conf.Mware.Mongo.Addr)
 	conf.Mware.Postgres.Addr= genAddrIP(conf.Mware.Postgres.Addr)
 	conf.Mware.S3.Addr	= genAddrIP(conf.Mware.S3.Addr)
