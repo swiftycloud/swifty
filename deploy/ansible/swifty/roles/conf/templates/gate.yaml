@@ -12,12 +12,6 @@ daemon:
                 share: "/home/swifty-volume"
                 clone: "/home/swifty/local-sources"
         loglevel: "debug"
-balancer:
-        localips:
-                - ip: "10.8.0.1"
-                  ports: "8680:8880"
-                - ip: "10.8.0.2"
-                  ports: "8780:8980"
 middleware:
         mwseckey: "MWSECPASS"
         maria:
