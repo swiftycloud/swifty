@@ -8,6 +8,7 @@ import (
 )
 
 const (
+	DBSwiftyDB	="swifty"
 	DBTenantDB	= "swifty-tenant"
 	DBColLimits	= "Limits"
 )
@@ -35,7 +36,7 @@ func dbConnect(conf *YAMLConf) error {
 
 	info := mgo.DialInfo{
 		Addrs:		[]string{conf.DB.Addr},
-		Database:	DBTenantDB,
+		Database:	DBSwiftyDB,
 		Timeout:	60 * time.Second,
 		Username:	conf.DB.User,
 		Password:	admdSecrets[conf.DB.Pass]}

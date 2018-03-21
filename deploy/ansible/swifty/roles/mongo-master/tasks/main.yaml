@@ -18,21 +18,10 @@
   ignore_errors: True
   when: mongod_installed.changed
 
-  #- name: check config
-  #  shell: mongo --quiet localhost:27017 --eval 'db.getMongo().getDBNames().indexOf("{{ mgo_master_db_state }}")'
-  #  register: db_name_result
-  #  ignore_errors: True
-  #  when: mongod_installed.changed
-
-- name: create swifty tenant db and users
+- name: create swifty main dbs and users
   shell: |
-    mongo --quiet localhost:27017/{{ mgo_master_db_tenant }} --eval 'db.createUser({user:"{{ mgo_master_db_admd }}", pwd:"{{ mgo_master_db_apass }}", roles:[{role:"dbOwner",db:"{{ mgo_master_db_state }}"}]});'
-    mongo --quiet localhost:27017/{{ mgo_master_db_tenant }} --eval 'db.createUser({user:"{{ mgo_master_db_gate }}", pwd:"{{ mgo_master_db_gpass }}", roles:[{role:"read",db:"{{ mgo_master_db_state }}"}]});'
-  when: mongod_installed.changed
-
-- name: create swifty state db and user
-  shell: |
-    mongo --quiet localhost:27017/{{ mgo_master_db_state }} --eval 'db.createUser({user:"{{ mgo_master_db_gate }}", pwd:"{{ mgo_master_db_gpass }}", roles:[{role:"dbOwner",db:"{{ mgo_master_db_state }}"}]});'
+    mongo --quiet localhost:27017/{{ mgo_master_db_main }} --eval 'db.createUser({user:"{{ mgo_master_db_gate }}", pwd:"{{ mgo_master_db_gpass }}", roles:[{role:"dbOwner",db:"{{ mgo_master_db_main }}"},{role:"read",db:"{{ mgo_master_db_tenant }}"}]});'
+    mongo --quiet localhost:27017/{{ mgo_master_db_main }} --eval 'db.createUser({user:"{{ mgo_master_db_admd }}", pwd:"{{ mgo_master_db_apass }}", roles:[{role:"dbOwner",db:"{{ mgo_master_db_tenant }}"}]});'
   when: mongod_installed.changed
 
 - name: create collections for tenant db
@@ -41,7 +30,7 @@
     - "Limits"
   when: mongod_installed.changed
 
-- name: create collections for state db
+- name: create collections for main db
   shell: mongo --quiet localhost:27017/{{ mgo_master_db_state }} --eval 'db.createCollection("{{ item }}");'
   with_items:
     - "Function"

@@ -1,7 +1,7 @@
 ---
 db:
         address: "127.0.0.1:27017"
-        user: "swifty"
+        user: "swygate"
         password: "DBPASS"
 keystone:
         address: "swy0:5000"

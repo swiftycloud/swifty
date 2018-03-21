@@ -64,7 +64,11 @@ func tendatGetOrInit(tenant string) *TenantMemData {
 
 	nret := &TenantMemData{}
 	nret.stats.Init(tenant)
-	ul, _ := dbTenantGetLimits(tenant)
+	ul, err := dbTenantGetLimits(tenant)
+	if err != nil {
+		glog.Errorf("No way to read user limits: %s", err.Error())
+	}
+
 	setupLimits(nret, ul)
 
 	var loaded bool
