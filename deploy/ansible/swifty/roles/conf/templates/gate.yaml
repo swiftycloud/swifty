@@ -12,9 +12,7 @@ daemon:
 middleware:
         mwseckey: "MWSECPASS"
         maria:
-                address: "{{ groups['mware'][0] }}:3306"
-                admin: "root"
-                password: "MARIAPASS"
+                creds: "root:MARIAPASS@{{ groups['mware'][0] }}:3306"
                 quotdb: "swifty.quotas"
         rabbit:
                 address: "{{ groups['mware'][0] }}:5672"

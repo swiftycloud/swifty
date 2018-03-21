@@ -13,9 +13,7 @@ daemon:
 middleware:
         mwseckey: "MWSECPASS"
         maria:
-                address: "swy1:3306"
-                admin: "root"
-                password: "MARIAPASS"
+                creds: "root:MARIAPASS@swy1:3306"
                 quotdb: "swifty.quotas"
         rabbit:
                 address: "swy1:5672"
