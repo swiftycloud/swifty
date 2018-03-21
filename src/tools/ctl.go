@@ -202,6 +202,36 @@ func list_functions(project string, args []string, opts [8]string) {
 	}
 }
 
+func sb2s(b uint64, o uint64, s string) string {
+	if b >= 1 << o {
+		i := b >> o
+		r := ((b - (i<<o)) >> (o-10))
+		if r >= 100 {
+			return fmt.Sprintf("%d.%d %s", i, r/100, s)
+		} else {
+			return fmt.Sprintf("%d %s", i, s)
+		}
+	}
+	return ""
+}
+
+func formatBytes(b uint64) string {
+	var bo string
+
+	bo = sb2s(b, 30, "Gb")
+	if bo == "" {
+		bo = sb2s(b, 20, "Mb")
+		if bo == "" {
+			bo = sb2s(b, 10, "Kb")
+			if bo == "" {
+				bo = fmt.Sprintf("%d bytes", b)
+			}
+		}
+	}
+
+	return bo
+}
+
 func info_function(project string, args []string, opts [8]string) {
 	var ifo swyapi.FunctionInfo
 	make_faas_req("function/info", swyapi.FunctionID{ Project: project, FuncName: args[0]}, &ifo)
@@ -256,6 +286,10 @@ func info_function(project string, args []string, opts [8]string) {
 		fmt.Printf("Last run:    %s ago\n", since.String())
 		fmt.Printf("Time:        %d (avg %d) usec\n", ifo.Stats.Time, ifo.Stats.Time / ifo.Stats.Called)
 		fmt.Printf("GBS:         %f\n", ifo.Stats.GBS)
+	}
+
+	if b := ifo.Stats.BytesOut; b != 0 {
+		fmt.Printf("Bytes sent:  %s\n", formatBytes(b))
 	}
 
 	if ifo.UserData != "" {

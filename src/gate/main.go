@@ -505,6 +505,7 @@ func handleFunctionStats(ctx context.Context, w http.ResponseWriter, r *http.Req
 			LastCall:	stats.LastCallS(),
 			Time:		stats.RunTimeUsec(),
 			GBS:		stats.GBS(),
+			BytesOut:	stats.BytesOut,
 		})
 	if err != nil {
 		return GateErrE(swy.GateBadResp, err)
@@ -567,6 +568,7 @@ func handleFunctionInfo(ctx context.Context, w http.ResponseWriter, r *http.Requ
 				LastCall:	stats.LastCallS(),
 				Time:		stats.RunTimeUsec(),
 				GBS:		stats.GBS(),
+				BytesOut:	stats.BytesOut,
 			},
 			Size:		swyapi.FunctionSize {
 				Memory:		fn.Size.Mem,
@@ -621,7 +623,7 @@ func fnCallable(fn *FunctionDesc) bool {
 	return fn.URLCall && (fn.State == swy.DBFuncStateRdy)
 }
 
-func makeArgMap(r *http.Request) map[string]string {
+func makeArgMap(sopq *statsOpaque, r *http.Request) map[string]string {
 	defer r.Body.Close()
 
 	args := make(map[string]string)
@@ -632,11 +634,13 @@ func makeArgMap(r *http.Request) map[string]string {
 		}
 
 		args[k] = v[0]
+		sopq.argsSz += len(k) + len(v[0])
 	}
 
 	body, err := ioutil.ReadAll(r.Body)
 	if err == nil && len(body) > 0 {
 		args[SwyBodyArg] = string(body)
+		sopq.bodySz = len(body)
 	}
 
 	return args
@@ -696,7 +700,7 @@ func handleFunctionCall(w http.ResponseWriter, r *http.Request) {
 	}
 
 
-	arg_map = makeArgMap(r)
+	arg_map = makeArgMap(sopq, r)
 	res, err = doRunConn(ctx, conn, fnId, "call", arg_map)
 	if err != nil {
 		code = http.StatusInternalServerError

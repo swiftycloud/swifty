@@ -33,6 +33,8 @@ type FnStats struct {
 	Errors		uint64		`bson:"errors"`
 	LastCall	time.Time	`bson:"lastcall"`
 	RunTime		time.Duration	`bson:"rtime"`
+	BytesIn		uint64		`bson:"bytesin"`
+	BytesOut	uint64		`bson:"bytesout"`
 
 	/* RunCost is a value that represents the amount of
 	 * resources spent for this function. It's used by
@@ -64,12 +66,16 @@ type TenStats struct {
 	Tenant		string		`bson:"tenant"`
 	Called		uint64		`bsin:"called"`
 	RunCost		uint64		`bson:"runcost"`
+	BytesIn		uint64		`bson:"bytesin"`
+	BytesOut	uint64		`bson:"bytesout"`
 
 	statsFlush			`bson:"-"`
 }
 
 type statsOpaque struct {
 	ts		time.Time
+	argsSz		int
+	bodySz		int
 }
 
 func statsGet(fn *FunctionDesc) *FnStats {
@@ -105,6 +111,8 @@ func statsUpdate(fmd *FnMemData, op *statsOpaque, res *swyapi.SwdFunctionRunResu
 
 	rc := uint64(rt) * fmd.mem
 	fmd.stats.RunCost += rc
+	fmd.stats.BytesIn += uint64(op.argsSz + op.bodySz)
+	fmd.stats.BytesOut += uint64(len(res.Return))
 	fmd.lock.Unlock()
 
 	fmd.stats.Dirty()
@@ -113,6 +121,8 @@ func statsUpdate(fmd *FnMemData, op *statsOpaque, res *swyapi.SwdFunctionRunResu
 	td.lock.Lock()
 	td.stats.RunCost += rc
 	td.stats.Called++
+	td.stats.BytesIn += uint64(op.argsSz + op.bodySz)
+	td.stats.BytesOut += uint64(len(res.Return))
 	td.lock.Unlock()
 
 	td.stats.Dirty()
