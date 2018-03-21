@@ -3,7 +3,6 @@ package main
 import (
 	"strings"
 	"context"
-	"../common"
 	"../common/http"
 	"../apis/apps"
 )
@@ -19,7 +18,7 @@ func InitPostgres(ctx context.Context, conf *YAMLConfMw, mwd *MwareDesc) (error)
 	mwd.Client = "p" + strings.ToLower(mwd.Client[:30])
 	mwd.Namespace = mwd.Client
 
-	addr := swy.MakeAdminURL(conf.Postgres.c.Host, conf.Postgres.AdminPort)
+	addr := conf.Postgres.c.AddrP(conf.Postgres.AdminPort)
 	_, err = swyhttp.MarshalAndPost(
 			&swyhttp.RestReq{
 				Address: "http://" + addr + "/create",
@@ -33,7 +32,7 @@ func InitPostgres(ctx context.Context, conf *YAMLConfMw, mwd *MwareDesc) (error)
 }
 
 func FiniPostgres(ctx context.Context, conf *YAMLConfMw, mwd *MwareDesc) error {
-	addr := swy.MakeAdminURL(conf.Postgres.c.Host, conf.Postgres.AdminPort)
+	addr := conf.Postgres.c.AddrP(conf.Postgres.AdminPort)
 	_, err := swyhttp.MarshalAndPost(
 			&swyhttp.RestReq{
 				Address: "http://" + addr + "/drop",
@@ -48,7 +47,7 @@ func FiniPostgres(ctx context.Context, conf *YAMLConfMw, mwd *MwareDesc) error {
 }
 
 func GetEnvPostgres(conf *YAMLConfMw, mwd *MwareDesc) ([][2]string) {
-	return append(mwGenUserPassEnvs(mwd, conf.Postgres.c.AddrPort()), mkEnv(mwd, "DBNAME", mwd.Namespace))
+	return append(mwGenUserPassEnvs(mwd, conf.Postgres.c.Addr()), mkEnv(mwd, "DBNAME", mwd.Namespace))
 }
 
 var MwarePostgres = MwareOps {

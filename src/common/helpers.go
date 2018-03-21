@@ -186,8 +186,12 @@ type XCreds struct {
 	Port    string
 }
 
-func (xc *XCreds)AddrPort() string {
+func (xc *XCreds)Addr() string {
 	return xc.Host + ":" + xc.Port
+}
+
+func (xc *XCreds)AddrP(port string) string {
+	return xc.Host + ":" + port
 }
 
 func ParseXCreds(url string) *XCreds {

@@ -17,7 +17,7 @@ func mariaConn(conf *YAMLConfMw) (*sql.DB, error) {
 			fmt.Sprintf("%s:%s@tcp(%s)/?charset=utf8",
 				conf.Maria.c.User,
 				gateSecrets[conf.Maria.c.Pass],
-				conf.Maria.c.AddrPort()))
+				conf.Maria.c.Addr()))
 }
 
 func mariaReq(db *sql.DB, req string) error {
@@ -115,7 +115,7 @@ func FiniMariaDB(ctx context.Context, conf *YAMLConfMw, mwd *MwareDesc) error {
 }
 
 func GetEnvMariaDB(conf *YAMLConfMw, mwd *MwareDesc) ([][2]string) {
-	return append(mwGenUserPassEnvs(mwd, conf.Maria.c.AddrPort()), mkEnv(mwd, "DBNAME", mwd.Namespace))
+	return append(mwGenUserPassEnvs(mwd, conf.Maria.c.Addr()), mkEnv(mwd, "DBNAME", mwd.Namespace))
 }
 
 var MwareMariaDB = MwareOps {

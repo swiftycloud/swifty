@@ -18,7 +18,7 @@ const (
 )
 
 func s3KeyGen(conf *YAMLConfS3, namespace, bucket string, lifetime uint32) (string, string, error) {
-	addr := swy.MakeAdminURL(conf.c.Host, conf.AdminPort)
+	addr := conf.c.AddrP(conf.AdminPort)
 
 	resp, err := swyhttp.MarshalAndPost(
 		&swyhttp.RestReq{
@@ -51,7 +51,7 @@ func s3KeyGen(conf *YAMLConfS3, namespace, bucket string, lifetime uint32) (stri
 }
 
 func s3KeyDel(conf *YAMLConfS3, key string) error {
-	addr := swy.MakeAdminURL(conf.c.Host, conf.AdminPort)
+	addr := conf.c.AddrP(conf.AdminPort)
 
 	_, err := swyhttp.MarshalAndPost(
 		&swyhttp.RestReq{
@@ -108,7 +108,8 @@ const (
 )
 
 func s3Subscribe(conf *YAMLConfMw, namespace, bucket string) error {
-	addr := swy.MakeAdminURL(conf.S3.c.Host, conf.S3.AdminPort)
+	addr := conf.S3.c.AddrP(conf.S3.AdminPort)
+
 	_, err := swyhttp.MarshalAndPost(
 		&swyhttp.RestReq{
 			Address: "http://" + addr + "/v1/api/notify/subscribe",
@@ -129,7 +130,8 @@ func s3Subscribe(conf *YAMLConfMw, namespace, bucket string) error {
 }
 
 func s3Unsubscribe(ctx context.Context, conf *YAMLConfMw, namespace, bucket string) {
-	addr := swy.MakeAdminURL(conf.S3.c.Host, conf.S3.AdminPort)
+	addr := conf.S3.c.AddrP(conf.S3.AdminPort)
+
 	_, err := swyhttp.MarshalAndPost(
 		&swyhttp.RestReq{
 			Address: "http://" + addr + "/v1/api/notify/unsubscribe",
@@ -189,26 +191,26 @@ func handleS3Event(ctx context.Context, user string, data []byte) {
 func EventS3(ctx context.Context, conf *YAMLConfMw, source *FnEventDesc, mwd *MwareDesc, on bool) (error) {
 	if on {
 		err := mqStartListener(conf.S3.Notify.c.User, conf.S3.Notify.c.Pass,
-				conf.S3.Notify.c.AddrPort() + "/" + conf.S3.Notify.Dom,
+				conf.S3.Notify.c.Addr() + "/" + conf.S3.Notify.Dom,
 				gates3queue, handleS3Event)
 		if err == nil {
 			err = s3Subscribe(conf, mwd.Namespace, source.S3Bucket)
 			if err != nil {
-				mqStopListener(conf.S3.Notify.c.AddrPort() + "/" + conf.S3.Notify.Dom, gates3queue)
+				mqStopListener(conf.S3.Notify.c.Addr() + "/" + conf.S3.Notify.Dom, gates3queue)
 			}
 		}
 
 		return err
 	} else {
 		s3Unsubscribe(ctx, conf, mwd.Namespace, source.S3Bucket)
-		mqStopListener(conf.S3.Notify.c.AddrPort() + "/" + conf.S3.Notify.Dom, "events")
+		mqStopListener(conf.S3.Notify.c.Addr() + "/" + conf.S3.Notify.Dom, "events")
 		return nil
 	}
 }
 
 func makeS3Envs(conf *YAMLConfS3, bucket, key, skey string) [][2]string {
 	var ret [][2]string
-	ret = append(ret, mkEnvId(bucket, "s3", "ADDR", conf.c.AddrPort()))
+	ret = append(ret, mkEnvId(bucket, "s3", "ADDR", conf.c.Addr()))
 	ret = append(ret, mkEnvId(bucket, "s3", "KEY", key))
 	ret = append(ret, mkEnvId(bucket, "s3", "SECRET", skey))
 	return ret

@@ -64,12 +64,6 @@ type YAMLConfKeystone struct {
 	Domain		string			`yaml:"domain"`
 }
 
-type YAMLConfMWCreds struct {
-	Addr		string			`yaml:"address"`
-	Admin		string			`yaml:"admin"`
-	Pass		string			`yaml:"password"`
-}
-
 type YAMLConfRabbit struct {
 	Creds		string			`yaml:"creds"`
 	AdminPort	string			`yaml:"admport"`

@@ -37,7 +37,7 @@ func dbConnect(conf *YAMLConf) error {
 
 	dbc := swy.ParseXCreds(conf.DB)
 	info := mgo.DialInfo{
-		Addrs:		[]string{dbc.AddrPort()},
+		Addrs:		[]string{dbc.Addr()},
 		Database:	DBSwiftyDB,
 		Timeout:	60 * time.Second,
 		Username:	dbc.User,

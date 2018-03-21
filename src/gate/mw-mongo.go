@@ -8,7 +8,7 @@ import (
 
 func mgoDial(conf *YAMLConfMw) (*mgo.Session, error) {
 	ifo := mgo.DialInfo {
-		Addrs:		[]string{conf.Mongo.c.AddrPort()},
+		Addrs:		[]string{conf.Mongo.c.Addr()},
 		Database:	"admin",
 		Timeout:	60*time.Second,
 		Username:	conf.Mongo.c.User,
@@ -58,7 +58,7 @@ func FiniMongo(ctx context.Context, conf *YAMLConfMw, mwd *MwareDesc) error {
 }
 
 func GetEnvMongo(conf *YAMLConfMw, mwd *MwareDesc) ([][2]string) {
-	return append(mwGenUserPassEnvs(mwd, conf.Mongo.c.AddrPort()), mkEnv(mwd, "DBNAME", mwd.Namespace))
+	return append(mwGenUserPassEnvs(mwd, conf.Mongo.c.Addr()), mkEnv(mwd, "DBNAME", mwd.Namespace))
 }
 
 var MwareMongo = MwareOps {
