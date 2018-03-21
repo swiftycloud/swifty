@@ -1,8 +1,7 @@
 ---
 db:
-        state: "swifty"
         address: "127.0.0.1:27017"
-        user: "swifty"
+        user: "swygate"
         password: "DBPASS"
 keystone:
         address: "{{ groups['master'][0] }}:5000"
