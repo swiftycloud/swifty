@@ -24,6 +24,7 @@ type FnMemData struct {
 type TenantMemData struct {
 	crl	*xratelimit.RL
 	stats	TenStats
+	fnlim	uint
 	lock	sync.Mutex
 }
 
@@ -45,6 +46,8 @@ func memdGetCond(cookie string) *FnMemData {
 }
 
 func setupLimits(td *TenantMemData, ul *swyapi.UserLimits) {
+	td.fnlim = ul.Fn.MaxInProj
+
 	if ul.Fn == nil || ul.Fn.Rate == 0 {
 		td.crl = nil
 	} else {
@@ -54,6 +57,10 @@ func setupLimits(td *TenantMemData, ul *swyapi.UserLimits) {
 			td.crl.Update(ul.Fn.Burst, ul.Fn.Rate)
 		}
 	}
+}
+
+func tendatGet(tenant string) *TenantMemData {
+	return tendatGetOrInit(tenant)
 }
 
 func tendatGetOrInit(tenant string) *TenantMemData {

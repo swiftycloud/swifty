@@ -129,6 +129,10 @@ func dbFuncCount() (int, error) {
 	return dbSession.DB(DBStateDB).C(DBColFunc).Count()
 }
 
+func dbFuncCountProj(id *SwoId) (int, error) {
+	return dbSession.DB(DBStateDB).C(DBColFunc).Find(bson.M{"tenant": id.Tennant, "project": id.Project}).Count()
+}
+
 func dbFuncFindOne(q bson.M) (*FunctionDesc, error) {
 	c := dbSession.DB(DBStateDB).C(DBColFunc)
 	var v FunctionDesc

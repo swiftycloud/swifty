@@ -157,6 +157,21 @@ func validateProjectAndFuncName(params *swyapi.FunctionAdd) error {
 	return err
 }
 
+func checkCount(id *SwoId) error {
+	tmd := tendatGet(id.Tennant)
+	if tmd.fnlim != 0 {
+		nr, err := dbFuncCountProj(id)
+		if err != nil {
+			return err
+		}
+		if uint(nr) > tmd.fnlim {
+			return errors.New("Too many functions in project")
+		}
+	}
+
+	return nil
+}
+
 func addFunction(ctx context.Context, conf *YAMLConf, tennant string, params *swyapi.FunctionAdd) *swyapi.GateErr {
 	var err, erc error
 	var build bool
@@ -182,6 +197,11 @@ func addFunction(ctx context.Context, conf *YAMLConf, tennant string, params *sw
 	if err != nil {
 		ctxlog(ctx).Errorf("Can't add function %s: %s", fn.SwoId.Str(), err.Error())
 		return GateErrD(err)
+	}
+
+	err = checkCount(&fn.SwoId)
+	if err != nil {
+		goto out_clean_func
 	}
 
 	gateFunctions.Inc()

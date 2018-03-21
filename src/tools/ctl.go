@@ -166,9 +166,21 @@ func do_user_limits(args []string, opts [8]string) {
 	chg := false
 
 	if opts[0] != "" {
-		chg = true
 		l.Fn = &swyapi.FunctionLimits{}
 		l.Fn.Rate, l.Fn.Burst = parse_rate(opts[0])
+		chg = true
+	}
+
+	if opts[1] != "" {
+		if !chg {
+			l.Fn = &swyapi.FunctionLimits{}
+		}
+		v, err := strconv.ParseUint(opts[1], 10, 32)
+		if err != nil {
+			fatal(fmt.Errorf("Bad max-fn value %s: %s", opts[0], err.Error()))
+		}
+		l.Fn.MaxInProj = uint(v)
+		chg = true
 	}
 
 	if chg {
@@ -178,7 +190,12 @@ func do_user_limits(args []string, opts [8]string) {
 		make_faas_req("limits/get", swyapi.UserInfo{Id: args[0]}, &l)
 		if l.Fn != nil {
 			fmt.Printf("Functions:\n")
-			fmt.Printf("    Rate:       %d:%d\n", l.Fn.Rate, l.Fn.Burst)
+			if l.Fn.Rate != 0 {
+				fmt.Printf("    Rate:              %d:%d\n", l.Fn.Rate, l.Fn.Burst)
+			}
+			if l.Fn.MaxInProj != 0 {
+				fmt.Printf("    Max in project:    %d\n", l.Fn.MaxInProj)
+			}
 		}
 	}
 }
@@ -867,6 +884,7 @@ func main() {
 	bindCmdUsage(CMD_PASS,	[]string{"UID"}, "Set password", false)
 	bindCmdUsage(CMD_UINF,	[]string{"UID"}, "Get user info", false)
 	cmdMap[CMD_LIMITS].opts.StringVar(&opts[0], "rl", "", "Rate (rate[:burst])")
+	cmdMap[CMD_LIMITS].opts.StringVar(&opts[1], "fnr", "", "Number of functions (in a project)")
 	bindCmdUsage(CMD_LIMITS, []string{"UID"}, "Get/Set limits for user", false)
 
 	bindCmdUsage(CMD_MTYPES, []string{}, "List middleware types", false)
