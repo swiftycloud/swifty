@@ -8,14 +8,12 @@ import (
 	"encoding/json"
 	"encoding/hex"
 	"net/http"
-	"strings"
 	"errors"
 	"flag"
 	"context"
 	"sync/atomic"
 	"time"
 	"fmt"
-	"net"
 	"os"
 	"io/ioutil"
 	"encoding/base64"
@@ -1019,39 +1017,23 @@ func genReqHandler(cb func(ctx context.Context, w http.ResponseWriter, r *http.R
 }
 
 func setupMwareAddr(conf *YAMLConf) {
-	// "ip:port"
-	genAddrIP := func(addrip string) string {
-		v := strings.Split(addrip, ":")
-		if len(v) > 0 && net.ParseIP(v[0]) == nil {
-			ips, err := net.LookupIP(v[0])
-			if err == nil && len(ips) > 0 {
-				if len(v) == 2 {
-					return ips[0].String() + ":" + v[1]
-				} else {
-					return ips[0].String()
-				}
-			}
-		}
-		return addrip
-	}
-
 	conf.Mware.Maria.c = swy.ParseXCreds(conf.Mware.Maria.Creds)
-	conf.Mware.Maria.c.Host = genAddrIP(conf.Mware.Maria.c.Host)
+	conf.Mware.Maria.c.Resolve()
 
 	conf.Mware.Rabbit.c = swy.ParseXCreds(conf.Mware.Rabbit.Creds)
-	conf.Mware.Rabbit.c.Host = genAddrIP(conf.Mware.Rabbit.c.Host)
+	conf.Mware.Rabbit.c.Resolve()
 
 	conf.Mware.Mongo.c = swy.ParseXCreds(conf.Mware.Mongo.Creds)
-	conf.Mware.Mongo.c.Host = genAddrIP(conf.Mware.Mongo.c.Host)
+	conf.Mware.Mongo.c.Resolve()
 
 	conf.Mware.Postgres.c = swy.ParseXCreds(conf.Mware.Postgres.Creds)
-	conf.Mware.Postgres.c.Host = genAddrIP(conf.Mware.Postgres.c.Host)
+	conf.Mware.Postgres.c.Resolve()
 
 	conf.Mware.S3.c = swy.ParseXCreds(conf.Mware.S3.Creds)
-	conf.Mware.S3.c.Host = genAddrIP(conf.Mware.S3.c.Host)
+	conf.Mware.S3.c.Resolve()
 
 	conf.Mware.S3.Notify.c = swy.ParseXCreds(conf.Mware.S3.Notify.Creds)
-	conf.Mware.S3.Notify.c.Host = genAddrIP(conf.Mware.S3.Notify.c.Host)
+	conf.Mware.S3.Notify.c.Resolve()
 }
 
 func setupLogger(conf *YAMLConf) {

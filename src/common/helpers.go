@@ -13,6 +13,7 @@ import (
 	"regexp"
 	"bytes"
 	"time"
+	"net"
 	"fmt"
 	"os"
 )
@@ -192,6 +193,15 @@ func (xc *XCreds)Addr() string {
 
 func (xc *XCreds)AddrP(port string) string {
 	return xc.Host + ":" + port
+}
+
+func (xc *XCreds)Resolve() {
+	if net.ParseIP(xc.Host) == nil {
+		ips, err := net.LookupIP(xc.Host)
+		if err == nil && len(ips) > 0 {
+			xc.Host = ips[0].String()
+		}
+	}
 }
 
 func ParseXCreds(url string) *XCreds {
