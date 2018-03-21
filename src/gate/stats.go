@@ -48,6 +48,18 @@ func (fs *FnStats)GBS() float64 {
 	return float64(fs.RunCost) / float64(1024 * time.Second)
 }
 
+func (fs *FnStats)LastCallS() string {
+	if fs.Called != 0 {
+		return fs.LastCall.Format(time.RFC1123Z)
+	} else {
+		return ""
+	}
+}
+
+func (fs *FnStats)RunTimeUsec() uint64 {
+	return uint64(fs.RunTime/time.Microsecond)
+}
+
 type TenStats struct {
 	Tenant		string		`bson:"tenant"`
 	Called		uint64		`bsin:"called"`

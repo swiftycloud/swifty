@@ -483,7 +483,6 @@ func handleFunctionCode(ctx context.Context, w http.ResponseWriter, r *http.Requ
 func handleFunctionStats(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
 	var params swyapi.FunctionID
 	var stats *FnStats
-	var lcs string
 
 	err := swyhttp.ReadAndUnmarshalReq(r, &params)
 	if err != nil {
@@ -499,16 +498,12 @@ func handleFunctionStats(ctx context.Context, w http.ResponseWriter, r *http.Req
 	}
 
 	stats = statsGet(fn)
-	if stats.Called != 0 {
-		lcs = stats.LastCall.Format(time.RFC1123Z)
-	}
-
 	err = swyhttp.MarshalAndWrite(w,  swyapi.FunctionStats{
 			Called:		stats.Called,
 			Timeouts:	stats.Timeouts,
 			Errors:		stats.Errors,
-			LastCall:	lcs,
-			Time:		uint64(stats.RunTime.Nanoseconds()/1000),
+			LastCall:	stats.LastCallS(),
+			Time:		stats.RunTimeUsec(),
 			GBS:		stats.GBS(),
 		})
 	if err != nil {
@@ -523,7 +518,6 @@ func handleFunctionInfo(ctx context.Context, w http.ResponseWriter, r *http.Requ
 	var fv []string
 	var url = ""
 	var stats *FnStats
-	var lcs string
 
 	err := swyhttp.ReadAndUnmarshalReq(r, &params)
 	if err != nil {
@@ -543,10 +537,6 @@ func handleFunctionInfo(ctx context.Context, w http.ResponseWriter, r *http.Requ
 	}
 
 	stats = statsGet(fn)
-	if stats.Called != 0 {
-		lcs = stats.LastCall.Format(time.RFC1123Z)
-	}
-
 	fv, err = dbBalancerRSListVersions(fn)
 	if err != nil {
 		return GateErrD(err)
@@ -574,8 +564,8 @@ func handleFunctionInfo(ctx context.Context, w http.ResponseWriter, r *http.Requ
 				Called:		stats.Called,
 				Timeouts:	stats.Timeouts,
 				Errors:		stats.Errors,
-				LastCall:	lcs,
-				Time:		uint64(stats.RunTime.Nanoseconds()/1000),
+				LastCall:	stats.LastCallS(),
+				Time:		stats.RunTimeUsec(),
 				GBS:		stats.GBS(),
 			},
 			Size:		swyapi.FunctionSize {
@@ -792,18 +782,13 @@ func handleFunctionList(ctx context.Context, w http.ResponseWriter, r *http.Requ
 	}
 
 	for _, v := range recs {
-		var lcs string
 		stats := statsGet(&v)
-		if stats.Called != 0 {
-			lcs = stats.LastCall.Format(time.RFC1123Z)
-		}
-
 		result = append(result,
 			swyapi.FunctionItem{
 				FuncName:	v.Name,
 				State:		fnStates[v.State],
 				Timeout:	v.Size.Tmo,
-				LastCall:	lcs,
+				LastCall:	stats.LastCallS(),
 		})
 	}
 
