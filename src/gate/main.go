@@ -94,16 +94,16 @@ type YAMLConfPostgres struct {
 }
 
 type YAMLConfS3Notify struct {
-	URL		string			`yaml:"url"`
-	User		string			`yaml:"user"`
-	Pass		string			`yaml:"password"`
+	Creds		string			`yaml:"creds"`
+	Dom		string			`yaml:"domain"`
+	c		*swy.XCreds
 }
 
 type YAMLConfS3 struct {
-	Addr		string			`yaml:"address"`
+	Creds		string			`yaml:"creds"`
 	AdminPort	string			`yaml:"admport"`
-	Token		string			`yaml:"token"`
 	Notify		YAMLConfS3Notify	`yaml:"notify"`
+	c		*swy.XCreds
 }
 
 type YAMLConfMw struct {
@@ -1053,7 +1053,11 @@ func setupMwareAddr(conf *YAMLConf) {
 	conf.Mware.Postgres.c = swy.ParseXCreds(conf.Mware.Postgres.Creds)
 	conf.Mware.Postgres.c.Host = genAddrIP(conf.Mware.Postgres.c.Host)
 
-	conf.Mware.S3.Addr	= genAddrIP(conf.Mware.S3.Addr)
+	conf.Mware.S3.c = swy.ParseXCreds(conf.Mware.S3.Creds)
+	conf.Mware.S3.c.Host = genAddrIP(conf.Mware.S3.c.Host)
+
+	conf.Mware.S3.Notify.c = swy.ParseXCreds(conf.Mware.S3.Notify.Creds)
+	conf.Mware.S3.Notify.c.Host = genAddrIP(conf.Mware.S3.Notify.c.Host)
 }
 
 func setupLogger(conf *YAMLConf) {

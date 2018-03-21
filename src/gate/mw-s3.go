@@ -18,13 +18,13 @@ const (
 )
 
 func s3KeyGen(conf *YAMLConfS3, namespace, bucket string, lifetime uint32) (string, string, error) {
-	addr := swy.MakeAdminURL(conf.Addr, conf.AdminPort)
+	addr := swy.MakeAdminURL(conf.c.Host, conf.AdminPort)
 
 	resp, err := swyhttp.MarshalAndPost(
 		&swyhttp.RestReq{
 			Address: "http://" + addr + "/v1/api/admin/keygen",
 			Timeout: 120,
-			Headers: map[string]string{"X-SwyS3-Token": gateSecrets[conf.Token]},
+			Headers: map[string]string{"X-SwyS3-Token": gateSecrets[conf.c.Pass]},
 		},
 		&swys3api.S3CtlKeyGen{
 			Namespace: namespace,
@@ -51,13 +51,13 @@ func s3KeyGen(conf *YAMLConfS3, namespace, bucket string, lifetime uint32) (stri
 }
 
 func s3KeyDel(conf *YAMLConfS3, key string) error {
-	addr := swy.MakeAdminURL(conf.Addr, conf.AdminPort)
+	addr := swy.MakeAdminURL(conf.c.Host, conf.AdminPort)
 
 	_, err := swyhttp.MarshalAndPost(
 		&swyhttp.RestReq{
 			Address: "http://" + addr + "/v1/api/admin/keydel",
 			Timeout: 120,
-			Headers: map[string]string{"X-SwyS3-Token": gateSecrets[conf.Token]},
+			Headers: map[string]string{"X-SwyS3-Token": gateSecrets[conf.c.Pass]},
 		},
 		&swys3api.S3CtlKeyDel{
 			AccessKeyID: key,
@@ -81,7 +81,7 @@ func s3BucketReq(conf *YAMLConfS3, addr, req, namespace, bucket string) error {
 		&swyhttp.RestReq{
 			Address: "http://" + addr + "/v1/api/admin/" + req,
 			Timeout: 120,
-			Headers: map[string]string{"X-SwyS3-Token": gateSecrets[conf.Token]},
+			Headers: map[string]string{"X-SwyS3-Token": gateSecrets[conf.c.Pass]},
 			Success: code,
 		},
 		&swys3api.S3CtlBucketReq{
@@ -108,11 +108,11 @@ const (
 )
 
 func s3Subscribe(conf *YAMLConfMw, namespace, bucket string) error {
-	addr := swy.MakeAdminURL(conf.S3.Addr, conf.S3.AdminPort)
+	addr := swy.MakeAdminURL(conf.S3.c.Host, conf.S3.AdminPort)
 	_, err := swyhttp.MarshalAndPost(
 		&swyhttp.RestReq{
 			Address: "http://" + addr + "/v1/api/notify/subscribe",
-			Headers: map[string]string{"X-SwyS3-Token": gateSecrets[conf.S3.Token]},
+			Headers: map[string]string{"X-SwyS3-Token": gateSecrets[conf.S3.c.Pass]},
 			Success: http.StatusAccepted,
 		},
 		&swys3api.S3Subscribe{
@@ -129,11 +129,11 @@ func s3Subscribe(conf *YAMLConfMw, namespace, bucket string) error {
 }
 
 func s3Unsubscribe(ctx context.Context, conf *YAMLConfMw, namespace, bucket string) {
-	addr := swy.MakeAdminURL(conf.S3.Addr, conf.S3.AdminPort)
+	addr := swy.MakeAdminURL(conf.S3.c.Host, conf.S3.AdminPort)
 	_, err := swyhttp.MarshalAndPost(
 		&swyhttp.RestReq{
 			Address: "http://" + addr + "/v1/api/notify/unsubscribe",
-			Headers: map[string]string{"X-SwyS3-Token": gateSecrets[conf.S3.Token]},
+			Headers: map[string]string{"X-SwyS3-Token": gateSecrets[conf.S3.c.Pass]},
 			Success: http.StatusAccepted,
 		},
 		&swys3api.S3Subscribe{
@@ -188,26 +188,27 @@ func handleS3Event(ctx context.Context, user string, data []byte) {
 
 func EventS3(ctx context.Context, conf *YAMLConfMw, source *FnEventDesc, mwd *MwareDesc, on bool) (error) {
 	if on {
-		err := mqStartListener(conf.S3.Notify.User, conf.S3.Notify.Pass,
-				conf.S3.Notify.URL, gates3queue, handleS3Event)
+		err := mqStartListener(conf.S3.Notify.c.User, conf.S3.Notify.c.Pass,
+				conf.S3.Notify.c.AddrPort() + "/" + conf.S3.Notify.Dom,
+				gates3queue, handleS3Event)
 		if err == nil {
 			err = s3Subscribe(conf, mwd.Namespace, source.S3Bucket)
 			if err != nil {
-				mqStopListener(conf.S3.Notify.URL, gates3queue)
+				mqStopListener(conf.S3.Notify.c.AddrPort() + "/" + conf.S3.Notify.Dom, gates3queue)
 			}
 		}
 
 		return err
 	} else {
 		s3Unsubscribe(ctx, conf, mwd.Namespace, source.S3Bucket)
-		mqStopListener(conf.S3.Notify.URL, "events")
+		mqStopListener(conf.S3.Notify.c.AddrPort() + "/" + conf.S3.Notify.Dom, "events")
 		return nil
 	}
 }
 
 func makeS3Envs(conf *YAMLConfS3, bucket, key, skey string) [][2]string {
 	var ret [][2]string
-	ret = append(ret, mkEnvId(bucket, "s3", "ADDR", conf.Addr))
+	ret = append(ret, mkEnvId(bucket, "s3", "ADDR", conf.c.AddrPort()))
 	ret = append(ret, mkEnvId(bucket, "s3", "KEY", key))
 	ret = append(ret, mkEnvId(bucket, "s3", "SECRET", skey))
 	return ret
@@ -231,8 +232,7 @@ func mwareGetS3Creds(ctx context.Context, conf *YAMLConf, acc *swyapi.MwareS3Acc
 
 	/* XXX -- for now pretend, that s3 listens on the same address as gate does */
 	gateAP := strings.Split(conf.Daemon.Addr, ":")
-	s3AP := strings.Split(conf.Mware.S3.Addr, ":")
-	creds.Endpoint = gateAP[0] + ":" + s3AP[1]
+	creds.Endpoint = gateAP[0] + ":" + conf.Mware.S3.c.Port
 
 	creds.Expires = acc.Lifetime
 

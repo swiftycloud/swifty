@@ -24,13 +24,11 @@ middleware:
                 creds: "-:PGRTOKEN@swy1:5432"
                 admport: "3872"
         s3:
-                address: "swy1:8787"
+                creds: "-:S3TOKEN@swy1:8787"
                 admport: "8789"
-                token: "S3TOKEN"
                 notify:
-                        url: "swy0:5672/s3"
-                        user: "swifty"
-                        password: "S3IFYPASS"
+                        creds: "swifty:S3IFYPASS@swy0:5672"
+                        domain: "s3"
 runtime:
         timeout:
                 max: 60
