@@ -20,9 +20,8 @@ middleware:
         mongo:
                 creds: "admin:MONGOPASS@{{ groups['mware'][0] }}:27017"
         postgres:
-                address: "{{ groups['mware'][0] }}:5432"
+                creds: "-:PGRTOKEN@{{ groups['mware'][0] }}:5432"
                 admport: "3872"
-                token: "PGRTOKEN"
         s3:
                 address: "{{ groups['s3'][0] }}:8787"
                 admport: "8789"

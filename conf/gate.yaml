@@ -21,9 +21,8 @@ middleware:
         mongo:
                 creds: "admin:MONGOPASS@swy1:27017"
         postgres:
-                address: "swy1:5432"
+                creds: "-:PGRTOKEN@swy1:5432"
                 admport: "3872"
-                token: "PGRTOKEN"
         s3:
                 address: "swy1:8787"
                 admport: "8789"

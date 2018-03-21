@@ -88,9 +88,9 @@ type YAMLConfMongo struct {
 }
 
 type YAMLConfPostgres struct {
-	Addr		string			`yaml:"address"`
+	Creds		string			`yaml:"creds"`
 	AdminPort	string			`yaml:"admport"`
-	Token		string			`yaml:"token"`
+	c		*swy.XCreds
 }
 
 type YAMLConfS3Notify struct {
@@ -1050,7 +1050,9 @@ func setupMwareAddr(conf *YAMLConf) {
 	conf.Mware.Mongo.c = swy.ParseXCreds(conf.Mware.Mongo.Creds)
 	conf.Mware.Mongo.c.Host = genAddrIP(conf.Mware.Mongo.c.Host)
 
-	conf.Mware.Postgres.Addr= genAddrIP(conf.Mware.Postgres.Addr)
+	conf.Mware.Postgres.c = swy.ParseXCreds(conf.Mware.Postgres.Creds)
+	conf.Mware.Postgres.c.Host = genAddrIP(conf.Mware.Postgres.c.Host)
+
 	conf.Mware.S3.Addr	= genAddrIP(conf.Mware.S3.Addr)
 }
 
