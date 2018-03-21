@@ -18,9 +18,7 @@ middleware:
                 creds: "root:RABBITPASS@{{ groups['mware'][0] }}:5672"
                 admport: "15672"
         mongo:
-                address: "{{ groups['mware'][0] }}:27017"
-                admin: "admin"
-                password: "MONGOPASS"
+                creds: "admin:MONGOPASS@{{ groups['mware'][0] }}:27017"
         postgres:
                 address: "{{ groups['mware'][0] }}:5432"
                 admport: "3872"
