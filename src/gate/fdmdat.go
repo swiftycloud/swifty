@@ -81,8 +81,13 @@ func tendatGetOrInit(tenant string) *TenantMemData {
 		go func() {
 			for {
 				time.Sleep(SwyTenantLimitsUpdPeriod)
-				ul, _ := dbTenantGetLimits(tenant)
-				setupLimits(lret, ul)
+				ul, err := dbTenantGetLimits(tenant)
+				if err == nil {
+					setupLimits(lret, ul)
+					glog.Debugf("Updated limits for %s", tenant)
+				} else {
+					glog.Errorf("No way to read user limits: %s", err.Error())
+				}
 			}
 		}()
 	}
