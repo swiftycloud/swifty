@@ -55,11 +55,6 @@ runtime:
                 max: 1024
                 min: 64
                 def: 128
-        images:
-                golang: "swifty/golang"
-                python: "swifty/python"
-                swift:  "swifty/swift"
-                nodejs: "swifty/nodejs"
 wdog:
         ct-path: "/usr/bin/swy-wdog"
         port: 8687

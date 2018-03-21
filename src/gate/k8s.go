@@ -292,12 +292,7 @@ func swk8sRun(ctx context.Context, conf *YAMLConf, fn *FunctionDesc) error {
 	var err error
 
 	depname := fn.DepName()
-	ctxlog(ctx).Debugf("Start %s deployment for %s", depname, fn.SwoId.Str())
-
-	img, ok := conf.Runtime.Images[fn.Code.Lang]
-	if !ok {
-		return errors.New("Bad lang selected") /* cannot happen actually */
-	}
+	ctxlog(ctx).Debugf("Start %s deployment for %s (img: %s)", depname, fn.SwoId.Str(), "swifty/" + fn.Code.Lang)
 
 	envs := swk8sGenEnvVar(ctx, fn, conf.Wdog.Port)
 
@@ -329,7 +324,7 @@ func swk8sRun(ctx context.Context, conf *YAMLConf, fn *FunctionDesc) error {
 			Containers:	[]v1.Container{
 				{
 					Name:		"wdog",
-					Image:		img,
+					Image:		"swifty/" + fn.Code.Lang,
 					Env:		envs,
 					VolumeMounts:	[]v1.VolumeMount{
 						{

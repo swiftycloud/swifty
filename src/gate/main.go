@@ -121,7 +121,6 @@ type YAMLConfRange struct {
 type YAMLConfRt struct {
 	Timeout		YAMLConfRange		`yaml:"timeout"`
 	Memory		YAMLConfRange		`yaml:"memory"`
-	Images		map[string]string	`yaml:"images"`
 }
 
 type YAMLConfKuber struct {
