@@ -178,3 +178,24 @@ func DropDir(dir, subdir string) error {
 
 	return nil
 }
+
+type XCreds struct {
+	User    string
+	Pass    string
+	Host    string
+	Port    string
+}
+
+func ParseXCreds(url string) *XCreds {
+	xc := &XCreds{}
+	/* user:pass@host:port */
+	x := strings.SplitN(url, ":", 2)
+	xc.User = x[0]
+	x = strings.SplitN(x[1], "@", 2)
+	xc.Pass = x[0]
+	x = strings.SplitN(x[1], ":", 2)
+	xc.Host = x[0]
+	xc.Port = x[1]
+
+	return xc
+}

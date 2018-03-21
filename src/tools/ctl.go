@@ -687,13 +687,11 @@ func make_login(creds string) {
 		fatal(fmt.Errorf("No HOME dir set"))
 	}
 
-	x := strings.SplitN(creds, ":", 2)
-	conf.Login.User = x[0]
-	x = strings.SplitN(x[1], "@", 2)
-	conf.Login.Pass = x[0]
-	x = strings.SplitN(x[1], ":", 2)
-	conf.Login.Host = x[0]
-	conf.Login.Port = x[1]
+	c := swy.ParseXCreds(creds)
+	conf.Login.User = c.User
+	conf.Login.Pass = c.Pass
+	conf.Login.Host = c.Host
+	conf.Login.Port = c.Port
 
 	refresh_token(home)
 }
