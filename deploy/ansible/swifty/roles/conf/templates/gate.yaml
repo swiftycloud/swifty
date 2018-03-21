@@ -1,8 +1,5 @@
 ---
-db:
-        address: "127.0.0.1:27017"
-        user: "swygate"
-        password: "DBPASS"
+db: "swygate:DBPASS@127.0.0.1:27017"
 keystone:
         address: "{{ groups['master'][0] }}:5000"
         domain: "swifty"

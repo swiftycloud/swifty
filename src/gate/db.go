@@ -419,17 +419,19 @@ func dbProjectListAll(ten string) (fn []string, mw []string, err error) {
 func dbConnect(conf *YAMLConf) error {
 	var err error
 
+	dbc := swy.ParseXCreds(conf.DB)
+
 	info := mgo.DialInfo{
-		Addrs:		[]string{conf.DB.Addr},
+		Addrs:		[]string{dbc.AddrPort()},
 		Database:	DBStateDB,
 		Timeout:	60 * time.Second,
-		Username:	conf.DB.User,
-		Password:	gateSecrets[conf.DB.Pass]}
+		Username:	dbc.User,
+		Password:	gateSecrets[dbc.Pass]}
 
 	session, err := mgo.DialWithInfo(&info);
 	if err != nil {
 		glog.Errorf("dbConnect: Can't dial to %s with db %s (%s)",
-				conf.DB.Addr, DBStateDB, err.Error())
+				conf.DB, DBStateDB, err.Error())
 		return err
 	}
 

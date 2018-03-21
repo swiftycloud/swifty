@@ -28,17 +28,11 @@ type YAMLConfKeystone struct {
 	Pass		string			`yaml:"pass"`
 }
 
-type YAMLConfDB struct {
-	Addr		string		`yaml:"address"`
-	User		string		`yaml:"user"`
-	Pass		string		`yaml:"password"`
-}
-
 type YAMLConf struct {
 	Listen		string			`yaml:"listen"`
 	Gate		string			`yaml:"gate"`
 	Keystone	YAMLConfKeystone	`yaml:"keystone"`
-	DB		YAMLConfDB		`yaml:"db"`
+	DB		string			`yaml:"db"`
 }
 
 var conf YAMLConf

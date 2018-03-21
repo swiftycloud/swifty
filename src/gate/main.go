@@ -128,14 +128,8 @@ type YAMLConfKuber struct {
 	MaxReplicas	uint32			`yaml:"max-replicas"`
 }
 
-type YAMLConfDB struct {
-	Addr		string		`yaml:"address"`
-	User		string		`yaml:"user"`
-	Pass		string		`yaml:"password"`
-}
-
 type YAMLConf struct {
-	DB		YAMLConfDB		`yaml:"db"`
+	DB		string			`yaml:"db"`
 	Daemon		YAMLConfDaemon		`yaml:"daemon"`
 	Keystone	YAMLConfKeystone	`yaml:"keystone"`
 	Mware		YAMLConfMw		`yaml:"middleware"`

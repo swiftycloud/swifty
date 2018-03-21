@@ -4,6 +4,7 @@ import (
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 	"time"
+	"../common"
 	"../apis/apps"
 )
 
@@ -34,17 +35,18 @@ func dbSetUserLimits(conf *YAMLConf, limits *swyapi.UserLimits) error {
 func dbConnect(conf *YAMLConf) error {
 	var err error
 
+	dbc := swy.ParseXCreds(conf.DB)
 	info := mgo.DialInfo{
-		Addrs:		[]string{conf.DB.Addr},
+		Addrs:		[]string{dbc.AddrPort()},
 		Database:	DBSwiftyDB,
 		Timeout:	60 * time.Second,
-		Username:	conf.DB.User,
-		Password:	admdSecrets[conf.DB.Pass]}
+		Username:	dbc.User,
+		Password:	admdSecrets[dbc.Pass]}
 
 	session, err := mgo.DialWithInfo(&info);
 	if err != nil {
 		log.Errorf("dbConnect: Can't dial to %s with db %s (%s)",
-				conf.DB.Addr, DBTenantDB, err.Error())
+				conf.DB, DBTenantDB, err.Error())
 		return err
 	}
 
