@@ -23,12 +23,12 @@ func fnCodePathV(fn *FunctionDesc) string {
 	return fnCodeSubPath(fn) + "/" + fn.Src.Version
 }
 
-func fnRepoClone(fn *FunctionDesc, prefix string) string {
-	return prefix + "/" + fnCodeSubPath(fn)
+func fnRepoClone(fn *FunctionDesc) string {
+	return conf.Daemon.Sources.Clone + "/" + fnCodeSubPath(fn)
 }
 
 func fnRepoCheckoutC(conf *YAMLConf, fn *FunctionDesc, version string) string {
-	return fnRepoClone(fn, conf.Daemon.Sources.Share) + "/" + version
+	return conf.Daemon.Sources.Share + "/" + fnCodeSubPath(fn) + "/" + version
 }
 
 func fnRepoCheckout(conf *YAMLConf, fn *FunctionDesc) string {
@@ -48,7 +48,7 @@ func checkoutSources(ctx context.Context, fn *FunctionDesc) error {
 	var stderr bytes.Buffer
 	share_to := "?"
 
-	cloned_to := fnRepoClone(fn, conf.Daemon.Sources.Clone)
+	cloned_to := fnRepoClone(fn)
 	cmd := exec.Command("git", "-C", cloned_to, "log", "-n1", "--pretty=format:%H")
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
@@ -134,7 +134,7 @@ func cloneGitRepo(ctx context.Context, fn *FunctionDesc) error {
 		return fmt.Errorf("Disabled sources type git")
 	}
 
-	clone_to := fnRepoClone(fn, conf.Daemon.Sources.Clone)
+	clone_to := fnRepoClone(fn)
 	ctxlog(ctx).Debugf("Git clone %s -> %s", fn.Src.Repo, clone_to)
 
 	_, err := os.Stat(clone_to)
@@ -204,7 +204,7 @@ func updateGitRepo(ctx context.Context, fn *FunctionDesc, params *swyapi.Functio
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 
-	clone_to := fnRepoClone(fn, conf.Daemon.Sources.Clone)
+	clone_to := fnRepoClone(fn)
 	ctxlog(ctx).Debugf("Git pull %s", clone_to)
 
 	cmd := exec.Command("git", "-C", clone_to, "pull")
