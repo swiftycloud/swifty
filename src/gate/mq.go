@@ -14,7 +14,7 @@ type mqConsumer struct {
 
 type mqListenerCb func(context.Context, string, []byte)
 
-// FIXME -- isn't there out-of-the-box factory engine in go?
+// XXX -- isn't there out-of-the-box factory engine in go?
 type mq_listener_req struct {
 	user	string
 	pass	string
