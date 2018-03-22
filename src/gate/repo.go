@@ -19,7 +19,7 @@ func fnCodeDir(fn *FunctionDesc) string {
 	return fn.Tennant + "/" + fn.Project + "/" + fn.Name
 }
 
-func fnCodePathV(fn *FunctionDesc) string {
+func fnCodeLatestDir(fn *FunctionDesc) string {
 	return fnCodeDir(fn) + "/" + fn.Src.Version
 }
 

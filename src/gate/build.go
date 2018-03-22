@@ -28,7 +28,7 @@ func buildFunction(ctx context.Context, conf *YAMLConf, addr string, fn *Functio
 				Timeout: 120,
 			},
 			&swyapi.SwdFunctionBuild{
-				Sources: fnCodePathV(fn),
+				Sources: fnCodeLatestDir(fn),
 			})
 	if err != nil {
 		ctxlog(ctx).Errorf("Error building function: %s", err.Error())
