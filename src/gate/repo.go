@@ -35,14 +35,6 @@ func fnRepoCheckout(conf *YAMLConf, fn *FunctionDesc) string {
 	return fnRepoCheckoutC(conf, fn, fn.Src.Version)
 }
 
-func fnCodePath(conf *YAMLConf, fn *FunctionDesc, version string) (string, error) {
-	if fn.Src.Type != "code" {
-		return "", fmt.Errorf("No single file for %s sources", fn.Src.Type)
-	}
-
-	return fnRepoCheckoutC(conf, fn, version) + "/" + RtDefaultScriptName(&fn.Code), nil
-}
-
 func checkoutSources(ctx context.Context, fn *FunctionDesc) error {
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
