@@ -19,12 +19,16 @@ func fnCodeDir(fn *FunctionDesc) string {
 	return fn.Tennant + "/" + fn.Project + "/" + fn.Name
 }
 
+func fnCodeVersionDir(fn *FunctionDesc, version string) string {
+	return fnCodeDir(fn) + "/" + version
+}
+
 func fnCodeLatestDir(fn *FunctionDesc) string {
-	return fnCodeDir(fn) + "/" + fn.Src.Version
+	return fnCodeVersionDir(fn, fn.Src.Version)
 }
 
 func fnCodeVersionPath(conf *YAMLConf, fn *FunctionDesc, version string) string {
-	return conf.Daemon.Sources.Share + "/" + fnCodeDir(fn) + "/" + version
+	return conf.Daemon.Sources.Share + "/" + fnCodeVersionDir(fn, version)
 }
 
 func fnCodeLatestPath(conf *YAMLConf, fn *FunctionDesc) string {
