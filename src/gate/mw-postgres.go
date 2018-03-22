@@ -8,7 +8,7 @@ import (
 )
 
 func InitPostgres(ctx context.Context, conf *YAMLConfMw, mwd *MwareDesc) (error) {
-	err := mwareGenerateUserPassClient(mwd)
+	err := mwareGenerateUserPassClient(ctx, mwd)
 	if err != nil {
 		return err
 	}

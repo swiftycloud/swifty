@@ -74,7 +74,6 @@ func GenRandId(length int) (string, error) {
 	pass:= make([]byte, length)
 	_, err := rand.Read(idx)
 	if err != nil {
-		swylog.Errorf("Can't generate password: %s", err.Error())
 		return "", err
 	}
 

@@ -35,7 +35,7 @@ func mariaReq(db *sql.DB, req string) error {
 // DROP DATABASE IF EXISTS 8257fbff9618952fbd2b83b4794eb694;
 
 func InitMariaDB(ctx context.Context, conf *YAMLConfMw, mwd *MwareDesc) (error) {
-	err := mwareGenerateUserPassClient(mwd)
+	err := mwareGenerateUserPassClient(ctx, mwd)
 	if err != nil {
 		return err
 	}
