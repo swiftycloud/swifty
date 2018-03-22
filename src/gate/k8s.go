@@ -100,11 +100,6 @@ func swk8sGenEnvVar(ctx context.Context, fn *FunctionDesc, wd_port int) []v1.Env
 
 	for _, v := range fn.Code.Env {
 		vs := strings.SplitN(v, "=", 2)
-		if strings.HasPrefix(vs[0], "SWD_") {
-			// FIXME -- check earlier and abort adding
-			ctxlog(ctx).Warn("Bogus env %s in %s", vs[0], fn.SwoId.Str())
-			continue
-		}
 		s = append(s, v1.EnvVar{Name: vs[0], Value: vs[1]})
 	}
 

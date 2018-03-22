@@ -178,16 +178,6 @@ func addFunction(ctx context.Context, conf *YAMLConf, tennant string, params *sw
 	var bAddr string
 	var fn *FunctionDesc
 
-	err = validateProjectAndFuncName(params)
-	if err != nil {
-		goto out
-	}
-
-	if !RtLangEnabled(params.Code.Lang) {
-		err = errors.New("Unsupported language")
-		goto out
-	}
-
 	fn = getFunctionDesc(tennant, params)
 
 	ctxlog(ctx).Debugf("function/add %s (cookie %s)", fn.SwoId.Str(), fn.Cookie[:32])

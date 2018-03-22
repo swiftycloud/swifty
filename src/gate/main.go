@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"errors"
 	"flag"
+	"strings"
 	"context"
 	"sync/atomic"
 	"time"
@@ -318,6 +319,21 @@ func handleFunctionAdd(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	}
 	if params.Code.Lang == "" {
 		return GateErrM(swy.GateBadRequest, "No language specified")
+	}
+
+	err = validateProjectAndFuncName(&params)
+	if err != nil {
+		return GateErrM(swy.GateBadRequest, "Bad project/function name")
+	}
+
+	if !RtLangEnabled(params.Code.Lang) {
+		return GateErrM(swy.GateBadRequest, "Unsupported language")
+	}
+
+	for _, env := range(params.Code.Env) {
+		if strings.HasPrefix(env, "SWD_") {
+			return GateErrM(swy.GateBadRequest, "Environment var cannot start with SWD_")
+		}
 	}
 
 	cerr := addFunction(ctx, &conf, fromContext(ctx).Tenant, &params)
