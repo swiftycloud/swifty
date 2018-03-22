@@ -229,7 +229,7 @@ func updateFileFromReq(ctx context.Context, fn *FunctionDesc, params *swyapi.Fun
 }
 
 func cleanRepo(fn *FunctionDesc) error {
-	sd := fnRepoClone(fn, "")
+	sd := fnCodeSubPath(fn)
 
 	clone_to := conf.Daemon.Sources.Clone
 	err := swy.DropDir(clone_to, sd)
