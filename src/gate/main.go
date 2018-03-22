@@ -1084,8 +1084,6 @@ func setupLogger(conf *YAMLConf) {
 
 	logger, _ := zcfg.Build()
 	glog = logger.Sugar()
-
-	swy.InitLogger(glog)
 }
 
 func main() {

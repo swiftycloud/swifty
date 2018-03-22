@@ -95,8 +95,6 @@ func main() {
 	var conf_path string
 	var err error
 
-	swy.InitLogger(log)
-
 	flag.StringVar(&conf_path,
 			"conf",
 				"/etc/swifty/conf/mquotad.yaml",

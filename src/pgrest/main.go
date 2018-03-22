@@ -177,8 +177,6 @@ func main() {
 	var err error
 	var pgrSecrets map[string]string
 
-	swy.InitLogger(log)
-
 	flag.StringVar(&conf_path,
 			"conf",
 				"/etc/swifty/conf/pgrest.yaml",

@@ -582,8 +582,6 @@ func startCResponder(runner *Runner, podip string) error {
 }
 
 func main() {
-	swy.InitLogger(log)
-
 	podIP := swy.SafeEnv("SWD_POD_IP", "")
 	if podIP == "" {
 		log.Fatal("NO POD_IP")

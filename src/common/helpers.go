@@ -1,8 +1,6 @@
 package swy
 
 import (
-	"go.uber.org/zap"
-
 	"gopkg.in/yaml.v2"
 	"crypto/rand"
 	"io/ioutil"
@@ -20,12 +18,6 @@ import (
 
 func MakeAdminURL(clienturl, admport string) string {
 	return strings.Split(clienturl, ":")[0] + ":" + admport
-}
-
-var swylog = zap.NewNop().Sugar()
-
-func InitLogger(logger *zap.SugaredLogger) {
-	swylog = logger
 }
 
 var Letters = []byte("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789")
