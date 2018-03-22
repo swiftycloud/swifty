@@ -408,7 +408,7 @@ func updateFunction(ctx context.Context, conf *YAMLConf, id *SwoId, params *swya
 			ctxlog(ctx).Debugf("Updating deploy")
 			err = swk8sUpdate(ctx, conf, fn)
 			if err != nil {
-				/* FIXME -- stalled? */
+				/* XXX -- stalled? */
 				goto out
 			}
 		} else {
