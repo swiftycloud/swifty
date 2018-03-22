@@ -215,7 +215,7 @@ func dbFuncUpdateAdded(fn *FunctionDesc) error {
 
 func dbFuncUpdatePulled(fn *FunctionDesc, update bson.M) error {
 	return dbFuncUpdate(
-		bson.M{"cookie": fn.Cookie},
+		bson.M{"cookie": fn.Cookie, "state": fn.State},
 		bson.M{"$set": update })
 }
 

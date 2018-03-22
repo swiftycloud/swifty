@@ -298,8 +298,6 @@ func updateFunction(ctx context.Context, conf *YAMLConf, id *SwoId, params *swya
 		goto out
 	}
 
-	// FIXME -- lock other requests :\
-
 	if params.Code != "" {
 		ctxlog(ctx).Debugf("Will update sources for %s", fn.SwoId.Str())
 		oldver = fn.Src.Version
