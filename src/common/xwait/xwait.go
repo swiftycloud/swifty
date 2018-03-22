@@ -6,13 +6,18 @@ import (
 )
 
 type Waiter struct {
-	k string
-	s chan string
+	key string
+	s chan bool
 	d chan bool
 	l *list.Element
 }
 
-var adds chan chan *Waiter
+type wreq struct {
+	key string
+	r chan *Waiter
+}
+
+var adds chan *wreq
 var dels chan *Waiter
 var evnts chan string
 
@@ -24,13 +29,15 @@ func serve() {
 		case key := <-evnts:
 			for el := ws.Front(); el != nil; el = el.Next() {
 				w := el.Value.(*Waiter)
-				w.s <-key
+				if w.key == key {
+					w.s <-true
+				}
 			}
 
 		case r := <-adds:
-			w := &Waiter{s: make(chan string), d: make(chan bool)}
+			w := &Waiter{key: r.key, s: make(chan bool), d: make(chan bool)}
 			w.l = ws.PushBack(w)
-			r <-w
+			r.r <-w
 
 		case r := <-dels:
 			ws.Remove(r.l)
@@ -40,7 +47,7 @@ func serve() {
 }
 
 func init() {
-	adds = make(chan chan *Waiter)
+	adds = make(chan *wreq)
 	dels = make(chan *Waiter)
 	evnts = make(chan string)
 
@@ -49,10 +56,8 @@ func init() {
 
 func Prepare(key string) *Waiter {
 	r := make(chan *Waiter)
-	adds <-r
-	w := <-r
-	w.k = key
-	return w
+	adds <-&wreq{key: key, r: r}
+	return <-r
 }
 
 func (w *Waiter)Wait(tmo *time.Duration) bool {
@@ -61,20 +66,15 @@ func (w *Waiter)Wait(tmo *time.Duration) bool {
 		select {
 		case <-time.After(*tmo):
 			return true
-		case e := <-w.s:
-			now := time.Now()
-			elapsed := now.Sub(start)
+		case <-w.s:
+			elapsed := time.Since(start)
 			if elapsed >= *tmo {
 				*tmo = 0
 			} else {
 				*tmo -= elapsed
 			}
 
-			if e == w.k {
-				return false
-			}
-
-			start = now
+			return false
 		}
 	}
 }
