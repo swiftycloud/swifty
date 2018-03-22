@@ -269,9 +269,6 @@ func swk8sUpdate(ctx context.Context, conf *YAMLConf, fn *FunctionDesc) error {
 }
 
 func specSetRes(res *v1.ResourceRequirements, fn *FunctionDesc) {
-	// FIXME: Obtain them from settings and
-	// account in backend database
-
 	mem_max := fmt.Sprintf("%dMi", fn.Size.Mem)
 	mem_min := fmt.Sprintf("%dMi", fn.Size.Mem / 2)
 
