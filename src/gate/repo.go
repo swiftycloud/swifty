@@ -211,7 +211,7 @@ func GCOldSources(ctx context.Context, fn *FunctionDesc, ver string) {
 
 	w := xwait.Prepare(fn.Cookie)
 	cookie := fn.Cookie
-	ctxlog(ctx).Debugf("Will remove %s's sources after a while", ver)
+	ctxlog(ctx).Debugf("Will remove %s's sources after a while via %s", ver, np)
 
 	go func() {
 		tmo := 16 * 60 * time.Second
@@ -274,15 +274,28 @@ func updateFileFromReq(ctx context.Context, fn *FunctionDesc, params *swyapi.Fun
 	return writeSource(ctx, fn, params.Code)
 }
 
-func cleanRepo(fn *FunctionDesc) error {
+func cleanRepo(ctx context.Context, fn *FunctionDesc) error {
 	sd := fnCodeDir(fn)
 
-	err := swy.DropDir(conf.Daemon.Sources.Clone, sd)
+	td, err := swy.DropDir(conf.Daemon.Sources.Clone, sd)
 	if err != nil {
 		return err
 	}
 
-	return swy.DropDir(conf.Daemon.Sources.Share, sd)
+	if td != "" {
+		ctxlog(ctx).Debugf("Will remove %s repo clone via %s", fn.SwoId.Str(), td)
+	}
+
+	td, err = swy.DropDir(conf.Daemon.Sources.Share, sd)
+	if err != nil {
+		return err
+	}
+
+	if td != "" {
+		ctxlog(ctx).Debugf("Will remove %s sources via %s", fn.SwoId.Str(), td)
+	}
+
+	return nil
 }
 
 func update_deps(ctx context.Context, repo_path string) error {

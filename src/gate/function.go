@@ -244,7 +244,7 @@ func addFunction(ctx context.Context, conf *YAMLConf, tennant string, params *sw
 	return nil
 
 out_clean_repo:
-	erc = cleanRepo(fn)
+	erc = cleanRepo(ctx, fn)
 	if erc != nil {
 		goto stalled
 	}
@@ -485,7 +485,7 @@ func removeFunction(ctx context.Context, conf *YAMLConf, id *SwoId) *swyapi.Gate
 	}
 
 	ctxlog(ctx).Debugf("`- clean sources")
-	err = cleanRepo(fn)
+	err = cleanRepo(ctx, fn)
 	if err != nil {
 		goto later
 	}

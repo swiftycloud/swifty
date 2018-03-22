@@ -148,14 +148,14 @@ func Exec(exe string, args []string) (bytes.Buffer, bytes.Buffer, error) {
 	return stdout, stderr, nil
 }
 
-func DropDir(dir, subdir string) error {
+func DropDir(dir, subdir string) (string, error) {
 	nn, err := DropDirPrep(dir, subdir)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	DropDirComplete(nn)
-	return nil
+	return nn, nil
 }
 
 func DropDirPrep(dir, subdir string) (string, error) {
@@ -178,7 +178,6 @@ func DropDirPrep(dir, subdir string) (string, error) {
 		return "", fmt.Errorf("can't move repo clone: %s", err.Error())
 	}
 
-	swylog.Debugf("Will remove %s/%s (via %s)", dir, subdir, nname)
 	return nname, nil
 }
 
