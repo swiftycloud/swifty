@@ -27,7 +27,7 @@ func fnCodeVersionPath(conf *YAMLConf, fn *FunctionDesc, version string) string 
 	return conf.Daemon.Sources.Share + "/" + fnCodeDir(fn) + "/" + version
 }
 
-func fnRepoCheckout(conf *YAMLConf, fn *FunctionDesc) string {
+func fnCodeLatestPath(conf *YAMLConf, fn *FunctionDesc) string {
 	return fnCodeVersionPath(conf, fn, fn.Src.Version)
 }
 
@@ -58,7 +58,7 @@ func checkoutSources(ctx context.Context, fn *FunctionDesc) error {
 	}
 
 	// Now put the sources into shared place
-	share_to = fnRepoCheckout(&conf, fn)
+	share_to = fnCodeLatestPath(&conf, fn)
 
 	ctxlog(ctx).Debugf("Checkout %s to %s", fn.Src.Version[:12], share_to)
 	err = copy_git_files(cloned_to, share_to)
@@ -155,7 +155,7 @@ func cloneGitRepo(ctx context.Context, fn *FunctionDesc) error {
 }
 
 func writeSource(ctx context.Context, fn *FunctionDesc, codeb64 string) error {
-	to := fnRepoCheckout(&conf, fn)
+	to := fnCodeLatestPath(&conf, fn)
 	err := os.MkdirAll(to, 0750)
 	if err != nil {
 		ctxlog(ctx).Error("Can't mkdir sources: %s", err.Error())

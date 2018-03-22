@@ -227,7 +227,7 @@ func swk8sUpdate(ctx context.Context, conf *YAMLConf, fn *FunctionDesc) error {
 	for i := 0; i < len(this.Spec.Template.Spec.Volumes); i++ {
 		vol := &this.Spec.Template.Spec.Volumes[i]
 		if vol.Name == "code" {
-			vol.VolumeSource.HostPath.Path = fnRepoCheckout(conf, fn)
+			vol.VolumeSource.HostPath.Path = fnCodeLatestPath(conf, fn)
 			break
 		}
 	}
@@ -299,7 +299,7 @@ func swk8sRun(ctx context.Context, conf *YAMLConf, fn *FunctionDesc) error {
 					Name:		"code",
 					VolumeSource:	v1.VolumeSource {
 						HostPath: &v1.HostPathVolumeSource{
-								Path: fnRepoCheckout(conf, fn),
+								Path: fnCodeLatestPath(conf, fn),
 							},
 					},
 				},

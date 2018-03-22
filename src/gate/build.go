@@ -20,7 +20,7 @@ func tryBuildFunction(ctx context.Context, conf *YAMLConf, fn *FunctionDesc) err
 func buildFunction(ctx context.Context, conf *YAMLConf, addr string, fn *FunctionDesc) error {
 	var wd_result swyapi.SwdFunctionRunResult
 
-	ctxlog(ctx).Debugf("Building function in %s", fnRepoCheckout(conf, fn))
+	ctxlog(ctx).Debugf("Building function in %s", fnCodeLatestPath(conf, fn))
 
 	resp, err := swyhttp.MarshalAndPost(
 			&swyhttp.RestReq{
