@@ -165,7 +165,7 @@ func DropDirPrep(dir, subdir string) (string, error) {
 		return "", fmt.Errorf("leaking %s: %s", subdir, err.Error())
 	}
 
-	err = os.Rename(dir + "/" + subdir, nname + "/_" /* Why _ ? Why not...*/)
+	err = os.Rename(dir + "/" + subdir, nname + "/" + strings.Replace(subdir, "/", "_", -1))
 	if err != nil {
 		return "", fmt.Errorf("can't move repo clone: %s", err.Error())
 	}
