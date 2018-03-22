@@ -466,7 +466,7 @@ func handleFunctionCode(ctx context.Context, w http.ResponseWriter, r *http.Requ
 		return GateErrM(swy.GateNotAvail, "No single file for sources")
 	}
 
-	codeFile = fnRepoCheckoutC(&conf, fn, params.Version) + "/" + RtDefaultScriptName(&fn.Code)
+	codeFile = fnCodeVersionPath(&conf, fn, params.Version) + "/" + RtDefaultScriptName(&fn.Code)
 	fnCode, err = ioutil.ReadFile(codeFile)
 	if err != nil {
 		ctxlog(ctx).Errorf("Can't read file with code: %s", err.Error())

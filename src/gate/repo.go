@@ -23,16 +23,16 @@ func fnCodeLatestDir(fn *FunctionDesc) string {
 	return fnCodeDir(fn) + "/" + fn.Src.Version
 }
 
-func fnRepoClone(fn *FunctionDesc) string {
-	return conf.Daemon.Sources.Clone + "/" + fnCodeDir(fn)
-}
-
-func fnRepoCheckoutC(conf *YAMLConf, fn *FunctionDesc, version string) string {
+func fnCodeVersionPath(conf *YAMLConf, fn *FunctionDesc, version string) string {
 	return conf.Daemon.Sources.Share + "/" + fnCodeDir(fn) + "/" + version
 }
 
 func fnRepoCheckout(conf *YAMLConf, fn *FunctionDesc) string {
-	return fnRepoCheckoutC(conf, fn, fn.Src.Version)
+	return fnCodeVersionPath(conf, fn, fn.Src.Version)
+}
+
+func fnRepoClone(fn *FunctionDesc) string {
+	return conf.Daemon.Sources.Clone + "/" + fnCodeDir(fn)
 }
 
 func checkoutSources(ctx context.Context, fn *FunctionDesc) error {
