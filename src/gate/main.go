@@ -542,7 +542,7 @@ func handleFunctionInfo(ctx context.Context, w http.ResponseWriter, r *http.Requ
 	}
 
 	stats = statsGet(fn)
-	fv, err = dbBalancerRSListVersions(fn)
+	fv, err = dbBalancerRSListVersions(fn.Cookie)
 	if err != nil {
 		return GateErrD(err)
 	}

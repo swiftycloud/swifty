@@ -260,11 +260,6 @@ func swk8sUpdate(ctx context.Context, conf *YAMLConf, fn *FunctionDesc) error {
 		return err
 	}
 
-	/*
-	 * FIXME -- after the new version of the deployment is rolled
-	 * out we may remove old checkout out sources
-	 */
-
 	return err
 }
 

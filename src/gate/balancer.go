@@ -25,13 +25,15 @@ func (bd *BalancerDat)Flush() {
 }
 
 func BalancerPodDel(pod *k8sPod) error {
-	balancerPodsFlush(pod.SwoId.Cookie())
+	fnid := pod.SwoId.Cookie()
+	balancerPodsFlush(fnid)
 
 	err := dbBalancerPodDel(pod)
 	if err != nil {
 		return fmt.Errorf("Pod del error: %s", err.Error())
 	}
 
+	fnWaiterKick(fnid)
 	return nil
 }
 

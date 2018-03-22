@@ -289,6 +289,7 @@ func updateFunction(ctx context.Context, conf *YAMLConf, id *SwoId, params *swya
 	var err error
 	var stalled, restart bool
 	var mfix, rlfix bool
+	var oldver string
 
 	update := make(bson.M)
 
@@ -301,6 +302,7 @@ func updateFunction(ctx context.Context, conf *YAMLConf, id *SwoId, params *swya
 
 	if params.Code != "" {
 		ctxlog(ctx).Debugf("Will update sources for %s", fn.SwoId.Str())
+		oldver = fn.Src.Version
 		err = updateSources(ctx, fn, params)
 		if err != nil {
 			goto out
@@ -421,6 +423,10 @@ func updateFunction(ctx context.Context, conf *YAMLConf, id *SwoId, params *swya
 		}
 	}
 
+	if oldver != "" {
+		GCOldSources(ctx, fn, oldver)
+	}
+
 	logSaveEvent(fn, "updated", fmt.Sprintf("to: %s", fn.Src.Version))
 out:
 	if err != nil {
@@ -509,7 +515,7 @@ func waitFunctionVersion(ctx context.Context, fn *FunctionDesc, version string, 
 
 	for {
 		ctxlog(ctx).Debugf("Check %s for %s", fn.SwoId.Str(), version)
-		vers, err := dbBalancerRSListVersions(fn)
+		vers, err := dbBalancerRSListVersions(fn.Cookie)
 		if err != nil {
 			break
 		}

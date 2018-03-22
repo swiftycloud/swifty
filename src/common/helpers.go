@@ -150,34 +150,41 @@ func Exec(exe string, args []string) (bytes.Buffer, bytes.Buffer, error) {
 }
 
 func DropDir(dir, subdir string) error {
+	nn, err := DropDirPrep(dir, subdir)
+	if err != nil {
+		return err
+	}
+
+	DropDirComplete(nn)
+	return nil
+}
+
+func DropDirPrep(dir, subdir string) (string, error) {
 	_, err := os.Stat(dir + "/" + subdir)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil
+			return "", nil
 		}
 
-		return fmt.Errorf("Can't stat %s%s: %s", dir, subdir, err.Error())
+		return "", fmt.Errorf("Can't stat %s%s: %s", dir, subdir, err.Error())
 	}
 
 	nname, err := ioutil.TempDir(dir, ".rm")
 	if err != nil {
-		return fmt.Errorf("leaking %s: %s", subdir, err.Error())
+		return "", fmt.Errorf("leaking %s: %s", subdir, err.Error())
 	}
 
 	err = os.Rename(dir + "/" + subdir, nname + "/_" /* Why _ ? Why not...*/)
 	if err != nil {
-		return fmt.Errorf("can't move repo clone: %s", err.Error())
+		return "", fmt.Errorf("can't move repo clone: %s", err.Error())
 	}
 
 	swylog.Debugf("Will remove %s/%s (via %s)", dir, subdir, nname)
-	go func() {
-		err = os.RemoveAll(nname)
-		if err != nil {
-			swylog.Errorf("can't remove %s (%s): %s", nname, subdir, err.Error())
-		}
-	}()
+	return nname, nil
+}
 
-	return nil
+func DropDirComplete(nname string) {
+	go os.RemoveAll(nname)
 }
 
 type XCreds struct {

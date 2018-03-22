@@ -7,11 +7,13 @@ import (
 	"os"
 	"context"
 	"io"
+	"time"
 	"io/ioutil"
 	"encoding/base64"
 	"strconv"
 	"errors"
 	"../common"
+	"../common/xwait"
 	"../apis/apps"
 )
 
@@ -196,6 +198,54 @@ func updateSources(ctx context.Context, fn *FunctionDesc, params *swyapi.Functio
 	return srch.update(ctx, fn, params)
 }
 
+func GCOldSources(ctx context.Context, fn *FunctionDesc, ver string) {
+	np, err := swy.DropDirPrep(conf.Daemon.Sources.Share, fnCodeVersionDir(fn, ver))
+	if err != nil {
+		ctxlog(ctx).Errorf("Leaking %s sources till FN removal (err %s)", ver, err.Error())
+		return
+	}
+
+	if np == "" {
+		return
+	}
+
+	w := xwait.Prepare(fn.Cookie)
+	cookie := fn.Cookie
+	ctxlog(ctx).Debugf("Will remove %s's sources after a while", ver)
+
+	go func() {
+		tmo := 16 * 60 * time.Second
+
+		for {
+			vers, err := dbBalancerRSListVersions(cookie)
+			if err != nil {
+				break /* What to do? */
+			}
+
+			found := false
+			for _, v := range(vers) {
+				if ver == v {
+					found = true
+					break
+				}
+			}
+
+			if !found {
+				ctxlog(ctx).Debugf("Dropping %s.%s sources", cookie, ver)
+				swy.DropDirComplete(np)
+				break
+			}
+
+			if w.Wait(&tmo) {
+				ctxlog(ctx).Errorf("Leaking %s sources till FN removal (tmo)", ver)
+				break
+			}
+		}
+
+		w.Done()
+	}()
+}
+
 func updateGitRepo(ctx context.Context, fn *FunctionDesc, params *swyapi.FunctionUpdate) error {
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
@@ -227,14 +277,12 @@ func updateFileFromReq(ctx context.Context, fn *FunctionDesc, params *swyapi.Fun
 func cleanRepo(fn *FunctionDesc) error {
 	sd := fnCodeDir(fn)
 
-	clone_to := conf.Daemon.Sources.Clone
-	err := swy.DropDir(clone_to, sd)
+	err := swy.DropDir(conf.Daemon.Sources.Clone, sd)
 	if err != nil {
 		return err
 	}
 
-	share_to := conf.Daemon.Sources.Share
-	return swy.DropDir(share_to, sd)
+	return swy.DropDir(conf.Daemon.Sources.Share, sd)
 }
 
 func update_deps(ctx context.Context, repo_path string) error {
