@@ -15,20 +15,20 @@ import (
 	"../apis/apps"
 )
 
-func fnCodeSubPath(fn *FunctionDesc) string {
+func fnCodeDir(fn *FunctionDesc) string {
 	return fn.Tennant + "/" + fn.Project + "/" + fn.Name
 }
 
 func fnCodePathV(fn *FunctionDesc) string {
-	return fnCodeSubPath(fn) + "/" + fn.Src.Version
+	return fnCodeDir(fn) + "/" + fn.Src.Version
 }
 
 func fnRepoClone(fn *FunctionDesc) string {
-	return conf.Daemon.Sources.Clone + "/" + fnCodeSubPath(fn)
+	return conf.Daemon.Sources.Clone + "/" + fnCodeDir(fn)
 }
 
 func fnRepoCheckoutC(conf *YAMLConf, fn *FunctionDesc, version string) string {
-	return conf.Daemon.Sources.Share + "/" + fnCodeSubPath(fn) + "/" + version
+	return conf.Daemon.Sources.Share + "/" + fnCodeDir(fn) + "/" + version
 }
 
 func fnRepoCheckout(conf *YAMLConf, fn *FunctionDesc) string {
@@ -221,7 +221,7 @@ func updateFileFromReq(ctx context.Context, fn *FunctionDesc, params *swyapi.Fun
 }
 
 func cleanRepo(fn *FunctionDesc) error {
-	sd := fnCodeSubPath(fn)
+	sd := fnCodeDir(fn)
 
 	clone_to := conf.Daemon.Sources.Clone
 	err := swy.DropDir(clone_to, sd)
