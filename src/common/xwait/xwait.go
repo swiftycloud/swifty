@@ -2,13 +2,15 @@ package xwait
 
 import (
 	"time"
+	"sync"
 	"container/list"
 )
 
 type Waiter struct {
 	key string
-	s chan bool
-	d chan bool
+	evt bool
+	lock sync.Mutex
+	wake *sync.Cond
 	l *list.Element
 }
 
@@ -30,18 +32,23 @@ func serve() {
 			for el := ws.Front(); el != nil; el = el.Next() {
 				w := el.Value.(*Waiter)
 				if w.key == key {
-					w.s <-true
+					w.lock.Lock()
+					if !w.evt {
+						w.evt = true
+						w.wake.Signal()
+					}
+					w.lock.Unlock()
 				}
 			}
 
 		case r := <-adds:
-			w := &Waiter{key: r.key, s: make(chan bool), d: make(chan bool)}
+			w := &Waiter{key: r.key}
+			w.wake = sync.NewCond(&w.lock)
 			w.l = ws.PushBack(w)
 			r.r <-w
 
 		case r := <-dels:
 			ws.Remove(r.l)
-			close(r.d)
 		}
 	}
 }
@@ -61,43 +68,35 @@ func Prepare(key string) *Waiter {
 }
 
 func (w *Waiter)Wait(tmo *time.Duration) bool {
-	start := time.Now()
-	for {
-		select {
-		case <-time.After(*tmo):
-			return true
-		case <-w.s:
-			elapsed := time.Since(start)
-			if elapsed >= *tmo {
-				*tmo = 0
-			} else {
-				*tmo -= elapsed
-			}
+	w.lock.Lock()
+	defer w.lock.Unlock()
 
-			return false
-		}
+	if w.evt {
+		w.evt = false
+		return false
 	}
+
+	start := time.Now()
+	t := time.AfterFunc(*tmo, func() { w.wake.Signal() })
+	w.wake.Wait()
+	t.Stop()
+
+	if !w.evt {
+		return true
+	}
+
+	w.evt = false
+	elapsed := time.Since(start)
+	if elapsed >= *tmo {
+		*tmo = 0
+	} else {
+		*tmo -= elapsed
+	}
+
+	return false
 }
 
 func (w *Waiter)Done() {
-	/*
-	 * The serve() may be right now sitting in event
-	 * fanout loop waiting for us to get one, and we'll
-	 * no be able to do send ourselves to dels. To
-	 * avoid this deadlock -- start an events drainer
-	 * goroutine
-	 */
-	go func() {
-		for {
-			select {
-			case <-w.s:
-				;
-			case <-w.d:
-				return
-			}
-		}
-	}()
-
 	dels <-w
 }
 
