@@ -327,6 +327,8 @@ func s3UploadPart(iam *S3Iam, bucket *S3Bucket, oname,
 		return "", err
 	}
 
+	ioSize.Observe(float64(part.Size) / KiB)
+
 	upload.dbRefDec()
 
 	log.Debugf("s3: Inserted %s", infoLong(part))

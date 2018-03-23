@@ -162,6 +162,8 @@ func s3AddObject(iam *S3Iam, bucket *S3Bucket, oname string,
 		goto out
 	}
 
+	ioSize.Observe(float64(object.Size) / KiB)
+
 	if bucket.BasicNotify != nil {
 		s3Notify(iam, bucket, object, S3NotifyPut)
 	}
