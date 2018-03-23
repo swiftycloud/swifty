@@ -31,7 +31,7 @@
   when: mongod_installed.changed
 
 - name: create collections for main db
-  shell: mongo --quiet localhost:27017/{{ mgo_master_db_state }} --eval 'db.createCollection("{{ item }}");'
+  shell: mongo --quiet localhost:27017/{{ mgo_master_db_gate }} --eval 'db.createCollection("{{ item }}");'
   with_items:
     - "Function"
     - "Mware"
