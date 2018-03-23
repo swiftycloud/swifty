@@ -5,6 +5,7 @@ daemon:
         admport: "8789"
         token: "S3TOKEN"
         loglevel: "debug"
+        prometheus: "{{ groups['s3'][0] }}:9012"
 notify:
         rabbitmq: "s3:RMQS3PASS@{{ groups['master'][0] }}:5672/s3"
 secretskey: "S3SECRETSKEY"

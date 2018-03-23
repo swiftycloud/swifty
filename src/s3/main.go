@@ -36,6 +36,7 @@ type YAMLConfDaemon struct {
 	AdminPort	string			`yaml:"admport"`
 	Token		string			`yaml:"token"`
 	LogLevel	string			`yaml:"loglevel"`
+	Prometheus	string			`yaml:"prometheus"`
 }
 
 type YAMLConfNotify struct {
@@ -757,6 +758,11 @@ func main() {
 	err = gcInit(0)
 	if err != nil {
 		log.Fatalf("Can't setup garbage collector: %s", err.Error())
+	}
+
+	err = PrometheusInit(&conf)
+	if err != nil {
+		log.Fatalf("Can't setup prometheus: %s", err.Error())
 	}
 
 	go func() {
