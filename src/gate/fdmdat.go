@@ -46,7 +46,9 @@ func memdGetCond(cookie string) *FnMemData {
 }
 
 func setupLimits(td *TenantMemData, ul *swyapi.UserLimits) {
-	td.fnlim = ul.Fn.MaxInProj
+	if ul.Fn != nil {
+		td.fnlim = ul.Fn.MaxInProj
+	}
 
 	if ul.Fn == nil || ul.Fn.Rate == 0 {
 		td.crl = nil
