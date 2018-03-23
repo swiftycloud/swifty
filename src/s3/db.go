@@ -7,13 +7,14 @@ import (
 	"reflect"
 	"time"
 	"fmt"
+	"../common"
 )
 
 var dbColMap map[reflect.Type]string
 var dbSession *mgo.Session
-var dbName string
 
 const (
+	DBName					= "swifty-s3"
 	DBColS3Iams				= "S3Iams"
 	DBColS3Buckets				= "S3Buckets"
 	DBColS3Objects				= "S3Objects"
@@ -35,17 +36,18 @@ var s3StateTransition = map[uint32][]uint32 {
 }
 
 func dbConnect(conf *YAMLConf) error {
+	dbc := swy.ParseXCreds(conf.DB)
 	info := mgo.DialInfo{
-		Addrs:		[]string{conf.DB.Addr},
-		Database:	conf.DB.Name,
+		Addrs:		[]string{dbc.Addr()},
+		Database:	DBName,
 		Timeout:	60 * time.Second,
-		Username:	conf.DB.User,
-		Password:	s3Secrets[conf.DB.Pass]}
+		Username:	dbc.User,
+		Password:	s3Secrets[dbc.Pass]}
 
 	session, err := mgo.DialWithInfo(&info);
 	if err != nil {
 		log.Errorf("dbConnect: Can't dial to %s with db %s (%s)",
-				conf.DB.Addr, conf.DB.Name, err.Error())
+				conf.DB, DBName, err.Error())
 		return err
 	}
 
@@ -53,7 +55,6 @@ func dbConnect(conf *YAMLConf) error {
 	session.SetMode(mgo.Monotonic, true)
 
 	dbSession = session.Copy()
-	dbName = conf.DB.Name
 
 	// Make sure the indices are present
 	index := mgo.Index{
@@ -63,28 +64,28 @@ func dbConnect(conf *YAMLConf) error {
 			Sparse:		true}
 
 	index.Key = []string{"namespace"}
-	dbSession.DB(dbName).C(DBColS3Iams).EnsureIndex(index)
+	dbSession.DB(DBName).C(DBColS3Iams).EnsureIndex(index)
 
 	index.Key = []string{"user"}
-	dbSession.DB(dbName).C(DBColS3Iams).EnsureIndex(index)
+	dbSession.DB(DBName).C(DBColS3Iams).EnsureIndex(index)
 
 	index.Key = []string{"bid"}
-	dbSession.DB(dbName).C(DBColS3Buckets).EnsureIndex(index)
+	dbSession.DB(DBName).C(DBColS3Buckets).EnsureIndex(index)
 
 	index.Key = []string{"bid"}
-	dbSession.DB(dbName).C(DBColS3Objects).EnsureIndex(index)
+	dbSession.DB(DBName).C(DBColS3Objects).EnsureIndex(index)
 
 	index.Key = []string{"bid"}
-	dbSession.DB(dbName).C(DBColS3ObjectData).EnsureIndex(index)
+	dbSession.DB(DBName).C(DBColS3ObjectData).EnsureIndex(index)
 
 	index.Key = []string{"uid"}
-	dbSession.DB(dbName).C(DBColS3Uploads).EnsureIndex(index)
+	dbSession.DB(DBName).C(DBColS3Uploads).EnsureIndex(index)
 
 	index.Key = []string{"bid"}
-	dbSession.DB(dbName).C(DBColS3Uploads).EnsureIndex(index)
+	dbSession.DB(DBName).C(DBColS3Uploads).EnsureIndex(index)
 
 	index.Key = []string{"access-key-id"}
-	dbSession.DB(dbName).C(DBColS3AccessKeys).EnsureIndex(index)
+	dbSession.DB(DBName).C(DBColS3AccessKeys).EnsureIndex(index)
 
 	dbColMap = make(map[reflect.Type]string)
 	dbColMap[reflect.TypeOf(S3Iam{})] = DBColS3Iams
@@ -126,7 +127,6 @@ func dbConnect(conf *YAMLConf) error {
 func dbDisconnect() {
 	dbSession.Close()
 	dbSession = nil
-	dbName = ""
 }
 
 func dbRepair() error {
@@ -242,7 +242,7 @@ func dbS3SetMTime(o interface{}) {
 func dbS3Insert(o interface{}) (error) {
 	dbS3SetMTime(o)
 
-	err := dbSession.DB(dbName).C(dbColl(o)).Insert(o)
+	err := dbSession.DB(DBName).C(dbColl(o)).Insert(o)
 	if err != nil {
 		log.Errorf("dbS3Insert: %s: %s", infoLong(o), err.Error())
 	}
@@ -255,7 +255,7 @@ func dbS3Update(query bson.M, update bson.M, retnew bool, o interface{}) (error)
 	dbS3SetObjID(o, query)
 	dbS3UpdateMTime(update)
 
-	c := dbSession.DB(dbName).C(dbColl(o))
+	c := dbSession.DB(DBName).C(dbColl(o))
 	change := mgo.Change{
 		Upsert:		false,
 		Remove:		false,
@@ -269,7 +269,7 @@ func dbS3Update(query bson.M, update bson.M, retnew bool, o interface{}) (error)
 func dbS3Upsert(query bson.M, update bson.M, o interface{}) (error) {
 	if query == nil { query = make(bson.M) }
 
-	c := dbSession.DB(dbName).C(dbColl(o))
+	c := dbSession.DB(DBName).C(dbColl(o))
 	change := mgo.Change{
 		Upsert:		true,
 		Remove:		false,
@@ -303,7 +303,7 @@ func dbS3RemoveCond(o interface{}, query bson.M) (error) {
 
 	dbS3SetObjID(o, query)
 
-	c := dbSession.DB(dbName).C(dbColl(o))
+	c := dbSession.DB(DBName).C(dbColl(o))
 	change := mgo.Change{
 		Upsert:		false,
 		Remove:		true,
@@ -330,11 +330,11 @@ func dbS3Remove(o interface{}) (error) {
 }
 
 func dbS3FindOne(query bson.M, o interface{}) (error) {
-	return dbSession.DB(dbName).C(dbColl(o)).Find(query).One(o)
+	return dbSession.DB(DBName).C(dbColl(o)).Find(query).One(o)
 }
 
 func dbS3FindAll(query bson.M, o interface{}) (error) {
-	return dbSession.DB(dbName).C(dbColl(o)).Find(query).All(o)
+	return dbSession.DB(DBName).C(dbColl(o)).Find(query).All(o)
 }
 
 func dbS3FindAllInactive(o interface{}) (error) {
@@ -345,5 +345,5 @@ func dbS3FindAllInactive(o interface{}) (error) {
 }
 
 func dbS3Pipe(o interface{}, pipeline interface{}) (*mgo.Pipe) {
-	return dbSession.DB(dbName).C(dbColl(o)).Pipe(pipeline)
+	return dbSession.DB(DBName).C(dbColl(o)).Pipe(pipeline)
 }

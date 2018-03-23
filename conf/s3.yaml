@@ -1,9 +1,5 @@
 ---
-db:
-        state: "swifty-s3"
-        address: "swy0:27017"
-        user: "swifty-s3"
-        password: "MGOS3PASS"
+db: "swifty-s3:MGOS3PASS@swy0:27017"
 daemon:
         address: "swy1:8787"
         admport: "8789"

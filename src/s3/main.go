@@ -38,13 +38,6 @@ type YAMLConfDaemon struct {
 	LogLevel	string			`yaml:"loglevel"`
 }
 
-type YAMLConfDB struct {
-	Name		string			`yaml:"state"`
-	Addr		string			`yaml:"address"`
-	User		string			`yaml:"user"`
-	Pass		string			`yaml:"password"`
-}
-
 type YAMLConfNotifyRMQ struct {
 	Target		string			`yaml:"target"`
 	User		string			`yaml:"user"`
@@ -56,7 +49,7 @@ type YAMLConfNotify struct {
 }
 
 type YAMLConf struct {
-	DB		YAMLConfDB		`yaml:"db"`
+	DB		string			`yaml:"db"`
 	Daemon		YAMLConfDaemon		`yaml:"daemon"`
 	Ceph		YAMLConfCeph		`yaml:"ceph"`
 	SecKey		string			`yaml:"secretskey"`
