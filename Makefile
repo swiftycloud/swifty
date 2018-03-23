@@ -187,13 +187,7 @@ swifty/swift: swy-wdog-go kubectl/docker/images/swift/Dockerfile
 	$(Q) $(MAKE) -C kubectl/docker/images/swift all
 .PHONY: swifty/swift
 
-swifty/nodejs: swy-wdog kubectl/docker/images/nodejs/Dockerfile
-	$(call msg-gen,$@)
-	$(Q) $(CP) swy-wdog  kubectl/docker/images/nodejs/
-	$(Q) $(MAKE) -C kubectl/docker/images/nodejs all
-.PHONY: swifty/nodejs
-
-images: swifty/python swifty/golang swifty/swift swifty/nodejs
+images: swifty/python swifty/golang swifty/swift
 	@true
 .PHONY: images
 
@@ -214,7 +208,6 @@ help:
 	@echo '      swifty/python   - Build swifty/python docker image'
 	@echo '      swifty/golang   - Build swifty/golang docker image'
 	@echo '      swifty/swift    - Build swifty/swift docker image'
-	@echo '      swifty/nodejs   - Build swifty/nodejs docker image'
 	@echo '      rsclean         - Cleanup resources'
 	@echo '      clean-db-swifty - Cleanup swifty mongo collections'
 	@echo '      clean-db-s3     - Cleanup s3 mongo collections'
