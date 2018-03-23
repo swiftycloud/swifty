@@ -19,7 +19,7 @@ middleware:
                 creds: "root:RABBITPASS@swy1:5672"
                 admport: "15672"
         mongo:
-                creds: "admin:MONGOPASS@swy1:27017"
+                creds: "root:MONGOPASS@swy1:27017"
         postgres:
                 creds: "-:PGRTOKEN@swy1:5432"
                 admport: "3872"
