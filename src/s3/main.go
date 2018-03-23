@@ -38,14 +38,8 @@ type YAMLConfDaemon struct {
 	LogLevel	string			`yaml:"loglevel"`
 }
 
-type YAMLConfNotifyRMQ struct {
-	Target		string			`yaml:"target"`
-	User		string			`yaml:"user"`
-	Pass		string			`yaml:"password"`
-}
-
 type YAMLConfNotify struct {
-	Rabbit		*YAMLConfNotifyRMQ	`yaml:"rabbitmq,omitempty"`
+	Rabbit		string			`yaml:"rabbitmq,omitempty"`
 }
 
 type YAMLConf struct {

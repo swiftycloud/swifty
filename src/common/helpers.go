@@ -182,6 +182,7 @@ type XCreds struct {
 	Pass    string
 	Host    string
 	Port    string
+	Domn	string
 }
 
 func (xc *XCreds)Addr() string {
@@ -190,6 +191,14 @@ func (xc *XCreds)Addr() string {
 
 func (xc *XCreds)AddrP(port string) string {
 	return xc.Host + ":" + port
+}
+
+func (xc *XCreds)URL() string {
+	s := xc.User + ":" + xc.Pass + "@" + xc.Host + ":" + xc.Port
+	if xc.Domn != "" {
+		s += "/" + xc.Domn
+	}
+	return s
 }
 
 func (xc *XCreds)Resolve() {
@@ -210,7 +219,11 @@ func ParseXCreds(url string) *XCreds {
 	xc.Pass = x[0]
 	x = strings.SplitN(x[1], ":", 2)
 	xc.Host = x[0]
-	xc.Port = x[1]
+	x = strings.SplitN(x[1], "/", 2)
+	xc.Port = x[0]
+	if len(x) > 1 {
+		xc.Domn = x[1]
+	}
 
 	return xc
 }

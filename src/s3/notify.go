@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"strings"
 	"fmt"
+	"../common"
 	"../apis/apps/s3"
 )
 
@@ -109,13 +110,16 @@ func s3Notify(iam *S3Iam, bucket *S3Bucket, object *S3Object, op uint) {
 }
 
 func notifyInit(conf *YAMLConfNotify) error {
-	if conf.Rabbit == nil {
+	if conf.Rabbit == "" {
 		return nil
 	}
 
-	log.Debugf("Turn on AMQP notifications via %s", conf.Rabbit.Target)
+	xc := swy.ParseXCreds(conf.Rabbit)
+	xc.Pass = s3Secrets[xc.Pass]
 
-	nConn, err := amqp.Dial("amqp://" + conf.Rabbit.User + ":" + s3Secrets[conf.Rabbit.Pass] + "@" + conf.Rabbit.Target)
+	log.Debugf("Turn on AMQP notifications via %s", xc.Domn)
+
+	nConn, err := amqp.Dial("amqp://" + xc.URL())
 	if err != nil {
 		return fmt.Errorf("Can't dial amqp: %s", err.Error())
 	}

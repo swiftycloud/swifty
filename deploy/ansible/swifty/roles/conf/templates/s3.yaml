@@ -6,10 +6,7 @@ daemon:
         token: "S3TOKEN"
         loglevel: "debug"
 notify:
-        rabbitmq:
-                target: "{{ groups['master'][0] }}:5672/s3"
-                user: "s3"
-                password: "RMQS3PASS"
+        rabbitmq: "s3:RMQS3PASS@{{ groups['master'][0] }}:5672/s3"
 secretskey: "S3SECRETSKEY"
 ceph:
         config-path: /etc/swifty/conf/ceph.conf
