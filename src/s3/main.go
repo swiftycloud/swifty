@@ -224,23 +224,29 @@ func handleBucket(iam *S3Iam, akey *S3AccessKey, w http.ResponseWriter, r *http.
 	switch r.Method {
 	case http.MethodGet:
 		if bname == "" {
+			apiCalls.WithLabelValues("b", "ls").Inc()
 			if !policy.isRoot() { goto e_access }
 			return handleListBuckets(iam, w, r)
 		}
 		if _, ok := getURLParam(r, "uploads"); ok {
 			if !policy.mayAccess(bname) { goto e_access }
+			apiCalls.WithLabelValues("u", "ls").Inc()
 			return handleListUploads(bname, iam, w, r)
 		}
 		if !policy.mayAccess(bname) { goto e_access }
+		apiCalls.WithLabelValues("o", "ls").Inc()
 		return handleListObjects(bname, iam, w, r)
 	case http.MethodPut:
 		if !policy.isRoot() { goto e_access }
+		apiCalls.WithLabelValues("b", "put").Inc()
 		return handlePutBucket(bname, iam, w, r)
 	case http.MethodDelete:
 		if !policy.isRoot() { goto e_access }
+		apiCalls.WithLabelValues("b", "del").Inc()
 		return handleDeleteBucket(bname, iam, w, r)
 	case http.MethodHead:
 		if !policy.mayAccess(bname) { goto e_access }
+		apiCalls.WithLabelValues("b", "acc").Inc()
 		return handleAccessBucket(bname, iam, w, r)
 	default:
 		return &S3Error{ ErrorCode: S3ErrMethodNotAllowed }
@@ -422,27 +428,36 @@ func handleObject(iam *S3Iam, akey *S3AccessKey, w http.ResponseWriter, r *http.
 	switch r.Method {
 	case http.MethodPost:
 		if uploadId, ok := getURLParam(r, "uploadId"); ok {
+			apiCalls.WithLabelValues("u", "fin").Inc()
 			return handleUploadFini(uploadId, iam, bucket, w, r)
 		} else if _, ok := getURLParam(r, "uploads"); ok {
+			apiCalls.WithLabelValues("u", "ini").Inc()
 			return handleUploadInit(oname, iam, bucket, w, r)
 		}
 		return &S3Error{ ErrorCode: S3ErrMethodNotAllowed }
 	case http.MethodGet:
 		if uploadId, ok := getURLParam(r, "uploadId"); ok {
+			apiCalls.WithLabelValues("u", "lp").Inc()
 			return handleUploadListParts(uploadId, oname, iam, bucket, w, r)
 		}
+		apiCalls.WithLabelValues("o", "get").Inc()
 		return handleGetObject(oname, iam, bucket, w, r)
 	case http.MethodPut:
 		if uploadId, ok := getURLParam(r, "uploadId"); ok {
+			apiCalls.WithLabelValues("u", "put").Inc()
 			return handleUploadPart(uploadId, oname, iam, bucket, w, r)
 		}
+		apiCalls.WithLabelValues("o", "put").Inc()
 		return handlePutObject(oname, iam, bucket, w, r)
 	case http.MethodDelete:
 		if uploadId, ok := getURLParam(r, "uploadId"); ok {
+			apiCalls.WithLabelValues("u", "del").Inc()
 			return handleUploadAbort(uploadId, oname, iam, bucket, w, r)
 		}
+		apiCalls.WithLabelValues("o", "del").Inc()
 		return handleDeleteObject(oname, iam, bucket, w, r)
 	case http.MethodHead:
+		apiCalls.WithLabelValues("o", "acc").Inc()
 		return handleAccessObject(bname, oname, iam, w, r)
 	default:
 		return &S3Error{ ErrorCode: S3ErrMethodNotAllowed }
