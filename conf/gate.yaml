@@ -4,7 +4,7 @@ keystone:
         address: "swy0:5000"
         domain: "swifty"
 daemon:
-        address: "swy0:8686"
+        address: "swy0-web:8686"
         sources:
                 share: "/home/swifty-volume"
                 clone: "/home/swifty/local-sources"
