@@ -204,9 +204,6 @@ func swk8sGenLabels(fn *FunctionDesc, depname string) map[string]string {
 	labels := map[string]string {
 		"deployment":	depname,
 		"swyrun":	fn.Cookie[:32],
-		"tenant":	fn.Tennant,
-		"project":	fn.Project,
-		"function":	fn.Name,
 	}
 	return labels
 }

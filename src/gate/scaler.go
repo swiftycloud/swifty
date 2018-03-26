@@ -95,17 +95,21 @@ func balancerFnDepGrow(ctx context.Context, fdm *FnMemData, goal uint32) {
 	fdm.lock.Unlock()
 }
 
-func listSwyDeps() error {
-	depiface := swk8sClientSet.Extensions().Deployments(v1.NamespaceDefault)
-	deps, err := depiface.List(v1.ListOptions{ LabelSelector: "swyrun" })
+func scalerInit() error {
+	fns, err := dbFuncList()
 	if err != nil {
-		glog.Errorf("Error listing DEPs: %s", err.Error())
-		return errors.New("Error listing PODs")
+		return errors.New("Error listing FNs")
 	}
 
-	/* FIXME -- tune up the BalancerRS DB for this deployment */
+	depiface := swk8sClientSet.Extensions().Deployments(v1.NamespaceDefault)
 
-	for _, dep := range deps.Items {
+	for _, fn := range(fns) {
+		dep, err := depiface.Get(fn.DepName())
+		if err != nil {
+			return errors.New("Error getting dep")
+		}
+
+		glog.Debugf("Chk replicas for %s/%s", fn.SwoId.Str(), fn.DepName())
 		if *dep.Spec.Replicas <= 1 {
 			continue
 		}
@@ -116,7 +120,7 @@ func listSwyDeps() error {
 			dep.ObjectMeta.Labels["function"])
 		glog.Debugf("Found %s grown-up (%d) deployment for %s", dep.Name, *dep.Spec.Replicas, id.Str())
 
-		fdm := memdGet(id.Cookie())
+		fdm := memdGetFn(&fn)
 		if fdm == nil {
 			return fmt.Errorf("Can't get fdmd for %s", id.Str())
 		}
@@ -124,15 +128,6 @@ func listSwyDeps() error {
 		fdm.bd.goal = uint32(*dep.Spec.Replicas)
 		fdm.bd.wakeup = sync.NewCond(&fdm.lock)
 		go balancerFnScaler(fdm)
-	}
-
-	return nil
-}
-
-func scalerInit() error {
-	err := listSwyDeps()
-	if err != nil {
-		return err
 	}
 
 	return nil
