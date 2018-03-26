@@ -290,6 +290,7 @@ func updateFunction(ctx context.Context, conf *YAMLConf, id *SwoId, params *swya
 	var stalled, restart bool
 	var mfix, rlfix bool
 	var oldver string
+	var olds int
 
 	update := make(bson.M)
 
@@ -297,6 +298,8 @@ func updateFunction(ctx context.Context, conf *YAMLConf, id *SwoId, params *swya
 	if err != nil {
 		goto out
 	}
+
+	olds = fn.State
 
 	if params.Code != "" {
 		ctxlog(ctx).Debugf("Will update sources for %s", fn.SwoId.Str())
@@ -374,7 +377,7 @@ func updateFunction(ctx context.Context, conf *YAMLConf, id *SwoId, params *swya
 		update["state"] = fn.State
 	}
 
-	err = dbFuncUpdatePulled(fn, update)
+	err = dbFuncUpdatePulled(fn, update, olds)
 	if err != nil {
 		ctxlog(ctx).Errorf("Can't update pulled %s: %s", fn.Name, err.Error())
 		err = errors.New("DB error")
