@@ -242,7 +242,7 @@ func dbTenStatsGet(tenant string, st *TenStats) error {
 	if err == mgo.ErrNotFound {
 		err = nil
 	}
-	return nil
+	return err
 }
 
 func dbTenStatsUpdate(st *TenStats) {
@@ -259,7 +259,7 @@ func dbFnStatsGet(cookie string, st *FnStats) error {
 	if err == mgo.ErrNotFound {
 		err = nil
 	}
-	return nil
+	return err
 }
 
 func dbFnStatsUpdate(st *FnStats) {
