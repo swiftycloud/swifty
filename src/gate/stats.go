@@ -160,7 +160,7 @@ func (st *FnStats)Init(fn *FunctionDesc) error {
 	err := dbFnStatsGet(fn.Cookie, st)
 	if err == nil {
 		st.Cookie = fn.Cookie
-		st.Start(st, fn.Cookie)
+		st.statsFlush.Init(st, fn.Cookie)
 	}
 	return err
 }
@@ -173,7 +173,7 @@ func (st *TenStats)Init(tenant string) error {
 	err := dbTenStatsGet(tenant, st)
 	if err == nil {
 		st.Tenant = tenant
-		st.Start(st, tenant)
+		st.statsFlush.Init(st, tenant)
 	}
 	return err
 }
@@ -182,13 +182,15 @@ func (st *TenStats)Write() {
 	dbTenStatsUpdate(st)
 }
 
-func (fc *statsFlush)Start(writer statsWriter, id string) {
+func (fc *statsFlush)Init(writer statsWriter, id string) {
 	fc.id = id
 	fc.writer = writer
 	fc.done = make(chan chan bool)
 	fc.flushed = make(chan bool)
 	fc.dirty = false
+}
 
+func (fc *statsFlush)Start() {
 	go func() {
 		for {
 			select {

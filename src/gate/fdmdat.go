@@ -79,7 +79,6 @@ func tendatGetOrInit(tenant string) (*TenantMemData, error) {
 
 	ul, err := dbTenantGetLimits(tenant)
 	if err != nil {
-		nret.stats.Stop()
 		return nil, err
 	}
 
@@ -89,9 +88,8 @@ func tendatGetOrInit(tenant string) (*TenantMemData, error) {
 	ret, loaded = tdat.LoadOrStore(tenant, nret)
 	lret := ret.(*TenantMemData)
 
-	if loaded {
-		nret.stats.Stop()
-	} else {
+	if !loaded {
+		lret.stats.Start()
 		go func() {
 			for {
 				time.Sleep(SwyTenantLimitsUpdPeriod)
@@ -131,7 +129,6 @@ func fndatGetOrInit(cookie string, fn *FunctionDesc) (*FnMemData, error) {
 
 	nret.td, err = tendatGetOrInit(fn.SwoId.Tennant)
 	if err != nil {
-		nret.stats.Stop()
 		return nil, err
 	}
 
@@ -143,11 +140,12 @@ func fndatGetOrInit(cookie string, fn *FunctionDesc) (*FnMemData, error) {
 	nret.public = fn.URLCall
 	nret.depname = fn.DepName()
 
-	ret, _ = fdmd.LoadOrStore(fn.Cookie, nret)
+	var loaded bool
+	ret, loaded = fdmd.LoadOrStore(fn.Cookie, nret)
 	lret := ret.(*FnMemData)
 
-	if lret != nret {
-		nret.stats.Stop()
+	if !loaded {
+		lret.stats.Start()
 	}
 
 	return lret, nil
