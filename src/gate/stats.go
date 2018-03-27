@@ -41,6 +41,7 @@ type FnStats struct {
 	 * billing to change the tennant.
 	 */
 	RunCost		uint64		`bson:"runcost"`
+	Dropped		*time.Time	`bson:"dropped,omitempty"`
 
 	statsFlush			`bson:"-"`
 }

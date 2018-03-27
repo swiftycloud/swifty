@@ -244,12 +244,12 @@ func dbTenStatsUpdate(st *TenStats) {
 
 func dbFnStatsGet(cookie string, st *FnStats) error {
 	c := dbSession.DB(DBStateDB).C(DBColFnStats)
-	return c.Find(bson.M{"cookie": cookie}).One(st)
+	return c.Find(bson.M{"cookie": cookie, "dropped": bson.M{"$exists":false}}).One(st)
 }
 
 func dbFnStatsUpdate(st *FnStats) {
 	c := dbSession.DB(DBStateDB).C(DBColFnStats)
-	_, err := c.Upsert(bson.M{"cookie": st.Cookie}, st)
+	_, err := c.Upsert(bson.M{"cookie": st.Cookie, "dropped": bson.M{"$exists":false}}, st)
 	if err != nil {
 		glog.Errorf("Error upserting fn stats: %s", err.Error())
 	}
@@ -257,7 +257,8 @@ func dbFnStatsUpdate(st *FnStats) {
 
 func dbFnStatsDrop(cookie string) error {
 	c := dbSession.DB(DBStateDB).C(DBColFnStats)
-	err := c.Remove(bson.M{"cookie": cookie})
+	err := c.Update(bson.M{"cookie": cookie, "dropped": bson.M{"$exists":false}},
+		bson.M{"$set": bson.M{"dropped": time.Now()}})
 	if err == mgo.ErrNotFound {
 		err = nil
 	}
