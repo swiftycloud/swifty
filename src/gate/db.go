@@ -156,7 +156,14 @@ func dbFuncFind(id *SwoId) (*FunctionDesc, error) {
 }
 
 func dbFuncFindByCookie(cookie string) (*FunctionDesc, error) {
-	return dbFuncFindOne(bson.M{"cookie": cookie})
+	fn, err := dbFuncFindOne(bson.M{"cookie": cookie})
+	if err != nil {
+		fn = nil
+		if err == mgo.ErrNotFound {
+			err = nil
+		}
+	}
+	return fn, err
 }
 
 func dbFuncFindStates(id *SwoId, states []int) (*FunctionDesc, error) {
@@ -231,7 +238,11 @@ func dbFuncRemove(fn *FunctionDesc) error {
 
 func dbTenStatsGet(tenant string, st *TenStats) error {
 	c := dbSession.DB(DBStateDB).C(DBColTenStats)
-	return c.Find(bson.M{"tenant": tenant}).One(st)
+	err := c.Find(bson.M{"tenant": tenant}).One(st)
+	if err == mgo.ErrNotFound {
+		err = nil
+	}
+	return nil
 }
 
 func dbTenStatsUpdate(st *TenStats) {
@@ -244,7 +255,11 @@ func dbTenStatsUpdate(st *TenStats) {
 
 func dbFnStatsGet(cookie string, st *FnStats) error {
 	c := dbSession.DB(DBStateDB).C(DBColFnStats)
-	return c.Find(bson.M{"cookie": cookie, "dropped": bson.M{"$exists":false}}).One(st)
+	err := c.Find(bson.M{"cookie": cookie, "dropped": bson.M{"$exists":false}}).One(st)
+	if err == mgo.ErrNotFound {
+		err = nil
+	}
+	return nil
 }
 
 func dbFnStatsUpdate(st *FnStats) {

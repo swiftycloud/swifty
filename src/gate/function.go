@@ -158,7 +158,11 @@ func validateProjectAndFuncName(params *swyapi.FunctionAdd) error {
 }
 
 func checkCount(id *SwoId) error {
-	tmd := tendatGet(id.Tennant)
+	tmd, err := tendatGet(id.Tennant)
+	if err != nil {
+		return err
+	}
+
 	if tmd.fnlim != 0 {
 		nr, err := dbFuncCountProj(id)
 		if err != nil {
@@ -385,7 +389,11 @@ func updateFunction(ctx context.Context, conf *YAMLConf, id *SwoId, params *swya
 	}
 
 	if rlfix || mfix {
-		fdm := memdGetFn(fn)
+		fdm := memdGetCond(fn.Cookie)
+		if fdm == nil {
+			goto skip
+		}
+
 		if mfix {
 			fdm.mem = fn.Size.Mem
 		}
@@ -404,6 +412,8 @@ func updateFunction(ctx context.Context, conf *YAMLConf, id *SwoId, params *swya
 				fdm.crl = nil
 			}
 		}
+	skip:
+		;
 	}
 
 	if restart {
@@ -545,7 +555,7 @@ func fnWaiterKick(cookie string) {
 
 func notifyPodTmo(ctx context.Context, cookie string) {
 	fn, err := dbFuncFindByCookie(cookie)
-	if err != nil {
+	if err != nil || fn == nil {
 		ctxlog(ctx).Errorf("POD timeout %s error: %s", cookie, err.Error())
 		return
 	}

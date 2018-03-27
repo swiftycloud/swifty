@@ -79,9 +79,13 @@ type statsOpaque struct {
 	bodySz		int
 }
 
-func statsGet(fn *FunctionDesc) *FnStats {
-	md := memdGetFn(fn)
-	return &md.stats
+func statsGet(fn *FunctionDesc) (*FnStats, error) {
+	md, err := memdGetFn(fn)
+	if err != nil {
+		return nil, err
+	} else {
+		return &md.stats, nil
+	}
 }
 
 func statsStart() *statsOpaque {
@@ -152,20 +156,26 @@ func statsDrop(fn *FunctionDesc) error {
 	return dbFnStatsDrop(fn.Cookie)
 }
 
-func (st *FnStats)Init(fn *FunctionDesc) {
-	dbFnStatsGet(fn.Cookie, st)
-	st.Cookie = fn.Cookie
-	st.Start(st, fn.Cookie)
+func (st *FnStats)Init(fn *FunctionDesc) error {
+	err := dbFnStatsGet(fn.Cookie, st)
+	if err == nil {
+		st.Cookie = fn.Cookie
+		st.Start(st, fn.Cookie)
+	}
+	return err
 }
 
 func (st *FnStats)Write() {
 	dbFnStatsUpdate(st)
 }
 
-func (st *TenStats)Init(tenant string) {
-	dbTenStatsGet(tenant, st)
-	st.Tenant = tenant
-	st.Start(st, tenant)
+func (st *TenStats)Init(tenant string) error {
+	err := dbTenStatsGet(tenant, st)
+	if err == nil {
+		st.Tenant = tenant
+		st.Start(st, tenant)
+	}
+	return err
 }
 
 func (st *TenStats)Write() {

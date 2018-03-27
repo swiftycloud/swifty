@@ -120,9 +120,9 @@ func scalerInit() error {
 			dep.ObjectMeta.Labels["function"])
 		glog.Debugf("Found %s grown-up (%d) deployment for %s", dep.Name, *dep.Spec.Replicas, id.Str())
 
-		fdm := memdGetFn(&fn)
-		if fdm == nil {
-			return fmt.Errorf("Can't get fdmd for %s", id.Str())
+		fdm, err := memdGetFn(&fn)
+		if err != nil {
+			return fmt.Errorf("Can't get fdmd for %s: %s", id.Str(), err.Error())
 		}
 
 		fdm.bd.goal = uint32(*dep.Spec.Replicas)

@@ -28,11 +28,11 @@ type TenantMemData struct {
 	lock	sync.Mutex
 }
 
-func memdGetFn(fn *FunctionDesc) *FnMemData {
+func memdGetFn(fn *FunctionDesc) (*FnMemData, error) {
 	return fndatGetOrInit(fn.Cookie, fn)
 }
 
-func memdGet(cookie string) *FnMemData {
+func memdGet(cookie string) (*FnMemData, error) {
 	return fndatGetOrInit(cookie, nil)
 }
 
@@ -61,21 +61,26 @@ func setupLimits(td *TenantMemData, ul *swyapi.UserLimits) {
 	}
 }
 
-func tendatGet(tenant string) *TenantMemData {
+func tendatGet(tenant string) (*TenantMemData, error) {
 	return tendatGetOrInit(tenant)
 }
 
-func tendatGetOrInit(tenant string) *TenantMemData {
+func tendatGetOrInit(tenant string) (*TenantMemData, error) {
 	ret, ok := tdat.Load(tenant)
 	if ok {
-		return ret.(*TenantMemData)
+		return ret.(*TenantMemData), nil
 	}
 
 	nret := &TenantMemData{}
-	nret.stats.Init(tenant)
+	err := nret.stats.Init(tenant)
+	if err != nil {
+		return nil, err
+	}
+
 	ul, err := dbTenantGetLimits(tenant)
 	if err != nil {
-		glog.Errorf("No way to read user limits: %s", err.Error())
+		nret.stats.Stop()
+		return nil, err
 	}
 
 	setupLimits(nret, ul)
@@ -100,32 +105,41 @@ func tendatGetOrInit(tenant string) *TenantMemData {
 		}()
 	}
 
-	return lret
+	return lret, nil
 }
 
-func fndatGetOrInit(cookie string, fn *FunctionDesc) *FnMemData {
+func fndatGetOrInit(cookie string, fn *FunctionDesc) (*FnMemData, error) {
 	var err error
 
 	ret, ok := fdmd.Load(cookie)
 	if ok {
-		return ret.(*FnMemData)
+		return ret.(*FnMemData), nil
 	}
 
 	if fn == nil {
 		fn, err = dbFuncFindByCookie(cookie)
-		if err != nil {
-			return nil
+		if err != nil || fn == nil {
+			return nil, err
 		}
 	}
 
 	nret := &FnMemData{}
+	err = nret.stats.Init(fn)
+	if err != nil {
+		return nil, err
+	}
+
+	nret.td, err = tendatGetOrInit(fn.SwoId.Tennant)
+	if err != nil {
+		nret.stats.Stop()
+		return nil, err
+	}
+
 	if fn.Size.Rate != 0 {
 		nret.crl = xratelimit.MakeRL(fn.Size.Burst, fn.Size.Rate)
 	}
 
-	nret.stats.Init(fn)
 	nret.mem = fn.Size.Mem
-	nret.td = tendatGetOrInit(fn.SwoId.Tennant)
 	nret.public = fn.URLCall
 	nret.depname = fn.DepName()
 
@@ -136,7 +150,7 @@ func fndatGetOrInit(cookie string, fn *FunctionDesc) *FnMemData {
 		nret.stats.Stop()
 	}
 
-	return lret
+	return lret, nil
 }
 
 func memdGone(fn *FunctionDesc) {

@@ -501,7 +501,11 @@ func handleFunctionStats(ctx context.Context, w http.ResponseWriter, r *http.Req
 		return GateErrD(err)
 	}
 
-	stats = statsGet(fn)
+	stats, err = statsGet(fn)
+	if err != nil {
+		return GateErrM(swy.GateGenErr, "Error getting stats")
+	}
+
 	err = swyhttp.MarshalAndWrite(w,  swyapi.FunctionStats{
 			Called:		stats.Called,
 			Timeouts:	stats.Timeouts,
@@ -541,7 +545,11 @@ func handleFunctionInfo(ctx context.Context, w http.ResponseWriter, r *http.Requ
 		url = conf.Daemon.Addr + "/call/" + fn.Cookie
 	}
 
-	stats = statsGet(fn)
+	stats, err = statsGet(fn)
+	if err != nil {
+		return GateErrM(swy.GateGenErr, "Error getting stats")
+	}
+
 	fv, err = dbBalancerRSListVersions(fn.Cookie)
 	if err != nil {
 		return GateErrD(err)
@@ -683,7 +691,13 @@ func handleFunctionCall(w http.ResponseWriter, r *http.Request) {
 	ctx := context.Background()
 	fnId := mux.Vars(r)["fnid"]
 
-	fmd = memdGet(fnId)
+	fmd, err = memdGet(fnId)
+	if err != nil {
+		code = http.StatusInternalServerError
+		err = errors.New("Error getting function")
+		goto out
+	}
+
 	if fmd == nil || !fmd.public {
 		code = http.StatusServiceUnavailable
 		err = errors.New("No such function")
@@ -790,7 +804,11 @@ func handleFunctionList(ctx context.Context, w http.ResponseWriter, r *http.Requ
 	}
 
 	for _, v := range recs {
-		stats := statsGet(&v)
+		stats, err := statsGet(&v)
+		if err != nil {
+			return GateErrM(swy.GateGenErr, "Error getting stats")
+		}
+
 		result = append(result,
 			swyapi.FunctionItem{
 				FuncName:	v.Name,
