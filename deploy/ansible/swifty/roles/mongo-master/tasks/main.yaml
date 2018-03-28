@@ -37,6 +37,9 @@
     - "Mware"
     - "Logs"
     - "FnStats"
+    - "FnStatsArch"
+    - "TenantStats"
+    - "TenantStatsArch"
     - "Balancer"
     - "BalancerRS"
   when: mongod_installed.changed

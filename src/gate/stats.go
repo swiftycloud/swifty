@@ -148,12 +148,16 @@ func statsInit(conf *YAMLConf) error {
 }
 
 func statsDrop(fn *FunctionDesc) error {
-	md := memdGetCond(fn.Cookie)
-	if md != nil && !md.stats.closed {
+	md, err := memdGetFn(fn)
+	if err != nil {
+		return err
+	}
+
+	if !md.stats.closed {
 		md.stats.Stop()
 	}
 
-	return dbFnStatsDrop(fn.Cookie)
+	return dbFnStatsDrop(fn.Cookie, &md.stats)
 }
 
 func (st *FnStats)Init(fn *FunctionDesc) error {

@@ -19,7 +19,9 @@ const (
 	DBColMware	= "Mware"
 	DBColLogs	= "Logs"
 	DBColFnStats	= "FnStats"
+	DBColFnStatsA	= "FnStatsArch"
 	DBColTenStats	= "TenantStats"
+	DBColTenStatsA	= "TenantStatsArch"
 	DBColBalancerRS = "BalancerRS"
 	DBColLimits	= "Limits"
 )
@@ -255,7 +257,7 @@ func dbTenStatsUpdate(st *TenStats) {
 
 func dbFnStatsGet(cookie string, st *FnStats) error {
 	c := dbSession.DB(DBStateDB).C(DBColFnStats)
-	err := c.Find(bson.M{"cookie": cookie, "dropped": bson.M{"$exists":false}}).One(st)
+	err := c.Find(bson.M{"cookie": cookie}).One(st)
 	if err == mgo.ErrNotFound {
 		err = nil
 	}
@@ -264,16 +266,26 @@ func dbFnStatsGet(cookie string, st *FnStats) error {
 
 func dbFnStatsUpdate(st *FnStats) {
 	c := dbSession.DB(DBStateDB).C(DBColFnStats)
-	_, err := c.Upsert(bson.M{"cookie": st.Cookie, "dropped": bson.M{"$exists":false}}, st)
+	_, err := c.Upsert(bson.M{"cookie": st.Cookie}, st)
 	if err != nil {
 		glog.Errorf("Error upserting fn stats: %s", err.Error())
 	}
 }
 
-func dbFnStatsDrop(cookie string) error {
+func dbFnStatsDrop(cookie string, st *FnStats) error {
+	if st.Called != 0 {
+		n := time.Now()
+		st.Dropped = &n
+
+		c := dbSession.DB(DBStateDB).C(DBColFnStatsA)
+		err := c.Insert(st)
+		if err != nil {
+			return err
+		}
+	}
+
 	c := dbSession.DB(DBStateDB).C(DBColFnStats)
-	err := c.Update(bson.M{"cookie": cookie, "dropped": bson.M{"$exists":false}},
-		bson.M{"$set": bson.M{"dropped": time.Now()}})
+	err := c.Remove(bson.M{"cookie": cookie})
 	if err == mgo.ErrNotFound {
 		err = nil
 	}
