@@ -470,7 +470,7 @@ func removeFunction(ctx context.Context, conf *YAMLConf, id *SwoId) *swyapi.Gate
 	ctxlog(ctx).Debugf("Forget function %s", fn.SwoId.Str())
 	// Allow to remove function if only we're in known state,
 	// otherwise wait for function building to complete
-	err = dbFuncSetStateCond(id, swy.DBFuncStateTrm, []int{fn.State})
+	err = dbFuncSetStateCond(id, swy.DBFuncStateTrm, fn.State)
 	if err != nil {
 		ctxlog(ctx).Errorf("Can't terminate function %s: %s", id.Name, err.Error())
 		return GateErrM(swy.GateGenErr, "Cannot terminate fn")
@@ -602,7 +602,7 @@ func deactivateFunction(ctx context.Context, conf *YAMLConf, id *SwoId) *swyapi.
 		return GateErrD(err)
 	}
 
-	err = dbFuncSetStateCond(id, swy.DBFuncStateDea, []int{swy.DBFuncStateRdy})
+	err = dbFuncSetStateCond(id, swy.DBFuncStateDea, swy.DBFuncStateRdy)
 	if err != nil {
 		ctxlog(ctx).Errorf("Can't deactivate function %s: %s", id.Name, err.Error())
 		return GateErrM(swy.GateGenErr, "Cannot deactivate function")

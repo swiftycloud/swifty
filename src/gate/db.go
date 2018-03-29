@@ -191,9 +191,9 @@ func dbFuncListWithEvents() ([]FunctionDesc, error) {
 	return dbFuncFindAll(bson.M{"event.source": bson.M{"$ne": ""}})
 }
 
-func dbFuncSetStateCond(id *SwoId, state int, states []int) error {
+func dbFuncSetStateCond(id *SwoId, state, ostate int) error {
 	return dbFuncUpdate(
-		bson.M{"cookie": id.Cookie(), "state": bson.M{"$in": states}},
+		bson.M{"cookie": id.Cookie(), "state": ostate},
 		bson.M{"$set": bson.M{"state": state}})
 }
 
