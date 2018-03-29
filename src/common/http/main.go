@@ -2,6 +2,8 @@ package swyhttp
 
 import (
 	"encoding/json"
+	"crypto/tls"
+	"crypto/x509"
 	"io/ioutil"
 	"net/http"
 	"strings"
@@ -21,6 +23,7 @@ type RestReq struct {
 	Timeout		uint
 	Headers		map[string]string
 	Success		int
+	Certs		[]byte
 }
 
 func SetCORS(w http.ResponseWriter, methods []string, headers []string) {
@@ -93,6 +96,12 @@ func MarshalAndPost(req *RestReq, data interface{}) (*http.Response, error) {
 
 	var c = &http.Client{
 		Timeout: time.Duration(req.Timeout) * time.Second,
+	}
+
+	if req.Certs != nil {
+		cpool := x509.NewCertPool()
+		cpool.AppendCertsFromPEM(req.Certs)
+		c.Transport = &http.Transport{ TLSClientConfig: &tls.Config{ RootCAs: cpool }}
 	}
 
 	var req_body io.Reader

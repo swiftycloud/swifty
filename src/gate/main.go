@@ -51,11 +51,17 @@ type YAMLConfSources struct {
 	Clone		string			`yaml:"clone"`
 }
 
+type YAMLConfHTTPS struct {
+	Cert		string			`yaml:"cert"`
+	Key		string			`yaml:"key"`
+}
+
 type YAMLConfDaemon struct {
 	Addr		string			`yaml:"address"`
 	Sources		YAMLConfSources		`yaml:"sources"`
 	LogLevel	string			`yaml:"loglevel"`
 	Prometheus	string			`yaml:"prometheus"`
+	HTTPS		*YAMLConfHTTPS		`yaml:"https,omitempty"`
 }
 
 type YAMLConfKeystone struct {
@@ -1217,7 +1223,18 @@ func main() {
 			ReadTimeout:  60 * time.Second,
 	}
 
-	err = gatesrv.ListenAndServe()
+	if conf.Daemon.HTTPS == nil {
+		if SwyModeDevel {
+			glog.Debugf("Going plain http")
+			err = gatesrv.ListenAndServe()
+		} else {
+			err = errors.New("Can't go non-https in production mode")
+		}
+	} else {
+		glog.Debugf("Going https")
+		err = gatesrv.ListenAndServeTLS(conf.Daemon.HTTPS.Cert, conf.Daemon.HTTPS.Key)
+	}
+
 	if err != nil {
 		glog.Errorf("ListenAndServe: %s", err.Error())
 	}

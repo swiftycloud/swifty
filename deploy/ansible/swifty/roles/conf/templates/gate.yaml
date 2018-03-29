@@ -9,6 +9,9 @@ daemon:
                 share: "/home/swifty-volume"
                 clone: "/home/swifty/local-sources"
         loglevel: "debug"
+        https:
+                cert: "/etc/swifty/ca/server.crt"
+                key: "/etc/swifty/ca/server.key"
 middleware:
         mwseckey: "MWSECPASS"
         maria:

@@ -28,6 +28,8 @@ type LoginInfo struct {
 
 type YAMLConf struct {
 	Login		LoginInfo	`yaml:"login"`
+	TLS		bool		`yaml:"tls"`
+	Certs		string		`yaml:"x509crtfile"`
 }
 
 var conf YAMLConf
@@ -38,11 +40,29 @@ func fatal(err error) {
 }
 
 func make_faas_req_x(url string, in interface{}, succ_code int, tmo uint) (*http.Response, error) {
-	var address string = "http://" + conf.Login.Host + ":" + conf.Login.Port + "/v1/" + url
+	var address string
+
+	if conf.TLS {
+		address = "https"
+	} else {
+		address = "http"
+	}
+
+	address += "://" + conf.Login.Host + ":" + conf.Login.Port + "/v1/" + url
 
 	h := make(map[string]string)
 	if conf.Login.Token != "" {
 		h["X-Auth-Token"] = conf.Login.Token
+	}
+
+	var crt []byte
+	if conf.TLS && conf.Certs != "" {
+		var err error
+
+		crt, err = ioutil.ReadFile(conf.Certs)
+		if err != nil {
+			return nil, fmt.Errorf("Error reading cert file: %s", err.Error())
+		}
 	}
 
 	return swyhttp.MarshalAndPost(
@@ -51,6 +71,7 @@ func make_faas_req_x(url string, in interface{}, succ_code int, tmo uint) (*http
 				Headers:	h,
 				Success:	succ_code,
 				Timeout:	tmo,
+				Certs:		crt,
 			}, in)
 }
 
@@ -676,7 +697,7 @@ func login() {
 	}
 }
 
-func make_login(creds string) {
+func make_login(creds string, opts [8]string) {
 	//
 	// Login string is user:pass@host:port
 	//
@@ -692,6 +713,13 @@ func make_login(creds string) {
 	conf.Login.Pass = c.Pass
 	conf.Login.Host = c.Host
 	conf.Login.Port = c.Port
+
+	if opts[0] == "yes" {
+		conf.TLS = true
+		if opts[1] != "" {
+			conf.Certs = opts[1]
+		}
+	}
 
 	refresh_token(home)
 }
@@ -831,6 +859,8 @@ func bindCmdUsage(cmd string, args []string, help string, wp bool) {
 func main() {
 	var opts [8]string
 
+	cmdMap[CMD_LOGIN].opts.StringVar(&opts[0], "tls", "no", "TLS mode")
+	cmdMap[CMD_LOGIN].opts.StringVar(&opts[1], "cert", "", "x509 cert file")
 	bindCmdUsage(CMD_LOGIN,	[]string{"USER:PASS@HOST:PORT"}, "Login into the system", false)
 
 	bindCmdUsage(CMD_PS,	[]string{}, "List projects", false)
@@ -908,13 +938,14 @@ func main() {
 		os.Exit(1)
 	}
 
+	npa := len(cd.pargs) + 2
+	cd.opts.Parse(os.Args[npa:])
+
 	if os.Args[1] == CMD_LOGIN {
-		make_login(os.Args[2])
+		make_login(os.Args[2], opts)
 		return
 	}
 
-	npa := len(cd.pargs) + 2
-	cd.opts.Parse(os.Args[npa:])
 	login()
 
 	if cd.pcall != nil {
