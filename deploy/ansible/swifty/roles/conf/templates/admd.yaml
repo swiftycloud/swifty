@@ -1,5 +1,6 @@
 ---
-listen: "{{ groups['master'][0] }}:8687"
+daemon:
+        address: "{{ groups['master'][0] }}:8687"
 gate: "{{ groups['master'][0] }}:8686"
 keystone:
         address: "{{ groups['master'][0] }}:5000"

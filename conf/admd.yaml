@@ -1,5 +1,6 @@
 ---
-listen: "swy0-web:8687"
+daemon:
+        address: "swy0-web:8687"
 gate: "swy0-web:8686"
 keystone:
         address: "swy0:5000"

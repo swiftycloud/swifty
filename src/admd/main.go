@@ -28,8 +28,12 @@ type YAMLConfKeystone struct {
 	Pass		string			`yaml:"pass"`
 }
 
+type YAMLConfDaemon struct {
+	Address		string			`yaml:"address"`
+}
+
 type YAMLConf struct {
-	Listen		string			`yaml:"listen"`
+	Daemon		YAMLConfDaemon		`yaml:"daemon"`
 	Gate		string			`yaml:"gate"`
 	Keystone	YAMLConfKeystone	`yaml:"keystone"`
 	DB		string			`yaml:"db"`
@@ -494,7 +498,7 @@ func main() {
 
 	gatesrv = &http.Server{
 			Handler:      r,
-			Addr:         conf.Listen,
+			Addr:         conf.Daemon.Address,
 			WriteTimeout: 60 * time.Second,
 			ReadTimeout:  60 * time.Second,
 	}
