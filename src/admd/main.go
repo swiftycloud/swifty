@@ -28,8 +28,14 @@ type YAMLConfKeystone struct {
 	Pass		string			`yaml:"pass"`
 }
 
+type YAMLConfHTTPS struct {
+	Cert		string			`yaml:"cert"`
+	Key		string			`yaml:"key"`
+}
+
 type YAMLConfDaemon struct {
 	Address		string			`yaml:"address"`
+	HTTPS		*YAMLConfHTTPS		`yaml:"https,omitempty"`
 }
 
 type YAMLConf struct {
@@ -503,7 +509,17 @@ func main() {
 			ReadTimeout:  60 * time.Second,
 	}
 
-	err = gatesrv.ListenAndServe()
+	if conf.Daemon.HTTPS == nil {
+		if devel {
+			log.Debugf("Going plain http")
+			err = gatesrv.ListenAndServe()
+		} else {
+			err = errors.New("Can't go non-https in production mode")
+		}
+	} else {
+		log.Debugf("Going https")
+		err = gatesrv.ListenAndServeTLS(conf.Daemon.HTTPS.Cert, conf.Daemon.HTTPS.Key)
+	}
 	if err != nil {
 		log.Errorf("ListenAndServe: %s", err.Error())
 	}

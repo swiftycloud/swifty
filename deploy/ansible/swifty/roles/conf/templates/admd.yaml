@@ -1,6 +1,9 @@
 ---
 daemon:
         address: "{{ groups['master'][0] }}:8687"
+        https:
+                cert: "/etc/swifty/ca/server.crt"
+                key: "/etc/swifty/ca/server.key"
 gate: "{{ groups['master'][0] }}:8686"
 keystone:
         address: "{{ groups['master'][0] }}:5000"
