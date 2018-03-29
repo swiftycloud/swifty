@@ -455,13 +455,22 @@ func removeFunction(ctx context.Context, conf *YAMLConf, id *SwoId) *swyapi.Gate
 		return GateErrD(err)
 	}
 
+	switch fn.State {
+	case swy.DBFuncStateStr:
+	case swy.DBFuncStateRdy:
+	case swy.DBFuncStateStl:
+	case swy.DBFuncStateDea:
+	case swy.DBFuncStateTrm:
+		;
+	default:
+		ctxlog(ctx).Errorf("Can't terminate %s function %s", fnStates[fn.State], id.Name)
+		return GateErrM(swy.GateGenErr, "Cannot terminate fn")
+	}
+
 	ctxlog(ctx).Debugf("Forget function %s", fn.SwoId.Str())
 	// Allow to remove function if only we're in known state,
 	// otherwise wait for function building to complete
-	err = dbFuncSetStateCond(id, swy.DBFuncStateTrm, []int{
-			swy.DBFuncStateStr,
-			swy.DBFuncStateRdy, swy.DBFuncStateStl,
-			swy.DBFuncStateDea, swy.DBFuncStateTrm})
+	err = dbFuncSetStateCond(id, swy.DBFuncStateTrm, []int{fn.State})
 	if err != nil {
 		ctxlog(ctx).Errorf("Can't terminate function %s: %s", id.Name, err.Error())
 		return GateErrM(swy.GateGenErr, "Cannot terminate fn")
