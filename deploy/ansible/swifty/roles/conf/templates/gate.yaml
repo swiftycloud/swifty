@@ -9,6 +9,7 @@ daemon:
                 share: "/home/swifty-volume"
                 clone: "/home/swifty/local-sources"
         loglevel: "debug"
+        prometheus: "{{ groups['master'][0] }}:9012"
         https:
                 cert: "/etc/swifty/ca/server.crt"
                 key: "/etc/swifty/ca/server.key"
