@@ -35,12 +35,16 @@ func BalancerPodDel(pod *k8sPod) error {
 	return nil
 }
 
-func BalancerPodAdd(pod *k8sPod) error {
+func BalancerPodUp(pod *k8sPod) error {
+	return dbBalancerPodAdd(pod)
+}
+
+func BalancerPodRdy(pod *k8sPod) error {
 	fnid := pod.SwoId.Cookie()
 
 	balancerPodsFlush(fnid)
 
-	err := dbBalancerPodAdd(fnid, pod)
+	err := dbBalancerPodUpd(fnid, pod)
 	if err != nil {
 		return fmt.Errorf("Add error: %s", err.Error())
 	}

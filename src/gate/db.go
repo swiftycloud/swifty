@@ -341,17 +341,28 @@ func dbBalancerRSListVersions(cookie string) ([]string, error) {
 	return fv, err
 }
 
-func dbBalancerPodAdd(fnId string, pod *k8sPod) error {
+func dbBalancerPodAdd(pod *k8sPod) error {
 	c := dbSession.DB(DBStateDB).C(DBColBalancerRS)
 	err := c.Insert(bson.M{
-			"fnid":		fnId,
 			"uid":		pod.UID,
 			"wdogaddr":	pod.WdogAddr,
 			"wdogport":	pod.WdogPort,
 			"host":		pod.Host,
-			"fnversion":	pod.Version,
 		})
 	if err != nil {
+		return fmt.Errorf("add: %s", err.Error())
+	}
+
+	return nil
+}
+
+func dbBalancerPodUpd(fnId string, pod *k8sPod) error {
+	c := dbSession.DB(DBStateDB).C(DBColBalancerRS)
+	err := c.Update(bson.M{"uid": pod.UID}, bson.M{"$set": bson.M {
+			"fnid":		fnId,
+			"fnversion":	pod.Version,
+		}})
+	if err != nil && err != mgo.ErrNotFound {
 		return fmt.Errorf("add: %s", err.Error())
 	}
 
