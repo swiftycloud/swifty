@@ -1,0 +1,2 @@
+all:
+	$(Q) go build
