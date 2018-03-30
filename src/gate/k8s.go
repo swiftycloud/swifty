@@ -275,6 +275,7 @@ func specSetRes(res *v1.ResourceRequirements, fn *FunctionDesc) {
 
 func swk8sRun(ctx context.Context, conf *YAMLConf, fn *FunctionDesc) error {
 	var err error
+	roRoot := true
 
 	depname := fn.DepName()
 	ctxlog(ctx).Debugf("Start %s deployment for %s (img: %s)", depname, fn.SwoId.Str(), "swifty/" + fn.Code.Lang)
@@ -324,6 +325,9 @@ func swk8sRun(ctx context.Context, conf *YAMLConf, fn *FunctionDesc) error {
 						},
 					},
 					ImagePullPolicy: v1.PullNever,
+					SecurityContext: &v1.SecurityContext {
+						ReadOnlyRootFilesystem: &roRoot,
+					},
 				},
 			},
 		},
