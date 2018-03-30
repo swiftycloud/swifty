@@ -187,6 +187,12 @@ swifty/swift: swy-wdog-go kubectl/docker/images/swift/Dockerfile
 	$(Q) $(MAKE) -C kubectl/docker/images/swift all
 .PHONY: swifty/swift
 
+swifty/gate: swy-gate kubectl/docker/gate/Dockerfile
+	$(call msg-gen,$@)
+	$(Q) $(CP) swy-gate kubectl/docker/gate/swy-gate
+	$(Q) $(MAKE) -C kubectl/docker/gate all
+.PHONY: swifty/gate
+
 images: swifty/python swifty/golang swifty/swift
 	@true
 .PHONY: images
