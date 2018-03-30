@@ -495,14 +495,38 @@ func swk8sPodUpd(obj_old, obj_new interface{}) {
 	ctx = mkContext(ctx, "::k8s-notify")
 
 	if po.Status.PodIP == "" && pn.Status.PodIP != "" {
-		swk8sPodUp(ctx, genBalancerPod(pn))
+		podEvents <- &podEvent{up: true, ctx: ctx, pod: genBalancerPod(pn)}
 	} else if po.Status.PodIP != "" && pn.Status.PodIP == "" {
-		swk8sPodDown(ctx, genBalancerPod(po))
+		podEvents <- &podEvent{up: false, ctx: ctx, pod: genBalancerPod(pn)}
 	} else if po.Status.PodIP != "" && pn.Status.PodIP != "" {
 		if po.Status.PodIP != pn.Status.PodIP {
 			glog.Errorf("BAD news: POD IP has changed, while shouldn't")
 		}
 	}
+}
+
+type podEvent struct {
+	up	bool
+	ctx	context.Context
+	pod	*k8sPod
+}
+
+var podEvents chan *podEvent
+
+func podEventLoop() {
+	for {
+		evt := <-podEvents
+		if evt.up {
+			swk8sPodUp(evt.ctx, evt.pod)
+		} else {
+			swk8sPodDown(evt.ctx, evt.pod)
+		}
+	}
+}
+
+func init() {
+	podEvents = make(chan *podEvent)
+	go podEventLoop()
 }
 
 func swk8sMwSecretGen(envs [][2]string) map[string][]byte {
