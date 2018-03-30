@@ -407,9 +407,9 @@ func swk8sPodAdd(obj interface{}) {
 func swk8sPodDel(obj interface{}) {
 }
 
-func waitPodPort(addr, port string) error {
+func waitPodPort(ctx context.Context, addr, port string) error {
 	wt := 100 * time.Millisecond
-	var slept time.Duration
+	till := time.Now().Add(SwyPodStartTmo)
 	for {
 		conn, err := net.Dial("tcp", addr + ":" + port)
 		if err == nil {
@@ -417,7 +417,7 @@ func waitPodPort(addr, port string) error {
 			break
 		}
 
-		if slept >= SwyPodStartTmo {
+		if time.Now().After(till) {
 			return fmt.Errorf("Pod's port not up for too long")
 		}
 
@@ -431,9 +431,8 @@ func waitPodPort(addr, port string) error {
 		 * Moreover, this port waiter is only needed when the fn
 		 * is being waited for.
 		 */
-		glog.Debugf("Port not open yet (%s) ... polling", err.Error())
+		ctxlog(ctx).Debugf("Port %s:%s not open yet (%s) ... polling", addr, port, err.Error())
 		<-time.After(wt)
-		slept += wt
 		wt += 50 * time.Millisecond
 	}
 
@@ -454,8 +453,10 @@ func swk8sPodUp(ctx context.Context, pod *k8sPod) {
 	}
 
 	go func() {
-		err = waitPodPort(pod.WdogAddr, pod.WdogPort)
+		err = waitPodPort(ctx, pod.WdogAddr, pod.WdogPort)
 		if err != nil {
+			ctxlog(ctx).Errorf("POD %s port wait err: %s",
+					pod.UID, err.Error())
 			return
 		}
 
