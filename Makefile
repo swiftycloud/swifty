@@ -193,6 +193,12 @@ swifty/gate: swy-gate kubectl/docker/gate/Dockerfile
 	$(Q) $(MAKE) -C kubectl/docker/gate all
 .PHONY: swifty/gate
 
+swifty/admd: swy-admd kubectl/docker/admd/Dockerfile
+	$(call msg-gen,$@)
+	$(Q) $(CP) swy-admd kubectl/docker/admd/swy-admd
+	$(Q) $(MAKE) -C kubectl/docker/admd all
+.PHONY: swifty/admd
+
 images: swifty/python swifty/golang swifty/swift
 	@true
 .PHONY: images
