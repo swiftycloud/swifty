@@ -447,22 +447,20 @@ func swk8sPodUp(ctx context.Context, pod *k8sPod) {
 		return
 	}
 
-	go func() {
-		err := waitPodPort(pod.WdogAddr, pod.WdogPort)
-		if err != nil {
-			return
-		}
+	err := waitPodPort(pod.WdogAddr, pod.WdogPort)
+	if err != nil {
+		return
+	}
 
-		err = BalancerPodAdd(pod)
-		if err != nil {
-			ctxlog(ctx).Errorf("Can't add pod %s/%s/%s: %s",
-					pod.DepName, pod.UID,
-					pod.WdogAddr, err.Error())
-			return
-		}
+	err = BalancerPodAdd(pod)
+	if err != nil {
+		ctxlog(ctx).Errorf("Can't add pod %s/%s/%s: %s",
+		pod.DepName, pod.UID,
+		pod.WdogAddr, err.Error())
+		return
+	}
 
-		notifyPodUp(ctx, pod)
-	}()
+	notifyPodUp(ctx, pod)
 }
 
 func swk8sPodDown(ctx context.Context, pod *k8sPod) {
