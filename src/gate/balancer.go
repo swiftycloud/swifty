@@ -1,11 +1,9 @@
 package main
 
 import (
-	"time"
 	"sync"
 	"sync/atomic"
 	"errors"
-	"net"
 	"context"
 	"fmt"
 
@@ -37,50 +35,12 @@ func BalancerPodDel(pod *k8sPod) error {
 	return nil
 }
 
-func waitPort(addr, port string) error {
-	wt := 100 * time.Millisecond
-	var slept time.Duration
-	for {
-		conn, err := net.Dial("tcp", addr + ":" + port)
-		if err == nil {
-			conn.Close()
-			break
-		}
-
-		if slept >= SwyPodStartTmo {
-			return fmt.Errorf("Pod's port not up for too long")
-		}
-
-		/*
-		 * Kuber sends us POD-Up event when POD is up, not when
-		 * watchdog is ready :) But we need to make sure that the
-		 * port is open and ready to serve connetions. Possible
-		 * solution might be to make wdog ping us after openeing
-		 * its socket, but ... will gate stand that ping flood?
-		 *
-		 * Moreover, this port waiter is only needed when the fn
-		 * is being waited for.
-		 */
-		glog.Debugf("Port not open yet (%s) ... polling", err.Error())
-		<-time.After(wt)
-		slept += wt
-		wt += 50 * time.Millisecond
-	}
-
-	return nil
-}
-
 func BalancerPodAdd(pod *k8sPod) error {
 	fnid := pod.SwoId.Cookie()
 
-	err := waitPort(pod.WdogAddr, pod.WdogPort)
-	if err != nil {
-		return err
-	}
-
 	balancerPodsFlush(fnid)
 
-	err = dbBalancerPodAdd(fnid, pod)
+	err := dbBalancerPodAdd(fnid, pod)
 	if err != nil {
 		return fmt.Errorf("Add error: %s", err.Error())
 	}
