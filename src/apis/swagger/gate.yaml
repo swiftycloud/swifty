@@ -34,6 +34,35 @@ paths:
           description: Something went wrong
         '401':
           description: Bad username/pass
+          
+  /stats:
+    post:
+      summary: Show user statistics
+      parameters:
+        - in: header
+          name: X-Auth-Token
+          type: string
+          required: true
+        - name: date
+          in: body
+          description: Function name
+          required: true
+          schema:
+            $ref: '#/definitions/UserStatsReq'
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/UserStatsResp'
+        '400':
+          description: Bad request
+          schema:
+            $ref: '#/definitions/GateError'
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad authentication token
+          
   /project/list:
     post:
       summary: List projects
@@ -314,12 +343,12 @@ paths:
           description: Function name
           required: true
           schema:
-            $ref: '#/definitions/FunctionID'
+            $ref: '#/definitions/FunctionStatsReq'
       responses:
         '200':
           description: OK
           schema:
-            $ref: '#/definitions/FunctionStats'
+            $ref: '#/definitions/FunctionStatsResp'
         '400':
           description: Bad request
           schema:
@@ -624,6 +653,43 @@ definitions:
           example:
             - foobucket
               barbucket
+  FunctionStatsReq:
+    type: object
+    description: Request for FN statistics
+    properties:
+      project:
+        type: string
+      name:
+        type: string
+        description: Function name
+      periods:
+        type: integer
+        description: Numer of periods back to request (default 0), the top-most stat will be "till now"
+  UserStatsReq:
+    type: object
+    description: Request for user statistics
+    properties:
+      periods:
+        type: integer
+        description: Numer of periods back to request (default 0), the top-most stat will be "till now"
+  FunctionStatsResp:
+    type: object
+    description: Responce with FN stats
+    properties:
+      stats:
+        type: array
+        description: Per-period statistics, "till"-sorted descending. Each period is incremental to previous. The 0th one is "till now"
+        items:
+          $ref: '#/definitions/FunctionStats'
+  UserStatsResp:
+    type: object
+    description: Responce with user stats
+    properties:
+      stats:
+        type: array
+        description: Per-period statistics, "till"-sorted descending. Each period is incremental to previous. The 0th one is "till now"
+        items:
+          $ref: '#/definitions/UserStats'
   FunctionStats:
     type: object
     description: Statistics about function
@@ -632,6 +698,12 @@ definitions:
         type: integer
         description: Number of funciton invovations so far
         example: 42
+      timeouts:
+        type: integer
+        description: Number of timeouts (included in called)
+      errors:
+        type: integer
+        description: Number of fn run errors (included in called)
       lastcall:
         type: string
         description: Time or last call in RFC1123Z format
@@ -640,6 +712,32 @@ definitions:
         type: integer
         description: Total time spent in function code (in microseconds)
         example: 123000
+      gbs:
+        type: number
+        description: Mem*time consumed so far, in GB * sec
+      bytesout:
+        type: integer
+        description: Total size of JSON objects returned from function
+      till:
+        type: string
+        description: Time (RFC1123Z) till which stats are collected (if empty means "till now")
+  UserStats:
+    type: object
+    description: Statistics about user
+    properties:
+      called:
+        type: integer
+        description: Number of all funcitons invocations so far
+        example: 42
+      gbs:
+        type: number
+        description: Mem*time consumed so far, in GB * sec
+      bytesout:
+        type: integer
+        description: Total size of JSON objects returned from all user functions
+      till:
+        type: string
+        description: Time (RFC1123Z) till which stats are collected (if empty means "till now")
   FunctionWait:
     type: object
     description: What to wait on a function
