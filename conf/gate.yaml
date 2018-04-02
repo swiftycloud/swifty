@@ -29,9 +29,7 @@ middleware:
         s3:
                 creds: "-:S3TOKEN@swy1:8787"
                 admport: "8789"
-                notify:
-                        creds: "swifty:S3IFYPASS@swy0:5672"
-                        domain: "s3"
+                notify: "swifty:S3IFYPASS@swy0:5672/s3"
 runtime:
         timeout:
                 max: 60

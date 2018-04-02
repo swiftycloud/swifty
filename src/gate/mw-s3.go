@@ -190,20 +190,20 @@ func handleS3Event(ctx context.Context, user string, data []byte) {
 
 func EventS3(ctx context.Context, conf *YAMLConfMw, source *FnEventDesc, mwd *MwareDesc, on bool) (error) {
 	if on {
-		err := mqStartListener(conf.S3.Notify.c.User, conf.S3.Notify.c.Pass,
-				conf.S3.Notify.c.Addr() + "/" + conf.S3.Notify.Dom,
+		err := mqStartListener(conf.S3.cn.User, conf.S3.cn.Pass,
+				conf.S3.cn.Addr() + "/" + conf.S3.cn.Domn,
 				gates3queue, handleS3Event)
 		if err == nil {
 			err = s3Subscribe(conf, mwd.Namespace, source.S3Bucket)
 			if err != nil {
-				mqStopListener(conf.S3.Notify.c.Addr() + "/" + conf.S3.Notify.Dom, gates3queue)
+				mqStopListener(conf.S3.cn.Addr() + "/" + conf.S3.cn.Domn, gates3queue)
 			}
 		}
 
 		return err
 	} else {
 		s3Unsubscribe(ctx, conf, mwd.Namespace, source.S3Bucket)
-		mqStopListener(conf.S3.Notify.c.Addr() + "/" + conf.S3.Notify.Dom, "events")
+		mqStopListener(conf.S3.cn.Addr() + "/" + conf.S3.cn.Domn, "events")
 		return nil
 	}
 }
