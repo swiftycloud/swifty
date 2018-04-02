@@ -148,6 +148,11 @@ swifty/admd: swy-admd kubectl/docker/admd/Dockerfile
 	$(Q) $(MAKE) -C kubectl/docker/admd all
 .PHONY: swifty/admd
 
+swifty/s3: swy-s3 kubectl/docker/s3/Dockerfile
+	$(call msg-gen,$@)
+	$(Q) $(CP) swy-s3 kubectl/docker/s3/swy-s3
+	$(Q) $(MAKE) -C kubectl/docker/s3 all
+
 images: swifty/python swifty/golang swifty/swift
 	@true
 .PHONY: images
