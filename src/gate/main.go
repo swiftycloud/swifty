@@ -123,9 +123,6 @@ type YAMLConfRange struct {
 type YAMLConfRt struct {
 	Timeout		YAMLConfRange		`yaml:"timeout"`
 	Memory		YAMLConfRange		`yaml:"memory"`
-}
-
-type YAMLConfKuber struct {
 	MaxReplicas	uint32			`yaml:"max-replicas"`
 }
 
@@ -136,7 +133,6 @@ type YAMLConf struct {
 	Mware		YAMLConfMw		`yaml:"middleware"`
 	Runtime		YAMLConfRt		`yaml:"runtime"`
 	Wdog		YAMLConfSwd		`yaml:"wdog"`
-	Kuber		YAMLConfKuber		`yaml:"kubernetes"`
 }
 
 var conf YAMLConf

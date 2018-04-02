@@ -40,7 +40,6 @@ runtime:
                 max: 1024
                 min: 64
                 def: 128
+        max-replicas: 32
 wdog:
         port: 8687
-kubernetes:
-        max-replicas: 32
