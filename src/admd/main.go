@@ -21,13 +21,6 @@ import (
 
 var admdSecrets map[string]string
 
-type YAMLConfKeystone struct {
-	Addr		string			`yaml:"address"`
-	Domain		string			`yaml:"domain"`
-	Admin		string			`yaml:"admin"`
-	Pass		string			`yaml:"pass"`
-}
-
 type YAMLConfHTTPS struct {
 	Cert		string			`yaml:"cert"`
 	Key		string			`yaml:"key"`
@@ -41,8 +34,9 @@ type YAMLConfDaemon struct {
 type YAMLConf struct {
 	Daemon		YAMLConfDaemon		`yaml:"daemon"`
 	Gate		string			`yaml:"gate"`
-	Keystone	YAMLConfKeystone	`yaml:"keystone"`
+	Keystone	string			`yaml:"keystone"`
 	DB		string			`yaml:"db"`
+	kc		*swy.XCreds
 }
 
 var conf YAMLConf
@@ -76,7 +70,7 @@ func handleUserLogin(w http.ResponseWriter, r *http.Request) {
 
 	log.Debugf("Try to login user %s", params.UserName)
 
-	token, td.Expires, err = swyks.KeystoneAuthWithPass(conf.Keystone.Addr, conf.Keystone.Domain, &params)
+	token, td.Expires, err = swyks.KeystoneAuthWithPass(conf.kc.Addr(), conf.kc.Domn, &params)
 	if err != nil {
 		resp = http.StatusUnauthorized
 		goto out
@@ -108,7 +102,7 @@ func handleAdminReq(r *http.Request, params interface{}) (*swyks.KeystoneTokenDa
 		return nil, http.StatusUnauthorized, fmt.Errorf("Auth token not provided")
 	}
 
-	td, code := swyks.KeystoneGetTokenData(conf.Keystone.Addr, token)
+	td, code := swyks.KeystoneGetTokenData(conf.kc.Addr(), token)
 	if code != 0 {
 		return nil, code, fmt.Errorf("Keystone auth error")
 	}
@@ -150,7 +144,7 @@ func handleUserInfo(w http.ResponseWriter, r *http.Request) {
 	}
 
 	code = http.StatusBadRequest
-	kud, err = ksGetUserDesc(&conf.Keystone, ui.Id)
+	kud, err = ksGetUserDesc(conf.kc, ui.Id)
 	if err != nil {
 		log.Errorf("GetUserDesc: %s", err.Error())
 		goto out
@@ -191,7 +185,7 @@ func handleListUsers(w http.ResponseWriter, r *http.Request) {
 	}
 
 	code = http.StatusBadRequest
-	result, err = ksListUsers(&conf.Keystone)
+	result, err = ksListUsers(conf.kc)
 	if err != nil {
 		goto out
 	}
@@ -290,7 +284,7 @@ func handleDelUser(w http.ResponseWriter, r *http.Request) {
 
 	log.Debugf("Del user %v", params)
 	code = http.StatusBadRequest
-	err = ksDelUserAndProject(&conf.Keystone, &params)
+	err = ksDelUserAndProject(conf.kc, &params)
 	if err != nil {
 		goto out
 	}
@@ -323,7 +317,7 @@ func handleAddUser(w http.ResponseWriter, r *http.Request) {
 
 	log.Debugf("Add user %v", params)
 	code = http.StatusBadRequest
-	err = ksAddUserAndProject(&conf.Keystone, &params)
+	err = ksAddUserAndProject(conf.kc, &params)
 	if err != nil {
 		goto out
 	}
@@ -421,7 +415,7 @@ func handleSetPassword(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Debugf("Change pass to %s", params.UserName)
-	err = ksChangeUserPass(&conf.Keystone, &params)
+	err = ksChangeUserPass(conf.kc, &params)
 	if err != nil {
 		goto out
 	}
@@ -480,7 +474,9 @@ func main() {
 
 	log.Debugf("config: %v", &conf)
 
-	err = ksInit(&conf.Keystone)
+	conf.kc = swy.ParseXCreds(conf.Keystone)
+
+	err = ksInit(conf.kc)
 	if err != nil {
 		log.Errorf("Can't init ks: %s", err.Error())
 		return

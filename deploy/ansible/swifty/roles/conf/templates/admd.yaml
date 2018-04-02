@@ -5,9 +5,5 @@ daemon:
                 cert: "/etc/swifty/ca/server.crt"
                 key: "/etc/swifty/ca/server.key"
 gate: "{{ groups['master'][0] }}:8686"
-keystone:
-        address: "{{ groups['master'][0] }}:5000"
-        domain: "swifty"
-        admin: "admin"
-        pass: "KSPASS"
+keystone: "admin:KSPASS@{{ groups['master'][0] }}:5000/swifty"
 db: "swyadm:DBAPASS@127.0.0.1:27017"

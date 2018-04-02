@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"encoding/json"
 	"../apis/apps"
+	"../common"
 	"../common/keystone"
 )
 
@@ -17,7 +18,7 @@ var ksClient *swyks.KsClient
 var ksSwyDomainId string
 var ksSwyOwnerRole string
 
-func keystoneGetDomainId(conf *YAMLConfKeystone) (string, error) {
+func keystoneGetDomainId(c *swy.XCreds) (string, error) {
 	var doms swyks.KeystoneDomainsResp
 
 	err := ksClient.MakeReq(&swyks.KeystoneReq {
@@ -28,18 +29,18 @@ func keystoneGetDomainId(conf *YAMLConfKeystone) (string, error) {
 		return "", err
 	}
 
-	log.Debugf("Looking for domain %s", conf.Domain)
+	log.Debugf("Looking for domain %s", c.Domn)
 	for _, dom := range doms.Domains {
-		if dom.Name == conf.Domain {
-			log.Debugf("Found %s domain: %s", conf.Domain, dom.Id)
+		if dom.Name == c.Domn {
+			log.Debugf("Found %s domain: %s", c.Domn, dom.Id)
 			return dom.Id, nil
 		}
 	}
 
-	return "", fmt.Errorf("Can't find domain %s", conf.Domain)
+	return "", fmt.Errorf("Can't find domain %s", c.Domn)
 }
 
-func keystoneGetOwnerRoleId(conf *YAMLConfKeystone) (string, error) {
+func keystoneGetOwnerRoleId(c *swy.XCreds) (string, error) {
 	var roles swyks.KeystoneRolesResp
 
 	err := ksClient.MakeReq(&swyks.KeystoneReq {
@@ -61,7 +62,7 @@ func keystoneGetOwnerRoleId(conf *YAMLConfKeystone) (string, error) {
 	return "", fmt.Errorf("Can't find swifty.owner role")
 }
 
-func ksListUsers(conf *YAMLConfKeystone) (*[]swyapi.UserInfo, error) {
+func ksListUsers(c *swy.XCreds) (*[]swyapi.UserInfo, error) {
 	var users swyks.KeystoneUsersResp
 	var res []swyapi.UserInfo
 
@@ -84,7 +85,7 @@ func ksListUsers(conf *YAMLConfKeystone) (*[]swyapi.UserInfo, error) {
 	return &res, nil
 }
 
-func ksAddUserAndProject(conf *YAMLConfKeystone, user *swyapi.AddUser) error {
+func ksAddUserAndProject(c *swy.XCreds, user *swyapi.AddUser) error {
 	var presp swyks.KeystoneProjectAdd
 
 	udesc, err := json.Marshal(&ksUserDesc{ Name: user.Name, Email: user.Id })
@@ -143,8 +144,8 @@ func ksAddUserAndProject(conf *YAMLConfKeystone, user *swyapi.AddUser) error {
 	return nil
 }
 
-func ksGetUserDesc(conf *YAMLConfKeystone, user string) (*ksUserDesc, error) {
-	kui, err := ksGetUserInfo(conf, user)
+func ksGetUserDesc(c *swy.XCreds, user string) (*ksUserDesc, error) {
+	kui, err := ksGetUserInfo(c, user)
 	if err != nil {
 		return nil, err
 	}
@@ -160,7 +161,7 @@ func ksGetUserDesc(conf *YAMLConfKeystone, user string) (*ksUserDesc, error) {
 	return &kud, nil
 }
 
-func ksGetUserInfo(conf *YAMLConfKeystone, user string) (*swyks.KeystoneUser, error) {
+func ksGetUserInfo(c *swy.XCreds, user string) (*swyks.KeystoneUser, error) {
 	var uresp swyks.KeystoneUsersResp
 
 	err := ksClient.MakeReq(
@@ -179,7 +180,7 @@ func ksGetUserInfo(conf *YAMLConfKeystone, user string) (*swyks.KeystoneUser, er
 	return &uresp.Users[0], nil
 }
 
-func ksGetProjectInfo(conf *YAMLConfKeystone, project string) (*swyks.KeystoneProject, error) {
+func ksGetProjectInfo(c *swy.XCreds, project string) (*swyks.KeystoneProject, error) {
 	var presp swyks.KeystoneProjectsResp
 
 	err := ksClient.MakeReq(
@@ -198,8 +199,8 @@ func ksGetProjectInfo(conf *YAMLConfKeystone, project string) (*swyks.KeystonePr
 	return &presp.Projects[0], nil
 }
 
-func ksChangeUserPass(conf *YAMLConfKeystone, up *swyapi.UserLogin) error {
-	uinf, err := ksGetUserInfo(conf, up.UserName)
+func ksChangeUserPass(c *swy.XCreds, up *swyapi.UserLogin) error {
+	uinf, err := ksGetUserInfo(c, up.UserName)
 	if err != nil {
 		return err
 	}
@@ -222,10 +223,10 @@ func ksChangeUserPass(conf *YAMLConfKeystone, up *swyapi.UserLogin) error {
 	return nil
 }
 
-func ksDelUserAndProject(conf *YAMLConfKeystone, ui *swyapi.UserInfo) error {
+func ksDelUserAndProject(c *swy.XCreds, ui *swyapi.UserInfo) error {
 	var err error
 
-	uinf, err := ksGetUserInfo(conf, ui.Id)
+	uinf, err := ksGetUserInfo(c, ui.Id)
 	if err != nil {
 		return err
 	}
@@ -239,7 +240,7 @@ func ksDelUserAndProject(conf *YAMLConfKeystone, ui *swyapi.UserInfo) error {
 		return err
 	}
 
-	pinf, err := ksGetProjectInfo(conf, ui.Id)
+	pinf, err := ksGetProjectInfo(c, ui.Id)
 	if err != nil {
 		return err
 	}
@@ -256,23 +257,23 @@ func ksDelUserAndProject(conf *YAMLConfKeystone, ui *swyapi.UserInfo) error {
 	return nil
 }
 
-func ksInit(conf *YAMLConfKeystone) error {
+func ksInit(c *swy.XCreds) error {
 	var err error
 
 	log.Debugf("Logging in")
-	ksClient, err = swyks.KeystoneConnect(conf.Addr, "default",
-				&swyapi.UserLogin{UserName: conf.Admin, Password: admdSecrets[conf.Pass]})
+	ksClient, err = swyks.KeystoneConnect(c.Addr(), "default",
+				&swyapi.UserLogin{UserName: c.User, Password: admdSecrets[c.Pass]})
 	if err != nil {
 		return err
 	}
 
 	log.Debugf("Logged in as admin")
-	ksSwyDomainId, err = keystoneGetDomainId(conf)
+	ksSwyDomainId, err = keystoneGetDomainId(c)
 	if err != nil {
 		return fmt.Errorf("Can't get domain: %s", err.Error())
 	}
 
-	ksSwyOwnerRole, err = keystoneGetOwnerRoleId(conf)
+	ksSwyOwnerRole, err = keystoneGetOwnerRoleId(c)
 	if err != nil {
 		return fmt.Errorf("Can't get role: %s", err.Error())
 	}
