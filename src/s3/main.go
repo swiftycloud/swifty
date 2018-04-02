@@ -31,18 +31,13 @@ type YAMLConfCeph struct {
 	ConfigPath	string			`yaml:"config-path"`
 }
 
-type YAMLConfHTTPS struct {
-	Cert		string			`yaml:"cert"`
-	Key		string			`yaml:"key"`
-}
-
 type YAMLConfDaemon struct {
 	Addr		string			`yaml:"address"`
 	AdminPort	string			`yaml:"admport"`
 	Token		string			`yaml:"token"`
 	LogLevel	string			`yaml:"loglevel"`
 	Prometheus	string			`yaml:"prometheus"`
-	HTTPS		*YAMLConfHTTPS		`yaml:"https,omitempty"`
+	HTTPS		*swyhttp.YAMLConfHTTPS	`yaml:"https,omitempty"`
 }
 
 type YAMLConfNotify struct {
@@ -800,25 +795,13 @@ func main() {
 		}
 	}()
 
-	gatesrv = &http.Server{
+	err = swyhttp.ListenAndServe(
+		&http.Server{
 			Handler:      rgatesrv,
 			Addr:         conf.Daemon.Addr,
 			WriteTimeout: 60 * time.Second,
 			ReadTimeout:  60 * time.Second,
-	}
-
-	if conf.Daemon.HTTPS == nil {
-		if S3ModeDevel {
-			log.Debugf("Going plain http")
-			err = gatesrv.ListenAndServe()
-		} else {
-			err = errors.New("Can't go non-https in production mode")
-		}
-	} else {
-		log.Debugf("Going https")
-		err = gatesrv.ListenAndServeTLS(conf.Daemon.HTTPS.Cert, conf.Daemon.HTTPS.Key)
-	}
-
+		}, conf.Daemon.HTTPS, S3ModeDevel, func(s string) { log.Debugf(s) })
 	if err != nil {
 		log.Errorf("ListenAndServe: gatesrv %s", err.Error())
 	}

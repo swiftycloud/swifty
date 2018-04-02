@@ -21,14 +21,9 @@ import (
 
 var admdSecrets map[string]string
 
-type YAMLConfHTTPS struct {
-	Cert		string			`yaml:"cert"`
-	Key		string			`yaml:"key"`
-}
-
 type YAMLConfDaemon struct {
 	Address		string			`yaml:"address"`
-	HTTPS		*YAMLConfHTTPS		`yaml:"https,omitempty"`
+	HTTPS		*swyhttp.YAMLConfHTTPS	`yaml:"https,omitempty"`
 }
 
 type YAMLConf struct {
@@ -498,24 +493,13 @@ func main() {
 	r.HandleFunc("/v1/limits/set", handleSetLimits).Methods("POST", "OPTIONS")
 	r.HandleFunc("/v1/limits/get", handleGetLimits).Methods("POST", "OPTIONS")
 
-	gatesrv = &http.Server{
+	err = swyhttp.ListenAndServe(
+		&http.Server{
 			Handler:      r,
 			Addr:         conf.Daemon.Address,
 			WriteTimeout: 60 * time.Second,
 			ReadTimeout:  60 * time.Second,
-	}
-
-	if conf.Daemon.HTTPS == nil {
-		if devel {
-			log.Debugf("Going plain http")
-			err = gatesrv.ListenAndServe()
-		} else {
-			err = errors.New("Can't go non-https in production mode")
-		}
-	} else {
-		log.Debugf("Going https")
-		err = gatesrv.ListenAndServeTLS(conf.Daemon.HTTPS.Cert, conf.Daemon.HTTPS.Key)
-	}
+		}, conf.Daemon.HTTPS, devel, func(s string) { log.Debugf(s) })
 	if err != nil {
 		log.Errorf("ListenAndServe: %s", err.Error())
 	}

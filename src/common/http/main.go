@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strings"
+	"errors"
 	"bytes"
 	"time"
 	"fmt"
@@ -144,4 +145,23 @@ func MarshalAndPost(req *RestReq, data interface{}) (*http.Response, error) {
 	}
 
 	return rsp, nil
+}
+
+type YAMLConfHTTPS struct {
+	Cert		string			`yaml:"cert"`
+	Key		string			`yaml:"key"`
+}
+
+func ListenAndServe(srv *http.Server, https *YAMLConfHTTPS, devel bool, log func(string)) error {
+	if https == nil {
+		if devel {
+			log("Going plain http")
+			return srv.ListenAndServe()
+		} else {
+			return errors.New("Can't go non-https in production mode")
+		}
+	} else {
+		log("Going https")
+		return srv.ListenAndServeTLS(https.Cert, https.Key)
+	}
 }

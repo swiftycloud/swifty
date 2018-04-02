@@ -51,17 +51,12 @@ type YAMLConfSources struct {
 	Clone		string			`yaml:"clone"`
 }
 
-type YAMLConfHTTPS struct {
-	Cert		string			`yaml:"cert"`
-	Key		string			`yaml:"key"`
-}
-
 type YAMLConfDaemon struct {
 	Addr		string			`yaml:"address"`
 	Sources		YAMLConfSources		`yaml:"sources"`
 	LogLevel	string			`yaml:"loglevel"`
 	Prometheus	string			`yaml:"prometheus"`
-	HTTPS		*YAMLConfHTTPS		`yaml:"https,omitempty"`
+	HTTPS		*swyhttp.YAMLConfHTTPS	`yaml:"https,omitempty"`
 }
 
 type YAMLConfKeystone struct {
@@ -1206,25 +1201,13 @@ func main() {
 		glog.Fatalf("Can't set up prometheus: %s", err.Error())
 	}
 
-	gatesrv = &http.Server{
+	err = swyhttp.ListenAndServe(
+		&http.Server{
 			Handler:      r,
 			Addr:         conf.Daemon.Addr,
 			WriteTimeout: 60 * time.Second,
 			ReadTimeout:  60 * time.Second,
-	}
-
-	if conf.Daemon.HTTPS == nil {
-		if SwyModeDevel {
-			glog.Debugf("Going plain http")
-			err = gatesrv.ListenAndServe()
-		} else {
-			err = errors.New("Can't go non-https in production mode")
-		}
-	} else {
-		glog.Debugf("Going https")
-		err = gatesrv.ListenAndServeTLS(conf.Daemon.HTTPS.Cert, conf.Daemon.HTTPS.Key)
-	}
-
+		}, conf.Daemon.HTTPS, SwyModeDevel, func(s string) { glog.Debugf(s) })
 	if err != nil {
 		glog.Errorf("ListenAndServe: %s", err.Error())
 	}
