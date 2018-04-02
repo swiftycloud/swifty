@@ -508,7 +508,7 @@ func handleTenantStats(ctx context.Context, w http.ResponseWriter, r *http.Reque
 }
 
 func handleFunctionStats(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
-	var params swyapi.FunctionID
+	var params swyapi.FunctionStatsReq
 	var stats *FnStats
 
 	err := swyhttp.ReadAndUnmarshalReq(r, &params)
