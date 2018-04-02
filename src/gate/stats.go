@@ -51,6 +51,11 @@ func (fs *FnStats)GBS() float64 {
 	return float64(fs.RunCost) / float64(1024 * time.Second)
 }
 
+func (fs *TenStats)GBS() float64 {
+	/* RunCost is in fn.mem * Duration, i.e. -- MB * nanoseconds */
+	return float64(fs.RunCost) / float64(1024 * time.Second)
+}
+
 func (fs *FnStats)LastCallS() string {
 	if fs.Called != 0 {
 		return fs.LastCall.Format(time.RFC1123Z)

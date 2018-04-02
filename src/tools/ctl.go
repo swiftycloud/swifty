@@ -221,6 +221,15 @@ func do_user_limits(args []string, opts [8]string) {
 	}
 }
 
+func show_stats(args []string, opts[8]string) {
+	var st swyapi.TenantStats
+	make_faas_req("stats", swyapi.TenantStatsReq{}, &st)
+
+	fmt.Printf("Called:           %d\n", st.Called)
+	fmt.Printf("GBS:              %f\n", st.GBS)
+	fmt.Printf("Bytes sent:       %s\n", formatBytes(st.BytesOut))
+}
+
 func list_projects(args []string, opts [8]string) {
 	var ps []swyapi.ProjectItem
 	make_faas_req("project/list", swyapi.ProjectList{}, &ps)
@@ -743,6 +752,7 @@ func refresh_token(home string) {
 
 const (
 	CMD_LOGIN string	= "login"
+	CMD_STATS string	= "st"
 	CMD_PS string		= "ps"
 	CMD_LS string		= "ls"
 	CMD_INF string		= "inf"
@@ -773,6 +783,7 @@ const (
 
 var cmdOrder = []string {
 	CMD_LOGIN,
+	CMD_STATS,
 	CMD_PS,
 	CMD_LS,
 	CMD_INF,
@@ -811,6 +822,7 @@ type cmdDesc struct {
 
 var cmdMap = map[string]*cmdDesc {
 	CMD_LOGIN:	&cmdDesc{			  opts: flag.NewFlagSet(CMD_LOGIN, flag.ExitOnError) },
+	CMD_STATS:	&cmdDesc{  call: show_stats,	  opts: flag.NewFlagSet(CMD_STATS, flag.ExitOnError) },
 	CMD_PS:		&cmdDesc{  call: list_projects,	  opts: flag.NewFlagSet(CMD_PS, flag.ExitOnError) },
 	CMD_LS:		&cmdDesc{ pcall: list_functions,  opts: flag.NewFlagSet(CMD_LS, flag.ExitOnError) },
 	CMD_INF:	&cmdDesc{ pcall: info_function,	  opts: flag.NewFlagSet(CMD_INF, flag.ExitOnError) },
@@ -863,6 +875,7 @@ func main() {
 	cmdMap[CMD_LOGIN].opts.StringVar(&opts[1], "cert", "", "x509 cert file")
 	bindCmdUsage(CMD_LOGIN,	[]string{"USER:PASS@HOST:PORT"}, "Login into the system", false)
 
+	bindCmdUsage(CMD_STATS,	[]string{}, "Show stats", false)
 	bindCmdUsage(CMD_PS,	[]string{}, "List projects", false)
 
 	bindCmdUsage(CMD_LS,	[]string{}, "List functions", true)

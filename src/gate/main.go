@@ -475,6 +475,35 @@ func handleFunctionCode(ctx context.Context, w http.ResponseWriter, r *http.Requ
 	return nil
 }
 
+func handleTenantStats(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
+	var params swyapi.TenantStatsReq
+
+	err := swyhttp.ReadAndUnmarshalReq(r, &params)
+	if err != nil {
+		return GateErrE(swy.GateBadRequest, err)
+	}
+
+	ten := fromContext(ctx).Tenant
+	ctxlog(ctx).Debugf("Get FN stats %s", ten)
+
+	var tst TenStats
+	err = dbTenStatsGet(ten, &tst)
+	if err != nil {
+		return GateErrD(err)
+	}
+
+	err = swyhttp.MarshalAndWrite(w,  swyapi.TenantStats{
+			Called:		tst.Called,
+			GBS:		tst.GBS(),
+			BytesOut:	tst.BytesOut,
+		})
+	if err != nil {
+		return GateErrE(swy.GateBadResp, err)
+	}
+
+	return nil
+}
+
 func handleFunctionStats(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
 	var params swyapi.FunctionID
 	var stats *FnStats
@@ -1140,6 +1169,7 @@ func main() {
 
 	r := mux.NewRouter()
 	r.HandleFunc("/v1/login",		handleUserLogin).Methods("POST", "OPTIONS")
+	r.Handle("/v1/stats",			genReqHandler(handleTenantStats)).Methods("POST", "OPTIONS")
 	r.Handle("/v1/project/list",		genReqHandler(handleProjectList)).Methods("POST", "OPTIONS")
 	r.Handle("/v1/project/del",		genReqHandler(handleProjectDel)).Methods("POST", "OPTIONS")
 	r.Handle("/v1/function/add",		genReqHandler(handleFunctionAdd)).Methods("POST", "OPTIONS")
