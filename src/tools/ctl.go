@@ -222,12 +222,29 @@ func do_user_limits(args []string, opts [8]string) {
 }
 
 func show_stats(args []string, opts[8]string) {
+	var rq swyapi.TenantStatsReq
 	var st swyapi.TenantStatsResp
-	make_faas_req("stats", swyapi.TenantStatsReq{}, &st)
+	var err error
 
-	fmt.Printf("Called:           %d\n", st.Stats[0].Called)
-	fmt.Printf("GBS:              %f\n", st.Stats[0].GBS)
-	fmt.Printf("Bytes sent:       %s\n", formatBytes(st.Stats[0].BytesOut))
+	if opts[0] != "" {
+		rq.Periods, err = strconv.Atoi(opts[0])
+		if err != nil {
+			fatal(fmt.Errorf("Bad period value %s: %s", opts[0],  err.Error()))
+		}
+	}
+
+	make_faas_req("stats", rq, &st)
+
+	for _, s := range(st.Stats) {
+		if s.Till != "" {
+			fmt.Printf("---\nTill:             %s\n", s.Till)
+		} else {
+			fmt.Printf("---\nTill:             %s\n", "NOW")
+		}
+		fmt.Printf("Called:           %d\n", s.Called)
+		fmt.Printf("GBS:              %f\n", s.GBS)
+		fmt.Printf("Bytes sent:       %s\n", formatBytes(s.BytesOut))
+	}
 }
 
 func list_projects(args []string, opts [8]string) {
@@ -875,6 +892,7 @@ func main() {
 	cmdMap[CMD_LOGIN].opts.StringVar(&opts[1], "cert", "", "x509 cert file")
 	bindCmdUsage(CMD_LOGIN,	[]string{"USER:PASS@HOST:PORT"}, "Login into the system", false)
 
+	cmdMap[CMD_STATS].opts.StringVar(&opts[0], "p", "0", "Periods to report")
 	bindCmdUsage(CMD_STATS,	[]string{}, "Show stats", false)
 	bindCmdUsage(CMD_PS,	[]string{}, "List projects", false)
 

@@ -17,11 +17,13 @@ type ProjectDel struct {
 }
 
 type TenantStatsReq struct {
+	Periods		int			`json:"periods"`
 }
 
 type FunctionStatsReq struct {
 	Project		string			`json:"project"`
 	FuncName	string			`json:"name"`
+	Periods		int			`json:"periods"`
 }
 
 type FunctionStats struct {
@@ -32,6 +34,7 @@ type FunctionStats struct {
 	Time		uint64			`json:"time"`
 	GBS		float64			`json:"gbs"`
 	BytesOut	uint64			`json:"bytesout"`
+	Till		string			`json:"till,omitempty"`
 }
 
 type FunctionStatsResp struct {
@@ -42,6 +45,7 @@ type TenantStats struct {
 	Called		uint64			`json:"called"`
 	GBS		float64			`json:"gbs"`
 	BytesOut	uint64			`json:"bytesout"`
+	Till		string			`json:"till,omitempty"`
 }
 
 type TenantStatsResp struct {

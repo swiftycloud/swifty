@@ -247,6 +247,13 @@ func dbTenStatsGet(tenant string, st *TenStats) error {
 	return err
 }
 
+func dbTenStatsGetArch(tenant string, nr int) ([]TenStats, error) {
+	var ret []TenStats
+	c := dbSession.DB(DBStateDB).C(DBColTenStatsA)
+	err := c.Find(bson.M{"tenant": tenant}).Sort("-till").Limit(nr).All(&ret)
+	return ret, err
+}
+
 func dbTenStatsUpdate(st *TenStats) {
 	c := dbSession.DB(DBStateDB).C(DBColTenStats)
 	_, err := c.Upsert(bson.M{"tenant": st.Tenant}, st)
@@ -264,6 +271,13 @@ func dbFnStatsGet(cookie string, st *FnStats) error {
 	return err
 }
 
+func dbFnStatsGetArch(id string, nr int) ([]FnStats, error) {
+	var ret []FnStats
+	c := dbSession.DB(DBStateDB).C(DBColFnStatsA)
+	err := c.Find(bson.M{"cookie": id}).Sort("-till").Limit(nr).All(&ret)
+	return ret, err
+}
+
 func dbFnStatsUpdate(st *FnStats) {
 	c := dbSession.DB(DBStateDB).C(DBColFnStats)
 	_, err := c.Upsert(bson.M{"cookie": st.Cookie}, st)
@@ -276,6 +290,7 @@ func dbFnStatsDrop(cookie string, st *FnStats) error {
 	if st.Called != 0 {
 		n := time.Now()
 		st.Dropped = &n
+		st.Till = &n
 
 		c := dbSession.DB(DBStateDB).C(DBColFnStatsA)
 		err := c.Insert(st)

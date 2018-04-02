@@ -42,6 +42,7 @@ type FnStats struct {
 	 */
 	RunCost		uint64		`bson:"runcost"`
 	Dropped		*time.Time	`bson:"dropped,omitempty"`
+	Till		*time.Time	`bson:"till,omitempty"`
 
 	statsFlush			`bson:"-"`
 }
@@ -56,9 +57,25 @@ func (fs *TenStats)GBS() float64 {
 	return float64(fs.RunCost) / float64(1024 * time.Second)
 }
 
+func (fs *TenStats)TillS() string {
+	if fs.Till != nil {
+		return fs.Till.Format(time.RFC1123Z)
+	} else {
+		return ""
+	}
+}
+
 func (fs *FnStats)LastCallS() string {
 	if fs.Called != 0 {
 		return fs.LastCall.Format(time.RFC1123Z)
+	} else {
+		return ""
+	}
+}
+
+func (fs *FnStats)TillS() string {
+	if fs.Till != nil {
+		return fs.Till.Format(time.RFC1123Z)
 	} else {
 		return ""
 	}
@@ -74,6 +91,7 @@ type TenStats struct {
 	RunCost		uint64		`bson:"runcost"`
 	BytesIn		uint64		`bson:"bytesin"`
 	BytesOut	uint64		`bson:"bytesout"`
+	Till		*time.Time	`bson:"till,omitempty"`
 
 	statsFlush			`bson:"-"`
 }

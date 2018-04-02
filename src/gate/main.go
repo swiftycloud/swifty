@@ -486,17 +486,39 @@ func handleTenantStats(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	ten := fromContext(ctx).Tenant
 	ctxlog(ctx).Debugf("Get FN stats %s", ten)
 
-	var tst TenStats
-	err = dbTenStatsGet(ten, &tst)
+	td, err := tendatGet(ten)
 	if err != nil {
 		return GateErrD(err)
 	}
 
 	var resp swyapi.TenantStatsResp
+	prev := &td.stats
+
+	if params.Periods > 0 {
+		var atst []TenStats
+
+		atst, err = dbTenStatsGetArch(ten, params.Periods)
+		if err != nil {
+			return GateErrD(err)
+		}
+
+		for i := 0; i < params.Periods && i < len(atst); i++ {
+			cur := &atst[i]
+			resp.Stats = append(resp.Stats, swyapi.TenantStats{
+				Called:		prev.Called - cur.Called,
+				GBS:		prev.GBS() - cur.GBS(),
+				BytesOut:	prev.BytesOut - cur.BytesOut,
+				Till:		prev.TillS(),
+			})
+			prev = cur
+		}
+	}
+
 	resp.Stats = append(resp.Stats, swyapi.TenantStats{
-		Called:		tst.Called,
-		GBS:		tst.GBS(),
-		BytesOut:	tst.BytesOut,
+		Called:		prev.Called,
+		GBS:		prev.GBS(),
+		BytesOut:	prev.BytesOut,
+		Till:		prev.TillS(),
 	})
 
 	err = swyhttp.MarshalAndWrite(w, resp)
@@ -509,7 +531,7 @@ func handleTenantStats(ctx context.Context, w http.ResponseWriter, r *http.Reque
 
 func handleFunctionStats(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
 	var params swyapi.FunctionStatsReq
-	var stats *FnStats
+	var prev *FnStats
 
 	err := swyhttp.ReadAndUnmarshalReq(r, &params)
 	if err != nil {
@@ -524,20 +546,45 @@ func handleFunctionStats(ctx context.Context, w http.ResponseWriter, r *http.Req
 		return GateErrD(err)
 	}
 
-	stats, err = statsGet(fn)
+	prev, err = statsGet(fn)
 	if err != nil {
 		return GateErrM(swy.GateGenErr, "Error getting stats")
 	}
 
 	var resp swyapi.FunctionStatsResp
+	if params.Periods > 0 {
+		var afst []FnStats
+
+		afst, err = dbFnStatsGetArch(fn.Cookie, params.Periods)
+		if err != nil {
+			return GateErrD(err)
+		}
+
+		for i := 0; i < params.Periods && i < len(afst); i++ {
+			cur := &afst[i]
+			resp.Stats = append(resp.Stats, swyapi.FunctionStats{
+				Called:		prev.Called - cur.Called,
+				Timeouts:	prev.Timeouts - cur.Timeouts,
+				Errors:		prev.Errors - cur.Errors,
+				LastCall:	prev.LastCallS(),
+				Time:		prev.RunTimeUsec() - cur.RunTimeUsec(),
+				GBS:		prev.GBS() - cur.GBS(),
+				BytesOut:	prev.BytesOut - cur.BytesOut,
+				Till:		prev.TillS(),
+			})
+			prev = cur
+		}
+	}
+
 	resp.Stats = append(resp.Stats, swyapi.FunctionStats{
-		Called:		stats.Called,
-		Timeouts:	stats.Timeouts,
-		Errors:		stats.Errors,
-		LastCall:	stats.LastCallS(),
-		Time:		stats.RunTimeUsec(),
-		GBS:		stats.GBS(),
-		BytesOut:	stats.BytesOut,
+		Called:		prev.Called,
+		Timeouts:	prev.Timeouts,
+		Errors:		prev.Errors,
+		LastCall:	prev.LastCallS(),
+		Time:		prev.RunTimeUsec(),
+		GBS:		prev.GBS(),
+		BytesOut:	prev.BytesOut,
+		Till:		prev.TillS(),
 	})
 
 	err = swyhttp.MarshalAndWrite(w, resp)
