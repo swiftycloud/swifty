@@ -14,6 +14,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/pkg/fields"
 
+	"path/filepath"
 	"context"
 	"strconv"
 	"strings"
@@ -633,8 +634,9 @@ func swk8sGetBuildPods() (map[string]string, error) {
 	return rv, nil
 }
 
-func swk8sInit(conf *YAMLConf) error {
-	kubeconfig := flag.String("kubeconfig", conf.Kuber.ConfigPath, "path to the kubeconfig file")
+func swk8sInit(conf *YAMLConf, config_path string) error {
+	config_path = filepath.Dir(config_path) + "/kubeconfig"
+	kubeconfig := flag.String("kubeconfig", config_path, "path to the kubeconfig file")
 	flag.Parse()
 
 	config, err := clientcmd.BuildConfigFromFlags("", *kubeconfig)

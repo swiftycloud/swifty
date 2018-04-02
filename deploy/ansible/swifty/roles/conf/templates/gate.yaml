@@ -43,5 +43,4 @@ runtime:
 wdog:
         port: 8687
 kubernetes:
-        config-path: /etc/swifty/conf/kubeconfig
         max-replicas: 32
