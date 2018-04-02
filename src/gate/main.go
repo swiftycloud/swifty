@@ -492,11 +492,14 @@ func handleTenantStats(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		return GateErrD(err)
 	}
 
-	err = swyhttp.MarshalAndWrite(w,  swyapi.TenantStats{
-			Called:		tst.Called,
-			GBS:		tst.GBS(),
-			BytesOut:	tst.BytesOut,
-		})
+	var resp swyapi.TenantStatsResp
+	resp.Stats = append(resp.Stats, swyapi.TenantStats{
+		Called:		tst.Called,
+		GBS:		tst.GBS(),
+		BytesOut:	tst.BytesOut,
+	})
+
+	err = swyhttp.MarshalAndWrite(w, resp)
 	if err != nil {
 		return GateErrE(swy.GateBadResp, err)
 	}
@@ -526,15 +529,18 @@ func handleFunctionStats(ctx context.Context, w http.ResponseWriter, r *http.Req
 		return GateErrM(swy.GateGenErr, "Error getting stats")
 	}
 
-	err = swyhttp.MarshalAndWrite(w,  swyapi.FunctionStats{
-			Called:		stats.Called,
-			Timeouts:	stats.Timeouts,
-			Errors:		stats.Errors,
-			LastCall:	stats.LastCallS(),
-			Time:		stats.RunTimeUsec(),
-			GBS:		stats.GBS(),
-			BytesOut:	stats.BytesOut,
-		})
+	var resp swyapi.FunctionStatsResp
+	resp.Stats = append(resp.Stats, swyapi.FunctionStats{
+		Called:		stats.Called,
+		Timeouts:	stats.Timeouts,
+		Errors:		stats.Errors,
+		LastCall:	stats.LastCallS(),
+		Time:		stats.RunTimeUsec(),
+		GBS:		stats.GBS(),
+		BytesOut:	stats.BytesOut,
+	})
+
+	err = swyhttp.MarshalAndWrite(w, resp)
 	if err != nil {
 		return GateErrE(swy.GateBadResp, err)
 	}

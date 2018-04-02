@@ -29,10 +29,18 @@ type FunctionStats struct {
 	BytesOut	uint64			`json:"bytesout"`
 }
 
+type FunctionStatsResp struct {
+	Stats		[]FunctionStats		`json:"stats"`
+}
+
 type TenantStats struct {
 	Called		uint64			`json:"called"`
 	GBS		float64			`json:"gbs"`
 	BytesOut	uint64			`json:"bytesout"`
+}
+
+type TenantStatsResp struct {
+	Stats		[]TenantStats		`json:"stats"`
 }
 
 type FunctionWait struct {

@@ -222,12 +222,12 @@ func do_user_limits(args []string, opts [8]string) {
 }
 
 func show_stats(args []string, opts[8]string) {
-	var st swyapi.TenantStats
+	var st swyapi.TenantStatsResp
 	make_faas_req("stats", swyapi.TenantStatsReq{}, &st)
 
-	fmt.Printf("Called:           %d\n", st.Called)
-	fmt.Printf("GBS:              %f\n", st.GBS)
-	fmt.Printf("Bytes sent:       %s\n", formatBytes(st.BytesOut))
+	fmt.Printf("Called:           %d\n", st.Stats[0].Called)
+	fmt.Printf("GBS:              %f\n", st.Stats[0].GBS)
+	fmt.Printf("Bytes sent:       %s\n", formatBytes(st.Stats[0].BytesOut))
 }
 
 func list_projects(args []string, opts [8]string) {
