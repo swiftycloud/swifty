@@ -5,6 +5,8 @@ etcd_master_node: "{{ groups['master'][0] }}"
 flannel_etcd_prefix: "/swifty.com/network"
 flannel_network: "16.18.0.0/16"
 flannel_subnetlen: 24
+flannel_iface: ens3
+
 #
 # Kubernetes
 kube_cluster_ip_range: "16.18.0.0/16"
