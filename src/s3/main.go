@@ -96,6 +96,7 @@ var CORS_Headers = []string {
 	swys3api.SwyS3_AdminToken,
 	"Content-Type",
 	"Content-Length",
+	"Content-MD5",
 	"Authorization",
 	"X-Amz-Date",
 	"x-amz-acl",
