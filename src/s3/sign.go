@@ -17,6 +17,7 @@ import (
 const (
 	AWSAuthHeaderPrefix	= "AWS4-HMAC-SHA256"
 	AWSEmptyStringSHA256	= "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+	AWSUnsignedPayload	= "UNSIGNED-PAYLOAD"
 	AWS4Service		= "s3"
 	AWS4Request		= "aws4_request"
 )
@@ -30,6 +31,7 @@ type AuthContext struct {
 	Signature		string
 
 	// Building from headers
+	ContentSha256		string
 	LongTimeStamp		string
 	BodyDigest		string
 	CanonicalString		string
@@ -122,7 +124,9 @@ func (ctx *AuthContext) ParseAuthorization(authHeader string) error {
 }
 
 func (ctx *AuthContext) BuildBodyDigest(r *http.Request) (error) {
-	if r.Body == nil {
+	if ctx.ContentSha256 == AWSUnsignedPayload {
+		ctx.BodyDigest = AWSUnsignedPayload
+	} else if r.Body == nil {
 		ctx.BodyDigest = AWSEmptyStringSHA256
 	} else {
 		buf, err := ioutil.ReadAll(r.Body)
@@ -252,6 +256,7 @@ func s3VerifyAuthorizationHeaders(r *http.Request, authHeader string) (*S3Access
 
 	ctx.BuildSigningKey(s3DecryptAccessKeySecret(akey))
 	ctx.LongTimeStamp = getHeader(r, "X-Amz-Date")
+	ctx.ContentSha256 = getHeader(r, "X-Amz-Content-Sha256")
 
 	err = ctx.BuildBodyDigest(r)
 	if err != nil {
