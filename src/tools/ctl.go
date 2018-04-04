@@ -187,16 +187,23 @@ func do_user_limits(args []string, opts [8]string) {
 	chg := false
 
 	if opts[0] != "" {
-		l.Fn = &swyapi.FunctionLimits{}
-		l.Fn.Rate, l.Fn.Burst = parse_rate(opts[0])
+		l.PlanId = opts[0]
 		chg = true
 	}
 
 	if opts[1] != "" {
-		if !chg {
+		if l.Fn == nil {
 			l.Fn = &swyapi.FunctionLimits{}
 		}
-		v, err := strconv.ParseUint(opts[1], 10, 32)
+		l.Fn.Rate, l.Fn.Burst = parse_rate(opts[1])
+		chg = true
+	}
+
+	if opts[2] != "" {
+		if l.Fn == nil {
+			l.Fn = &swyapi.FunctionLimits{}
+		}
+		v, err := strconv.ParseUint(opts[2], 10, 32)
 		if err != nil {
 			fatal(fmt.Errorf("Bad max-fn value %s: %s", opts[0], err.Error()))
 		}
@@ -209,6 +216,9 @@ func do_user_limits(args []string, opts [8]string) {
 		make_faas_req("limits/set", &l, nil)
 	} else {
 		make_faas_req("limits/get", swyapi.UserInfo{Id: args[0]}, &l)
+		if l.PlanId != "" {
+			fmt.Printf("Plan ID: %s\n", l.PlanId)
+		}
 		if l.Fn != nil {
 			fmt.Printf("Functions:\n")
 			if l.Fn.Rate != 0 {
@@ -942,8 +952,9 @@ func main() {
 	cmdMap[CMD_PASS].opts.StringVar(&opts[0], "pass", "", "New password")
 	bindCmdUsage(CMD_PASS,	[]string{"UID"}, "Set password", false)
 	bindCmdUsage(CMD_UINF,	[]string{"UID"}, "Get user info", false)
-	cmdMap[CMD_LIMITS].opts.StringVar(&opts[0], "rl", "", "Rate (rate[:burst])")
-	cmdMap[CMD_LIMITS].opts.StringVar(&opts[1], "fnr", "", "Number of functions (in a project)")
+	cmdMap[CMD_LIMITS].opts.StringVar(&opts[0], "plan", "", "Taroff plan ID")
+	cmdMap[CMD_LIMITS].opts.StringVar(&opts[1], "rl", "", "Rate (rate[:burst])")
+	cmdMap[CMD_LIMITS].opts.StringVar(&opts[2], "fnr", "", "Number of functions (in a project)")
 	bindCmdUsage(CMD_LIMITS, []string{"UID"}, "Get/Set limits for user", false)
 
 	bindCmdUsage(CMD_MTYPES, []string{}, "List middleware types", false)

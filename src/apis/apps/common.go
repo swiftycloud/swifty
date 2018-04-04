@@ -25,5 +25,6 @@ type FunctionLimits struct {
 
 type UserLimits struct {
 	Id	string			`json:"id",bson:"id"`
+	PlanId	string			`json:"planid",bson:"planid"`
 	Fn	*FunctionLimits		`json:"function,omitempty",bson:"function,omitempty"`
 }
