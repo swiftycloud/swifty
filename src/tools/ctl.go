@@ -39,16 +39,16 @@ func fatal(err error) {
 	os.Exit(1)
 }
 
-func make_faas_req_x(url string, in interface{}, succ_code int, tmo uint) (*http.Response, error) {
-	var address string
-
+func gateProto() string {
 	if conf.TLS {
-		address = "https"
+		return "https"
 	} else {
-		address = "http"
+		return "http"
 	}
+}
 
-	address += "://" + conf.Login.Host + ":" + conf.Login.Port + "/v1/" + url
+func make_faas_req_x(url string, in interface{}, succ_code int, tmo uint) (*http.Response, error) {
+	address := gateProto() + "://" + conf.Login.Host + ":" + conf.Login.Port + "/v1/" + url
 
 	h := make(map[string]string)
 	if conf.Login.Token != "" {
@@ -345,7 +345,7 @@ func info_function(project string, args []string, opts [8]string) {
 		fmt.Printf("Event:       %s\n", estr)
 	}
 	if ifo.URL != "" {
-		fmt.Printf("URL:         http://%s\n", ifo.URL)
+		fmt.Printf("URL:         %s://%s\n", gateProto(), ifo.URL)
 	}
 	fmt.Printf("Timeout:     %dms\n", ifo.Size.Timeout)
 	if ifo.Size.Rate != 0 {
