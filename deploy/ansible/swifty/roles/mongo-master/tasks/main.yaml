@@ -28,6 +28,7 @@
   shell: mongo --quiet localhost:27017/{{ mgo_master_db_tenant }} --eval 'db.createCollection("{{ item }}");'
   with_items:
     - "Limits"
+    - "Plans"
   when: mongod_installed.changed
 
 - name: create collections for main db

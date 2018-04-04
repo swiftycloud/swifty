@@ -12,6 +12,7 @@ const (
 	DBSwiftyDB	="swifty"
 	DBTenantDB	= "swifty-tenant"
 	DBColLimits	= "Limits"
+	DBColPlans	= "Plans"
 )
 
 var dbSession *mgo.Session
@@ -26,10 +27,25 @@ func dbGetUserLimits(conf *YAMLConf, id string) (*swyapi.UserLimits, error) {
 	return &v, err
 }
 
+func dbGetPlanLimits(conf *YAMLConf, id string) (*swyapi.UserLimits, error) {
+	c := dbSession.DB(DBTenantDB).C(DBColPlans)
+	var v swyapi.UserLimits
+	err := c.Find(bson.M{"planid":id}).One(&v)
+	if err == mgo.ErrNotFound {
+		err = nil
+	}
+	return &v, err
+}
+
 func dbSetUserLimits(conf *YAMLConf, limits *swyapi.UserLimits) error {
 	c := dbSession.DB(DBTenantDB).C(DBColLimits)
 	_, err := c.Upsert(bson.M{"id":limits.Id}, limits)
 	return err
+}
+
+func dbDelUserLimits(conf *YAMLConf, id string) {
+	c := dbSession.DB(DBTenantDB).C(DBColLimits)
+	c.Remove(bson.M{"id":id})
 }
 
 func dbConnect(conf *YAMLConf) error {

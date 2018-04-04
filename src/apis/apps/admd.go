@@ -12,4 +12,5 @@ type AddUser struct {
 	Id	string		`json:"id"`
 	Pass	string		`json:"pass"`
 	Name	string		`json:"name"`
+	PlanId	string		`json:"planid"`
 }

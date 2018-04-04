@@ -312,8 +312,25 @@ func handleAddUser(w http.ResponseWriter, r *http.Request) {
 
 	log.Debugf("Add user %v", params)
 	code = http.StatusBadRequest
+
+	if params.PlanId != "" {
+		var plim *swyapi.UserLimits
+
+		plim, err = dbGetPlanLimits(&conf, params.PlanId)
+		if err != nil {
+			goto out
+		}
+
+		plim.Id = params.Id
+		err = dbSetUserLimits(&conf, plim)
+		if err != nil {
+			goto out
+		}
+	}
+
 	err = ksAddUserAndProject(conf.kc, &params)
 	if err != nil {
+		dbDelUserLimits(&conf, params.Id)
 		goto out
 	}
 
@@ -339,6 +356,31 @@ func handleSetLimits(w http.ResponseWriter, r *http.Request) {
 	if !swyks.KeystoneRoleHas(td, swyks.SwyAdminRole) {
 		err = errors.New("Only admin may change user limits")
 		goto out
+	}
+
+	if params.PlanId != "" {
+		var plim *swyapi.UserLimits
+
+		plim, err = dbGetPlanLimits(&conf, params.PlanId)
+		if err != nil {
+			goto out
+		}
+
+		/* Set nil params' limits to plans' ones */
+		if plim.Fn != nil {
+			if params.Fn == nil {
+				params.Fn = plim.Fn
+			} else {
+				if params.Fn.Rate == 0 {
+					params.Fn.Rate = plim.Fn.Rate
+					params.Fn.Burst = plim.Fn.Burst
+				}
+
+				if params.Fn.MaxInProj == 0 {
+					params.Fn.MaxInProj = plim.Fn.MaxInProj
+				}
+			}
+		}
 	}
 
 	err = dbSetUserLimits(&conf, &params)
