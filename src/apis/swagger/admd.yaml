@@ -222,6 +222,9 @@ definitions:
       name:
         type: string
         example: John Doe
+      planid:
+        type: string
+        description: ID of a tariff plan. If set, user limits will be set creation-time into tariff values.
   UserLimits:
     properties:
       id:
@@ -250,3 +253,6 @@ definitions:
       bytesout:
         type: integer
         description: maximum bytes-out (outgoing network traffic) value per billing period
+      planid:
+        type: string
+        description: Description of the tarif plan used. During set the uninitialized above fields are copied from the tariff plan's defaults. If tariff plan doesn't exist, this value is just saved for the user.
