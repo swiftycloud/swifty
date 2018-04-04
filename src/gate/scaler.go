@@ -111,7 +111,7 @@ func scalerInit() error {
 
 		dep, err := depiface.Get(fn.DepName())
 		if err != nil {
-			glog.Error("Can't get dep %s: %s", fn.DepName(), err.Error())
+			glog.Errorf("Can't get dep %s: %s", fn.DepName(), err.Error())
 			return errors.New("Error getting dep")
 		}
 

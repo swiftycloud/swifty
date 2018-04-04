@@ -529,8 +529,7 @@ func main() {
 
 	err = dbConnect(&conf)
 	if err != nil {
-		log.Fatalf("Can't setup mongo: %s",
-				err.Error())
+		log.Fatalf("Can't setup mongo: %s", err.Error())
 	}
 
 	r := mux.NewRouter()

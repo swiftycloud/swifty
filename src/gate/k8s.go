@@ -641,19 +641,19 @@ func swk8sInit(conf *YAMLConf, config_path string) error {
 
 	config, err := clientcmd.BuildConfigFromFlags("", *kubeconfig)
 	if err != nil {
-		glog.Error("BuildConfigFromFlags: %s", err.Error())
+		glog.Errorf("BuildConfigFromFlags: %s", err.Error())
 		return err
 	}
 
 	swk8sClientSet, err = kubernetes.NewForConfig(config)
 	if err != nil {
-		glog.Error("NewForConfig: %s", err.Error())
+		glog.Errorf("NewForConfig: %s", err.Error())
 		return err
 	}
 
 	err = scalerInit()
 	if err != nil {
-		glog.Error("Can't sart scaler: %s", err.Error())
+		glog.Errorf("Can't sart scaler: %s", err.Error())
 		return err
 	}
 
