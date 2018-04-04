@@ -51,6 +51,17 @@ func memdGetCond(cookie string) *FnMemData {
 func setupLimits(ten string, td *TenantMemData, ul *swyapi.UserLimits, off *TenStats) {
 	if ul.Fn != nil {
 		td.fnlim = ul.Fn.MaxInProj
+
+		/*
+		 * Some explanation about limiting. The GBS(RunCost) and BytesOut are
+		 * monotonic counters, that constantly gorw. At the same time, limit
+		 * should be per-someperiod. The pariod is the same as the snapshot
+		 * one for stats, so to get the idea of what to limit, we get the latest
+		 * available stats snapshot and make current stat go over these values
+		 * not much than the configured limit.
+		 *
+		 * Bad design? Maybe, but what are other options?
+		 */
 		td.GBS_l = ul.Fn.GBS
 		td.GBS_o = off.GBS()
 		td.BOut_l = ul.Fn.BytesOut
