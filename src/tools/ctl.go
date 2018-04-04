@@ -205,9 +205,33 @@ func do_user_limits(args []string, opts [8]string) {
 		}
 		v, err := strconv.ParseUint(opts[2], 10, 32)
 		if err != nil {
-			fatal(fmt.Errorf("Bad max-fn value %s: %s", opts[0], err.Error()))
+			fatal(fmt.Errorf("Bad max-fn value %s: %s", opts[2], err.Error()))
 		}
 		l.Fn.MaxInProj = uint(v)
+		chg = true
+	}
+
+	if opts[3] != "" {
+		if l.Fn == nil {
+			l.Fn = &swyapi.FunctionLimits{}
+		}
+		v, err := strconv.ParseUint(opts[3], 10, 64)
+		if err != nil {
+			fatal(fmt.Errorf("Bad GBS value %s: %s", opts[3], err.Error()))
+		}
+		l.Fn.GBS = uint64(v)
+		chg = true
+	}
+
+	if opts[4] != "" {
+		if l.Fn == nil {
+			l.Fn = &swyapi.FunctionLimits{}
+		}
+		v, err := strconv.ParseUint(opts[4], 10, 64)
+		if err != nil {
+			fatal(fmt.Errorf("Bad bytes-out value %s: %s", opts[4], err.Error()))
+		}
+		l.Fn.BytesOut = uint64(v)
 		chg = true
 	}
 
@@ -226,6 +250,12 @@ func do_user_limits(args []string, opts [8]string) {
 			}
 			if l.Fn.MaxInProj != 0 {
 				fmt.Printf("    Max in project:    %d\n", l.Fn.MaxInProj)
+			}
+			if l.Fn.GBS != 0 {
+				fmt.Printf("    Max GBS:           %d\n", l.Fn.GBS)
+			}
+			if l.Fn.BytesOut != 0 {
+				fmt.Printf("    Max bytes out:     %d\n", formatBytes(l.Fn.BytesOut))
 			}
 		}
 	}
@@ -955,6 +985,8 @@ func main() {
 	cmdMap[CMD_LIMITS].opts.StringVar(&opts[0], "plan", "", "Taroff plan ID")
 	cmdMap[CMD_LIMITS].opts.StringVar(&opts[1], "rl", "", "Rate (rate[:burst])")
 	cmdMap[CMD_LIMITS].opts.StringVar(&opts[2], "fnr", "", "Number of functions (in a project)")
+	cmdMap[CMD_LIMITS].opts.StringVar(&opts[3], "gbs", "", "Maximum number of GBS to consume")
+	cmdMap[CMD_LIMITS].opts.StringVar(&opts[4], "bo", "", "Maximum outgoing network bytes")
 	bindCmdUsage(CMD_LIMITS, []string{"UID"}, "Get/Set limits for user", false)
 
 	bindCmdUsage(CMD_MTYPES, []string{}, "List middleware types", false)

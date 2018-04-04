@@ -244,3 +244,9 @@ definitions:
       maxinproj:
         type: integer
         description: maximum number of functions in a single project
+      gbs:
+        type: integer
+        description: maximum GBS value per billing period
+      bytesout:
+        type: integer
+        description: maximum bytes-out (outgoing network traffic) value per billing period

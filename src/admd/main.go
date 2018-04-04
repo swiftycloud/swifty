@@ -379,6 +379,14 @@ func handleSetLimits(w http.ResponseWriter, r *http.Request) {
 				if params.Fn.MaxInProj == 0 {
 					params.Fn.MaxInProj = plim.Fn.MaxInProj
 				}
+
+				if params.Fn.GBS == 0 {
+					params.Fn.GBS = plim.Fn.GBS
+				}
+
+				if params.Fn.BytesOut == 0 {
+					params.Fn.BytesOut = plim.Fn.BytesOut
+				}
 			}
 		}
 	}
