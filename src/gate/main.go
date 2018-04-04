@@ -749,6 +749,24 @@ func ratelimited(fmd *FnMemData) bool {
 	return false
 }
 
+func rslimited(fmd *FnMemData) bool {
+	tmd := fmd.td
+
+	if tmd.GBS_l != 0 {
+		if tmd.stats.GBS() - tmd.GBS_o > tmd.GBS_l {
+			return true
+		}
+	}
+
+	if tmd.BOut_l != 0 {
+		if tmd.stats.BytesOut - tmd.BOut_o > tmd.BOut_l {
+			return true
+		}
+	}
+
+	return false
+}
+
 func handleFunctionCall(w http.ResponseWriter, r *http.Request) {
 	var arg_map map[string]string
 	var res *swyapi.SwdFunctionRunResult
@@ -780,6 +798,12 @@ func handleFunctionCall(w http.ResponseWriter, r *http.Request) {
 	if ratelimited(fmd) {
 		code = http.StatusTooManyRequests
 		err = errors.New("Ratelimited")
+		goto out
+	}
+
+	if rslimited(fmd) {
+		code = http.StatusLocked
+		err = errors.New("Resources exhausted")
 		goto out
 	}
 

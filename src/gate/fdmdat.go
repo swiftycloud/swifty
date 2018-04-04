@@ -26,6 +26,9 @@ type TenantMemData struct {
 	stats	TenStats
 	fnlim	uint
 	lock	sync.Mutex
+
+	GBS_l, GBS_o	float64
+	BOut_l, BOut_o	uint64
 }
 
 func memdGetFn(fn *FunctionDesc) (*FnMemData, error) {
@@ -45,9 +48,14 @@ func memdGetCond(cookie string) *FnMemData {
 	}
 }
 
-func setupLimits(td *TenantMemData, ul *swyapi.UserLimits) {
+func setupLimits(ten string, td *TenantMemData, ul *swyapi.UserLimits, off *TenStats) {
 	if ul.Fn != nil {
 		td.fnlim = ul.Fn.MaxInProj
+		td.GBS_l = ul.Fn.GBS
+		td.GBS_o = off.GBS()
+		td.BOut_l = ul.Fn.BytesOut
+		td.BOut_o = off.BytesOut
+		glog.Debugf("ten %s: GBS %f-%f, BO %d-%d", ten, td.GBS_o, td.GBS_l, td.BOut_o, td.BOut_l)
 	}
 
 	if ul.Fn == nil || ul.Fn.Rate == 0 {
@@ -82,7 +90,12 @@ func tendatGetOrInit(tenant string) (*TenantMemData, error) {
 		return nil, err
 	}
 
-	setupLimits(nret, ul)
+	off, err := dbTenStatsGetLatestArch(tenant)
+	if err != nil {
+		return nil, err
+	}
+
+	setupLimits(tenant, nret, ul, off)
 
 	var loaded bool
 	ret, loaded = tdat.LoadOrStore(tenant, nret)
@@ -94,11 +107,18 @@ func tendatGetOrInit(tenant string) (*TenantMemData, error) {
 			for {
 				time.Sleep(SwyTenantLimitsUpdPeriod)
 				ul, err := dbTenantGetLimits(tenant)
-				if err == nil {
-					setupLimits(lret, ul)
-				} else {
+				if err != nil {
 					glog.Errorf("No way to read user limits: %s", err.Error())
+					continue
 				}
+
+				off, err := dbTenStatsGetLatestArch(tenant)
+				if err != nil {
+					glog.Errorf("No way to read user latest stats: %s", err.Error())
+					continue
+				}
+
+				setupLimits(tenant, lret, ul, off)
 			}
 		}()
 	}

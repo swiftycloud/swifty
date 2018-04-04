@@ -215,11 +215,11 @@ func do_user_limits(args []string, opts [8]string) {
 		if l.Fn == nil {
 			l.Fn = &swyapi.FunctionLimits{}
 		}
-		v, err := strconv.ParseUint(opts[3], 10, 64)
+		v, err := strconv.ParseFloat(opts[3], 64)
 		if err != nil {
 			fatal(fmt.Errorf("Bad GBS value %s: %s", opts[3], err.Error()))
 		}
-		l.Fn.GBS = uint64(v)
+		l.Fn.GBS = v
 		chg = true
 	}
 
@@ -231,7 +231,7 @@ func do_user_limits(args []string, opts [8]string) {
 		if err != nil {
 			fatal(fmt.Errorf("Bad bytes-out value %s: %s", opts[4], err.Error()))
 		}
-		l.Fn.BytesOut = uint64(v)
+		l.Fn.BytesOut = v
 		chg = true
 	}
 
@@ -252,7 +252,7 @@ func do_user_limits(args []string, opts [8]string) {
 				fmt.Printf("    Max in project:    %d\n", l.Fn.MaxInProj)
 			}
 			if l.Fn.GBS != 0 {
-				fmt.Printf("    Max GBS:           %d\n", l.Fn.GBS)
+				fmt.Printf("    Max GBS:           %f\n", l.Fn.GBS)
 			}
 			if l.Fn.BytesOut != 0 {
 				fmt.Printf("    Max bytes out:     %d\n", formatBytes(l.Fn.BytesOut))

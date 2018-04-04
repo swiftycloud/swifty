@@ -251,7 +251,19 @@ func dbTenStatsGetArch(tenant string, nr int) ([]TenStats, error) {
 	var ret []TenStats
 	c := dbSession.DB(DBStateDB).C(DBColTenStatsA)
 	err := c.Find(bson.M{"tenant": tenant}).Sort("-till").Limit(nr).All(&ret)
+	if err == mgo.ErrNotFound {
+		err = nil
+	}
 	return ret, err
+}
+
+func dbTenStatsGetLatestArch(tenant string) (*TenStats, error) {
+	var ret TenStats
+	a, err := dbTenStatsGetArch(tenant, 1)
+	if len(a) != 0 {
+		ret = a[0]
+	}
+	return &ret, err
 }
 
 func dbTenStatsUpdate(st *TenStats) {
@@ -275,6 +287,9 @@ func dbFnStatsGetArch(id string, nr int) ([]FnStats, error) {
 	var ret []FnStats
 	c := dbSession.DB(DBStateDB).C(DBColFnStatsA)
 	err := c.Find(bson.M{"cookie": id}).Sort("-till").Limit(nr).All(&ret)
+	if err == mgo.ErrNotFound {
+		err = nil
+	}
 	return ret, err
 }
 
