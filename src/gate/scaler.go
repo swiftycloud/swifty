@@ -7,6 +7,7 @@ import (
 	"errors"
 	"sync"
 	"time"
+	"../common"
 )
 
 func condWaitTmo(cond *sync.Cond, tmo time.Duration) {
@@ -104,8 +105,13 @@ func scalerInit() error {
 	depiface := swk8sClientSet.Extensions().Deployments(v1.NamespaceDefault)
 
 	for _, fn := range(fns) {
+		if fn.State != swy.DBFuncStateRdy {
+			continue
+		}
+
 		dep, err := depiface.Get(fn.DepName())
 		if err != nil {
+			glog.Error("Can't get dep %s: %s", fn.DepName(), err.Error())
 			return errors.New("Error getting dep")
 		}
 
