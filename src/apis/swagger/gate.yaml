@@ -384,6 +384,31 @@ paths:
           description: Need to authenticate
         '403':
           description: Bad authentication token
+  /function/state:
+    post:
+      summary: Set specific function state
+      parameters:
+        - in: header
+          name: X-Auth-Token
+          type: string
+          required: true
+        - name: date
+          in: body
+          description: Function name and state
+          required: true
+          schema:
+            $ref: '#/definitions/FunctionState'
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+          schema:
+            $ref: '#/definitions/GateError'
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad authentication token
   /mware/list:
     post:
       summary: List middleware
@@ -690,6 +715,20 @@ definitions:
         description: Per-period statistics, "till"-sorted descending. Each period is incremental to previous. The 0th one is "till now"
         items:
           $ref: '#/definitions/UserStats'
+  FunctionState:
+    type: object
+    description: Function name and state to set
+    required:
+      - name
+      - state
+    properties:
+      project:
+        type: string
+      name:
+        type: string
+      state:
+        type: string
+        description: Values reported by /function/info in state field. To (de)activate use "deactivated" and "ready" respectively
   FunctionStats:
     type: object
     description: Statistics about function
