@@ -66,7 +66,6 @@ func setupLimits(ten string, td *TenantMemData, ul *swyapi.UserLimits, off *TenS
 		td.GBS_o = off.GBS()
 		td.BOut_l = ul.Fn.BytesOut
 		td.BOut_o = off.BytesOut
-		glog.Debugf("ten %s: GBS %f-%f, BO %d-%d", ten, td.GBS_o, td.GBS_l, td.BOut_o, td.BOut_l)
 	}
 
 	if ul.Fn == nil || ul.Fn.Rate == 0 {
