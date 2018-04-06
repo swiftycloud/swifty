@@ -763,6 +763,22 @@ func login() {
 	}
 }
 
+func show_login() {
+	fmt.Printf("%s@%s:%s (%s)\n", conf.Login.User, conf.Login.Host, conf.Login.Port, gateProto())
+}
+
+func manage_login(args []string, opts [8]string) {
+	action := "show"
+	if len(args) >= 1 {
+		action = args[0]
+	}
+
+	switch action {
+	case "show":
+		show_login()
+	}
+}
+
 func make_login(creds string, opts [8]string) {
 	//
 	// Login string is user:pass@host:port
@@ -809,6 +825,7 @@ func refresh_token(home string) {
 
 const (
 	CMD_LOGIN string	= "login"
+	CMD_ME string		= "me"
 	CMD_STATS string	= "st"
 	CMD_PS string		= "ps"
 	CMD_LS string		= "ls"
@@ -840,6 +857,7 @@ const (
 
 var cmdOrder = []string {
 	CMD_LOGIN,
+	CMD_ME,
 	CMD_STATS,
 	CMD_PS,
 	CMD_LS,
@@ -879,6 +897,7 @@ type cmdDesc struct {
 
 var cmdMap = map[string]*cmdDesc {
 	CMD_LOGIN:	&cmdDesc{			  opts: flag.NewFlagSet(CMD_LOGIN, flag.ExitOnError) },
+	CMD_ME:		&cmdDesc{  call: manage_login,	  opts: flag.NewFlagSet(CMD_ME, flag.ExitOnError) },
 	CMD_STATS:	&cmdDesc{  call: show_stats,	  opts: flag.NewFlagSet(CMD_STATS, flag.ExitOnError) },
 	CMD_PS:		&cmdDesc{  call: list_projects,	  opts: flag.NewFlagSet(CMD_PS, flag.ExitOnError) },
 	CMD_LS:		&cmdDesc{ pcall: list_functions,  opts: flag.NewFlagSet(CMD_LS, flag.ExitOnError) },
@@ -931,6 +950,8 @@ func main() {
 	cmdMap[CMD_LOGIN].opts.StringVar(&opts[0], "tls", "no", "TLS mode")
 	cmdMap[CMD_LOGIN].opts.StringVar(&opts[1], "cert", "", "x509 cert file")
 	bindCmdUsage(CMD_LOGIN,	[]string{"USER:PASS@HOST:PORT"}, "Login into the system", false)
+
+	bindCmdUsage(CMD_ME, []string{"ACTION"}, "Manage login", false)
 
 	cmdMap[CMD_STATS].opts.StringVar(&opts[0], "p", "0", "Periods to report")
 	bindCmdUsage(CMD_STATS,	[]string{}, "Show stats", false)
@@ -1013,7 +1034,9 @@ func main() {
 	}
 
 	npa := len(cd.pargs) + 2
-	cd.opts.Parse(os.Args[npa:])
+	if len(os.Args) >= npa {
+		cd.opts.Parse(os.Args[npa:])
+	}
 
 	if os.Args[1] == CMD_LOGIN {
 		make_login(os.Args[2], opts)
