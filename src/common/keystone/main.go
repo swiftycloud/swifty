@@ -2,6 +2,7 @@ package swyks
 
 import (
 	"sync"
+	"time"
 	"net/http"
 	"../http"
 	"../../apis/apps"
@@ -11,6 +12,7 @@ const (
 	SwyAdminRole	string	= "swifty.admin"
 	SwyUserRole	string	= "swifty.owner"
 	SwyUIRole	string	= "swifty.ui"
+	KsTokenCacheExpires time.Duration = 60 * time.Second
 )
 
 type KeystoneDomain struct {
@@ -177,8 +179,15 @@ retry:
 	return nil
 }
 
+var tdCache sync.Map
+
 func KeystoneGetTokenData(addr, token string) (*KeystoneTokenData, int) {
 	var out KeystoneAuthResp
+
+	v, ok := tdCache.Load(token)
+	if ok {
+		return v.(*KeystoneTokenData), 0
+	}
 
 	kc := &KsClient { addr: addr, }
 
@@ -200,7 +209,12 @@ func KeystoneGetTokenData(addr, token string) (*KeystoneTokenData, int) {
 		return nil, http.StatusUnauthorized /* FIXME -- get status from keystone too */
 	}
 
-	return &out.Token, 0
+	v, loaded := tdCache.LoadOrStore(token, &out.Token)
+	if !loaded {
+		time.AfterFunc(KsTokenCacheExpires, func() { tdCache.Delete(token) })
+	}
+
+	return v.(*KeystoneTokenData), 0
 }
 
 func KeystoneAuthWithPass(addr, domain string, up *swyapi.UserLogin) (string, string, error) {
