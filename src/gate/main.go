@@ -9,6 +9,7 @@ import (
 	"encoding/hex"
 	"net/http"
 	"errors"
+	"os/exec"
 	"flag"
 	"strings"
 	"context"
@@ -879,6 +880,14 @@ func handleFunctionRun(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	res, err = doRunConn(ctx, conn, fn.Cookie, "run", params.Args)
 	if err != nil {
 		return GateErrE(swy.GateGenErr, err)
+	}
+
+	if params.Project == "test" {
+		var fort []byte
+		fort, err = exec.Command("fortune", "fortunes").Output()
+		if err == nil {
+			res.Stdout = string(fort)
+		}
 	}
 
 	err = swyhttp.MarshalAndWrite(w, swyapi.FunctionRunResult{

@@ -577,7 +577,7 @@ func run_function(project string, args []string, opts [8]string) {
 	var rres swyapi.FunctionRunResult
 	var argmap = make(map[string]string)
 
-	for _, arg := range args[1:] {
+	for _, arg := range strings.Split(args[1], ",") {
 		a := strings.SplitN(arg, "=", 2)
 		argmap[a[0]] = a[1]
 	}
@@ -986,7 +986,7 @@ func main() {
 	cmdMap[CMD_ADD].opts.StringVar(&opts[5], "rl", "", "Rate (rate[:burst])")
 	cmdMap[CMD_ADD].opts.StringVar(&opts[6], "data", "", "Any text associated with fn")
 	bindCmdUsage(CMD_ADD,	[]string{"NAME"}, "Add a function", true)
-	bindCmdUsage(CMD_RUN,	[]string{"NAME", "ARGUMENTS..."}, "Run a function", true)
+	bindCmdUsage(CMD_RUN,	[]string{"NAME", "ARG=VAL,..."}, "Run a function", true)
 	cmdMap[CMD_UPD].opts.StringVar(&opts[0], "src", "", "Source file")
 	cmdMap[CMD_UPD].opts.StringVar(&opts[1], "tmo", "", "Timeout")
 	cmdMap[CMD_UPD].opts.StringVar(&opts[2], "rl", "", "Rate (rate[:burst])")
