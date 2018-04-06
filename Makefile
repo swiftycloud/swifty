@@ -112,28 +112,28 @@ all: $(all-y)
 
 #
 # Docker images
-swifty/python: swy-wdog-go src/wdog/runner.py kubectl/docker/images/python/Dockerfile
+swifty/python: swy-wdog-go src/wdog/runner.py kubectl/docker/wdog/python/Dockerfile
 	$(call msg-gen,$@)
-	$(Q) $(CP) swy-wdog-go  kubectl/docker/images/python/swy-wdog
-	$(Q) $(CP) src/wdog/runner.py  kubectl/docker/images/python/swy-runner.py
-	$(Q) $(CP) src/wdog/lib.py kubectl/docker/images/python/swifty.py
-	$(Q) $(MAKE) -C kubectl/docker/images/python all
+	$(Q) $(CP) swy-wdog-go  kubectl/docker/wdog/python/swy-wdog
+	$(Q) $(CP) src/wdog/runner.py  kubectl/docker/wdog/python/swy-runner.py
+	$(Q) $(CP) src/wdog/lib.py kubectl/docker/wdog/python/swifty.py
+	$(Q) $(MAKE) -C kubectl/docker/wdog/python all
 .PHONY: swifty/python
 
-swifty/golang: swy-wdog-go kubectl/docker/images/golang/Dockerfile
+swifty/golang: swy-wdog-go kubectl/docker/wdog/golang/Dockerfile
 	$(call msg-gen,$@)
-	$(Q) $(CP) swy-wdog-go  kubectl/docker/images/golang/swy-wdog
-	$(Q) $(CP) src/wdog/runner.go kubectl/docker/images/golang/
-	$(Q) $(CP) src/wdog/lib.go kubectl/docker/images/golang/
-	$(Q) $(CP) src/common/xqueue/queue.go kubectl/docker/images/golang/
-	$(Q) $(MAKE) -C kubectl/docker/images/golang all
+	$(Q) $(CP) swy-wdog-go  kubectl/docker/wdog/golang/swy-wdog
+	$(Q) $(CP) src/wdog/runner.go kubectl/docker/wdog/golang/
+	$(Q) $(CP) src/wdog/lib.go kubectl/docker/wdog/golang/
+	$(Q) $(CP) src/common/xqueue/queue.go kubectl/docker/wdog/golang/
+	$(Q) $(MAKE) -C kubectl/docker/wdog/golang all
 .PHONY: swifty/golang
 
-swifty/swift: swy-wdog-go kubectl/docker/images/swift/Dockerfile
+swifty/swift: swy-wdog-go kubectl/docker/wdog/swift/Dockerfile
 	$(call msg-gen,$@)
-	$(Q) $(CP) swy-wdog-go  kubectl/docker/images/swift/swy-wdog
-	$(Q) $(CP) src/wdog/runner.swift kubectl/docker/images/swift/
-	$(Q) $(MAKE) -C kubectl/docker/images/swift all
+	$(Q) $(CP) swy-wdog-go  kubectl/docker/wdog/swift/swy-wdog
+	$(Q) $(CP) src/wdog/runner.swift kubectl/docker/wdog/swift/
+	$(Q) $(MAKE) -C kubectl/docker/wdog/swift all
 .PHONY: swifty/swift
 
 swifty/gate: swy-gate kubectl/docker/gate/Dockerfile
