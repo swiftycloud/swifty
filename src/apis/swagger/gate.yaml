@@ -145,6 +145,38 @@ paths:
           description: Need to authenticate
         '403':
           description: Bad authentication token
+
+  /function/list/info:
+    post:
+      summary: List functions and provide info for each
+      parameters:
+        - in: header
+          name: X-Auth-Token
+          type: string
+          required: true
+        - in: body
+          name: data
+          description: List parameters
+          required: true
+          schema:
+            $ref: '#/definitions/FunctionListInfo'
+      responses:
+        '200':
+          description: OK
+          schema:
+            properties:
+              functions:
+                type: array
+                items:
+                  $ref: '#/definitions/FunctionInfo'
+        '400':
+          description: Bad request
+          schema:
+            $ref: '#/definitions/GateError'
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad authentication token
   /function/add:
     post:
       summary: Add a function
@@ -639,6 +671,14 @@ definitions:
       project:
         type: string
         example: my-project
+  FunctionListInfo:
+    properties:
+      project:
+        type: string
+        example: my-project
+      periods:
+        type: integer
+        description: Numer of stats periods, see FunctionStatsReq for details
   FunctionInfo:
     properties:
       state:

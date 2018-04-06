@@ -894,6 +894,41 @@ func handleFunctionRun(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	return nil
 }
 
+func handleFunctionListWithInfos(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
+	var recs []FunctionDesc
+	var result []*swyapi.FunctionInfo
+	var params swyapi.FunctionListInfo
+
+	ctxlog(ctx).Debugf("List functions with infos")
+
+	err := swyhttp.ReadAndUnmarshalReq(r, &params)
+	if err != nil {
+		return GateErrE(swy.GateBadRequest, err)
+	}
+
+	id := makeSwoId(fromContext(ctx).Tenant, params.Project, "")
+	recs, err = dbFuncListProj(id)
+	if err != nil {
+		return GateErrD(err)
+	}
+
+	for _, v := range recs {
+		ifo, cerr := getFunctionInfo(&v, params.Periods)
+		if cerr != nil {
+			return cerr
+		}
+
+		result = append(result, ifo)
+	}
+
+	err = swyhttp.MarshalAndWrite(w, result)
+	if err != nil {
+		return GateErrE(swy.GateBadResp, err)
+	}
+
+	return nil
+}
+
 func handleFunctionList(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
 	var recs []FunctionDesc
 	var result []swyapi.FunctionItem
@@ -1264,6 +1299,7 @@ func main() {
 	r.Handle("/v1/function/remove",		genReqHandler(handleFunctionRemove)).Methods("POST", "OPTIONS")
 	r.Handle("/v1/function/run",		genReqHandler(handleFunctionRun)).Methods("POST", "OPTIONS")
 	r.Handle("/v1/function/list",		genReqHandler(handleFunctionList)).Methods("POST", "OPTIONS")
+	r.Handle("/v1/function/list/info",	genReqHandler(handleFunctionListWithInfos)).Methods("POST", "OPTIONS")
 	r.Handle("/v1/function/info",		genReqHandler(handleFunctionInfo)).Methods("POST", "OPTIONS")
 	r.Handle("/v1/function/stats",		genReqHandler(handleFunctionStats)).Methods("POST", "OPTIONS")
 	r.Handle("/v1/function/code",		genReqHandler(handleFunctionCode)).Methods("POST", "OPTIONS")

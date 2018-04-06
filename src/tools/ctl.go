@@ -47,7 +47,7 @@ func gateProto() string {
 	}
 }
 
-func make_faas_req_x(url string, in interface{}, succ_code int, tmo uint) (*http.Response, error) {
+func make_faas_req4(url string, in interface{}, succ_code int, tmo uint) (*http.Response, error) {
 	address := gateProto() + "://" + conf.Login.Host + ":" + conf.Login.Port + "/v1/" + url
 
 	h := make(map[string]string)
@@ -76,7 +76,7 @@ func make_faas_req_x(url string, in interface{}, succ_code int, tmo uint) (*http
 }
 
 func faas_login() string {
-	resp, err := make_faas_req_x("login", swyapi.UserLogin {
+	resp, err := make_faas_req4("login", swyapi.UserLogin {
 			UserName: conf.Login.User, Password: conf.Login.Pass,
 		}, http.StatusOK, 0)
 	if err != nil {
@@ -104,14 +104,10 @@ func faas_login() string {
 	return token
 }
 
-func make_faas_req(url string, in interface{}, out interface{}) {
-	make_faas_req2(url, in, out, http.StatusOK, 30)
-}
-
-func make_faas_req2(url string, in interface{}, out interface{}, succ_code int, tmo uint) {
+func make_faas_req3(url string, in interface{}, succ_code int, tmo uint) *http.Response {
 	first_attempt := true
 again:
-	resp, err := make_faas_req_x(url, in, succ_code, tmo)
+	resp, err := make_faas_req4(url, in, succ_code, tmo)
 	if err != nil {
 		if resp == nil {
 			fatal(err)
@@ -142,15 +138,24 @@ again:
 		fatal(err)
 	}
 
+	return resp
+}
+
+func make_faas_req2(url string, in interface{}, out interface{}, succ_code int, tmo uint) {
+	resp := make_faas_req3(url, in, succ_code, tmo)
 	/* Here we have http.StatusOK */
 	defer resp.Body.Close()
 
 	if out != nil {
-		err = swyhttp.ReadAndUnmarshalResp(resp, out)
+		err := swyhttp.ReadAndUnmarshalResp(resp, out)
 		if err != nil {
 			fatal(err)
 		}
 	}
+}
+
+func make_faas_req(url string, in interface{}, out interface{}) {
+	make_faas_req2(url, in, out, http.StatusOK, 30)
 }
 
 func list_users(args []string, opts [8]string) {
@@ -297,12 +302,25 @@ func list_projects(args []string, opts [8]string) {
 }
 
 func list_functions(project string, args []string, opts [8]string) {
-	var fns []swyapi.FunctionItem
-	make_faas_req("function/list", swyapi.FunctionList{ Project: project, }, &fns)
+	if opts[0] == "" {
+		var fns []swyapi.FunctionItem
+		make_faas_req("function/list", swyapi.FunctionList{ Project: project, }, &fns)
 
-	fmt.Printf("%-20s%-10s\n", "NAME", "STATE")
-	for _, fn := range fns {
-		fmt.Printf("%-20s%-12s\n", fn.FuncName, fn.State)
+		fmt.Printf("%-20s%-10s\n", "NAME", "STATE")
+		for _, fn := range fns {
+			fmt.Printf("%-20s%-12s\n", fn.FuncName, fn.State)
+		}
+	} else if opts[0] == "json" {
+		resp := make_faas_req3("function/list/info",
+			swyapi.FunctionListInfo{ Project: project, Periods: 0 }, http.StatusOK, 30)
+		defer resp.Body.Close()
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			fatal(fmt.Errorf("\tCan't parse responce: %s", err.Error()))
+		}
+		fmt.Printf("%s\n", string(body))
+	} else {
+		fatal(fmt.Errorf("Bad -o value %s", opts[0]))
 	}
 }
 
@@ -957,6 +975,7 @@ func main() {
 	bindCmdUsage(CMD_STATS,	[]string{}, "Show stats", false)
 	bindCmdUsage(CMD_PS,	[]string{}, "List projects", false)
 
+	cmdMap[CMD_LS].opts.StringVar(&opts[0], "o", "", "Output format (NONE, json)")
 	bindCmdUsage(CMD_LS,	[]string{}, "List functions", true)
 	bindCmdUsage(CMD_INF,	[]string{"NAME"}, "Function info", true)
 	cmdMap[CMD_ADD].opts.StringVar(&opts[0], "lang", "auto", "Language")

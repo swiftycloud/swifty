@@ -9,6 +9,11 @@ type FunctionList struct {
 	Project		string			`json:"project"`
 }
 
+type FunctionListInfo struct {
+	Project		string			`json:"project"`
+	Periods		int			`json:"periods"`
+}
+
 type ProjectList struct {
 }
 
