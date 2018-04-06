@@ -529,9 +529,54 @@ func handleTenantStats(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	return nil
 }
 
+func getFunctionStats(fn *FunctionDesc, periods int) ([]swyapi.FunctionStats, *swyapi.GateErr) {
+	var stats []swyapi.FunctionStats
+
+	prev, err := statsGet(fn)
+	if err != nil {
+		return nil, GateErrM(swy.GateGenErr, "Error getting stats")
+	}
+
+	if periods > 0 {
+		var afst []FnStats
+
+		afst, err = dbFnStatsGetArch(fn.Cookie, periods)
+		if err != nil {
+			return nil, GateErrD(err)
+		}
+
+		for i := 0; i < periods && i < len(afst); i++ {
+			cur := &afst[i]
+			stats = append(stats, swyapi.FunctionStats{
+				Called:		prev.Called - cur.Called,
+				Timeouts:	prev.Timeouts - cur.Timeouts,
+				Errors:		prev.Errors - cur.Errors,
+				LastCall:	prev.LastCallS(),
+				Time:		prev.RunTimeUsec() - cur.RunTimeUsec(),
+				GBS:		prev.GBS() - cur.GBS(),
+				BytesOut:	prev.BytesOut - cur.BytesOut,
+				Till:		prev.TillS(),
+			})
+			prev = cur
+		}
+	}
+
+	stats = append(stats, swyapi.FunctionStats{
+		Called:		prev.Called,
+		Timeouts:	prev.Timeouts,
+		Errors:		prev.Errors,
+		LastCall:	prev.LastCallS(),
+		Time:		prev.RunTimeUsec(),
+		GBS:		prev.GBS(),
+		BytesOut:	prev.BytesOut,
+		Till:		prev.TillS(),
+	})
+
+	return stats, nil
+}
+
 func handleFunctionStats(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
 	var params swyapi.FunctionStatsReq
-	var prev *FnStats
 
 	err := swyhttp.ReadAndUnmarshalReq(r, &params)
 	if err != nil {
@@ -546,48 +591,12 @@ func handleFunctionStats(ctx context.Context, w http.ResponseWriter, r *http.Req
 		return GateErrD(err)
 	}
 
-	prev, err = statsGet(fn)
-	if err != nil {
-		return GateErrM(swy.GateGenErr, "Error getting stats")
+	stats, cerr := getFunctionStats(fn, params.Periods)
+	if cerr != nil {
+		return cerr
 	}
 
-	var resp swyapi.FunctionStatsResp
-	if params.Periods > 0 {
-		var afst []FnStats
-
-		afst, err = dbFnStatsGetArch(fn.Cookie, params.Periods)
-		if err != nil {
-			return GateErrD(err)
-		}
-
-		for i := 0; i < params.Periods && i < len(afst); i++ {
-			cur := &afst[i]
-			resp.Stats = append(resp.Stats, swyapi.FunctionStats{
-				Called:		prev.Called - cur.Called,
-				Timeouts:	prev.Timeouts - cur.Timeouts,
-				Errors:		prev.Errors - cur.Errors,
-				LastCall:	prev.LastCallS(),
-				Time:		prev.RunTimeUsec() - cur.RunTimeUsec(),
-				GBS:		prev.GBS() - cur.GBS(),
-				BytesOut:	prev.BytesOut - cur.BytesOut,
-				Till:		prev.TillS(),
-			})
-			prev = cur
-		}
-	}
-
-	resp.Stats = append(resp.Stats, swyapi.FunctionStats{
-		Called:		prev.Called,
-		Timeouts:	prev.Timeouts,
-		Errors:		prev.Errors,
-		LastCall:	prev.LastCallS(),
-		Time:		prev.RunTimeUsec(),
-		GBS:		prev.GBS(),
-		BytesOut:	prev.BytesOut,
-		Till:		prev.TillS(),
-	})
-
-	err = swyhttp.MarshalAndWrite(w, resp)
+	err = swyhttp.MarshalAndWrite(w, &swyapi.FunctionStatsResp{ Stats: stats })
 	if err != nil {
 		return GateErrE(swy.GateBadResp, err)
 	}
