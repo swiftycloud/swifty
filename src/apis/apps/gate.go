@@ -68,7 +68,7 @@ type FunctionInfo struct {
 	Code		FunctionCode		`json:"code"`
 	Event		FunctionEvent		`json:"event"`
 	URL		string			`json:"url"`
-	Stats		FunctionStats		`json:"stats"`
+	Stats		[]FunctionStats		`json:"stats"`
 	Size		FunctionSize		`json:"size"`
 	UserData	string			`json:"userdata"`
 }
@@ -197,6 +197,12 @@ type FunctionRunResult struct {
 type FunctionID struct {
 	Project		string			`json:"project"`
 	FuncName	string			`json:"name"`
+}
+
+type FunctionInfoReq struct {
+	Project		string			`json:"project"`
+	FuncName	string			`json:"name"`
+	Periods		int			`json:"periods,omitempty"`
 }
 
 type FunctionXID struct {

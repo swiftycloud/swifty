@@ -604,19 +604,18 @@ func handleFunctionStats(ctx context.Context, w http.ResponseWriter, r *http.Req
 	return nil
 }
 
-func getFunctionInfo(fn *FunctionDesc) (*swyapi.FunctionInfo, *swyapi.GateErr) {
+func getFunctionInfo(fn *FunctionDesc, periods int) (*swyapi.FunctionInfo, *swyapi.GateErr) {
 	var fv []string
 	var url = ""
-	var stats *FnStats
 	var err error
 
 	if (fn.URLCall) {
 		url = conf.Daemon.Addr + "/call/" + fn.Cookie
 	}
 
-	stats, err = statsGet(fn)
+	stats, cerr := getFunctionStats(fn, periods)
 	if err != nil {
-		return nil, GateErrM(swy.GateGenErr, "Error getting stats")
+		return nil, cerr
 	}
 
 	fv, err = dbBalancerRSListVersions(fn.Cookie)
@@ -642,15 +641,7 @@ func getFunctionInfo(fn *FunctionDesc) (*swyapi.FunctionInfo, *swyapi.GateErr) {
 			MQueue:		fn.Event.MQueue,
 			S3Bucket:	fn.Event.S3Bucket,
 		},
-		Stats:		swyapi.FunctionStats {
-			Called:		stats.Called,
-			Timeouts:	stats.Timeouts,
-			Errors:		stats.Errors,
-			LastCall:	stats.LastCallS(),
-			Time:		stats.RunTimeUsec(),
-			GBS:		stats.GBS(),
-			BytesOut:	stats.BytesOut,
-		},
+		Stats: stats,
 		Size:		swyapi.FunctionSize {
 			Memory:		fn.Size.Mem,
 			Timeout:	fn.Size.Tmo,
@@ -662,7 +653,7 @@ func getFunctionInfo(fn *FunctionDesc) (*swyapi.FunctionInfo, *swyapi.GateErr) {
 }
 
 func handleFunctionInfo(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
-	var params swyapi.FunctionID
+	var params swyapi.FunctionInfoReq
 	err := swyhttp.ReadAndUnmarshalReq(r, &params)
 	if err != nil {
 		return GateErrE(swy.GateBadRequest, err)
@@ -676,7 +667,7 @@ func handleFunctionInfo(ctx context.Context, w http.ResponseWriter, r *http.Requ
 		return GateErrD(err)
 	}
 
-	fi, cerr := getFunctionInfo(fn)
+	fi, cerr := getFunctionInfo(fn, params.Periods)
 	if cerr != nil {
 		return cerr
 	}

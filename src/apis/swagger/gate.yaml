@@ -316,7 +316,7 @@ paths:
           description: Function name
           required: true
           schema:
-            $ref: '#/definitions/FunctionID'
+            $ref: '#/definitions/FunctionInfoReq'
       responses:
         '200':
           description: OK
@@ -660,7 +660,10 @@ definitions:
       size:
         $ref: '#/definitions/FunctionSize'
       stats:
-        $ref: '#/definitions/FunctionStats'
+        type: array
+        description: Per-period statistics, see FunctionStatsResp for details
+        items:
+          $ref: '#/definitions/FunctionStats'
       userdata:
         type: string
         description: The data provided during /add call
@@ -959,6 +962,19 @@ definitions:
       name:
         type: string
         example: my-function
+  FunctionInfoReq:
+    required:
+      - name
+    properties:
+      project:
+        type: string
+        example: my-project
+      name:
+        type: string
+        example: my-function
+      periods:
+        type: integer
+        description: Numer of stats periods, see FunctionStatsReq for details
   FunctionXID:
     required:
       - name

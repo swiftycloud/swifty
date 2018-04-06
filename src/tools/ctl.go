@@ -338,7 +338,7 @@ func formatBytes(b uint64) string {
 
 func info_function(project string, args []string, opts [8]string) {
 	var ifo swyapi.FunctionInfo
-	make_faas_req("function/info", swyapi.FunctionID{ Project: project, FuncName: args[0]}, &ifo)
+	make_faas_req("function/info", swyapi.FunctionInfoReq{ Project: project, FuncName: args[0], Periods: 0}, &ifo)
 	ver := ifo.Version
 	if len(ver) > 8 {
 		ver = ver[:8]
@@ -382,17 +382,17 @@ func info_function(project string, args []string, opts [8]string) {
 		fmt.Printf("Rate:        %d:%d\n", ifo.Size.Rate, ifo.Size.Burst)
 	}
 	fmt.Printf("Memory:      %dMi\n", ifo.Size.Memory)
-	fmt.Printf("Called:      %d\n", ifo.Stats.Called)
-	if ifo.Stats.Called != 0 {
-		lc, _ := time.Parse(time.RFC1123Z, ifo.Stats.LastCall)
+	fmt.Printf("Called:      %d\n", ifo.Stats[0].Called)
+	if ifo.Stats[0].Called != 0 {
+		lc, _ := time.Parse(time.RFC1123Z, ifo.Stats[0].LastCall)
 		since := time.Since(lc)
 		since -= since % time.Second
 		fmt.Printf("Last run:    %s ago\n", since.String())
-		fmt.Printf("Time:        %d (avg %d) usec\n", ifo.Stats.Time, ifo.Stats.Time / ifo.Stats.Called)
-		fmt.Printf("GBS:         %f\n", ifo.Stats.GBS)
+		fmt.Printf("Time:        %d (avg %d) usec\n", ifo.Stats[0].Time, ifo.Stats[0].Time / ifo.Stats[0].Called)
+		fmt.Printf("GBS:         %f\n", ifo.Stats[0].GBS)
 	}
 
-	if b := ifo.Stats.BytesOut; b != 0 {
+	if b := ifo.Stats[0].BytesOut; b != 0 {
 		fmt.Printf("Bytes sent:  %s\n", formatBytes(b))
 	}
 
