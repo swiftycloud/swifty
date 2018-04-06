@@ -595,12 +595,65 @@ func handleFunctionStats(ctx context.Context, w http.ResponseWriter, r *http.Req
 	return nil
 }
 
-func handleFunctionInfo(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
-	var params swyapi.FunctionID
+func getFunctionInfo(fn *FunctionDesc) (*swyapi.FunctionInfo, *swyapi.GateErr) {
 	var fv []string
 	var url = ""
 	var stats *FnStats
+	var err error
 
+	if (fn.URLCall) {
+		url = conf.Daemon.Addr + "/call/" + fn.Cookie
+	}
+
+	stats, err = statsGet(fn)
+	if err != nil {
+		return nil, GateErrM(swy.GateGenErr, "Error getting stats")
+	}
+
+	fv, err = dbBalancerRSListVersions(fn.Cookie)
+	if err != nil {
+		return nil, GateErrD(err)
+	}
+
+	return &swyapi.FunctionInfo{
+		State:          fnStates[fn.State],
+		Mware:          fn.Mware,
+		S3Buckets:	fn.S3Buckets,
+		Version:        fn.Src.Version,
+		RdyVersions:    fv,
+		URL:		url,
+		Code:		swyapi.FunctionCode{
+			Lang:		fn.Code.Lang,
+			Env:		fn.Code.Env,
+		},
+		Event:		swyapi.FunctionEvent{
+			Source:		fn.Event.Source,
+			CronTab:	fn.Event.CronTab,
+			MwareId:	fn.Event.MwareId,
+			MQueue:		fn.Event.MQueue,
+			S3Bucket:	fn.Event.S3Bucket,
+		},
+		Stats:		swyapi.FunctionStats {
+			Called:		stats.Called,
+			Timeouts:	stats.Timeouts,
+			Errors:		stats.Errors,
+			LastCall:	stats.LastCallS(),
+			Time:		stats.RunTimeUsec(),
+			GBS:		stats.GBS(),
+			BytesOut:	stats.BytesOut,
+		},
+		Size:		swyapi.FunctionSize {
+			Memory:		fn.Size.Mem,
+			Timeout:	fn.Size.Tmo,
+			Rate:		fn.Size.Rate,
+			Burst:		fn.Size.Burst,
+		},
+		UserData:	fn.UserData,
+	}, nil
+}
+
+func handleFunctionInfo(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
+	var params swyapi.FunctionID
 	err := swyhttp.ReadAndUnmarshalReq(r, &params)
 	if err != nil {
 		return GateErrE(swy.GateBadRequest, err)
@@ -614,55 +667,12 @@ func handleFunctionInfo(ctx context.Context, w http.ResponseWriter, r *http.Requ
 		return GateErrD(err)
 	}
 
-	if (fn.URLCall) {
-		url = conf.Daemon.Addr + "/call/" + fn.Cookie
+	fi, cerr := getFunctionInfo(fn)
+	if cerr != nil {
+		return cerr
 	}
 
-	stats, err = statsGet(fn)
-	if err != nil {
-		return GateErrM(swy.GateGenErr, "Error getting stats")
-	}
-
-	fv, err = dbBalancerRSListVersions(fn.Cookie)
-	if err != nil {
-		return GateErrD(err)
-	}
-
-	err = swyhttp.MarshalAndWrite(w,  swyapi.FunctionInfo{
-			State:          fnStates[fn.State],
-			Mware:          fn.Mware,
-			S3Buckets:	fn.S3Buckets,
-			Version:        fn.Src.Version,
-			RdyVersions:    fv,
-			URL:		url,
-			Code:		swyapi.FunctionCode{
-				Lang:		fn.Code.Lang,
-				Env:		fn.Code.Env,
-			},
-			Event:		swyapi.FunctionEvent{
-				Source:		fn.Event.Source,
-				CronTab:	fn.Event.CronTab,
-				MwareId:	fn.Event.MwareId,
-				MQueue:		fn.Event.MQueue,
-				S3Bucket:	fn.Event.S3Bucket,
-			},
-			Stats:		swyapi.FunctionStats {
-				Called:		stats.Called,
-				Timeouts:	stats.Timeouts,
-				Errors:		stats.Errors,
-				LastCall:	stats.LastCallS(),
-				Time:		stats.RunTimeUsec(),
-				GBS:		stats.GBS(),
-				BytesOut:	stats.BytesOut,
-			},
-			Size:		swyapi.FunctionSize {
-				Memory:		fn.Size.Mem,
-				Timeout:	fn.Size.Tmo,
-				Rate:		fn.Size.Rate,
-				Burst:		fn.Size.Burst,
-			},
-			UserData:	fn.UserData,
-		})
+	err = swyhttp.MarshalAndWrite(w, fi)
 	if err != nil {
 		return GateErrE(swy.GateBadResp, err)
 	}
