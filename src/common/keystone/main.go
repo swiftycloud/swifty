@@ -117,6 +117,7 @@ type KeystoneReq struct {
 	Type		string
 	URL		string
 	Succ		int
+	Headers		map[string]string
 
 	outToken	string
 }
@@ -146,6 +147,10 @@ retry:
 	if kc.Token != "" {
 		cToken = kc.Token
 		headers["X-Auth-Token"] = cToken
+	}
+
+	for h, hv := range(ksreq.Headers) {
+		headers[h] = hv
 	}
 
 	resp, err := swyhttp.MarshalAndPost(
@@ -192,19 +197,17 @@ func KeystoneGetTokenData(addr, token string) (*KeystoneTokenData, int) {
 	kc := &KsClient { addr: addr, }
 
 	req := KeystoneReq {
-		Type:		"POST",
+		Type:		"GET",
 		URL:		"auth/tokens",
-		Succ:		201,
+		Succ:		200,
+		Headers:	map[string]string{
+			/* XXX -- each service should rather login to KS itself */
+			"X-Auth-Token": token,
+			"X-Subject-Token": token,
+		},
 	}
 
-	err := kc.MakeReq(&req, &KeystoneAuthReq {
-		Auth: KeystoneAuth{
-			Identity: KeystoneIdentity{
-				Methods: []string{"token"},
-				Token: &KeystoneToken{
-					Id: token,
-				},
-			},},}, &out)
+	err := kc.MakeReq(&req, nil, &out)
 	if err != nil {
 		return nil, http.StatusUnauthorized /* FIXME -- get status from keystone too */
 	}
