@@ -144,7 +144,7 @@ stalled:
 	return GateErrE(swy.GateGenErr, err)
 }
 
-func mwareInfo(ctx context.Context, conf *YAMLConfMw, id *SwoId, params *swyapi.MwareID) (*swyapi.MwareInfo, *swyapi.GateErr) {
+func mwareInfo(ctx context.Context, conf *YAMLConfMw, id *SwoId) (*swyapi.MwareInfo, *swyapi.GateErr) {
 	var item MwareDesc
 	var err error
 
@@ -158,7 +158,6 @@ func mwareInfo(ctx context.Context, conf *YAMLConfMw, id *SwoId, params *swyapi.
 	}
 
 	resp := &swyapi.MwareInfo{}
-	resp.MwareID = *params
 	resp.Type = item.MwareType
 
 	if handler.Info != nil {
