@@ -1121,7 +1121,7 @@ func handleMwareInfo(ctx context.Context, w http.ResponseWriter, r *http.Request
 	id := makeSwoId(fromContext(ctx).Tenant, params.Project, params.ID)
 	ctxlog(ctx).Debugf("mware/info: %s params %v", fromContext(ctx).Tenant, params)
 
-	mwinf, cerr := mwareInfo(&conf.Mware, id, &params)
+	mwinf, cerr := mwareInfo(ctx, &conf.Mware, id, &params)
 	if cerr != nil {
 		return cerr
 	}

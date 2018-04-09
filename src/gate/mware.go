@@ -32,6 +32,7 @@ type MwareOps struct {
 	Event	func(ctx context.Context, conf *YAMLConfMw, source *FnEventDesc, mwd *MwareDesc, on bool) (error)
 	GenSec	func(ctx context.Context, conf *YAMLConfMw, fid *SwoId, id string)([][2]string, error)
 	GetEnv	func(conf *YAMLConfMw, mwd *MwareDesc) ([][2]string)
+	Info	func(ctx context.Context, conf *YAMLConfMw, mwd *MwareDesc, ifo *swyapi.MwareInfo) (error)
 	Devel	bool
 }
 
@@ -143,7 +144,7 @@ stalled:
 	return GateErrE(swy.GateGenErr, err)
 }
 
-func mwareInfo(conf *YAMLConfMw, id *SwoId, params *swyapi.MwareID) (*swyapi.MwareInfo, *swyapi.GateErr) {
+func mwareInfo(ctx context.Context, conf *YAMLConfMw, id *SwoId, params *swyapi.MwareID) (*swyapi.MwareInfo, *swyapi.GateErr) {
 	var item MwareDesc
 	var err error
 
@@ -151,9 +152,21 @@ func mwareInfo(conf *YAMLConfMw, id *SwoId, params *swyapi.MwareID) (*swyapi.Mwa
 		return nil, GateErrD(err)
 	}
 
+	handler, ok := mwareHandlers[item.MwareType]
+	if !ok {
+		return nil, GateErrC(swy.GateGenErr) /* Shouldn't happen */
+	}
+
 	resp := &swyapi.MwareInfo{}
 	resp.MwareID = *params
 	resp.Type = item.MwareType
+
+	if handler.Info != nil {
+		err := handler.Info(ctx, conf, &item, resp)
+		if err != nil {
+			return nil, GateErrE(swy.GateGenErr, err)
+		}
+	}
 
 	return resp, nil
 }

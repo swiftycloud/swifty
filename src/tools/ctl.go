@@ -328,6 +328,14 @@ func sb2s(b uint64, o uint64, s string) string {
 	if b >= 1 << o {
 		i := b >> o
 		r := ((b - (i<<o)) >> (o-10))
+		if r >= 1000 {
+			/* Values 1000 through 1023 are valid, but should
+			 * not result in .10 fraction below. Maybe we should
+			 * rather split tenths by 102? Maybe 103? Dunno.
+			 */
+			r = 999
+		}
+
 		if r >= 100 {
 			return fmt.Sprintf("%d.%d %s", i, r/100, s)
 		} else {
@@ -724,6 +732,9 @@ func info_mware(project string, args []string, opts [8]string) {
 	make_faas_req("mware/info",
 		swyapi.MwareID{ Project: project, ID: args[0], }, &resp)
 	fmt.Printf("Type:      %s", resp.Type)
+	if resp.DU != 0 {
+		fmt.Printf("Type:      %s", formatBytes(resp.DU))
+	}
 }
 
 func add_mware(project string, args []string, opts [8]string) {
