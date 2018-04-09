@@ -5,6 +5,7 @@ import (
 	"gopkg.in/mgo.v2/bson"
 	"strings"
 	"regexp"
+	"sort"
 	"time"
 
 	"../apis/apps/s3"
@@ -493,7 +494,13 @@ func s3ListBucket(iam *S3Iam, bname string, params *S3ListObjectsRP) (*swys3api.
 	}
 	iter.Close()
 
+	keys := []string{ }
 	for k, _ := range prefixes_map {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	for _, k := range keys {
 		list.CommonPrefixes = append(list.CommonPrefixes,
 			swys3api.S3Prefix {
 				Prefix: k,
