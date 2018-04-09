@@ -3,6 +3,7 @@ package main
 import (
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
+	"strings"
 	"regexp"
 	"time"
 
@@ -399,6 +400,7 @@ func (params *S3ListObjectsRP) Validate() (bool) {
 
 func s3ListBucket(iam *S3Iam, bname string, params *S3ListObjectsRP) (*swys3api.S3Bucket, *S3Error) {
 	var start_after, cont_after bool
+	var prefixes_map map[string]bool
 	var list swys3api.S3Bucket
 	var bucket *S3Bucket
 	var object S3Object
@@ -431,24 +433,17 @@ func s3ListBucket(iam *S3Iam, bname string, params *S3ListObjectsRP) (*swys3api.
 
 	query := bson.M{ "bucket-id": bucket.ObjID, "state": S3StateActive}
 
-	if params.Delimiter != "" || params.Prefix != "" {
-		if params.Delimiter != "" {
-			query["key"] = bson.M{ "$regex":
-				"^" + params.Prefix +
-				"([^" + params.Delimiter + "]+)?$",
-			}
-		} else {
-			query["key"] = bson.M{ "$regex":
-				"^" + params.Prefix + ".+",
-			}
+	if params.Prefix != "" {
+		query["key"] = bson.M{ "$regex":
+			"^" + params.Prefix + ".+",
 		}
 	}
+
+	prefixes_map = make(map[string]bool)
 
 	pipe = dbS3Pipe(&object, []bson.M{{"$match": query}, {"$sort": bson.M{"key": 1}}})
 	iter = pipe.Iter()
 	for iter.Next(&object) {
-		// FIXME: Is there a chance to skip some entries
-		// by mongo itself via request?
 		if start_after {
 			if object.Key != params.StartAfter { continue }
 			start_after = false
@@ -458,6 +453,20 @@ func s3ListBucket(iam *S3Iam, bname string, params *S3ListObjectsRP) (*swys3api.
 			if object.Key != params.ContTokenDecoded { continue }
 			cont_after = false
 			continue
+		}
+		if params.Delimiter != "" {
+			len_pfx := len(params.Prefix)
+			len_dlm := len(params.Delimiter)
+			len_key := len(object.Key)
+			pos := strings.Index(object.Key[len_pfx:], params.Delimiter)
+			if pos >= 0 && (pos + len_pfx + len_dlm) <= len_key {
+				if pos == 0 { continue }
+				prefix := object.Key[len_pfx:len_pfx+pos+len_dlm]
+				if _, ok := prefixes_map[prefix]; !ok {
+					prefixes_map[prefix] = true
+				}
+				continue
+			}
 		}
 		o := swys3api.S3Object {
 			Key:		object.Key,
@@ -484,22 +493,12 @@ func s3ListBucket(iam *S3Iam, bname string, params *S3ListObjectsRP) (*swys3api.
 	}
 	iter.Close()
 
-	if params.Delimiter != "" {
-		query["key"] = bson.M{ "$regex":
-			"^" + params.Prefix +
-			"([^" + params.Delimiter + "]+)?" +
-			params.Delimiter + "$",
-		}
-	}
-	pipe = dbS3Pipe(&object, []bson.M{{"$match": query}})
-	iter = pipe.Iter()
-	for iter.Next(&object) {
+	for k, _ := range prefixes_map {
 		list.CommonPrefixes = append(list.CommonPrefixes,
-		swys3api.S3Prefix {
-			Prefix: object.Key,
-		})
+			swys3api.S3Prefix {
+				Prefix: k,
+			})
 	}
-	iter.Close()
 
 	return &list, nil
 }
