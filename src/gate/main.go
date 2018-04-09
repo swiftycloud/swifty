@@ -927,6 +927,7 @@ func handleFunctionListWithInfos(ctx context.Context, w http.ResponseWriter, r *
 			return cerr
 		}
 
+		ifo.Name = v.SwoId.Name
 		result = append(result, ifo)
 	}
 

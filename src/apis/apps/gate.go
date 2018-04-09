@@ -65,6 +65,7 @@ type FunctionWait struct {
 }
 
 type FunctionInfo struct {
+	Name		string			`json:"name,omitempty"`
 	Mware		[]string		`json:"mware"`
 	S3Buckets	[]string		`json:"s3buckets"`
 	State		string			`json:"state"`

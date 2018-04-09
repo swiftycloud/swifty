@@ -681,6 +681,9 @@ definitions:
         description: Numer of stats periods, see FunctionStatsReq for details
   FunctionInfo:
     properties:
+      name:
+        type: string
+        description: Function name (reported for /list/info operation)
       state:
         type: string
         description: Function state
