@@ -435,9 +435,7 @@ func s3ListBucket(iam *S3Iam, bname string, params *S3ListObjectsRP) (*swys3api.
 	query := bson.M{ "bucket-id": bucket.ObjID, "state": S3StateActive}
 
 	if params.Prefix != "" {
-		query["key"] = bson.M{ "$regex":
-			"^" + params.Prefix + ".+",
-		}
+		query["key"] = bson.M{ "$regex": "^" + params.Prefix, }
 	}
 
 	prefixes_map = make(map[string]bool)
