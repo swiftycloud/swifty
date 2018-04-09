@@ -128,7 +128,12 @@ type MwareID struct {
 type MwareInfo struct {
 	MwareID					`json:",inline"`
 	Type		string			`json:"type"`
-	DU		uint64			`json:"disk_usage,omitempty"` /* in ... KB */
+	DU		*uint64			`json:"disk_usage,omitempty"` /* in ... KB */
+}
+
+func (i *MwareInfo)SetDU(bytes uint64) {
+	kb := bytes >> 10
+	i.DU = &kb
 }
 
 type MwareS3Access struct {

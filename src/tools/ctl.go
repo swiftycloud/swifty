@@ -731,9 +731,9 @@ func info_mware(project string, args []string, opts [8]string) {
 
 	make_faas_req("mware/info",
 		swyapi.MwareID{ Project: project, ID: args[0], }, &resp)
-	fmt.Printf("Type:      %s", resp.Type)
-	if resp.DU != 0 {
-		fmt.Printf("Type:      %s", formatBytes(resp.DU))
+	fmt.Printf("Type:      %s\n", resp.Type)
+	if resp.DU != nil {
+		fmt.Printf("Type:      %s\n", formatBytes(*resp.DU))
 	}
 }
 
