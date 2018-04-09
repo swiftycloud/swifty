@@ -127,6 +127,7 @@ type MwareID struct {
 }
 
 type MwareInfo struct {
+	ID		string			`json:"id,omitempty"`
 	Type		string			`json:"type"`
 	DU		*uint64			`json:"disk_usage,omitempty"` /* in ... KB */
 }

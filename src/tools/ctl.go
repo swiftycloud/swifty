@@ -717,12 +717,25 @@ func show_logs(project string, args []string, opts [8]string) {
 }
 
 func list_mware(project string, args []string, opts [8]string) {
-	var mws []swyapi.MwareItem
-	make_faas_req("mware/list", swyapi.MwareList{ Project: project, }, &mws)
+	if opts[0] == "" {
+		var mws []swyapi.MwareItem
+		make_faas_req("mware/list", swyapi.MwareList{ Project: project, }, &mws)
 
-	fmt.Printf("%-20s%-10s%s\n", "NAME", "TYPE", "OPTIONS")
-	for _, mw := range mws {
-		fmt.Printf("%-20s%-10s%s\n", mw.ID, mw.Type, "")
+		fmt.Printf("%-20s%-10s%s\n", "NAME", "TYPE", "OPTIONS")
+		for _, mw := range mws {
+			fmt.Printf("%-20s%-10s%s\n", mw.ID, mw.Type, "")
+		}
+	} else if opts[0] == "json" {
+		resp := make_faas_req3("mware/list/info",
+			swyapi.MwareList{ Project: project }, http.StatusOK, 30)
+		defer resp.Body.Close()
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			fatal(fmt.Errorf("\tCan't parse responce: %s", err.Error()))
+		}
+		fmt.Printf("%s\n", string(body))
+	} else {
+		fatal(fmt.Errorf("Bad -o value %s", opts[0]))
 	}
 }
 
@@ -1017,6 +1030,7 @@ func main() {
 	cmdMap[CMD_WAIT].opts.StringVar(&opts[1], "tmo", "", "Timeout")
 	bindCmdUsage(CMD_WAIT,	[]string{"NAME"}, "Wait function event", true)
 
+	cmdMap[CMD_MLS].opts.StringVar(&opts[0], "o", "", "Output format (NONE, json)")
 	bindCmdUsage(CMD_MLS,	[]string{}, "List middleware", true)
 	bindCmdUsage(CMD_MINF,	[]string{"ID"}, "Middleware info", true)
 	bindCmdUsage(CMD_MADD,	[]string{"ID", "TYPE"}, "Add middleware", true)

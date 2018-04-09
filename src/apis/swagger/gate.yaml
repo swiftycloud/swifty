@@ -472,6 +472,37 @@ paths:
           description: Need to authenticate
         '403':
           description: Bad authentication token
+  /mware/list/info:
+    post:
+      summary: List mwares and provide info for each
+      parameters:
+        - in: header
+          name: X-Auth-Token
+          type: string
+          required: true
+        - in: body
+          name: data
+          description: List parameters
+          required: true
+          schema:
+            $ref: '#/definitions/MwareList'
+      responses:
+        '200':
+          description: OK
+          schema:
+            properties:
+              functions:
+                type: array
+                items:
+                  $ref: '#/definitions/MwareInfo'
+        '400':
+          description: Bad request
+          schema:
+            $ref: '#/definitions/GateError'
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad authentication token
   /mware/add:
     post:
       summary: Add middleware
@@ -1145,6 +1176,9 @@ definitions:
     type: object
     description: Middleware inforamtion
     properties:
+      id:
+        type: string
+        description: Mware ID (reported for /list/info operation)
       type:
         type: string
         description: Middleware type

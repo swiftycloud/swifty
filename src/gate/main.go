@@ -1070,6 +1070,43 @@ func handleMwareList(ctx context.Context, w http.ResponseWriter, r *http.Request
 	return nil
 }
 
+func handleMwareListWithInfo(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
+	var result []*swyapi.MwareInfo
+	var params swyapi.MwareList
+	var mwares []MwareDesc
+
+	err := swyhttp.ReadAndUnmarshalReq(r, &params)
+	if err != nil {
+		return GateErrE(swy.GateBadRequest, err)
+	}
+
+	id := makeSwoId(fromContext(ctx).Tenant, params.Project, "")
+	ctxlog(ctx).Debugf("list mware for %s", fromContext(ctx).Tenant)
+
+	mwares, err = dbMwareGetAll(id)
+	if err != nil {
+		return GateErrD(err)
+	}
+
+	for _, mw := range mwares {
+		id.Name = mw.SwoId.Name
+		ifo, cerr := mwareInfo(ctx, &conf.Mware, id)
+		if cerr != nil {
+			return cerr
+		}
+
+		ifo.ID = id.Name
+		result = append(result, ifo)
+	}
+
+	err = swyhttp.MarshalAndWrite(w, &result)
+	if err != nil {
+		return GateErrE(swy.GateBadResp, err)
+	}
+
+	return nil
+}
+
 func handleMwareRemove(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
 	var params swyapi.MwareRemove
 
@@ -1318,6 +1355,7 @@ func main() {
 	r.Handle("/v1/mware/add",		genReqHandler(handleMwareAdd)).Methods("POST", "OPTIONS")
 	r.Handle("/v1/mware/info",		genReqHandler(handleMwareInfo)).Methods("POST", "OPTIONS")
 	r.Handle("/v1/mware/list",		genReqHandler(handleMwareList)).Methods("POST", "OPTIONS")
+	r.Handle("/v1/mware/list/info",		genReqHandler(handleMwareListWithInfo)).Methods("POST", "OPTIONS")
 	r.Handle("/v1/mware/remove",		genReqHandler(handleMwareRemove)).Methods("POST", "OPTIONS")
 	r.Handle("/v1/mware/access/s3",		genReqHandler(handleMwareS3Access)).Methods("POST", "OPTIONS")
 
