@@ -1112,7 +1112,6 @@ func handleMwareS3Access(ctx context.Context, w http.ResponseWriter, r *http.Req
 
 func handleMwareInfo(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
 	var params swyapi.MwareID
-	var resp swyapi.MwareInfo
 
 	err := swyhttp.ReadAndUnmarshalReq(r, &params)
 	if err != nil {
@@ -1122,12 +1121,12 @@ func handleMwareInfo(ctx context.Context, w http.ResponseWriter, r *http.Request
 	id := makeSwoId(fromContext(ctx).Tenant, params.Project, params.ID)
 	ctxlog(ctx).Debugf("mware/info: %s params %v", fromContext(ctx).Tenant, params)
 
-	cerr := mwareInfo(&conf.Mware, id, &params, &resp)
+	mwinf, cerr := mwareInfo(&conf.Mware, id, &params)
 	if cerr != nil {
 		return cerr
 	}
 
-	err = swyhttp.MarshalAndWrite(w, &resp)
+	err = swyhttp.MarshalAndWrite(w, mwinf)
 	if err != nil {
 		return GateErrE(swy.GateBadResp, err)
 	}

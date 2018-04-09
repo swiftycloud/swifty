@@ -143,19 +143,19 @@ stalled:
 	return GateErrE(swy.GateGenErr, err)
 }
 
-func mwareInfo(conf *YAMLConfMw, id *SwoId, params *swyapi.MwareID,
-		resp *swyapi.MwareInfo) (*swyapi.GateErr) {
+func mwareInfo(conf *YAMLConfMw, id *SwoId, params *swyapi.MwareID) (*swyapi.MwareInfo, *swyapi.GateErr) {
 	var item MwareDesc
 	var err error
 
 	if item, err = dbMwareGetItem(id); err != nil {
-		return GateErrD(err)
+		return nil, GateErrD(err)
 	}
 
+	resp := &swyapi.MwareInfo{}
 	resp.MwareID = *params
 	resp.Type = item.MwareType
 
-	return nil
+	return resp, nil
 }
 
 func getMwareDesc(id *SwoId, mwType string) *MwareDesc {
