@@ -128,7 +128,8 @@ func logRequest(r *http.Request) {
 
 	content_type := r.Header.Get("Content-Type")
 	if content_type != "" {
-		if string(content_type[0:20]) == "multipart/form-data;" {
+		if len(content_type) >= 21 &&
+			string(content_type[0:20]) == "multipart/form-data;" {
 			r.ParseMultipartForm(0)
 			request = append(request, fmt.Sprintf("MultipartForm: %v", r.MultipartForm))
 		}
@@ -360,7 +361,57 @@ func handleGetObject(oname string, iam *S3Iam, bucket *S3Bucket, w http.Response
 	return nil
 }
 
+func handleCopyObject(copy_source, oname string, iam *S3Iam, bucket *S3Bucket, w http.ResponseWriter, r *http.Request) *S3Error {
+	var bname_source, oname_source string
+	var bucket_source *S3Bucket
+	var err error
+
+	canned_acl := r.Header.Get("x-amz-acl")
+	if verifyAclValue(canned_acl, BucketCannedAcls) == false {
+		canned_acl = swys3api.S3BucketAclCannedPrivate
+	}
+
+	if copy_source[0] == '/' { copy_source = copy_source[1:] }
+	v := strings.SplitAfterN(copy_source, "/", 2)
+	if len(v) < 2 {
+		return &S3Error{
+			ErrorCode:	S3ErrInvalidRequest,
+			Message:	"Wrong source " + copy_source,
+		}
+	} else {
+		bname_source = v[0][:(len(v[0]) - 1)]
+		oname_source = v[1]
+	}
+
+	if !iam.Policy.mayAccess(bname_source) {
+		return &S3Error{ ErrorCode: S3ErrAccessDenied }
+	}
+
+	bucket_source, err = iam.FindBucket(bname_source)
+	if err != nil {
+		return &S3Error{ ErrorCode: S3ErrInvalidBucketName }
+	}
+
+	body, err := s3ReadObject(bucket_source, oname_source, 0, 1)
+	if err != nil {
+		return &S3Error{ ErrorCode: S3ErrInvalidRequest, Message: err.Error() }
+	}
+
+	_, err = s3AddObject(iam, bucket, oname, canned_acl, int64(len(body)), body)
+	if err != nil {
+		return &S3Error{ ErrorCode: S3ErrInvalidRequest, Message: err.Error() }
+	}
+
+	w.WriteHeader(http.StatusOK)
+	return nil
+}
+
 func handlePutObject(oname string, iam *S3Iam, bucket *S3Bucket, w http.ResponseWriter, r *http.Request) *S3Error {
+	copy_source := r.Header.Get("X-Amz-Copy-Source")
+	if copy_source != "" {
+		return handleCopyObject(copy_source, oname, iam, bucket, w, r)
+	}
+
 	object_size, err := strconv.ParseInt(r.Header.Get("Content-Length"), 10, 64)
 	if err != nil {
 		object_size = 0
