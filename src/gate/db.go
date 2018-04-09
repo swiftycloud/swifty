@@ -120,10 +120,14 @@ func dbMwareGetReady(id *SwoId) (MwareDesc, error) {
 	return dbMwareGetOne(bson.M{"cookie": id.Cookie(), "state": swy.DBMwareStateRdy})
 }
 
-func dbMwareGetAll(id *SwoId) ([]MwareDesc, error) {
+func dbMwareListProj(id *SwoId, mwtyp string) ([]MwareDesc, error) {
 	var recs []MwareDesc
 	c := dbSession.DB(DBStateDB).C(DBColMware)
-	err := c.Find(bson.M{"tennant": id.Tennant, "project": id.Project}).All(&recs)
+	lk := bson.M{"tennant": id.Tennant, "project": id.Project}
+	if mwtyp != "" {
+		lk["mwaretype"] = mwtyp
+	}
+	err := c.Find(lk).All(&recs)
 	return recs, err
 }
 

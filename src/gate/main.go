@@ -230,7 +230,7 @@ func handleProjectDel(ctx context.Context, w http.ResponseWriter, r *http.Reques
 		}
 	}
 
-	mws, err = dbMwareGetAll(id)
+	mws, err = dbMwareListProj(id, "")
 	if err != nil {
 		return GateErrD(err)
 	}
@@ -1049,7 +1049,7 @@ func handleMwareList(ctx context.Context, w http.ResponseWriter, r *http.Request
 	id := makeSwoId(fromContext(ctx).Tenant, params.Project, "")
 	ctxlog(ctx).Debugf("list mware for %s", fromContext(ctx).Tenant)
 
-	mwares, err = dbMwareGetAll(id)
+	mwares, err = dbMwareListProj(id, params.Type)
 	if err != nil {
 		return GateErrD(err)
 	}
@@ -1083,7 +1083,7 @@ func handleMwareListWithInfo(ctx context.Context, w http.ResponseWriter, r *http
 	id := makeSwoId(fromContext(ctx).Tenant, params.Project, "")
 	ctxlog(ctx).Debugf("list mware for %s", fromContext(ctx).Tenant)
 
-	mwares, err = dbMwareGetAll(id)
+	mwares, err = dbMwareListProj(id, params.Type)
 	if err != nil {
 		return GateErrD(err)
 	}

@@ -717,17 +717,21 @@ func show_logs(project string, args []string, opts [8]string) {
 }
 
 func list_mware(project string, args []string, opts [8]string) {
+	req := swyapi.MwareList{ Project: project }
+	if opts[1] != "" {
+		req.Type = opts[1]
+	}
+
 	if opts[0] == "" {
 		var mws []swyapi.MwareItem
-		make_faas_req("mware/list", swyapi.MwareList{ Project: project, }, &mws)
+		make_faas_req("mware/list", &req, &mws)
 
 		fmt.Printf("%-20s%-10s%s\n", "NAME", "TYPE", "OPTIONS")
 		for _, mw := range mws {
 			fmt.Printf("%-20s%-10s%s\n", mw.ID, mw.Type, "")
 		}
 	} else if opts[0] == "json" {
-		resp := make_faas_req3("mware/list/info",
-			swyapi.MwareList{ Project: project }, http.StatusOK, 30)
+		resp := make_faas_req3("mware/list/info", &req, http.StatusOK, 30)
 		defer resp.Body.Close()
 		body, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
@@ -1031,6 +1035,7 @@ func main() {
 	bindCmdUsage(CMD_WAIT,	[]string{"NAME"}, "Wait function event", true)
 
 	cmdMap[CMD_MLS].opts.StringVar(&opts[0], "o", "", "Output format (NONE, json)")
+	cmdMap[CMD_MLS].opts.StringVar(&opts[1], "type", "", "Filter mware by type")
 	bindCmdUsage(CMD_MLS,	[]string{}, "List middleware", true)
 	bindCmdUsage(CMD_MINF,	[]string{"ID"}, "Middleware info", true)
 	bindCmdUsage(CMD_MADD,	[]string{"ID", "TYPE"}, "Add middleware", true)

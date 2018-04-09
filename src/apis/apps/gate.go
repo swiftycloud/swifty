@@ -158,6 +158,7 @@ type MwareItem struct {
 
 type MwareList struct {
 	Project		string			`json:"project"`
+	Type		string			`json:"type"`
 }
 
 type FunctionAdd struct {
