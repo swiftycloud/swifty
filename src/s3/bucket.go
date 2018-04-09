@@ -419,7 +419,10 @@ func s3ListBucket(iam *S3Iam, bname string, params *S3ListObjectsRP) (*swys3api.
 	}
 
 	if params.StartAfter != "" { start_after = true }
-	if params.ContTokenDecoded != "" { cont_after = true }
+	if params.ContTokenDecoded != "" {
+		start_after = false
+		cont_after = true
+	}
 
 	list.Name	= bucket.Name
 	list.KeyCount	= 0
