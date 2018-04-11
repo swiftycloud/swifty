@@ -460,7 +460,7 @@ func s3ListBucket(iam *S3Iam, bname string, params *S3ListObjectsRP) (*swys3api.
 			pos := strings.Index(object.Key[len_pfx:], params.Delimiter)
 			if pos >= 0 && (pos + len_pfx + len_dlm) <= len_key {
 				if pos == 0 { continue }
-				prefix := object.Key[len_pfx:len_pfx+pos+len_dlm]
+				prefix := object.Key[:len_pfx+pos+len_dlm]
 				if _, ok := prefixes_map[prefix]; !ok {
 					prefixes_map[prefix] = true
 				}
