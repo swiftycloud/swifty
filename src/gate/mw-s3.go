@@ -13,10 +13,6 @@ import (
 	"../apis/apps/s3"
 )
 
-const (
-	s3HiddenKeyTimeout uint32 = 16
-)
-
 func s3KeyGen(conf *YAMLConfS3, namespace, bucket string, lifetime uint32) (string, string, error) {
 	addr := conf.c.AddrP(conf.AdminPort)
 
@@ -240,7 +236,7 @@ func mwareGetS3Creds(ctx context.Context, conf *YAMLConf, acc *swyapi.MwareS3Acc
 
 	for _, acc := range(acc.Access) {
 		if acc == "hidden" {
-			creds.Expires = s3HiddenKeyTimeout
+			creds.Expires = conf.Mware.S3.HiddenKeyTmo
 			continue
 		}
 

@@ -92,6 +92,7 @@ type YAMLConfS3 struct {
 	Creds		string			`yaml:"creds"`
 	AdminPort	string			`yaml:"admport"`
 	Notify		string			`yaml:"notify"`
+	HiddenKeyTmo	uint32			`yaml:"hidden-key-timeout"`
 	c		*swy.XCreds
 	cn		*swy.XCreds
 }
