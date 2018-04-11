@@ -7,8 +7,8 @@ const (
 	// Default objects count for listing
 	S3StorageDefaultListObjects	= int64(1000)
 
-	// Maximum size of one object
-	S3StorageMaxBytes		= int64(100 << 20)
+	// Maximum size of all objects in bucket
+	S3StorageMaxBytes		= int64(1 << 30)
 
 	// Maximum size of an object to keep data inside
 	// MongoDB itself
