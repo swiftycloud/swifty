@@ -18,7 +18,8 @@ const (
 	AWSAuthHeaderPrefix	= "AWS4-HMAC-SHA256"
 	AWSEmptyStringSHA256	= "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
 	AWSUnsignedPayload	= "UNSIGNED-PAYLOAD"
-	AWS4Service		= "s3"
+	AWS4ServiceS3		= "s3"
+	AWS4ServiceCW		= "monitoring"
 	AWS4Request		= "aws4_request"
 )
 
@@ -27,6 +28,7 @@ type AuthContext struct {
 	AccessKey		string
 	ShortTimeStamp		string
 	Region			string
+	Service			string
 	SignedHeaders		[]string
 	Signature		string
 
@@ -90,7 +92,9 @@ func (ctx *AuthContext) ParseAuthorization(authHeader string) error {
 			ctx.AccessKey		= creds[0]
 			ctx.ShortTimeStamp	= creds[1]
 			ctx.Region		= creds[2]
-			if creds[3] != AWS4Service ||
+			ctx.Service		= creds[3]
+			if (creds[3] != AWS4ServiceS3 &&
+				creds[3] != AWS4ServiceCW) ||
 				creds[4] != AWS4Request {
 				return fmt.Errorf("s3: Wrong request type %s in header", e)
 			}
@@ -214,7 +218,7 @@ func (ctx *AuthContext) BuildSigningKey(secret string) {
 	a := makeHmac([]byte("AWS4" + secret),
 			[]byte(ctx.ShortTimeStamp))
 	b := makeHmac(a, []byte(ctx.Region))
-	c := makeHmac(b, []byte(AWS4Service))
+	c := makeHmac(b, []byte(ctx.Service))
 	ctx.SigningKey = makeHmac(c, []byte(AWS4Request))
 }
 
@@ -225,7 +229,7 @@ func (ctx *AuthContext) BuildStringToSign() {
 		strings.Join([]string{
 			ctx.ShortTimeStamp,
 			ctx.Region,
-			AWS4Service,
+			ctx.Service,
 			AWS4Request,
 		}, "/"),
 		hex.EncodeToString(makeSha256([]byte(ctx.CanonicalString))),
