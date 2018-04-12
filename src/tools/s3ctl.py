@@ -96,8 +96,8 @@ for cmd in ['object-copy']:
     spp = sp.add_parser(cmd, help = 'Copy object')
     spp.add_argument('--name', dest = 'name', help = 'Bucket name', required = True)
     spp.add_argument('--key', dest = 'key', help = 'Object name', required = True)
-    spp.add_argument('--dst-name', dest = 'dst_name', required = True)
-    spp.add_argument('--dst-key', dest = 'dst_key', required = True)
+    spp.add_argument('--src-name', dest = 'src_name', required = True)
+    spp.add_argument('--src-key', dest = 'src_key', required = True)
 
 for cmd in ['object-del']:
     spp = sp.add_parser(cmd, help = 'Delete object')
@@ -360,11 +360,11 @@ if args.cmd == 'object-add':
 
 if args.cmd == 'object-copy':
     print("Copying object %s/%s -> %s/%s" % \
-          (args.name, args.key, args.dst_name, args.dst_key))
+          (args.src_name, args.src_key, args.name, args.key))
     try:
         resp = s3.copy_object(Bucket = args.name, Key = args.key,
-                              CopySource = {'Bucket': args.dst_name,
-                                           'Key': args.dst_key})
+                              CopySource = {'Bucket': args.src_name,
+                                           'Key': args.src_key})
         print("\tDone")
     except:
         print("ERROR: Can't copy object")
