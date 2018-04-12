@@ -65,32 +65,6 @@ func s3KeyDel(conf *YAMLConfS3, key string) error {
 	return nil
 }
 
-func s3BucketReq(conf *YAMLConfS3, addr, req, namespace, bucket string) error {
-	var code int
-	if req == "badd" {
-		code = http.StatusCreated
-	} else {
-		code = http.StatusNoContent
-	}
-
-	_, err := swyhttp.MarshalAndPost(
-		&swyhttp.RestReq{
-			Address: "http://" + addr + "/v1/api/admin/" + req,
-			Timeout: 120,
-			Headers: map[string]string{"X-SwyS3-Token": gateSecrets[conf.c.Pass]},
-			Success: code,
-		},
-		&swys3api.S3CtlBucketReq{
-			Namespace: namespace,
-			Bucket: bucket,
-		})
-	if err != nil {
-		return fmt.Errorf("Error %s bucket for S3: %s", req, err.Error())
-	}
-
-	return nil
-}
-
 func InitS3(ctx context.Context, conf *YAMLConfMw, mwd *MwareDesc) (error) {
 	return fmt.Errorf("S3 mware is external")
 }
