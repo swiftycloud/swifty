@@ -365,6 +365,7 @@ func handleGetObject(oname string, iam *S3Iam, bucket *S3Bucket, w http.Response
 func handleCopyObject(copy_source, oname string, iam *S3Iam, bucket *S3Bucket, w http.ResponseWriter, r *http.Request) *S3Error {
 	var bname_source, oname_source string
 	var bucket_source *S3Bucket
+	var object *S3Object
 	var err error
 
 	canned_acl := r.Header.Get("x-amz-acl")
@@ -398,12 +399,15 @@ func handleCopyObject(copy_source, oname string, iam *S3Iam, bucket *S3Bucket, w
 		return &S3Error{ ErrorCode: S3ErrInvalidRequest, Message: err.Error() }
 	}
 
-	_, err = s3AddObject(iam, bucket, oname, canned_acl, int64(len(body)), body)
+	object, err = s3AddObject(iam, bucket, oname, canned_acl, int64(len(body)), body)
 	if err != nil {
 		return &S3Error{ ErrorCode: S3ErrInvalidRequest, Message: err.Error() }
 	}
 
-	w.WriteHeader(http.StatusOK)
+	HTTPRespXML(w, &swys3api.CopyObjectResult{
+		ETag:		object.ETag,
+		LastModified:	object.CreationTime,
+	})
 	return nil
 }
 

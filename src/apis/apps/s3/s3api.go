@@ -88,6 +88,11 @@ type S3Object struct {
 	StorageClass		string				`xml:"StorageClass,omitempy"`
 }
 
+type CopyObjectResult struct {
+	ETag			string				`xml:"ETag,omitempy"`
+	LastModified		string				`xml:"LastModified,omitempy"`
+}
+
 type S3Prefix struct {
 	Prefix			string				`xml:"Prefix"`
 }
