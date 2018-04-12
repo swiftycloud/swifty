@@ -100,6 +100,7 @@ var CORS_Headers = []string {
 	"Authorization",
 	"X-Amz-Date",
 	"x-amz-acl",
+	"x-amz-copy-source",
 	"X-Amz-Content-Sha256",
 	"X-Amz-User-Agent",
 }
