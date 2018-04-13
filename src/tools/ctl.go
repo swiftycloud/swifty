@@ -158,7 +158,7 @@ func make_faas_req(url string, in interface{}, out interface{}) {
 	make_faas_req2(url, in, out, http.StatusOK, 30)
 }
 
-func list_users(args []string, opts [8]string) {
+func list_users(args []string, opts [16]string) {
 	var uss []swyapi.UserInfo
 	make_faas_req("users", swyapi.ListUsers{}, &uss)
 
@@ -167,27 +167,27 @@ func list_users(args []string, opts [8]string) {
 	}
 }
 
-func add_user(args []string, opts [8]string) {
+func add_user(args []string, opts [16]string) {
 	make_faas_req2("adduser", swyapi.AddUser{Id: args[0], Pass: opts[1], Name: opts[0]},
 		nil, http.StatusCreated, 0)
 }
 
-func del_user(args []string, opts [8]string) {
+func del_user(args []string, opts [16]string) {
 	make_faas_req2("deluser", swyapi.UserInfo{Id: args[0]}, nil, http.StatusNoContent, 0)
 }
 
-func set_password(args []string, opts [8]string) {
+func set_password(args []string, opts [16]string) {
 	make_faas_req2("setpass", swyapi.UserLogin{UserName: args[0], Password: opts[0]},
 		nil, http.StatusCreated, 0)
 }
 
-func show_user_info(args []string, opts [8]string) {
+func show_user_info(args []string, opts [16]string) {
 	var ui swyapi.UserInfo
 	make_faas_req("userinfo", swyapi.UserInfo{Id: args[0]}, &ui)
 	fmt.Printf("Name: %s\n", ui.Name)
 }
 
-func do_user_limits(args []string, opts [8]string) {
+func do_user_limits(args []string, opts [16]string) {
 	var l swyapi.UserLimits
 	chg := false
 
@@ -266,7 +266,7 @@ func do_user_limits(args []string, opts [8]string) {
 	}
 }
 
-func show_stats(args []string, opts[8]string) {
+func show_stats(args []string, opts [16]string) {
 	var rq swyapi.TenantStatsReq
 	var st swyapi.TenantStatsResp
 	var err error
@@ -292,7 +292,7 @@ func show_stats(args []string, opts[8]string) {
 	}
 }
 
-func list_projects(args []string, opts [8]string) {
+func list_projects(args []string, opts [16]string) {
 	var ps []swyapi.ProjectItem
 	make_faas_req("project/list", swyapi.ProjectList{}, &ps)
 
@@ -301,7 +301,7 @@ func list_projects(args []string, opts [8]string) {
 	}
 }
 
-func list_functions(project string, args []string, opts [8]string) {
+func list_functions(project string, args []string, opts [16]string) {
 	if opts[0] == "" {
 		var fns []swyapi.FunctionItem
 		make_faas_req("function/list", swyapi.FunctionList{ Project: project, }, &fns)
@@ -362,7 +362,7 @@ func formatBytes(b uint64) string {
 	return bo
 }
 
-func info_function(project string, args []string, opts [8]string) {
+func info_function(project string, args []string, opts [16]string) {
 	var ifo swyapi.FunctionInfo
 	make_faas_req("function/info", swyapi.FunctionInfoReq{ Project: project, FuncName: args[0], Periods: 0}, &ifo)
 	ver := ifo.Version
@@ -427,7 +427,7 @@ func info_function(project string, args []string, opts [8]string) {
 	}
 }
 
-func check_lang(args []string, opts [8]string) {
+func check_lang(args []string, opts [16]string) {
 	l := detect_language(opts[0], "code")
 	fmt.Printf("%s\n", l)
 }
@@ -494,7 +494,7 @@ func parse_rate(val string) (uint, uint) {
 	return uint(rate), uint(burst)
 }
 
-func add_function(project string, args []string, opts [8]string) {
+func add_function(project string, args []string, opts [16]string) {
 	sources := swyapi.FunctionSources{}
 	code := swyapi.FunctionCode{}
 
@@ -581,7 +581,7 @@ func add_function(project string, args []string, opts [8]string) {
 
 }
 
-func run_function(project string, args []string, opts [8]string) {
+func run_function(project string, args []string, opts [16]string) {
 	var rres swyapi.FunctionRunResult
 	var argmap = make(map[string]string)
 
@@ -598,7 +598,7 @@ func run_function(project string, args []string, opts [8]string) {
 	fmt.Fprintf(os.Stderr, "%s", rres.Stderr)
 }
 
-func update_function(project string, args []string, opts [8]string) {
+func update_function(project string, args []string, opts [16]string) {
 	req := swyapi.FunctionUpdate {
 		Project: project,
 		FuncName: args[0],
@@ -642,31 +642,31 @@ func update_function(project string, args []string, opts [8]string) {
 
 	if opts[5] != "" {
 		fmt.Printf("Wait FN %s\n", opts[5])
-		wait_fn(project, []string{args[0]}, [8]string{opts[5], "15000"})
+		wait_fn(project, []string{args[0]}, [16]string{opts[5], "15000"})
 	}
 
 	if opts[6] != "" {
 		fmt.Printf("Run FN %s\n", opts[6])
-		run_function(project, []string{args[0], opts[6]}, [8]string{})
+		run_function(project, []string{args[0], opts[6]}, [16]string{})
 	}
 }
 
-func del_function(project string, args []string, opts [8]string) {
+func del_function(project string, args []string, opts [16]string) {
 	make_faas_req("function/remove",
 		swyapi.FunctionRemove{ Project: project, FuncName: args[0] }, nil)
 }
 
-func on_fn(project string, args []string, opts [8]string) {
+func on_fn(project string, args []string, opts [16]string) {
 	make_faas_req("function/state",
 		swyapi.FunctionState{ Project: project, FuncName: args[0], State: "ready" }, nil)
 }
 
-func off_fn(project string, args []string, opts [8]string) {
+func off_fn(project string, args []string, opts [16]string) {
 	make_faas_req("function/state",
 		swyapi.FunctionState{ Project: project, FuncName: args[0], State: "deactivated" }, nil)
 }
 
-func wait_fn(project string, args []string, opts[8]string) {
+func wait_fn(project string, args []string, opts [16]string) {
 	req := swyapi.FunctionWait{
 		Project: project,
 		FuncName: args[0],
@@ -694,7 +694,7 @@ func wait_fn(project string, args []string, opts[8]string) {
 	make_faas_req2("function/wait", req, nil, http.StatusOK, httpTmo + 10)
 }
 
-func show_code(project string, args []string, opts [8]string) {
+func show_code(project string, args []string, opts [16]string) {
 	var res swyapi.FunctionSources
 	make_faas_req("function/code",
 		swyapi.FunctionXID{ Project: project, FuncName: args[0], Version: opts[0], }, &res)
@@ -706,7 +706,7 @@ func show_code(project string, args []string, opts [8]string) {
 	fmt.Printf("%s", data)
 }
 
-func show_logs(project string, args []string, opts [8]string) {
+func show_logs(project string, args []string, opts [16]string) {
 	var res []swyapi.FunctionLogEntry
 	make_faas_req("function/logs",
 		swyapi.FunctionID{ Project: project, FuncName: args[0], }, &res)
@@ -716,7 +716,7 @@ func show_logs(project string, args []string, opts [8]string) {
 	}
 }
 
-func list_mware(project string, args []string, opts [8]string) {
+func list_mware(project string, args []string, opts [16]string) {
 	req := swyapi.MwareList{ Project: project }
 	if opts[1] != "" {
 		req.Type = opts[1]
@@ -743,7 +743,7 @@ func list_mware(project string, args []string, opts [8]string) {
 	}
 }
 
-func info_mware(project string, args []string, opts [8]string) {
+func info_mware(project string, args []string, opts [16]string) {
 	var resp swyapi.MwareInfo
 
 	make_faas_req("mware/info",
@@ -754,17 +754,17 @@ func info_mware(project string, args []string, opts [8]string) {
 	}
 }
 
-func add_mware(project string, args []string, opts [8]string) {
+func add_mware(project string, args []string, opts [16]string) {
 	req := swyapi.MwareAdd { Project: project, ID: args[0], Type: args[1] }
 	make_faas_req("mware/add", req, nil)
 }
 
-func del_mware(project string, args []string, opts [8]string) {
+func del_mware(project string, args []string, opts [16]string) {
 	make_faas_req("mware/remove",
 		swyapi.MwareRemove{ Project: project, ID: args[0], }, nil)
 }
 
-func s3_access(project string, args []string, opts[8]string) {
+func s3_access(project string, args []string, opts [16]string) {
 	lt, err := strconv.Atoi(opts[0])
 	if err != nil {
 		fatal(fmt.Errorf("Bad lifetie value: %s", err.Error()))
@@ -789,11 +789,11 @@ func req_list(url string) {
 	}
 }
 
-func languages(args []string, opts [8]string) {
+func languages(args []string, opts [16]string) {
 	req_list("info/langs")
 }
 
-func mware_types(args []string, opts [8]string) {
+func mware_types(args []string, opts [16]string) {
 	req_list("info/mwares")
 }
 
@@ -813,7 +813,7 @@ func show_login() {
 	fmt.Printf("%s@%s:%s (%s)\n", conf.Login.User, conf.Login.Host, conf.Login.Port, gateProto())
 }
 
-func manage_login(args []string, opts [8]string) {
+func manage_login(args []string, opts [16]string) {
 	action := "show"
 	if len(args) >= 1 {
 		action = args[0]
@@ -825,7 +825,7 @@ func manage_login(args []string, opts [8]string) {
 	}
 }
 
-func make_login(creds string, opts [8]string) {
+func make_login(creds string, opts [16]string) {
 	//
 	// Login string is user:pass@host:port
 	//
@@ -937,8 +937,8 @@ type cmdDesc struct {
 	opts	*flag.FlagSet
 	pargs	[]string
 	project	string
-	pcall	func(string, []string, [8]string)
-	call	func([]string, [8]string)
+	pcall	func(string, []string, [16]string)
+	call	func([]string, [16]string)
 }
 
 var cmdMap = map[string]*cmdDesc {
@@ -991,7 +991,7 @@ func bindCmdUsage(cmd string, args []string, help string, wp bool) {
 }
 
 func main() {
-	var opts [8]string
+	var opts [16]string
 
 	cmdMap[CMD_LOGIN].opts.StringVar(&opts[0], "tls", "no", "TLS mode")
 	cmdMap[CMD_LOGIN].opts.StringVar(&opts[1], "cert", "", "x509 cert file")
