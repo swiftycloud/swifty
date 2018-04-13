@@ -76,6 +76,7 @@ type FunctionInfo struct {
 	URL		string			`json:"url"`
 	Stats		[]FunctionStats		`json:"stats"`
 	Size		FunctionSize		`json:"size"`
+	AuthCtx		string			`json:"authctx,omitempty"`
 	UserData	string			`json:"userdata"`
 }
 
@@ -171,6 +172,7 @@ type FunctionAdd struct {
 	Mware		[]string		`json:"mware"`
 	S3Buckets	[]string		`json:"s3buckets"`
 	UserData	string			`json:"userdata"`
+	AuthCtx		string			`json:"authctx,omitempty"`
 }
 
 type FunctionState struct {
@@ -186,6 +188,7 @@ type FunctionUpdate struct {
 	Size		*FunctionSize		`json:"size,omitempty"`
 	Mware		*[]string		`json:"mware,omitempty"`
 	S3Buckets	*[]string		`json:"s3buckets,omitempty"`
+	AuthCtx		*string			`json:"authctx,omitempty"`
 	UserData	string			`json:"userdata"`
 }
 

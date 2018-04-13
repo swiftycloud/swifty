@@ -14,6 +14,7 @@ type FnMemData struct {
 	public	bool
 	mem	uint64
 	depname	string
+	ac	*AuthCtx
 	bd	BalancerDat
 	crl	*xratelimit.RL
 	td	*TenantMemData
@@ -169,6 +170,12 @@ func fndatGetOrInit(cookie string, fn *FunctionDesc) (*FnMemData, error) {
 	nret.mem = fn.Size.Mem
 	nret.public = fn.URLCall
 	nret.depname = fn.DepName()
+	if fn.AuthCtx != "" {
+		nret.ac, err = authCtxGet(fn)
+		if err != nil {
+			return nil, err
+		}
+	}
 
 	var loaded bool
 	ret, loaded = fdmd.LoadOrStore(fn.Cookie, nret)

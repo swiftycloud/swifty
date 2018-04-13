@@ -738,6 +738,9 @@ definitions:
         description: Per-period statistics, see FunctionStatsResp for details
         items:
           $ref: '#/definitions/FunctionStats'
+      authctx:
+        type: string
+        description: ID of auth mware that must authorize the caller before running FN
       userdata:
         type: string
         description: The data provided during /add call
@@ -967,6 +970,9 @@ definitions:
       userdata:
         type: string
         description: And string user wishes to keep with this FN
+      authctx:
+        type: string
+        description: ID of auth mware
       sources:
         $ref: '#/definitions/FunctionSources'
       code:
@@ -1004,6 +1010,9 @@ definitions:
       userdata:
         type: string
         description: And string user wishes to keep with this FN
+      authctx:
+        type: string
+        description: ID of auth mware. If empty, the FN becomes unauthorized
       mware:
         type: array
         description: 'No value means "leave as is", any other value, even empty list, means "set to this"'

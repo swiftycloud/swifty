@@ -20,9 +20,9 @@ type MwareDesc struct {
 	SwoId				`bson:",inline"`
 	Cookie		string		`bson:"cookie"`
 	MwareType	string		`bson:"mwaretype"`	// Middleware type
-	Client		string		`bson:"client"`		// Middleware client (db user)
+	Client		string		`bson:"client,omitempty"`		// Middleware client (db user)
 	Secret		string		`bson:"secret"`		// Client secret (e.g. password)
-	Namespace	string		`bson:"namespace"`	// Client namespace (e.g. dbname, mq domain)
+	Namespace	string		`bson:"namespace,omitempty"`	// Client namespace (e.g. dbname, mq domain)
 	State		int		`bson:"state"`		// Mware state
 }
 
@@ -86,6 +86,7 @@ var mwareHandlers = map[string]*MwareOps {
 	"rabbit":	&MwareRabbitMQ,
 	"mongo":	&MwareMongo,
 	"s3":		&MwareS3,
+	"authjwt":	&MwareAuthJWT,
 }
 
 func mwareGenerateSecret(ctx context.Context, fid *SwoId, typ, id string) ([][2]string, error) {

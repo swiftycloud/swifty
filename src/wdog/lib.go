@@ -3,8 +3,14 @@ package swifty
 import (
 	"os"
 	"sync"
+	"time"
 	"errors"
 	"strings"
+	"encoding/json"
+	"encoding/base64"
+	"crypto"
+	_ "crypto/sha256"
+	"crypto/hmac"
 	"gopkg.in/mgo.v2"
 )
 
@@ -46,4 +52,64 @@ func MongoDatabase(mwn string) (*mgo.Database, error) {
 
 	ses = sv.(*mgo.Session)
 	return ses.DB(dbn), nil
+}
+
+type AuthCtx struct {
+	UsersCol	*mgo.Collection
+	signKey		string
+}
+
+var _authCtx *AuthCtx
+
+func AuthContext() (*AuthCtx, error) {
+	ctx := _authCtx
+	if ctx == nil {
+		var err error
+
+		ctx = &AuthCtx{}
+
+		auc := os.Getenv("SWIFTY_AUTHJWT_MWARE")
+		mgo := os.Getenv("SWIFTY_AUTHJWT_MONGO")
+		if mgo == "" || auc == "" {
+			return nil, errors.New("No authjwt middleware attached")
+		}
+
+		db, err := MongoDatabase(mgo)
+		if err != nil {
+			return nil, errors.New("No mongo for authjwn found")
+		}
+
+		key := os.Getenv("MWARE_AUTHJWT" + strings.ToUpper(auc) + "_SIGNKEY")
+		if key == "" {
+			return nil, errors.New("No authjwt key found")
+		}
+
+		ctx.UsersCol = db.C("Users")
+		ctx.signKey = key
+		_authCtx = ctx
+	}
+	return ctx, nil
+}
+
+func encodeBytes(b []byte) string {
+	return strings.TrimRight(base64.URLEncoding.EncodeToString(b), "=")
+}
+
+func (ctx *AuthCtx)MakeJWT(claims map[string]interface{}) (string, error) {
+	header, _ := json.Marshal(map[string]string {
+		"typ": "JWT",
+		"alg": "HS256",
+	})
+
+	claims["iat"] = time.Now().Unix()
+	claimsJ, err := json.Marshal(claims)
+	if err != nil {
+		return "", err
+	}
+
+	unsigned := encodeBytes(header) + "." + encodeBytes(claimsJ)
+	hasher := hmac.New(crypto.SHA256.New, []byte(ctx.signKey))
+	hasher.Write([]byte(unsigned))
+
+	return unsigned + "." + encodeBytes(hasher.Sum(nil)), nil
 }

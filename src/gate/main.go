@@ -36,6 +36,7 @@ const (
 	SwyDefaultProject string		= "default"
 	SwyPodStartTmo time.Duration		= 120 * time.Second
 	SwyBodyArg string			= "_SWY_BODY_"
+	SwyJWTClaimsArg string			= "_SWY_JWT_CLAIMS_"
 	SwyDepScaleupRelax time.Duration	= 16 * time.Second
 	SwyDepScaledownStep time.Duration	= 8 * time.Second
 	SwyTenantLimitsUpdPeriod time.Duration	= 120 * time.Second
@@ -650,6 +651,7 @@ func getFunctionInfo(fn *FunctionDesc, periods int) (*swyapi.FunctionInfo, *swya
 			Rate:		fn.Size.Rate,
 			Burst:		fn.Size.Burst,
 		},
+		AuthCtx:	fn.AuthCtx,
 		UserData:	fn.UserData,
 	}, nil
 }
@@ -828,6 +830,21 @@ func handleFunctionCall(w http.ResponseWriter, r *http.Request) {
 
 
 	arg_map = makeArgMap(sopq, r)
+
+	if fmd.ac != nil {
+		var auth_args map[string]string
+
+		auth_args, err = fmd.ac.Verify(r)
+		if err != nil {
+			code = http.StatusUnauthorized
+			goto out
+		}
+
+		for k, v:= range(auth_args) {
+			arg_map[k] = v
+		}
+	}
+
 	res, err = doRunConn(ctx, conn, fnId, "call", arg_map)
 	if err != nil {
 		code = http.StatusInternalServerError

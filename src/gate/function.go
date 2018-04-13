@@ -102,6 +102,7 @@ type FunctionDesc struct {
 	Src		FnSrcDesc	`bson:"src"`
 	Size		FnSizeDesc	`bson:"size"`
 	OneShot		bool		`bson:"oneshot"`
+	AuthCtx		string		`bson:"authctx,omitempty"`
 	UserData	string		`bson:"userdata,omitempty"`
 }
 
@@ -139,6 +140,7 @@ func getFunctionDesc(tennant string, p_add *swyapi.FunctionAdd) *FunctionDesc {
 		},
 		Mware:		p_add.Mware,
 		S3Buckets:	p_add.S3Buckets,
+		AuthCtx:	p_add.AuthCtx,
 		UserData:	p_add.UserData,
 	}
 
@@ -292,9 +294,10 @@ func swyFixSize(sz *swyapi.FunctionSize, conf *YAMLConf) error {
 func updateFunction(ctx context.Context, conf *YAMLConf, id *SwoId, params *swyapi.FunctionUpdate) *swyapi.GateErr {
 	var err error
 	var stalled, restart bool
-	var mfix, rlfix bool
+	var mfix, rlfix, acfix bool
 	var oldver string
 	var olds int
+	var nac *AuthCtx
 
 	update := make(bson.M)
 
@@ -370,6 +373,20 @@ func updateFunction(ctx context.Context, conf *YAMLConf, id *SwoId, params *swya
 		update["userdata"] = fn.UserData
 	}
 
+	if params.AuthCtx != nil {
+		fn.AuthCtx = *params.AuthCtx
+
+		if fn.AuthCtx != "" {
+			nac, err = authCtxGet(fn)
+			if err != nil {
+				goto out
+			}
+		}
+
+		update["authctx"] = fn.AuthCtx
+		acfix = true
+	}
+
 	if len(update) == 0 {
 		ctxlog(ctx).Debugf("Nothing to update for %s", fn.SwoId.Str())
 		goto out
@@ -388,7 +405,7 @@ func updateFunction(ctx context.Context, conf *YAMLConf, id *SwoId, params *swya
 		goto out
 	}
 
-	if rlfix || mfix {
+	if rlfix || mfix || acfix {
 		fdm := memdGetCond(fn.Cookie)
 		if fdm == nil {
 			goto skip
@@ -411,6 +428,10 @@ func updateFunction(ctx context.Context, conf *YAMLConf, id *SwoId, params *swya
 				/* Remove */
 				fdm.crl = nil
 			}
+		}
+
+		if acfix {
+			fdm.ac = nac
 		}
 	skip:
 		;

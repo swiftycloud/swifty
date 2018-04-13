@@ -422,6 +422,10 @@ func info_function(project string, args []string, opts [16]string) {
 		fmt.Printf("Bytes sent:  %s\n", formatBytes(b))
 	}
 
+	if ifo.AuthCtx != "" {
+		fmt.Printf("Auth by:     %s\n", ifo.AuthCtx)
+	}
+
 	if ifo.UserData != "" {
 		fmt.Printf("Data:        %s\n", ifo.UserData)
 	}
@@ -524,6 +528,9 @@ func add_function(project string, args []string, opts [16]string) {
 	}
 
 	code.Lang = opts[0]
+	if opts[7] != "" {
+		code.Env = strings.Split(opts[7], ":")
+	}
 
 	var mw []string
 	if opts[2] != "" {
@@ -575,6 +582,10 @@ func add_function(project string, args []string, opts [16]string) {
 
 	if opts[6] != "" {
 		req.UserData = opts[6]
+	}
+
+	if opts[8] != "" {
+		req.AuthCtx = opts[8]
 	}
 
 	make_faas_req("function/add", req, nil)
@@ -636,6 +647,15 @@ func update_function(project string, args []string, opts [16]string) {
 
 	if opts[4] != "" {
 		req.UserData = opts[4]
+	}
+
+	if opts[7] != "" {
+		var ac string
+		if opts[7] != "-" {
+			ac = opts[7]
+		}
+
+		req.AuthCtx = &ac
 	}
 
 	make_faas_req("function/update", req, nil)
@@ -1013,6 +1033,8 @@ func main() {
 	cmdMap[CMD_ADD].opts.StringVar(&opts[4], "tmo", "", "Timeout")
 	cmdMap[CMD_ADD].opts.StringVar(&opts[5], "rl", "", "Rate (rate[:burst])")
 	cmdMap[CMD_ADD].opts.StringVar(&opts[6], "data", "", "Any text associated with fn")
+	cmdMap[CMD_ADD].opts.StringVar(&opts[7], "env", "", "Colon-separated list of env vars")
+	cmdMap[CMD_ADD].opts.StringVar(&opts[8], "auth", "", "ID of auth mware to verify the call")
 	bindCmdUsage(CMD_ADD,	[]string{"NAME"}, "Add a function", true)
 	bindCmdUsage(CMD_RUN,	[]string{"NAME", "ARG=VAL,..."}, "Run a function", true)
 	cmdMap[CMD_UPD].opts.StringVar(&opts[0], "src", "", "Source file")
@@ -1022,6 +1044,7 @@ func main() {
 	cmdMap[CMD_UPD].opts.StringVar(&opts[4], "data", "", "Associated text")
 	cmdMap[CMD_UPD].opts.StringVar(&opts[5], "ver", "", "Version")
 	cmdMap[CMD_UPD].opts.StringVar(&opts[6], "arg", "", "Args")
+	cmdMap[CMD_UPD].opts.StringVar(&opts[7], "auth", "", "Auth context (- for off)")
 	bindCmdUsage(CMD_UPD,	[]string{"NAME"}, "Update a function", true)
 	bindCmdUsage(CMD_DEL,	[]string{"NAME"}, "Delete a function", true)
 	bindCmdUsage(CMD_LOGS,	[]string{"NAME"}, "Show function logs", true)
