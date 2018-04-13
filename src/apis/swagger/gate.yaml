@@ -840,6 +840,9 @@ definitions:
       till:
         type: string
         description: Time (RFC1123Z) till which stats are collected (if empty means "till now")
+      from:
+        type: string
+        description: Time (RFC1123Z) from which stats are collected (if empty means "till tenant creation time")
   UserStats:
     type: object
     description: Statistics about user
@@ -857,6 +860,9 @@ definitions:
       till:
         type: string
         description: Time (RFC1123Z) till which stats are collected (if empty means "till now")
+      from:
+        type: string
+        description: Time (RFC1123Z) from which stats are collected (if empty means "till tenant creation time")
   FunctionWait:
     type: object
     description: What to wait on a function
