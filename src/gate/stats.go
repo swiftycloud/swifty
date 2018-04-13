@@ -58,11 +58,13 @@ func (fs *TenStats)GBS() float64 {
 }
 
 func (fs *TenStats)TillS() string {
-	if fs.Till != nil {
-		return fs.Till.Format(time.RFC1123Z)
-	} else {
-		return ""
+	t := fs.Till
+	if t == nil {
+		n := time.Now()
+		t = &n
 	}
+
+	return t.Format(time.RFC1123Z)
 }
 
 func (fs *FnStats)LastCallS() string {
@@ -74,11 +76,13 @@ func (fs *FnStats)LastCallS() string {
 }
 
 func (fs *FnStats)TillS() string {
-	if fs.Till != nil {
-		return fs.Till.Format(time.RFC1123Z)
-	} else {
-		return ""
+	t := fs.Till
+	if t == nil {
+		n := time.Now()
+		t = &n
 	}
+
+	return t.Format(time.RFC1123Z)
 }
 
 func (fs *FnStats)RunTimeUsec() uint64 {

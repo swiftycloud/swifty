@@ -512,6 +512,7 @@ func handleTenantStats(ctx context.Context, w http.ResponseWriter, r *http.Reque
 				GBS:		prev.GBS() - cur.GBS(),
 				BytesOut:	prev.BytesOut - cur.BytesOut,
 				Till:		prev.TillS(),
+				From:		cur.TillS(),
 			})
 			prev = cur
 		}
@@ -559,6 +560,7 @@ func getFunctionStats(fn *FunctionDesc, periods int) ([]swyapi.FunctionStats, *s
 				GBS:		prev.GBS() - cur.GBS(),
 				BytesOut:	prev.BytesOut - cur.BytesOut,
 				Till:		prev.TillS(),
+				From:		cur.TillS(),
 			})
 			prev = cur
 		}

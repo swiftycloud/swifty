@@ -40,6 +40,7 @@ type FunctionStats struct {
 	GBS		float64			`json:"gbs"`
 	BytesOut	uint64			`json:"bytesout"`
 	Till		string			`json:"till,omitempty"`
+	From		string			`json:"from,omitempty"`
 }
 
 type FunctionStatsResp struct {
@@ -51,6 +52,7 @@ type TenantStats struct {
 	GBS		float64			`json:"gbs"`
 	BytesOut	uint64			`json:"bytesout"`
 	Till		string			`json:"till,omitempty"`
+	From		string			`json:"from,omitempty"`
 }
 
 type TenantStatsResp struct {

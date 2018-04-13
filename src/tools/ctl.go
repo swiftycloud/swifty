@@ -266,6 +266,15 @@ func do_user_limits(args []string, opts [16]string) {
 	}
 }
 
+func dateOnly(tm string) string {
+	if tm == "" {
+		return ""
+	}
+
+	t, _ := time.Parse(time.RFC1123Z, tm)
+	return t.Format("02 Jan 2006")
+}
+
 func show_stats(args []string, opts [16]string) {
 	var rq swyapi.TenantStatsReq
 	var st swyapi.TenantStatsResp
@@ -281,11 +290,7 @@ func show_stats(args []string, opts [16]string) {
 	make_faas_req("stats", rq, &st)
 
 	for _, s := range(st.Stats) {
-		if s.Till != "" {
-			fmt.Printf("---\nTill:             %s\n", s.Till)
-		} else {
-			fmt.Printf("---\nTill:             %s\n", "NOW")
-		}
+		fmt.Printf("---\n%s ... %s\n", dateOnly(s.From), dateOnly(s.Till))
 		fmt.Printf("Called:           %d\n", s.Called)
 		fmt.Printf("GBS:              %f\n", s.GBS)
 		fmt.Printf("Bytes sent:       %s\n", formatBytes(s.BytesOut))
