@@ -7,6 +7,7 @@ import (
 	"encoding/xml"
 	"encoding/hex"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 )
@@ -38,8 +39,8 @@ func sha256sum(s []byte) string {
 	return hex.EncodeToString(h.Sum(nil))
 }
 
-func getURLParam(r *http.Request, param string) (string, bool) {
-	if v, ok := r.URL.Query()[param]; ok {
+func urlParam(m url.Values, param string) (string, bool) {
+	if v, ok := m[param]; ok {
 		if len(v) > 0 {
 			return v[0], true
 		} else {
@@ -47,6 +48,15 @@ func getURLParam(r *http.Request, param string) (string, bool) {
 		}
 	}
 	return "", false
+}
+
+func getURLParam(r *http.Request, param string) (string, bool) {
+	return urlParam(r.URL.Query(), param)
+}
+
+func urlValue(m url.Values, param string) (string) {
+	val, _ := urlParam(m, param)
+	return val
 }
 
 func getURLValue(r *http.Request, param string) (string) {
