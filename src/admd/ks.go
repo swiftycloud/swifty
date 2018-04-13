@@ -7,11 +7,21 @@ import (
 	"../apis/apps"
 	"../common"
 	"../common/keystone"
+	"time"
 )
 
 type ksUserDesc struct {
-	Name	string	`json:"name"`
-	Email	string	`json:"email"`
+	Name	string		`json:"name"`
+	Email	string		`json:"email"`
+	Created	*time.Time	`json:"created,omitempty"`
+}
+
+func (kud *ksUserDesc)CreatedS() string {
+	if kud.Created != nil {
+		return kud.Created.Format(time.RFC1123Z)
+	} else {
+		return ""
+	}
 }
 
 var ksClient *swyks.KsClient
@@ -88,7 +98,12 @@ func ksListUsers(c *swy.XCreds) (*[]swyapi.UserInfo, error) {
 func ksAddUserAndProject(c *swy.XCreds, user *swyapi.AddUser) error {
 	var presp swyks.KeystoneProjectAdd
 
-	udesc, err := json.Marshal(&ksUserDesc{ Name: user.Name, Email: user.Id })
+	now := time.Now()
+	udesc, err := json.Marshal(&ksUserDesc{
+		Name:		user.Name,
+		Email:		user.Id,
+		Created:	&now,
+	})
 	if err != nil {
 		return fmt.Errorf("Can't marshal user desc: %s", err.Error())
 	}

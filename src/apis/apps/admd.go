@@ -6,6 +6,7 @@ type ListUsers struct {
 type UserInfo struct {
 	Id	string		`json:"id"`
 	Name	string		`json:"name,omitempty"`
+	Created	string		`json:"created,omitempty"`
 }
 
 type AddUser struct {

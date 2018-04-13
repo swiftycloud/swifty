@@ -149,6 +149,7 @@ func handleUserInfo(w http.ResponseWriter, r *http.Request) {
 	err = swyhttp.MarshalAndWrite(w, swyapi.UserInfo{
 				Id: ui.Id,
 				Name: kud.Name,
+				Created: kud.CreatedS(),
 			})
 	if err != nil {
 		goto out

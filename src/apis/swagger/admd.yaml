@@ -208,6 +208,9 @@ definitions:
       name:
         type: string
         example: John Doe
+      created:
+        type: string
+        description: Time of user creation (RFC1123Z format)
   UserAdd:
     required:
       - id
