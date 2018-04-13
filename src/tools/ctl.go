@@ -746,7 +746,7 @@ func list_mware(project string, args []string, opts [16]string) {
 		var mws []swyapi.MwareItem
 		make_faas_req("mware/list", &req, &mws)
 
-		fmt.Printf("%-20s%-10s%s\n", "NAME", "TYPE", "OPTIONS")
+		fmt.Printf("%-20s%-10s%s\n", "NAME", "TYPE")
 		for _, mw := range mws {
 			fmt.Printf("%-20s%-10s%s\n", mw.ID, mw.Type, "")
 		}
@@ -772,10 +772,18 @@ func info_mware(project string, args []string, opts [16]string) {
 	if resp.DU != nil {
 		fmt.Printf("Disk usage:   %s\n", formatBytes(*resp.DU << 10))
 	}
+	if resp.UserData != "" {
+		fmt.Printf("Data:         %s\n", resp.UserData)
+	}
 }
 
 func add_mware(project string, args []string, opts [16]string) {
-	req := swyapi.MwareAdd { Project: project, ID: args[0], Type: args[1] }
+	req := swyapi.MwareAdd {
+		Project: project,
+		ID: args[0],
+		Type: args[1],
+		UserData: opts[0],
+	}
 	make_faas_req("mware/add", req, nil)
 }
 
@@ -1061,6 +1069,7 @@ func main() {
 	cmdMap[CMD_MLS].opts.StringVar(&opts[1], "type", "", "Filter mware by type")
 	bindCmdUsage(CMD_MLS,	[]string{}, "List middleware", true)
 	bindCmdUsage(CMD_MINF,	[]string{"ID"}, "Middleware info", true)
+	cmdMap[CMD_MADD].opts.StringVar(&opts[0], "data", "", "Associated text")
 	bindCmdUsage(CMD_MADD,	[]string{"ID", "TYPE"}, "Add middleware", true)
 	bindCmdUsage(CMD_MDEL,	[]string{"ID"}, "Delete middleware", true)
 

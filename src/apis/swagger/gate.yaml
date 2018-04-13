@@ -1168,6 +1168,9 @@ definitions:
         type: string
         description: Middleware type
         example: maria
+      userdata:
+        type: string
+        description: And string user wishes to keep with this mware
   MwareID:
     type: object
     description: Middleware ID
@@ -1192,6 +1195,9 @@ definitions:
         type: string
         description: Middleware type
         example: maria
+      userdata:
+        type: string
+        description: String provided during /add call
       disk_usage:
         type: integer
         description: Disk usage in KBytes

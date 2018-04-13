@@ -115,6 +115,7 @@ type MwareAdd struct {
 	Project		string			`json:"project"`
 	ID		string			`json:"id"`
 	Type		string			`json:"type"`
+	UserData	string			`json:"userdata"`
 }
 
 type MwareRemove struct {
@@ -130,6 +131,7 @@ type MwareID struct {
 type MwareInfo struct {
 	ID		string			`json:"id,omitempty"`
 	Type		string			`json:"type"`
+	UserData	string			`json:"userdata,omitempty"`
 	DU		*uint64			`json:"disk_usage,omitempty"` /* in ... KB */
 }
 

@@ -24,6 +24,7 @@ type MwareDesc struct {
 	Secret		string		`bson:"secret"`		// Client secret (e.g. password)
 	Namespace	string		`bson:"namespace,omitempty"`	// Client namespace (e.g. dbname, mq domain)
 	State		int		`bson:"state"`		// Mware state
+	UserData	string		`bson:"userdata,omitempty"`
 }
 
 type MwareOps struct {
@@ -160,6 +161,7 @@ func mwareInfo(ctx context.Context, conf *YAMLConfMw, id *SwoId) (*swyapi.MwareI
 
 	resp := &swyapi.MwareInfo{}
 	resp.Type = item.MwareType
+	resp.UserData = item.UserData
 
 	if handler.Info != nil {
 		err := handler.Info(ctx, conf, &item, resp)
@@ -171,28 +173,29 @@ func mwareInfo(ctx context.Context, conf *YAMLConfMw, id *SwoId) (*swyapi.MwareI
 	return resp, nil
 }
 
-func getMwareDesc(id *SwoId, mwType string) *MwareDesc {
+func getMwareDesc(id *SwoId, params *swyapi.MwareAdd) *MwareDesc {
 	ret := &MwareDesc {
 		SwoId: SwoId {
 			Tennant:	id.Tennant,
 			Project:	id.Project,
 			Name:		id.Name,
 		},
-		MwareType:	mwType,
+		MwareType:	params.Type,
 		State:		swy.DBMwareStatePrp,
+		UserData:	params.UserData,
 	}
 
 	ret.Cookie = ret.SwoId.Cookie()
 	return ret
 }
 
-func mwareSetup(ctx context.Context, conf *YAMLConfMw, id *SwoId, mwType string) *swyapi.GateErr {
+func mwareSetup(ctx context.Context, conf *YAMLConfMw, id *SwoId, params *swyapi.MwareAdd) *swyapi.GateErr {
 	var handler *MwareOps
 	var ok bool
 	var err, erc error
 
-	mwd := getMwareDesc(id, mwType)
-	ctxlog(ctx).Debugf("set up wmare %s:%s", mwd.SwoId.Str(), mwType)
+	mwd := getMwareDesc(id, params)
+	ctxlog(ctx).Debugf("set up wmare %s:%s", mwd.SwoId.Str(), mwd.MwareType)
 
 	err = dbMwareAdd(mwd)
 	if err != nil {
@@ -200,16 +203,16 @@ func mwareSetup(ctx context.Context, conf *YAMLConfMw, id *SwoId, mwType string)
 		return GateErrD(err)
 	}
 
-	gateMwares.WithLabelValues(mwType).Inc()
+	gateMwares.WithLabelValues(mwd.MwareType).Inc()
 
-	handler, ok = mwareHandlers[mwType]
+	handler, ok = mwareHandlers[mwd.MwareType]
 	if !ok {
-		err = fmt.Errorf("Bad mware type %s", mwType)
+		err = fmt.Errorf("Bad mware type %s", mwd.MwareType)
 		goto outdb
 	}
 
 	if handler.Devel && !SwyModeDevel {
-		err = fmt.Errorf("Bad mware type %s", mwType)
+		err = fmt.Errorf("Bad mware type %s", mwd.MwareType)
 		goto outdb
 	}
 
@@ -255,7 +258,7 @@ outdb:
 	if erc != nil {
 		goto stalled
 	}
-	gateMwares.WithLabelValues(mwType).Dec()
+	gateMwares.WithLabelValues(mwd.MwareType).Dec()
 out:
 	ctxlog(ctx).Errorf("mwareSetup: %s", err.Error())
 	return GateErrE(swy.GateGenErr, err)

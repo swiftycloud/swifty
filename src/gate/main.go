@@ -1007,7 +1007,7 @@ func handleMwareAdd(ctx context.Context, w http.ResponseWriter, r *http.Request)
 	id := makeSwoId(fromContext(ctx).Tenant, params.Project, params.ID)
 	ctxlog(ctx).Debugf("mware/add: %s params %v", fromContext(ctx).Tenant, params)
 
-	cerr := mwareSetup(ctx, &conf.Mware, id, params.Type)
+	cerr := mwareSetup(ctx, &conf.Mware, id, &params)
 	if cerr != nil {
 		return cerr
 	}
