@@ -97,6 +97,31 @@ type S3Prefix struct {
 	Prefix			string				`xml:"Prefix"`
 }
 
+type S3Datapoint struct {
+	Average			float64				`xml:"Average,omitempy"`
+	//ExtendedStatistics	map[string]float64		`xml:"ExtendedStatistics,omitempy"`
+	//Maximum		float64				`xml:"Maximum,omitempy"`
+	//Minimum		float64				`xml:"Minimum,omitempy"`
+	//SampleCount		float64				`xml:"SampleCount,omitempy"`
+	//Sum			float64				`xml:"Sum,omitempy"`
+	Timestamp		string				`xml:"Timestamp,omitempy"`
+	Unit			string				`xml:"Unit,omitempy"`
+}
+
+type S3Datapoints struct {
+	Points			[]S3Datapoint			`xml:"Datapoint,omitempy"`
+}
+
+type S3GetMetricStatisticsResult struct {
+	Label			string				`xml:"Label,omitempy"`
+	Datapoints		S3Datapoints			`xml:"Datapoints,omitempy"`
+}
+
+type S3GetMetricStatisticsOutput struct {
+	XMLName			xml.Name			`xml:"GetMetricStatisticsOutput,omitempy"`
+	Result			S3GetMetricStatisticsResult	`xml:"GetMetricStatisticsResult,omitempy"`
+}
+
 type S3Bucket struct {
 	XMLName			xml.Name			`xml:"ListBucketResult"`
 	Name			string				`xml:"Name,omitempy"`

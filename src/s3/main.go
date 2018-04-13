@@ -9,6 +9,7 @@ import (
 	"encoding/hex"
 	"encoding/xml"
 	"net/http"
+	"net/url"
 	"strings"
 	"strconv"
 	"errors"
@@ -140,6 +141,64 @@ func logRequest(r *http.Request) {
 	log.Debug(strings.Join(request, "\n"))
 }
 
+func handleBucketCloudWatch(iam *S3Iam, akey *S3AccessKey, w http.ResponseWriter, r *http.Request) *S3Error {
+	var bname, v string
+
+	content_type := r.Header.Get("Content-Type")
+	if content_type != "application/x-www-form-urlencoded" {
+		return &S3Error{
+			ErrorCode: S3ErrInvalidURI,
+			Message: "Unexpected Content-Type",
+		}
+	}
+
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		return &S3Error{ ErrorCode: S3ErrIncompleteBody }
+	}
+
+	request_map, err := url.ParseQuery(string(body[:]))
+	if err != nil {
+		return &S3Error{
+			ErrorCode: S3ErrIncompleteBody,
+			Message: "Unable to decode metrics query",
+		}
+	}
+
+	v = urlValue(request_map, "Namespace")
+	if v != "AWS/S3" {
+		return &S3Error{
+			ErrorCode: S3ErrIncompleteBody,
+			Message: "Wrong/missing 'Namespace'",
+		}
+	}
+
+	v = urlValue(request_map, "Action")
+	if v != "GetMetricStatistics" {
+		return &S3Error{
+			ErrorCode: S3ErrIncompleteBody,
+			Message: "Wrong/missing 'Action'",
+		}
+	}
+
+	if urlValue(request_map, "Dimensions.member.1.Name") == "BucketName" {
+		bname = urlValue(request_map, "Dimensions.member.1.Value")
+	} else if urlValue(request_map, "Dimensions.member.2.Name") == "BucketName" {
+		bname = urlValue(request_map, "Dimensions.member.2.Value")
+	} else {
+		return &S3Error{
+			ErrorCode: S3ErrIncompleteBody,
+			Message: "Wrong/missing 'BucketName'",
+		}
+	}
+
+	res, e := s3GetBucketMetricOutput(iam, bname, urlValue(request_map, "MetricName"))
+	if e != nil { return e }
+
+	HTTPRespXML(w, res)
+	return nil
+}
+
 // List all buckets belonging to an account
 func handleListBuckets(iam *S3Iam, w http.ResponseWriter, r *http.Request) *S3Error {
 	buckets, err := s3ListBuckets(iam)
@@ -221,8 +280,15 @@ func handleBucket(iam *S3Iam, akey *S3AccessKey, w http.ResponseWriter, r *http.
 	var bname string = mux.Vars(r)["BucketName"]
 	var policy = &iam.Policy
 
-	if bname == "" && r.Method != http.MethodGet {
-		return &S3Error{ ErrorCode: S3ErrInvalidBucketName }
+	if bname == "" {
+		if r.Method == http.MethodPost {
+			//
+			// A special case where we
+			// hande some subset of cloudwatch
+			return handleBucketCloudWatch(iam, akey, w, r)
+		} else if r.Method != http.MethodGet {
+			return &S3Error{ ErrorCode: S3ErrInvalidBucketName }
+		}
 	}
 
 	switch r.Method {

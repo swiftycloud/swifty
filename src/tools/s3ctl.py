@@ -85,6 +85,11 @@ for cmd in ['bucket-del']:
     spp.add_argument('--name', dest = 'name',
                      help = 'Bucket name', required = True)
 
+for cmd in ['bucket-stat']:
+    spp = sp.add_parser(cmd, help = 'Shw bucket statistics')
+    spp.add_argument('--name', dest = 'name',
+                     help = 'Bucket name', required = True)
+
 for cmd in ['object-add']:
     spp = sp.add_parser(cmd, help = 'Create object')
     spp.add_argument('--name', dest = 'name', help = 'Bucket name', required = True)
@@ -219,25 +224,55 @@ def request_notify(data):
     except:
         return None
 
-def make_s3(endpoint_url, access_key, secret_key):
+def make_client(service_name, endpoint_url, access_key, secret_key):
     endpoint_url = "http://" + endpoint_url + "/"
-    print("Connecting to endpoint %s with keys %s / %s" %
-          (endpoint_url, access_key, secret_key))
-    try:
-        return boto3.session.Session().client(service_name = 's3',
-                                              aws_access_key_id = access_key,
-                                              aws_secret_access_key = secret_key,
-                                              endpoint_url = endpoint_url)
-    except ConnectionError as e:
-        print("ERROR: Can't connect: %s" % (endpoint_url, repr(e)))
-        return None
-    except:
-        return None
+    print("Connecting to %s endpoint %s with keys %s / %s" %
+          (service_name, endpoint_url, access_key, secret_key))
+    return boto3.session.Session().client(service_name,
+                                          aws_access_key_id = access_key,
+                                          aws_secret_access_key = secret_key,
+                                          endpoint_url = endpoint_url,
+                                          region_name = 'us-east-1')
 
-if args.cmd not in ['keygen', 'keydel', 'keygetroot', 'notify']:
-    s3 = make_s3(args.endpoint_url, args.access_key_id, args.secret_key_id)
+if args.cmd not in ['bucket-stat', 'keygen', 'keydel', 'keygetroot', 'notify']:
+    s3 = make_client('s3', args.endpoint_url, args.access_key_id, args.secret_key_id)
     if s3 == None:
          resp_error(args.cmd, None)
+
+if args.cmd == 'bucket-stat':
+    try:
+        cw = make_client('cloudwatch', args.endpoint_url, args.access_key_id, args.secret_key_id)
+        resp_bytes = cw.get_metric_statistics(Namespace = 'AWS/S3',
+                                              MetricName = 'BucketSizeBytes',
+                                              StartTime = 0, EndTime = 0, Period = 86400,
+                                              Statistics = ['Average'], Unit = 'Bytes',
+                                              Dimensions = [
+                                                  {
+                                                      'Name': 'BucketName',
+                                                      'Value': args.name,
+                                                  }, {
+                                                      'Name': 'StorageType',
+                                                      'Value': 'StandardStorage'
+                                                  }
+                                              ])
+        resp_cnt = cw.get_metric_statistics(Namespace = 'AWS/S3',
+                                            MetricName = 'NumberOfObjects',
+                                            StartTime = 0, EndTime = 0, Period = 86400,
+                                            Statistics = ['Average'], Unit = 'Count',
+                                            Dimensions = [
+                                                {
+                                                    'Name': 'BucketName',
+                                                    'Value': args.name,
+                                                }, {
+                                                    'Name': 'StorageType',
+                                                    'Value': 'AllStorageTypes'
+                                                }
+                                            ])
+        v1 = resp_bytes['Datapoints'][0]
+        v2 = resp_cnt['Datapoints'][0]
+        print("\t%s: %d bytes %d objects" % (args.name, int(v1['Average']), int(v2['Average'])))
+    except:
+        print("ERROR: Can't fetch statistics")
 
 if args.cmd == 'keygen':
     resp = request_admin(args.cmd, {"namespace": args.namespace,

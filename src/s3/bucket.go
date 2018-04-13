@@ -373,6 +373,38 @@ func (bucket *S3Bucket)dbFindAll(query bson.M) ([]S3Object, error) {
 	return res, nil
 }
 
+func s3GetBucketMetricOutput(iam *S3Iam, bname, metric_name string) (*swys3api.S3GetMetricStatisticsOutput, *S3Error) {
+	var res swys3api.S3GetMetricStatisticsOutput
+	var point swys3api.S3Datapoint
+
+	bucket, err := iam.FindBucket(bname)
+	if err != nil {
+		if err == mgo.ErrNotFound {
+			return nil, &S3Error{ ErrorCode: S3ErrNoSuchBucket }
+		}
+		return nil, &S3Error{ ErrorCode: S3ErrInternalError}
+	}
+
+	if metric_name == "BucketSizeBytes" {
+		point.Timestamp	= bucket.CreationTime
+		point.Average	= float64(bucket.CntBytes)
+		point.Unit	= "Bytes"
+	} else if metric_name == "NumberOfObjects" {
+		point.Timestamp	= bucket.CreationTime
+		point.Average	= float64(bucket.CntObjects)
+		point.Unit	= "Count"
+	} else {
+		return nil, &S3Error{
+			ErrorCode: S3ErrIncompleteBody,
+			Message: "Wrong metric name",
+		}
+	}
+
+	res.Result.Datapoints.Points = append(res.Result.Datapoints.Points, point)
+	res.Result.Label = metric_name
+	return &res, nil
+}
+
 func (params *S3ListObjectsRP) Validate() (bool) {
 	re := regexp.MustCompile(S3ObjectName_Letter)
 
