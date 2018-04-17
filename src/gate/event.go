@@ -29,14 +29,6 @@ func eventSetup(ctx context.Context, conf *YAMLConf, fn *FunctionDesc, on bool) 
 	}
 }
 
-type faasCronJob struct {
-	Id SwoId
-}
-
-func (cj faasCronJob) Run () {
-	glog.Debugf("Will run %s function", cj.Id.Str())
-}
-
 func oneshotEventSetup(ctx context.Context, conf *YAMLConf, fn *FunctionDesc, on bool) error {
 	if !SwyModeDevel {
 		return errors.New("Cannot setup one-shot event")
@@ -52,7 +44,12 @@ func cronEventSetup(ctx context.Context, conf *YAMLConf, fn *FunctionDesc, on bo
 	}
 
 	if on {
-		id, err := cronRunner.AddJob(fn.Event.CronTab, faasCronJob{Id: fn.SwoId})
+		var fnid SwoId
+
+		fnid = fn.SwoId
+		id, err := cronRunner.AddFunc(fn.Event.CronTab, func() {
+				glog.Debugf("Will run %s function, %s", fnid.Str())
+			})
 		if err != nil {
 			ctxlog(ctx).Errorf("Can't setup cron trigger for %s", fn.SwoId.Str())
 			return err
