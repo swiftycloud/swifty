@@ -894,24 +894,12 @@ definitions:
     properties:
       source:
         type: string
-        description: 'Event source type, supported by platform'
+        description: 'Event source type, supported by platform (options: "url", "cron")'
         example: url
       crontab:
         type: string
         description: Cron string if source is "cron"
         example: '* * * * * *'
-      mwid:
-        type: string
-        description: Mware ID if type is "mware"
-        example: myrmq
-      s3bucket:
-        type: string
-        description: S3 bucket name if source is "mware" and mwid refers to an s3 type
-        example: mybucket
-      mqueue:
-        type: string
-        description: MQ queue name if type is "mware" and mwid refers to a rabbitmq type
-        example: myqueue
   FunctionSources:
     type: object
     description: Sources description
@@ -1031,6 +1019,8 @@ definitions:
         items:
           type: string
           example: foobucket
+      event:
+        $ref: '#/definitions/FunctionEvent'
   FunctionRemove:
     required:
       - name

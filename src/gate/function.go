@@ -125,19 +125,22 @@ type FunctionDesc struct {
 
 var zeroVersion = "0"
 
+func getEventDesc(evt *swyapi.FunctionEvent) *FnEventDesc {
+	return &FnEventDesc {
+		Source:		evt.Source,
+		CronTab:	evt.CronTab,
+		MwareId:	evt.MwareId,
+		MQueue:		evt.MQueue,
+		S3Bucket:	evt.S3Bucket,
+	}
+}
+
 func getFunctionDesc(tennant string, p_add *swyapi.FunctionAdd) *FunctionDesc {
 	fn := &FunctionDesc {
 		SwoId: SwoId {
 			Tennant: tennant,
 			Project: p_add.Project,
 			Name:	 p_add.FuncName,
-		},
-		Event:		&FnEventDesc {
-			Source:		p_add.Event.Source,
-			CronTab:	p_add.Event.CronTab,
-			MwareId:	p_add.Event.MwareId,
-			MQueue:		p_add.Event.MQueue,
-			S3Bucket:	p_add.Event.S3Bucket,
 		},
 		Src:		FnSrcDesc {
 			Type:		p_add.Sources.Type,
@@ -161,6 +164,7 @@ func getFunctionDesc(tennant string, p_add *swyapi.FunctionAdd) *FunctionDesc {
 		UserData:	p_add.UserData,
 	}
 
+	fn.Event = getEventDesc(&p_add.Event)
 	fn.Cookie = fn.SwoId.Cookie()
 	return fn
 }
@@ -315,6 +319,7 @@ func updateFunction(ctx context.Context, conf *YAMLConf, id *SwoId, params *swya
 	var oldver string
 	var olds int
 	var nac *AuthCtx
+	var oevt *FnEventDesc
 
 	update := make(bson.M)
 
@@ -404,6 +409,22 @@ func updateFunction(ctx context.Context, conf *YAMLConf, id *SwoId, params *swya
 		acfix = true
 	}
 
+	if params.Event != nil {
+		oevt = fn.Event
+		fn.Event = getEventDesc(params.Event)
+		err = fn.Event.Prepare(ctx, conf, fn.SwoId)
+		if err != nil {
+			goto out
+		}
+
+		update["event.source"] = fn.Event.Source
+		update["event.crontab"] = fn.Event.CronTab
+		update["event.mwid"] = fn.Event.MwareId
+		update["event.mqueue"] = fn.Event.MQueue
+		update["event.s3bucket"] = fn.Event.S3Bucket
+		update["event.cronid"] = fn.Event.CronID
+	}
+
 	if len(update) == 0 {
 		ctxlog(ctx).Debugf("Nothing to update for %s", fn.SwoId.Str())
 		goto out
@@ -454,6 +475,11 @@ func updateFunction(ctx context.Context, conf *YAMLConf, id *SwoId, params *swya
 		;
 	}
 
+	if oevt != nil {
+		oevt.Cancel(ctx, conf, fn.SwoId)
+		oevt = nil
+	}
+
 	if restart {
 		if !stalled {
 			ctxlog(ctx).Debugf("Updating deploy")
@@ -479,6 +505,9 @@ func updateFunction(ctx context.Context, conf *YAMLConf, id *SwoId, params *swya
 	logSaveEvent(fn, "updated", fmt.Sprintf("to: %s", fn.Src.Version))
 out:
 	if err != nil {
+		if oevt != nil {
+			oevt.Cancel(ctx, conf, fn.SwoId)
+		}
 		return GateErrE(swy.GateGenErr, err)
 	}
 

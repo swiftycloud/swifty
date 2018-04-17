@@ -76,7 +76,6 @@ func cronEventSetup(ctx context.Context, conf *YAMLConf, fnid *SwoId, evt *FnEve
 
 var EventCron = EventOps {
 	Setup: cronEventSetup,
-	Devel: true,
 }
 
 func eventsRestart(conf *YAMLConf) error {

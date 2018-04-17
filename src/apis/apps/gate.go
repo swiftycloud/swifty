@@ -193,6 +193,7 @@ type FunctionUpdate struct {
 	Mware		*[]string		`json:"mware,omitempty"`
 	S3Buckets	*[]string		`json:"s3buckets,omitempty"`
 	AuthCtx		*string			`json:"authctx,omitempty"`
+	Event		*FunctionEvent		`json:"event,omitempty"`
 	UserData	string			`json:"userdata"`
 }
 
