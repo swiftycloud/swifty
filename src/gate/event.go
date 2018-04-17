@@ -20,6 +20,14 @@ var evtHandlers = map[string]*EventOps {
 	"oneshot":	&EventOneShot,
 }
 
+func eventPrepare(ctx context.Context, conf *YAMLConf, fn *FunctionDesc) error {
+	return eventSetup(ctx, conf, fn, true)
+}
+
+func eventCancel(ctx context.Context, conf *YAMLConf, fn *FunctionDesc) error {
+	return eventSetup(ctx, conf, fn, false)
+}
+
 func eventSetup(ctx context.Context, conf *YAMLConf, fn *FunctionDesc, on bool) error {
 	if fn.Event.Source == "" {
 		return nil

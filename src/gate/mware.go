@@ -278,7 +278,7 @@ func mwareEventSetup(ctx context.Context, conf *YAMLConf, fn *FunctionDesc, on b
 
 	iface, ok := mwareHandlers[item.MwareType]
 	if ok && (iface.Event != nil) {
-		return iface.Event(ctx, &conf.Mware, &fn.Event, &item, on)
+		return iface.Event(ctx, &conf.Mware, fn.Event, &item, on)
 	}
 
 	ctxlog(ctx).Errorf("Can't find mware handler for %s.%s event", item.SwoId.Str(), item.MwareType)

@@ -95,7 +95,7 @@ type FunctionDesc struct {
 	State		int		`bson:"state"`		// Function state
 	CronID		int		`bson:"cronid"`		// ID of cron trigger (if present)
 	URLCall		bool		`bson:"urlcall"`	// Function is callable via direct URL
-	Event		FnEventDesc	`bson:"event"`
+	Event		*FnEventDesc	`bson:"event"`
 	Mware		[]string	`bson:"mware"`
 	S3Buckets	[]string	`bson:"s3buckets"`
 	Code		FnCodeDesc	`bson:"code"`
@@ -115,7 +115,7 @@ func getFunctionDesc(tennant string, p_add *swyapi.FunctionAdd) *FunctionDesc {
 			Project: p_add.Project,
 			Name:	 p_add.FuncName,
 		},
-		Event:		FnEventDesc {
+		Event:		&FnEventDesc {
 			Source:		p_add.Event.Source,
 			CronTab:	p_add.Event.CronTab,
 			MwareId:	p_add.Event.MwareId,
@@ -202,7 +202,7 @@ func addFunction(ctx context.Context, conf *YAMLConf, tennant string, params *sw
 
 	gateFunctions.Inc()
 
-	err = eventSetup(ctx, conf, fn, true)
+	err = eventPrepare(ctx, conf, fn)
 	if err != nil {
 		goto out_clean_func
 	}
@@ -255,7 +255,7 @@ out_clean_repo:
 		goto stalled
 	}
 out_clean_evt:
-	erc = eventSetup(ctx, conf, fn, false)
+	erc = eventCancel(ctx, conf, fn)
 	if erc != nil {
 		goto stalled
 	}
@@ -507,7 +507,7 @@ func removeFunction(ctx context.Context, conf *YAMLConf, id *SwoId) *swyapi.Gate
 	}
 
 	ctxlog(ctx).Debugf("`- setdown events")
-	err = eventSetup(ctx, conf, fn, false)
+	err = eventCancel(ctx, conf, fn)
 	if err != nil {
 		goto later
 	}
