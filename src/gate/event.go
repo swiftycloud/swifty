@@ -41,26 +41,32 @@ var EventOneShot = EventOps {
 	Devel: true,
 }
 
+func cronEventSetupOne(crontab string, fnid *SwoId) (cron.EntryID, error) {
+	var id cron.EntryID
+	var err error
+
+	id, err = cronRunner.AddFunc(crontab, func() {
+		glog.Debugf("Will run %s function, %s", fnid.Str())
+		fn, err := dbFuncFind(fnid)
+		if err != nil {
+			glog.Errorf("Can't find FN %s to run Cron event", fnid.Str())
+			return
+		}
+
+		if fn.Event.CronID != int(id) {
+			glog.Errorf("CronID mismatch for %s: exp %d got %d", fnid.Str(), id, fn.Event.CronID)
+			return
+		}
+
+		doRun(context.Background(), fn, "cron", map[string]string{})
+	})
+
+	return id, err
+}
+
 func cronEventSetup(ctx context.Context, conf *YAMLConf, fnid *SwoId, evt *FnEventDesc, on bool) error {
 	if on {
-		var id cron.EntryID
-		var err error
-
-		id, err = cronRunner.AddFunc(evt.CronTab, func() {
-				glog.Debugf("Will run %s function, %s", fnid.Str())
-				fn, err := dbFuncFind(fnid)
-				if err != nil {
-					glog.Errorf("Can't find FN %s to run Cron event", fnid.Str())
-					return
-				}
-
-				if fn.Event.CronID != int(id) {
-					glog.Errorf("CronID mismatch for %s: exp %d got %d", fnid.Str(), id, fn.Event.CronID)
-					return
-				}
-
-				doRun(ctx, fn, "cron", map[string]string{})
-			})
+		id, err := cronEventSetupOne(evt.CronTab, fnid)
 		if err != nil {
 			ctxlog(ctx).Errorf("Can't setup cron trigger for %s", fnid.Str())
 			return err
