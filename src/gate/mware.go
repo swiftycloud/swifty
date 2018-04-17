@@ -268,20 +268,21 @@ stalled:
 	goto out
 }
 
-func mwareEventSetup(ctx context.Context, conf *YAMLConf, fn *FunctionDesc, on bool) error {
-	item, err := dbMwareGetReady(makeSwoId(fn.Tennant, fn.Project, fn.Event.MwareId))
+func mwareEventSetup(ctx context.Context, conf *YAMLConf, id *SwoId, evt *FnEventDesc, on bool) error {
+	id.Name = evt.MwareId
+	item, err := dbMwareGetReady(id)
 	if err != nil {
 		return errors.New("No mware for event")
 	}
 
-	ctxlog(ctx).Debugf("set up event for %s.%s mware", fn.Event.MwareId, item.MwareType)
+	ctxlog(ctx).Debugf("set up event for %s.%s mware", id.Str(), item.MwareType)
 
 	iface, ok := mwareHandlers[item.MwareType]
 	if ok && (iface.Event != nil) {
-		return iface.Event(ctx, &conf.Mware, fn.Event, &item, on)
+		return iface.Event(ctx, &conf.Mware, evt, &item, on)
 	}
 
-	ctxlog(ctx).Errorf("Can't find mware handler for %s.%s event", item.SwoId.Str(), item.MwareType)
+	ctxlog(ctx).Errorf("Can't find mware handler for %s.%s event", id.Str(), item.MwareType)
 	return errors.New("Bad mware for event")
 }
 

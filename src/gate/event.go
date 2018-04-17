@@ -9,7 +9,7 @@ import (
 var cronRunner *cron.Cron
 
 type EventOps struct {
-	Setup func(ctx context.Context, conf *YAMLConf, fn *FunctionDesc, on bool) error
+	Setup func(ctx context.Context, conf *YAMLConf, id *SwoId, evt *FnEventDesc, on bool) error
 	Devel bool
 }
 
@@ -20,25 +20,17 @@ var evtHandlers = map[string]*EventOps {
 	"oneshot":	&EventOneShot,
 }
 
-func eventPrepare(ctx context.Context, conf *YAMLConf, fn *FunctionDesc) error {
-	return eventSetup(ctx, conf, fn, true)
-}
-
-func eventCancel(ctx context.Context, conf *YAMLConf, fn *FunctionDesc) error {
-	return eventSetup(ctx, conf, fn, false)
-}
-
-func eventSetup(ctx context.Context, conf *YAMLConf, fn *FunctionDesc, on bool) error {
+func (evt *FnEventDesc)setup(ctx context.Context, conf *YAMLConf, id *SwoId, on bool) error {
 	var err error
 
-	if fn.Event.Source != "" {
-		eh, ok := evtHandlers[fn.Event.Source]
+	if evt.Source != "" {
+		eh, ok := evtHandlers[evt.Source]
 		if ok && (SwyModeDevel || !eh.Devel) {
 			if eh.Setup != nil {
-				err = eh.Setup(ctx, conf, fn, on)
+				err = eh.Setup(ctx, conf, id, evt, on)
 			}
 		} else {
-			err = fmt.Errorf("Unknown event type %s", fn.Event.Source)
+			err = fmt.Errorf("Unknown event type %s", evt.Source)
 		}
 	}
 
@@ -49,22 +41,19 @@ var EventOneShot = EventOps {
 	Devel: true,
 }
 
-func cronEventSetup(ctx context.Context, conf *YAMLConf, fn *FunctionDesc, on bool) error {
+func cronEventSetup(ctx context.Context, conf *YAMLConf, fnid *SwoId, evt *FnEventDesc, on bool) error {
 	if on {
-		var fnid SwoId
-
-		fnid = fn.SwoId
-		id, err := cronRunner.AddFunc(fn.Event.CronTab, func() {
+		id, err := cronRunner.AddFunc(evt.CronTab, func() {
 				glog.Debugf("Will run %s function, %s", fnid.Str())
 			})
 		if err != nil {
-			ctxlog(ctx).Errorf("Can't setup cron trigger for %s", fn.SwoId.Str())
+			ctxlog(ctx).Errorf("Can't setup cron trigger for %s", fnid.Str())
 			return err
 		}
 
-		fn.Event.CronID = int(id)
+		evt.CronID = int(id)
 	} else {
-		cronRunner.Remove(cron.EntryID(fn.Event.CronID))
+		cronRunner.Remove(cron.EntryID(evt.CronID))
 	}
 
 	return nil
@@ -84,7 +73,7 @@ func eventsRestart(conf *YAMLConf) error {
 
 	for _, fn := range fns {
 		glog.Debugf("Restart event for %s", fn.SwoId.Str())
-		err = eventPrepare(context.Background(), conf, &fn)
+		err = fn.Event.Prepare(context.Background(), conf, fn.SwoId)
 		if err != nil {
 			return err
 		}

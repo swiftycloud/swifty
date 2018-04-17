@@ -76,6 +76,15 @@ type FnEventDesc struct {
 	CronID		int		`bson:"cronid"`		// ID of cron trigger (if present)
 }
 
+/* id in Prepare/Cancel MUST be by-value, as .setup modifies one */
+func (evt *FnEventDesc)Prepare(ctx context.Context, conf *YAMLConf, id SwoId) error {
+	return evt.setup(ctx, conf, &id, true)
+}
+
+func (evt *FnEventDesc)Cancel(ctx context.Context, conf *YAMLConf, id SwoId) error {
+	return evt.setup(ctx, conf, &id, false)
+}
+
 func (evt *FnEventDesc)isURL() bool {
 	return evt.Source == "url"
 }
@@ -210,7 +219,7 @@ func addFunction(ctx context.Context, conf *YAMLConf, tennant string, params *sw
 
 	gateFunctions.Inc()
 
-	err = eventPrepare(ctx, conf, fn)
+	err = fn.Event.Prepare(ctx, conf, fn.SwoId)
 	if err != nil {
 		goto out_clean_func
 	}
@@ -263,7 +272,7 @@ out_clean_repo:
 		goto stalled
 	}
 out_clean_evt:
-	erc = eventCancel(ctx, conf, fn)
+	erc = fn.Event.Cancel(ctx, conf, fn.SwoId)
 	if erc != nil {
 		goto stalled
 	}
@@ -515,7 +524,7 @@ func removeFunction(ctx context.Context, conf *YAMLConf, id *SwoId) *swyapi.Gate
 	}
 
 	ctxlog(ctx).Debugf("`- setdown events")
-	err = eventCancel(ctx, conf, fn)
+	err = fn.Event.Cancel(ctx, conf, fn.SwoId)
 	if err != nil {
 		goto later
 	}
