@@ -897,9 +897,11 @@ definitions:
         description: 'Event source type, supported by platform (options: "url", "cron")'
         example: url
       crontab:
-        type: string
+        type: array
         description: Cron string if source is "cron"
-        example: '* * * * * *'
+        items:
+          type: string
+          example: '* * * * * *'
   FunctionSources:
     type: object
     description: Sources description

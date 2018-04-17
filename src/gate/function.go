@@ -67,13 +67,13 @@ type FnSrcDesc struct {
 
 type FnEventDesc struct {
 	Source		string		`bson:"source"`
-	CronTab		string		`bson:"crontab,omitempty"`
+	CronTab		[]string	`bson:"crontab,omitempty"`
 	MwareId		string		`bson:"mwid,omitempty"`
 	MQueue		string		`bson:"mqueue,omitempty"`
 	S3Bucket	string		`bson:"s3bucket,omitempty"`
 
 	/* Generated part */
-	CronID		int		`bson:"cronid"`		// ID of cron trigger (if present)
+	CronID		[]int		`bson:"cronid"`		// ID of cron trigger (if present)
 }
 
 /* id in Prepare/Cancel MUST be by-value, as .setup modifies one */

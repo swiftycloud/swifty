@@ -53,8 +53,16 @@ func cronEventSetupOne(crontab string, fnid *SwoId) (cron.EntryID, error) {
 			return
 		}
 
-		if fn.Event.CronID != int(id) {
-			glog.Errorf("CronID mismatch for %s: exp %d got %d", fnid.Str(), id, fn.Event.CronID)
+		var ok bool
+		for _, i := range(fn.Event.CronID) {
+			if i == int(id) {
+				ok = true
+				break
+			}
+		}
+
+		if !ok {
+			glog.Errorf("CronID mismatch for %s: %v != %d", fnid.Str(), fn.Event.CronID, id)
 			return
 		}
 
@@ -66,15 +74,22 @@ func cronEventSetupOne(crontab string, fnid *SwoId) (cron.EntryID, error) {
 
 func cronEventSetup(ctx context.Context, conf *YAMLConf, fnid *SwoId, evt *FnEventDesc, on bool) error {
 	if on {
-		id, err := cronEventSetupOne(evt.CronTab, fnid)
-		if err != nil {
-			ctxlog(ctx).Errorf("Can't setup cron trigger for %s", fnid.Str())
-			return err
-		}
+		for _, ct := range(evt.CronTab) {
+			id, err := cronEventSetupOne(ct, fnid)
+			if err != nil {
+				for _, i := range(evt.CronID) {
+					cronRunner.Remove(cron.EntryID(i))
+				}
+				ctxlog(ctx).Errorf("Can't setup cron trigger for %s", fnid.Str())
+				return err
+			}
 
-		evt.CronID = int(id)
+			evt.CronID = append(evt.CronID, int(id))
+		}
 	} else {
-		cronRunner.Remove(cron.EntryID(evt.CronID))
+		for _, i := range(evt.CronID) {
+			cronRunner.Remove(cron.EntryID(i))
+		}
 	}
 
 	return nil
