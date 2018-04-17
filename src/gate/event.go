@@ -29,24 +29,23 @@ func eventCancel(ctx context.Context, conf *YAMLConf, fn *FunctionDesc) error {
 }
 
 func eventSetup(ctx context.Context, conf *YAMLConf, fn *FunctionDesc, on bool) error {
-	if fn.Event.Source == "" {
-		return nil
+	var err error
+
+	if fn.Event.Source != "" {
+		eh, ok := evtHandlers[fn.Event.Source]
+		if ok && (SwyModeDevel || !eh.Devel) {
+			if eh.Setup != nil {
+				err = eh.Setup(ctx, conf, fn, on)
+			}
+		} else {
+			err = fmt.Errorf("Unknown event type %s", fn.Event.Source)
+		}
 	}
 
-	eh, ok := evtHandlers[fn.Event.Source]
-	if ok && (SwyModeDevel || !eh.Devel) {
-		return eh.Setup(ctx, conf, fn, on)
-	} else {
-		return fmt.Errorf("Unknown event type %s", fn.Event.Source)
-	}
-}
-
-func oneshotEventSetup(ctx context.Context, conf *YAMLConf, fn *FunctionDesc, on bool) error {
-	return nil
+	return err
 }
 
 var EventOneShot = EventOps {
-	Setup: oneshotEventSetup,
 	Devel: true,
 }
 
