@@ -84,7 +84,7 @@ func eventsRestart(conf *YAMLConf) error {
 
 	for _, fn := range fns {
 		glog.Debugf("Restart event for %s", fn.SwoId.Str())
-		err = eventSetup(context.Background(), conf, &fn, true)
+		err = eventPrepare(context.Background(), conf, &fn)
 		if err != nil {
 			return err
 		}
