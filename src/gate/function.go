@@ -71,6 +71,17 @@ type FnEventDesc struct {
 	MwareId		string		`bson:"mwid,omitempty"`
 	MQueue		string		`bson:"mqueue,omitempty"`
 	S3Bucket	string		`bson:"s3bucket,omitempty"`
+
+	/* Generated part */
+	CronID		int		`bson:"cronid"`		// ID of cron trigger (if present)
+}
+
+func (evt *FnEventDesc)isURL() bool {
+	return evt.Source == "url"
+}
+
+func (evt *FnEventDesc)isOneShot() bool {
+	return evt.Source == "oneshot"
 }
 
 type FnSizeDesc struct {
@@ -93,15 +104,12 @@ type FunctionDesc struct {
 	SwoId				`bson:",inline"`
 	Cookie		string		`bson:"cookie"`		// Some "unique" identifier
 	State		int		`bson:"state"`		// Function state
-	CronID		int		`bson:"cronid"`		// ID of cron trigger (if present)
-	URLCall		bool		`bson:"urlcall"`	// Function is callable via direct URL
 	Event		*FnEventDesc	`bson:"event"`
 	Mware		[]string	`bson:"mware"`
 	S3Buckets	[]string	`bson:"s3buckets"`
 	Code		FnCodeDesc	`bson:"code"`
 	Src		FnSrcDesc	`bson:"src"`
 	Size		FnSizeDesc	`bson:"size"`
-	OneShot		bool		`bson:"oneshot"`
 	AuthCtx		string		`bson:"authctx,omitempty"`
 	UserData	string		`bson:"userdata,omitempty"`
 }
@@ -497,7 +505,7 @@ func removeFunction(ctx context.Context, conf *YAMLConf, id *SwoId) *swyapi.Gate
 		return GateErrM(swy.GateGenErr, "Cannot terminate fn")
 	}
 
-	if !fn.OneShot && (fn.State != swy.DBFuncStateDea) {
+	if !fn.Event.isOneShot() && (fn.State != swy.DBFuncStateDea) {
 		ctxlog(ctx).Debugf("`- delete deploy")
 		err = swk8sRemove(ctx, conf, fn)
 		if err != nil {
@@ -604,7 +612,7 @@ func notifyPodUp(ctx context.Context, pod *k8sPod) {
 	if fn.State != swy.DBFuncStateRdy {
 		logSaveEvent(fn, "Ready", "")
 		dbFuncSetState(ctx, fn, swy.DBFuncStateRdy)
-		if fn.OneShot {
+		if fn.Event.isOneShot() {
 			runFunctionOnce(ctx, fn)
 		}
 	}

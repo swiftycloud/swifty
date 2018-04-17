@@ -219,10 +219,8 @@ func dbFuncUpdateAdded(fn *FunctionDesc) error {
 		bson.M{"cookie": fn.Cookie},
 		bson.M{"$set": bson.M{
 				"src.version": fn.Src.Version,
-				"cronid": fn.CronID,
-				"oneshot": fn.OneShot,
+				"event.cronid": fn.Event.CronID,
 				"state": fn.State,
-				"urlcall": fn.URLCall,
 			}})
 }
 

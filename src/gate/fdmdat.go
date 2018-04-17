@@ -168,7 +168,7 @@ func fndatGetOrInit(cookie string, fn *FunctionDesc) (*FnMemData, error) {
 	}
 
 	nret.mem = fn.Size.Mem
-	nret.public = fn.URLCall
+	nret.public = fn.Event.isURL()
 	nret.depname = fn.DepName()
 	if fn.AuthCtx != "" {
 		nret.ac, err = authCtxGet(fn)

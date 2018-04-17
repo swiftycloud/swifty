@@ -614,7 +614,7 @@ func getFunctionInfo(fn *FunctionDesc, periods int) (*swyapi.FunctionInfo, *swya
 	var url = ""
 	var err error
 
-	if (fn.URLCall) {
+	if fn.Event.isURL() {
 		url = conf.Daemon.Addr + "/call/" + fn.Cookie
 	}
 
@@ -721,7 +721,7 @@ func handleFunctionLogs(ctx context.Context, w http.ResponseWriter, r *http.Requ
 }
 
 func fnCallable(fn *FunctionDesc) bool {
-	return fn.URLCall && (fn.State == swy.DBFuncStateRdy)
+	return fn.Event.isURL() && (fn.State == swy.DBFuncStateRdy)
 }
 
 func makeArgMap(sopq *statsOpaque, r *http.Request) map[string]string {

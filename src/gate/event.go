@@ -42,7 +42,6 @@ func eventSetup(ctx context.Context, conf *YAMLConf, fn *FunctionDesc, on bool) 
 }
 
 func oneshotEventSetup(ctx context.Context, conf *YAMLConf, fn *FunctionDesc, on bool) error {
-	fn.OneShot = true
 	return nil
 }
 
@@ -64,9 +63,9 @@ func cronEventSetup(ctx context.Context, conf *YAMLConf, fn *FunctionDesc, on bo
 			return err
 		}
 
-		fn.CronID = int(id)
+		fn.Event.CronID = int(id)
 	} else {
-		cronRunner.Remove(cron.EntryID(fn.CronID))
+		cronRunner.Remove(cron.EntryID(fn.Event.CronID))
 	}
 
 	return nil
