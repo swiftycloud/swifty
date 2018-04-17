@@ -506,7 +506,8 @@ func updateFunction(ctx context.Context, conf *YAMLConf, id *SwoId, params *swya
 out:
 	if err != nil {
 		if oevt != nil {
-			oevt.Cancel(ctx, conf, fn.SwoId)
+			fn.Event.Cancel(ctx, conf, fn.SwoId)
+			fn.Event = oevt
 		}
 		return GateErrE(swy.GateGenErr, err)
 	}
