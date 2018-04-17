@@ -11,3 +11,7 @@ func urlSetup(ctx context.Context, conf *YAMLConf, fn *FunctionDesc, on bool) er
 	}
 	return nil
 }
+
+var EventURL = EventOps {
+	Setup: urlSetup,
+}

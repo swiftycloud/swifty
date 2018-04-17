@@ -284,3 +284,8 @@ func mwareEventSetup(ctx context.Context, conf *YAMLConf, fn *FunctionDesc, on b
 	ctxlog(ctx).Errorf("Can't find mware handler for %s.%s event", item.SwoId.Str(), item.MwareType)
 	return errors.New("Bad mware for event")
 }
+
+var EventMware = EventOps {
+	Setup: mwareEventSetup,
+	Devel: true,
+}

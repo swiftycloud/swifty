@@ -2,18 +2,22 @@ package main
 
 import (
 	"fmt"
-	"errors"
 	"context"
 	"gopkg.in/robfig/cron.v2"
 )
 
 var cronRunner *cron.Cron
 
-var evtHandlers = map[string]func(context.Context, *YAMLConf, *FunctionDesc, bool) error {
-	"mware": mwareEventSetup,
-	"cron": cronEventSetup,
-	"oneshot": oneshotEventSetup,
-	"url": urlSetup,
+type EventOps struct {
+	Setup func(ctx context.Context, conf *YAMLConf, fn *FunctionDesc, on bool) error
+	Devel bool
+}
+
+var evtHandlers = map[string]*EventOps {
+	"url":		&EventURL,
+	"cron":		&EventCron,
+	"mware":	&EventMware,
+	"oneshot":	&EventOneShot,
 }
 
 func eventSetup(ctx context.Context, conf *YAMLConf, fn *FunctionDesc, on bool) error {
@@ -21,28 +25,25 @@ func eventSetup(ctx context.Context, conf *YAMLConf, fn *FunctionDesc, on bool) 
 		return nil
 	}
 
-	evtHandler, ok := evtHandlers[fn.Event.Source]
-	if ok {
-		return evtHandler(ctx, conf, fn, on)
+	eh, ok := evtHandlers[fn.Event.Source]
+	if ok && (SwyModeDevel || !eh.Devel) {
+		return eh.Setup(ctx, conf, fn, on)
 	} else {
 		return fmt.Errorf("Unknown event type %s", fn.Event.Source)
 	}
 }
 
 func oneshotEventSetup(ctx context.Context, conf *YAMLConf, fn *FunctionDesc, on bool) error {
-	if !SwyModeDevel {
-		return errors.New("Cannot setup one-shot event")
-	}
-
 	fn.OneShot = true
 	return nil
 }
 
-func cronEventSetup(ctx context.Context, conf *YAMLConf, fn *FunctionDesc, on bool) error {
-	if !SwyModeDevel {
-		return errors.New("Cannot setup cron event")
-	}
+var EventOneShot = EventOps {
+	Setup: oneshotEventSetup,
+	Devel: true,
+}
 
+func cronEventSetup(ctx context.Context, conf *YAMLConf, fn *FunctionDesc, on bool) error {
 	if on {
 		var fnid SwoId
 
@@ -61,6 +62,11 @@ func cronEventSetup(ctx context.Context, conf *YAMLConf, fn *FunctionDesc, on bo
 	}
 
 	return nil
+}
+
+var EventCron = EventOps {
+	Setup: cronEventSetup,
+	Devel: true,
 }
 
 func eventsRestart(conf *YAMLConf) error {
