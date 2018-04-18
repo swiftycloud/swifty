@@ -65,9 +65,14 @@ type FnSrcDesc struct {
 	Code		string		`bson:"-"`
 }
 
+type FnCronDesc struct {
+	Tab		string			`bson:"tab"`
+	Args		map[string]string	`bson:"args"`
+}
+
 type FnEventDesc struct {
 	Source		string		`bson:"source"`
-	CronTab		[]string	`bson:"crontab,omitempty"`
+	Cron		[]*FnCronDesc	`bson:"cron,omitempty"`
 	MwareId		string		`bson:"mwid,omitempty"`
 	MQueue		string		`bson:"mqueue,omitempty"`
 	S3Bucket	string		`bson:"s3bucket,omitempty"`
@@ -91,6 +96,37 @@ func (evt *FnEventDesc)isURL() bool {
 
 func (evt *FnEventDesc)isOneShot() bool {
 	return evt.Source == "oneshot"
+}
+
+func (evt *FnEventDesc)cronBson() []bson.M {
+	var ret []bson.M
+	for _, ce := range(evt.Cron) {
+		ret = append(ret, bson.M{
+			"tab": ce.Tab,
+			"args": ce.Args,
+		})
+	}
+	return ret
+}
+
+func (evt *FnEventDesc)crons() []swyapi.FunctionEventCron {
+	var ret []swyapi.FunctionEventCron
+	for _, ce := range(evt.Cron) {
+		ret = append(ret, swyapi.FunctionEventCron {
+			Tab: ce.Tab,
+			Args: ce.Args,
+		})
+	}
+	return ret
+}
+
+func (evd *FnEventDesc)setCrons(evt *swyapi.FunctionEvent) {
+	for _, ct := range(evt.Cron) {
+		evd.Cron = append(evd.Cron, &FnCronDesc{
+			Tab: ct.Tab,
+			Args: ct.Args,
+		})
+	}
 }
 
 type FnSizeDesc struct {
@@ -126,13 +162,15 @@ type FunctionDesc struct {
 var zeroVersion = "0"
 
 func getEventDesc(evt *swyapi.FunctionEvent) *FnEventDesc {
-	return &FnEventDesc {
+	evd := &FnEventDesc {
 		Source:		evt.Source,
-		CronTab:	evt.CronTab,
 		MwareId:	evt.MwareId,
 		MQueue:		evt.MQueue,
 		S3Bucket:	evt.S3Bucket,
 	}
+
+	evd.setCrons(evt)
+	return evd
 }
 
 func getFunctionDesc(tennant string, p_add *swyapi.FunctionAdd) *FunctionDesc {
@@ -418,7 +456,7 @@ func updateFunction(ctx context.Context, conf *YAMLConf, id *SwoId, params *swya
 		}
 
 		update["event.source"] = fn.Event.Source
-		update["event.crontab"] = fn.Event.CronTab
+		update["event.cron"] = fn.Event.cronBson()
 		update["event.mwid"] = fn.Event.MwareId
 		update["event.mqueue"] = fn.Event.MQueue
 		update["event.s3bucket"] = fn.Event.S3Bucket

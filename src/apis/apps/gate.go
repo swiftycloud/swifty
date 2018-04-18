@@ -105,9 +105,14 @@ type FunctionSize struct {
 	Burst		uint			`json:"burst,omitempty"`
 }
 
+type FunctionEventCron struct {
+	Tab		string			`json:"tab"`
+	Args		map[string]string	`json:"args"`
+}
+
 type FunctionEvent struct {
 	Source		string			`json:"source"`
-	CronTab		[]string		`json:"crontab,omitempty"`
+	Cron		[]FunctionEventCron	`json:"cron,omitempty"`
 	MwareId		string			`json:"mwid,omitempty"`
 	MQueue		string			`json:"mqueue,omitempty"`
 	S3Bucket	string			`json:"s3bucket,omitempty"`

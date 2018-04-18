@@ -41,12 +41,12 @@ var EventOneShot = EventOps {
 	Devel: true,
 }
 
-func cronEventSetupOne(crontab string, fnid *SwoId) (cron.EntryID, error) {
+func cronEventSetupOne(ce *FnCronDesc, fnid *SwoId) (cron.EntryID, error) {
 	var id cron.EntryID
 	var err error
 
-	id, err = cronRunner.AddFunc(crontab, func() {
-		glog.Debugf("Will run %s function, %s", fnid.Str())
+	id, err = cronRunner.AddFunc(ce.Tab, func() {
+		glog.Debugf("Will run %s function", fnid.Str())
 		fn, err := dbFuncFind(fnid)
 		if err != nil {
 			glog.Errorf("Can't find FN %s to run Cron event", fnid.Str())
@@ -66,7 +66,7 @@ func cronEventSetupOne(crontab string, fnid *SwoId) (cron.EntryID, error) {
 			return
 		}
 
-		doRun(context.Background(), fn, "cron", map[string]string{})
+		doRun(context.Background(), fn, "cron", ce.Args) /* XXX Args can also be taken from fn ... */
 	})
 
 	return id, err
@@ -74,8 +74,8 @@ func cronEventSetupOne(crontab string, fnid *SwoId) (cron.EntryID, error) {
 
 func cronEventSetup(ctx context.Context, conf *YAMLConf, fnid *SwoId, evt *FnEventDesc, on bool) error {
 	if on {
-		for _, ct := range(evt.CronTab) {
-			id, err := cronEventSetupOne(ct, fnid)
+		for _, ce := range(evt.Cron) {
+			id, err := cronEventSetupOne(ce, fnid)
 			if err != nil {
 				for _, i := range(evt.CronID) {
 					cronRunner.Remove(cron.EntryID(i))

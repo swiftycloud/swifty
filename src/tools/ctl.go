@@ -390,15 +390,9 @@ func info_function(project string, args []string, opts [16]string) {
 		estr := ifo.Event.Source
 		if ifo.Event.Source == "url" {
 			/* nothing */
-		} else if ifo.Event.CronTab != "" {
-			estr += ":" + ifo.Event.CronTab
-		} else if ifo.Event.MwareId != "" {
-			estr += ":" + ifo.Event.MwareId
-			if ifo.Event.MQueue != "" {
-				estr += ":q=" + ifo.Event.MQueue
-			}
-			if ifo.Event.S3Bucket != "" {
-				estr += ":b=" + ifo.Event.S3Bucket
+		} else if ifo.Event.Source == "cron" {
+			for _, c := range(ifo.Event.Cron) {
+				estr += ":" + c.Tab + "/" + make_args_string(c.Args)
 			}
 		} else {
 			estr += "UNKNOWN"
@@ -548,16 +542,13 @@ func add_function(project string, args []string, opts [16]string) {
 		evt.Source = mwe[0]
 		if evt.Source == "url" {
 			/* nothing */
-		} else if evt.Source == "mware" {
-			evt.MwareId = mwe[1]
-			mwi := strings.SplitN(mwe[2], "=", 2)
-			switch mwi[0] {
-			case "q":
-				evt.MQueue = mwe[1]
-			case "b":
-				evt.S3Bucket = mwi[1]
-			default:
-				fatal(fmt.Errorf("Unknown mware event id %s", mwi[0]))
+		} else if evt.Source == "cron" {
+			for _, cron := range mwe[1:] {
+				x := strings.SplitN(cron, "/", 2)
+				evt.Cron = append(evt.Cron, swyapi.FunctionEventCron {
+					Tab: x[0],
+					Args: split_args_string(x[1]),
+				})
 			}
 		} else {
 			/* FIXME -- CRONTAB */
@@ -597,15 +588,28 @@ func add_function(project string, args []string, opts [16]string) {
 
 }
 
+/* Splits a=v,a=v,... string into map */
+func split_args_string(as string) map[string]string {
+	ret := make(map[string]string)
+	for _, arg := range strings.Split(as, ",") {
+		a := strings.SplitN(arg, "=", 2)
+		ret[a[0]] = a[1]
+	}
+	return ret
+}
+
+func make_args_string(args map[string]string) string {
+	var ass []string
+	for a, v := range args {
+		ass = append(ass, a + "=" + v)
+	}
+	return strings.Join(ass, ",")
+}
+
 func run_function(project string, args []string, opts [16]string) {
 	var rres swyapi.FunctionRunResult
-	var argmap = make(map[string]string)
 
-	for _, arg := range strings.Split(args[1], ",") {
-		a := strings.SplitN(arg, "=", 2)
-		argmap[a[0]] = a[1]
-	}
-
+	argmap := split_args_string(args[1])
 	make_faas_req("function/run",
 		swyapi.FunctionRun{ Project: project, FuncName: args[0], Args: argmap, }, &rres)
 
