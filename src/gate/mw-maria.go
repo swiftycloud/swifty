@@ -138,18 +138,19 @@ func InfoMariaDB(ctx context.Context, conf *YAMLConfMw, mwd *MwareDesc, ifo *swy
 		return errors.New("Error getting DB size")
 	}
 	defer rows.Close()
+
+	var size uint64
 	for rows.Next() {
-		var size uint64
 
 		if err := rows.Scan(&size); err != nil {
 			ctxlog(ctx).Errorf("Can't get result: %s", err.Error())
 			return errors.New("Error getting DB size")
 		}
 
-		ifo.SetDU(size)
 		break /* There should be only one */
 	}
 
+	ifo.SetDU(size)
 	return nil
 }
 
