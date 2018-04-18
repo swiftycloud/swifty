@@ -755,7 +755,7 @@ func list_mware(project string, args []string, opts [16]string) {
 		var mws []swyapi.MwareItem
 		make_faas_req("mware/list", &req, &mws)
 
-		fmt.Printf("%-20s%-10s%s\n", "NAME", "TYPE")
+		fmt.Printf("%-20s%-10s\n", "NAME", "TYPE")
 		for _, mw := range mws {
 			fmt.Printf("%-20s%-10s%s\n", mw.ID, mw.Type, "")
 		}
