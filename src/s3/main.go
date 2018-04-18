@@ -145,7 +145,7 @@ func handleBucketCloudWatch(iam *S3Iam, akey *S3AccessKey, w http.ResponseWriter
 	var bname, v string
 
 	content_type := r.Header.Get("Content-Type")
-	if content_type != "application/x-www-form-urlencoded" {
+	if content_type[0:34] != "application/x-www-form-urlencoded;" {
 		return &S3Error{
 			ErrorCode: S3ErrInvalidURI,
 			Message: "Unexpected Content-Type",
