@@ -12,6 +12,8 @@ import (
 	_ "crypto/sha256"
 	"crypto/hmac"
 	"gopkg.in/mgo.v2"
+	"database/sql"
+	_ "github.com/go-sql-driver/mysql"
 )
 
 var _mgoSessions sync.Map
@@ -52,6 +54,41 @@ func MongoDatabase(mwn string) (*mgo.Database, error) {
 
 	ses = sv.(*mgo.Session)
 	return ses.DB(dbn), nil
+}
+
+var _mariaDBS sync.Map
+var db *sql.DB
+
+func MariaConn(mwn string) (*sql.DB, error) {
+	mwn = strings.ToUpper(mwn)
+	dbv, ok := _mariaDBS.Load(mwn)
+	if !ok {
+		dbn := os.Getenv("MWARE_MARIA" + mwn + "_DBNAME")
+		if dbn == "" {
+			return nil, errors.New("Middleware not attached")
+		}
+
+		addr := os.Getenv("MWARE_MARIA" + mwn + "_ADDR")
+		user := os.Getenv("MWARE_MARIA" + mwn + "_USER")
+		pass := os.Getenv("MWARE_MARIA" + mwn + "_PASS")
+
+		db, err := sql.Open("mysql", user + ":" + pass + "@tcp(" + addr + ")/" + dbn)
+		if err != nil {
+			return nil, err
+		}
+
+		err = db.Ping()
+		if err != nil {
+			return nil, err
+		}
+
+		dbv, ok = _mariaDBS.LoadOrStore(mwn, db)
+		if ok {
+			db.Close()
+		}
+	}
+
+	return dbv.(*sql.DB), nil
 }
 
 type AuthCtx struct {

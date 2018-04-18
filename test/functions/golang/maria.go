@@ -2,44 +2,15 @@ package main
 
 import (
 	"fmt"
-	"os"
-	"strings"
-	"database/sql"
-	_ "github.com/go-sql-driver/mysql"
+	"swifty"
 )
 
-var db *sql.DB
-
-func MariaConn(mwn string) *sql.DB {
-	if db == nil {
-		var err error
-
-		mwn = strings.ToUpper(mwn)
-		addr := os.Getenv("MWARE_" + mwn + "_ADDR")
-		user := os.Getenv("MWARE_" + mwn + "_USER")
-		pass := os.Getenv("MWARE_" + mwn + "_PASS")
-		dbn := os.Getenv("MWARE_" + mwn + "_DBNAME")
-
-		db, err = sql.Open("mysql", user + ":" + pass + "@tcp(" + addr + ")/" + dbn)
-		if err != nil {
-			fmt.Println(err)
-			panic("Can't open DB")
-		}
-
-		err = db.Ping()
-		if err != nil {
-			fmt.Println(err)
-			panic("Can't ping DB")
-		}
-	}
-
-	return db
-}
-
 func Main(args map[string]string) interface{} {
-	var err error
-
-	db := MariaConn(args["dbname"])
+	db, err := swifty.MariaConn(args["dbname"])
+	if err != nil {
+		fmt.Println(err)
+		panic("Can't get maria conn")
+	}
 
 	res := "invalid"
 	if args["action"] == "create" {
