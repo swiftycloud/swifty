@@ -10,6 +10,7 @@
 - hosts: all
   roles:
   - common
+  - docker
 
 #
 # Setup master node
@@ -28,7 +29,6 @@
   roles:
   - nfs-slave
   - flannel-slave
-  - docker-slave
   - kube-slave
   - service-slave
 
