@@ -19,7 +19,13 @@ type podConn struct {
 }
 
 func doRun(ctx context.Context, fn *FunctionDesc, event string, args map[string]string) (*swyapi.SwdFunctionRunResult, error) {
-	conn, err := balancerGetConnAny(ctx, fn.Cookie, nil)
+	fmd, err := memdGetFn(fn)
+	if err != nil {
+		ctxlog(ctx).Errorf("Can't %s memdat: %s", fn.Cookie, err.Error())
+		return nil, err
+	}
+
+	conn, err := balancerGetConnAny(ctx, fn.Cookie, fmd)
 	if conn == nil {
 		ctxlog(ctx).Errorf("Can't find %s cookie balancer: %s", fn.Cookie, err.Error())
 		return nil, fmt.Errorf("Can't find balancer for %s", fn.Cookie)

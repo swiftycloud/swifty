@@ -112,10 +112,7 @@ func balancerGetConnAny(ctx context.Context, cookie string, fdm *FnMemData) (*po
 	var aps []podConn
 	var err error
 
-	if fdm != nil {
-		aps = fdm.bd.pods
-	}
-
+	aps = fdm.bd.pods
 	if len(aps) == 0 {
 		aps, err = dbBalancerGetConnsByCookie(cookie)
 		if aps == nil {
