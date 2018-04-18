@@ -98,18 +98,18 @@ type S3Prefix struct {
 }
 
 type S3Datapoint struct {
-	Average			float64				`xml:"Average,omitempy"`
-	//ExtendedStatistics	map[string]float64		`xml:"ExtendedStatistics,omitempy"`
-	//Maximum		float64				`xml:"Maximum,omitempy"`
-	//Minimum		float64				`xml:"Minimum,omitempy"`
-	//SampleCount		float64				`xml:"SampleCount,omitempy"`
-	//Sum			float64				`xml:"Sum,omitempy"`
 	Timestamp		string				`xml:"Timestamp,omitempy"`
+	SampleCount		float64				`xml:"SampleCount,omitempy"`
+	Average			float64				`xml:"Average,omitempy"`
+	//Sum			float64				`xml:"Sum,omitempy"`
+	//Minimum		float64				`xml:"Minimum,omitempy"`
+	//Maximum		float64				`xml:"Maximum,omitempy"`
 	Unit			string				`xml:"Unit,omitempy"`
+	//ExtendedStatistics	map[string]float64		`xml:"ExtendedStatistics,omitempy"`
 }
 
 type S3Datapoints struct {
-	Points			[]S3Datapoint			`xml:"Datapoint,omitempy"`
+	Points			[]S3Datapoint			`xml:"member,omitempy"`
 }
 
 type S3GetMetricStatisticsResult struct {
@@ -118,8 +118,8 @@ type S3GetMetricStatisticsResult struct {
 }
 
 type S3GetMetricStatisticsOutput struct {
-	XMLName			xml.Name			`xml:"GetMetricStatisticsOutput,omitempy"`
-	Result			S3GetMetricStatisticsResult	`xml:"GetMetricStatisticsResult,omitempy"`
+	XMLName			xml.Name			`xml:"GetMetricStatisticsResponse"`
+	Result			S3GetMetricStatisticsResult	`xml:"GetMetricStatisticsResult"`
 }
 
 type S3Bucket struct {

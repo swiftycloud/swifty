@@ -400,6 +400,8 @@ func s3GetBucketMetricOutput(iam *S3Iam, bname, metric_name string) (*swys3api.S
 		}
 	}
 
+	point.SampleCount = 1
+
 	res.Result.Datapoints.Points = append(res.Result.Datapoints.Points, point)
 	res.Result.Label = metric_name
 	return &res, nil
