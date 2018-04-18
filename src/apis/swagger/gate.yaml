@@ -886,6 +886,24 @@ definitions:
           When a function version equals or (!) greater than this becomes
           available for execution, the event occurs. Note, that older versions
           may still be there when the event happens.
+  FunctionEventCron:
+    type: object
+    description: Cron string and arguments
+    required:
+      - tab
+      - args
+    properties:
+      tab:
+        type: string
+        description: Cron string in classical notation
+        example: '* * * * * *'
+      args:
+        type: object
+        description: Dict with args to pass to FN when this cron fires
+        additionalProperties:
+          type: string
+        example:
+          - arg: value
   FunctionEvent:
     type: object
     description: Event specification
@@ -898,10 +916,8 @@ definitions:
         example: url
       crontab:
         type: array
-        description: Cron string if source is "cron"
         items:
-          type: string
-          example: '* * * * * *'
+          $ref: '#/definitions/FunctionEventCron'
   FunctionSources:
     type: object
     description: Sources description
