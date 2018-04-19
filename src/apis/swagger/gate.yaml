@@ -607,6 +607,83 @@ paths:
           description: Need to authenticate
         '403':
           description: Bad authentication token
+  /deploy/start:
+    post:
+      summary: Start deploying set of functions and middleware
+      parameters:
+        - in: header
+          name: X-Auth-Token
+          type: string
+          required: true
+        - name: data
+          in: body
+          description: Middleware to remove
+          required: true
+          schema:
+            $ref: '#/definitions/DeployStart'
+      responses:
+        '200':
+          description: All objects has been /add-ed
+        '400':
+          description: Bad request
+          schema:
+            $ref: '#/definitions/GateError'
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad authentication token
+  /deploy/stop:
+    post:
+      summary: Start demolishing previously deployed items
+      parameters:
+        - in: header
+          name: X-Auth-Token
+          type: string
+          required: true
+        - name: data
+          in: body
+          description: Middleware to remove
+          required: true
+          schema:
+            $ref: '#/definitions/DeployId'
+      responses:
+        '200':
+          description: All objects has been /remove-ed
+        '400':
+          description: Bad request
+          schema:
+            $ref: '#/definitions/GateError'
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad authentication token
+  /deploy/info:
+    post:
+      summary: Get info about deployment
+      parameters:
+        - in: header
+          name: X-Auth-Token
+          type: string
+          required: true
+        - name: data
+          in: body
+          description: Middleware to remove
+          required: true
+          schema:
+            $ref: '#/definitions/DeployId'
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/DeployInfo'
+        '400':
+          description: Bad request
+          schema:
+            $ref: '#/definitions/GateError'
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad authentication token
   /info/langs:
     post:
       summary: Show supported languages
@@ -1265,3 +1342,59 @@ definitions:
       project:
         type: string
         example: my-project
+  DeployId:
+    type: object
+    description: ID of an item
+    required:
+      - name
+    properties:
+      project:
+        type: string
+      name:
+        type: string
+  DeployItem:
+    type: object
+    description: Item to deploy (function or middleware)
+    properties:
+      function:
+        $ref: '#/definitions/FunctionAdd'
+      mware:
+        $ref: '#/definitions/MwareAdd'
+  DeployStart:
+    type: object
+    description: Description of deployment
+    required:
+      - name
+      - items
+    properties:
+      project:
+        type: string
+      name:
+        type: string
+      items:
+        type: array
+        items:
+          $ref: '#/definitions/DeployItem'
+  DeployItemInfo:
+    type: object
+    description: Info about a deploy item
+    properties:
+      type:
+        type: string
+        description: Item type, "function" or "middleware"
+      name:
+        type: string
+      state:
+        type: string
+        description: Item state, "ready", "dead" or other. See function/mware states for details
+  DeployInfo:
+    type: object
+    description: Info about deployment
+    properties:
+      state:
+        type: string
+        description: State of deploying -- "starting", "ready", "stalled" or "terminating"
+      items:
+        type: array
+        items:
+          $ref: '#/definitions/DeployItemInfo'
