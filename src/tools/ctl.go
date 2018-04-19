@@ -158,7 +158,7 @@ func make_faas_req(url string, in interface{}, out interface{}) {
 	make_faas_req2(url, in, out, http.StatusOK, 30)
 }
 
-func list_users(args []string, opts [16]string) {
+func list_users(cd *cmdDesc, args []string, opts [16]string) {
 	var uss []swyapi.UserInfo
 	make_faas_req("users", swyapi.ListUsers{}, &uss)
 
@@ -167,27 +167,27 @@ func list_users(args []string, opts [16]string) {
 	}
 }
 
-func add_user(args []string, opts [16]string) {
+func add_user(cd *cmdDesc, args []string, opts [16]string) {
 	make_faas_req2("adduser", swyapi.AddUser{Id: args[0], Pass: opts[1], Name: opts[0]},
 		nil, http.StatusCreated, 0)
 }
 
-func del_user(args []string, opts [16]string) {
+func del_user(cd *cmdDesc, args []string, opts [16]string) {
 	make_faas_req2("deluser", swyapi.UserInfo{Id: args[0]}, nil, http.StatusNoContent, 0)
 }
 
-func set_password(args []string, opts [16]string) {
+func set_password(cd *cmdDesc, args []string, opts [16]string) {
 	make_faas_req2("setpass", swyapi.UserLogin{UserName: args[0], Password: opts[0]},
 		nil, http.StatusCreated, 0)
 }
 
-func show_user_info(args []string, opts [16]string) {
+func show_user_info(cd *cmdDesc, args []string, opts [16]string) {
 	var ui swyapi.UserInfo
 	make_faas_req("userinfo", swyapi.UserInfo{Id: args[0]}, &ui)
 	fmt.Printf("Name: %s\n", ui.Name)
 }
 
-func do_user_limits(args []string, opts [16]string) {
+func do_user_limits(cd *cmdDesc, args []string, opts [16]string) {
 	var l swyapi.UserLimits
 	chg := false
 
@@ -275,7 +275,7 @@ func dateOnly(tm string) string {
 	return t.Format("02 Jan 2006")
 }
 
-func show_stats(args []string, opts [16]string) {
+func show_stats(cd *cmdDesc, args []string, opts [16]string) {
 	var rq swyapi.TenantStatsReq
 	var st swyapi.TenantStatsResp
 	var err error
@@ -297,7 +297,7 @@ func show_stats(args []string, opts [16]string) {
 	}
 }
 
-func list_projects(args []string, opts [16]string) {
+func list_projects(cd *cmdDesc, args []string, opts [16]string) {
 	var ps []swyapi.ProjectItem
 	make_faas_req("project/list", swyapi.ProjectList{}, &ps)
 
@@ -306,10 +306,10 @@ func list_projects(args []string, opts [16]string) {
 	}
 }
 
-func list_functions(project string, args []string, opts [16]string) {
+func list_functions(cd *cmdDesc, args []string, opts [16]string) {
 	if opts[0] == "" {
 		var fns []swyapi.FunctionItem
-		make_faas_req("function/list", swyapi.FunctionList{ Project: project, }, &fns)
+		make_faas_req("function/list", swyapi.FunctionList{ Project: cd.project, }, &fns)
 
 		fmt.Printf("%-20s%-10s\n", "NAME", "STATE")
 		for _, fn := range fns {
@@ -317,7 +317,7 @@ func list_functions(project string, args []string, opts [16]string) {
 		}
 	} else if opts[0] == "json" {
 		resp := make_faas_req3("function/list/info",
-			swyapi.FunctionListInfo{ Project: project, Periods: 0 }, http.StatusOK, 30)
+			swyapi.FunctionListInfo{ Project: cd.project, Periods: 0 }, http.StatusOK, 30)
 		defer resp.Body.Close()
 		body, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
@@ -367,9 +367,9 @@ func formatBytes(b uint64) string {
 	return bo
 }
 
-func info_function(project string, args []string, opts [16]string) {
+func info_function(cd *cmdDesc, args []string, opts [16]string) {
 	var ifo swyapi.FunctionInfo
-	make_faas_req("function/info", swyapi.FunctionInfoReq{ Project: project, FuncName: args[0], Periods: 0}, &ifo)
+	make_faas_req("function/info", swyapi.FunctionInfoReq{ Project: cd.project, FuncName: args[0], Periods: 0}, &ifo)
 	ver := ifo.Version
 	if len(ver) > 8 {
 		ver = ver[:8]
@@ -430,7 +430,7 @@ func info_function(project string, args []string, opts [16]string) {
 	}
 }
 
-func check_lang(args []string, opts [16]string) {
+func check_lang(cd *cmdDesc, args []string, opts [16]string) {
 	l := detect_language(opts[0], "code")
 	fmt.Printf("%s\n", l)
 }
@@ -497,7 +497,7 @@ func parse_rate(val string) (uint, uint) {
 	return uint(rate), uint(burst)
 }
 
-func add_function(project string, args []string, opts [16]string) {
+func add_function(cd *cmdDesc, args []string, opts [16]string) {
 	sources := swyapi.FunctionSources{}
 	code := swyapi.FunctionCode{}
 
@@ -557,7 +557,7 @@ func add_function(project string, args []string, opts [16]string) {
 	}
 
 	req := swyapi.FunctionAdd{
-		Project: project,
+		Project: cd.project,
 		FuncName: args[0],
 		Sources: sources,
 		Code: code,
@@ -606,21 +606,21 @@ func make_args_string(args map[string]string) string {
 	return strings.Join(ass, ",")
 }
 
-func run_function(project string, args []string, opts [16]string) {
+func run_function(cd *cmdDesc, args []string, opts [16]string) {
 	var rres swyapi.FunctionRunResult
 
 	argmap := split_args_string(args[1])
 	make_faas_req("function/run",
-		swyapi.FunctionRun{ Project: project, FuncName: args[0], Args: argmap, }, &rres)
+		swyapi.FunctionRun{ Project: cd.project, FuncName: args[0], Args: argmap, }, &rres)
 
 	fmt.Printf("returned: %s\n", rres.Return)
 	fmt.Printf("%s", rres.Stdout)
 	fmt.Fprintf(os.Stderr, "%s", rres.Stderr)
 }
 
-func update_function(project string, args []string, opts [16]string) {
+func update_function(cd *cmdDesc, args []string, opts [16]string) {
 	req := swyapi.FunctionUpdate {
-		Project: project,
+		Project: cd.project,
 		FuncName: args[0],
 	}
 
@@ -671,33 +671,33 @@ func update_function(project string, args []string, opts [16]string) {
 
 	if opts[5] != "" {
 		fmt.Printf("Wait FN %s\n", opts[5])
-		wait_fn(project, []string{args[0]}, [16]string{opts[5], "15000"})
+		wait_fn(cd, []string{args[0]}, [16]string{opts[5], "15000"})
 	}
 
 	if opts[6] != "" {
 		fmt.Printf("Run FN %s\n", opts[6])
-		run_function(project, []string{args[0], opts[6]}, [16]string{})
+		run_function(cd, []string{args[0], opts[6]}, [16]string{})
 	}
 }
 
-func del_function(project string, args []string, opts [16]string) {
+func del_function(cd *cmdDesc, args []string, opts [16]string) {
 	make_faas_req("function/remove",
-		swyapi.FunctionRemove{ Project: project, FuncName: args[0] }, nil)
+		swyapi.FunctionRemove{ Project: cd.project, FuncName: args[0] }, nil)
 }
 
-func on_fn(project string, args []string, opts [16]string) {
+func on_fn(cd *cmdDesc, args []string, opts [16]string) {
 	make_faas_req("function/state",
-		swyapi.FunctionState{ Project: project, FuncName: args[0], State: "ready" }, nil)
+		swyapi.FunctionState{ Project: cd.project, FuncName: args[0], State: "ready" }, nil)
 }
 
-func off_fn(project string, args []string, opts [16]string) {
+func off_fn(cd *cmdDesc, args []string, opts [16]string) {
 	make_faas_req("function/state",
-		swyapi.FunctionState{ Project: project, FuncName: args[0], State: "deactivated" }, nil)
+		swyapi.FunctionState{ Project: cd.project, FuncName: args[0], State: "deactivated" }, nil)
 }
 
-func wait_fn(project string, args []string, opts [16]string) {
+func wait_fn(cd *cmdDesc, args []string, opts [16]string) {
 	req := swyapi.FunctionWait{
-		Project: project,
+		Project: cd.project,
 		FuncName: args[0],
 	}
 
@@ -723,10 +723,10 @@ func wait_fn(project string, args []string, opts [16]string) {
 	make_faas_req2("function/wait", req, nil, http.StatusOK, httpTmo + 10)
 }
 
-func show_code(project string, args []string, opts [16]string) {
+func show_code(cd *cmdDesc, args []string, opts [16]string) {
 	var res swyapi.FunctionSources
 	make_faas_req("function/code",
-		swyapi.FunctionXID{ Project: project, FuncName: args[0], Version: opts[0], }, &res)
+		swyapi.FunctionXID{ Project: cd.project, FuncName: args[0], Version: opts[0], }, &res)
 
 	data, err := base64.StdEncoding.DecodeString(res.Code)
 	if err != nil {
@@ -735,18 +735,18 @@ func show_code(project string, args []string, opts [16]string) {
 	fmt.Printf("%s", data)
 }
 
-func show_logs(project string, args []string, opts [16]string) {
+func show_logs(cd *cmdDesc, args []string, opts [16]string) {
 	var res []swyapi.FunctionLogEntry
 	make_faas_req("function/logs",
-		swyapi.FunctionID{ Project: project, FuncName: args[0], }, &res)
+		swyapi.FunctionID{ Project: cd.project, FuncName: args[0], }, &res)
 
 	for _, le := range res {
 		fmt.Printf("%36s%8s: %s\n", le.Ts, le.Event, le.Text)
 	}
 }
 
-func list_mware(project string, args []string, opts [16]string) {
-	req := swyapi.MwareList{ Project: project }
+func list_mware(cd *cmdDesc, args []string, opts [16]string) {
+	req := swyapi.MwareList{ Project: cd.project }
 	if opts[1] != "" {
 		req.Type = opts[1]
 	}
@@ -772,11 +772,11 @@ func list_mware(project string, args []string, opts [16]string) {
 	}
 }
 
-func info_mware(project string, args []string, opts [16]string) {
+func info_mware(cd *cmdDesc, args []string, opts [16]string) {
 	var resp swyapi.MwareInfo
 
 	make_faas_req("mware/info",
-		swyapi.MwareID{ Project: project, ID: args[0], }, &resp)
+		swyapi.MwareID{ Project: cd.project, ID: args[0], }, &resp)
 	fmt.Printf("Type:         %s\n", resp.Type)
 	if resp.DU != nil {
 		fmt.Printf("Disk usage:   %s\n", formatBytes(*resp.DU << 10))
@@ -786,9 +786,9 @@ func info_mware(project string, args []string, opts [16]string) {
 	}
 }
 
-func add_mware(project string, args []string, opts [16]string) {
+func add_mware(cd *cmdDesc, args []string, opts [16]string) {
 	req := swyapi.MwareAdd {
-		Project: project,
+		Project: cd.project,
 		ID: args[0],
 		Type: args[1],
 		UserData: opts[0],
@@ -796,12 +796,12 @@ func add_mware(project string, args []string, opts [16]string) {
 	make_faas_req("mware/add", req, nil)
 }
 
-func del_mware(project string, args []string, opts [16]string) {
+func del_mware(cd *cmdDesc, args []string, opts [16]string) {
 	make_faas_req("mware/remove",
-		swyapi.MwareRemove{ Project: project, ID: args[0], }, nil)
+		swyapi.MwareRemove{ Project: cd.project, ID: args[0], }, nil)
 }
 
-func s3_access(project string, args []string, opts [16]string) {
+func s3_access(cd *cmdDesc, args []string, opts [16]string) {
 	lt, err := strconv.Atoi(opts[0])
 	if err != nil {
 		fatal(fmt.Errorf("Bad lifetie value: %s", err.Error()))
@@ -810,7 +810,7 @@ func s3_access(project string, args []string, opts [16]string) {
 	var creds swyapi.MwareS3Creds
 
 	make_faas_req("mware/access/s3",
-		swyapi.MwareS3Access{ Project: project, Bucket: args[0], Lifetime: uint32(lt)}, &creds)
+		swyapi.MwareS3Access{ Project: cd.project, Bucket: args[0], Lifetime: uint32(lt)}, &creds)
 	fmt.Printf("Endpoint %s\n", creds.Endpoint)
 	fmt.Printf("Key:     %s\n", creds.Key)
 	fmt.Printf("Secret:  %s\n", creds.Secret)
@@ -826,11 +826,11 @@ func req_list(url string) {
 	}
 }
 
-func languages(args []string, opts [16]string) {
+func languages(cd *cmdDesc, args []string, opts [16]string) {
 	req_list("info/langs")
 }
 
-func mware_types(args []string, opts [16]string) {
+func mware_types(cd *cmdDesc, args []string, opts [16]string) {
 	req_list("info/mwares")
 }
 
@@ -850,7 +850,7 @@ func show_login() {
 	fmt.Printf("%s@%s:%s (%s)\n", conf.Login.User, conf.Login.Host, conf.Login.Port, gateProto())
 }
 
-func manage_login(args []string, opts [16]string) {
+func manage_login(cd *cmdDesc, args []string, opts [16]string) {
 	action := "show"
 	if len(args) >= 1 {
 		action = args[0]
@@ -974,40 +974,39 @@ type cmdDesc struct {
 	opts	*flag.FlagSet
 	pargs	[]string
 	project	string
-	pcall	func(string, []string, [16]string)
-	call	func([]string, [16]string)
+	call	func(*cmdDesc, []string, [16]string)
 }
 
 var cmdMap = map[string]*cmdDesc {
 	CMD_LOGIN:	&cmdDesc{			  opts: flag.NewFlagSet(CMD_LOGIN, flag.ExitOnError) },
-	CMD_ME:		&cmdDesc{  call: manage_login,	  opts: flag.NewFlagSet(CMD_ME, flag.ExitOnError) },
-	CMD_STATS:	&cmdDesc{  call: show_stats,	  opts: flag.NewFlagSet(CMD_STATS, flag.ExitOnError) },
-	CMD_PS:		&cmdDesc{  call: list_projects,	  opts: flag.NewFlagSet(CMD_PS, flag.ExitOnError) },
-	CMD_LS:		&cmdDesc{ pcall: list_functions,  opts: flag.NewFlagSet(CMD_LS, flag.ExitOnError) },
-	CMD_INF:	&cmdDesc{ pcall: info_function,	  opts: flag.NewFlagSet(CMD_INF, flag.ExitOnError) },
-	CMD_ADD:	&cmdDesc{ pcall: add_function,	  opts: flag.NewFlagSet(CMD_ADD, flag.ExitOnError) },
-	CMD_RUN:	&cmdDesc{ pcall: run_function,	  opts: flag.NewFlagSet(CMD_RUN, flag.ExitOnError) },
-	CMD_UPD:	&cmdDesc{ pcall: update_function, opts: flag.NewFlagSet(CMD_UPD, flag.ExitOnError) },
-	CMD_DEL:	&cmdDesc{ pcall: del_function,	  opts: flag.NewFlagSet(CMD_DEL, flag.ExitOnError) },
-	CMD_LOGS:	&cmdDesc{ pcall: show_logs,	  opts: flag.NewFlagSet(CMD_LOGS, flag.ExitOnError) },
-	CMD_CODE:	&cmdDesc{ pcall: show_code,	  opts: flag.NewFlagSet(CMD_CODE, flag.ExitOnError) },
-	CMD_ON:		&cmdDesc{ pcall: on_fn,		  opts: flag.NewFlagSet(CMD_ON, flag.ExitOnError) },
-	CMD_OFF:	&cmdDesc{ pcall: off_fn,	  opts: flag.NewFlagSet(CMD_OFF, flag.ExitOnError) },
-	CMD_WAIT:	&cmdDesc{ pcall: wait_fn,	  opts: flag.NewFlagSet(CMD_WAIT, flag.ExitOnError) },
-	CMD_MLS:	&cmdDesc{ pcall: list_mware,	  opts: flag.NewFlagSet(CMD_MLS, flag.ExitOnError) },
-	CMD_MINF:	&cmdDesc{ pcall: info_mware,	  opts: flag.NewFlagSet(CMD_INF, flag.ExitOnError) },
-	CMD_MADD:	&cmdDesc{ pcall: add_mware,	  opts: flag.NewFlagSet(CMD_MADD, flag.ExitOnError) },
-	CMD_MDEL:	&cmdDesc{ pcall: del_mware,	  opts: flag.NewFlagSet(CMD_MDEL, flag.ExitOnError) },
-	CMD_S3ACC:	&cmdDesc{ pcall: s3_access,	  opts: flag.NewFlagSet(CMD_S3ACC, flag.ExitOnError) },
-	CMD_LUSR:	&cmdDesc{  call: list_users,	  opts: flag.NewFlagSet(CMD_LUSR, flag.ExitOnError) },
-	CMD_UADD:	&cmdDesc{  call: add_user,	  opts: flag.NewFlagSet(CMD_UADD, flag.ExitOnError) },
-	CMD_UDEL:	&cmdDesc{  call: del_user,	  opts: flag.NewFlagSet(CMD_UDEL, flag.ExitOnError) },
-	CMD_PASS:	&cmdDesc{  call: set_password,	  opts: flag.NewFlagSet(CMD_PASS, flag.ExitOnError) },
-	CMD_UINF:	&cmdDesc{  call: show_user_info,  opts: flag.NewFlagSet(CMD_UINF, flag.ExitOnError) },
-	CMD_LIMITS:	&cmdDesc{  call: do_user_limits,  opts: flag.NewFlagSet(CMD_LIMITS, flag.ExitOnError) },
-	CMD_LANGS:	&cmdDesc{  call: languages,	  opts: flag.NewFlagSet(CMD_LANGS, flag.ExitOnError) },
-	CMD_MTYPES:	&cmdDesc{  call: mware_types,	  opts: flag.NewFlagSet(CMD_MTYPES, flag.ExitOnError) },
-	CMD_LANG:	&cmdDesc{  call: check_lang,	  opts: flag.NewFlagSet(CMD_LANG, flag.ExitOnError) },
+	CMD_ME:		&cmdDesc{ call: manage_login,	  opts: flag.NewFlagSet(CMD_ME, flag.ExitOnError) },
+	CMD_STATS:	&cmdDesc{ call: show_stats,	  opts: flag.NewFlagSet(CMD_STATS, flag.ExitOnError) },
+	CMD_PS:		&cmdDesc{ call: list_projects,	  opts: flag.NewFlagSet(CMD_PS, flag.ExitOnError) },
+	CMD_LS:		&cmdDesc{ call: list_functions,  opts: flag.NewFlagSet(CMD_LS, flag.ExitOnError) },
+	CMD_INF:	&cmdDesc{ call: info_function,	  opts: flag.NewFlagSet(CMD_INF, flag.ExitOnError) },
+	CMD_ADD:	&cmdDesc{ call: add_function,	  opts: flag.NewFlagSet(CMD_ADD, flag.ExitOnError) },
+	CMD_RUN:	&cmdDesc{ call: run_function,	  opts: flag.NewFlagSet(CMD_RUN, flag.ExitOnError) },
+	CMD_UPD:	&cmdDesc{ call: update_function, opts: flag.NewFlagSet(CMD_UPD, flag.ExitOnError) },
+	CMD_DEL:	&cmdDesc{ call: del_function,	  opts: flag.NewFlagSet(CMD_DEL, flag.ExitOnError) },
+	CMD_LOGS:	&cmdDesc{ call: show_logs,	  opts: flag.NewFlagSet(CMD_LOGS, flag.ExitOnError) },
+	CMD_CODE:	&cmdDesc{ call: show_code,	  opts: flag.NewFlagSet(CMD_CODE, flag.ExitOnError) },
+	CMD_ON:		&cmdDesc{ call: on_fn,		  opts: flag.NewFlagSet(CMD_ON, flag.ExitOnError) },
+	CMD_OFF:	&cmdDesc{ call: off_fn,	  opts: flag.NewFlagSet(CMD_OFF, flag.ExitOnError) },
+	CMD_WAIT:	&cmdDesc{ call: wait_fn,	  opts: flag.NewFlagSet(CMD_WAIT, flag.ExitOnError) },
+	CMD_MLS:	&cmdDesc{ call: list_mware,	  opts: flag.NewFlagSet(CMD_MLS, flag.ExitOnError) },
+	CMD_MINF:	&cmdDesc{ call: info_mware,	  opts: flag.NewFlagSet(CMD_INF, flag.ExitOnError) },
+	CMD_MADD:	&cmdDesc{ call: add_mware,	  opts: flag.NewFlagSet(CMD_MADD, flag.ExitOnError) },
+	CMD_MDEL:	&cmdDesc{ call: del_mware,	  opts: flag.NewFlagSet(CMD_MDEL, flag.ExitOnError) },
+	CMD_S3ACC:	&cmdDesc{ call: s3_access,	  opts: flag.NewFlagSet(CMD_S3ACC, flag.ExitOnError) },
+	CMD_LUSR:	&cmdDesc{ call: list_users,	  opts: flag.NewFlagSet(CMD_LUSR, flag.ExitOnError) },
+	CMD_UADD:	&cmdDesc{ call: add_user,	  opts: flag.NewFlagSet(CMD_UADD, flag.ExitOnError) },
+	CMD_UDEL:	&cmdDesc{ call: del_user,	  opts: flag.NewFlagSet(CMD_UDEL, flag.ExitOnError) },
+	CMD_PASS:	&cmdDesc{ call: set_password,	  opts: flag.NewFlagSet(CMD_PASS, flag.ExitOnError) },
+	CMD_UINF:	&cmdDesc{ call: show_user_info,  opts: flag.NewFlagSet(CMD_UINF, flag.ExitOnError) },
+	CMD_LIMITS:	&cmdDesc{ call: do_user_limits,  opts: flag.NewFlagSet(CMD_LIMITS, flag.ExitOnError) },
+	CMD_LANGS:	&cmdDesc{ call: languages,	  opts: flag.NewFlagSet(CMD_LANGS, flag.ExitOnError) },
+	CMD_MTYPES:	&cmdDesc{ call: mware_types,	  opts: flag.NewFlagSet(CMD_MTYPES, flag.ExitOnError) },
+	CMD_LANG:	&cmdDesc{ call: check_lang,	  opts: flag.NewFlagSet(CMD_LANG, flag.ExitOnError) },
 }
 
 func bindCmdUsage(cmd string, args []string, help string, wp bool) {
@@ -1135,10 +1134,8 @@ func main() {
 
 	login()
 
-	if cd.pcall != nil {
-		cd.pcall(cd.project, os.Args[2:], opts)
-	} else if cd.call != nil {
-		cd.call(os.Args[2:], opts)
+	if cd.call != nil {
+		cd.call(cd, os.Args[2:], opts)
 	} else {
 		fatal(fmt.Errorf("Bad cmd"))
 	}
