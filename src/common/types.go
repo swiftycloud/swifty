@@ -5,6 +5,8 @@ const (
 	DBMwareStateRdy	int = 2		// Ready
 	DBMwareStateTrm	int = 3		// Terminating
 	DBMwareStateStl	int = 4		// Stalled (while terminating or cleaning up)
+
+	DBMwareStateNo	int = -1	// Doesn't exists :)
 )
 
 const (
@@ -15,6 +17,15 @@ const (
 	DBFuncStateTrm	int = 6		// Terminating
 	DBFuncStateStl	int = 7		// Stalled
 	DBFuncStateDea	int = 8		// Deactivated
+
+	DBFuncStateNo	int = -1	// Doesn't exists :)
+)
+
+const (
+	DBDepStateIni	int = 1
+	DBDepStateRdy	int = 2
+	DBDepStateStl	int = 3
+	DBDepStateTrm	int = 4
 )
 
 const (

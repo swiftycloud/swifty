@@ -27,6 +27,14 @@ type MwareDesc struct {
 	UserData	string		`bson:"userdata,omitempty"`
 }
 
+var mwStates = map[int]string {
+	swy.DBMwareStatePrp:	"preparing",
+	swy.DBMwareStateRdy:	"ready",
+	swy.DBMwareStateTrm:	"terminating",
+	swy.DBMwareStateStl:	"stalled",
+	swy.DBMwareStateNo:	"dead",
+}
+
 type MwareOps struct {
 	Init	func(ctx context.Context, conf *YAMLConfMw, mwd *MwareDesc) (error)
 	Fini	func(ctx context.Context, conf *YAMLConfMw, mwd *MwareDesc) (error)

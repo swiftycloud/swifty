@@ -1006,6 +1006,10 @@ func handleMwareAdd(ctx context.Context, w http.ResponseWriter, r *http.Request)
 		return GateErrE(swy.GateBadRequest, err)
 	}
 
+	if params.Project == "" {
+		params.Project = SwyDefaultProject
+	}
+
 	ctxlog(ctx).Debugf("mware/add: %s params %v", fromContext(ctx).Tenant, params)
 
 	cerr := mwareSetup(ctx, &conf.Mware, getMwareDesc(fromContext(ctx).Tenant, &params))
@@ -1135,7 +1139,7 @@ func handleMwareRemove(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	}
 
 	id := makeSwoId(fromContext(ctx).Tenant, params.Project, params.ID)
-	ctxlog(ctx).Debugf("mware/remove: %s params %v", fromContext(ctx).Tenant, params)
+	ctxlog(ctx).Debugf("mware/remove: %s params %v (%s)", fromContext(ctx).Tenant, params, id.Cookie())
 
 	cerr := mwareRemove(ctx, &conf.Mware, id)
 	if cerr != nil {
@@ -1164,6 +1168,63 @@ func handleMwareS3Access(ctx context.Context, w http.ResponseWriter, r *http.Req
 		return GateErrE(swy.GateBadResp, err)
 	}
 
+	return nil
+}
+
+func handleDeployStop(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
+	var params swyapi.DeployId
+
+	err := swyhttp.ReadAndUnmarshalReq(r, &params)
+	if err != nil {
+		return GateErrE(swy.GateBadRequest, err)
+	}
+
+	id := makeSwoId(fromContext(ctx).Tenant, params.Project, params.Name)
+	cerr := deployStop(ctx, id)
+	if cerr != nil {
+		return cerr
+	}
+
+	w.WriteHeader(http.StatusOK)
+	return nil
+}
+
+func handleDeployInfo(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
+	var params swyapi.DeployId
+
+	err := swyhttp.ReadAndUnmarshalReq(r, &params)
+	if err != nil {
+		return GateErrE(swy.GateBadRequest, err)
+	}
+
+	id := makeSwoId(fromContext(ctx).Tenant, params.Project, params.Name)
+	inf, cerr := deployInfo(ctx, id)
+	if cerr != nil {
+		return cerr
+	}
+
+	err = swyhttp.MarshalAndWrite(w, inf)
+	if err != nil {
+		return GateErrE(swy.GateBadResp, err)
+	}
+
+	return nil
+}
+
+func handleDeployStart(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
+	var params swyapi.DeployStart
+
+	err := swyhttp.ReadAndUnmarshalReq(r, &params)
+	if err != nil {
+		return GateErrE(swy.GateBadRequest, err)
+	}
+
+	cerr := deployStart(ctx, &params)
+	if cerr != nil {
+		return cerr
+	}
+
+	w.WriteHeader(http.StatusOK)
 	return nil
 }
 
@@ -1378,6 +1439,10 @@ func main() {
 	r.Handle("/v1/mware/remove",		genReqHandler(handleMwareRemove)).Methods("POST", "OPTIONS")
 	r.Handle("/v1/mware/access/s3",		genReqHandler(handleMwareS3Access)).Methods("POST", "OPTIONS")
 
+	r.Handle("/v1/deploy/start",		genReqHandler(handleDeployStart)).Methods("POST", "OPTIONS")
+	r.Handle("/v1/deploy/info",		genReqHandler(handleDeployInfo)).Methods("POST", "OPTIONS")
+	r.Handle("/v1/deploy/stop",		genReqHandler(handleDeployStop)).Methods("POST", "OPTIONS")
+
 	r.Handle("/v1/info/langs",		genReqHandler(handleLanguages)).Methods("POST", "OPTIONS")
 	r.Handle("/v1/info/mwares",		genReqHandler(handleMwareTypes)).Methods("POST", "OPTIONS")
 
@@ -1413,6 +1478,11 @@ func main() {
 	err = BuilderInit(&conf)
 	if err != nil {
 		glog.Fatalf("Can't set up builder: %s", err.Error())
+	}
+
+	err = DeployInit(&conf)
+	if err != nil {
+		glog.Fatalf("Can't set up deploys: %s", err.Error())
 	}
 
 	err = PrometheusInit(&conf)

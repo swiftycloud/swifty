@@ -23,6 +23,7 @@ const (
 	DBColTenStats	= "TenantStats"
 	DBColTenStatsA	= "TenantStatsArch"
 	DBColBalancerRS = "BalancerRS"
+	DBColDeploy	= "Deploy"
 	DBColLimits	= "Limits"
 )
 
@@ -485,6 +486,31 @@ func dbProjectListAll(ten string) (fn []string, mw []string, err error) {
 	c = dbSession.DB(DBStateDB).C(DBColMware)
 	err = c.Find(bson.M{"tennant": ten}).Distinct("project", &mw)
 	return
+}
+
+func dbDeployAdd(dep *DeployDesc) error {
+	return dbSession.DB(DBStateDB).C(DBColDeploy).Insert(dep)
+}
+
+func dbDeployGet(id *SwoId) (*DeployDesc, error) {
+	var dep DeployDesc
+	err := dbSession.DB(DBStateDB).C(DBColDeploy).Find(bson.M{"cookie": id.Cookie()}).One(&dep)
+	return &dep, err
+}
+
+func dbDeployDel(dep *DeployDesc) error {
+	return dbSession.DB(DBStateDB).C(DBColDeploy).Remove(bson.M{"cookie": dep.Cookie})
+}
+
+func dbDeployList() (deps []DeployDesc, err error) {
+	err = dbSession.DB(DBStateDB).C(DBColDeploy).Find(bson.M{}).All(&deps)
+	return
+}
+
+func dbDeployStateUpdate(dep *DeployDesc, state int) error {
+	dep.State = state
+	return dbSession.DB(DBStateDB).C(DBColDeploy).Update(bson.M{"cookie": dep.Cookie},
+			bson.M{"$set": bson.M{"state": state}})
 }
 
 func dbConnect(conf *YAMLConf) error {

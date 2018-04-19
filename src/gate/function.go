@@ -51,6 +51,7 @@ var fnStates = map[int]string {
 	swy.DBFuncStateDea: "deactivated",
 	swy.DBFuncStateTrm: "terminating",
 	swy.DBFuncStateStl: "stalled",
+	swy.DBFuncStateNo:  "dead",
 }
 
 type FnCodeDesc struct {

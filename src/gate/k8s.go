@@ -577,6 +577,9 @@ func swk8sMwSecretRemove(ctx context.Context, id string) error {
 		})
 	if err != nil {
 		ctxlog(ctx).Errorf("Can't remove mw %s secret: %s", id, err.Error())
+		if k8serr.IsNotFound(err) {
+			err = nil
+		}
 	}
 
 	return err

@@ -253,3 +253,30 @@ type FunctionLogEntry struct {
 	Ts		string			`json:"ts"`
 	Text		string			`json:"text"`
 }
+
+type DeployId struct {
+	Project		string			`json:"project"`
+	Name		string			`json:"description"`
+}
+
+type DeployItem struct {
+	Function	*FunctionAdd		`json:"function,omitempty"`
+	Mware		*MwareAdd		`json:"mware,omitempty"`
+}
+
+type DeployStart struct {
+	Project		string			`json:"project"`
+	Name		string			`json:"name"`
+	Items		[]DeployItem		`json:"items"`
+}
+
+type DeployItemInfo struct {
+	Type		string			`json:"type"`
+	Name		string			`json:"name"`
+	State		string			`json:"state"`
+}
+
+type DeployInfo struct {
+	State		string			`json:"state"`
+	Items		[]*DeployItemInfo	`json:"items"`
+}
