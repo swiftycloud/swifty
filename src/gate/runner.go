@@ -68,10 +68,6 @@ func talkHTTP(addr, port, url string, args map[string]string) (*swyapi.SwdFuncti
 }
 
 func doRunConn(ctx context.Context, conn *podConn, cookie, event string, args map[string]string) (*swyapi.SwdFunctionRunResult, error) {
-	if event != "call" {
-		ctxlog(ctx).Debugf("RUN %s %s (%v)", cookie, event, args)
-	}
-
 	var res *swyapi.SwdFunctionRunResult
 	var err error
 
@@ -89,11 +85,6 @@ func doRunConn(ctx context.Context, conn *podConn, cookie, event string, args ma
 
 	if res.Stdout != "" || res.Stderr != "" {
 		logSaveResult(cookie, event, res.Stdout, res.Stderr)
-	}
-
-	if event != "call" {
-		ctxlog(ctx).Debugf("RETurn %s: %d out[%s] err[%s]", cookie,
-			res.Code, res.Stdout, res.Stderr)
 	}
 
 	return res, nil

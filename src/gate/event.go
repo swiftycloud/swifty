@@ -46,7 +46,6 @@ func cronEventSetupOne(ce *FnCronDesc, fnid *SwoId) (cron.EntryID, error) {
 	var err error
 
 	id, err = cronRunner.AddFunc(ce.Tab, func() {
-		glog.Debugf("Will run %s function", fnid.Str())
 		fn, err := dbFuncFind(fnid)
 		if err != nil {
 			glog.Errorf("Can't find FN %s to run Cron event", fnid.Str())
