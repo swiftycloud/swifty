@@ -89,7 +89,7 @@ type RunCmd struct {
 
 type FunctionCode struct {
 	Lang		string			`json:"lang"`
-	Env		[]string		`json:"env"`
+	Env		[]string		`json:"env,omitempty"`
 }
 
 type FunctionSources struct {
@@ -111,7 +111,7 @@ type FunctionEventCron struct {
 }
 
 type FunctionEvent struct {
-	Source		string			`json:"source"`
+	Source		string			`json:"source,omitempty"`
 	Cron		[]FunctionEventCron	`json:"cron,omitempty"`
 	MwareId		string			`json:"mwid,omitempty"`
 	MQueue		string			`json:"mqueue,omitempty"`
@@ -122,7 +122,7 @@ type MwareAdd struct {
 	Project		string			`json:"project"`
 	ID		string			`json:"id"`
 	Type		string			`json:"type"`
-	UserData	string			`json:"userdata"`
+	UserData	string			`json:"userdata,omitempty"`
 }
 
 type MwareRemove struct {
@@ -178,9 +178,9 @@ type FunctionAdd struct {
 	Code		FunctionCode		`json:"code"`
 	Event		FunctionEvent		`json:"event"`
 	Size		FunctionSize		`json:"size"`
-	Mware		[]string		`json:"mware"`
-	S3Buckets	[]string		`json:"s3buckets"`
-	UserData	string			`json:"userdata"`
+	Mware		[]string		`json:"mware,omitempty"`
+	S3Buckets	[]string		`json:"s3buckets,omitempty"`
+	UserData	string			`json:"userdata,omitempty"`
 	AuthCtx		string			`json:"authctx,omitempty"`
 }
 

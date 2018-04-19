@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"encoding/base64"
 	"path/filepath"
 	"io/ioutil"
@@ -584,8 +585,14 @@ func add_function(cd *cmdDesc, args []string, opts [16]string) {
 		req.AuthCtx = opts[8]
 	}
 
-	make_faas_req("function/add", req, nil)
-
+	if !cd.req {
+		make_faas_req("function/add", req, nil)
+	} else {
+		d, err := json.Marshal(req)
+		if err == nil {
+			fmt.Printf("%s\n", string(d))
+		}
+	}
 }
 
 /* Splits a=v,a=v,... string into map */
@@ -793,7 +800,14 @@ func add_mware(cd *cmdDesc, args []string, opts [16]string) {
 		Type: args[1],
 		UserData: opts[0],
 	}
-	make_faas_req("mware/add", req, nil)
+	if !cd.req {
+		make_faas_req("mware/add", req, nil)
+	} else {
+		d, err := json.Marshal(req)
+		if err == nil {
+			fmt.Printf("%s\n", string(d))
+		}
+	}
 }
 
 func del_mware(cd *cmdDesc, args []string, opts [16]string) {
@@ -974,6 +988,7 @@ type cmdDesc struct {
 	opts	*flag.FlagSet
 	pargs	[]string
 	project	string
+	req	bool
 	call	func(*cmdDesc, []string, [16]string)
 }
 
@@ -1014,6 +1029,7 @@ func bindCmdUsage(cmd string, args []string, help string, wp bool) {
 	if wp {
 		cd.opts.StringVar(&cd.project, "proj", "", "Project to work on")
 	}
+	cd.opts.BoolVar(&cd.req, "req", false, "Only show the request to be sent")
 
 	cd.pargs = args
 	cd.opts.Usage = func() {
