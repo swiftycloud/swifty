@@ -256,7 +256,7 @@ type FunctionLogEntry struct {
 
 type DeployId struct {
 	Project		string			`json:"project"`
-	Name		string			`json:"description"`
+	Name		string			`json:"name"`
 }
 
 type DeployItem struct {
