@@ -991,7 +991,7 @@ definitions:
         type: string
         description: 'Event source type, supported by platform (options: "url", "cron")'
         example: url
-      crontab:
+      cron:
         type: array
         items:
           $ref: '#/definitions/FunctionEventCron'
