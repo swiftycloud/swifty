@@ -1,16 +1,7 @@
 #!/bin/bash
 
-set -x
-
-SWYCTL="./swyctl"
 ID=${1}
+CODE="./test/functions/golang/simple-user-mgmt.go"
 
-[ -z "${ID}" ] && exit 1
-
-AMGO="auth_${ID}_mgo"
-AJWT="auth_${ID}_jwt"
-AFUN="auth_${ID}"
-
-$SWYCTL madd ${AMGO} mongo
-$SWYCTL madd ${AJWT} authjwt
-$SWYCTL add ${AFUN} -src "test/functions/golang/simple-user-mgmt.go" -event url -mw "${AMGO},${AJWT}" -tmo 3000
+cat contrib/auth-dep.json | sed -e "s/#NAME#/${ID}/g" -e "s/#CODE#/$(cat ${CODE} | base64 -w 0)/" > auth-dep.json
+echo "Run \"swyctl ds auth-dep.json\""

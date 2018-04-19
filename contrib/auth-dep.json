@@ -1,0 +1,33 @@
+[
+	{
+		"mware": {
+			"id": "#NAME#_db",
+			"type": "mongo"
+		}
+	},
+	{
+		"mware": {
+			"id": "#NAME#_auth",
+			"type": "authjwt"
+		}
+	},
+	{
+		"function": {
+			"code": {
+				"lang": "golang"
+			},
+			"name": "#NAME#_um",
+			"sources": {
+				"code": "#CODE#",
+				"type": "code"
+			},
+			"event": {
+				"source": "url"
+			},
+			"mware": [
+				"#NAME#_db",
+				"#NAME#_auth"
+			]
+		}
+	}
+]
