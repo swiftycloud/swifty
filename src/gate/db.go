@@ -225,6 +225,12 @@ func dbFuncUpdateAdded(fn *FunctionDesc) error {
 			}})
 }
 
+func dbFuncUpdateCron(fn *FunctionDesc) error {
+	return dbFuncUpdate(
+		bson.M{"cookie": fn.Cookie},
+		bson.M{"$set": bson.M{ "event.cronid": fn.Event.CronID }})
+}
+
 func dbFuncUpdatePulled(fn *FunctionDesc, update bson.M, olds int) error {
 	return dbFuncUpdate(
 		bson.M{"cookie": fn.Cookie, "state": olds},

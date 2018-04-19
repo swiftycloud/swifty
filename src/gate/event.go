@@ -107,9 +107,17 @@ func eventsRestart(conf *YAMLConf) error {
 
 	for _, fn := range fns {
 		glog.Debugf("Restart event for %s", fn.SwoId.Str())
+		if fn.Event.Source == "cron" {
+			fn.Event.CronID = []int{}
+		}
+
 		err = fn.Event.Prepare(context.Background(), conf, fn.SwoId)
 		if err != nil {
 			return err
+		}
+
+		if fn.Event.Source == "cron" {
+			dbFuncUpdateCron(&fn)
 		}
 	}
 
