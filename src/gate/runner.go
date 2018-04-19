@@ -31,7 +31,13 @@ func doRun(ctx context.Context, fn *FunctionDesc, event string, args map[string]
 		return nil, fmt.Errorf("Can't find balancer for %s", fn.Cookie)
 	}
 
-	return doRunConn(ctx, conn, fn.Cookie, event, args)
+	sopq := statsStart()
+	res, err := doRunConn(ctx, conn, fn.Cookie, event, args)
+	if err == nil {
+		statsUpdate(fmd, sopq, res)
+	}
+
+	return res, err
 }
 
 func talkHTTP(addr, port, url string, args map[string]string) (*swyapi.SwdFunctionRunResult, error) {
