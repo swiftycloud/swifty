@@ -237,13 +237,10 @@ func checkCount(id *SwoId) error {
 	return nil
 }
 
-func addFunction(ctx context.Context, conf *YAMLConf, tennant string, params *swyapi.FunctionAdd) *swyapi.GateErr {
+func addFunction(ctx context.Context, conf *YAMLConf, fn *FunctionDesc) *swyapi.GateErr {
 	var err, erc error
 	var build bool
 	var bAddr string
-	var fn *FunctionDesc
-
-	fn = getFunctionDesc(tennant, params)
 
 	ctxlog(ctx).Debugf("function/add %s (cookie %s)", fn.SwoId.Str(), fn.Cookie[:32])
 

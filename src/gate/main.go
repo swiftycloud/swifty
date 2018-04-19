@@ -330,7 +330,7 @@ func handleFunctionAdd(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		}
 	}
 
-	cerr := addFunction(ctx, &conf, fromContext(ctx).Tenant, &params)
+	cerr := addFunction(ctx, &conf, getFunctionDesc(fromContext(ctx).Tenant, &params))
 	if cerr != nil {
 		return cerr
 
@@ -1006,10 +1006,9 @@ func handleMwareAdd(ctx context.Context, w http.ResponseWriter, r *http.Request)
 		return GateErrE(swy.GateBadRequest, err)
 	}
 
-	id := makeSwoId(fromContext(ctx).Tenant, params.Project, params.ID)
 	ctxlog(ctx).Debugf("mware/add: %s params %v", fromContext(ctx).Tenant, params)
 
-	cerr := mwareSetup(ctx, &conf.Mware, id, &params)
+	cerr := mwareSetup(ctx, &conf.Mware, getMwareDesc(fromContext(ctx).Tenant, &params))
 	if cerr != nil {
 		return cerr
 	}

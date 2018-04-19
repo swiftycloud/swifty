@@ -173,12 +173,12 @@ func mwareInfo(ctx context.Context, conf *YAMLConfMw, id *SwoId) (*swyapi.MwareI
 	return resp, nil
 }
 
-func getMwareDesc(id *SwoId, params *swyapi.MwareAdd) *MwareDesc {
+func getMwareDesc(tenant string, params *swyapi.MwareAdd) *MwareDesc {
 	ret := &MwareDesc {
 		SwoId: SwoId {
-			Tennant:	id.Tennant,
-			Project:	id.Project,
-			Name:		id.Name,
+			Tennant:	tenant,
+			Project:	params.Project,
+			Name:		params.ID,
 		},
 		MwareType:	params.Type,
 		State:		swy.DBMwareStatePrp,
@@ -189,12 +189,11 @@ func getMwareDesc(id *SwoId, params *swyapi.MwareAdd) *MwareDesc {
 	return ret
 }
 
-func mwareSetup(ctx context.Context, conf *YAMLConfMw, id *SwoId, params *swyapi.MwareAdd) *swyapi.GateErr {
+func mwareSetup(ctx context.Context, conf *YAMLConfMw, mwd *MwareDesc) *swyapi.GateErr {
 	var handler *MwareOps
 	var ok bool
 	var err, erc error
 
-	mwd := getMwareDesc(id, params)
 	ctxlog(ctx).Debugf("set up wmare %s:%s", mwd.SwoId.Str(), mwd.MwareType)
 
 	err = dbMwareAdd(mwd)
