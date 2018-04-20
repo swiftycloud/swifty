@@ -77,18 +77,7 @@ type FnEventDesc struct {
 	MwareId		string		`bson:"mwid,omitempty"`
 	MQueue		string		`bson:"mqueue,omitempty"`
 	S3Bucket	string		`bson:"s3bucket,omitempty"`
-
-	/* Generated part */
-	CronID		[]int		`bson:"cronid"`		// ID of cron trigger (if present)
-}
-
-/* id in Prepare/Cancel MUST be by-value, as .setup modifies one */
-func (evt *FnEventDesc)Prepare(ctx context.Context, conf *YAMLConf, id SwoId) error {
-	return evt.setup(ctx, conf, &id, true)
-}
-
-func (evt *FnEventDesc)Cancel(ctx context.Context, conf *YAMLConf, id SwoId) error {
-	return evt.setup(ctx, conf, &id, false)
+	start		func()
 }
 
 func (evt *FnEventDesc)isURL() bool {
@@ -303,6 +292,7 @@ func addFunction(ctx context.Context, conf *YAMLConf, fn *FunctionDesc) *swyapi.
 		}
 	}
 
+	fn.Event.Start()
 	logSaveEvent(fn, "registered", "")
 	return nil
 
@@ -312,7 +302,7 @@ out_clean_repo:
 		goto stalled
 	}
 out_clean_evt:
-	erc = fn.Event.Cancel(ctx, conf, fn.SwoId)
+	erc = fn.Event.Cancel(ctx, conf, fn.SwoId, false)
 	if erc != nil {
 		goto stalled
 	}
@@ -355,7 +345,7 @@ func updateFunction(ctx context.Context, conf *YAMLConf, id *SwoId, params *swya
 	var oldver string
 	var olds int
 	var nac *AuthCtx
-	var oevt *FnEventDesc
+	var evt *FnEventDesc
 
 	update := make(bson.M)
 
@@ -446,24 +436,22 @@ func updateFunction(ctx context.Context, conf *YAMLConf, id *SwoId, params *swya
 	}
 
 	if params.Event != nil {
-		oevt = fn.Event
-		fn.Event = getEventDesc(params.Event)
-		err = fn.Event.Prepare(ctx, conf, fn.SwoId)
+		evt = getEventDesc(params.Event)
+		err = evt.Prepare(ctx, conf, fn.SwoId)
 		if err != nil {
 			goto out
 		}
 
-		update["event.source"] = fn.Event.Source
-		update["event.cron"] = fn.Event.cronBson()
-		update["event.mwid"] = fn.Event.MwareId
-		update["event.mqueue"] = fn.Event.MQueue
-		update["event.s3bucket"] = fn.Event.S3Bucket
-		update["event.cronid"] = fn.Event.CronID
+		update["event.source"] = evt.Source
+		update["event.cron"] = evt.cronBson()
+		update["event.mwid"] = evt.MwareId
+		update["event.mqueue"] = evt.MQueue
+		update["event.s3bucket"] = evt.S3Bucket
 	}
 
 	if len(update) == 0 {
 		ctxlog(ctx).Debugf("Nothing to update for %s", fn.SwoId.Str())
-		goto out
+		goto out_ne
 	}
 
 	if restart && fn.State == swy.DBFuncStateStl {
@@ -511,9 +499,11 @@ func updateFunction(ctx context.Context, conf *YAMLConf, id *SwoId, params *swya
 		;
 	}
 
-	if oevt != nil {
-		oevt.Cancel(ctx, conf, fn.SwoId)
-		oevt = nil
+	if evt != nil {
+		fn.Event.Cancel(ctx, conf, fn.SwoId, true)
+		fn.Event = evt
+		evt.Start()
+		evt = nil
 	}
 
 	if restart {
@@ -539,16 +529,15 @@ func updateFunction(ctx context.Context, conf *YAMLConf, id *SwoId, params *swya
 	}
 
 	logSaveEvent(fn, "updated", fmt.Sprintf("to: %s", fn.Src.Version))
+out_ne:
+	return nil
+
 out:
-	if err != nil {
-		if oevt != nil {
-			fn.Event.Cancel(ctx, conf, fn.SwoId)
-			fn.Event = oevt
-		}
-		return GateErrE(swy.GateGenErr, err)
+	if evt != nil {
+		evt.Cancel(ctx, conf, fn.SwoId, false)
 	}
 
-	return nil
+	return GateErrE(swy.GateGenErr, err)
 }
 
 func removeFunction(ctx context.Context, conf *YAMLConf, id *SwoId) *swyapi.GateErr {
@@ -590,7 +579,7 @@ func removeFunction(ctx context.Context, conf *YAMLConf, id *SwoId) *swyapi.Gate
 	}
 
 	ctxlog(ctx).Debugf("`- setdown events")
-	err = fn.Event.Cancel(ctx, conf, fn.SwoId)
+	err = fn.Event.Cancel(ctx, conf, fn.SwoId, true)
 	if err != nil {
 		goto later
 	}

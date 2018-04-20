@@ -275,7 +275,7 @@ stalled:
 	goto out
 }
 
-func mwareEventSetup(ctx context.Context, conf *YAMLConf, id *SwoId, evt *FnEventDesc, on bool) error {
+func mwareEventSetup(ctx context.Context, conf *YAMLConf, id *SwoId, evt *FnEventDesc, on bool, started bool) error {
 	id.Name = evt.MwareId
 	item, err := dbMwareGetReady(id)
 	if err != nil {

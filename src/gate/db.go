@@ -220,15 +220,8 @@ func dbFuncUpdateAdded(fn *FunctionDesc) error {
 		bson.M{"cookie": fn.Cookie},
 		bson.M{"$set": bson.M{
 				"src.version": fn.Src.Version,
-				"event.cronid": fn.Event.CronID,
 				"state": fn.State,
 			}})
-}
-
-func dbFuncUpdateCron(fn *FunctionDesc) error {
-	return dbFuncUpdate(
-		bson.M{"cookie": fn.Cookie},
-		bson.M{"$set": bson.M{ "event.cronid": fn.Event.CronID }})
 }
 
 func dbFuncUpdatePulled(fn *FunctionDesc, update bson.M, olds int) error {
