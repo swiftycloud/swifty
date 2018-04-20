@@ -1,0 +1,67 @@
+---
+# requires pip install docker-py on nodes
+- name: Install docker-py
+  pip:
+    name: docker-py
+
+- name: Create /usr/share/swifty/docker directory
+  file:
+    path: '/usr/share/swifty/docker/{{ item }}'
+    state: directory
+  with_items:
+    - gate
+
+- name: Pull golang:1.9 image
+  docker_image:
+    name: golang:1.9
+
+- name: Remove existing swygate container
+  docker_container:
+    name: swygate
+    state: absent
+
+- name: Remove existing swifty/gate image
+  docker_image:
+    name: swifty/gate
+    state: absent
+
+- name: Ship swifty/gate docker prerequisites
+  copy:
+    src: 'templates/gate/{{ item.name }}'
+    dest: "/usr/share/swifty/docker/gate/{{ item.name }}"
+    owner: root
+    group: root
+    mode: "{{ item.mode }}"
+    force: yes
+  with_items:
+    - { "name": "Dockerfile", "mode": "0644" }
+    - { "name": "swy-gate", "mode": "0755" }
+
+#
+# docker_image tries to use non host network
+# and failed fetching updates, so I had to
+# use plain shell instead.
+#
+#- name: Build new swifty/gate image
+#  docker_image:
+#    path: /usr/share/swifty/docker/gate/
+#    name: swifty/gate
+#    state: present
+- name: Build new swifty/gate image
+  shell: |
+    docker build --network=host  -t swifty/gate /usr/share/swifty/docker/gate/
+
+- name: Run swygate container
+  docker_container:
+    name: swygate
+    image: swifty/gate
+    network_mode: host
+    restart_retries: 1
+    detach: true
+    cleanup: true
+    volumes:
+      - /etc/swifty:/etc/swifty
+      - /root/.swysecrets:/root/.swysecrets
+      - /etc/letsencrypt:/etc/letsencrypt
+      - /home/swifty-volume:/home/swifty-volume
+    state: started

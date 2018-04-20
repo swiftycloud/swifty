@@ -1,0 +1,5 @@
+#
+# Deploy master components
+- hosts: master
+  roles:
+  - swy-gate
