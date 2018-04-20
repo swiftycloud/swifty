@@ -138,6 +138,7 @@ var runners = map[string]string {
 	"golang": "/go/src/swycode/function",
 	"python": "/usr/bin/swy-runner.py",
 	"swift": "/swift/swycode/debug/function",
+	"nodejs": "/home/swifty/runner-js.sh",
 }
 
 func startQnR(runner *Runner) error {

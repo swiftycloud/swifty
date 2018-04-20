@@ -136,6 +136,13 @@ swifty/swift: swy-wdog-go kubectl/docker/wdog/swift/Dockerfile
 	$(Q) $(MAKE) -C kubectl/docker/wdog/swift all
 .PHONY: swifty/swift
 
+swifty/nodejs: swy-wdog-go kubectl/docker/wdog/nodejs/Dockerfile
+	$(call msg-gen,$@)
+	$(Q) $(CP) swy-wdog-go  kubectl/docker/wdog/nodejs/swy-wdog
+	$(Q) $(CP) src/wdog/runner.js kubectl/docker/wdog/nodejs/
+	$(Q) $(MAKE) -C kubectl/docker/wdog/nodejs all
+.PHONY: swifty/nodejs
+
 swifty/gate: swy-gate kubectl/docker/gate/Dockerfile
 	$(call msg-gen,$@)
 	$(Q) $(CP) swy-gate kubectl/docker/gate/swy-gate
