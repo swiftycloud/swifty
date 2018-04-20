@@ -451,6 +451,7 @@ func detect_language(path string, typ string) string {
 	pyr := regexp.MustCompile("^def\\s+main\\s*\\(")
 	gor := regexp.MustCompile("^func\\s+Main\\s*\\(.*interface\\s*{\\s*}")
 	swr := regexp.MustCompile("^func\\s+Main\\s*\\(.*->\\s*Encodable")
+	jsr := regexp.MustCompile("^exports.Main\\s*=\\s*function")
 
 	lines := strings.Split(string(cont), "\n")
 	for _, ln := range(lines) {
@@ -464,6 +465,10 @@ func detect_language(path string, typ string) string {
 
 		if swr.MatchString(ln) {
 			return "swift"
+		}
+
+		if jsr.MatchString(ln) {
+			return "nodejs"
 		}
 	}
 
