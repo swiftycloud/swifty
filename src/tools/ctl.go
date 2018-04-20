@@ -393,7 +393,7 @@ func info_function(cd *cmdDesc, args []string, opts [16]string) {
 			/* nothing */
 		} else if ifo.Event.Source == "cron" {
 			for _, c := range(ifo.Event.Cron) {
-				estr += ":" + c.Tab + "/" + make_args_string(c.Args)
+				estr += ":" + c.Tab + ";" + make_args_string(c.Args)
 			}
 		} else {
 			estr += "UNKNOWN"
@@ -498,6 +498,27 @@ func parse_rate(val string) (uint, uint) {
 	return uint(rate), uint(burst)
 }
 
+func parse_event_arg(arg string, evt *swyapi.FunctionEvent) {
+	mwe := strings.Split(arg, ":")
+	evt.Source = mwe[0]
+	switch evt.Source {
+	case "url":
+		;/* nothing */
+	case "cron":
+		for _, cron := range mwe[1:] {
+			x := strings.SplitN(cron, ";", 2)
+			evt.Cron = append(evt.Cron, swyapi.FunctionEventCron {
+				Tab: x[0],
+				Args: split_args_string(x[1]),
+			})
+		}
+	case "none":
+		evt.Source = ""
+	default:
+		fatal(fmt.Errorf("Unknown event string"))
+	}
+}
+
 func add_function(cd *cmdDesc, args []string, opts [16]string) {
 	sources := swyapi.FunctionSources{}
 	code := swyapi.FunctionCode{}
@@ -539,22 +560,7 @@ func add_function(cd *cmdDesc, args []string, opts [16]string) {
 
 	evt := swyapi.FunctionEvent {}
 	if opts[3] != "" {
-		mwe := strings.Split(opts[3], ":")
-		evt.Source = mwe[0]
-		if evt.Source == "url" {
-			/* nothing */
-		} else if evt.Source == "cron" {
-			for _, cron := range mwe[1:] {
-				x := strings.SplitN(cron, "/", 2)
-				evt.Cron = append(evt.Cron, swyapi.FunctionEventCron {
-					Tab: x[0],
-					Args: split_args_string(x[1]),
-				})
-			}
-		} else {
-			/* FIXME -- CRONTAB */
-			fatal(fmt.Errorf("Unknown event string"))
-		}
+		parse_event_arg(opts[3], &evt)
 	}
 
 	req := swyapi.FunctionAdd{
@@ -672,6 +678,12 @@ func update_function(cd *cmdDesc, args []string, opts [16]string) {
 		}
 
 		req.AuthCtx = &ac
+	}
+
+	if opts[8] != "" {
+		evt := swyapi.FunctionEvent{}
+		parse_event_arg(opts[8], &evt)
+		req.Event = &evt
 	}
 
 	make_faas_req("function/update", req, nil)
@@ -1102,7 +1114,7 @@ func main() {
 	cmdMap[CMD_ADD].opts.StringVar(&opts[0], "lang", "auto", "Language")
 	cmdMap[CMD_ADD].opts.StringVar(&opts[1], "src", ".", "Source file")
 	cmdMap[CMD_ADD].opts.StringVar(&opts[2], "mw", "", "Mware to use, comma-separated")
-	cmdMap[CMD_ADD].opts.StringVar(&opts[3], "event", "", "Event this fn is to start")
+	cmdMap[CMD_ADD].opts.StringVar(&opts[3], "event", "", "Event for this fn")
 	cmdMap[CMD_ADD].opts.StringVar(&opts[4], "tmo", "", "Timeout")
 	cmdMap[CMD_ADD].opts.StringVar(&opts[5], "rl", "", "Rate (rate[:burst])")
 	cmdMap[CMD_ADD].opts.StringVar(&opts[6], "data", "", "Any text associated with fn")
@@ -1118,6 +1130,7 @@ func main() {
 	cmdMap[CMD_UPD].opts.StringVar(&opts[5], "ver", "", "Version")
 	cmdMap[CMD_UPD].opts.StringVar(&opts[6], "arg", "", "Args")
 	cmdMap[CMD_UPD].opts.StringVar(&opts[7], "auth", "", "Auth context (- for off)")
+	cmdMap[CMD_UPD].opts.StringVar(&opts[8], "event", "", "Event for this fn")
 	bindCmdUsage(CMD_UPD,	[]string{"NAME"}, "Update a function", true)
 	bindCmdUsage(CMD_DEL,	[]string{"NAME"}, "Delete a function", true)
 	bindCmdUsage(CMD_LOGS,	[]string{"NAME"}, "Show function logs", true)
