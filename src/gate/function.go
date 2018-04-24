@@ -77,6 +77,7 @@ type FnEventDesc struct {
 	MwareId		string		`bson:"mwid,omitempty"`
 	MQueue		string		`bson:"mqueue,omitempty"`
 	S3Bucket	string		`bson:"s3bucket,omitempty"`
+	S3Ns		string		`bson:"s3ns,omitempty"`
 	start		func()
 }
 
@@ -151,7 +152,7 @@ type FunctionDesc struct {
 
 var zeroVersion = "0"
 
-func getEventDesc(evt *swyapi.FunctionEvent) *FnEventDesc {
+func (fn *FunctionDesc)getEventDesc(evt *swyapi.FunctionEvent) *FnEventDesc {
 	evd := &FnEventDesc {
 		Source:		evt.Source,
 		MwareId:	evt.MwareId,
@@ -159,6 +160,9 @@ func getEventDesc(evt *swyapi.FunctionEvent) *FnEventDesc {
 		S3Bucket:	evt.S3Bucket,
 	}
 
+	if evd.S3Bucket != "" {
+		evd.S3Ns = fn.SwoId.Namespace()
+	}
 	evd.setCrons(evt)
 	return evd
 }
@@ -192,7 +196,7 @@ func getFunctionDesc(tennant string, p_add *swyapi.FunctionAdd) *FunctionDesc {
 		UserData:	p_add.UserData,
 	}
 
-	fn.Event = getEventDesc(&p_add.Event)
+	fn.Event = fn.getEventDesc(&p_add.Event)
 	fn.Cookie = fn.SwoId.Cookie()
 	return fn
 }
@@ -436,7 +440,7 @@ func updateFunction(ctx context.Context, conf *YAMLConf, id *SwoId, params *swya
 	}
 
 	if params.Event != nil {
-		evt = getEventDesc(params.Event)
+		evt = fn.getEventDesc(params.Event)
 		err = evt.Prepare(ctx, conf, fn.SwoId)
 		if err != nil {
 			goto out
@@ -447,6 +451,9 @@ func updateFunction(ctx context.Context, conf *YAMLConf, id *SwoId, params *swya
 		update["event.mwid"] = evt.MwareId
 		update["event.mqueue"] = evt.MQueue
 		update["event.s3bucket"] = evt.S3Bucket
+		if evt.S3Bucket != "" {
+			update["event.s3ns"] = fn.SwoId.Namespace()
+		}
 	}
 
 	if len(update) == 0 {

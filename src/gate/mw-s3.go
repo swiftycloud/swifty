@@ -126,15 +126,10 @@ func handleS3Event(ctx context.Context, user string, data []byte) {
 		return
 	}
 
-	mw, err := dbMwareGetOne(bson.M{"mwaretype": "s3", "namespace": evt.Namespace})
-	if err != nil {
-		ctxlog(ctx).Errorf("No S3 mware for ns %s", evt.Namespace)
-		return
-	}
-
-	funcs, err := dbFuncListMwEvent(&mw.SwoId, bson.M {
-		"event.source": "mware",
-		"event.mwid": mw.SwoId.Name,
+	funcs, err := dbFuncFindAll(bson.M {
+		"state": swy.DBFuncStateRdy,
+		"event.source": "s3",
+		"event.s3ns": evt.Namespace,
 		"event.s3bucket": evt.Bucket,
 	})
 	if err != nil {
@@ -146,7 +141,7 @@ func handleS3Event(ctx context.Context, user string, data []byte) {
 	for _, fn := range funcs {
 		ctxlog(ctx).Debugf("s3 event -> [%s]", fn.SwoId.Str())
 		/* FIXME -- this is synchronous */
-		_, err := doRun(ctx, &fn, "mware:" + mw.SwoId.Name + ":" + evt.Bucket,
+		_, err := doRun(ctx, &fn, "s3:" + evt.Op + ":" + evt.Bucket,
 				map[string]string {
 					"bucket": evt.Bucket,
 					"object": evt.Object,
