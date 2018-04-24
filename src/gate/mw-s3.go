@@ -158,13 +158,14 @@ func handleS3Event(ctx context.Context, user string, data []byte) {
 	}
 }
 
-func EventS3(ctx context.Context, conf *YAMLConfMw, source *FnEventDesc, mwd *MwareDesc, on bool) (error) {
+func setupEventS3(ctx context.Context, c *YAMLConf, fnid *SwoId, evt *FnEventDesc, on bool, started bool) (error) {
+	conf := &c.Mware
 	if on {
 		err := mqStartListener(conf.S3.cn.User, conf.S3.cn.Pass,
 				conf.S3.cn.Addr() + "/" + conf.S3.cn.Domn,
 				gates3queue, handleS3Event)
 		if err == nil {
-			err = s3Subscribe(conf, mwd.Namespace, source.S3Bucket)
+			err = s3Subscribe(conf, fnid.Namespace(), evt.S3Bucket)
 			if err != nil {
 				mqStopListener(conf.S3.cn.Addr() + "/" + conf.S3.cn.Domn, gates3queue)
 			}
@@ -172,7 +173,7 @@ func EventS3(ctx context.Context, conf *YAMLConfMw, source *FnEventDesc, mwd *Mw
 
 		return err
 	} else {
-		s3Unsubscribe(ctx, conf, mwd.Namespace, source.S3Bucket)
+		s3Unsubscribe(ctx, conf, fnid.Namespace(), evt.S3Bucket)
 		mqStopListener(conf.S3.cn.Addr() + "/" + conf.S3.cn.Domn, "events")
 		return nil
 	}
@@ -235,6 +236,9 @@ func mwareGetS3Creds(ctx context.Context, conf *YAMLConf, acc *swyapi.MwareS3Acc
 var MwareS3 = MwareOps {
 	Init:		InitS3,
 	Fini:		FiniS3,
-	Event:		EventS3,
 	GenSec:		GenBucketKeysS3,
+}
+
+var EventS3 = EventOps {
+	Setup:		setupEventS3,
 }

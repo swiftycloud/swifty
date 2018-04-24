@@ -19,6 +19,7 @@ type EventOps struct {
 var evtHandlers = map[string]*EventOps {
 	"url":		&EventURL,
 	"cron":		&EventCron,
+	"s3":		&EventS3,
 	"mware":	&EventMware,
 	"oneshot":	&EventOneShot,
 }
