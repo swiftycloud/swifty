@@ -10,33 +10,6 @@ import (
 	"../apis/apps/s3"
 )
 
-const (
-	S3NotifyPut =		1
-)
-
-var eventNames = []string {
-	1: "put",
-}
-
-func genOpsMask(ops string) (uint64, error) {
-	var ret uint64
-
-	opss := strings.Split(ops, ",")
-out:
-	for _, op := range opss {
-		for n, opn := range eventNames {
-			if op == opn {
-				ret |= (uint64(1) << uint(n))
-				continue out
-			}
-		}
-
-		return 0, fmt.Errorf("Unknwon op %s", op)
-	}
-
-	return ret, nil
-}
-
 func notifyFindBucket(params *swys3api.S3Subscribe) (*S3Bucket, error) {
 	var bucket S3Bucket
 
@@ -50,22 +23,21 @@ func notifyFindBucket(params *swys3api.S3Subscribe) (*S3Bucket, error) {
 }
 
 func s3Subscribe(params *swys3api.S3Subscribe) error {
-	var ops uint64
-
-	ops, err := genOpsMask(params.Ops)
-	if err != nil {
-		return err
-	}
-
 	bucket, err := notifyFindBucket(params)
 	if err != nil {
 		return err
 	}
 
-	query := bson.M{ "state": S3StateActive }
-	notify := bson.M{ "events": ops, "queue": params.Queue }
-	update := bson.M{ "$set": bson.M{ "notify": notify }}
+	ops := bson.M{}
+	for _, op := range strings.Split(params.Ops, ",") {
+		ops["notify." + op] = 1
+	}
+	update := bson.M{
+		"$set": bson.M{ "notify.queue": params.Queue },
+		"$inc": ops,
+	}
 
+	query := bson.M{ "state": S3StateActive }
 	return dbS3Update(query, update, false, bucket)
 }
 
@@ -75,19 +47,19 @@ func s3Unsubscribe(params *swys3api.S3Subscribe) error {
 		return err
 	}
 
-	query := bson.M{ "state": S3StateActive }
-	update := bson.M{"$unset": bson.M{ "notify": "" }}
+	ops := bson.M{}
+	for _, op := range strings.Split(params.Ops, ",") {
+		ops["notify." + op] = -1
+	}
+	update := bson.M{"$inc": ops}
 
+	query := bson.M{ "state": S3StateActive }
 	return dbS3Update(query, update, false, bucket)
 }
 
 var nChan *amqp.Channel
 
-func s3Notify(iam *S3Iam, bucket *S3Bucket, object *S3Object, op uint) {
-	if bucket.BasicNotify.Events & (uint64(1) << op) == 0 {
-		return
-	}
-
+func s3Notify(iam *S3Iam, bucket *S3Bucket, object *S3Object, op string) {
 	account, err := iam.s3AccountLookup()
 	if err != nil { return }
 
@@ -95,7 +67,7 @@ func s3Notify(iam *S3Iam, bucket *S3Bucket, object *S3Object, op uint) {
 			Namespace: account.Namespace,
 			Bucket: bucket.Name,
 			Object: object.Key,
-			Op: eventNames[op],
+			Op: op,
 		})
 
 	// XXX Throttling

@@ -164,8 +164,8 @@ func s3AddObject(iam *S3Iam, bucket *S3Bucket, oname string,
 
 	ioSize.Observe(float64(object.Size) / KiB)
 
-	if bucket.BasicNotify != nil {
-		s3Notify(iam, bucket, object, S3NotifyPut)
+	if bucket.BasicNotify != nil && bucket.BasicNotify.Put > 0 {
+		s3Notify(iam, bucket, object, "put")
 	}
 
 	log.Debugf("s3: Added %s", infoLong(object))
