@@ -28,7 +28,6 @@ var swift_info = rt_info {
 var nodejs_info = rt_info {
 	Ext:		"js",
 	CodePath:	"/function",
-	Devel:		true,
 }
 
 var rt_handlers = map[string]*rt_info {
