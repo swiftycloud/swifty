@@ -160,7 +160,7 @@ swifty/s3: swy-s3 kubectl/docker/s3/Dockerfile
 	$(Q) $(CP) swy-s3 kubectl/docker/s3/swy-s3
 	$(Q) $(MAKE) -C kubectl/docker/s3 all
 
-images: swifty/python swifty/golang swifty/swift
+images: swifty/python swifty/golang swifty/swift swifty/nodejs
 	@true
 .PHONY: images
 
@@ -181,6 +181,7 @@ help:
 	@echo '      swifty/python   - Build swifty/python docker image'
 	@echo '      swifty/golang   - Build swifty/golang docker image'
 	@echo '      swifty/swift    - Build swifty/swift docker image'
+	@echo '      swifty/nodejs   - Build swifty/nodejs docker image'
 	@echo '      rsclean         - Cleanup resources'
 	@echo '      clean-db-swifty - Cleanup swifty mongo collections'
 	@echo '      clean-db-s3     - Cleanup s3 mongo collections'
