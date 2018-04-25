@@ -3,6 +3,7 @@ package main
 import (
 	"net/http"
 	"context"
+	"errors"
 	"gopkg.in/mgo.v2/bson"
 	"github.com/michaelklishin/rabbit-hole"
 	"fmt"
@@ -113,6 +114,7 @@ func mqEvent(ctx context.Context, mwid, queue, userid, data string) {
 }
 
 func EventRabbitMQ(ctx context.Context, conf *YAMLConfMw, source *FnEventDesc, mwd *MwareDesc, on bool) (error) {
+	/*
 	if on {
 		return mqStartListener(conf.Rabbit.c.User, conf.Rabbit.c.Pass,
 			conf.Rabbit.c.Addr() + "/" + mwd.Namespace, source.MQueue,
@@ -125,6 +127,8 @@ func EventRabbitMQ(ctx context.Context, conf *YAMLConfMw, source *FnEventDesc, m
 		mqStopListener(conf.Rabbit.c.Addr() + "/" + mwd.Namespace, source.MQueue)
 		return nil
 	}
+	*/
+	return errors.New("Not supported")
 }
 
 func GetEnvRabbitMQ(conf *YAMLConfMw, mwd *MwareDesc) ([][2]string) {

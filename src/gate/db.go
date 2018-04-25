@@ -25,6 +25,7 @@ const (
 	DBColBalancerRS = "BalancerRS"
 	DBColDeploy	= "Deploy"
 	DBColLimits	= "Limits"
+	DBColEvents	= "Events"
 )
 
 type DBLogRec struct {
@@ -510,6 +511,26 @@ func dbDeployStateUpdate(dep *DeployDesc, state int) error {
 	dep.State = state
 	return dbSession.DB(DBStateDB).C(DBColDeploy).Update(bson.M{"cookie": dep.Cookie},
 			bson.M{"$set": bson.M{"state": state}})
+}
+
+func dbListFnEvents(fnid string) ([]FnEventDesc, error) {
+	var ret []FnEventDesc
+	err := dbSession.DB(DBStateDB).C(DBColEvents).Find(bson.M{"fnid": fnid}).All(&ret)
+	return ret, err
+}
+
+func dbAddEvent(ed *FnEventDesc) error {
+	return dbSession.DB(DBStateDB).C(DBColEvents).Insert(ed)
+}
+
+func dbFindEvent(id string) (*FnEventDesc, error) {
+	var ed FnEventDesc
+	err := dbSession.DB(DBStateDB).C(DBColEvents).Find(bson.M{"_id": bson.ObjectIdHex(id)}).One(&ed)
+	return &ed, err
+}
+
+func dbRemoveEvent(id string) error {
+	return dbSession.DB(DBStateDB).C(DBColEvents).Remove(bson.M{"_id": bson.ObjectIdHex(id)})
 }
 
 func dbConnect(conf *YAMLConf) error {

@@ -340,6 +340,71 @@ func handleFunctionAdd(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	return nil
 }
 
+func handleFunctionEvents(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
+	fnid := mux.Vars(r)["fid"]
+
+	switch r.Method {
+	case "GET":
+		evs, erc := eventsList(fnid)
+		if erc != nil {
+			return erc
+		}
+
+		err := swyhttp.MarshalAndWrite(w, evs)
+		if err != nil {
+			return GateErrE(swy.GateBadResp, err)
+		}
+
+	case "PUT":
+		var evt swyapi.FunctionEvent
+
+		err := swyhttp.ReadAndUnmarshalReq(r, &evt)
+		if err != nil {
+			return GateErrE(swy.GateBadRequest, err)
+		}
+
+		eid, erc := eventsAdd(fnid, &evt)
+		if erc != nil {
+			return erc
+		}
+
+		err = swyhttp.MarshalAndWrite(w, eid)
+		if err != nil {
+			return GateErrE(swy.GateBadResp, err)
+		}
+	}
+
+	return nil
+}
+
+func handleFunctionEvent(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
+	fnid := mux.Vars(r)["fid"]
+	eid := mux.Vars(r)["eid"]
+
+	switch r.Method {
+	case "GET":
+		ed, erc := eventsGet(fnid, eid)
+		if erc != nil {
+			return erc
+		}
+
+		err := swyhttp.MarshalAndWrite(w, ed)
+		if err != nil {
+			return GateErrE(swy.GateBadResp, err)
+		}
+
+	case "DELETE":
+		erc := eventsDelete(fnid, eid)
+		if erc != nil {
+			return erc
+		}
+
+		w.WriteHeader(http.StatusOK)
+	}
+
+	return nil
+}
+
 func handleFunctionWait(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
 	var wi swyapi.FunctionWait
 	var err error
@@ -1425,6 +1490,8 @@ func main() {
 	r.Handle("/v1/function/logs",		genReqHandler(handleFunctionLogs)).Methods("POST", "OPTIONS")
 	r.Handle("/v1/function/state",		genReqHandler(handleFunctionState)).Methods("POST", "OPTIONS")
 	r.Handle("/v1/function/wait",		genReqHandler(handleFunctionWait)).Methods("POST", "OPTIONS")
+	r.Handle("/v1/function/{fid}/events",	genReqHandler(handleFunctionEvents)).Methods("GET", "PUT", "OPTIONS")
+	r.Handle("/v1/function/{fid}/events/{eid}", genReqHandler(handleFunctionEvent)).Methods("GET", "POST", "DELETE", "OPTIONS")
 	r.Handle("/v1/mware/add",		genReqHandler(handleMwareAdd)).Methods("POST", "OPTIONS")
 	r.Handle("/v1/mware/info",		genReqHandler(handleMwareInfo)).Methods("POST", "OPTIONS")
 	r.Handle("/v1/mware/list",		genReqHandler(handleMwareList)).Methods("POST", "OPTIONS")

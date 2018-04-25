@@ -11,6 +11,8 @@ import (
 	"../apis/apps"
 )
 
+const FnEventURLId = "0" // Special ID for URL-triggered event
+
 type FnEventCron struct {
 	Tab		string			`bson:"tab"`
 	Args		map[string]string	`bson:"args"`
@@ -33,84 +35,13 @@ func (s3 *FnEventS3)hasOp(op string) bool {
 }
 
 type FnEventDesc struct {
+	ObjID		bson.ObjectId	`bson:"_id,omitempty"`
+	FnId		string		`bson:"fnid"`
+	Name		string		`bson:"name"`
 	Source		string		`bson:"source"`
-	Cron		[]*FnEventCron	`bson:"cron,omitempty"`
+	Cron		*FnEventCron	`bson:"cron,omitempty"`
 	S3		*FnEventS3	`bson:"s3,omitempty"`
-	MwareId		string		`bson:"mwid,omitempty"`
-	MQueue		string		`bson:"mqueue,omitempty"`
 	start		func()
-}
-
-func (evt *FnEventDesc)isURL() bool {
-	return evt.Source == "url"
-}
-
-func (evt *FnEventDesc)isOneShot() bool {
-	return evt.Source == "oneshot"
-}
-
-func (evt *FnEventDesc)cronBson() []bson.M {
-	var ret []bson.M
-	for _, ce := range(evt.Cron) {
-		ret = append(ret, bson.M{
-			"tab": ce.Tab,
-			"args": ce.Args,
-		})
-	}
-	return ret
-}
-
-func (evt *FnEventDesc)s3bson() bson.M {
-	if evt.S3 == nil {
-		return bson.M{}
-	}
-
-	return bson.M{
-		"ns": evt.S3.Ns,
-		"bucket": evt.S3.Bucket,
-		"ops": evt.S3.Ops,
-	}
-}
-
-func (evt *FnEventDesc)crons() []swyapi.FunctionEventCron {
-	var ret []swyapi.FunctionEventCron
-	for _, ce := range(evt.Cron) {
-		ret = append(ret, swyapi.FunctionEventCron {
-			Tab: ce.Tab,
-			Args: ce.Args,
-		})
-	}
-	return ret
-}
-
-func (evt *FnEventDesc)s3s() *swyapi.FunctionEventS3 {
-	if evt.S3 == nil {
-		return nil
-	}
-
-	return &swyapi.FunctionEventS3 {
-		Bucket: evt.S3.Bucket,
-		Ops: evt.S3.Ops,
-	}
-}
-
-func (evd *FnEventDesc)setCrons(evt *swyapi.FunctionEvent) {
-	for _, ct := range(evt.Cron) {
-		evd.Cron = append(evd.Cron, &FnEventCron{
-			Tab: ct.Tab,
-			Args: ct.Args,
-		})
-	}
-}
-
-func (evd *FnEventDesc)setS3s(evt *swyapi.FunctionEvent, fn *FunctionDesc) {
-	if evt.Source == "s3" {
-		evd.S3 = &FnEventS3 {
-			Ns : fn.SwoId.Namespace(),
-			Bucket: evt.S3.Bucket,
-			Ops: evt.S3.Ops,
-		}
-	}
 }
 
 var runners map[string]*cron.Cron
@@ -186,12 +117,10 @@ func cronEventSetupOne(c *cron.Cron, ce *FnEventCron, fnid *SwoId) error {
 func cronEventSetup(ctx context.Context, conf *YAMLConf, fnid *SwoId, evt *FnEventDesc, on bool, started bool) error {
 	if on {
 		c := cron.New()
-		for _, ce := range(evt.Cron) {
-			err := cronEventSetupOne(c, ce, fnid)
-			if err != nil {
-				ctxlog(ctx).Errorf("Can't setup cron trigger for %s", fnid.Str())
-				return err
-			}
+		err := cronEventSetupOne(c, evt.Cron, fnid)
+		if err != nil {
+			ctxlog(ctx).Errorf("Can't setup cron trigger for %s", fnid.Str())
+			return err
 		}
 
 		id := fnid.Cookie()
@@ -231,5 +160,109 @@ var EventCron = EventOps {
 
 func eventsInit(conf *YAMLConf) error {
 	runners = make(map[string]*cron.Cron)
+	return nil
+}
+
+func (e *FnEventDesc)toAPI(withid bool) *swyapi.FunctionEvent {
+	ae := swyapi.FunctionEvent{
+		Name: e.Name,
+		Source: e.Source,
+	}
+
+	if withid {
+		ae.Id = e.ObjID.Hex()
+	}
+
+	if e.Cron != nil {
+		ae.Cron = &swyapi.FunctionEventCron {
+			Tab: e.Cron.Tab,
+			Args: e.Cron.Args,
+		}
+	}
+
+	if e.S3 != nil {
+		ae.S3 = &swyapi.FunctionEventS3 {
+			Bucket: e.S3.Bucket,
+			Ops: e.S3.Ops,
+		}
+	}
+
+	return &ae
+}
+
+func eventsList(fnid string) ([]swyapi.FunctionEvent, *swyapi.GateErr) {
+	var ret []swyapi.FunctionEvent
+	evs, err := dbListFnEvents(fnid)
+	if err != nil {
+		return ret, GateErrD(err)
+	}
+
+	for _, e := range evs {
+		ret = append(ret, *e.toAPI(true))
+	}
+	return ret, nil
+}
+
+func eventsAdd(fnid string, evt *swyapi.FunctionEvent) (string, *swyapi.GateErr) {
+	ed := &FnEventDesc{
+		ObjID: bson.NewObjectId(),
+		Name: evt.Name,
+		FnId: fnid,
+		Source: evt.Source,
+	}
+
+	switch evt.Source {
+	case "cron":
+		ed.Cron = &FnEventCron{
+			Tab: evt.Cron.Tab,
+			Args: evt.Cron.Args,
+		}
+	case "s3":
+		ed.S3 = &FnEventS3{
+			Bucket: evt.S3.Bucket,
+			Ops: evt.S3.Ops,
+		}
+	case "url":
+		;
+	default:
+		return "", GateErrM(swy.GateBadRequest, "Unsupported event type")
+	}
+
+	err := dbAddEvent(ed)
+	if err != nil {
+		return "", GateErrD(err)
+	}
+
+	return ed.ObjID.Hex(), nil
+}
+
+func eventsGet(fnid, eid string) (*swyapi.FunctionEvent, *swyapi.GateErr) {
+	ed, err := dbFindEvent(eid)
+	if err != nil {
+		return nil, GateErrD(err)
+	}
+
+	if ed.FnId != fnid {
+		return nil, GateErrC(swy.GateNotFound)
+	}
+
+	return ed.toAPI(false), nil
+}
+
+func eventsDelete(fnid, eid string) *swyapi.GateErr {
+	ed, err := dbFindEvent(eid)
+	if err != nil {
+		return GateErrD(err)
+	}
+
+	if ed.FnId != fnid {
+		return GateErrC(swy.GateNotFound)
+	}
+
+	err = dbRemoveEvent(eid)
+	if err != nil {
+		return GateErrD(err)
+	}
+
 	return nil
 }

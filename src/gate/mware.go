@@ -276,6 +276,7 @@ stalled:
 }
 
 func mwareEventSetup(ctx context.Context, conf *YAMLConf, id *SwoId, evt *FnEventDesc, on bool, started bool) error {
+	/*
 	id.Name = evt.MwareId
 	item, err := dbMwareGetReady(id)
 	if err != nil {
@@ -290,6 +291,7 @@ func mwareEventSetup(ctx context.Context, conf *YAMLConf, id *SwoId, evt *FnEven
 	}
 
 	ctxlog(ctx).Errorf("Can't find mware handler for %s.%s event", id.Str(), item.MwareType)
+	*/
 	return errors.New("Bad mware for event")
 }
 

@@ -93,10 +93,11 @@ type FunctionDesc struct {
 	Size		FnSizeDesc	`bson:"size"`
 	AuthCtx		string		`bson:"authctx,omitempty"`
 	UserData	string		`bson:"userdata,omitempty"`
+	URL		bool		`bson:"url"`
 }
 
 func (fn *FunctionDesc)isURL() bool {
-	return true
+	return fn.URL
 }
 
 func (fn *FunctionDesc)isOneShot() bool {

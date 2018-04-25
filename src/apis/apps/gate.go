@@ -115,11 +115,11 @@ type FunctionEventS3 struct {
 }
 
 type FunctionEvent struct {
-	Source		string			`json:"source,omitempty"`
-	Cron		[]FunctionEventCron	`json:"cron,omitempty"`
+	Id		string			`json:"id,omitempty"`
+	Name		string			`json:"name"`
+	Source		string			`json:"source"`
+	Cron		*FunctionEventCron	`json:"cron,omitempty"`
 	S3		*FunctionEventS3	`json:"s3,omitempty"`
-	MwareId		string			`json:"mwid,omitempty"`
-	MQueue		string			`json:"mqueue,omitempty"`
 }
 
 type MwareAdd struct {
