@@ -529,8 +529,8 @@ func dbFindEvent(id string) (*FnEventDesc, error) {
 	return &ed, err
 }
 
-func dbRemoveEvent(id string) error {
-	return dbSession.DB(DBStateDB).C(DBColEvents).Remove(bson.M{"_id": bson.ObjectIdHex(id)})
+func dbRemoveEvent(ed *FnEventDesc) error {
+	return dbSession.DB(DBStateDB).C(DBColEvents).Remove(bson.M{"_id": ed.ObjID})
 }
 
 func dbConnect(conf *YAMLConf) error {

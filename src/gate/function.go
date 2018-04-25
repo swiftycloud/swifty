@@ -483,6 +483,12 @@ func removeFunction(ctx context.Context, conf *YAMLConf, id *SwoId) *swyapi.Gate
 		}
 	}
 
+	ctxlog(ctx).Debugf("`- setdown events")
+	err = clearAllEvents(ctx, fn)
+	if err != nil {
+		goto later
+	}
+
 	ctxlog(ctx).Debugf("`- drop stats")
 	err = statsDrop(fn)
 	if err != nil {

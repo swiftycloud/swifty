@@ -99,7 +99,7 @@ func s3Subscribe(ctx context.Context, conf *YAMLConfMw, evt *FnEventS3) error {
 	return nil
 }
 
-func s3Unsubscribe(ctx context.Context, conf *YAMLConfMw, evt *FnEventS3) {
+func s3Unsubscribe(ctx context.Context, conf *YAMLConfMw, evt *FnEventS3) error {
 	addr := conf.S3.c.AddrP(conf.S3.AdminPort)
 
 	_, err := swyhttp.MarshalAndPost(
@@ -116,6 +116,7 @@ func s3Unsubscribe(ctx context.Context, conf *YAMLConfMw, evt *FnEventS3) {
 	if err != nil {
 		ctxlog(ctx).Errorf("Error unsubscibing: %s", err.Error())
 	}
+	return err
 }
 
 func handleS3Event(ctx context.Context, user string, data []byte) {
@@ -154,25 +155,28 @@ func handleS3Event(ctx context.Context, user string, data []byte) {
 	}
 }
 
-func setupEventS3(ctx context.Context, c *YAMLConf, fnid *SwoId, evt *FnEventDesc, on bool, started bool) (error) {
-	conf := &c.Mware
-	if on {
-		err := mqStartListener(conf.S3.cn.User, conf.S3.cn.Pass,
-				conf.S3.cn.Addr() + "/" + conf.S3.cn.Domn,
-				gates3queue, handleS3Event)
-		if err == nil {
-			err = s3Subscribe(ctx, conf, evt.S3)
-			if err != nil {
-				mqStopListener(conf.S3.cn.Addr() + "/" + conf.S3.cn.Domn, gates3queue)
-			}
+func s3EventStart(ctx context.Context, evt *FnEventDesc) error {
+	conf := &conf.Mware
+	err := mqStartListener(conf.S3.cn.User, conf.S3.cn.Pass,
+		conf.S3.cn.Addr() + "/" + conf.S3.cn.Domn,
+		gates3queue, handleS3Event)
+	if err == nil {
+		err = s3Subscribe(ctx, conf, evt.S3)
+		if err != nil {
+			mqStopListener(conf.S3.cn.Addr() + "/" + conf.S3.cn.Domn, gates3queue)
 		}
-
-		return err
-	} else {
-		s3Unsubscribe(ctx, conf, evt.S3)
-		mqStopListener(conf.S3.cn.Addr() + "/" + conf.S3.cn.Domn, "events")
-		return nil
 	}
+
+	return err
+}
+
+func s3EventStop(ctx context.Context, evt *FnEventDesc) error {
+	conf := &conf.Mware
+	err := s3Unsubscribe(ctx, conf, evt.S3)
+	if err == nil {
+		mqStopListener(conf.S3.cn.Addr() + "/" + conf.S3.cn.Domn, "events")
+	}
+	return err
 }
 
 func makeS3Envs(conf *YAMLConfS3, bucket, key, skey string) [][2]string {
@@ -233,8 +237,4 @@ var MwareS3 = MwareOps {
 	Init:		InitS3,
 	Fini:		FiniS3,
 	GenSec:		GenBucketKeysS3,
-}
-
-var EventS3 = EventOps {
-	Setup:		setupEventS3,
 }

@@ -274,28 +274,3 @@ stalled:
 	dbMwareSetStalled(mwd)
 	goto out
 }
-
-func mwareEventSetup(ctx context.Context, conf *YAMLConf, id *SwoId, evt *FnEventDesc, on bool, started bool) error {
-	/*
-	id.Name = evt.MwareId
-	item, err := dbMwareGetReady(id)
-	if err != nil {
-		return errors.New("No mware for event")
-	}
-
-	ctxlog(ctx).Debugf("set up event for %s.%s mware", id.Str(), item.MwareType)
-
-	iface, ok := mwareHandlers[item.MwareType]
-	if ok && (iface.Event != nil) {
-		return iface.Event(ctx, &conf.Mware, evt, &item, on)
-	}
-
-	ctxlog(ctx).Errorf("Can't find mware handler for %s.%s event", id.Str(), item.MwareType)
-	*/
-	return errors.New("Bad mware for event")
-}
-
-var EventMware = EventOps {
-	Setup: mwareEventSetup,
-	Devel: true,
-}

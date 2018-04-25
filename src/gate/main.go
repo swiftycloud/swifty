@@ -363,7 +363,7 @@ func handleFunctionEvents(ctx context.Context, w http.ResponseWriter, r *http.Re
 			return GateErrE(swy.GateBadRequest, err)
 		}
 
-		eid, erc := eventsAdd(fnid, &evt)
+		eid, erc := eventsAdd(ctx, fnid, &evt)
 		if erc != nil {
 			return erc
 		}
@@ -394,7 +394,7 @@ func handleFunctionEvent(ctx context.Context, w http.ResponseWriter, r *http.Req
 		}
 
 	case "DELETE":
-		erc := eventsDelete(fnid, eid)
+		erc := eventsDelete(ctx, fnid, eid)
 		if erc != nil {
 			return erc
 		}

@@ -1,21 +1,18 @@
 package main
 
 import (
-	"fmt"
 	"strings"
 	"context"
 	"gopkg.in/robfig/cron.v2"
 	"gopkg.in/mgo.v2/bson"
-	"sync"
 	"../common"
 	"../apis/apps"
 )
 
-const FnEventURLId = "0" // Special ID for URL-triggered event
-
 type FnEventCron struct {
 	Tab		string			`bson:"tab"`
 	Args		map[string]string	`bson:"args"`
+	JobID		int			`bson:"eid"`
 }
 
 type FnEventS3 struct {
@@ -44,63 +41,13 @@ type FnEventDesc struct {
 	start		func()
 }
 
-var runners map[string]*cron.Cron
-var lock sync.Mutex
+var cronRunner *cron.Cron
 
-type EventOps struct {
-	Setup func(ctx context.Context, conf *YAMLConf, id *SwoId, evt *FnEventDesc, on bool, started bool) error
-	Devel bool
-}
-
-var evtHandlers = map[string]*EventOps {
-	"url":		&EventURL,
-	"cron":		&EventCron,
-	"s3":		&EventS3,
-	"mware":	&EventMware,
-	"oneshot":	&EventOneShot,
-}
-
-func (evt *FnEventDesc)Start() {
-	if evt.start != nil {
-		evt.start()
-	}
-}
-
-/* id in Prepare/Cancel/Stop MUST be by-value, as .setup modifies one */
-func (evt *FnEventDesc)Prepare(ctx context.Context, conf *YAMLConf, id SwoId) error {
-	return evt.setup(ctx, conf, &id, true, false)
-}
-
-func (evt *FnEventDesc)Cancel(ctx context.Context, conf *YAMLConf, id SwoId, started bool) error {
-	return evt.setup(ctx, conf, &id, false, started)
-}
-
-func (evt *FnEventDesc)setup(ctx context.Context, conf *YAMLConf, id *SwoId, on bool, started bool) error {
-	var err error
-
-	if evt.Source != "" {
-		eh, ok := evtHandlers[evt.Source]
-		if ok && (SwyModeDevel || !eh.Devel) {
-			if eh.Setup != nil {
-				err = eh.Setup(ctx, conf, id, evt, on, started)
-			}
-		} else {
-			err = fmt.Errorf("Unknown event type %s", evt.Source)
-		}
-	}
-
-	return err
-}
-
-var EventOneShot = EventOps {
-	Devel: true,
-}
-
-func cronEventSetupOne(c *cron.Cron, ce *FnEventCron, fnid *SwoId) error {
-	_, err := c.AddFunc(ce.Tab, func() {
-		fn, err := dbFuncFind(fnid)
-		if err != nil {
-			glog.Errorf("Can't find FN %s to run Cron event", fnid.Str())
+func cronEventStart(ctx context.Context, evt *FnEventDesc) error {
+	id, err := cronRunner.AddFunc(evt.Cron.Tab, func() {
+		fn, err := dbFuncFindByCookie(evt.FnId)
+		if err != nil || fn == nil {
+			glog.Errorf("Can't find FN %s to run Cron event", evt.FnId)
 			return
 		}
 
@@ -108,58 +55,24 @@ func cronEventSetupOne(c *cron.Cron, ce *FnEventCron, fnid *SwoId) error {
 			return
 		}
 
-		doRun(context.Background(), fn, "cron", ce.Args)
+		doRun(context.Background(), fn, "cron", evt.Cron.Args)
 	})
+
+	if err == nil {
+		evt.Cron.JobID = int(id)
+	}
 
 	return err
 }
 
-func cronEventSetup(ctx context.Context, conf *YAMLConf, fnid *SwoId, evt *FnEventDesc, on bool, started bool) error {
-	if on {
-		c := cron.New()
-		err := cronEventSetupOne(c, evt.Cron, fnid)
-		if err != nil {
-			ctxlog(ctx).Errorf("Can't setup cron trigger for %s", fnid.Str())
-			return err
-		}
-
-		id := fnid.Cookie()
-		evt.start = func() {
-			/* There can be another cron runner sitting under this
-			 * id, so we defer inserting ourselves into the map
-			 * till the previous one is removed (if at all)
-			 */
-			lock.Lock()
-			runners[id] = c
-			lock.Unlock()
-			c.Start()
-		}
-	} else {
-		if started {
-			/* If this evt was not started, then we should not
-			 * remove it from the runners map (chances are that
-			 * there's an old chap sitting there).
-			 */
-			id := fnid.Cookie()
-
-			lock.Lock()
-			c := runners[id]
-			delete(runners, id)
-			lock.Unlock()
-
-			if c != nil { c.Stop() }
-		}
-	}
-
+func cronEventStop(ctx context.Context, evt *FnEventDesc) error {
+	cronRunner.Remove(cron.EntryID(evt.Cron.JobID))
 	return nil
 }
 
-var EventCron = EventOps {
-	Setup: cronEventSetup,
-}
-
 func eventsInit(conf *YAMLConf) error {
-	runners = make(map[string]*cron.Cron)
+	cronRunner = cron.New()
+	cronRunner.Start()
 	return nil
 }
 
@@ -203,7 +116,7 @@ func eventsList(fnid string) ([]swyapi.FunctionEvent, *swyapi.GateErr) {
 	return ret, nil
 }
 
-func eventsAdd(fnid string, evt *swyapi.FunctionEvent) (string, *swyapi.GateErr) {
+func eventsAdd(ctx context.Context, fnid string, evt *swyapi.FunctionEvent) (string, *swyapi.GateErr) {
 	ed := &FnEventDesc{
 		ObjID: bson.NewObjectId(),
 		Name: evt.Name,
@@ -211,25 +124,35 @@ func eventsAdd(fnid string, evt *swyapi.FunctionEvent) (string, *swyapi.GateErr)
 		Source: evt.Source,
 	}
 
+	var err error
+
 	switch evt.Source {
 	case "cron":
 		ed.Cron = &FnEventCron{
 			Tab: evt.Cron.Tab,
 			Args: evt.Cron.Args,
 		}
+
+		err = cronEventStart(ctx, ed)
 	case "s3":
 		ed.S3 = &FnEventS3{
 			Bucket: evt.S3.Bucket,
 			Ops: evt.S3.Ops,
 		}
+		err = s3EventStart(ctx, ed)
 	case "url":
-		;
+		err = urlEventStart(ctx, ed)
 	default:
 		return "", GateErrM(swy.GateBadRequest, "Unsupported event type")
 	}
 
-	err := dbAddEvent(ed)
 	if err != nil {
+		return "", GateErrM(swy.GateGenErr, "Can't setup event")
+	}
+
+	err = dbAddEvent(ed)
+	if err != nil {
+		eventStop(ctx, ed)
 		return "", GateErrD(err)
 	}
 
@@ -249,7 +172,22 @@ func eventsGet(fnid, eid string) (*swyapi.FunctionEvent, *swyapi.GateErr) {
 	return ed.toAPI(false), nil
 }
 
-func eventsDelete(fnid, eid string) *swyapi.GateErr {
+func eventStop(ctx context.Context, ed *FnEventDesc) error {
+	var err error
+
+	switch ed.Source {
+	case "cron":
+		err = cronEventStop(ctx, ed)
+	case "s3":
+		err = s3EventStop(ctx, ed)
+	case "url":
+		err = urlEventStop(ctx, ed)
+	}
+
+	return err
+}
+
+func eventsDelete(ctx context.Context, fnid, eid string) *swyapi.GateErr {
 	ed, err := dbFindEvent(eid)
 	if err != nil {
 		return GateErrD(err)
@@ -259,9 +197,35 @@ func eventsDelete(fnid, eid string) *swyapi.GateErr {
 		return GateErrC(swy.GateNotFound)
 	}
 
-	err = dbRemoveEvent(eid)
+	err = eventStop(ctx, ed)
+	if err != nil {
+		return GateErrM(swy.GateGenErr, "Can't stop event")
+	}
+
+	err = dbRemoveEvent(ed)
 	if err != nil {
 		return GateErrD(err)
+	}
+
+	return nil
+}
+
+func clearAllEvents(ctx context.Context, fn *FunctionDesc) error {
+	evs, err := dbListFnEvents(fn.Cookie)
+	if err != nil {
+		return err
+	}
+
+	for _, e := range evs {
+		err = eventStop(ctx, &e)
+		if err != nil {
+			return err
+		}
+
+		err = dbRemoveEvent(&e)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
