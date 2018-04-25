@@ -207,7 +207,7 @@ func cronEventSetup(ctx context.Context, conf *YAMLConf, fnid *SwoId, evt *FnEve
 			delete(runners, id)
 			lock.Unlock()
 
-			c.Stop()
+			if c != nil { c.Stop() }
 		}
 	}
 
