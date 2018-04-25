@@ -129,8 +129,8 @@ func handleS3Event(ctx context.Context, user string, data []byte) {
 	funcs, err := dbFuncFindAll(bson.M {
 		"state": swy.DBFuncStateRdy,
 		"event.source": "s3",
-		"event.s3ns": evt.Namespace,
-		"event.s3bucket": evt.Bucket,
+		"event.s3.ns": evt.Namespace,
+		"event.s3.bucket": evt.Bucket,
 	})
 	if err != nil {
 		/* FIXME -- this should be notified? Or what? */
@@ -160,7 +160,7 @@ func setupEventS3(ctx context.Context, c *YAMLConf, fnid *SwoId, evt *FnEventDes
 				conf.S3.cn.Addr() + "/" + conf.S3.cn.Domn,
 				gates3queue, handleS3Event)
 		if err == nil {
-			err = s3Subscribe(conf, fnid.Namespace(), evt.S3Bucket)
+			err = s3Subscribe(conf, evt.S3.Ns, evt.S3.Bucket)
 			if err != nil {
 				mqStopListener(conf.S3.cn.Addr() + "/" + conf.S3.cn.Domn, gates3queue)
 			}
@@ -168,7 +168,7 @@ func setupEventS3(ctx context.Context, c *YAMLConf, fnid *SwoId, evt *FnEventDes
 
 		return err
 	} else {
-		s3Unsubscribe(ctx, conf, fnid.Namespace(), evt.S3Bucket)
+		s3Unsubscribe(ctx, conf, evt.S3.Ns, evt.S3.Bucket)
 		mqStopListener(conf.S3.cn.Addr() + "/" + conf.S3.cn.Domn, "events")
 		return nil
 	}

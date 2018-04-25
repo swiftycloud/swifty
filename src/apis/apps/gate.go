@@ -110,12 +110,16 @@ type FunctionEventCron struct {
 	Args		map[string]string	`json:"args"`
 }
 
+type FunctionEventS3 struct {
+	Bucket		string			`json:"bucket"`
+}
+
 type FunctionEvent struct {
 	Source		string			`json:"source,omitempty"`
 	Cron		[]FunctionEventCron	`json:"cron,omitempty"`
+	S3		*FunctionEventS3	`json:"s3,omitempty"`
 	MwareId		string			`json:"mwid,omitempty"`
 	MQueue		string			`json:"mqueue,omitempty"`
-	S3Bucket	string			`json:"s3bucket,omitempty"`
 }
 
 type MwareAdd struct {

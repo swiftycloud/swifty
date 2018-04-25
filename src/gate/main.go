@@ -644,7 +644,7 @@ func getFunctionInfo(fn *FunctionDesc, periods int) (*swyapi.FunctionInfo, *swya
 			Cron:		fn.Event.crons(),
 			MwareId:	fn.Event.MwareId,
 			MQueue:		fn.Event.MQueue,
-			S3Bucket:	fn.Event.S3Bucket,
+			S3:		fn.Event.s3s(),
 		},
 		Stats: stats,
 		Size:		swyapi.FunctionSize {

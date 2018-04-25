@@ -395,6 +395,8 @@ func info_function(cd *cmdDesc, args []string, opts [16]string) {
 			for _, c := range(ifo.Event.Cron) {
 				estr += ":" + c.Tab + ";" + make_args_string(c.Args)
 			}
+		} else if ifo.Event.Source == "s3" {
+			estr += ":" + ifo.Event.S3.Bucket
 		} else {
 			estr += "UNKNOWN"
 		}
@@ -516,6 +518,10 @@ func parse_event_arg(arg string, evt *swyapi.FunctionEvent) {
 				Tab: x[0],
 				Args: split_args_string(x[1]),
 			})
+		}
+	case "s3":
+		evt.S3 = &swyapi.FunctionEventS3 {
+			Bucket: mwe[1],
 		}
 	case "none":
 		evt.Source = ""

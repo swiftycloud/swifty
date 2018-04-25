@@ -71,13 +71,17 @@ type FnCronDesc struct {
 	Args		map[string]string	`bson:"args"`
 }
 
+type FnEventS3 struct {
+	Ns		string		`bson:"ns"`
+	Bucket		string		`bson:"bucket"`
+}
+
 type FnEventDesc struct {
 	Source		string		`bson:"source"`
 	Cron		[]*FnCronDesc	`bson:"cron,omitempty"`
+	S3		*FnEventS3	`bson:"s3,omitempty"`
 	MwareId		string		`bson:"mwid,omitempty"`
 	MQueue		string		`bson:"mqueue,omitempty"`
-	S3Bucket	string		`bson:"s3bucket,omitempty"`
-	S3Ns		string		`bson:"s3ns,omitempty"`
 	start		func()
 }
 
@@ -100,6 +104,17 @@ func (evt *FnEventDesc)cronBson() []bson.M {
 	return ret
 }
 
+func (evt *FnEventDesc)s3bson() bson.M {
+	if evt.S3 == nil {
+		return bson.M{}
+	}
+
+	return bson.M{
+		"ns": evt.S3.Ns,
+		"bucket": evt.S3.Bucket,
+	}
+}
+
 func (evt *FnEventDesc)crons() []swyapi.FunctionEventCron {
 	var ret []swyapi.FunctionEventCron
 	for _, ce := range(evt.Cron) {
@@ -111,12 +126,31 @@ func (evt *FnEventDesc)crons() []swyapi.FunctionEventCron {
 	return ret
 }
 
+func (evt *FnEventDesc)s3s() *swyapi.FunctionEventS3 {
+	if evt.S3 == nil {
+		return nil
+	}
+
+	return &swyapi.FunctionEventS3 {
+		Bucket: evt.S3.Bucket,
+	}
+}
+
 func (evd *FnEventDesc)setCrons(evt *swyapi.FunctionEvent) {
 	for _, ct := range(evt.Cron) {
 		evd.Cron = append(evd.Cron, &FnCronDesc{
 			Tab: ct.Tab,
 			Args: ct.Args,
 		})
+	}
+}
+
+func (evd *FnEventDesc)setS3s(evt *swyapi.FunctionEvent, fn *FunctionDesc) {
+	if evt.Source == "s3" {
+		evd.S3 = &FnEventS3 {
+			Ns : fn.SwoId.Namespace(),
+			Bucket: evt.S3.Bucket,
+		}
 	}
 }
 
@@ -157,12 +191,9 @@ func (fn *FunctionDesc)getEventDesc(evt *swyapi.FunctionEvent) *FnEventDesc {
 		Source:		evt.Source,
 		MwareId:	evt.MwareId,
 		MQueue:		evt.MQueue,
-		S3Bucket:	evt.S3Bucket,
 	}
 
-	if evd.S3Bucket != "" {
-		evd.S3Ns = fn.SwoId.Namespace()
-	}
+	evd.setS3s(evt, fn)
 	evd.setCrons(evt)
 	return evd
 }
@@ -448,12 +479,9 @@ func updateFunction(ctx context.Context, conf *YAMLConf, id *SwoId, params *swya
 
 		update["event.source"] = evt.Source
 		update["event.cron"] = evt.cronBson()
+		update["event.s3"] = evt.s3bson()
 		update["event.mwid"] = evt.MwareId
 		update["event.mqueue"] = evt.MQueue
-		update["event.s3bucket"] = evt.S3Bucket
-		if evt.S3Bucket != "" {
-			update["event.s3ns"] = fn.SwoId.Namespace()
-		}
 	}
 
 	if len(update) == 0 {
