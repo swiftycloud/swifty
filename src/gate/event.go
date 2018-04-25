@@ -54,7 +54,10 @@ func cronEventStart(ctx context.Context, evt *FnEventDesc) error {
 			return
 		}
 
-		doRun(context.Background(), fn, "cron", evt.Cron.Args)
+		_, err = doRun(context.Background(), fn, "cron", evt.Cron.Args)
+		if err != nil {
+			ctxlog(ctx).Errorf("cron: Error running FN %s", err.Error())
+		}
 	})
 
 	if err == nil {

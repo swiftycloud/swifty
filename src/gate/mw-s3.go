@@ -145,7 +145,10 @@ func handleS3Event(ctx context.Context, user string, data []byte) {
 			continue
 		}
 
-		ctxlog(ctx).Debugf("s3 event -> [%s]", fn.SwoId.Str())
+		if fn.State != swy.DBFuncStateRdy {
+			continue
+		}
+
 		/* FIXME -- this is synchronous */
 		_, err = doRun(ctx, fn, "s3:" + evt.Op + ":" + evt.Bucket,
 				map[string]string {
@@ -154,7 +157,7 @@ func handleS3Event(ctx context.Context, user string, data []byte) {
 					"op": evt.Op,
 				})
 		if err != nil {
-			ctxlog(ctx).Errorf("mq: Error running FN %s", err.Error())
+			ctxlog(ctx).Errorf("s3: Error running FN %s", err.Error())
 		}
 	}
 }
