@@ -995,6 +995,22 @@ definitions:
         type: array
         items:
           $ref: '#/definitions/FunctionEventCron'
+      s3:
+        $ref: '#/definitions/FunctionEventS3'
+  FunctionEventS3:
+    type: object
+    description: Bucket to receive envets from
+    required:
+      - bucket
+      - ops
+    properties:
+      bucket:
+        type: string
+        description: 'Bucket name in S3'
+      ops:
+        type: string
+        description: 'Comma-separated list of operations'
+        example: 'put'
   FunctionSources:
     type: object
     description: Sources description
