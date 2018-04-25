@@ -478,11 +478,14 @@ func updateFunction(ctx context.Context, conf *YAMLConf, id *SwoId, params *swya
 			goto out
 		}
 
-		update["event.source"] = evt.Source
-		update["event.cron"] = evt.cronBson()
-		update["event.s3"] = evt.s3bson()
-		update["event.mwid"] = evt.MwareId
-		update["event.mqueue"] = evt.MQueue
+		upd := bson.M{ "source": evt.Source }
+		if evt.Source == "cron" {
+			upd["cron"] = evt.cronBson()
+		} else if evt.Source == "s3" {
+			upd["s3"] = evt.s3bson()
+		} /* XXX -- update mq here */
+
+		update["event"] = upd
 	}
 
 	if len(update) == 0 {
