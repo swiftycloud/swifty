@@ -77,7 +77,7 @@ const (
 	gates3queue = "events"
 )
 
-func s3Subscribe(conf *YAMLConfMw, namespace, bucket string) error {
+func s3Subscribe(ctx context.Context, conf *YAMLConfMw, namespace, bucket string) error {
 	addr := conf.S3.c.AddrP(conf.S3.AdminPort)
 
 	_, err := swyhttp.MarshalAndPost(
@@ -160,7 +160,7 @@ func setupEventS3(ctx context.Context, c *YAMLConf, fnid *SwoId, evt *FnEventDes
 				conf.S3.cn.Addr() + "/" + conf.S3.cn.Domn,
 				gates3queue, handleS3Event)
 		if err == nil {
-			err = s3Subscribe(conf, evt.S3.Ns, evt.S3.Bucket)
+			err = s3Subscribe(ctx, conf, evt.S3.Ns, evt.S3.Bucket)
 			if err != nil {
 				mqStopListener(conf.S3.cn.Addr() + "/" + conf.S3.cn.Domn, gates3queue)
 			}
