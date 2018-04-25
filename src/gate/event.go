@@ -72,6 +72,25 @@ func cronEventStop(ctx context.Context, evt *FnEventDesc) error {
 func eventsInit(conf *YAMLConf) error {
 	cronRunner = cron.New()
 	cronRunner.Start()
+
+	evs, err := dbListEvents(bson.M{"source":"cron"})
+	if err != nil {
+		return err
+	}
+
+	ctx := context.Background()
+	for _, ed := range evs {
+		err = cronEventStart(ctx, &ed)
+		if err != nil {
+			return err
+		}
+
+		err = dbUpdateEvent(&ed)
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 

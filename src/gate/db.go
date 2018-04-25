@@ -535,6 +535,10 @@ func dbFindEvent(id string) (*FnEventDesc, error) {
 	return &ed, err
 }
 
+func dbUpdateEvent(ed *FnEventDesc) error {
+	return dbSession.DB(DBStateDB).C(DBColEvents).Update(bson.M{"_id": ed.ObjID}, ed)
+}
+
 func dbRemoveEvent(ed *FnEventDesc) error {
 	return dbSession.DB(DBStateDB).C(DBColEvents).Remove(bson.M{"_id": ed.ObjID})
 }
