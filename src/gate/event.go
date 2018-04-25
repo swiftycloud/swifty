@@ -11,7 +11,7 @@ import (
 	"../apis/apps"
 )
 
-type FnCronDesc struct {
+type FnEventCron struct {
 	Tab		string			`bson:"tab"`
 	Args		map[string]string	`bson:"args"`
 }
@@ -34,7 +34,7 @@ func (s3 *FnEventS3)hasOp(op string) bool {
 
 type FnEventDesc struct {
 	Source		string		`bson:"source"`
-	Cron		[]*FnCronDesc	`bson:"cron,omitempty"`
+	Cron		[]*FnEventCron	`bson:"cron,omitempty"`
 	S3		*FnEventS3	`bson:"s3,omitempty"`
 	MwareId		string		`bson:"mwid,omitempty"`
 	MQueue		string		`bson:"mqueue,omitempty"`
@@ -96,7 +96,7 @@ func (evt *FnEventDesc)s3s() *swyapi.FunctionEventS3 {
 
 func (evd *FnEventDesc)setCrons(evt *swyapi.FunctionEvent) {
 	for _, ct := range(evt.Cron) {
-		evd.Cron = append(evd.Cron, &FnCronDesc{
+		evd.Cron = append(evd.Cron, &FnEventCron{
 			Tab: ct.Tab,
 			Args: ct.Args,
 		})
@@ -165,7 +165,7 @@ var EventOneShot = EventOps {
 	Devel: true,
 }
 
-func cronEventSetupOne(c *cron.Cron, ce *FnCronDesc, fnid *SwoId) error {
+func cronEventSetupOne(c *cron.Cron, ce *FnEventCron, fnid *SwoId) error {
 	_, err := c.AddFunc(ce.Tab, func() {
 		fn, err := dbFuncFind(fnid)
 		if err != nil {
