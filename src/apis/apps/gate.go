@@ -79,6 +79,7 @@ type FunctionInfo struct {
 	Size		FunctionSize		`json:"size"`
 	AuthCtx		string			`json:"authctx,omitempty"`
 	UserData	string			`json:"userdata"`
+	Id		string			`json:"id"`
 }
 
 type RunCmd struct {

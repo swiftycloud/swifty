@@ -694,6 +694,7 @@ func getFunctionInfo(fn *FunctionDesc, periods int) (*swyapi.FunctionInfo, *swya
 	}
 
 	return &swyapi.FunctionInfo{
+		Id:		fn.Cookie,
 		State:          fnStates[fn.State],
 		Mware:          fn.Mware,
 		S3Buckets:	fn.S3Buckets,

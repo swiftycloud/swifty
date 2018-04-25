@@ -376,6 +376,7 @@ func info_function(cd *cmdDesc, args []string, opts [16]string) {
 		ver = ver[:8]
 	}
 
+	fmt.Printf("Id:          %s\n", ifo.Id)
 	fmt.Printf("Lang:        %s\n", ifo.Code.Lang)
 
 	rv := ""
@@ -488,33 +489,6 @@ func parse_rate(val string) (uint, uint) {
 	}
 
 	return uint(rate), uint(burst)
-}
-
-func parse_event_arg(arg string, evt *swyapi.FunctionEvent) {
-	mwe := strings.Split(arg, ":")
-	evt.Source = mwe[0]
-	switch evt.Source {
-	case "url":
-		;/* nothing */
-	case "cron":
-		for _, cron := range mwe[1:] {
-			x := strings.SplitN(cron, ";", 2)
-			evt.Cron = append(evt.Cron, swyapi.FunctionEventCron {
-				Tab: x[0],
-				Args: split_args_string(x[1]),
-			})
-		}
-	case "s3":
-		x := strings.Split(mwe[1], "=")
-		evt.S3 = &swyapi.FunctionEventS3 {
-			Bucket: x[0],
-			Ops: x[1],
-		}
-	case "none":
-		evt.Source = ""
-	default:
-		fatal(fmt.Errorf("Unknown event string"))
-	}
 }
 
 func add_function(cd *cmdDesc, args []string, opts [16]string) {
