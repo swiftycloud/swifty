@@ -396,7 +396,7 @@ func info_function(cd *cmdDesc, args []string, opts [16]string) {
 				estr += ":" + c.Tab + ";" + make_args_string(c.Args)
 			}
 		} else if ifo.Event.Source == "s3" {
-			estr += ":" + ifo.Event.S3.Bucket
+			estr += ":" + ifo.Event.S3.Bucket + "=" + ifo.Event.S3.Ops
 		} else {
 			estr += "UNKNOWN"
 		}
@@ -520,8 +520,10 @@ func parse_event_arg(arg string, evt *swyapi.FunctionEvent) {
 			})
 		}
 	case "s3":
+		x := strings.Split(mwe[1], "=")
 		evt.S3 = &swyapi.FunctionEventS3 {
-			Bucket: mwe[1],
+			Bucket: x[0],
+			Ops: x[1],
 		}
 	case "none":
 		evt.Source = ""

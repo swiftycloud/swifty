@@ -74,6 +74,7 @@ type FnCronDesc struct {
 type FnEventS3 struct {
 	Ns		string		`bson:"ns"`
 	Bucket		string		`bson:"bucket"`
+	Ops		string		`bson:"ops"`
 }
 
 type FnEventDesc struct {
@@ -112,6 +113,7 @@ func (evt *FnEventDesc)s3bson() bson.M {
 	return bson.M{
 		"ns": evt.S3.Ns,
 		"bucket": evt.S3.Bucket,
+		"ops": evt.S3.Ops,
 	}
 }
 
@@ -133,6 +135,7 @@ func (evt *FnEventDesc)s3s() *swyapi.FunctionEventS3 {
 
 	return &swyapi.FunctionEventS3 {
 		Bucket: evt.S3.Bucket,
+		Ops: evt.S3.Ops,
 	}
 }
 
@@ -150,6 +153,7 @@ func (evd *FnEventDesc)setS3s(evt *swyapi.FunctionEvent, fn *FunctionDesc) {
 		evd.S3 = &FnEventS3 {
 			Ns : fn.SwoId.Namespace(),
 			Bucket: evt.S3.Bucket,
+			Ops: evt.S3.Ops,
 		}
 	}
 }

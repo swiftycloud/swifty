@@ -77,7 +77,7 @@ const (
 	gates3queue = "events"
 )
 
-func s3Subscribe(ctx context.Context, conf *YAMLConfMw, namespace, bucket string) error {
+func s3Subscribe(ctx context.Context, conf *YAMLConfMw, evt *FnEventS3) error {
 	addr := conf.S3.c.AddrP(conf.S3.AdminPort)
 
 	_, err := swyhttp.MarshalAndPost(
@@ -87,9 +87,9 @@ func s3Subscribe(ctx context.Context, conf *YAMLConfMw, namespace, bucket string
 			Success: http.StatusAccepted,
 		},
 		&swys3api.S3Subscribe{
-			Namespace: namespace,
-			Bucket: bucket,
-			Ops: "put",
+			Namespace: evt.Ns,
+			Bucket: evt.Bucket,
+			Ops: evt.Ops,
 			Queue: gates3queue,
 		})
 	if err != nil {
@@ -99,7 +99,7 @@ func s3Subscribe(ctx context.Context, conf *YAMLConfMw, namespace, bucket string
 	return nil
 }
 
-func s3Unsubscribe(ctx context.Context, conf *YAMLConfMw, namespace, bucket string) {
+func s3Unsubscribe(ctx context.Context, conf *YAMLConfMw, evt *FnEventS3) {
 	addr := conf.S3.c.AddrP(conf.S3.AdminPort)
 
 	_, err := swyhttp.MarshalAndPost(
@@ -109,8 +109,9 @@ func s3Unsubscribe(ctx context.Context, conf *YAMLConfMw, namespace, bucket stri
 			Success: http.StatusAccepted,
 		},
 		&swys3api.S3Subscribe{
-			Namespace: namespace,
-			Bucket: bucket,
+			Namespace: evt.Ns,
+			Bucket: evt.Bucket,
+			Ops: evt.Ops,
 		})
 	if err != nil {
 		ctxlog(ctx).Errorf("Error unsubscibing: %s", err.Error())
@@ -160,7 +161,7 @@ func setupEventS3(ctx context.Context, c *YAMLConf, fnid *SwoId, evt *FnEventDes
 				conf.S3.cn.Addr() + "/" + conf.S3.cn.Domn,
 				gates3queue, handleS3Event)
 		if err == nil {
-			err = s3Subscribe(ctx, conf, evt.S3.Ns, evt.S3.Bucket)
+			err = s3Subscribe(ctx, conf, evt.S3)
 			if err != nil {
 				mqStopListener(conf.S3.cn.Addr() + "/" + conf.S3.cn.Domn, gates3queue)
 			}
@@ -168,7 +169,7 @@ func setupEventS3(ctx context.Context, c *YAMLConf, fnid *SwoId, evt *FnEventDes
 
 		return err
 	} else {
-		s3Unsubscribe(ctx, conf, evt.S3.Ns, evt.S3.Bucket)
+		s3Unsubscribe(ctx, conf, evt.S3)
 		mqStopListener(conf.S3.cn.Addr() + "/" + conf.S3.cn.Domn, "events")
 		return nil
 	}
