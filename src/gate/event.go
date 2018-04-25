@@ -38,7 +38,6 @@ type FnEventDesc struct {
 	Source		string		`bson:"source"`
 	Cron		*FnEventCron	`bson:"cron,omitempty"`
 	S3		*FnEventS3	`bson:"s3,omitempty"`
-	start		func()
 }
 
 var cronRunner *cron.Cron

@@ -128,22 +128,26 @@ func handleS3Event(ctx context.Context, user string, data []byte) {
 		return
 	}
 
-	funcs, err := dbFuncFindAll(bson.M {
-		"state": swy.DBFuncStateRdy,
-		"event.source": "s3",
-		"event.s3.ns": evt.Namespace,
-		"event.s3.bucket": evt.Bucket,
-	})
+	evs, err := dbListEvents(bson.M{"source":"s3", "s3.ns": evt.Namespace, "s3.bucket": evt.Bucket})
 	if err != nil {
 		/* FIXME -- this should be notified? Or what? */
-		ctxlog(ctx).Errorf("mq: Can't list functions for s3 event")
+		ctxlog(ctx).Errorf("mq: Can't list triggers for s3 event")
 		return
 	}
 
-	for _, fn := range funcs {
+	for _, ed := range evs {
+		if !ed.S3.hasOp(evt.Op) {
+			continue
+		}
+
+		fn, err := dbFuncFindByCookie(ed.FnId)
+		if err != nil || fn == nil {
+			continue
+		}
+
 		ctxlog(ctx).Debugf("s3 event -> [%s]", fn.SwoId.Str())
 		/* FIXME -- this is synchronous */
-		_, err := doRun(ctx, &fn, "s3:" + evt.Op + ":" + evt.Bucket,
+		_, err = doRun(ctx, fn, "s3:" + evt.Op + ":" + evt.Bucket,
 				map[string]string {
 					"bucket": evt.Bucket,
 					"object": evt.Object,
@@ -156,8 +160,14 @@ func handleS3Event(ctx context.Context, user string, data []byte) {
 }
 
 func s3EventStart(ctx context.Context, evt *FnEventDesc) error {
+	fn, err := dbFuncFindByCookie(evt.FnId)
+	if err != nil || fn == nil {
+		return err
+	}
+
+	evt.S3.Ns = fn.SwoId.Namespace()
 	conf := &conf.Mware
-	err := mqStartListener(conf.S3.cn.User, conf.S3.cn.Pass,
+	err = mqStartListener(conf.S3.cn.User, conf.S3.cn.Pass,
 		conf.S3.cn.Addr() + "/" + conf.S3.cn.Domn,
 		gates3queue, handleS3Event)
 	if err == nil {

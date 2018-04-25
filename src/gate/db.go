@@ -519,6 +519,12 @@ func dbListFnEvents(fnid string) ([]FnEventDesc, error) {
 	return ret, err
 }
 
+func dbListEvents(q bson.M) ([]FnEventDesc, error) {
+	var ret []FnEventDesc
+	err := dbSession.DB(DBStateDB).C(DBColEvents).Find(q).All(&ret)
+	return ret, err
+}
+
 func dbAddEvent(ed *FnEventDesc) error {
 	return dbSession.DB(DBStateDB).C(DBColEvents).Insert(ed)
 }
