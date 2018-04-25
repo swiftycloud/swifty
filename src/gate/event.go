@@ -231,20 +231,5 @@ var EventCron = EventOps {
 
 func eventsInit(conf *YAMLConf) error {
 	runners = make(map[string]*cron.Cron)
-
-	fns, err := dbFuncListWithEvents()
-	if err != nil {
-		glog.Errorf("Can't list functions with events: %s", err.Error())
-		return err
-	}
-
-	for _, fn := range fns {
-		glog.Debugf("Restart event for %s", fn.SwoId.Str())
-		err = fn.Event.Prepare(context.Background(), conf, fn.SwoId)
-		if err != nil {
-			return err
-		}
-	}
-
 	return nil
 }

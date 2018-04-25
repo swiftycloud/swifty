@@ -86,7 +86,6 @@ type FunctionDesc struct {
 	SwoId				`bson:",inline"`
 	Cookie		string		`bson:"cookie"`		// Some "unique" identifier
 	State		int		`bson:"state"`		// Function state
-	Event		*FnEventDesc	`bson:"event"`
 	Mware		[]string	`bson:"mware"`
 	S3Buckets	[]string	`bson:"s3buckets"`
 	Code		FnCodeDesc	`bson:"code"`
@@ -96,19 +95,15 @@ type FunctionDesc struct {
 	UserData	string		`bson:"userdata,omitempty"`
 }
 
-var zeroVersion = "0"
-
-func (fn *FunctionDesc)getEventDesc(evt *swyapi.FunctionEvent) *FnEventDesc {
-	evd := &FnEventDesc {
-		Source:		evt.Source,
-		MwareId:	evt.MwareId,
-		MQueue:		evt.MQueue,
-	}
-
-	evd.setS3s(evt, fn)
-	evd.setCrons(evt)
-	return evd
+func (fn *FunctionDesc)isURL() bool {
+	return true
 }
+
+func (fn *FunctionDesc)isOneShot() bool {
+	return false
+}
+
+var zeroVersion = "0"
 
 func getFunctionDesc(tennant string, p_add *swyapi.FunctionAdd) *FunctionDesc {
 	fn := &FunctionDesc {
@@ -139,7 +134,6 @@ func getFunctionDesc(tennant string, p_add *swyapi.FunctionAdd) *FunctionDesc {
 		UserData:	p_add.UserData,
 	}
 
-	fn.Event = fn.getEventDesc(&p_add.Event)
 	fn.Cookie = fn.SwoId.Cookie()
 	return fn
 }
@@ -195,14 +189,9 @@ func addFunction(ctx context.Context, conf *YAMLConf, fn *FunctionDesc) *swyapi.
 
 	gateFunctions.Inc()
 
-	err = fn.Event.Prepare(ctx, conf, fn.SwoId)
-	if err != nil {
-		goto out_clean_func
-	}
-
 	err = getSources(ctx, fn)
 	if err != nil {
-		goto out_clean_evt
+		goto out_clean_func
 	}
 
 	fn.State = swy.DBFuncStateStr
@@ -239,17 +228,11 @@ func addFunction(ctx context.Context, conf *YAMLConf, fn *FunctionDesc) *swyapi.
 		}
 	}
 
-	fn.Event.Start()
 	logSaveEvent(fn, "registered", "")
 	return nil
 
 out_clean_repo:
 	erc = cleanRepo(ctx, fn)
-	if erc != nil {
-		goto stalled
-	}
-out_clean_evt:
-	erc = fn.Event.Cancel(ctx, conf, fn.SwoId, false)
 	if erc != nil {
 		goto stalled
 	}
@@ -292,7 +275,6 @@ func updateFunction(ctx context.Context, conf *YAMLConf, id *SwoId, params *swya
 	var oldver string
 	var olds int
 	var nac *AuthCtx
-	var evt *FnEventDesc
 
 	update := make(bson.M)
 
@@ -382,24 +364,6 @@ func updateFunction(ctx context.Context, conf *YAMLConf, id *SwoId, params *swya
 		acfix = true
 	}
 
-	if params.Event != nil {
-		evt = fn.getEventDesc(params.Event)
-		err = evt.Prepare(ctx, conf, fn.SwoId)
-		if err != nil {
-			evt = nil
-			goto out
-		}
-
-		upd := bson.M{ "source": evt.Source }
-		if evt.Source == "cron" {
-			upd["cron"] = evt.cronBson()
-		} else if evt.Source == "s3" {
-			upd["s3"] = evt.s3bson()
-		} /* XXX -- update mq here */
-
-		update["event"] = upd
-	}
-
 	if len(update) == 0 {
 		ctxlog(ctx).Debugf("Nothing to update for %s", fn.SwoId.Str())
 		goto out_ne
@@ -450,13 +414,6 @@ func updateFunction(ctx context.Context, conf *YAMLConf, id *SwoId, params *swya
 		;
 	}
 
-	if evt != nil {
-		fn.Event.Cancel(ctx, conf, fn.SwoId, true)
-		fn.Event = evt
-		evt.Start()
-		evt = nil
-	}
-
 	if restart {
 		if !stalled {
 			ctxlog(ctx).Debugf("Updating deploy")
@@ -484,10 +441,6 @@ out_ne:
 	return nil
 
 out:
-	if evt != nil {
-		evt.Cancel(ctx, conf, fn.SwoId, false)
-	}
-
 	return GateErrE(swy.GateGenErr, err)
 }
 
@@ -520,19 +473,13 @@ func removeFunction(ctx context.Context, conf *YAMLConf, id *SwoId) *swyapi.Gate
 		return GateErrM(swy.GateGenErr, "Cannot terminate fn")
 	}
 
-	if !fn.Event.isOneShot() && (fn.State != swy.DBFuncStateDea) {
+	if !fn.isOneShot() && (fn.State != swy.DBFuncStateDea) {
 		ctxlog(ctx).Debugf("`- delete deploy")
 		err = swk8sRemove(ctx, conf, fn)
 		if err != nil {
 			ctxlog(ctx).Errorf("remove deploy error: %s", err.Error())
 			goto later
 		}
-	}
-
-	ctxlog(ctx).Debugf("`- setdown events")
-	err = fn.Event.Cancel(ctx, conf, fn.SwoId, true)
-	if err != nil {
-		goto later
 	}
 
 	ctxlog(ctx).Debugf("`- drop stats")
@@ -627,7 +574,7 @@ func notifyPodUp(ctx context.Context, pod *k8sPod) {
 	if fn.State != swy.DBFuncStateRdy {
 		logSaveEvent(fn, "Ready", "")
 		dbFuncSetState(ctx, fn, swy.DBFuncStateRdy)
-		if fn.Event.isOneShot() {
+		if fn.isOneShot() {
 			runFunctionOnce(ctx, fn)
 		}
 	}

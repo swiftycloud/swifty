@@ -387,21 +387,6 @@ func info_function(cd *cmdDesc, args []string, opts [16]string) {
 	if len(ifo.Mware) > 0 {
 		fmt.Printf("Mware:       %s\n", strings.Join(ifo.Mware, ", "))
 	}
-	if ifo.Event.Source != "" {
-		estr := ifo.Event.Source
-		if ifo.Event.Source == "url" {
-			/* nothing */
-		} else if ifo.Event.Source == "cron" {
-			for _, c := range(ifo.Event.Cron) {
-				estr += ":" + c.Tab + ";" + make_args_string(c.Args)
-			}
-		} else if ifo.Event.Source == "s3" {
-			estr += ":" + ifo.Event.S3.Bucket + "=" + ifo.Event.S3.Ops
-		} else {
-			estr += "UNKNOWN"
-		}
-		fmt.Printf("Event:       %s\n", estr)
-	}
 	if ifo.URL != "" {
 		fmt.Printf("URL:         %s://%s\n", gateProto(), ifo.URL)
 	}
@@ -571,18 +556,12 @@ func add_function(cd *cmdDesc, args []string, opts [16]string) {
 		mw = strings.Split(opts[2], ",")
 	}
 
-	evt := swyapi.FunctionEvent {}
-	if opts[3] != "" {
-		parse_event_arg(opts[3], &evt)
-	}
-
 	req := swyapi.FunctionAdd{
 		Project: cd.project,
 		FuncName: args[0],
 		Sources: sources,
 		Code: code,
 		Mware: mw,
-		Event: evt,
 	}
 
 	if opts[4] != "" {
@@ -691,12 +670,6 @@ func update_function(cd *cmdDesc, args []string, opts [16]string) {
 		}
 
 		req.AuthCtx = &ac
-	}
-
-	if opts[8] != "" {
-		evt := swyapi.FunctionEvent{}
-		parse_event_arg(opts[8], &evt)
-		req.Event = &evt
 	}
 
 	make_faas_req("function/update", req, nil)
@@ -1127,7 +1100,6 @@ func main() {
 	cmdMap[CMD_ADD].opts.StringVar(&opts[0], "lang", "auto", "Language")
 	cmdMap[CMD_ADD].opts.StringVar(&opts[1], "src", ".", "Source file")
 	cmdMap[CMD_ADD].opts.StringVar(&opts[2], "mw", "", "Mware to use, comma-separated")
-	cmdMap[CMD_ADD].opts.StringVar(&opts[3], "event", "", "Event for this fn")
 	cmdMap[CMD_ADD].opts.StringVar(&opts[4], "tmo", "", "Timeout")
 	cmdMap[CMD_ADD].opts.StringVar(&opts[5], "rl", "", "Rate (rate[:burst])")
 	cmdMap[CMD_ADD].opts.StringVar(&opts[6], "data", "", "Any text associated with fn")
@@ -1143,7 +1115,6 @@ func main() {
 	cmdMap[CMD_UPD].opts.StringVar(&opts[5], "ver", "", "Version")
 	cmdMap[CMD_UPD].opts.StringVar(&opts[6], "arg", "", "Args")
 	cmdMap[CMD_UPD].opts.StringVar(&opts[7], "auth", "", "Auth context (- for off)")
-	cmdMap[CMD_UPD].opts.StringVar(&opts[8], "event", "", "Event for this fn")
 	bindCmdUsage(CMD_UPD,	[]string{"NAME"}, "Update a function", true)
 	bindCmdUsage(CMD_DEL,	[]string{"NAME"}, "Delete a function", true)
 	bindCmdUsage(CMD_LOGS,	[]string{"NAME"}, "Show function logs", true)

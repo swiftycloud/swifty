@@ -74,7 +74,6 @@ type FunctionInfo struct {
 	Version		string			`json:"version"`
 	RdyVersions	[]string		`json:"rversions"`
 	Code		FunctionCode		`json:"code"`
-	Event		FunctionEvent		`json:"event"`
 	URL		string			`json:"url"`
 	Stats		[]FunctionStats		`json:"stats"`
 	Size		FunctionSize		`json:"size"`
@@ -181,7 +180,6 @@ type FunctionAdd struct {
 	FuncName	string			`json:"name"`
 	Sources		FunctionSources		`json:"sources"`
 	Code		FunctionCode		`json:"code"`
-	Event		FunctionEvent		`json:"event"`
 	Size		FunctionSize		`json:"size"`
 	Mware		[]string		`json:"mware,omitempty"`
 	S3Buckets	[]string		`json:"s3buckets,omitempty"`
@@ -203,7 +201,6 @@ type FunctionUpdate struct {
 	Mware		*[]string		`json:"mware,omitempty"`
 	S3Buckets	*[]string		`json:"s3buckets,omitempty"`
 	AuthCtx		*string			`json:"authctx,omitempty"`
-	Event		*FunctionEvent		`json:"event,omitempty"`
 	UserData	string			`json:"userdata"`
 }
 
