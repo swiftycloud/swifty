@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"strings"
 	"context"
 	"gopkg.in/robfig/cron.v2"
 	"gopkg.in/mgo.v2/bson"
@@ -19,6 +20,16 @@ type FnEventS3 struct {
 	Ns		string		`bson:"ns"`
 	Bucket		string		`bson:"bucket"`
 	Ops		string		`bson:"ops"`
+}
+
+func (s3 *FnEventS3)hasOp(op string) bool {
+	ops := strings.Split(s3.Ops, ",")
+	for _, o := range ops {
+		if o == op {
+			return true
+		}
+	}
+	return false
 }
 
 type FnEventDesc struct {

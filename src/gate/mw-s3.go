@@ -140,6 +140,10 @@ func handleS3Event(ctx context.Context, user string, data []byte) {
 	}
 
 	for _, fn := range funcs {
+		if !fn.Event.S3.hasOp(evt.Op) {
+			continue
+		}
+
 		ctxlog(ctx).Debugf("s3 event -> [%s]", fn.SwoId.Str())
 		/* FIXME -- this is synchronous */
 		_, err := doRun(ctx, &fn, "s3:" + evt.Op + ":" + evt.Bucket,
