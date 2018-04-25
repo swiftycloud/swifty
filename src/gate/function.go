@@ -474,6 +474,7 @@ func updateFunction(ctx context.Context, conf *YAMLConf, id *SwoId, params *swya
 		evt = fn.getEventDesc(params.Event)
 		err = evt.Prepare(ctx, conf, fn.SwoId)
 		if err != nil {
+			evt = nil
 			goto out
 		}
 
