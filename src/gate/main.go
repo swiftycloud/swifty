@@ -1096,7 +1096,6 @@ func handleMwares(ctx context.Context, w http.ResponseWriter, r *http.Request) *
 			}
 
 			mi.ID = mw.ObjID.Hex()
-			mi.Name = mw.SwoId.Name
 			ret = append(ret, mi)
 		}
 
@@ -1269,26 +1268,27 @@ func handleDeployStart(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	return nil
 }
 
-func handleMwareInfo(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
-	var params swyapi.MwareID
-
-	err := swyhttp.ReadAndUnmarshalReq(r, &params)
+func handleMware(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
+	mid := mux.Vars(r)["mid"]
+	mw, err := dbMwareGetOne(bson.M{"tennant": fromContext(ctx).Tenant,
+			"_id": bson.ObjectIdHex(mid)})
 	if err != nil {
-		return GateErrE(swy.GateBadRequest, err)
+		return GateErrD(err)
 	}
 
-	id := ctxSwoId(ctx, params.Project, params.ID)
-	ctxlog(ctx).Debugf("mware/info: %s params %v", fromContext(ctx).Tenant, params)
+	switch r.Method {
+	case "GET":
+		mi, cerr := mw.toInfo(ctx, &conf.Mware, true)
+		if cerr != nil {
+			return cerr
+		}
 
-	mwinf, cerr := mwareInfo(ctx, &conf.Mware, id)
-	if cerr != nil {
-		return cerr
+		err = swyhttp.MarshalAndWrite(w, mi)
+		if err != nil {
+			return GateErrE(swy.GateBadResp, err)
+		}
 	}
 
-	err = swyhttp.MarshalAndWrite(w, mwinf)
-	if err != nil {
-		return GateErrE(swy.GateBadResp, err)
-	}
 	return nil
 }
 
@@ -1476,11 +1476,11 @@ func main() {
 	r.Handle("/v1/functions/{fid}/events",	genReqHandler(handleFunctionEvents)).Methods("GET", "POST", "OPTIONS")
 	r.Handle("/v1/functions/{fid}/events/{eid}", genReqHandler(handleFunctionEvent)).Methods("GET", "DELETE", "OPTIONS")
 	r.Handle("/v1/mware/add",		genReqHandler(handleMwareAdd)).Methods("POST", "OPTIONS")
-	r.Handle("/v1/mware/info",		genReqHandler(handleMwareInfo)).Methods("POST", "OPTIONS")
 	r.Handle("/v1/mware/remove",		genReqHandler(handleMwareRemove)).Methods("POST", "OPTIONS")
 	r.Handle("/v1/mware/access/s3",		genReqHandler(handleMwareS3Access)).Methods("POST", "OPTIONS")
 
 	r.Handle("/v1/middleware",		genReqHandler(handleMwares)).Methods("GET", "OPTIONS")
+	r.Handle("/v1/middleware/{mid}",	genReqHandler(handleMware)).Methods("GET", "OPTIONS")
 
 	r.Handle("/v1/deploy/start",		genReqHandler(handleDeployStart)).Methods("POST", "OPTIONS")
 	r.Handle("/v1/deploy/info",		genReqHandler(handleDeployInfo)).Methods("POST", "OPTIONS")

@@ -823,8 +823,8 @@ func list_mware(cd *cmdDesc, args []string, opts [16]string) {
 func info_mware(cd *cmdDesc, args []string, opts [16]string) {
 	var resp swyapi.MwareInfo
 
-	make_faas_req("mware/info",
-		swyapi.MwareID{ Project: cd.project, ID: args[0], }, &resp)
+	make_faas_req1("GET", "middleware/" + args[0], http.StatusOK, nil, &resp)
+	fmt.Printf("Name:         %s\n", resp.Name)
 	fmt.Printf("Type:         %s\n", resp.Type)
 	if resp.DU != nil {
 		fmt.Printf("Disk usage:   %s\n", formatBytes(*resp.DU << 10))

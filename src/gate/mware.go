@@ -154,17 +154,6 @@ stalled:
 	return GateErrE(swy.GateGenErr, err)
 }
 
-func mwareInfo(ctx context.Context, conf *YAMLConfMw, id *SwoId) (*swyapi.MwareInfo, *swyapi.GateErr) {
-	var item MwareDesc
-	var err error
-
-	if item, err = dbMwareGetItem(id); err != nil {
-		return nil, GateErrD(err)
-	}
-
-	return item.toInfo(ctx, conf, true)
-}
-
 func (item *MwareDesc)toInfo(ctx context.Context, conf *YAMLConfMw, details bool) (*swyapi.MwareInfo, *swyapi.GateErr) {
 	handler, ok := mwareHandlers[item.MwareType]
 	if !ok {
@@ -172,6 +161,7 @@ func (item *MwareDesc)toInfo(ctx context.Context, conf *YAMLConfMw, details bool
 	}
 
 	resp := &swyapi.MwareInfo{}
+	resp.Name = item.SwoId.Name
 	resp.Type = item.MwareType
 	resp.UserData = item.UserData
 
