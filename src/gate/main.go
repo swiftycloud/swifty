@@ -218,7 +218,7 @@ func handleProjectDel(ctx context.Context, w http.ResponseWriter, r *http.Reques
 		return GateErrE(swy.GateBadRequest, err)
 	}
 
-	id = makeSwoId(fromContext(ctx).Tenant, par.Project, "")
+	id = ctxSwoId(ctx, par.Project, "")
 
 	fns, err = dbFuncListProj(id)
 	if err != nil {
@@ -430,7 +430,7 @@ func handleFunctionWait(ctx context.Context, w http.ResponseWriter, r *http.Requ
 		return GateErrE(swy.GateBadRequest, err)
 	}
 
-	id := makeSwoId(fromContext(ctx).Tenant, wi.Project, wi.FuncName)
+	id := ctxSwoId(ctx, wi.Project, wi.FuncName)
 	fn, err := dbFuncFind(id)
 	if err != nil {
 		return GateErrD(err)
@@ -462,7 +462,7 @@ func handleFunctionState(ctx context.Context, w http.ResponseWriter, r *http.Req
 		return GateErrE(swy.GateBadRequest, err)
 	}
 
-	id := makeSwoId(fromContext(ctx).Tenant, params.Project, params.FuncName)
+	id := ctxSwoId(ctx, params.Project, params.FuncName)
 	ctxlog(ctx).Debugf("function/state %s -> %s", id.Str(), params.State)
 
 	cerr := setFunctionState(ctx, &conf, id, &params)
@@ -482,7 +482,7 @@ func handleFunctionUpdate(ctx context.Context, w http.ResponseWriter, r *http.Re
 		return GateErrE(swy.GateBadRequest, err)
 	}
 
-	id := makeSwoId(fromContext(ctx).Tenant, params.Project, params.FuncName)
+	id := ctxSwoId(ctx, params.Project, params.FuncName)
 	ctxlog(ctx).Debugf("function/update %s", id.Str())
 
 	cerr := updateFunction(ctx, &conf, id, &params)
@@ -502,7 +502,7 @@ func handleFunctionRemove(ctx context.Context, w http.ResponseWriter, r *http.Re
 		return GateErrE(swy.GateBadRequest, err)
 	}
 
-	id := makeSwoId(fromContext(ctx).Tenant, params.Project, params.FuncName)
+	id := ctxSwoId(ctx, params.Project, params.FuncName)
 	ctxlog(ctx).Debugf("function/remove %s", id.Str())
 
 	cerr := removeFunction(ctx, &conf, id)
@@ -524,7 +524,7 @@ func handleFunctionCode(ctx context.Context, w http.ResponseWriter, r *http.Requ
 		return GateErrE(swy.GateBadRequest, err)
 	}
 
-	id := makeSwoId(fromContext(ctx).Tenant, params.Project, params.FuncName)
+	id := ctxSwoId(ctx, params.Project, params.FuncName)
 	ctxlog(ctx).Debugf("Get FN code %s:%s", id.Str(), params.Version)
 
 	fn, err := dbFuncFind(id)
@@ -668,7 +668,7 @@ func handleFunctionStats(ctx context.Context, w http.ResponseWriter, r *http.Req
 		return GateErrE(swy.GateBadRequest, err)
 	}
 
-	id := makeSwoId(fromContext(ctx).Tenant, params.Project, params.FuncName)
+	id := ctxSwoId(ctx, params.Project, params.FuncName)
 	ctxlog(ctx).Debugf("Get FN stats %s", id.Str())
 
 	fn, err := dbFuncFind(id)
@@ -739,7 +739,7 @@ func handleFunctionInfo(ctx context.Context, w http.ResponseWriter, r *http.Requ
 		return GateErrE(swy.GateBadRequest, err)
 	}
 
-	id := makeSwoId(fromContext(ctx).Tenant, params.Project, params.FuncName)
+	id := ctxSwoId(ctx, params.Project, params.FuncName)
 	ctxlog(ctx).Debugf("Get FN Info %s", id.Str())
 
 	fn, err := dbFuncFind(id)
@@ -770,7 +770,7 @@ func handleFunctionLogs(ctx context.Context, w http.ResponseWriter, r *http.Requ
 		return GateErrE(swy.GateBadRequest, err)
 	}
 
-	id := makeSwoId(fromContext(ctx).Tenant, params.Project, params.FuncName)
+	id := ctxSwoId(ctx, params.Project, params.FuncName)
 	ctxlog(ctx).Debugf("Get logs for %s", fromContext(ctx).Tenant)
 
 	logs, err = logGetFor(id)
@@ -955,7 +955,7 @@ func handleFunctionRun(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		return GateErrE(swy.GateBadRequest, err)
 	}
 
-	id := makeSwoId(fromContext(ctx).Tenant, params.Project, params.FuncName)
+	id := ctxSwoId(ctx, params.Project, params.FuncName)
 	ctxlog(ctx).Debugf("function/run %s", id.Str())
 
 	fn, err := dbFuncFind(id)
@@ -1009,7 +1009,7 @@ func handleFunctionListWithInfos(ctx context.Context, w http.ResponseWriter, r *
 		return GateErrE(swy.GateBadRequest, err)
 	}
 
-	id := makeSwoId(fromContext(ctx).Tenant, params.Project, "")
+	id := ctxSwoId(ctx, params.Project, "")
 	recs, err = dbFuncListProj(id)
 	if err != nil {
 		return GateErrD(err)
@@ -1043,7 +1043,7 @@ func handleFunctionList(ctx context.Context, w http.ResponseWriter, r *http.Requ
 		return GateErrE(swy.GateBadRequest, err)
 	}
 
-	id := makeSwoId(fromContext(ctx).Tenant, params.Project, "")
+	id := ctxSwoId(ctx, params.Project, "")
 	recs, err = dbFuncListProj(id)
 	if err != nil {
 		return GateErrD(err)
@@ -1143,7 +1143,7 @@ func handleMwareList(ctx context.Context, w http.ResponseWriter, r *http.Request
 		return GateErrE(swy.GateBadRequest, err)
 	}
 
-	id := makeSwoId(fromContext(ctx).Tenant, params.Project, "")
+	id := ctxSwoId(ctx, params.Project, "")
 	ctxlog(ctx).Debugf("list mware for %s", fromContext(ctx).Tenant)
 
 	mwares, err = dbMwareListProj(id, params.Type)
@@ -1177,7 +1177,7 @@ func handleMwareListWithInfo(ctx context.Context, w http.ResponseWriter, r *http
 		return GateErrE(swy.GateBadRequest, err)
 	}
 
-	id := makeSwoId(fromContext(ctx).Tenant, params.Project, "")
+	id := ctxSwoId(ctx, params.Project, "")
 	ctxlog(ctx).Debugf("list mware for %s", fromContext(ctx).Tenant)
 
 	mwares, err = dbMwareListProj(id, params.Type)
@@ -1212,7 +1212,7 @@ func handleMwareRemove(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		return GateErrE(swy.GateBadRequest, err)
 	}
 
-	id := makeSwoId(fromContext(ctx).Tenant, params.Project, params.ID)
+	id := ctxSwoId(ctx, params.Project, params.ID)
 	ctxlog(ctx).Debugf("mware/remove: %s params %v (%s)", fromContext(ctx).Tenant, params, id.Cookie())
 
 	cerr := mwareRemove(ctx, &conf.Mware, id)
@@ -1253,7 +1253,7 @@ func handleDeployStop(ctx context.Context, w http.ResponseWriter, r *http.Reques
 		return GateErrE(swy.GateBadRequest, err)
 	}
 
-	id := makeSwoId(fromContext(ctx).Tenant, params.Project, params.Name)
+	id := ctxSwoId(ctx, params.Project, params.Name)
 	cerr := deployStop(ctx, id)
 	if cerr != nil {
 		return cerr
@@ -1271,7 +1271,7 @@ func handleDeployInfo(ctx context.Context, w http.ResponseWriter, r *http.Reques
 		return GateErrE(swy.GateBadRequest, err)
 	}
 
-	id := makeSwoId(fromContext(ctx).Tenant, params.Project, params.Name)
+	id := ctxSwoId(ctx, params.Project, params.Name)
 	inf, cerr := deployInfo(ctx, id)
 	if cerr != nil {
 		return cerr
@@ -1310,7 +1310,7 @@ func handleMwareInfo(ctx context.Context, w http.ResponseWriter, r *http.Request
 		return GateErrE(swy.GateBadRequest, err)
 	}
 
-	id := makeSwoId(fromContext(ctx).Tenant, params.Project, params.ID)
+	id := ctxSwoId(ctx, params.Project, params.ID)
 	ctxlog(ctx).Debugf("mware/info: %s params %v", fromContext(ctx).Tenant, params)
 
 	mwinf, cerr := mwareInfo(ctx, &conf.Mware, id)

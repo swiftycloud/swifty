@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 )
@@ -17,6 +18,10 @@ func makeSwoId(tennant, project, name string) *SwoId {
 	}
 
 	return &SwoId{Tennant: tennant, Project: project, Name: name}
+}
+
+func ctxSwoId(ctx context.Context, project, name string) *SwoId {
+	return makeSwoId(fromContext(ctx).Tenant, project, name)
 }
 
 func (id *SwoId) Str() string {
