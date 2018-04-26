@@ -150,14 +150,13 @@ func (i *MwareInfo)SetDU(bytes uint64) {
 	i.DU = &kb
 }
 
-type MwareS3Access struct {
-	Project		string			`json:"project"`
+type S3Access struct {
 	Bucket		string			`json:"bucket"`
 	Lifetime	uint32			`json:"lifetime"` /* seconds */
 	Access		[]string		`json:"access"`
 }
 
-type MwareS3Creds struct {
+type S3Creds struct {
 	Endpoint	string			`json:"endpoint"`
 	Key		string			`json:"key"`
 	Secret		string			`json:"secret"`

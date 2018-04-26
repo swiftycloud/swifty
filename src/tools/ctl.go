@@ -900,10 +900,15 @@ func s3_access(cd *cmdDesc, args []string, opts [16]string) {
 		fatal(fmt.Errorf("Bad lifetie value: %s", err.Error()))
 	}
 
-	var creds swyapi.MwareS3Creds
+	var creds swyapi.S3Creds
 
-	make_faas_req("mware/access/s3",
-		swyapi.MwareS3Access{ Project: cd.project, Bucket: args[0], Lifetime: uint32(lt)}, &creds)
+	p := ""
+	if cd.project != "" {
+		p = "?project=" + cd.project
+	}
+
+	make_faas_req("s3/access" + p,
+		swyapi.S3Access{ Bucket: args[0], Lifetime: uint32(lt)}, &creds)
 	fmt.Printf("Endpoint %s\n", creds.Endpoint)
 	fmt.Printf("Key:     %s\n", creds.Key)
 	fmt.Printf("Secret:  %s\n", creds.Secret)
