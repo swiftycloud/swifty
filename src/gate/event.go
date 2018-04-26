@@ -153,27 +153,39 @@ func eventsAdd(ctx context.Context, fn *FunctionDesc, evt *swyapi.FunctionEvent)
 			Tab: evt.Cron.Tab,
 			Args: evt.Cron.Args,
 		}
-
-		err = cronEventStart(ctx, ed)
 	case "s3":
 		ed.S3 = &FnEventS3{
 			Bucket: evt.S3.Bucket,
 			Ops: evt.S3.Ops,
 		}
-		err = s3EventStart(ctx, fn, ed)
 	case "url":
-		err = urlEventStart(ctx, ed)
+		/* Nothing (yet) */ ;
 	default:
 		return "", GateErrM(swy.GateBadRequest, "Unsupported event type")
 	}
 
+	err = dbAddEvent(ed)
 	if err != nil {
+		return "", GateErrD(err)
+	}
+
+	switch evt.Source {
+	case "cron":
+		err = cronEventStart(ctx, ed)
+	case "s3":
+		err = s3EventStart(ctx, fn, ed)
+	case "url":
+		err = urlEventStart(ctx, ed)
+	}
+	if err != nil {
+		dbRemoveEvent(ed)
 		return "", GateErrM(swy.GateGenErr, "Can't setup event")
 	}
 
-	err = dbAddEvent(ed)
+	err = dbUpdateEvent(ed)
 	if err != nil {
 		eventStop(ctx, ed)
+		dbRemoveEvent(ed)
 		return "", GateErrD(err)
 	}
 
