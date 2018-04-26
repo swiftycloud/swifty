@@ -345,7 +345,7 @@ func handleFunctionEvents(ctx context.Context, w http.ResponseWriter, r *http.Re
 	fnid := mux.Vars(r)["fid"]
 
 	fn, err := dbFuncFindOne(bson.M{"tennant": fromContext(ctx).Tenant,
-			"cookie": fnid})
+			"_id": bson.ObjectIdHex(fnid)})
 	if err != nil {
 		return GateErrD(err)
 	}
@@ -387,7 +387,7 @@ func handleFunctionEvents(ctx context.Context, w http.ResponseWriter, r *http.Re
 func handleFunctionEvent(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
 	fnid := mux.Vars(r)["fid"]
 	fn, err := dbFuncFindOne(bson.M{"tennant": fromContext(ctx).Tenant,
-			"cookie": fnid})
+			"_id": bson.ObjectIdHex(fnid)})
 	if err != nil {
 		return GateErrD(err)
 	}
@@ -709,7 +709,7 @@ func getFunctionInfo(fn *FunctionDesc, periods int) (*swyapi.FunctionInfo, *swya
 	}
 
 	return &swyapi.FunctionInfo{
-		Id:		fn.Cookie,
+		Id:		fn.ObjID.Hex(),
 		State:          fnStates[fn.State],
 		Mware:          fn.Mware,
 		S3Buckets:	fn.S3Buckets,
