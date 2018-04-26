@@ -163,11 +163,6 @@ type S3Creds struct {
 	Expires		uint32			`json:"expires"` /* in seconds */
 }
 
-type MwareList struct {
-	Project		string			`json:"project"`
-	Type		string			`json:"type"`
-}
-
 type FunctionAdd struct {
 	Project		string			`json:"project"`
 	FuncName	string			`json:"name"`
