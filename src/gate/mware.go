@@ -111,24 +111,28 @@ func mwareGenerateSecret(ctx context.Context, fid *SwoId, typ, id string) ([][2]
 	return handler.GenSec(ctx, &conf.Mware, fid, id)
 }
 
-func mwareRemove(ctx context.Context, conf *YAMLConfMw, id *SwoId) *swyapi.GateErr {
+func mwareRemoveId(ctx context.Context, conf *YAMLConfMw, id *SwoId) *swyapi.GateErr {
 	item, err := dbMwareGetItem(id)
 	if err != nil {
 		return GateErrD(err)
 	}
 
+	return mwareRemove(ctx, conf, &item)
+}
+
+func mwareRemove(ctx context.Context, conf *YAMLConfMw, item *MwareDesc) *swyapi.GateErr {
 	handler, ok := mwareHandlers[item.MwareType]
 	if !ok {
 		return GateErrC(swy.GateGenErr) /* Shouldn't happen */
 	}
 
-	err = dbMwareTerminate(&item)
+	err := dbMwareTerminate(item)
 	if err != nil {
-		ctxlog(ctx).Errorf("Can't terminate mware %s", id.Str())
+		ctxlog(ctx).Errorf("Can't terminate mware %s", item.SwoId.Str())
 		return GateErrM(swy.GateGenErr, "Cannot terminate mware")
 	}
 
-	err = handler.Fini(ctx, conf, &item)
+	err = handler.Fini(ctx, conf, item)
 	if err != nil {
 		ctxlog(ctx).Errorf("Failed cleanup for mware %s: %s", item.SwoId.Str(), err.Error())
 		goto stalled
@@ -140,7 +144,7 @@ func mwareRemove(ctx context.Context, conf *YAMLConfMw, id *SwoId) *swyapi.GateE
 		goto stalled
 	}
 
-	err = dbMwareRemove(&item)
+	err = dbMwareRemove(item)
 	if err != nil {
 		ctxlog(ctx).Errorf("Can't remove mware %s: %s", item.SwoId.Str(), err.Error())
 		goto stalled
@@ -150,7 +154,7 @@ func mwareRemove(ctx context.Context, conf *YAMLConfMw, id *SwoId) *swyapi.GateE
 	return nil
 
 stalled:
-	dbMwareSetStalled(&item)
+	dbMwareSetStalled(item)
 	return GateErrE(swy.GateGenErr, err)
 }
 

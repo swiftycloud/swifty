@@ -240,7 +240,7 @@ func handleProjectDel(ctx context.Context, w http.ResponseWriter, r *http.Reques
 
 	for _, mw := range mws {
 		id.Name = mw.SwoId.Name
-		xerr := mwareRemove(ctx, &conf.Mware, id)
+		xerr := mwareRemoveId(ctx, &conf.Mware, id)
 		if xerr != nil {
 			ctxlog(ctx).Error("Mware removal failed: %s", xerr.Message)
 			ferr = GateErrM(xerr.Code, "Cannot remove " + id.Name + " mware: " + xerr.Message)
@@ -1170,26 +1170,6 @@ func handleMwareTypes(ctx context.Context, w http.ResponseWriter, r *http.Reques
 	return nil
 }
 
-func handleMwareRemove(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
-	var params swyapi.MwareRemove
-
-	err := swyhttp.ReadAndUnmarshalReq(r, &params)
-	if err != nil {
-		return GateErrE(swy.GateBadRequest, err)
-	}
-
-	id := ctxSwoId(ctx, params.Project, params.ID)
-	ctxlog(ctx).Debugf("mware/remove: %s params %v (%s)", fromContext(ctx).Tenant, params, id.Cookie())
-
-	cerr := mwareRemove(ctx, &conf.Mware, id)
-	if cerr != nil {
-		return cerr
-	}
-
-	w.WriteHeader(http.StatusOK)
-	return nil
-}
-
 func handleMwareS3Access(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
 	var params swyapi.MwareS3Access
 
@@ -1287,6 +1267,14 @@ func handleMware(ctx context.Context, w http.ResponseWriter, r *http.Request) *s
 		if err != nil {
 			return GateErrE(swy.GateBadResp, err)
 		}
+
+	case "DELETE":
+		cerr := mwareRemove(ctx, &conf.Mware, &mw)
+		if cerr != nil {
+			return cerr
+		}
+
+		w.WriteHeader(http.StatusOK)
 	}
 
 	return nil
@@ -1476,11 +1464,10 @@ func main() {
 	r.Handle("/v1/functions/{fid}/events",	genReqHandler(handleFunctionEvents)).Methods("GET", "POST", "OPTIONS")
 	r.Handle("/v1/functions/{fid}/events/{eid}", genReqHandler(handleFunctionEvent)).Methods("GET", "DELETE", "OPTIONS")
 	r.Handle("/v1/mware/add",		genReqHandler(handleMwareAdd)).Methods("POST", "OPTIONS")
-	r.Handle("/v1/mware/remove",		genReqHandler(handleMwareRemove)).Methods("POST", "OPTIONS")
 	r.Handle("/v1/mware/access/s3",		genReqHandler(handleMwareS3Access)).Methods("POST", "OPTIONS")
 
 	r.Handle("/v1/middleware",		genReqHandler(handleMwares)).Methods("GET", "OPTIONS")
-	r.Handle("/v1/middleware/{mid}",	genReqHandler(handleMware)).Methods("GET", "OPTIONS")
+	r.Handle("/v1/middleware/{mid}",	genReqHandler(handleMware)).Methods("GET", "DELETE", "OPTIONS")
 
 	r.Handle("/v1/deploy/start",		genReqHandler(handleDeployStart)).Methods("POST", "OPTIONS")
 	r.Handle("/v1/deploy/info",		genReqHandler(handleDeployInfo)).Methods("POST", "OPTIONS")

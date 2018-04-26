@@ -37,7 +37,7 @@ func (i *DeployItemDesc)stop(ctx context.Context) *swyapi.GateErr {
 	}
 
 	if i.Mw != nil {
-		return mwareRemove(ctx, &conf.Mware, &i.Mw.SwoId)
+		return mwareRemoveId(ctx, &conf.Mware, &i.Mw.SwoId)
 	}
 
 	return GateErrM(swy.GateGenErr, "Bad deploy item")

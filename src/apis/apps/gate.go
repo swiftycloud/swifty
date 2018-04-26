@@ -131,11 +131,6 @@ type MwareAdd struct {
 	UserData	string			`json:"userdata,omitempty"`
 }
 
-type MwareRemove struct {
-	Project		string			`json:"project"`
-	ID		string			`json:"id"`
-}
-
 type MwareInfo struct {
 	ID		string			`json:"id,omitempty"`
 	Name		string			`json:"name,omitempty"`

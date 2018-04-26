@@ -852,8 +852,7 @@ func add_mware(cd *cmdDesc, args []string, opts [16]string) {
 }
 
 func del_mware(cd *cmdDesc, args []string, opts [16]string) {
-	make_faas_req("mware/remove",
-		swyapi.MwareRemove{ Project: cd.project, ID: args[0], }, nil)
+	make_faas_req1("DELETE", "middleware/" + args[0], http.StatusOK, nil, nil)
 }
 
 func deploy_stop(cd *cmdDesc, args []string, opts [16]string) {
