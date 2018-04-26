@@ -19,6 +19,7 @@ import (
 	"os"
 	"io/ioutil"
 	"encoding/base64"
+	"gopkg.in/mgo.v2/bson"
 
 	"../apis/apps"
 	"../common"
@@ -343,9 +344,15 @@ func handleFunctionAdd(ctx context.Context, w http.ResponseWriter, r *http.Reque
 func handleFunctionEvents(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
 	fnid := mux.Vars(r)["fid"]
 
+	fn, err := dbFuncFindOne(bson.M{"tennant": fromContext(ctx).Tenant,
+			"cookie": fnid})
+	if err != nil {
+		return GateErrD(err)
+	}
+
 	switch r.Method {
 	case "GET":
-		evs, erc := eventsList(fnid)
+		evs, erc := eventsList(fn)
 		if erc != nil {
 			return erc
 		}
@@ -363,7 +370,7 @@ func handleFunctionEvents(ctx context.Context, w http.ResponseWriter, r *http.Re
 			return GateErrE(swy.GateBadRequest, err)
 		}
 
-		eid, erc := eventsAdd(ctx, fnid, &evt)
+		eid, erc := eventsAdd(ctx, fn, &evt)
 		if erc != nil {
 			return erc
 		}
@@ -379,22 +386,30 @@ func handleFunctionEvents(ctx context.Context, w http.ResponseWriter, r *http.Re
 
 func handleFunctionEvent(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
 	fnid := mux.Vars(r)["fid"]
+	fn, err := dbFuncFindOne(bson.M{"tennant": fromContext(ctx).Tenant,
+			"cookie": fnid})
+	if err != nil {
+		return GateErrD(err)
+	}
+
 	eid := mux.Vars(r)["eid"]
+	ed, err := dbFindEvent(eid)
+	if err != nil {
+		return GateErrD(err)
+	}
+	if ed.FnId != fn.Cookie {
+		return GateErrC(swy.GateNotFound)
+	}
 
 	switch r.Method {
 	case "GET":
-		ed, erc := eventsGet(fnid, eid)
-		if erc != nil {
-			return erc
-		}
-
-		err := swyhttp.MarshalAndWrite(w, ed)
+		err := swyhttp.MarshalAndWrite(w, ed.toAPI(false))
 		if err != nil {
 			return GateErrE(swy.GateBadResp, err)
 		}
 
 	case "DELETE":
-		erc := eventsDelete(ctx, fnid, eid)
+		erc := eventsDelete(ctx, fn, ed)
 		if erc != nil {
 			return erc
 		}

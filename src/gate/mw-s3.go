@@ -162,15 +162,10 @@ func handleS3Event(ctx context.Context, user string, data []byte) {
 	}
 }
 
-func s3EventStart(ctx context.Context, evt *FnEventDesc) error {
-	fn, err := dbFuncFindByCookie(evt.FnId)
-	if err != nil || fn == nil {
-		return err
-	}
-
+func s3EventStart(ctx context.Context, fn *FunctionDesc, evt *FnEventDesc) error {
 	evt.S3.Ns = fn.SwoId.Namespace()
 	conf := &conf.Mware
-	err = mqStartListener(conf.S3.cn.User, conf.S3.cn.Pass,
+	err := mqStartListener(conf.S3.cn.User, conf.S3.cn.Pass,
 		conf.S3.cn.Addr() + "/" + conf.S3.cn.Domn,
 		gates3queue, handleS3Event)
 	if err == nil {

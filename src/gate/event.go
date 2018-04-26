@@ -124,9 +124,9 @@ func (e *FnEventDesc)toAPI(withid bool) *swyapi.FunctionEvent {
 	return &ae
 }
 
-func eventsList(fnid string) ([]swyapi.FunctionEvent, *swyapi.GateErr) {
+func eventsList(fn *FunctionDesc) ([]swyapi.FunctionEvent, *swyapi.GateErr) {
 	var ret []swyapi.FunctionEvent
-	evs, err := dbListFnEvents(fnid)
+	evs, err := dbListFnEvents(fn.Cookie)
 	if err != nil {
 		return ret, GateErrD(err)
 	}
@@ -137,11 +137,11 @@ func eventsList(fnid string) ([]swyapi.FunctionEvent, *swyapi.GateErr) {
 	return ret, nil
 }
 
-func eventsAdd(ctx context.Context, fnid string, evt *swyapi.FunctionEvent) (string, *swyapi.GateErr) {
+func eventsAdd(ctx context.Context, fn *FunctionDesc, evt *swyapi.FunctionEvent) (string, *swyapi.GateErr) {
 	ed := &FnEventDesc{
 		ObjID: bson.NewObjectId(),
 		Name: evt.Name,
-		FnId: fnid,
+		FnId: fn.Cookie,
 		Source: evt.Source,
 	}
 
@@ -160,7 +160,7 @@ func eventsAdd(ctx context.Context, fnid string, evt *swyapi.FunctionEvent) (str
 			Bucket: evt.S3.Bucket,
 			Ops: evt.S3.Ops,
 		}
-		err = s3EventStart(ctx, ed)
+		err = s3EventStart(ctx, fn, ed)
 	case "url":
 		err = urlEventStart(ctx, ed)
 	default:
@@ -180,19 +180,6 @@ func eventsAdd(ctx context.Context, fnid string, evt *swyapi.FunctionEvent) (str
 	return ed.ObjID.Hex(), nil
 }
 
-func eventsGet(fnid, eid string) (*swyapi.FunctionEvent, *swyapi.GateErr) {
-	ed, err := dbFindEvent(eid)
-	if err != nil {
-		return nil, GateErrD(err)
-	}
-
-	if ed.FnId != fnid {
-		return nil, GateErrC(swy.GateNotFound)
-	}
-
-	return ed.toAPI(false), nil
-}
-
 func eventStop(ctx context.Context, ed *FnEventDesc) error {
 	var err error
 
@@ -208,17 +195,8 @@ func eventStop(ctx context.Context, ed *FnEventDesc) error {
 	return err
 }
 
-func eventsDelete(ctx context.Context, fnid, eid string) *swyapi.GateErr {
-	ed, err := dbFindEvent(eid)
-	if err != nil {
-		return GateErrD(err)
-	}
-
-	if ed.FnId != fnid {
-		return GateErrC(swy.GateNotFound)
-	}
-
-	err = eventStop(ctx, ed)
+func eventsDelete(ctx context.Context, fn *FunctionDesc, ed *FnEventDesc) *swyapi.GateErr {
+	err := eventStop(ctx, ed)
 	if err != nil {
 		return GateErrM(swy.GateGenErr, "Can't stop event")
 	}
