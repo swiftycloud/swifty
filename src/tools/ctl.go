@@ -676,6 +676,55 @@ func off_fn(cd *cmdDesc, args []string, opts [16]string) {
 		swyapi.FunctionState{ Project: cd.project, FuncName: args[0], State: "deactivated" }, nil)
 }
 
+func list_events(cd *cmdDesc, args []string, opts [16]string) {
+	var eds []swyapi.FunctionEvent
+	make_faas_req1("GET", "function/" + args[0] + "/events", http.StatusOK,  nil, &eds)
+	for _, e := range eds {
+		fmt.Printf("%16s%20s%8s\n", e.Id, e.Name, e.Source)
+	}
+}
+
+func add_event(cd *cmdDesc, args []string, opts [16]string) {
+	e := swyapi.FunctionEvent {
+		Name: args[1],
+		Source: args[2],
+	}
+	if e.Source == "cron" {
+		e.Cron = &swyapi.FunctionEventCron {
+			Tab: opts[0],
+			Args: split_args_string(opts[1]),
+		}
+	}
+	if e.Source == "s3" {
+		e.S3 = &swyapi.FunctionEventS3 {
+			Bucket: opts[0],
+			Ops: opts[1],
+		}
+	}
+	var res string
+	make_faas_req1("PUT", "function/" + args[0] + "/events", http.StatusOK, &e, &res)
+	fmt.Printf("Event %s created\n", res)
+}
+
+func info_event(cd *cmdDesc, args []string, opts [16]string) {
+	var e swyapi.FunctionEvent
+	make_faas_req1("GET", "function/" + args[0] + "/events/" + args[1], http.StatusOK,  nil, &e)
+	fmt.Printf("Name:          %s\n", e.Name)
+	fmt.Printf("Source:        %s\n", e.Source)
+	if e.Cron != nil {
+		fmt.Printf("Tab:        %s\n", e.Cron.Tab)
+		fmt.Printf("Args:       %s\n", make_args_string(e.Cron.Args))
+	}
+	if e.S3 != nil {
+		fmt.Printf("Bucket:     %s\n", e.S3.Bucket)
+		fmt.Printf("Ops:        %s\n", e.S3.Ops)
+	}
+}
+
+func del_event(cd *cmdDesc, args []string, opts [16]string) {
+	make_faas_req1("DELETE", "function/" + args[0] + "/events/" + args[1], http.StatusOK, nil, nil)
+}
+
 func wait_fn(cd *cmdDesc, args []string, opts [16]string) {
 	req := swyapi.FunctionWait{
 		Project: cd.project,
@@ -942,6 +991,10 @@ const (
 	CMD_ON string		= "on"
 	CMD_OFF string		= "off"
 	CMD_WAIT string		= "wait"
+	CMD_EL string		= "el"
+	CMD_EA string		= "ea"
+	CMD_EI string		= "ei"
+	CMD_ED string		= "ed"
 	CMD_MLS string		= "mls"
 	CMD_MINF string		= "minf"
 	CMD_MADD string		= "madd"
@@ -977,6 +1030,10 @@ var cmdOrder = []string {
 	CMD_ON,
 	CMD_OFF,
 	CMD_WAIT,
+	CMD_EL,
+	CMD_EA,
+	CMD_EI,
+	CMD_ED,
 	CMD_MLS,
 	CMD_MINF,
 	CMD_MADD,
@@ -1020,6 +1077,10 @@ var cmdMap = map[string]*cmdDesc {
 	CMD_ON:		&cmdDesc{ call: on_fn,		  opts: flag.NewFlagSet(CMD_ON, flag.ExitOnError) },
 	CMD_OFF:	&cmdDesc{ call: off_fn,	  opts: flag.NewFlagSet(CMD_OFF, flag.ExitOnError) },
 	CMD_WAIT:	&cmdDesc{ call: wait_fn,	  opts: flag.NewFlagSet(CMD_WAIT, flag.ExitOnError) },
+	CMD_EL:		&cmdDesc{ call: list_events,	  opts: flag.NewFlagSet(CMD_EL, flag.ExitOnError) },
+	CMD_EA:		&cmdDesc{ call: add_event,	  opts: flag.NewFlagSet(CMD_EA, flag.ExitOnError) },
+	CMD_EI:		&cmdDesc{ call: info_event,	  opts: flag.NewFlagSet(CMD_EI, flag.ExitOnError) },
+	CMD_ED:		&cmdDesc{ call: del_event,	  opts: flag.NewFlagSet(CMD_ED, flag.ExitOnError) },
 	CMD_MLS:	&cmdDesc{ call: list_mware,	  opts: flag.NewFlagSet(CMD_MLS, flag.ExitOnError) },
 	CMD_MINF:	&cmdDesc{ call: info_mware,	  opts: flag.NewFlagSet(CMD_INF, flag.ExitOnError) },
 	CMD_MADD:	&cmdDesc{ call: add_mware,	  opts: flag.NewFlagSet(CMD_MADD, flag.ExitOnError) },
@@ -1102,6 +1163,15 @@ func main() {
 	cmdMap[CMD_WAIT].opts.StringVar(&opts[0], "version", "", "Version")
 	cmdMap[CMD_WAIT].opts.StringVar(&opts[1], "tmo", "", "Timeout")
 	bindCmdUsage(CMD_WAIT,	[]string{"NAME"}, "Wait function event", true)
+
+	bindCmdUsage(CMD_EL,	[]string{"FNID"}, "List events for a function", true)
+	cmdMap[CMD_EA].opts.StringVar(&opts[0], "tab", "", "Cron tab")
+	cmdMap[CMD_EA].opts.StringVar(&opts[1], "args", "", "Cron args")
+	cmdMap[CMD_EA].opts.StringVar(&opts[0], "buck", "", "S3 bucket")
+	cmdMap[CMD_EA].opts.StringVar(&opts[1], "ops", "", "S3 ops")
+	bindCmdUsage(CMD_EA,	[]string{"FNID", "NAME", "SRC"}, "Add event", true)
+	bindCmdUsage(CMD_EI,	[]string{"FNID", "EID"}, "Show event info", true)
+	bindCmdUsage(CMD_ED,	[]string{"FNID", "EID"}, "Remove event", true)
 
 	cmdMap[CMD_MLS].opts.StringVar(&opts[0], "o", "", "Output format (NONE, json)")
 	cmdMap[CMD_MLS].opts.StringVar(&opts[1], "type", "", "Filter mware by type")
