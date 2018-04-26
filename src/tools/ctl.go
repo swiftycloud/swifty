@@ -309,6 +309,12 @@ func list_projects(cd *cmdDesc, args []string, opts [16]string) {
 	}
 }
 
+func resolve_fn(project, fname string) string {
+	var ifo swyapi.FunctionInfo
+	make_faas_req("function/info", swyapi.FunctionInfoReq{ Project: project, FuncName: fname, Periods: 0}, &ifo)
+	return ifo.Id
+}
+
 func list_functions(cd *cmdDesc, args []string, opts [16]string) {
 	if opts[0] == "" {
 		var fns []swyapi.FunctionItem
@@ -677,6 +683,7 @@ func off_fn(cd *cmdDesc, args []string, opts [16]string) {
 }
 
 func list_events(cd *cmdDesc, args []string, opts [16]string) {
+	args[0] = resolve_fn(cd.project, args[0])
 	var eds []swyapi.FunctionEvent
 	make_faas_req1("GET", "function/" + args[0] + "/events", http.StatusOK,  nil, &eds)
 	for _, e := range eds {
@@ -685,6 +692,7 @@ func list_events(cd *cmdDesc, args []string, opts [16]string) {
 }
 
 func add_event(cd *cmdDesc, args []string, opts [16]string) {
+	args[0] = resolve_fn(cd.project, args[0])
 	e := swyapi.FunctionEvent {
 		Name: args[1],
 		Source: args[2],
@@ -707,6 +715,7 @@ func add_event(cd *cmdDesc, args []string, opts [16]string) {
 }
 
 func info_event(cd *cmdDesc, args []string, opts [16]string) {
+	args[0] = resolve_fn(cd.project, args[0])
 	var e swyapi.FunctionEvent
 	make_faas_req1("GET", "function/" + args[0] + "/events/" + args[1], http.StatusOK,  nil, &e)
 	fmt.Printf("Name:          %s\n", e.Name)
@@ -722,6 +731,7 @@ func info_event(cd *cmdDesc, args []string, opts [16]string) {
 }
 
 func del_event(cd *cmdDesc, args []string, opts [16]string) {
+	args[0] = resolve_fn(cd.project, args[0])
 	make_faas_req1("DELETE", "function/" + args[0] + "/events/" + args[1], http.StatusOK, nil, nil)
 }
 
@@ -1164,14 +1174,14 @@ func main() {
 	cmdMap[CMD_WAIT].opts.StringVar(&opts[1], "tmo", "", "Timeout")
 	bindCmdUsage(CMD_WAIT,	[]string{"NAME"}, "Wait function event", true)
 
-	bindCmdUsage(CMD_EL,	[]string{"FNID"}, "List events for a function", true)
+	bindCmdUsage(CMD_EL,	[]string{"NAME"}, "List events for a function", true)
 	cmdMap[CMD_EA].opts.StringVar(&opts[0], "tab", "", "Cron tab")
 	cmdMap[CMD_EA].opts.StringVar(&opts[1], "args", "", "Cron args")
 	cmdMap[CMD_EA].opts.StringVar(&opts[0], "buck", "", "S3 bucket")
 	cmdMap[CMD_EA].opts.StringVar(&opts[1], "ops", "", "S3 ops")
-	bindCmdUsage(CMD_EA,	[]string{"FNID", "NAME", "SRC"}, "Add event", true)
-	bindCmdUsage(CMD_EI,	[]string{"FNID", "EID"}, "Show event info", true)
-	bindCmdUsage(CMD_ED,	[]string{"FNID", "EID"}, "Remove event", true)
+	bindCmdUsage(CMD_EA,	[]string{"NAME", "NAME", "SRC"}, "Add event", true)
+	bindCmdUsage(CMD_EI,	[]string{"NAME", "EID"}, "Show event info", true)
+	bindCmdUsage(CMD_ED,	[]string{"NAME", "EID"}, "Remove event", true)
 
 	cmdMap[CMD_MLS].opts.StringVar(&opts[0], "o", "", "Output format (NONE, json)")
 	cmdMap[CMD_MLS].opts.StringVar(&opts[1], "type", "", "Filter mware by type")
