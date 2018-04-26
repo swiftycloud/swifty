@@ -1072,6 +1072,44 @@ func handleFunctionList(ctx context.Context, w http.ResponseWriter, r *http.Requ
 	return nil
 }
 
+func handleMwares(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
+	switch r.Method {
+	case "GET":
+		q := r.URL.Query()
+		project := q.Get("project")
+		if project == "" {
+			project = SwyDefaultProject
+		}
+		details := (q.Get("details") != "")
+		mwtype := q.Get("type")
+
+		mws, err := dbMwareListProj(ctxSwoId(ctx, project, ""), mwtype)
+		if err != nil {
+			return GateErrD(err)
+		}
+
+		var ret []*swyapi.MwareInfo
+		for _, mw := range mws {
+			mi, cerr := mw.toInfo(ctx, &conf.Mware, details)
+			if cerr != nil {
+				return cerr
+			}
+
+			mi.ID = mw.ObjID.Hex()
+			mi.Name = mw.SwoId.Name
+			ret = append(ret, mi)
+		}
+
+		err = swyhttp.MarshalAndWrite(w, &ret)
+		if err != nil {
+			return GateErrE(swy.GateBadResp, err)
+		}
+
+	}
+
+	return nil
+}
+
 func handleMwareAdd(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
 	var params swyapi.MwareAdd
 
@@ -1126,77 +1164,6 @@ func handleMwareTypes(ctx context.Context, w http.ResponseWriter, r *http.Reques
 	}
 
 	err := swyhttp.MarshalAndWrite(w, ret)
-	if err != nil {
-		return GateErrE(swy.GateBadResp, err)
-	}
-
-	return nil
-}
-
-func handleMwareList(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
-	var result []swyapi.MwareItem
-	var params swyapi.MwareList
-	var mwares []MwareDesc
-
-	err := swyhttp.ReadAndUnmarshalReq(r, &params)
-	if err != nil {
-		return GateErrE(swy.GateBadRequest, err)
-	}
-
-	id := ctxSwoId(ctx, params.Project, "")
-	ctxlog(ctx).Debugf("list mware for %s", fromContext(ctx).Tenant)
-
-	mwares, err = dbMwareListProj(id, params.Type)
-	if err != nil {
-		return GateErrD(err)
-	}
-
-	for _, mware := range mwares {
-		result = append(result,
-			swyapi.MwareItem{
-				ID:	   mware.Name,
-				Type:	   mware.MwareType,
-			})
-	}
-
-	err = swyhttp.MarshalAndWrite(w, &result)
-	if err != nil {
-		return GateErrE(swy.GateBadResp, err)
-	}
-
-	return nil
-}
-
-func handleMwareListWithInfo(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
-	var result []*swyapi.MwareInfo
-	var params swyapi.MwareList
-	var mwares []MwareDesc
-
-	err := swyhttp.ReadAndUnmarshalReq(r, &params)
-	if err != nil {
-		return GateErrE(swy.GateBadRequest, err)
-	}
-
-	id := ctxSwoId(ctx, params.Project, "")
-	ctxlog(ctx).Debugf("list mware for %s", fromContext(ctx).Tenant)
-
-	mwares, err = dbMwareListProj(id, params.Type)
-	if err != nil {
-		return GateErrD(err)
-	}
-
-	for _, mw := range mwares {
-		id.Name = mw.SwoId.Name
-		ifo, cerr := mwareInfo(ctx, &conf.Mware, id)
-		if cerr != nil {
-			return cerr
-		}
-
-		ifo.ID = id.Name
-		result = append(result, ifo)
-	}
-
-	err = swyhttp.MarshalAndWrite(w, &result)
 	if err != nil {
 		return GateErrE(swy.GateBadResp, err)
 	}
@@ -1510,10 +1477,10 @@ func main() {
 	r.Handle("/v1/functions/{fid}/events/{eid}", genReqHandler(handleFunctionEvent)).Methods("GET", "DELETE", "OPTIONS")
 	r.Handle("/v1/mware/add",		genReqHandler(handleMwareAdd)).Methods("POST", "OPTIONS")
 	r.Handle("/v1/mware/info",		genReqHandler(handleMwareInfo)).Methods("POST", "OPTIONS")
-	r.Handle("/v1/mware/list",		genReqHandler(handleMwareList)).Methods("POST", "OPTIONS")
-	r.Handle("/v1/mware/list/info",		genReqHandler(handleMwareListWithInfo)).Methods("POST", "OPTIONS")
 	r.Handle("/v1/mware/remove",		genReqHandler(handleMwareRemove)).Methods("POST", "OPTIONS")
 	r.Handle("/v1/mware/access/s3",		genReqHandler(handleMwareS3Access)).Methods("POST", "OPTIONS")
+
+	r.Handle("/v1/middleware",		genReqHandler(handleMwares)).Methods("GET", "OPTIONS")
 
 	r.Handle("/v1/deploy/start",		genReqHandler(handleDeployStart)).Methods("POST", "OPTIONS")
 	r.Handle("/v1/deploy/info",		genReqHandler(handleDeployInfo)).Methods("POST", "OPTIONS")

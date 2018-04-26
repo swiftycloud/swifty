@@ -162,6 +162,10 @@ func mwareInfo(ctx context.Context, conf *YAMLConfMw, id *SwoId) (*swyapi.MwareI
 		return nil, GateErrD(err)
 	}
 
+	return item.toInfo(ctx, conf, true)
+}
+
+func (item *MwareDesc)toInfo(ctx context.Context, conf *YAMLConfMw, details bool) (*swyapi.MwareInfo, *swyapi.GateErr) {
 	handler, ok := mwareHandlers[item.MwareType]
 	if !ok {
 		return nil, GateErrC(swy.GateGenErr) /* Shouldn't happen */
@@ -172,7 +176,7 @@ func mwareInfo(ctx context.Context, conf *YAMLConfMw, id *SwoId) (*swyapi.MwareI
 	resp.UserData = item.UserData
 
 	if handler.Info != nil {
-		err := handler.Info(ctx, conf, &item, resp)
+		err := handler.Info(ctx, conf, item, resp)
 		if err != nil {
 			return nil, GateErrE(swy.GateGenErr, err)
 		}

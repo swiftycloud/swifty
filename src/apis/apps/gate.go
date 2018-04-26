@@ -143,6 +143,7 @@ type MwareID struct {
 
 type MwareInfo struct {
 	ID		string			`json:"id,omitempty"`
+	Name		string			`json:"name,omitempty"`
 	Type		string			`json:"type"`
 	UserData	string			`json:"userdata,omitempty"`
 	DU		*uint64			`json:"disk_usage,omitempty"` /* in ... KB */
@@ -165,11 +166,6 @@ type MwareS3Creds struct {
 	Key		string			`json:"key"`
 	Secret		string			`json:"secret"`
 	Expires		uint32			`json:"expires"` /* in seconds */
-}
-
-type MwareItem struct {
-	ID		string			`json:"id"`
-	Type		string			`json:"type"`
 }
 
 type MwareList struct {

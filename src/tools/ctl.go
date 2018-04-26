@@ -785,30 +785,38 @@ func show_logs(cd *cmdDesc, args []string, opts [16]string) {
 	}
 }
 
+func url(url string, args []string) string {
+	if len(args) != 0 {
+		url += "?" + strings.Join(args, "&")
+	}
+	return url
+}
+
 func list_mware(cd *cmdDesc, args []string, opts [16]string) {
-	req := swyapi.MwareList{ Project: cd.project }
+	var mws []swyapi.MwareInfo
+	ua := []string{}
+	if cd.project != "" {
+		ua = append(ua, "project=" + cd.project)
+	}
 	if opts[1] != "" {
-		req.Type = opts[1]
+		ua = append(ua, "type=" + opts[1])
 	}
 
 	if opts[0] == "" {
-		var mws []swyapi.MwareItem
-		make_faas_req("mware/list", &req, &mws)
-
-		fmt.Printf("%-20s%-10s\n", "NAME", "TYPE")
+		make_faas_req1("GET", url("middleware", ua), http.StatusOK, nil, &mws)
+		fmt.Printf("%-32s%-20s%-10s\n", "ID", "NAME", "TYPE")
 		for _, mw := range mws {
-			fmt.Printf("%-20s%-10s%s\n", mw.ID, mw.Type, "")
+			fmt.Printf("%-32s%-20s%-10s\n", mw.ID, mw.Name, mw.Type)
 		}
 	} else if opts[0] == "json" {
-		resp := make_faas_req2("POST", "mware/list/info", &req, http.StatusOK, 30)
+		ua = append(ua, "details=1")
+		resp := make_faas_req2("GET", url("middleware", ua), nil, http.StatusOK, 30)
 		defer resp.Body.Close()
 		body, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
 			fatal(fmt.Errorf("\tCan't parse responce: %s", err.Error()))
 		}
 		fmt.Printf("%s\n", string(body))
-	} else {
-		fatal(fmt.Errorf("Bad -o value %s", opts[0]))
 	}
 }
 
