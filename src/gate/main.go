@@ -1105,7 +1105,7 @@ func handleMwares(ctx context.Context, w http.ResponseWriter, r *http.Request) *
 			return GateErrE(swy.GateBadResp, err)
 		}
 
-	case "PUT":
+	case "POST":
 		var params swyapi.MwareAdd
 
 		err := swyhttp.ReadAndUnmarshalReq(r, &params)
@@ -1468,7 +1468,7 @@ func main() {
 	r.Handle("/v1/functions/{fid}/events",	genReqHandler(handleFunctionEvents)).Methods("GET", "POST", "OPTIONS")
 	r.Handle("/v1/functions/{fid}/events/{eid}", genReqHandler(handleFunctionEvent)).Methods("GET", "DELETE", "OPTIONS")
 
-	r.Handle("/v1/middleware",		genReqHandler(handleMwares)).Methods("GET", "PUT", "OPTIONS")
+	r.Handle("/v1/middleware",		genReqHandler(handleMwares)).Methods("GET", "POST", "OPTIONS")
 	r.Handle("/v1/middleware/{mid}",	genReqHandler(handleMware)).Methods("GET", "DELETE", "OPTIONS")
 
 	r.Handle("/v1/s3/access",		genReqHandler(handleS3Access)).Methods("GET", "OPTIONS")
