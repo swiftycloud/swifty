@@ -545,29 +545,39 @@ paths:
           description: Need to authenticate
         '403':
           description: Bad authentication token
-  /mware/list:
-    post:
+  /middleware:
+    parameters:
+      - in: header
+        name: X-Auth-Token
+        type: string
+        required: true
+      - name: project
+        in: query
+        description: Project to work on
+        required: false
+        type: string
+    get:
+      tags:
+        - mware
       summary: List middleware
       parameters:
-        - in: header
-          name: X-Auth-Token
+        - in: query
+          name: type
           type: string
-          required: true
-        - name: data
-          in: body
-          description: List parameters
-          required: true
-          schema:
-            $ref: '#/definitions/MwareList'
+          required: false
+          description: Middleware type to list
+        - in: query
+          name: details
+          type: string
+          required: false
+          description: Whether or not to show mware details (value itself is ignored)
       responses:
         '200':
           description: OK
           schema:
-            properties:
-              mware:
-                type: array
-                items:
-                  $ref: '#/definitions/MwareItem'
+            type: array
+            items:
+              $ref: '#/definitions/MwareInfo'
         '400':
           description: Bad request
           schema:
@@ -576,54 +586,24 @@ paths:
           description: Need to authenticate
         '403':
           description: Bad authentication token
-  /mware/list/info:
     post:
-      summary: List mwares and provide info for each
+      tags:
+        - mware
+      summary: Create middleware
       parameters:
-        - in: header
-          name: X-Auth-Token
-          type: string
-          required: true
-        - in: body
-          name: data
-          description: List parameters
-          required: true
-          schema:
-            $ref: '#/definitions/MwareList'
-      responses:
-        '200':
-          description: OK
-          schema:
-            properties:
-              functions:
-                type: array
-                items:
-                  $ref: '#/definitions/MwareInfo'
-        '400':
-          description: Bad request
-          schema:
-            $ref: '#/definitions/GateError'
-        '401':
-          description: Need to authenticate
-        '403':
-          description: Bad authentication token
-  /mware/add:
-    post:
-      summary: Add middleware
-      parameters:
-        - in: header
-          name: X-Auth-Token
-          type: string
-          required: true
         - name: data
           in: body
-          description: Middleware specification
+          description: Middleware description
           required: true
           schema:
             $ref: '#/definitions/MwareAdd'
       responses:
         '200':
-          description: Middleware added
+          description: OK
+          schema:
+            type: string
+            description: Mware ID
+            example: 'deadbeef'
         '400':
           description: Bad request
           schema:
@@ -632,20 +612,21 @@ paths:
           description: Need to authenticate
         '403':
           description: Bad authentication token
-  /mware/info:
-    post:
-      summary: Show information about middleware
-      parameters:
-        - in: header
-          name: X-Auth-Token
-          type: string
-          required: true
-        - name: data
-          in: body
-          description: Middleware to inspect
-          required: true
-          schema:
-            $ref: '#/definitions/MwareID'
+  /middleware/{mid}:
+    parameters:
+      - in: path
+        name: mid
+        description: Middleware ID
+        required: true
+        type: string
+      - in: header
+        name: X-Auth-Token
+        type: string
+        required: true
+    get:
+      tags:
+        - mware
+      summary: Show mware info
       responses:
         '200':
           description: OK
@@ -659,25 +640,13 @@ paths:
           description: Need to authenticate
         '403':
           description: Bad authentication token
-  /mware/access/s3:
-    post:
-      summary: Request keys for S3 access
-      parameters:
-        - in: header
-          name: X-Auth-Token
-          type: string
-          required: true
-        - name: data
-          in: body
-          description: Middleware to remove
-          required: true
-          schema:
-            $ref: '#/definitions/MwareS3Access'
+    delete:
+      tags:
+        - mware
+      summary: Create middleware
       responses:
         '200':
-          description: Middleware removed
-          schema:
-            $ref: '#/definitions/MwareS3Creds'
+          description: OK
         '400':
           description: Bad request
           schema:
@@ -686,23 +655,33 @@ paths:
           description: Need to authenticate
         '403':
           description: Bad authentication token
-  /mware/remove:
-    post:
-      summary: Remove middleware
+  /s3/access:
+    get:
+      tags:
+        - mware
+        - s3
+      summary: Request keys for S3 access
       parameters:
         - in: header
           name: X-Auth-Token
           type: string
           required: true
+        - name: project
+          in: query
+          description: Project to work on
+          required: false
+          type: string
         - name: data
           in: body
           description: Middleware to remove
           required: true
           schema:
-            $ref: '#/definitions/MwareRemove'
+            $ref: '#/definitions/S3Access'
       responses:
         '200':
           description: Middleware removed
+          schema:
+            $ref: '#/definitions/S3Creds'
         '400':
           description: Bad request
           schema:
@@ -1351,34 +1330,16 @@ definitions:
       stderr:
         type: string
         description: String with stderr captured while running
-  MwareItem:
-    type: object
-    description: Middleware item description
-    required:
-      - id
-      - type
-    properties:
-      id:
-        type: string
-        description: Middleware id
-        example: mymariadb
-      type:
-        type: string
-        description: Type of middleware
-        example: maria
   MwareAdd:
     type: object
     description: Middleware specification
     required:
-      - id
+      - name
       - type
     properties:
-      project:
+      name:
         type: string
-        example: my-project
-      id:
-        type: string
-        description: Just an identifier
+        description: Just an name
         example: mymariadb
       type:
         type: string
@@ -1387,26 +1348,16 @@ definitions:
       userdata:
         type: string
         description: And string user wishes to keep with this mware
-  MwareID:
-    type: object
-    description: Middleware ID
-    required:
-      - id
-    properties:
-      project:
-        type: string
-        example: my-project
-      id:
-        type: string
-        description: Just an identifier
-        example: mymariadb
   MwareInfo:
     type: object
     description: Middleware inforamtion
     properties:
       id:
         type: string
-        description: Mware ID (reported for /list/info operation)
+        description: Mware ID (reported for list/info operation)
+      name:
+        type: string
+        description: Mware name
       type:
         type: string
         description: Middleware type
@@ -1417,12 +1368,10 @@ definitions:
       disk_usage:
         type: integer
         description: Disk usage in KBytes
-  MwareS3Access:
+  S3Access:
     type: object
     description: Description of the access requested
     properties:
-      project:
-        type: string
       bucket:
         type: string
         description: if empty, access to "the whole s3" within the project is requested
@@ -1435,7 +1384,7 @@ definitions:
         items:
           type: string
           example: hidden
-  MwareS3Creds:
+  S3Creds:
     type: object
     description: Keys to access S3
     properties:
@@ -1449,28 +1398,6 @@ definitions:
       expires:
         type: integer
         description: Lifetime in seconds
-  MwareRemove:
-    type: object
-    description: Middleware specification
-    required:
-      - id
-    properties:
-      project:
-        type: string
-        example: my-project
-      id:
-        type: string
-        description: Just an identifier
-        example: mymariadb
-  MwareList:
-    properties:
-      project:
-        type: string
-        example: my-project
-      type:
-        type: string
-	example: mongo
-	description: Filter mwares by their type
   DeployId:
     type: object
     description: ID of an item
