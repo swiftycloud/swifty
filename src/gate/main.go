@@ -362,7 +362,7 @@ func handleFunctionEvents(ctx context.Context, w http.ResponseWriter, r *http.Re
 			return GateErrE(swy.GateBadResp, err)
 		}
 
-	case "PUT":
+	case "POST":
 		var evt swyapi.FunctionEvent
 
 		err := swyhttp.ReadAndUnmarshalReq(r, &evt)
@@ -1506,8 +1506,8 @@ func main() {
 	r.Handle("/v1/function/logs",		genReqHandler(handleFunctionLogs)).Methods("POST", "OPTIONS")
 	r.Handle("/v1/function/state",		genReqHandler(handleFunctionState)).Methods("POST", "OPTIONS")
 	r.Handle("/v1/function/wait",		genReqHandler(handleFunctionWait)).Methods("POST", "OPTIONS")
-	r.Handle("/v1/function/{fid}/events",	genReqHandler(handleFunctionEvents)).Methods("GET", "PUT", "OPTIONS")
-	r.Handle("/v1/function/{fid}/events/{eid}", genReqHandler(handleFunctionEvent)).Methods("GET", "POST", "DELETE", "OPTIONS")
+	r.Handle("/v1/functions/{fid}/events",	genReqHandler(handleFunctionEvents)).Methods("GET", "POST", "OPTIONS")
+	r.Handle("/v1/functions/{fid}/events/{eid}", genReqHandler(handleFunctionEvent)).Methods("GET", "POST", "DELETE", "OPTIONS")
 	r.Handle("/v1/mware/add",		genReqHandler(handleMwareAdd)).Methods("POST", "OPTIONS")
 	r.Handle("/v1/mware/info",		genReqHandler(handleMwareInfo)).Methods("POST", "OPTIONS")
 	r.Handle("/v1/mware/list",		genReqHandler(handleMwareList)).Methods("POST", "OPTIONS")

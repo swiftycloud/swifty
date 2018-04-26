@@ -685,7 +685,7 @@ func off_fn(cd *cmdDesc, args []string, opts [16]string) {
 func list_events(cd *cmdDesc, args []string, opts [16]string) {
 	args[0] = resolve_fn(cd.project, args[0])
 	var eds []swyapi.FunctionEvent
-	make_faas_req1("GET", "function/" + args[0] + "/events", http.StatusOK,  nil, &eds)
+	make_faas_req1("GET", "functions/" + args[0] + "/events", http.StatusOK,  nil, &eds)
 	for _, e := range eds {
 		fmt.Printf("%16s%20s%8s\n", e.Id, e.Name, e.Source)
 	}
@@ -710,14 +710,14 @@ func add_event(cd *cmdDesc, args []string, opts [16]string) {
 		}
 	}
 	var res string
-	make_faas_req1("PUT", "function/" + args[0] + "/events", http.StatusOK, &e, &res)
+	make_faas_req1("POST", "functions/" + args[0] + "/events", http.StatusOK, &e, &res)
 	fmt.Printf("Event %s created\n", res)
 }
 
 func info_event(cd *cmdDesc, args []string, opts [16]string) {
 	args[0] = resolve_fn(cd.project, args[0])
 	var e swyapi.FunctionEvent
-	make_faas_req1("GET", "function/" + args[0] + "/events/" + args[1], http.StatusOK,  nil, &e)
+	make_faas_req1("GET", "functions/" + args[0] + "/events/" + args[1], http.StatusOK,  nil, &e)
 	fmt.Printf("Name:          %s\n", e.Name)
 	fmt.Printf("Source:        %s\n", e.Source)
 	if e.Cron != nil {
@@ -732,7 +732,7 @@ func info_event(cd *cmdDesc, args []string, opts [16]string) {
 
 func del_event(cd *cmdDesc, args []string, opts [16]string) {
 	args[0] = resolve_fn(cd.project, args[0])
-	make_faas_req1("DELETE", "function/" + args[0] + "/events/" + args[1], http.StatusOK, nil, nil)
+	make_faas_req1("DELETE", "functions/" + args[0] + "/events/" + args[1], http.StatusOK, nil, nil)
 }
 
 func wait_fn(cd *cmdDesc, args []string, opts [16]string) {

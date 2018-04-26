@@ -441,7 +441,7 @@ paths:
           description: Need to authenticate
         '403':
           description: Bad authentication token
-  /function/{id}/events:
+  /functions/{id}/events:
     parameters:
       - in: path
         name: id
@@ -471,7 +471,7 @@ paths:
           description: Need to authenticate
         '403':
           description: Bad authentication token
-    put:
+    post:
       tags:
         - triggers
       summary: Add event trigger for the function
@@ -497,7 +497,7 @@ paths:
           description: Need to authenticate
         '403':
           description: Bad authentication token
-  /function/{id}/events/{eid}:
+  /functions/{id}/events/{eid}:
     parameters:
       - in: path
         name: id
