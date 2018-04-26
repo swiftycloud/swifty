@@ -441,6 +441,110 @@ paths:
           description: Need to authenticate
         '403':
           description: Bad authentication token
+  /function/{id}/events:
+    parameters:
+      - in: path
+        name: id
+        description: Funciton ID
+        required: true
+        type: string
+      - in: header
+        name: X-Auth-Token
+        type: string
+        required: true
+    get:
+      tags:
+        - triggers
+      summary: List event triggers for the function
+      responses:
+        '200':
+          description: OK
+          schema:
+              type: array
+              items:
+                $ref: '#/definitions/FunctionEvent'
+        '400':
+          description: Bad request
+          schema:
+            $ref: '#/definitions/GateError'
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad authentication token
+    put:
+      tags:
+        - triggers
+      summary: Add event trigger for the function
+      parameters:
+        - name: data
+          in: body
+          description: Event trigger description (without ID)
+          required: true
+          schema:
+            $ref: '#/definitions/FunctionEvent'
+      responses:
+        '200':
+          description: OK
+          schema:
+            type: string
+            description: ID of a newly created event trigger
+            example: 'deadbeef'
+        '400':
+          description: Bad request
+          schema:
+            $ref: '#/definitions/GateError'
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad authentication token
+  /function/{id}/events/{eid}:
+    parameters:
+      - in: path
+        name: id
+        description: Funciton ID
+        required: true
+        type: string
+      - in: path
+        name: eid
+        description: Event trigger ID
+        required: true
+        type: string
+      - in: header
+        name: X-Auth-Token
+        type: string
+        required: true
+    get:
+      tags:
+        - triggers
+      summary: Get event trigger details
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/FunctionEvent'
+        '400':
+          description: Bad request
+          schema:
+            $ref: '#/definitions/GateError'
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad authentication token
+    delete:
+      tags:
+        - triggers
+      summary: Remove event trigger
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+          schema:
+            $ref: '#/definitions/GateError'
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad authentication token
   /mware/list:
     post:
       summary: List middleware
@@ -789,6 +893,9 @@ definitions:
         description: Numer of stats periods, see FunctionStatsReq for details
   FunctionInfo:
     properties:
+      id:
+        type: string
+        description: Unique ID, system-wide
       name:
         type: string
         description: Function name (reported for /list/info operation)
@@ -806,8 +913,6 @@ definitions:
         example: "/call/ki4r4380984csdlsiduo9049843jk"
       code:
         $ref: '#/definitions/FunctionCode'
-      event:
-        $ref: '#/definitions/FunctionEvent'
       size:
         $ref: '#/definitions/FunctionSize'
       stats:
@@ -981,22 +1086,6 @@ definitions:
           type: string
         example:
           - arg: value
-  FunctionEvent:
-    type: object
-    description: Event specification
-    required:
-      - source
-    properties:
-      source:
-        type: string
-        description: 'Event source type, supported by platform (options: "url", "cron")'
-        example: url
-      cron:
-        type: array
-        items:
-          $ref: '#/definitions/FunctionEventCron'
-      s3:
-        $ref: '#/definitions/FunctionEventS3'
   FunctionEventS3:
     type: object
     description: Bucket to receive envets from
@@ -1011,6 +1100,26 @@ definitions:
         type: string
         description: 'Comma-separated list of operations'
         example: 'put'
+  FunctionEvent:
+    type: object
+    description: Event specification
+    required:
+      - name
+      - source
+    properties:
+      id:
+        type: string
+        description: Used in responces
+      name:
+        type: string
+      source:
+        type: string
+        description: 'Event source type, supported by platform'
+        example: 'url, cron, s3'
+      cron:
+        $ref: '#/definitions/FunctionEventCron'
+      s3:
+        $ref: '#/definitions/FunctionEventS3'
   FunctionSources:
     type: object
     description: Sources description
@@ -1082,8 +1191,6 @@ definitions:
         $ref: '#/definitions/FunctionSources'
       code:
         $ref: '#/definitions/FunctionCode'
-      event:
-        $ref: '#/definitions/FunctionEvent'
       size:
         $ref: '#/definitions/FunctionSize'
       mware:
@@ -1130,8 +1237,6 @@ definitions:
         items:
           type: string
           example: foobucket
-      event:
-        $ref: '#/definitions/FunctionEvent'
   FunctionRemove:
     required:
       - name
