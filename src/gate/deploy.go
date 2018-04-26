@@ -25,7 +25,8 @@ func (i *DeployItemDesc)start(ctx context.Context) *swyapi.GateErr {
 	}
 
 	if i.Mw != nil {
-		return mwareSetup(ctx, &conf.Mware, i.Mw)
+		_, cerr := mwareSetup(ctx, &conf.Mware, i.Mw)
+		return cerr
 	}
 
 	return GateErrM(swy.GateGenErr, "Bad deploy item")
@@ -142,8 +143,14 @@ func deployStart(ctx context.Context, params *swyapi.DeployStart) *swyapi.GateEr
 				return GateErrM(swy.GateBadRequest, "Cross-project deploy")
 			}
 
+			a := swyapi.MwareAdd {
+				Name: item.Mware.ID,
+				Type: item.Mware.Type,
+				UserData: item.Mware.UserData,
+			}
+
 			dep.Items = append(dep.Items, &DeployItemDesc{
-				Mw: getMwareDesc(ten, item.Mware),
+				Mw: getMwareDesc(ten, item.Mware.Project, &a),
 			})
 			continue
 		}

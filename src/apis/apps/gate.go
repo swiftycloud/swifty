@@ -125,6 +125,12 @@ type FunctionEvent struct {
 }
 
 type MwareAdd struct {
+	Name		string			`json:"name"`
+	Type		string			`json:"type"`
+	UserData	string			`json:"userdata,omitempty"`
+}
+
+type MwareAddD struct {
 	Project		string			`json:"project"`
 	ID		string			`json:"id"`
 	Type		string			`json:"type"`
@@ -251,7 +257,7 @@ type DeployId struct {
 
 type DeployItem struct {
 	Function	*FunctionAdd		`json:"function,omitempty"`
-	Mware		*MwareAdd		`json:"mware,omitempty"`
+	Mware		*MwareAddD		`json:"mware,omitempty"`
 }
 
 type DeployStart struct {

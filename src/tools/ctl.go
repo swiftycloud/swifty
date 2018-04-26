@@ -835,14 +835,21 @@ func info_mware(cd *cmdDesc, args []string, opts [16]string) {
 }
 
 func add_mware(cd *cmdDesc, args []string, opts [16]string) {
+	p := ""
+	if cd.project != "" {
+		p = "?project=" + cd.project
+	}
+
 	req := swyapi.MwareAdd {
-		Project: cd.project,
-		ID: args[0],
+		Name: args[0],
 		Type: args[1],
 		UserData: opts[0],
 	}
+
 	if !cd.req {
-		make_faas_req("mware/add", req, nil)
+		var id string
+		make_faas_req1("PUT", "middleware" + p, http.StatusOK, &req, &id)
+		fmt.Printf("Mware %s created\n", id)
 	} else {
 		d, err := json.Marshal(req)
 		if err == nil {
@@ -1195,7 +1202,7 @@ func main() {
 	bindCmdUsage(CMD_MLS,	[]string{}, "List middleware", true)
 	bindCmdUsage(CMD_MINF,	[]string{"ID"}, "Middleware info", true)
 	cmdMap[CMD_MADD].opts.StringVar(&opts[0], "data", "", "Associated text")
-	bindCmdUsage(CMD_MADD,	[]string{"ID", "TYPE"}, "Add middleware", true)
+	bindCmdUsage(CMD_MADD,	[]string{"NAME", "TYPE"}, "Add middleware", true)
 	bindCmdUsage(CMD_MDEL,	[]string{"ID"}, "Delete middleware", true)
 
 	cmdMap[CMD_S3ACC].opts.StringVar(&opts[0], "life", "60", "Lifetime (default 1 min)")

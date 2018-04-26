@@ -179,12 +179,12 @@ func (item *MwareDesc)toInfo(ctx context.Context, conf *YAMLConfMw, details bool
 	return resp, nil
 }
 
-func getMwareDesc(tenant string, params *swyapi.MwareAdd) *MwareDesc {
+func getMwareDesc(tenant, project string, params *swyapi.MwareAdd) *MwareDesc {
 	ret := &MwareDesc {
 		SwoId: SwoId {
 			Tennant:	tenant,
-			Project:	params.Project,
-			Name:		params.ID,
+			Project:	project,
+			Name:		params.Name,
 		},
 		MwareType:	params.Type,
 		State:		swy.DBMwareStatePrp,
@@ -195,17 +195,18 @@ func getMwareDesc(tenant string, params *swyapi.MwareAdd) *MwareDesc {
 	return ret
 }
 
-func mwareSetup(ctx context.Context, conf *YAMLConfMw, mwd *MwareDesc) *swyapi.GateErr {
+func mwareSetup(ctx context.Context, conf *YAMLConfMw, mwd *MwareDesc) (string, *swyapi.GateErr) {
 	var handler *MwareOps
 	var ok bool
 	var err, erc error
 
 	ctxlog(ctx).Debugf("set up wmare %s:%s", mwd.SwoId.Str(), mwd.MwareType)
 
+	mwd.ObjID = bson.NewObjectId()
 	err = dbMwareAdd(mwd)
 	if err != nil {
 		ctxlog(ctx).Errorf("Can't add mware %s: %s", mwd.SwoId.Str(), err.Error())
-		return GateErrD(err)
+		return "", GateErrD(err)
 	}
 
 	gateMwares.WithLabelValues(mwd.MwareType).Inc()
@@ -246,7 +247,7 @@ func mwareSetup(ctx context.Context, conf *YAMLConfMw, mwd *MwareDesc) *swyapi.G
 		goto outs
 	}
 
-	return nil
+	return mwd.ObjID.Hex(), nil
 
 outs:
 	erc = swk8sMwSecretRemove(ctx, mwd.Cookie)
@@ -266,7 +267,7 @@ outdb:
 	gateMwares.WithLabelValues(mwd.MwareType).Dec()
 out:
 	ctxlog(ctx).Errorf("mwareSetup: %s", err.Error())
-	return GateErrE(swy.GateGenErr, err)
+	return "", GateErrE(swy.GateGenErr, err)
 
 stalled:
 	dbMwareSetStalled(mwd)
