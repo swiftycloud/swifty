@@ -167,12 +167,15 @@ func (item *MwareDesc)toInfo(ctx context.Context, conf *YAMLConfMw, details bool
 	resp := &swyapi.MwareInfo{}
 	resp.Name = item.SwoId.Name
 	resp.Type = item.MwareType
-	resp.UserData = item.UserData
 
-	if handler.Info != nil {
-		err := handler.Info(ctx, conf, item, resp)
-		if err != nil {
-			return nil, GateErrE(swy.GateGenErr, err)
+	if details {
+		resp.UserData = item.UserData
+
+		if handler.Info != nil {
+			err := handler.Info(ctx, conf, item, resp)
+			if err != nil {
+				return nil, GateErrE(swy.GateGenErr, err)
+			}
 		}
 	}
 
