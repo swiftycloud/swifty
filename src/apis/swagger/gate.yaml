@@ -1463,6 +1463,10 @@ definitions:
       project:
         type: string
         example: my-project
+      type:
+        type: string
+	example: mongo
+	description: Filter mwares by their type
   DeployId:
     type: object
     description: ID of an item
