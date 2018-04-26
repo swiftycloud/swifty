@@ -48,7 +48,7 @@ func gateProto() string {
 	}
 }
 
-func make_faas_req4(url string, in interface{}, succ_code int, tmo uint) (*http.Response, error) {
+func make_faas_req3(method, url string, in interface{}, succ_code int, tmo uint) (*http.Response, error) {
 	address := gateProto() + "://" + conf.Login.Host + ":" + conf.Login.Port + "/v1/" + url
 
 	h := make(map[string]string)
@@ -68,6 +68,7 @@ func make_faas_req4(url string, in interface{}, succ_code int, tmo uint) (*http.
 
 	return swyhttp.MarshalAndPost(
 			&swyhttp.RestReq{
+				Method:		method,
 				Address:	address,
 				Headers:	h,
 				Success:	succ_code,
@@ -77,7 +78,7 @@ func make_faas_req4(url string, in interface{}, succ_code int, tmo uint) (*http.
 }
 
 func faas_login() string {
-	resp, err := make_faas_req4("login", swyapi.UserLogin {
+	resp, err := make_faas_req3("POST", "login", swyapi.UserLogin {
 			UserName: conf.Login.User, Password: conf.Login.Pass,
 		}, http.StatusOK, 0)
 	if err != nil {
@@ -105,10 +106,10 @@ func faas_login() string {
 	return token
 }
 
-func make_faas_req3(url string, in interface{}, succ_code int, tmo uint) *http.Response {
+func make_faas_req2(method, url string, in interface{}, succ_code int, tmo uint) *http.Response {
 	first_attempt := true
 again:
-	resp, err := make_faas_req4(url, in, succ_code, tmo)
+	resp, err := make_faas_req3(method, url, in, succ_code, tmo)
 	if err != nil {
 		if resp == nil {
 			fatal(err)
@@ -142,8 +143,8 @@ again:
 	return resp
 }
 
-func make_faas_req2(url string, in interface{}, out interface{}, succ_code int, tmo uint) {
-	resp := make_faas_req3(url, in, succ_code, tmo)
+func make_faas_req1(method, url string, succ int, in interface{}, out interface{}) {
+	resp := make_faas_req2(method, url, in, succ, 30)
 	/* Here we have http.StatusOK */
 	defer resp.Body.Close()
 
@@ -156,7 +157,7 @@ func make_faas_req2(url string, in interface{}, out interface{}, succ_code int, 
 }
 
 func make_faas_req(url string, in interface{}, out interface{}) {
-	make_faas_req2(url, in, out, http.StatusOK, 30)
+	make_faas_req1("POST", url, http.StatusOK, in, out)
 }
 
 func list_users(cd *cmdDesc, args []string, opts [16]string) {
@@ -169,17 +170,18 @@ func list_users(cd *cmdDesc, args []string, opts [16]string) {
 }
 
 func add_user(cd *cmdDesc, args []string, opts [16]string) {
-	make_faas_req2("adduser", swyapi.AddUser{Id: args[0], Pass: opts[1], Name: opts[0]},
-		nil, http.StatusCreated, 0)
+	make_faas_req2("POST", "adduser", swyapi.AddUser{Id: args[0], Pass: opts[1], Name: opts[0]},
+		http.StatusCreated, 0)
 }
 
 func del_user(cd *cmdDesc, args []string, opts [16]string) {
-	make_faas_req2("deluser", swyapi.UserInfo{Id: args[0]}, nil, http.StatusNoContent, 0)
+	make_faas_req2("POST", "deluser", swyapi.UserInfo{Id: args[0]},
+		http.StatusNoContent, 0)
 }
 
 func set_password(cd *cmdDesc, args []string, opts [16]string) {
-	make_faas_req2("setpass", swyapi.UserLogin{UserName: args[0], Password: opts[0]},
-		nil, http.StatusCreated, 0)
+	make_faas_req2("POST", "setpass", swyapi.UserLogin{UserName: args[0], Password: opts[0]},
+		http.StatusCreated, 0)
 }
 
 func show_user_info(cd *cmdDesc, args []string, opts [16]string) {
@@ -317,7 +319,7 @@ func list_functions(cd *cmdDesc, args []string, opts [16]string) {
 			fmt.Printf("%-20s%-12s\n", fn.FuncName, fn.State)
 		}
 	} else if opts[0] == "json" {
-		resp := make_faas_req3("function/list/info",
+		resp := make_faas_req2("POST", "function/list/info",
 			swyapi.FunctionListInfo{ Project: cd.project, Periods: 0 }, http.StatusOK, 30)
 		defer resp.Body.Close()
 		body, err := ioutil.ReadAll(resp.Body)
@@ -699,7 +701,7 @@ func wait_fn(cd *cmdDesc, args []string, opts [16]string) {
 		httpTmo = 1
 	}
 
-	make_faas_req2("function/wait", req, nil, http.StatusOK, httpTmo + 10)
+	make_faas_req2("POST", "function/wait", req, http.StatusOK, httpTmo + 10)
 }
 
 func show_code(cd *cmdDesc, args []string, opts [16]string) {
@@ -739,7 +741,7 @@ func list_mware(cd *cmdDesc, args []string, opts [16]string) {
 			fmt.Printf("%-20s%-10s%s\n", mw.ID, mw.Type, "")
 		}
 	} else if opts[0] == "json" {
-		resp := make_faas_req3("mware/list/info", &req, http.StatusOK, 30)
+		resp := make_faas_req2("POST", "mware/list/info", &req, http.StatusOK, 30)
 		defer resp.Body.Close()
 		body, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
