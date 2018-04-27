@@ -183,11 +183,6 @@ type FunctionUpdate struct {
 	UserData	string			`json:"userdata"`
 }
 
-type FunctionRemove struct {
-	Project		string			`json:"project"`
-	FuncName	string			`json:"name"`
-}
-
 type FunctionRun struct {
 	Project		string			`json:"project"`
 	FuncName	string			`json:"name"`

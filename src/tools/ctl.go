@@ -684,8 +684,8 @@ func update_function(cd *cmdDesc, args []string, opts [16]string) {
 }
 
 func del_function(cd *cmdDesc, args []string, opts [16]string) {
-	make_faas_req("function/remove",
-		swyapi.FunctionRemove{ Project: cd.project, FuncName: args[0] }, nil)
+	args[0] = resolve_fn(cd.project, args[0])
+	make_faas_req1("DELETE", "functions/" + args[0], http.StatusOK, nil, nil)
 }
 
 func on_fn(cd *cmdDesc, args []string, opts [16]string) {

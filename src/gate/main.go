@@ -228,7 +228,7 @@ func handleProjectDel(ctx context.Context, w http.ResponseWriter, r *http.Reques
 	}
 	for _, fn := range fns {
 		id.Name = fn.SwoId.Name
-		xerr := removeFunction(ctx, &conf, id)
+		xerr := removeFunctionId(ctx, &conf, id)
 		if xerr != nil {
 			ctxlog(ctx).Error("Funciton removal failed: %s", xerr.Message)
 			ferr = GateErrM(xerr.Code, "Cannot remove " + id.Name + " function: " + xerr.Message)
@@ -488,26 +488,6 @@ func handleFunctionUpdate(ctx context.Context, w http.ResponseWriter, r *http.Re
 	ctxlog(ctx).Debugf("function/update %s", id.Str())
 
 	cerr := updateFunction(ctx, &conf, id, &params)
-	if cerr != nil {
-		return cerr
-	}
-
-	w.WriteHeader(http.StatusOK)
-	return nil
-}
-
-func handleFunctionRemove(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
-	var params swyapi.FunctionRemove
-
-	err := swyhttp.ReadAndUnmarshalReq(r, &params)
-	if err != nil {
-		return GateErrE(swy.GateBadRequest, err)
-	}
-
-	id := ctxSwoId(ctx, params.Project, params.FuncName)
-	ctxlog(ctx).Debugf("function/remove %s", id.Str())
-
-	cerr := removeFunction(ctx, &conf, id)
 	if cerr != nil {
 		return cerr
 	}
@@ -1057,6 +1037,14 @@ func handleFunction(ctx context.Context, w http.ResponseWriter, r *http.Request)
 		if err != nil {
 			return GateErrE(swy.GateBadResp, err)
 		}
+
+	case "DELETE":
+		cerr := removeFunction(ctx, &conf, fn)
+		if cerr != nil {
+			return cerr
+		}
+
+		w.WriteHeader(http.StatusOK)
 	}
 
 	return nil
@@ -1445,7 +1433,6 @@ func main() {
 	r.Handle("/v1/project/del",		genReqHandler(handleProjectDel)).Methods("POST", "OPTIONS")
 	r.Handle("/v1/function/add",		genReqHandler(handleFunctionAdd)).Methods("POST", "OPTIONS")
 	r.Handle("/v1/function/update",		genReqHandler(handleFunctionUpdate)).Methods("POST", "OPTIONS")
-	r.Handle("/v1/function/remove",		genReqHandler(handleFunctionRemove)).Methods("POST", "OPTIONS")
 	r.Handle("/v1/function/run",		genReqHandler(handleFunctionRun)).Methods("POST", "OPTIONS")
 	r.Handle("/v1/function/stats",		genReqHandler(handleFunctionStats)).Methods("POST", "OPTIONS")
 	r.Handle("/v1/function/code",		genReqHandler(handleFunctionCode)).Methods("POST", "OPTIONS")
@@ -1454,7 +1441,7 @@ func main() {
 	r.Handle("/v1/function/wait",		genReqHandler(handleFunctionWait)).Methods("POST", "OPTIONS")
 
 	r.Handle("/v1/functions",		genReqHandler(handleFunctions)).Methods("GET", "OPTIONS")
-	r.Handle("/v1/functions/{fid}",		genReqHandler(handleFunction)).Methods("GET", "OPTIONS")
+	r.Handle("/v1/functions/{fid}",		genReqHandler(handleFunction)).Methods("GET", "DELETE", "OPTIONS")
 	r.Handle("/v1/functions/{fid}/events",	genReqHandler(handleFunctionEvents)).Methods("GET", "POST", "OPTIONS")
 	r.Handle("/v1/functions/{fid}/events/{eid}", genReqHandler(handleFunctionEvent)).Methods("GET", "DELETE", "OPTIONS")
 

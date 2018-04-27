@@ -34,7 +34,7 @@ func (i *DeployItemDesc)start(ctx context.Context) *swyapi.GateErr {
 
 func (i *DeployItemDesc)stop(ctx context.Context) *swyapi.GateErr {
 	if i.Fn != nil {
-		return removeFunction(ctx, &conf, &i.Fn.SwoId)
+		return removeFunctionId(ctx, &conf, &i.Fn.SwoId)
 	}
 
 	if i.Mw != nil {
