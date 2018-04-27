@@ -175,7 +175,6 @@ type FunctionUpdate struct {
 	Project		string			`json:"project"`
 	FuncName	string			`json:"name"`
 	Code		string			`json:"code"`
-	S3Buckets	*[]string		`json:"s3buckets,omitempty"`
 }
 
 type FunctionRun struct {

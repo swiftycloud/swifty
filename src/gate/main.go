@@ -497,6 +497,45 @@ func handleFunctionMware(ctx context.Context, w http.ResponseWriter, r *http.Req
 	return nil
 }
 
+func handleFunctionS3Bs(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
+	fnid := mux.Vars(r)["fid"]
+
+	fn, err := dbFuncFindOne(bson.M{"tennant": fromContext(ctx).Tenant,
+			"_id": bson.ObjectIdHex(fnid)})
+	if err != nil {
+		return GateErrD(err)
+	}
+
+	switch r.Method {
+	case "GET":
+		err := swyhttp.MarshalAndWrite(w, fn.S3Buckets)
+		if err != nil {
+			return GateErrE(swy.GateBadResp, err)
+		}
+
+	case "POST", "DELETE":
+		bnames := r.URL.Query()["name"]
+		if len(bnames) != 1 {
+			return GateErrM(swy.GateBadRequest, "Exactly one name needed")
+		}
+
+		if r.Method == "POST" {
+			err = fn.addS3Bucket(ctx, bnames[0])
+		} else {
+			err = fn.delS3Bucket(ctx, bnames[0])
+		}
+
+		if err != nil {
+			return GateErrE(swy.GateGenErr, err)
+		}
+
+		w.WriteHeader(http.StatusOK)
+	}
+
+	return nil
+}
+
+
 func handleFunctionEvent(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
 	fnid := mux.Vars(r)["fid"]
 	fn, err := dbFuncFindOne(bson.M{"tennant": fromContext(ctx).Tenant,
@@ -1511,6 +1550,7 @@ func main() {
 	r.Handle("/v1/functions/{fid}/authctx",	genReqHandler(handleFunctionAuthCtx)).Methods("GET", "PUT", "OPTIONS")
 	r.Handle("/v1/functions/{fid}/size",	genReqHandler(handleFunctionSize)).Methods("GET", "PUT", "OPTIONS")
 	r.Handle("/v1/functions/{fid}/middleware", genReqHandler(handleFunctionMware)).Methods("GET", "POST", "DELETE", "OPTIONS")
+	r.Handle("/v1/functions/{fid}/s3buckets",  genReqHandler(handleFunctionS3Bs)).Methods("GET", "POST", "DELETE", "OPTIONS")
 
 	r.Handle("/v1/middleware",		genReqHandler(handleMwares)).Methods("GET", "POST", "OPTIONS")
 	r.Handle("/v1/middleware/{mid}",	genReqHandler(handleMware)).Methods("GET", "DELETE", "OPTIONS")

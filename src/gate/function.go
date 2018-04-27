@@ -452,6 +452,44 @@ func (fn *FunctionDesc)delMware(ctx context.Context, mw *MwareDesc) error {
 	return nil
 }
 
+func (fn *FunctionDesc)addS3Bucket(ctx context.Context, b string) error {
+	err := dbFuncUpdate(bson.M{"_id": fn.ObjID}, bson.M{"$push": bson.M{"s3buckets":b}})
+	if err != nil {
+		return err
+	}
+
+	fn.S3Buckets = append(fn.S3Buckets, b)
+	if fn.State == swy.DBFuncStateRdy {
+		swk8sUpdate(ctx, &conf, fn)
+	}
+	return nil
+}
+
+func (fn *FunctionDesc)delS3Bucket(ctx context.Context, bn string) error {
+	found := -1
+	for i, b := range fn.S3Buckets {
+		if b == bn {
+			found = i
+			break
+		}
+	}
+
+	if found == -1 {
+		return errors.New("Bucket not attached")
+	}
+
+	err := dbFuncUpdate(bson.M{"_id": fn.ObjID}, bson.M{"$pull": bson.M{"s3buckets":bn}})
+	if err != nil {
+		return err
+	}
+
+	fn.S3Buckets = append(fn.S3Buckets[:found], fn.S3Buckets[found+1:]...)
+	if fn.State == swy.DBFuncStateRdy {
+		swk8sUpdate(ctx, &conf, fn)
+	}
+	return nil
+}
+
 func updateFunction(ctx context.Context, conf *YAMLConf, id *SwoId, params *swyapi.FunctionUpdate) *swyapi.GateErr {
 	var err error
 	var stalled, restart bool
@@ -481,12 +519,6 @@ func updateFunction(ctx context.Context, conf *YAMLConf, id *SwoId, params *swya
 		}
 
 		update["src.version"] = fn.Src.Version
-		restart = true
-	}
-
-	if params.S3Buckets != nil {
-		fn.S3Buckets = *params.S3Buckets
-		update["s3buckets"] = fn.S3Buckets
 		restart = true
 	}
 
