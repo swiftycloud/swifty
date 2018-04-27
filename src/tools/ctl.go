@@ -799,8 +799,8 @@ func show_code(cd *cmdDesc, args []string, opts [16]string) {
 
 func show_logs(cd *cmdDesc, args []string, opts [16]string) {
 	var res []swyapi.FunctionLogEntry
-	make_faas_req("function/logs",
-		swyapi.FunctionID{ Project: cd.project, FuncName: args[0], }, &res)
+	args[0] = resolve_fn(cd.project, args[0])
+	make_faas_req1("GET", "functions/" + args[0] + "/logs", http.StatusOK, nil, &res)
 
 	for _, le := range res {
 		fmt.Printf("%36s%8s: %s\n", le.Ts, le.Event, le.Text)

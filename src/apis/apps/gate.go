@@ -207,11 +207,6 @@ type FunctionRunResult struct {
 	Stderr		string			`json:"stderr"`
 }
 
-type FunctionID struct {
-	Project		string			`json:"project"`
-	FuncName	string			`json:"name"`
-}
-
 type FunctionXID struct {
 	Project		string			`json:"project"`
 	FuncName	string			`json:"name"`
