@@ -183,8 +183,6 @@ type FunctionUpdate struct {
 }
 
 type FunctionRun struct {
-	Project		string			`json:"project"`
-	FuncName	string			`json:"name"`
 	Args		map[string]string	`json:"args,omitempty"`
 }
 

@@ -618,9 +618,9 @@ func make_args_string(args map[string]string) string {
 func run_function(cd *cmdDesc, args []string, opts [16]string) {
 	var rres swyapi.FunctionRunResult
 
+	args[0] = resolve_fn(cd.project, args[0])
 	argmap := split_args_string(args[1])
-	make_faas_req("function/run",
-		swyapi.FunctionRun{ Project: cd.project, FuncName: args[0], Args: argmap, }, &rres)
+	make_faas_req1("POST", "functions/" + args[0], http.StatusOK, &swyapi.FunctionRun{ Args: argmap, }, &rres)
 
 	fmt.Printf("returned: %s\n", rres.Return)
 	fmt.Printf("%s", rres.Stdout)

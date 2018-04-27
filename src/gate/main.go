@@ -773,58 +773,6 @@ out:
 	http.Error(w, err.Error(), code)
 }
 
-func handleFunctionRun(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
-	var params swyapi.FunctionRun
-	var conn *podConn
-	var res *swyapi.SwdFunctionRunResult
-
-	err := swyhttp.ReadAndUnmarshalReq(r, &params)
-	if err != nil {
-		return GateErrE(swy.GateBadRequest, err)
-	}
-
-	id := ctxSwoId(ctx, params.Project, params.FuncName)
-	ctxlog(ctx).Debugf("function/run %s", id.Str())
-
-	fn, err := dbFuncFind(id)
-	if err != nil {
-		return GateErrD(err)
-	}
-	if fn.State != swy.DBFuncStateRdy {
-		return GateErrM(swy.GateNotAvail, "Function not ready (yet)")
-	}
-
-	conn, errc := balancerGetConnExact(ctx, fn.Cookie, fn.Src.Version)
-	if errc != nil {
-		return errc
-	}
-
-	res, err = doRunConn(ctx, conn, fn.Cookie, "run", params.Args)
-	if err != nil {
-		return GateErrE(swy.GateGenErr, err)
-	}
-
-	if params.Project == "test" {
-		var fort []byte
-		fort, err = exec.Command("fortune", "fortunes").Output()
-		if err == nil {
-			res.Stdout = string(fort)
-		}
-	}
-
-	err = swyhttp.MarshalAndWrite(w, swyapi.FunctionRunResult{
-		Code:		res.Code,
-		Return:		res.Return,
-		Stdout:		res.Stdout,
-		Stderr:		res.Stderr,
-	})
-	if err != nil {
-		return GateErrE(swy.GateBadResp, err)
-	}
-
-	return nil
-}
-
 func reqPeriods(q url.Values) int {
 	aux := q.Get("periods")
 	periods := 0
@@ -959,6 +907,49 @@ func handleFunction(ctx context.Context, w http.ResponseWriter, r *http.Request)
 		}
 
 		w.WriteHeader(http.StatusOK)
+
+	case "POST":
+		var params swyapi.FunctionRun
+		var res *swyapi.SwdFunctionRunResult
+
+		err := swyhttp.ReadAndUnmarshalReq(r, &params)
+		if err != nil {
+			return GateErrE(swy.GateBadRequest, err)
+		}
+
+		if fn.State != swy.DBFuncStateRdy {
+			return GateErrM(swy.GateNotAvail, "Function not ready (yet)")
+		}
+
+		conn, errc := balancerGetConnExact(ctx, fn.Cookie, fn.Src.Version)
+		if errc != nil {
+			return errc
+		}
+
+		res, err = doRunConn(ctx, conn, fn.Cookie, "run", params.Args)
+		if err != nil {
+			return GateErrE(swy.GateGenErr, err)
+		}
+
+		if fn.SwoId.Project == "test" {
+			var fort []byte
+			fort, err = exec.Command("fortune", "fortunes").Output()
+			if err == nil {
+				res.Stdout = string(fort)
+			}
+		}
+
+		err = swyhttp.MarshalAndWrite(w, swyapi.FunctionRunResult{
+			Code:		res.Code,
+			Return:		res.Return,
+			Stdout:		res.Stdout,
+			Stderr:		res.Stderr,
+		})
+		if err != nil {
+			return GateErrE(swy.GateBadResp, err)
+		}
+
+		return nil
 	}
 
 	return nil
@@ -1346,12 +1337,11 @@ func main() {
 	r.Handle("/v1/project/list",		genReqHandler(handleProjectList)).Methods("POST", "OPTIONS")
 	r.Handle("/v1/project/del",		genReqHandler(handleProjectDel)).Methods("POST", "OPTIONS")
 	r.Handle("/v1/function/update",		genReqHandler(handleFunctionUpdate)).Methods("POST", "OPTIONS")
-	r.Handle("/v1/function/run",		genReqHandler(handleFunctionRun)).Methods("POST", "OPTIONS")
 	r.Handle("/v1/function/code",		genReqHandler(handleFunctionCode)).Methods("POST", "OPTIONS")
 	r.Handle("/v1/function/wait",		genReqHandler(handleFunctionWait)).Methods("POST", "OPTIONS")
 
 	r.Handle("/v1/functions",		genReqHandler(handleFunctions)).Methods("GET", "POST", "OPTIONS")
-	r.Handle("/v1/functions/{fid}",		genReqHandler(handleFunction)).Methods("GET", "DELETE", "OPTIONS")
+	r.Handle("/v1/functions/{fid}",		genReqHandler(handleFunction)).Methods("GET", "DELETE", "POST", "OPTIONS")
 	r.Handle("/v1/functions/{fid}/events",	genReqHandler(handleFunctionEvents)).Methods("GET", "POST", "OPTIONS")
 	r.Handle("/v1/functions/{fid}/events/{eid}", genReqHandler(handleFunctionEvent)).Methods("GET", "DELETE", "OPTIONS")
 	r.Handle("/v1/functions/{fid}/logs",	genReqHandler(handleFunctionLogs)).Methods("GET", "OPTIONS")
