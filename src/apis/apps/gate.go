@@ -206,12 +206,6 @@ type FunctionID struct {
 	FuncName	string			`json:"name"`
 }
 
-type FunctionInfoReq struct {
-	Project		string			`json:"project"`
-	FuncName	string			`json:"name"`
-	Periods		int			`json:"periods,omitempty"`
-}
-
 type FunctionXID struct {
 	Project		string			`json:"project"`
 	FuncName	string			`json:"name"`

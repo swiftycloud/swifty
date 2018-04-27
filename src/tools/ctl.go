@@ -310,9 +310,20 @@ func list_projects(cd *cmdDesc, args []string, opts [16]string) {
 }
 
 func resolve_fn(project, fname string) string {
-	var ifo swyapi.FunctionInfo
-	make_faas_req("function/info", swyapi.FunctionInfoReq{ Project: project, FuncName: fname, Periods: 0}, &ifo)
-	return ifo.Id
+	var ifo []swyapi.FunctionInfo
+	ua := []string{}
+	if project != "" {
+		ua = append(ua, "project=" + project)
+	}
+	make_faas_req1("GET", url("functions", ua), http.StatusOK, nil, &ifo)
+	for _, i := range ifo {
+		if i.Name == fname {
+			return i.Id
+		}
+	}
+
+	fatal(fmt.Errorf("\tCanname %s not resolved", fname))
+	return ""
 }
 
 func list_functions(cd *cmdDesc, args []string, opts [16]string) {
@@ -383,13 +394,13 @@ func formatBytes(b uint64) string {
 
 func info_function(cd *cmdDesc, args []string, opts [16]string) {
 	var ifo swyapi.FunctionInfo
-	make_faas_req("function/info", swyapi.FunctionInfoReq{ Project: cd.project, FuncName: args[0], Periods: 0}, &ifo)
+	args[0] = resolve_fn(cd.project, args[0])
+	make_faas_req1("GET", "functions/" + args[0], http.StatusOK, nil, &ifo)
 	ver := ifo.Version
 	if len(ver) > 8 {
 		ver = ver[:8]
 	}
 
-	fmt.Printf("Id:          %s\n", ifo.Id)
 	fmt.Printf("Lang:        %s\n", ifo.Code.Lang)
 
 	rv := ""

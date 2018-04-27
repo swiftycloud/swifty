@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"encoding/hex"
 	"net/http"
+	"net/url"
 	"errors"
 	"os/exec"
 	"flag"
@@ -697,7 +698,7 @@ func (fn *FunctionDesc)toInfo(details bool, periods int) (*swyapi.FunctionInfo, 
 
 	if !details {
 		return &swyapi.FunctionInfo{
-			Id:		fn.ObjID.Hex(),
+			Name:		fn.SwoId.Name,
 			State:          fnStates[fn.State],
 		}, nil
 	}
@@ -717,7 +718,7 @@ func (fn *FunctionDesc)toInfo(details bool, periods int) (*swyapi.FunctionInfo, 
 	}
 
 	return &swyapi.FunctionInfo{
-		Id:		fn.ObjID.Hex(),
+		Name:		fn.SwoId.Name,
 		State:          fnStates[fn.State],
 		Mware:          fn.Mware,
 		S3Buckets:	fn.S3Buckets,
@@ -738,34 +739,6 @@ func (fn *FunctionDesc)toInfo(details bool, periods int) (*swyapi.FunctionInfo, 
 		AuthCtx:	fn.AuthCtx,
 		UserData:	fn.UserData,
 	}, nil
-}
-
-func handleFunctionInfo(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
-	var params swyapi.FunctionInfoReq
-	err := swyhttp.ReadAndUnmarshalReq(r, &params)
-	if err != nil {
-		return GateErrE(swy.GateBadRequest, err)
-	}
-
-	id := ctxSwoId(ctx, params.Project, params.FuncName)
-	ctxlog(ctx).Debugf("Get FN Info %s", id.Str())
-
-	fn, err := dbFuncFind(id)
-	if err != nil {
-		return GateErrD(err)
-	}
-
-	fi, cerr := fn.toInfo(true, params.Periods)
-	if cerr != nil {
-		return cerr
-	}
-
-	err = swyhttp.MarshalAndWrite(w, fi)
-	if err != nil {
-		return GateErrE(swy.GateBadResp, err)
-	}
-
-	return nil
 }
 
 func handleFunctionLogs(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
@@ -1005,6 +978,20 @@ func handleFunctionRun(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	return nil
 }
 
+func reqPeriods(q url.Values) int {
+	aux := q.Get("periods")
+	periods := 0
+	if aux != "" {
+		var err error
+		periods, err = strconv.Atoi(aux)
+		if err != nil {
+			return -1
+		}
+	}
+
+	return periods
+}
+
 func handleFunctions(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
 	q := r.URL.Query()
 	project := q.Get("project")
@@ -1015,14 +1002,9 @@ func handleFunctions(ctx context.Context, w http.ResponseWriter, r *http.Request
 	switch r.Method {
 	case "GET":
 		details := (q.Get("details") != "")
-		aux := q.Get("periods")
-		periods := 0
-		if aux != "" {
-			var err error
-			periods, err = strconv.Atoi(aux)
-			if err != nil {
-				return GateErrC(swy.GateBadRequest)
-			}
+		periods := reqPeriods(q)
+		if periods < 0 {
+			return GateErrC(swy.GateBadRequest)
 		}
 
 		fns, err := dbFuncListProj(ctxSwoId(ctx, project, ""))
@@ -1037,11 +1019,41 @@ func handleFunctions(ctx context.Context, w http.ResponseWriter, r *http.Request
 				return cerr
 			}
 
-			fi.Name = fn.SwoId.Name
+			fi.Id = fn.ObjID.Hex()
 			ret = append(ret, fi)
 		}
 
 		err = swyhttp.MarshalAndWrite(w, &ret)
+		if err != nil {
+			return GateErrE(swy.GateBadResp, err)
+		}
+	}
+
+	return nil
+}
+
+func handleFunction(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
+	fnid := mux.Vars(r)["fid"]
+
+	fn, err := dbFuncFindOne(bson.M{"tennant": fromContext(ctx).Tenant,
+			"_id": bson.ObjectIdHex(fnid)})
+	if err != nil {
+		return GateErrD(err)
+	}
+
+	switch r.Method {
+	case "GET":
+		periods := reqPeriods(r.URL.Query())
+		if periods < 0 {
+			return GateErrC(swy.GateBadRequest)
+		}
+
+		fi, cerr := fn.toInfo(true, periods)
+		if cerr != nil {
+			return cerr
+		}
+
+		err = swyhttp.MarshalAndWrite(w, fi)
 		if err != nil {
 			return GateErrE(swy.GateBadResp, err)
 		}
@@ -1435,7 +1447,6 @@ func main() {
 	r.Handle("/v1/function/update",		genReqHandler(handleFunctionUpdate)).Methods("POST", "OPTIONS")
 	r.Handle("/v1/function/remove",		genReqHandler(handleFunctionRemove)).Methods("POST", "OPTIONS")
 	r.Handle("/v1/function/run",		genReqHandler(handleFunctionRun)).Methods("POST", "OPTIONS")
-	r.Handle("/v1/function/info",		genReqHandler(handleFunctionInfo)).Methods("POST", "OPTIONS")
 	r.Handle("/v1/function/stats",		genReqHandler(handleFunctionStats)).Methods("POST", "OPTIONS")
 	r.Handle("/v1/function/code",		genReqHandler(handleFunctionCode)).Methods("POST", "OPTIONS")
 	r.Handle("/v1/function/logs",		genReqHandler(handleFunctionLogs)).Methods("POST", "OPTIONS")
@@ -1443,6 +1454,7 @@ func main() {
 	r.Handle("/v1/function/wait",		genReqHandler(handleFunctionWait)).Methods("POST", "OPTIONS")
 
 	r.Handle("/v1/functions",		genReqHandler(handleFunctions)).Methods("GET", "OPTIONS")
+	r.Handle("/v1/functions/{fid}",		genReqHandler(handleFunction)).Methods("GET", "OPTIONS")
 	r.Handle("/v1/functions/{fid}/events",	genReqHandler(handleFunctionEvents)).Methods("GET", "POST", "OPTIONS")
 	r.Handle("/v1/functions/{fid}/events/{eid}", genReqHandler(handleFunctionEvent)).Methods("GET", "DELETE", "OPTIONS")
 
