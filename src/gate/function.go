@@ -106,6 +106,56 @@ func (fn *FunctionDesc)isOneShot() bool {
 
 var zeroVersion = "0"
 
+func (fn *FunctionDesc)toInfo(details bool, periods int) (*swyapi.FunctionInfo, *swyapi.GateErr) {
+	var fv []string
+	var url = ""
+	var err error
+
+	if !details {
+		return &swyapi.FunctionInfo{
+			Name:		fn.SwoId.Name,
+			State:          fnStates[fn.State],
+		}, nil
+	}
+
+	if fn.isURL() {
+		url = conf.Daemon.Addr + "/call/" + fn.Cookie
+	}
+
+	stats, cerr := getFunctionStats(fn, periods)
+	if err != nil {
+		return nil, cerr
+	}
+
+	fv, err = dbBalancerRSListVersions(fn.Cookie)
+	if err != nil {
+		return nil, GateErrD(err)
+	}
+
+	return &swyapi.FunctionInfo{
+		Name:		fn.SwoId.Name,
+		State:          fnStates[fn.State],
+		Mware:          fn.Mware,
+		S3Buckets:	fn.S3Buckets,
+		Version:        fn.Src.Version,
+		RdyVersions:    fv,
+		URL:		url,
+		Code:		swyapi.FunctionCode{
+			Lang:		fn.Code.Lang,
+			Env:		fn.Code.Env,
+		},
+		Stats: stats,
+		Size:		swyapi.FunctionSize {
+			Memory:		fn.Size.Mem,
+			Timeout:	fn.Size.Tmo,
+			Rate:		fn.Size.Rate,
+			Burst:		fn.Size.Burst,
+		},
+		AuthCtx:	fn.AuthCtx,
+		UserData:	fn.UserData,
+	}, nil
+}
+
 func getFunctionDesc(tennant string, p_add *swyapi.FunctionAdd) *FunctionDesc {
 	fn := &FunctionDesc {
 		SwoId: SwoId {
