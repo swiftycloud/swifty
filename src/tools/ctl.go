@@ -639,18 +639,21 @@ func update_function(cd *cmdDesc, args []string, opts [16]string) {
 		req.Code = encodeFile(opts[0])
 	}
 
-	if opts[3] != "" {
-		if opts[3] == "-" {
-			req.Mware = &[]string{}
-		} else {
-			mw := strings.Split(opts[3], ",")
-			req.Mware = &mw
-		}
-	}
-
 	make_faas_req("function/update", req, nil)
 
 	fid := resolve_fn(cd.project, args[0])
+
+	if opts[3] != "" {
+		op := ""
+		if opts[3][0] == '+' {
+			op = "POST"
+		} else if opts[3][0] == '-' {
+			op = "DELETE"
+		} else {
+			fatal(fmt.Errorf("+/- mware name"))
+		}
+		make_faas_req1(op, "functions/" + fid + "/middleware?mwid=" + opts[3][1:], http.StatusOK, nil, nil)
+	}
 
 	if opts[4] != "" {
 		make_faas_req1("PUT", "functions/" + fid + "/userdata", http.StatusOK, opts[4], nil)

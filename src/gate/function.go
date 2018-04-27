@@ -414,6 +414,44 @@ func (fn *FunctionDesc)setSize(ctx context.Context, sz *swyapi.FunctionSize) err
 	return nil
 }
 
+func (fn *FunctionDesc)addMware(ctx context.Context, mw *MwareDesc) error {
+	err := dbFuncUpdate(bson.M{"_id": fn.ObjID}, bson.M{"$push": bson.M{"mware":mw.SwoId.Name}})
+	if err != nil {
+		return err
+	}
+
+	fn.Mware = append(fn.Mware, mw.SwoId.Name)
+	if fn.State == swy.DBFuncStateRdy {
+		swk8sUpdate(ctx, &conf, fn)
+	}
+	return nil
+}
+
+func (fn *FunctionDesc)delMware(ctx context.Context, mw *MwareDesc) error {
+	found := -1
+	for i, mwn := range fn.Mware {
+		if mwn == mw.SwoId.Name {
+			found = i
+			break
+		}
+	}
+
+	if found == -1 {
+		return errors.New("Mware not attached")
+	}
+
+	err := dbFuncUpdate(bson.M{"_id": fn.ObjID}, bson.M{"$pull": bson.M{"mware":fn.Mware[found]}})
+	if err != nil {
+		return err
+	}
+
+	fn.Mware = append(fn.Mware[:found], fn.Mware[found+1:]...)
+	if fn.State == swy.DBFuncStateRdy {
+		swk8sUpdate(ctx, &conf, fn)
+	}
+	return nil
+}
+
 func updateFunction(ctx context.Context, conf *YAMLConf, id *SwoId, params *swyapi.FunctionUpdate) *swyapi.GateErr {
 	var err error
 	var stalled, restart bool
@@ -443,12 +481,6 @@ func updateFunction(ctx context.Context, conf *YAMLConf, id *SwoId, params *swya
 		}
 
 		update["src.version"] = fn.Src.Version
-		restart = true
-	}
-
-	if params.Mware != nil {
-		fn.Mware = *params.Mware
-		update["mware"] = fn.Mware
 		restart = true
 	}
 
