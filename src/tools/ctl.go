@@ -628,6 +628,8 @@ func run_function(cd *cmdDesc, args []string, opts [16]string) {
 }
 
 func update_function(cd *cmdDesc, args []string, opts [16]string) {
+	var err error
+
 	req := swyapi.FunctionUpdate {
 		Project: cd.project,
 		FuncName: args[0],
@@ -635,23 +637,6 @@ func update_function(cd *cmdDesc, args []string, opts [16]string) {
 
 	if opts[0] != "" {
 		req.Code = encodeFile(opts[0])
-	}
-
-	if opts[1] != "" {
-		var err error
-		req.Size = &swyapi.FunctionSize {}
-		req.Size.Timeout, err = strconv.ParseUint(opts[1], 10, 64)
-		if err != nil {
-			fatal(fmt.Errorf("Bad tmo value %s: %s", opts[4], err.Error()))
-		}
-	}
-
-	if opts[2] != "" {
-		if req.Size == nil {
-			req.Size = &swyapi.FunctionSize {}
-		}
-
-		req.Size.Rate, req.Size.Burst = parse_rate(opts[2])
 	}
 
 	if opts[3] != "" {
@@ -677,6 +662,22 @@ func update_function(cd *cmdDesc, args []string, opts [16]string) {
 			ac = opts[7]
 		}
 		make_faas_req1("PUT", "functions/" + fid + "/authctx", http.StatusOK, ac, nil)
+	}
+
+	if opts[1] != "" || opts[2] != "" {
+		sz := swyapi.FunctionSize{}
+
+		if opts[1] != "" {
+			sz.Timeout, err = strconv.ParseUint(opts[1], 10, 64)
+			if err != nil {
+				fatal(fmt.Errorf("Bad tmo value %s: %s", opts[4], err.Error()))
+			}
+		}
+		if opts[2] != "" {
+			sz.Rate, sz.Burst = parse_rate(opts[2])
+		}
+
+		make_faas_req1("PUT", "functions/" + fid + "/size", http.StatusOK, &sz, nil)
 	}
 
 	if opts[5] != "" {

@@ -407,6 +407,51 @@ func handleFunctionAuthCtx(ctx context.Context, w http.ResponseWriter, r *http.R
 	return nil
 }
 
+func handleFunctionSize(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
+	fnid := mux.Vars(r)["fid"]
+
+	fn, err := dbFuncFindOne(bson.M{"tennant": fromContext(ctx).Tenant,
+			"_id": bson.ObjectIdHex(fnid)})
+	if err != nil {
+		return GateErrD(err)
+	}
+
+	switch r.Method {
+	case "GET":
+		err := swyhttp.MarshalAndWrite(w, &swyapi.FunctionSize{
+			Memory:		fn.Size.Mem,
+			Timeout:	fn.Size.Tmo,
+			Rate:		fn.Size.Rate,
+			Burst:		fn.Size.Burst,
+		})
+		if err != nil {
+			return GateErrE(swy.GateBadResp, err)
+		}
+
+	case "PUT":
+		var sz swyapi.FunctionSize
+
+		err := swyhttp.ReadAndUnmarshalReq(r, &sz)
+		if err != nil {
+			return GateErrE(swy.GateBadRequest, err)
+		}
+
+		err = swyFixSize(&sz, &conf)
+		if err != nil {
+			return GateErrE(swy.GateBadRequest, err)
+		}
+
+		err = fn.setSize(ctx, &sz)
+		if err != nil {
+			return GateErrE(swy.GateGenErr, err)
+		}
+
+		w.WriteHeader(http.StatusOK)
+	}
+
+	return nil
+}
+
 func handleFunctionEvent(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
 	fnid := mux.Vars(r)["fid"]
 	fn, err := dbFuncFindOne(bson.M{"tennant": fromContext(ctx).Tenant,
@@ -1419,6 +1464,7 @@ func main() {
 	r.Handle("/v1/functions/{fid}/state",	genReqHandler(handleFunctionState)).Methods("GET", "PUT", "OPTIONS")
 	r.Handle("/v1/functions/{fid}/userdata",genReqHandler(handleFunctionUserData)).Methods("GET", "PUT", "OPTIONS")
 	r.Handle("/v1/functions/{fid}/authctx",	genReqHandler(handleFunctionAuthCtx)).Methods("GET", "PUT", "OPTIONS")
+	r.Handle("/v1/functions/{fid}/size",	genReqHandler(handleFunctionSize)).Methods("GET", "PUT", "OPTIONS")
 
 	r.Handle("/v1/middleware",		genReqHandler(handleMwares)).Methods("GET", "POST", "OPTIONS")
 	r.Handle("/v1/middleware/{mid}",	genReqHandler(handleMware)).Methods("GET", "DELETE", "OPTIONS")

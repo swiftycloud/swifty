@@ -344,10 +344,79 @@ func (fn *FunctionDesc)setAuthCtx(ac string) error {
 	return err
 }
 
+func (fn *FunctionDesc)setSize(ctx context.Context, sz *swyapi.FunctionSize) error {
+	update := make(bson.M)
+	restart := false
+	mfix := false
+	rlfix := false
+
+	if fn.Size.Tmo != sz.Timeout {
+		ctxlog(ctx).Debugf("Will update tmo for %s", fn.SwoId.Str())
+		fn.Size.Tmo = sz.Timeout
+		update["size.timeout"] = sz.Timeout
+		restart = true
+	}
+
+	if fn.Size.Mem != sz.Memory {
+		ctxlog(ctx).Debugf("Will update mem for %s", fn.SwoId.Str())
+		fn.Size.Mem = sz.Memory
+		update["size.mem"] = sz.Memory
+		mfix = true
+		restart = true
+	}
+
+	if sz.Rate != fn.Size.Rate || sz.Burst != fn.Size.Burst {
+		ctxlog(ctx).Debugf("Will update ratelimit for %s", fn.SwoId.Str())
+		fn.Size.Burst = sz.Burst
+		fn.Size.Rate = sz.Rate
+		update["size.rate"] = sz.Rate
+		update["size.burst"] = sz.Burst
+		rlfix = true
+	}
+
+	err := dbFuncUpdateOne(fn, update)
+	if err != nil {
+		return err
+	}
+
+	if rlfix || mfix {
+		fdm := memdGetCond(fn.Cookie)
+		if fdm == nil {
+			goto skip
+		}
+
+		if mfix {
+			fdm.mem = fn.Size.Mem
+		}
+
+		if rlfix {
+			if fn.Size.Rate != 0 {
+				if fdm.crl != nil {
+					/* Update */
+					fdm.crl.Update(fn.Size.Burst, fn.Size.Rate)
+				} else {
+					/* Create */
+					fdm.crl = xratelimit.MakeRL(fn.Size.Burst, fn.Size.Rate)
+				}
+			} else {
+				/* Remove */
+				fdm.crl = nil
+			}
+		}
+	skip:
+		;
+	}
+
+	if restart && fn.State == swy.DBFuncStateRdy {
+		swk8sUpdate(ctx, &conf, fn)
+	}
+
+	return nil
+}
+
 func updateFunction(ctx context.Context, conf *YAMLConf, id *SwoId, params *swyapi.FunctionUpdate) *swyapi.GateErr {
 	var err error
 	var stalled, restart bool
-	var mfix, rlfix bool
 	var oldver string
 	var olds int
 
@@ -375,37 +444,6 @@ func updateFunction(ctx context.Context, conf *YAMLConf, id *SwoId, params *swya
 
 		update["src.version"] = fn.Src.Version
 		restart = true
-	}
-
-	if params.Size != nil {
-		err = swyFixSize(params.Size, conf)
-		if err != nil {
-			goto out
-		}
-
-		if fn.Size.Tmo != params.Size.Timeout {
-			ctxlog(ctx).Debugf("Will update tmo for %s", fn.SwoId.Str())
-			fn.Size.Tmo = params.Size.Timeout
-			update["size.timeout"] = params.Size.Timeout
-			restart = true
-		}
-
-		if fn.Size.Mem != params.Size.Memory {
-			ctxlog(ctx).Debugf("Will update mem for %s", fn.SwoId.Str())
-			fn.Size.Mem = params.Size.Memory
-			update["size.mem"] = params.Size.Memory
-			mfix = true
-			restart = true
-		}
-
-		if params.Size.Rate != fn.Size.Rate || params.Size.Burst != fn.Size.Burst {
-			ctxlog(ctx).Debugf("Will update ratelimit for %s", fn.SwoId.Str())
-			fn.Size.Burst = params.Size.Burst
-			fn.Size.Rate = params.Size.Rate
-			update["size.rate"] = params.Size.Rate
-			update["size.burst"] = params.Size.Burst
-			rlfix = true
-		}
 	}
 
 	if params.Mware != nil {
@@ -436,34 +474,6 @@ func updateFunction(ctx context.Context, conf *YAMLConf, id *SwoId, params *swya
 		ctxlog(ctx).Errorf("Can't update pulled %s: %s", fn.Name, err.Error())
 		err = errors.New("DB error")
 		goto out
-	}
-
-	if rlfix || mfix {
-		fdm := memdGetCond(fn.Cookie)
-		if fdm == nil {
-			goto skip
-		}
-
-		if mfix {
-			fdm.mem = fn.Size.Mem
-		}
-
-		if rlfix {
-			if fn.Size.Rate != 0 {
-				if fdm.crl != nil {
-					/* Update */
-					fdm.crl.Update(fn.Size.Burst, fn.Size.Rate)
-				} else {
-					/* Create */
-					fdm.crl = xratelimit.MakeRL(fn.Size.Burst, fn.Size.Rate)
-				}
-			} else {
-				/* Remove */
-				fdm.crl = nil
-			}
-		}
-	skip:
-		;
 	}
 
 	if restart {
