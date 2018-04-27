@@ -316,17 +316,22 @@ func resolve_fn(project, fname string) string {
 }
 
 func list_functions(cd *cmdDesc, args []string, opts [16]string) {
-	if opts[0] == "" {
-		var fns []swyapi.FunctionItem
-		make_faas_req("function/list", swyapi.FunctionList{ Project: cd.project, }, &fns)
+	ua := []string{}
+	if cd.project != "" {
+		ua = append(ua, "project=" + cd.project)
+	}
 
-		fmt.Printf("%-20s%-10s\n", "NAME", "STATE")
+	if opts[0] == "" {
+		var fns []swyapi.FunctionInfo
+		make_faas_req1("GET", url("functions", ua), http.StatusOK, nil, &fns)
+
+		fmt.Printf("%-32s%-20s%-10s\n", "ID", "NAME", "STATE")
 		for _, fn := range fns {
-			fmt.Printf("%-20s%-12s\n", fn.FuncName, fn.State)
+			fmt.Printf("%-32s%-20s%-12s\n", fn.Id, fn.Name, fn.State)
 		}
 	} else if opts[0] == "json" {
-		resp := make_faas_req2("POST", "function/list/info",
-			swyapi.FunctionListInfo{ Project: cd.project, Periods: 0 }, http.StatusOK, 30)
+		ua = append(ua, "details=1")
+		resp := make_faas_req2("GET", url("functions", ua), nil, http.StatusOK, 30)
 		defer resp.Body.Close()
 		body, err := ioutil.ReadAll(resp.Body)
 		if err != nil {

@@ -5,15 +5,6 @@ type GateErr struct {
 	Message		string			`json:"message"`
 }
 
-type FunctionList struct {
-	Project		string			`json:"project"`
-}
-
-type FunctionListInfo struct {
-	Project		string			`json:"project"`
-	Periods		int			`json:"periods"`
-}
-
 type ProjectList struct {
 }
 
@@ -68,17 +59,17 @@ type FunctionWait struct {
 
 type FunctionInfo struct {
 	Name		string			`json:"name,omitempty"`
-	Mware		[]string		`json:"mware"`
-	S3Buckets	[]string		`json:"s3buckets"`
+	Mware		[]string		`json:"mware,omitempty"`
+	S3Buckets	[]string		`json:"s3buckets,omitempty"`
 	State		string			`json:"state"`
 	Version		string			`json:"version"`
 	RdyVersions	[]string		`json:"rversions"`
 	Code		FunctionCode		`json:"code"`
-	URL		string			`json:"url"`
+	URL		string			`json:"url,omitempty"`
 	Stats		[]FunctionStats		`json:"stats"`
 	Size		FunctionSize		`json:"size"`
 	AuthCtx		string			`json:"authctx,omitempty"`
-	UserData	string			`json:"userdata"`
+	UserData	string			`json:"userdata,omitempty"`
 	Id		string			`json:"id"`
 }
 
@@ -225,13 +216,6 @@ type FunctionXID struct {
 	Project		string			`json:"project"`
 	FuncName	string			`json:"name"`
 	Version		string			`json:"version"`
-}
-
-type FunctionItem struct {
-	FuncName	string			`json:"name"`
-	State		string			`json:"state"`
-	Timeout		uint64			`json:"timeout"`
-	LastCall	string			`json:"lastcall,omitempty"`
 }
 
 type ProjectItem struct {

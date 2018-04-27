@@ -13,6 +13,7 @@ import (
 	"flag"
 	"strings"
 	"context"
+	"strconv"
 	"sync/atomic"
 	"time"
 	"fmt"
@@ -689,10 +690,17 @@ func handleFunctionStats(ctx context.Context, w http.ResponseWriter, r *http.Req
 	return nil
 }
 
-func getFunctionInfo(fn *FunctionDesc, periods int) (*swyapi.FunctionInfo, *swyapi.GateErr) {
+func (fn *FunctionDesc)toInfo(details bool, periods int) (*swyapi.FunctionInfo, *swyapi.GateErr) {
 	var fv []string
 	var url = ""
 	var err error
+
+	if !details {
+		return &swyapi.FunctionInfo{
+			Id:		fn.ObjID.Hex(),
+			State:          fnStates[fn.State],
+		}, nil
+	}
 
 	if fn.isURL() {
 		url = conf.Daemon.Addr + "/call/" + fn.Cookie
@@ -747,7 +755,7 @@ func handleFunctionInfo(ctx context.Context, w http.ResponseWriter, r *http.Requ
 		return GateErrD(err)
 	}
 
-	fi, cerr := getFunctionInfo(fn, params.Periods)
+	fi, cerr := fn.toInfo(true, params.Periods)
 	if cerr != nil {
 		return cerr
 	}
@@ -997,76 +1005,46 @@ func handleFunctionRun(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	return nil
 }
 
-func handleFunctionListWithInfos(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
-	var recs []FunctionDesc
-	var result []*swyapi.FunctionInfo
-	var params swyapi.FunctionListInfo
-
-	ctxlog(ctx).Debugf("List functions with infos")
-
-	err := swyhttp.ReadAndUnmarshalReq(r, &params)
-	if err != nil {
-		return GateErrE(swy.GateBadRequest, err)
+func handleFunctions(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
+	q := r.URL.Query()
+	project := q.Get("project")
+	if project == "" {
+		project = SwyDefaultProject
 	}
 
-	id := ctxSwoId(ctx, params.Project, "")
-	recs, err = dbFuncListProj(id)
-	if err != nil {
-		return GateErrD(err)
-	}
-
-	for _, v := range recs {
-		ifo, cerr := getFunctionInfo(&v, params.Periods)
-		if cerr != nil {
-			return cerr
+	switch r.Method {
+	case "GET":
+		details := (q.Get("details") != "")
+		aux := q.Get("periods")
+		periods := 0
+		if aux != "" {
+			var err error
+			periods, err = strconv.Atoi(aux)
+			if err != nil {
+				return GateErrC(swy.GateBadRequest)
+			}
 		}
 
-		ifo.Name = v.SwoId.Name
-		result = append(result, ifo)
-	}
-
-	err = swyhttp.MarshalAndWrite(w, result)
-	if err != nil {
-		return GateErrE(swy.GateBadResp, err)
-	}
-
-	return nil
-}
-
-func handleFunctionList(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
-	var recs []FunctionDesc
-	var result []swyapi.FunctionItem
-	var params swyapi.FunctionList
-
-	err := swyhttp.ReadAndUnmarshalReq(r, &params)
-	if err != nil {
-		return GateErrE(swy.GateBadRequest, err)
-	}
-
-	id := ctxSwoId(ctx, params.Project, "")
-	recs, err = dbFuncListProj(id)
-	if err != nil {
-		return GateErrD(err)
-	}
-
-	for _, v := range recs {
-		stats, err := statsGet(&v)
+		fns, err := dbFuncListProj(ctxSwoId(ctx, project, ""))
 		if err != nil {
-			return GateErrM(swy.GateGenErr, "Error getting stats")
+			return GateErrD(err)
 		}
 
-		result = append(result,
-			swyapi.FunctionItem{
-				FuncName:	v.Name,
-				State:		fnStates[v.State],
-				Timeout:	v.Size.Tmo,
-				LastCall:	stats.LastCallS(),
-		})
-	}
+		var ret []*swyapi.FunctionInfo
+		for _, fn := range fns {
+			fi, cerr := fn.toInfo(details, periods)
+			if cerr != nil {
+				return cerr
+			}
 
-	err = swyhttp.MarshalAndWrite(w, &result)
-	if err != nil {
-		return GateErrE(swy.GateBadResp, err)
+			fi.Name = fn.SwoId.Name
+			ret = append(ret, fi)
+		}
+
+		err = swyhttp.MarshalAndWrite(w, &ret)
+		if err != nil {
+			return GateErrE(swy.GateBadResp, err)
+		}
 	}
 
 	return nil
@@ -1457,14 +1435,14 @@ func main() {
 	r.Handle("/v1/function/update",		genReqHandler(handleFunctionUpdate)).Methods("POST", "OPTIONS")
 	r.Handle("/v1/function/remove",		genReqHandler(handleFunctionRemove)).Methods("POST", "OPTIONS")
 	r.Handle("/v1/function/run",		genReqHandler(handleFunctionRun)).Methods("POST", "OPTIONS")
-	r.Handle("/v1/function/list",		genReqHandler(handleFunctionList)).Methods("POST", "OPTIONS")
-	r.Handle("/v1/function/list/info",	genReqHandler(handleFunctionListWithInfos)).Methods("POST", "OPTIONS")
 	r.Handle("/v1/function/info",		genReqHandler(handleFunctionInfo)).Methods("POST", "OPTIONS")
 	r.Handle("/v1/function/stats",		genReqHandler(handleFunctionStats)).Methods("POST", "OPTIONS")
 	r.Handle("/v1/function/code",		genReqHandler(handleFunctionCode)).Methods("POST", "OPTIONS")
 	r.Handle("/v1/function/logs",		genReqHandler(handleFunctionLogs)).Methods("POST", "OPTIONS")
 	r.Handle("/v1/function/state",		genReqHandler(handleFunctionState)).Methods("POST", "OPTIONS")
 	r.Handle("/v1/function/wait",		genReqHandler(handleFunctionWait)).Methods("POST", "OPTIONS")
+
+	r.Handle("/v1/functions",		genReqHandler(handleFunctions)).Methods("GET", "OPTIONS")
 	r.Handle("/v1/functions/{fid}/events",	genReqHandler(handleFunctionEvents)).Methods("GET", "POST", "OPTIONS")
 	r.Handle("/v1/functions/{fid}/events/{eid}", genReqHandler(handleFunctionEvent)).Methods("GET", "DELETE", "OPTIONS")
 
