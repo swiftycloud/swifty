@@ -547,29 +547,30 @@ func handleTenantStats(ctx context.Context, w http.ResponseWriter, r *http.Reque
 }
 
 func handleFunctionStats(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
-	var params swyapi.FunctionStatsReq
+	fnid := mux.Vars(r)["fid"]
 
-	err := swyhttp.ReadAndUnmarshalReq(r, &params)
-	if err != nil {
-		return GateErrE(swy.GateBadRequest, err)
-	}
-
-	id := ctxSwoId(ctx, params.Project, params.FuncName)
-	ctxlog(ctx).Debugf("Get FN stats %s", id.Str())
-
-	fn, err := dbFuncFind(id)
+	fn, err := dbFuncFindOne(bson.M{"tennant": fromContext(ctx).Tenant,
+			"_id": bson.ObjectIdHex(fnid)})
 	if err != nil {
 		return GateErrD(err)
 	}
 
-	stats, cerr := getFunctionStats(fn, params.Periods)
-	if cerr != nil {
-		return cerr
-	}
+	switch r.Method {
+	case "GET":
+		periods := reqPeriods(r.URL.Query())
+		if periods < 0 {
+			return GateErrC(swy.GateBadRequest)
+		}
 
-	err = swyhttp.MarshalAndWrite(w, &swyapi.FunctionStatsResp{ Stats: stats })
-	if err != nil {
-		return GateErrE(swy.GateBadResp, err)
+		stats, cerr := getFunctionStats(fn, periods)
+		if cerr != nil {
+			return cerr
+		}
+
+		err = swyhttp.MarshalAndWrite(w, &swyapi.FunctionStatsResp{ Stats: stats })
+		if err != nil {
+			return GateErrE(swy.GateBadResp, err)
+		}
 	}
 
 	return nil
@@ -1334,7 +1335,6 @@ func main() {
 	r.Handle("/v1/project/del",		genReqHandler(handleProjectDel)).Methods("POST", "OPTIONS")
 	r.Handle("/v1/function/update",		genReqHandler(handleFunctionUpdate)).Methods("POST", "OPTIONS")
 	r.Handle("/v1/function/run",		genReqHandler(handleFunctionRun)).Methods("POST", "OPTIONS")
-	r.Handle("/v1/function/stats",		genReqHandler(handleFunctionStats)).Methods("POST", "OPTIONS")
 	r.Handle("/v1/function/code",		genReqHandler(handleFunctionCode)).Methods("POST", "OPTIONS")
 	r.Handle("/v1/function/state",		genReqHandler(handleFunctionState)).Methods("POST", "OPTIONS")
 	r.Handle("/v1/function/wait",		genReqHandler(handleFunctionWait)).Methods("POST", "OPTIONS")
@@ -1344,6 +1344,7 @@ func main() {
 	r.Handle("/v1/functions/{fid}/events",	genReqHandler(handleFunctionEvents)).Methods("GET", "POST", "OPTIONS")
 	r.Handle("/v1/functions/{fid}/events/{eid}", genReqHandler(handleFunctionEvent)).Methods("GET", "DELETE", "OPTIONS")
 	r.Handle("/v1/functions/{fid}/logs",	genReqHandler(handleFunctionLogs)).Methods("GET", "OPTIONS")
+	r.Handle("/v1/functions/{fid}/stats",	genReqHandler(handleFunctionStats)).Methods("GET", "OPTIONS")
 
 	r.Handle("/v1/middleware",		genReqHandler(handleMwares)).Methods("GET", "POST", "OPTIONS")
 	r.Handle("/v1/middleware/{mid}",	genReqHandler(handleMware)).Methods("GET", "DELETE", "OPTIONS")

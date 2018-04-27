@@ -16,12 +16,6 @@ type TenantStatsReq struct {
 	Periods		int			`json:"periods"`
 }
 
-type FunctionStatsReq struct {
-	Project		string			`json:"project"`
-	FuncName	string			`json:"name"`
-	Periods		int			`json:"periods"`
-}
-
 type FunctionStats struct {
 	Called		uint64			`json:"called"`
 	Timeouts	uint64			`json:"timeouts"`
