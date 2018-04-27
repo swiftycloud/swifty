@@ -695,13 +695,13 @@ func del_function(cd *cmdDesc, args []string, opts [16]string) {
 }
 
 func on_fn(cd *cmdDesc, args []string, opts [16]string) {
-	make_faas_req("function/state",
-		swyapi.FunctionState{ Project: cd.project, FuncName: args[0], State: "ready" }, nil)
+	args[0] = resolve_fn(cd.project, args[0])
+	make_faas_req1("PUT", "function/" + args[0] + "/state?v=ready", http.StatusOK, nil, nil)
 }
 
 func off_fn(cd *cmdDesc, args []string, opts [16]string) {
-	make_faas_req("function/state",
-		swyapi.FunctionState{ Project: cd.project, FuncName: args[0], State: "deactivated" }, nil)
+	args[0] = resolve_fn(cd.project, args[0])
+	make_faas_req1("PUT", "function/" + args[0] + "/state?v=deactivated", http.StatusOK, nil, nil)
 }
 
 func list_events(cd *cmdDesc, args []string, opts [16]string) {

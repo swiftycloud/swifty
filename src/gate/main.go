@@ -408,22 +408,34 @@ func handleFunctionWait(ctx context.Context, w http.ResponseWriter, r *http.Requ
 }
 
 func handleFunctionState(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
-	var params swyapi.FunctionState
+	fnid := mux.Vars(r)["fid"]
 
-	err := swyhttp.ReadAndUnmarshalReq(r, &params)
+	fn, err := dbFuncFindOne(bson.M{"tennant": fromContext(ctx).Tenant,
+			"_id": bson.ObjectIdHex(fnid)})
 	if err != nil {
-		return GateErrE(swy.GateBadRequest, err)
+		return GateErrD(err)
 	}
 
-	id := ctxSwoId(ctx, params.Project, params.FuncName)
-	ctxlog(ctx).Debugf("function/state %s -> %s", id.Str(), params.State)
+	switch r.Method {
+	case "GET":
+		err = swyhttp.MarshalAndWrite(w, fnStates[fn.State])
+		if err != nil {
+			return GateErrE(swy.GateBadResp, err)
+		}
+	case "PUT":
+		state := r.URL.Query().Get("v")
+		if state == "" {
+			return GateErrC(swy.GateBadRequest)
+		}
 
-	cerr := setFunctionState(ctx, &conf, id, &params)
-	if cerr != nil {
-		return cerr
+		cerr := setFunctionState(ctx, &conf, fn, state)
+		if cerr != nil {
+			return cerr
+		}
+
+		w.WriteHeader(http.StatusOK)
 	}
 
-	w.WriteHeader(http.StatusOK)
 	return nil
 }
 
@@ -1336,7 +1348,6 @@ func main() {
 	r.Handle("/v1/function/update",		genReqHandler(handleFunctionUpdate)).Methods("POST", "OPTIONS")
 	r.Handle("/v1/function/run",		genReqHandler(handleFunctionRun)).Methods("POST", "OPTIONS")
 	r.Handle("/v1/function/code",		genReqHandler(handleFunctionCode)).Methods("POST", "OPTIONS")
-	r.Handle("/v1/function/state",		genReqHandler(handleFunctionState)).Methods("POST", "OPTIONS")
 	r.Handle("/v1/function/wait",		genReqHandler(handleFunctionWait)).Methods("POST", "OPTIONS")
 
 	r.Handle("/v1/functions",		genReqHandler(handleFunctions)).Methods("GET", "POST", "OPTIONS")
@@ -1345,6 +1356,7 @@ func main() {
 	r.Handle("/v1/functions/{fid}/events/{eid}", genReqHandler(handleFunctionEvent)).Methods("GET", "DELETE", "OPTIONS")
 	r.Handle("/v1/functions/{fid}/logs",	genReqHandler(handleFunctionLogs)).Methods("GET", "OPTIONS")
 	r.Handle("/v1/functions/{fid}/stats",	genReqHandler(handleFunctionStats)).Methods("GET", "OPTIONS")
+	r.Handle("/v1/functions/{fid}/state",	genReqHandler(handleFunctionState)).Methods("GET", "PUT", "OPTIONS")
 
 	r.Handle("/v1/middleware",		genReqHandler(handleMwares)).Methods("GET", "POST", "OPTIONS")
 	r.Handle("/v1/middleware/{mid}",	genReqHandler(handleMware)).Methods("GET", "DELETE", "OPTIONS")

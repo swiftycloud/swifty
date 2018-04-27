@@ -640,17 +640,12 @@ out:
 	ctxlog(ctx).Errorf("POD update notify: %s", err.Error())
 }
 
-func deactivateFunction(ctx context.Context, conf *YAMLConf, id *SwoId) *swyapi.GateErr {
+func deactivateFunction(ctx context.Context, conf *YAMLConf, fn *FunctionDesc) *swyapi.GateErr {
 	var err error
 
-	fn, err := dbFuncFind(id)
+	err = dbFuncSetStateCond(&fn.SwoId, swy.DBFuncStateDea, swy.DBFuncStateRdy)
 	if err != nil {
-		return GateErrD(err)
-	}
-
-	err = dbFuncSetStateCond(id, swy.DBFuncStateDea, swy.DBFuncStateRdy)
-	if err != nil {
-		ctxlog(ctx).Errorf("Can't deactivate function %s: %s", id.Name, err.Error())
+		ctxlog(ctx).Errorf("Can't deactivate function %s: %s", fn.SwoId.Name, err.Error())
 		return GateErrM(swy.GateGenErr, "Cannot deactivate function")
 	}
 
@@ -664,12 +659,11 @@ func deactivateFunction(ctx context.Context, conf *YAMLConf, id *SwoId) *swyapi.
 	return nil
 }
 
-func activateFunction(ctx context.Context, conf *YAMLConf, id *SwoId) *swyapi.GateErr {
+func activateFunction(ctx context.Context, conf *YAMLConf, fn *FunctionDesc) *swyapi.GateErr {
 	var err error
 
-	fn, err := dbFuncFindStates(id, []int{swy.DBFuncStateDea})
-	if err != nil {
-		return GateErrD(err)
+	if fn.State != swy.DBFuncStateDea {
+		return GateErrM(swy.GateGenErr, "Function is not deactivated")
 	}
 
 	dbFuncSetState(ctx, fn, swy.DBFuncStateStr)
@@ -684,12 +678,12 @@ func activateFunction(ctx context.Context, conf *YAMLConf, id *SwoId) *swyapi.Ga
 	return nil
 }
 
-func setFunctionState(ctx context.Context, conf *YAMLConf, id *SwoId, st *swyapi.FunctionState) *swyapi.GateErr {
-	switch st.State {
+func setFunctionState(ctx context.Context, conf *YAMLConf, fn *FunctionDesc, st string) *swyapi.GateErr {
+	switch st {
 	case fnStates[swy.DBFuncStateDea]:
-		return deactivateFunction(ctx, conf, id)
+		return deactivateFunction(ctx, conf, fn)
 	case fnStates[swy.DBFuncStateRdy]:
-		return activateFunction(ctx, conf, id)
+		return activateFunction(ctx, conf, fn)
 	}
 
 	return GateErrM(swy.GateNotAvail, "Cannot set this state")
