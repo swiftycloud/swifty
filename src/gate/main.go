@@ -294,55 +294,6 @@ func handleProjectList(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	return nil
 }
 
-func handleFunctionAdd(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
-	var params swyapi.FunctionAdd
-
-	err := swyhttp.ReadAndUnmarshalReq(r, &params)
-	if err != nil {
-		return GateErrE(swy.GateBadRequest, err)
-	}
-
-	if params.Project == "" {
-		params.Project = SwyDefaultProject
-	}
-
-	err = swyFixSize(&params.Size, &conf)
-	if err != nil {
-		return GateErrE(swy.GateBadRequest, err)
-	}
-
-	if params.FuncName == "" {
-		return GateErrM(swy.GateBadRequest, "No function name")
-	}
-	if params.Code.Lang == "" {
-		return GateErrM(swy.GateBadRequest, "No language specified")
-	}
-
-	err = validateProjectAndFuncName(&params)
-	if err != nil {
-		return GateErrM(swy.GateBadRequest, "Bad project/function name")
-	}
-
-	if !RtLangEnabled(params.Code.Lang) {
-		return GateErrM(swy.GateBadRequest, "Unsupported language")
-	}
-
-	for _, env := range(params.Code.Env) {
-		if strings.HasPrefix(env, "SWD_") {
-			return GateErrM(swy.GateBadRequest, "Environment var cannot start with SWD_")
-		}
-	}
-
-	cerr := addFunction(ctx, &conf, getFunctionDesc(fromContext(ctx).Tenant, &params))
-	if cerr != nil {
-		return cerr
-
-	}
-
-	w.WriteHeader(http.StatusOK)
-	return nil
-}
-
 func handleFunctionEvents(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
 	fnid := mux.Vars(r)["fid"]
 
@@ -910,6 +861,53 @@ func handleFunctions(ctx context.Context, w http.ResponseWriter, r *http.Request
 		if err != nil {
 			return GateErrE(swy.GateBadResp, err)
 		}
+
+	case "POST":
+		var params swyapi.FunctionAdd
+
+		err := swyhttp.ReadAndUnmarshalReq(r, &params)
+		if err != nil {
+			return GateErrE(swy.GateBadRequest, err)
+		}
+
+		err = swyFixSize(&params.Size, &conf)
+		if err != nil {
+			return GateErrE(swy.GateBadRequest, err)
+		}
+
+		if params.Name == "" {
+			return GateErrM(swy.GateBadRequest, "No function name")
+		}
+		if params.Code.Lang == "" {
+			return GateErrM(swy.GateBadRequest, "No language specified")
+		}
+
+		err = validateFuncName(&params)
+		if err != nil {
+			return GateErrM(swy.GateBadRequest, "Bad project/function name")
+		}
+
+		if !RtLangEnabled(params.Code.Lang) {
+			return GateErrM(swy.GateBadRequest, "Unsupported language")
+		}
+
+		for _, env := range(params.Code.Env) {
+			if strings.HasPrefix(env, "SWD_") {
+				return GateErrM(swy.GateBadRequest, "Environment var cannot start with SWD_")
+			}
+		}
+
+		fid, cerr := addFunction(ctx, &conf,
+				getFunctionDesc(fromContext(ctx).Tenant, project, &params))
+		if cerr != nil {
+			return cerr
+
+		}
+
+		err = swyhttp.MarshalAndWrite(w, fid)
+		if err != nil {
+			return GateErrE(swy.GateBadResp, err)
+		}
 	}
 
 	return nil
@@ -1334,7 +1332,6 @@ func main() {
 	r.Handle("/v1/stats",			genReqHandler(handleTenantStats)).Methods("POST", "OPTIONS")
 	r.Handle("/v1/project/list",		genReqHandler(handleProjectList)).Methods("POST", "OPTIONS")
 	r.Handle("/v1/project/del",		genReqHandler(handleProjectDel)).Methods("POST", "OPTIONS")
-	r.Handle("/v1/function/add",		genReqHandler(handleFunctionAdd)).Methods("POST", "OPTIONS")
 	r.Handle("/v1/function/update",		genReqHandler(handleFunctionUpdate)).Methods("POST", "OPTIONS")
 	r.Handle("/v1/function/run",		genReqHandler(handleFunctionRun)).Methods("POST", "OPTIONS")
 	r.Handle("/v1/function/stats",		genReqHandler(handleFunctionStats)).Methods("POST", "OPTIONS")
@@ -1343,7 +1340,7 @@ func main() {
 	r.Handle("/v1/function/state",		genReqHandler(handleFunctionState)).Methods("POST", "OPTIONS")
 	r.Handle("/v1/function/wait",		genReqHandler(handleFunctionWait)).Methods("POST", "OPTIONS")
 
-	r.Handle("/v1/functions",		genReqHandler(handleFunctions)).Methods("GET", "OPTIONS")
+	r.Handle("/v1/functions",		genReqHandler(handleFunctions)).Methods("GET", "POST", "OPTIONS")
 	r.Handle("/v1/functions/{fid}",		genReqHandler(handleFunction)).Methods("GET", "DELETE", "OPTIONS")
 	r.Handle("/v1/functions/{fid}/events",	genReqHandler(handleFunctionEvents)).Methods("GET", "POST", "OPTIONS")
 	r.Handle("/v1/functions/{fid}/events/{eid}", genReqHandler(handleFunctionEvent)).Methods("GET", "DELETE", "OPTIONS")

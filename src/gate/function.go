@@ -156,12 +156,12 @@ func (fn *FunctionDesc)toInfo(details bool, periods int) (*swyapi.FunctionInfo, 
 	}, nil
 }
 
-func getFunctionDesc(tennant string, p_add *swyapi.FunctionAdd) *FunctionDesc {
+func getFunctionDesc(tennant, project string, p_add *swyapi.FunctionAdd) *FunctionDesc {
 	fn := &FunctionDesc {
 		SwoId: SwoId {
 			Tennant: tennant,
-			Project: p_add.Project,
-			Name:	 p_add.FuncName,
+			Project: project,
+			Name:	 p_add.Name,
 		},
 		Src:		FnSrcDesc {
 			Type:		p_add.Sources.Type,
@@ -189,15 +189,8 @@ func getFunctionDesc(tennant string, p_add *swyapi.FunctionAdd) *FunctionDesc {
 	return fn
 }
 
-func validateProjectAndFuncName(params *swyapi.FunctionAdd) error {
-	var err error
-
-	err = swy.CheckName(params.Project, 64)
-	if err == nil {
-		err = swy.CheckName(params.FuncName, 50)
-	}
-
-	return err
+func validateFuncName(params *swyapi.FunctionAdd) error {
+	return swy.CheckName(params.Name, 50)
 }
 
 func checkCount(id *SwoId) error {
@@ -219,18 +212,19 @@ func checkCount(id *SwoId) error {
 	return nil
 }
 
-func addFunction(ctx context.Context, conf *YAMLConf, fn *FunctionDesc) *swyapi.GateErr {
+func addFunction(ctx context.Context, conf *YAMLConf, fn *FunctionDesc) (string, *swyapi.GateErr) {
 	var err, erc error
 	var build bool
 	var bAddr string
 
 	ctxlog(ctx).Debugf("function/add %s (cookie %s)", fn.SwoId.Str(), fn.Cookie[:32])
 
+	fn.ObjID = bson.NewObjectId()
 	fn.State = swy.DBFuncStateIni
 	err = dbFuncAdd(fn)
 	if err != nil {
 		ctxlog(ctx).Errorf("Can't add function %s: %s", fn.SwoId.Str(), err.Error())
-		return GateErrD(err)
+		return "", GateErrD(err)
 	}
 
 	err = checkCount(&fn.SwoId)
@@ -280,7 +274,7 @@ func addFunction(ctx context.Context, conf *YAMLConf, fn *FunctionDesc) *swyapi.
 	}
 
 	logSaveEvent(fn, "registered", "")
-	return nil
+	return fn.ObjID.Hex(), nil
 
 out_clean_repo:
 	erc = cleanRepo(ctx, fn)
@@ -295,7 +289,7 @@ out_clean_func:
 
 	gateFunctions.Dec()
 out:
-	return GateErrE(swy.GateGenErr, err)
+	return "", GateErrE(swy.GateGenErr, err)
 
 stalled:
 	dbFuncSetState(ctx, fn, swy.DBFuncStateStl)

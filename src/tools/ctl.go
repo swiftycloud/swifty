@@ -516,6 +516,11 @@ func parse_rate(val string) (uint, uint) {
 }
 
 func add_function(cd *cmdDesc, args []string, opts [16]string) {
+	ua := []string{}
+	if cd.project != "" {
+		ua = append(ua, "project=" + cd.project)
+	}
+
 	sources := swyapi.FunctionSources{}
 	code := swyapi.FunctionCode{}
 
@@ -555,8 +560,7 @@ func add_function(cd *cmdDesc, args []string, opts [16]string) {
 	}
 
 	req := swyapi.FunctionAdd{
-		Project: cd.project,
-		FuncName: args[0],
+		Name: args[0],
 		Sources: sources,
 		Code: code,
 		Mware: mw,
@@ -582,7 +586,9 @@ func add_function(cd *cmdDesc, args []string, opts [16]string) {
 	}
 
 	if !cd.req {
-		make_faas_req("function/add", req, nil)
+		var fid string
+		make_faas_req1("POST", url("functions", ua), http.StatusOK, req, &fid)
+		fmt.Printf("Function %s created\n", fid)
 	} else {
 		d, err := json.Marshal(req)
 		if err == nil {

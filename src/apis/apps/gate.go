@@ -154,9 +154,20 @@ type S3Creds struct {
 	Expires		uint32			`json:"expires"` /* in seconds */
 }
 
-type FunctionAdd struct {
+type FunctionAddD struct {
 	Project		string			`json:"project"`
 	FuncName	string			`json:"name"`
+	Sources		FunctionSources		`json:"sources"`
+	Code		FunctionCode		`json:"code"`
+	Size		FunctionSize		`json:"size"`
+	Mware		[]string		`json:"mware,omitempty"`
+	S3Buckets	[]string		`json:"s3buckets,omitempty"`
+	UserData	string			`json:"userdata,omitempty"`
+	AuthCtx		string			`json:"authctx,omitempty"`
+}
+
+type FunctionAdd struct {
+	Name		string			`json:"name"`
 	Sources		FunctionSources		`json:"sources"`
 	Code		FunctionCode		`json:"code"`
 	Size		FunctionSize		`json:"size"`
@@ -223,7 +234,7 @@ type DeployId struct {
 }
 
 type DeployItem struct {
-	Function	*FunctionAdd		`json:"function,omitempty"`
+	Function	*FunctionAddD		`json:"function,omitempty"`
 	Mware		*MwareAddD		`json:"mware,omitempty"`
 }
 

@@ -21,7 +21,8 @@ type DeployItemDesc struct {
 
 func (i *DeployItemDesc)start(ctx context.Context) *swyapi.GateErr {
 	if i.Fn != nil {
-		return addFunction(ctx, &conf, i.Fn)
+		_, cerr := addFunction(ctx, &conf, i.Fn)
+		return cerr
 	}
 
 	if i.Mw != nil {
@@ -130,8 +131,19 @@ func deployStart(ctx context.Context, params *swyapi.DeployStart) *swyapi.GateEr
 				return GateErrM(swy.GateBadRequest, "Cross-project deploy")
 			}
 
+			a := swyapi.FunctionAdd{
+				Name:		item.Function.FuncName,
+				Sources:	item.Function.Sources,
+				Code:		item.Function.Code,
+				Size:		item.Function.Size,
+				Mware:		item.Function.Mware,
+				S3Buckets:	item.Function.S3Buckets,
+				UserData:	item.Function.UserData,
+				AuthCtx:	item.Function.AuthCtx,
+			}
+
 			dep.Items = append(dep.Items, &DeployItemDesc{
-				Fn: getFunctionDesc(ten, item.Function),
+				Fn: getFunctionDesc(ten, item.Function.Project, &a),
 			})
 			continue
 		}
