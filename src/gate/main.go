@@ -1507,7 +1507,7 @@ func main() {
 	r.Handle("/v1/function/state",		genReqHandler(handleFunctionState)).Methods("POST", "OPTIONS")
 	r.Handle("/v1/function/wait",		genReqHandler(handleFunctionWait)).Methods("POST", "OPTIONS")
 	r.Handle("/v1/functions/{fid}/events",	genReqHandler(handleFunctionEvents)).Methods("GET", "POST", "OPTIONS")
-	r.Handle("/v1/functions/{fid}/events/{eid}", genReqHandler(handleFunctionEvent)).Methods("GET", "POST", "DELETE", "OPTIONS")
+	r.Handle("/v1/functions/{fid}/events/{eid}", genReqHandler(handleFunctionEvent)).Methods("GET", "DELETE", "OPTIONS")
 	r.Handle("/v1/mware/add",		genReqHandler(handleMwareAdd)).Methods("POST", "OPTIONS")
 	r.Handle("/v1/mware/info",		genReqHandler(handleMwareInfo)).Methods("POST", "OPTIONS")
 	r.Handle("/v1/mware/list",		genReqHandler(handleMwareList)).Methods("POST", "OPTIONS")
