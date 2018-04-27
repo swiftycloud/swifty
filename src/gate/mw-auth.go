@@ -27,11 +27,8 @@ type AuthCtx struct {
 	signKey		string
 }
 
-func authCtxGet(fn *FunctionDesc) (*AuthCtx, error) {
-	var id SwoId
-
-	id = fn.SwoId
-	id.Name = fn.AuthCtx
+func authCtxGet(id SwoId, ac string) (*AuthCtx, error) {
+	id.Name = ac
 
 	item, err := dbMwareGetReady(&id)
 	if err != nil {

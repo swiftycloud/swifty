@@ -231,6 +231,10 @@ func dbFuncUpdatePulled(fn *FunctionDesc, update bson.M, olds int) error {
 		bson.M{"$set": update })
 }
 
+func dbFuncUpdateOne(fn *FunctionDesc, update bson.M) error {
+	return dbFuncUpdate(bson.M{"_id": fn.ObjID}, bson.M{"$set": update })
+}
+
 func dbFuncAdd(desc *FunctionDesc) error {
 	c := dbSession.DB(DBStateDB).C(DBColFunc)
 	return c.Insert(desc)

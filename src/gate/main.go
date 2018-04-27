@@ -337,6 +337,76 @@ func handleFunctionEvents(ctx context.Context, w http.ResponseWriter, r *http.Re
 	return nil
 }
 
+func handleFunctionUserData(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
+	fnid := mux.Vars(r)["fid"]
+
+	fn, err := dbFuncFindOne(bson.M{"tennant": fromContext(ctx).Tenant,
+			"_id": bson.ObjectIdHex(fnid)})
+	if err != nil {
+		return GateErrD(err)
+	}
+
+	switch r.Method {
+	case "GET":
+		err := swyhttp.MarshalAndWrite(w, fn.UserData)
+		if err != nil {
+			return GateErrE(swy.GateBadResp, err)
+		}
+
+	case "PUT":
+		var ud string
+
+		err := swyhttp.ReadAndUnmarshalReq(r, &ud)
+		if err != nil {
+			return GateErrE(swy.GateBadRequest, err)
+		}
+
+		err = fn.setUserData(ud)
+		if err != nil {
+			return GateErrE(swy.GateGenErr, err)
+		}
+
+		w.WriteHeader(http.StatusOK)
+	}
+
+	return nil
+}
+
+func handleFunctionAuthCtx(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
+	fnid := mux.Vars(r)["fid"]
+
+	fn, err := dbFuncFindOne(bson.M{"tennant": fromContext(ctx).Tenant,
+			"_id": bson.ObjectIdHex(fnid)})
+	if err != nil {
+		return GateErrD(err)
+	}
+
+	switch r.Method {
+	case "GET":
+		err := swyhttp.MarshalAndWrite(w, fn.AuthCtx)
+		if err != nil {
+			return GateErrE(swy.GateBadResp, err)
+		}
+
+	case "PUT":
+		var ac string
+
+		err := swyhttp.ReadAndUnmarshalReq(r, &ac)
+		if err != nil {
+			return GateErrE(swy.GateBadRequest, err)
+		}
+
+		err = fn.setAuthCtx(ac)
+		if err != nil {
+			return GateErrE(swy.GateGenErr, err)
+		}
+
+		w.WriteHeader(http.StatusOK)
+	}
+
+	return nil
+}
+
 func handleFunctionEvent(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
 	fnid := mux.Vars(r)["fid"]
 	fn, err := dbFuncFindOne(bson.M{"tennant": fromContext(ctx).Tenant,
@@ -1347,6 +1417,8 @@ func main() {
 	r.Handle("/v1/functions/{fid}/logs",	genReqHandler(handleFunctionLogs)).Methods("GET", "OPTIONS")
 	r.Handle("/v1/functions/{fid}/stats",	genReqHandler(handleFunctionStats)).Methods("GET", "OPTIONS")
 	r.Handle("/v1/functions/{fid}/state",	genReqHandler(handleFunctionState)).Methods("GET", "PUT", "OPTIONS")
+	r.Handle("/v1/functions/{fid}/userdata",genReqHandler(handleFunctionUserData)).Methods("GET", "PUT", "OPTIONS")
+	r.Handle("/v1/functions/{fid}/authctx",	genReqHandler(handleFunctionAuthCtx)).Methods("GET", "PUT", "OPTIONS")
 
 	r.Handle("/v1/middleware",		genReqHandler(handleMwares)).Methods("GET", "POST", "OPTIONS")
 	r.Handle("/v1/middleware/{mid}",	genReqHandler(handleMware)).Methods("GET", "DELETE", "OPTIONS")

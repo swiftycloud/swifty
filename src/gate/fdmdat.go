@@ -171,7 +171,7 @@ func fndatGetOrInit(cookie string, fn *FunctionDesc) (*FnMemData, error) {
 	nret.public = fn.isURL()
 	nret.depname = fn.DepName()
 	if fn.AuthCtx != "" {
-		nret.ac, err = authCtxGet(fn)
+		nret.ac, err = authCtxGet(fn.SwoId, fn.AuthCtx)
 		if err != nil {
 			return nil, err
 		}

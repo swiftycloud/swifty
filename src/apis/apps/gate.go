@@ -178,8 +178,6 @@ type FunctionUpdate struct {
 	Size		*FunctionSize		`json:"size,omitempty"`
 	Mware		*[]string		`json:"mware,omitempty"`
 	S3Buckets	*[]string		`json:"s3buckets,omitempty"`
-	AuthCtx		*string			`json:"authctx,omitempty"`
-	UserData	string			`json:"userdata"`
 }
 
 type FunctionRun struct {

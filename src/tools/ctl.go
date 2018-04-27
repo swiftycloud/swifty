@@ -663,8 +663,12 @@ func update_function(cd *cmdDesc, args []string, opts [16]string) {
 		}
 	}
 
+	make_faas_req("function/update", req, nil)
+
+	fid := resolve_fn(cd.project, args[0])
+
 	if opts[4] != "" {
-		req.UserData = opts[4]
+		make_faas_req1("PUT", "functions/" + fid + "/userdata", http.StatusOK, opts[4], nil)
 	}
 
 	if opts[7] != "" {
@@ -672,11 +676,8 @@ func update_function(cd *cmdDesc, args []string, opts [16]string) {
 		if opts[7] != "-" {
 			ac = opts[7]
 		}
-
-		req.AuthCtx = &ac
+		make_faas_req1("PUT", "functions/" + fid + "/authctx", http.StatusOK, ac, nil)
 	}
-
-	make_faas_req("function/update", req, nil)
 
 	if opts[5] != "" {
 		fmt.Printf("Wait FN %s\n", opts[5])

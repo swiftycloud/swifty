@@ -313,13 +313,43 @@ func swyFixSize(sz *swyapi.FunctionSize, conf *YAMLConf) error {
 	return nil
 }
 
+func (fn *FunctionDesc)setUserData(ud string) error {
+	err := dbFuncUpdateOne(fn, bson.M{"userdata": ud})
+	if err == nil {
+		fn.UserData = ud
+	}
+	return err
+}
+
+func (fn *FunctionDesc)setAuthCtx(ac string) error {
+	var nac *AuthCtx
+	var err error
+
+	if ac != "" {
+		nac, err = authCtxGet(fn.SwoId, ac)
+		if err != nil {
+			return err
+		}
+	}
+
+	err = dbFuncUpdateOne(fn, bson.M{"authctx": ac})
+	if err == nil {
+		fn.AuthCtx = ac
+		fdm := memdGetCond(fn.Cookie)
+		if fdm != nil {
+			fdm.ac = nac
+		}
+	}
+
+	return err
+}
+
 func updateFunction(ctx context.Context, conf *YAMLConf, id *SwoId, params *swyapi.FunctionUpdate) *swyapi.GateErr {
 	var err error
 	var stalled, restart bool
-	var mfix, rlfix, acfix bool
+	var mfix, rlfix bool
 	var oldver string
 	var olds int
-	var nac *AuthCtx
 
 	update := make(bson.M)
 
@@ -390,25 +420,6 @@ func updateFunction(ctx context.Context, conf *YAMLConf, id *SwoId, params *swya
 		restart = true
 	}
 
-	if params.UserData != "" {
-		fn.UserData = params.UserData
-		update["userdata"] = fn.UserData
-	}
-
-	if params.AuthCtx != nil {
-		fn.AuthCtx = *params.AuthCtx
-
-		if fn.AuthCtx != "" {
-			nac, err = authCtxGet(fn)
-			if err != nil {
-				goto out
-			}
-		}
-
-		update["authctx"] = fn.AuthCtx
-		acfix = true
-	}
-
 	if len(update) == 0 {
 		ctxlog(ctx).Debugf("Nothing to update for %s", fn.SwoId.Str())
 		goto out_ne
@@ -427,7 +438,7 @@ func updateFunction(ctx context.Context, conf *YAMLConf, id *SwoId, params *swya
 		goto out
 	}
 
-	if rlfix || mfix || acfix {
+	if rlfix || mfix {
 		fdm := memdGetCond(fn.Cookie)
 		if fdm == nil {
 			goto skip
@@ -450,10 +461,6 @@ func updateFunction(ctx context.Context, conf *YAMLConf, id *SwoId, params *swya
 				/* Remove */
 				fdm.crl = nil
 			}
-		}
-
-		if acfix {
-			fdm.ac = nac
 		}
 	skip:
 		;
