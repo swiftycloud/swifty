@@ -42,3 +42,4 @@ runtime:
         max-replicas: 32
 wdog:
         port: 8687
+swage: "/home/swifty/swage"

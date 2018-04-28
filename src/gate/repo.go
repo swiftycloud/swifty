@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"bytes"
+	"strings"
 	"os/exec"
 	"os"
 	"context"
@@ -95,6 +96,10 @@ var srcHandlers = map[string] struct {
 		update:	updateFileFromReq,
 		check:	checkFileVersion,
 	},
+
+	"swage": {
+		get:	swageFile,
+	},
 }
 
 func checkFileVersion(version string, versions []string) bool {
@@ -161,16 +166,20 @@ func cloneGitRepo(ctx context.Context, fn *FunctionDesc) error {
 }
 
 func writeSource(ctx context.Context, fn *FunctionDesc, codeb64 string) error {
+	data, err := base64.StdEncoding.DecodeString(codeb64)
+	if err != nil {
+		return fmt.Errorf("Error decoding sources")
+	}
+
+	return writeSourceRaw(ctx, fn, data)
+}
+
+func writeSourceRaw(ctx context.Context, fn *FunctionDesc, data []byte) error {
 	to := fnCodeLatestPath(&conf, fn)
 	err := os.MkdirAll(to, 0750)
 	if err != nil {
 		ctxlog(ctx).Error("Can't mkdir sources: %s", err.Error())
 		return errors.New("FS error")
-	}
-
-	data, err := base64.StdEncoding.DecodeString(codeb64)
-	if err != nil {
-		return fmt.Errorf("Error decoding sources")
 	}
 
 	script := RtDefaultScriptName(&fn.Code)
@@ -182,6 +191,31 @@ func writeSource(ctx context.Context, fn *FunctionDesc, codeb64 string) error {
 	}
 
 	return nil
+}
+
+func swageFile(ctx context.Context, fn *FunctionDesc) error {
+	if fn.Src.swage == nil {
+		return errors.New("No swage params")
+	}
+
+	tf := fn.Src.swage.Template
+	if strings.Contains(tf, "/") {
+		return errors.New("Bad swage name")
+	}
+
+	fnCode, err := ioutil.ReadFile(conf.Swage + "/" + fn.Code.Lang + "/" + tf + ".sw")
+	if err != nil {
+		return errors.New("Can't read swage")
+	}
+
+	for k, v := range fn.Src.swage.Params {
+		fnCode = bytes.Replace(fnCode, []byte(k), []byte(v), -1)
+	}
+
+	fn.Src.Type = "code"
+	fn.Src.Version = zeroVersion
+
+	return writeSourceRaw(ctx, fn, fnCode)
 }
 
 func getFileFromReq(ctx context.Context, fn *FunctionDesc) error {

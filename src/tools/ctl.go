@@ -573,6 +573,8 @@ func parse_rate(val string) (uint, uint) {
 }
 
 func function_add(args []string, opts [16]string) {
+	var err error
+
 	ua := []string{}
 	if curCmd.project != "" {
 		ua = append(ua, "project=" + curCmd.project)
@@ -581,24 +583,39 @@ func function_add(args []string, opts [16]string) {
 	sources := swyapi.FunctionSources{}
 	code := swyapi.FunctionCode{}
 
-	st, err := os.Stat(opts[1])
-	if err != nil {
-		fatal(fmt.Errorf("Can't stat sources path"))
-	}
+	if strings.HasPrefix(opts[1], "sw:") {
+		s := strings.Split(opts[1], ":")
+		var sw swyapi.FunctionSwage
 
-	if st.IsDir() {
-		repo, err := filepath.Abs(opts[1])
-		if err != nil {
-			fatal(fmt.Errorf("Can't get abs path for repo"))
+		sw.Template = s[1]
+		sw.Params = make(map[string]string)
+		for _, p := range s[2:] {
+			ps := strings.SplitN(p, "=", 2)
+			sw.Params[ps[0]] = ps[1]
 		}
 
-		fmt.Printf("Will add git repo %s\n", repo)
-		sources.Type = "git"
-		sources.Repo = repo
+		sources.Type = "swage"
+		sources.Swage = &sw
 	} else {
-		fmt.Printf("Will add file %s\n", opts[1])
-		sources.Type = "code"
-		sources.Code = encodeFile(opts[1])
+		st, err := os.Stat(opts[1])
+		if err != nil {
+			fatal(fmt.Errorf("Can't stat sources path"))
+		}
+
+		if st.IsDir() {
+			repo, err := filepath.Abs(opts[1])
+			if err != nil {
+				fatal(fmt.Errorf("Can't get abs path for repo"))
+			}
+
+			fmt.Printf("Will add git repo %s\n", repo)
+			sources.Type = "git"
+			sources.Repo = repo
+		} else {
+			fmt.Printf("Will add file %s\n", opts[1])
+			sources.Type = "code"
+			sources.Code = encodeFile(opts[1])
+		}
 	}
 
 	if opts[0] == "" {

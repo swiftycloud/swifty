@@ -128,6 +128,7 @@ type YAMLConf struct {
 	Mware		YAMLConfMw		`yaml:"middleware"`
 	Runtime		YAMLConfRt		`yaml:"runtime"`
 	Wdog		YAMLConfSwd		`yaml:"wdog"`
+	Swage		string			`yaml:"swage"`
 }
 
 var conf YAMLConf

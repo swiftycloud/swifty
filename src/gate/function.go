@@ -66,6 +66,8 @@ type FnSrcDesc struct {
 	Repo		string		`bson:"repo,omitempty"`
 	Version		string		`bson:"version"`		// Top commit in the repo
 	Code		string		`bson:"-"`
+
+	swage		*swyapi.FunctionSwage	`bson:"-"` // This doesn't get to the database (should it?)
 }
 
 type FnSizeDesc struct {
@@ -171,6 +173,7 @@ func getFunctionDesc(tennant, project string, p_add *swyapi.FunctionAdd) *Functi
 			Type:		p_add.Sources.Type,
 			Repo:		p_add.Sources.Repo,
 			Code:		p_add.Sources.Code,
+			swage:		p_add.Sources.Swage,
 		},
 		Size:		FnSizeDesc {
 			Replicas:	1,

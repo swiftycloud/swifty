@@ -220,7 +220,7 @@ func dbFuncUpdateAdded(fn *FunctionDesc) error {
 	return dbFuncUpdate(
 		bson.M{"cookie": fn.Cookie},
 		bson.M{"$set": bson.M{
-				"src.version": fn.Src.Version,
+				"src": &fn.Src,
 				"state": fn.State,
 			}})
 }
