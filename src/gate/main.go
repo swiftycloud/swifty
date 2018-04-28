@@ -1324,60 +1324,87 @@ func handleS3Access(ctx context.Context, w http.ResponseWriter, r *http.Request)
 	return nil
 }
 
-func handleDeployStop(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
-	var params swyapi.DeployId
-
-	err := swyhttp.ReadAndUnmarshalReq(r, &params)
-	if err != nil {
-		return GateErrE(swy.GateBadRequest, err)
+func handleDeployments(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
+	q := r.URL.Query()
+	project := q.Get("project")
+	if project == "" {
+		project = SwyDefaultProject
 	}
 
-	id := ctxSwoId(ctx, params.Project, params.Name)
-	cerr := deployStop(ctx, id)
-	if cerr != nil {
-		return cerr
+	switch r.Method {
+	case "GET":
+		deps, err := dbDeployListProj(ctxSwoId(ctx, project, ""))
+		if err != nil {
+			return GateErrD(err)
+		}
+
+		var dis []*swyapi.DeployInfo
+		for _, d := range deps {
+			di, cerr := d.toInfo(false)
+			if cerr != nil {
+				return cerr
+			}
+
+			di.Id = d.ObjID.Hex()
+			dis = append(dis, di)
+		}
+
+		err = swyhttp.MarshalAndWrite(w, dis)
+		if err != nil {
+			return GateErrE(swy.GateBadResp, err)
+		}
+
+	case "POST":
+		var ds swyapi.DeployStart
+
+		err := swyhttp.ReadAndUnmarshalReq(r, &ds)
+		if err != nil {
+			return GateErrE(swy.GateBadRequest, err)
+		}
+
+		did, cerr := deployStart(ctx, &ds)
+		if cerr != nil {
+			return cerr
+		}
+
+		err = swyhttp.MarshalAndWrite(w, &did)
+		if err != nil {
+			return GateErrE(swy.GateBadResp, err)
+		}
 	}
 
-	w.WriteHeader(http.StatusOK)
 	return nil
 }
 
-func handleDeployInfo(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
-	var params swyapi.DeployId
-
-	err := swyhttp.ReadAndUnmarshalReq(r, &params)
+func handleDeployment(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
+	did := mux.Vars(r)["did"]
+	dd, err := dbDeployGet(bson.M{"tennant": fromContext(ctx).Tenant,
+			"_id": bson.ObjectIdHex(did)})
 	if err != nil {
-		return GateErrE(swy.GateBadRequest, err)
+		return GateErrD(err)
 	}
 
-	id := ctxSwoId(ctx, params.Project, params.Name)
-	inf, cerr := deployInfo(ctx, id)
-	if cerr != nil {
-		return cerr
+	switch r.Method {
+	case "GET":
+		di, cerr := dd.toInfo(true)
+		if cerr != nil {
+			return cerr
+		}
+
+		err = swyhttp.MarshalAndWrite(w, di)
+		if err != nil {
+			return GateErrE(swy.GateBadResp, err)
+		}
+
+	case "DELETE":
+		cerr := deployStop(ctx, dd)
+		if cerr != nil {
+			return cerr
+		}
+
+		w.WriteHeader(http.StatusOK)
 	}
 
-	err = swyhttp.MarshalAndWrite(w, inf)
-	if err != nil {
-		return GateErrE(swy.GateBadResp, err)
-	}
-
-	return nil
-}
-
-func handleDeployStart(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
-	var params swyapi.DeployStart
-
-	err := swyhttp.ReadAndUnmarshalReq(r, &params)
-	if err != nil {
-		return GateErrE(swy.GateBadRequest, err)
-	}
-
-	cerr := deployStart(ctx, &params)
-	if cerr != nil {
-		return cerr
-	}
-
-	w.WriteHeader(http.StatusOK)
 	return nil
 }
 
@@ -1606,9 +1633,8 @@ func main() {
 
 	r.Handle("/v1/s3/access",		genReqHandler(handleS3Access)).Methods("GET", "OPTIONS")
 
-	r.Handle("/v1/deploy/start",		genReqHandler(handleDeployStart)).Methods("POST", "OPTIONS")
-	r.Handle("/v1/deploy/info",		genReqHandler(handleDeployInfo)).Methods("POST", "OPTIONS")
-	r.Handle("/v1/deploy/stop",		genReqHandler(handleDeployStop)).Methods("POST", "OPTIONS")
+	r.Handle("/v1/deployments",		genReqHandler(handleDeployments)).Methods("GET", "POST", "OPTIONS")
+	r.Handle("/v1/deployments/{did}",	genReqHandler(handleDeployment)).Methods("GET", "DELETE", "OPTIONS")
 
 	r.Handle("/v1/info/langs",		genReqHandler(handleLanguages)).Methods("POST", "OPTIONS")
 	r.Handle("/v1/info/mwares",		genReqHandler(handleMwareTypes)).Methods("POST", "OPTIONS")

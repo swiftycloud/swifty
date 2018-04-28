@@ -496,9 +496,9 @@ func dbDeployAdd(dep *DeployDesc) error {
 	return dbSession.DB(DBStateDB).C(DBColDeploy).Insert(dep)
 }
 
-func dbDeployGet(id *SwoId) (*DeployDesc, error) {
+func dbDeployGet(q bson.M) (*DeployDesc, error) {
 	var dep DeployDesc
-	err := dbSession.DB(DBStateDB).C(DBColDeploy).Find(bson.M{"cookie": id.Cookie()}).One(&dep)
+	err := dbSession.DB(DBStateDB).C(DBColDeploy).Find(q).One(&dep)
 	return &dep, err
 }
 
@@ -508,6 +508,11 @@ func dbDeployDel(dep *DeployDesc) error {
 
 func dbDeployList() (deps []DeployDesc, err error) {
 	err = dbSession.DB(DBStateDB).C(DBColDeploy).Find(bson.M{}).All(&deps)
+	return
+}
+
+func dbDeployListProj(id *SwoId) (deps []*DeployDesc, err error) {
+	err = dbSession.DB(DBStateDB).C(DBColDeploy).Find(bson.M{"tennant":id.Tennant,"project":id.Project}).All(&deps)
 	return
 }
 

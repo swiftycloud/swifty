@@ -45,15 +45,17 @@ func (i *DeployItemDesc)stop(ctx context.Context) *swyapi.GateErr {
 	return GateErrM(swy.GateGenErr, "Bad deploy item")
 }
 
-func (i *DeployItemDesc)info() (*swyapi.DeployItemInfo) {
+func (i *DeployItemDesc)info(details bool) (*swyapi.DeployItemInfo) {
 	if i.Fn != nil {
 		ret := &swyapi.DeployItemInfo{Type: "function", Name: i.Fn.SwoId.Name}
 
-		fn, err := dbFuncFind(&i.Fn.SwoId)
-		if err == nil {
-			ret.State = fnStates[fn.State]
-		} else {
-			ret.State = fnStates[swy.DBFuncStateNo]
+		if details {
+			fn, err := dbFuncFind(&i.Fn.SwoId)
+			if err == nil {
+				ret.State = fnStates[fn.State]
+			} else {
+				ret.State = fnStates[swy.DBFuncStateNo]
+			}
 		}
 
 		return ret
@@ -62,11 +64,13 @@ func (i *DeployItemDesc)info() (*swyapi.DeployItemInfo) {
 	if i.Mw != nil {
 		ret := &swyapi.DeployItemInfo{Type: "mware", Name: i.Mw.SwoId.Name}
 
-		mw, err := dbMwareGetItem(&i.Mw.SwoId)
-		if err == nil {
-			ret.State = mwStates[mw.State]
-		} else {
-			ret.State = mwStates[swy.DBMwareStateNo]
+		if details {
+			mw, err := dbMwareGetItem(&i.Mw.SwoId)
+			if err == nil {
+				ret.State = mwStates[mw.State]
+			} else {
+				ret.State = mwStates[swy.DBMwareStateNo]
+			}
 		}
 
 		return ret
@@ -116,7 +120,7 @@ func deployStopItems(ctx context.Context, dep *DeployDesc, till int) *swyapi.Gat
 	return err
 }
 
-func deployStart(ctx context.Context, params *swyapi.DeployStart) *swyapi.GateErr {
+func deployStart(ctx context.Context, params *swyapi.DeployStart) (string, *swyapi.GateErr) {
 	var err error
 
 	ten := fromContext(ctx).Tenant
@@ -138,47 +142,39 @@ func deployStart(ctx context.Context, params *swyapi.DeployStart) *swyapi.GateEr
 			continue
 		}
 
-		return GateErrM(swy.GateBadRequest, "Bad item")
+		return "", GateErrM(swy.GateBadRequest, "Bad item")
 	}
 
+	dep.ObjID = bson.NewObjectId()
 	err = dbDeployAdd(dep)
 	if err != nil {
-		return GateErrD(err)
+		return "", GateErrD(err)
 	}
 
 	go deployStartItems(ctx, dep)
 
-	return nil
+	return dep.ObjID.Hex(), nil
 }
 
-func deployInfo(ctx context.Context, id *SwoId) (*swyapi.DeployInfo, *swyapi.GateErr) {
+func (dep *DeployDesc)toInfo(details bool) (*swyapi.DeployInfo, *swyapi.GateErr) {
 	var ret swyapi.DeployInfo
 
-	dep, err := dbDeployGet(id)
-	if err != nil {
-		return nil, GateErrD(err)
-	}
-
+	ret.Name = dep.SwoId.Name
 	ret.State = depStates[dep.State]
 	for _, item := range dep.Items {
-		ret.Items = append(ret.Items, item.info())
+		ret.Items = append(ret.Items, item.info(details))
 	}
 
 	return &ret, nil
 }
 
-func deployStop(ctx context.Context, id *SwoId) (*swyapi.GateErr) {
-	dep, err := dbDeployGet(id)
-	if err != nil {
-		return GateErrD(err)
-	}
-
+func deployStop(ctx context.Context, dep *DeployDesc) (*swyapi.GateErr) {
 	cerr := deployStopItems(ctx, dep, len(dep.Items))
 	if cerr != nil {
 		return cerr
 	}
 
-	err = dbDeployDel(dep)
+	err := dbDeployDel(dep)
 	if err != nil {
 		return GateErrD(err)
 	}
