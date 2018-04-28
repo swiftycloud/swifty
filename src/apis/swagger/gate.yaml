@@ -113,30 +113,71 @@ paths:
           description: Need to authenticate
         '403':
           description: Bad authentication token
-  
-  /function/list:
-    post:
+
+  /functions:
+    parameters:
+      - in: header
+        name: X-Auth-Token
+        type: string
+        required: true
+      - name: project
+        in: query
+        description: Project to work on
+        required: false
+        type: string
+    get:
+      tags:
+        - function
       summary: List functions
       parameters:
-        - in: header
-          name: X-Auth-Token
+        - in: query
+          name: periods
+          type: integer
+          required: false
+          description: Number of stats periods to report
+        - in: query
+          name: details
           type: string
-          required: true
-        - in: body
-          name: data
-          description: List parameters
-          required: true
-          schema:
-            $ref: '#/definitions/FunctionList'
+          required: false
+          description: Whether or not to show details about functions (value itself is ignored)
+        - in: query
+          name: name
+          type: string
+          required: false
+          description: Name of a function to find (useful to resolve ID by name)
       responses:
         '200':
           description: OK
           schema:
-            properties:
-              functions:
-                type: array
-                items:
-                  $ref: '#/definitions/FunctionItem'
+            type: array
+            items:
+              $ref: '#/definitions/FunctionInfo'
+        '400':
+          description: Bad request
+          schema:
+            $ref: '#/definitions/GateError'
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad authentication token
+    post:
+      tags:
+        - function
+      summary: Create funciton
+      parameters:
+        - name: data
+          in: body
+          description: Middleware description
+          required: true
+          schema:
+            $ref: '#/definitions/FunctionAdd'
+      responses:
+        '200':
+          description: OK
+          schema:
+            type: string
+            description: Function ID
+            example: 'deadbeef'
         '400':
           description: Bad request
           schema:
@@ -146,29 +187,32 @@ paths:
         '403':
           description: Bad authentication token
 
-  /function/list/info:
-    post:
-      summary: List functions and provide info for each
+  /functions/{fid}:
+    parameters:
+      - in: header
+        name: X-Auth-Token
+        type: string
+        required: true
+      - in: path
+        name: fid
+        type: string
+        required: true
+        description: Function ID
+    get:
+      tags:
+        - function
+      summary: Show function info (with details, without ID)
       parameters:
-        - in: header
-          name: X-Auth-Token
-          type: string
-          required: true
-        - in: body
-          name: data
-          description: List parameters
-          required: true
-          schema:
-            $ref: '#/definitions/FunctionListInfo'
+        - in: query
+          name: periods
+          type: integer
+          required: false
+          description: Number of stats periods to report
       responses:
         '200':
           description: OK
           schema:
-            properties:
-              functions:
-                type: array
-                items:
-                  $ref: '#/definitions/FunctionInfo'
+            $ref: '#/definitions/FunctionInfo'
         '400':
           description: Bad request
           schema:
@@ -177,117 +221,29 @@ paths:
           description: Need to authenticate
         '403':
           description: Bad authentication token
-  /function/add:
-    post:
-      summary: Add a function
-      parameters:
-        - in: header
-          name: X-Auth-Token
-          type: string
-          required: true
-        - name: data
-          in: body
-          description: Function specification
-          required: true
-          schema:
-            $ref: '#/definitions/FunctionAdd'
+    delete:
+      tags:
+        - function
+      summary: Create middleware
       responses:
         '200':
-          description: Function added
+          description: OK
         '400':
-          description: Some error occurred
+          description: Bad request
           schema:
             $ref: '#/definitions/GateError'
         '401':
           description: Need to authenticate
         '403':
           description: Bad authentication token
-  /function/update:
     post:
-      summary: Update function code and/or properties
+      tags:
+        - function
+      summary: Run funciton
       parameters:
-        - in: header
-          name: X-Auth-Token
-          type: string
-          required: true
         - name: data
           in: body
-          description: Update description
-          required: true
-          schema:
-            $ref: '#/definitions/FunctionUpdate'
-      responses:
-        '200':
-          description: Function updated
-        '400':
-          description: Something went wrong
-          schema:
-            $ref: '#/definitions/GateError'
-        '401':
-          description: Need to authenticate
-        '403':
-          description: Bad authentication token
-  /function/wait:
-    post:
-      summary: Wait for an event on a function
-      parameters:
-        - in: header
-          name: X-Auth-Token
-          type: string
-          required: true
-        - name: data
-          in: body
-          description: Event to wait
-          required: true
-          schema:
-            $ref: '#/definitions/FunctionWait'
-      responses:
-        '200':
-          description: Event occurred
-        '400':
-          description: Something went wrong
-        '401':
-          description: Need to authenticate
-        '403':
-          description: Bad authentication token
-        '524':
-          description: Timout while waiting for event
-  /function/remove:
-    post:
-      summary: Remove a function
-      parameters:
-        - in: header
-          name: X-Auth-Token
-          type: string
-          required: true
-        - name: data
-          in: body
-          description: Function to remove
-          required: true
-          schema:
-            $ref: '#/definitions/FunctionRemove'
-      responses:
-        '200':
-          description: Function removed
-        '400':
-          description: Something went wrong
-          schema:
-            $ref: '#/definitions/GateError'
-        '401':
-          description: Need to authenticate
-        '403':
-          description: Bad authentication token
-  /function/run:
-    post:
-      summary: Manual execution trigger
-      parameters:
-        - in: header
-          name: X-Auth-Token
-          type: string
-          required: true
-        - name: data
-          in: body
-          description: Function ID and arguments
+          description: Arguments
           required: false
           schema:
             $ref: '#/definitions/FunctionRun'
@@ -303,57 +259,30 @@ paths:
         '401':
           description: Need to authenticate
         '403':
-          description: Bad authentication token
-  /function/logs:
-    post:
-      summary: Show logs of a function
-      parameters:
-        - in: header
-          name: X-Auth-Token
-          type: string
-          required: true
-        - name: data
-          in: body
-          description: Function name to see logs for
-          required: true
-          schema:
-            $ref: '#/definitions/FunctionID'
+          description: Bad authentication token  
+          
+  /functions/{fid}/logs:
+    parameters:
+      - in: header
+        name: X-Auth-Token
+        type: string
+        required: true
+      - in: path
+        name: fid
+        type: string
+        required: true
+        description: Function ID
+    get:
+      tags:
+        - function
+      summary: Show function logs
       responses:
         '200':
           description: OK
           schema:
-            properties:
-              logs:
-                type: array
-                items:
-                  $ref: '#/definitions/FunctionLogEntry'
-        '400':
-          description: Something went wrong
-          schema:
-            $ref: '#/definitions/GateError'
-        '401':
-          description: Need to authenticate
-        '403':
-          description: Bad authentication token
-  /function/info:
-    post:
-      summary: Show extended info about a function
-      parameters:
-        - in: header
-          name: X-Auth-Token
-          type: string
-          required: true
-        - name: date
-          in: body
-          description: Function name
-          required: true
-          schema:
-            $ref: '#/definitions/FunctionInfoReq'
-      responses:
-        '200':
-          description: OK
-          schema:
-            $ref: '#/definitions/FunctionInfo'
+            type: array
+            items:
+              $ref: '#/definitions/FunctionLogEntry'
         '400':
           description: Bad request
           schema:
@@ -362,25 +291,35 @@ paths:
           description: Need to authenticate
         '403':
           description: Bad authentication token
-  /function/stats:
-    post:
-      summary: Show function statistics
+          
+  /functions/{fid}/stats:
+    parameters:
+      - in: header
+        name: X-Auth-Token
+        type: string
+        required: true
+      - in: path
+        name: fid
+        type: string
+        required: true
+        description: Function ID
+    get:
+      tags:
+        - function
+      summary: Show function stats
       parameters:
-        - in: header
-          name: X-Auth-Token
-          type: string
-          required: true
-        - name: date
-          in: body
-          description: Function name
-          required: true
-          schema:
-            $ref: '#/definitions/FunctionStatsReq'
+        - in: query
+          name: periods
+          type: integer
+          required: false
+          description: Number of stats periods to report
       responses:
         '200':
           description: OK
           schema:
-            $ref: '#/definitions/FunctionStatsResp'
+            type: array
+            items:
+              $ref: '#/definitions/FunctionStatsResp'
         '400':
           description: Bad request
           schema:
@@ -389,20 +328,272 @@ paths:
           description: Need to authenticate
         '403':
           description: Bad authentication token
-  /function/code:
-    post:
-      summary: Show function code
+          
+  /functions/{fid}/state:
+    parameters:
+      - in: header
+        name: X-Auth-Token
+        type: string
+        required: true
+      - in: path
+        name: fid
+        type: string
+        required: true
+        description: Function ID
+    get:
+      tags:
+        - function
+      summary: Get function state
+      responses:
+        '200':
+          description: OK
+          schema:
+            type: string
+            example: 'ready, deactivated'
+        '400':
+          description: Bad request
+          schema:
+            $ref: '#/definitions/GateError'
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad authentication token
+    put:
+      tags:
+        - function
+      summary: Set function state
       parameters:
-        - in: header
-          name: X-Auth-Token
+        - in: query
+          name: v
           type: string
           required: true
-        - name: date
-          in: body
-          description: Function name
-          required: true
+          description: State to set
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
           schema:
-            $ref: '#/definitions/FunctionXID'
+            $ref: '#/definitions/GateError'
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad authentication token
+          
+  /functions/{fid}/wait:
+    parameters:
+      - in: header
+        name: X-Auth-Token
+        type: string
+        required: true
+      - in: path
+        name: fid
+        type: string
+        required: true
+        description: Function ID
+    post:
+      tags:
+        - function
+      summary: Wait for an event on a function
+      parameters:
+        - in: query
+          name: timeout
+          type: string
+          required: false
+          description: Time to wait in msec
+        - in: query
+          name: version
+          type: string
+          required: false
+          description: >-
+            When a function version equals or (!) greater than this becomes
+            available for execution, the event occurs. Note, that older versions
+            may still be there when the event happens.
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+          schema:
+            $ref: '#/definitions/GateError'
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad authentication token
+        '524':
+          description: TImeout has occurred
+
+          
+  /functions/{fid}/userdata:
+    parameters:
+      - in: header
+        name: X-Auth-Token
+        type: string
+        required: true
+      - in: path
+        name: fid
+        type: string
+        required: true
+        description: Function ID
+    get:
+      tags:
+        - function
+      summary: Get function associated text
+      responses:
+        '200':
+          description: OK
+          schema:
+            type: string
+            example: 'This is my first function :)'
+        '400':
+          description: Bad request
+          schema:
+            $ref: '#/definitions/GateError'
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad authentication token
+    put:
+      tags:
+        - function
+      summary: Set function associated text
+      parameters:
+        - in: body
+          name: data
+          schema:
+            type: string
+          required: true
+          description: State to set
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+          schema:
+            $ref: '#/definitions/GateError'
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad authentication token
+          
+  /functions/{fid}/authctx:
+    parameters:
+      - in: header
+        name: X-Auth-Token
+        type: string
+        required: true
+      - in: path
+        name: fid
+        type: string
+        required: true
+        description: Function ID
+    get:
+      tags:
+        - function
+      summary: Get function auth context (controlling middleware) name
+      responses:
+        '200':
+          description: OK
+          schema:
+            type: string
+            example: 'my_authjwt'
+        '400':
+          description: Bad request
+          schema:
+            $ref: '#/definitions/GateError'
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad authentication token
+    put:
+      tags:
+        - function
+      summary: Set function auth context
+      parameters:
+        - in: body
+          name: data
+          schema:
+            type: string
+          required: true
+          description: Auth mware name to set (empty string is accepted and unsets the context)
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+          schema:
+            $ref: '#/definitions/GateError'
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad authentication token
+
+  /functions/{fid}/size:
+    parameters:
+      - in: header
+        name: X-Auth-Token
+        type: string
+        required: true
+      - in: path
+        name: fid
+        type: string
+        required: true
+        description: Function ID
+    get:
+      tags:
+        - function
+      summary: Get function size
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/FunctionSize'
+        '400':
+          description: Bad request
+          schema:
+            $ref: '#/definitions/GateError'
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad authentication token
+    put:
+      tags:
+        - function
+      summary: Set function size
+      parameters:
+        - in: body
+          name: data
+          schema:
+            $ref: '#/definitions/FunctionSize'
+          required: true
+          description: Mware name to set (empty string is accepted and unsets the context)
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+          schema:
+            $ref: '#/definitions/GateError'
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad authentication token
+          
+  /functions/{fid}/sources:
+    parameters:
+      - in: header
+        name: X-Auth-Token
+        type: string
+        required: true
+      - in: path
+        name: fid
+        type: string
+        required: true
+        description: Function ID
+    get:
+      tags:
+        - function
+      summary: Get function sources
       responses:
         '200':
           description: OK
@@ -416,20 +607,16 @@ paths:
           description: Need to authenticate
         '403':
           description: Bad authentication token
-  /function/state:
-    post:
-      summary: Set specific function state
+    put:
+      tags:
+        - function
+      summary: Set (update) function sources
       parameters:
-        - in: header
-          name: X-Auth-Token
-          type: string
-          required: true
-        - name: date
-          in: body
-          description: Function name and state
-          required: true
+        - in: body
+          name: data
           schema:
-            $ref: '#/definitions/FunctionState'
+            $ref: '#/definitions/FunctionSources'
+          required: true
       responses:
         '200':
           description: OK
@@ -441,10 +628,159 @@ paths:
           description: Need to authenticate
         '403':
           description: Bad authentication token
-  /functions/{id}/events:
+
+  /functions/{fid}/middleware:
+    parameters:
+      - in: header
+        name: X-Auth-Token
+        type: string
+        required: true
+      - in: path
+        name: fid
+        type: string
+        required: true
+        description: Function ID
+    get:
+      tags:
+        - function
+      summary: Get function middleware
+      responses:
+        '200':
+          description: OK
+          schema:
+            type: array
+            items:
+              type: string
+              description: Name of attached middleware
+        '400':
+          description: Bad request
+          schema:
+            $ref: '#/definitions/GateError'
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad authentication token
+    post:
+      tags:
+        - function
+      summary: Attach mware to function
+      parameters:
+        - in: query
+          name: mwid
+          required: true
+          type: string
+          description: Middleware ID
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+          schema:
+            $ref: '#/definitions/GateError'
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad authentication token
+    delete:
+      tags:
+        - function
+      summary: Detach mware from function
+      parameters:
+        - in: query
+          name: mwid
+          required: true
+          type: string
+          description: Middleware ID
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+          schema:
+            $ref: '#/definitions/GateError'
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad authentication token
+
+  /functions/{fid}/s3buckets:
+    parameters:
+      - in: header
+        name: X-Auth-Token
+        type: string
+        required: true
+      - in: path
+        name: fid
+        type: string
+        required: true
+        description: Function ID
+    get:
+      tags:
+        - function
+      summary: Get function S3 buckets
+      responses:
+        '200':
+          description: OK
+          schema:
+            type: array
+            items:
+              type: string
+              description: Name of attached S3 buckets
+        '400':
+          description: Bad request
+          schema:
+            $ref: '#/definitions/GateError'
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad authentication token
+    post:
+      tags:
+        - function
+      summary: Attach S3 bucket to function
+      parameters:
+        - in: query
+          name: name
+          required: true
+          type: string
+          description: Bucket name
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+          schema:
+            $ref: '#/definitions/GateError'
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad authentication token
+    delete:
+      tags:
+        - function
+      summary: Detach S3 bucket from function
+      parameters:
+        - in: query
+          name: name
+          required: true
+          type: string
+          description: Bucket name
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+          schema:
+            $ref: '#/definitions/GateError'
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad authentication token
+
+  /functions/{fid}/events:
     parameters:
       - in: path
-        name: id
+        name: fid
         description: Funciton ID
         required: true
         type: string
@@ -455,6 +791,7 @@ paths:
     get:
       tags:
         - triggers
+        - function
       summary: List event triggers for the function
       responses:
         '200':
@@ -497,10 +834,11 @@ paths:
           description: Need to authenticate
         '403':
           description: Bad authentication token
-  /functions/{id}/events/{eid}:
+
+  /functions/{fid}/events/{eid}:
     parameters:
       - in: path
-        name: id
+        name: fid
         description: Funciton ID
         required: true
         type: string
@@ -516,6 +854,7 @@ paths:
     get:
       tags:
         - triggers
+        - function
       summary: Get event trigger details
       responses:
         '200':
@@ -857,19 +1196,6 @@ definitions:
       project:
         type: string
         example: my-project
-  FunctionList:
-    properties:
-      project:
-        type: string
-        example: my-project
-  FunctionListInfo:
-    properties:
-      project:
-        type: string
-        example: my-project
-      periods:
-        type: integer
-        description: Numer of stats periods, see FunctionStatsReq for details
   FunctionInfo:
     properties:
       id:
@@ -919,18 +1245,7 @@ definitions:
           example:
             - foobucket
               barbucket
-  FunctionStatsReq:
-    type: object
-    description: Request for FN statistics
-    properties:
-      project:
-        type: string
-      name:
-        type: string
-        description: Function name
-      periods:
-        type: integer
-        description: Numer of periods back to request (default 0), the top-most stat will be "till now"
+
   UserStatsReq:
     type: object
     description: Request for user statistics
@@ -956,20 +1271,7 @@ definitions:
         description: Per-period statistics, "till"-sorted descending. Each period is incremental to previous. The 0th one is "till now"
         items:
           $ref: '#/definitions/UserStats'
-  FunctionState:
-    type: object
-    description: Function name and state to set
-    required:
-      - name
-      - state
-    properties:
-      project:
-        type: string
-      name:
-        type: string
-      state:
-        type: string
-        description: Values reported by /function/info in state field. To (de)activate use "deactivated" and "ready" respectively
+
   FunctionStats:
     type: object
     description: Statistics about function
@@ -1024,29 +1326,6 @@ definitions:
       from:
         type: string
         description: Time (RFC1123Z) from which stats are collected (if empty means "till tenant creation time")
-  FunctionWait:
-    type: object
-    description: What to wait on a function
-    required:
-      - name
-      - timeout
-    properties:
-      project:
-        type: string
-      name:
-        type: string
-        description: Function name
-      timeout:
-        type: integer
-        description: Timtout on milliseconds
-        example: '1000'
-      version:
-        type: string
-        example: '42'
-        description: >-
-          When a function version equals or (!) greater than this becomes
-          available for execution, the event occurs. Note, that older versions
-          may still be there when the event happens.
   FunctionEventCron:
     type: object
     description: Cron string and arguments
@@ -1158,9 +1437,6 @@ definitions:
       - sources
       - code
     properties:
-      project:
-        type: string
-        example: my-project
       name:
         type: string
         example: my-function
@@ -1186,100 +1462,7 @@ definitions:
         items:
           type: string
           example: foobucket
-  FunctionUpdate:
-    required:
-      - name
-    properties:
-      project:
-        type: string
-        example: my-project
-      name:
-        type: string
-        example: my-function
-      code:
-        type: string
-        description: Base64 encoded source file
-        example: 'cHJpbnQoIkhlbGxvIHdvcmxkIikK'
-      size:
-        $ref: '#/definitions/FunctionSize'
-      userdata:
-        type: string
-        description: And string user wishes to keep with this FN
-      authctx:
-        type: string
-        description: ID of auth mware. If empty, the FN becomes unauthorized
-      mware:
-        type: array
-        description: 'No value means "leave as is", any other value, even empty list, means "set to this"'
-        items:
-          type: string
-          example: mymariadb
-      s3buckets:
-        type: array
-        description: 'Works same as mware does'
-        items:
-          type: string
-          example: foobucket
-  FunctionRemove:
-    required:
-      - name
-    properties:
-      project:
-        type: string
-        example: my-project
-      name:
-        type: string
-        example: my-function
-  FunctionID:
-    required:
-      - name
-    properties:
-      project:
-        type: string
-        example: my-project
-      name:
-        type: string
-        example: my-function
-  FunctionInfoReq:
-    required:
-      - name
-    properties:
-      project:
-        type: string
-        example: my-project
-      name:
-        type: string
-        example: my-function
-      periods:
-        type: integer
-        description: Numer of stats periods, see FunctionStatsReq for details
-  FunctionXID:
-    required:
-      - name
-      - version
-    properties:
-      project:
-        type: string
-        example: my-project
-      name:
-        type: string
-        example: my-function
-      version:
-        type: string
-        example: 0
-  FunctionItem:
-    properties:
-      name:
-        type: string
-        example: my-function
-      state:
-        type: string
-        example: ready
-        description: function state description
-      timeout:
-        type: integer
-        example: 10
-        description: timeout in msec
+
   FunctionLogEntry:
     description: Entry in function logs
     properties:
@@ -1296,14 +1479,8 @@ definitions:
   FunctionRun:
     description: Function ID and arguments
     required:
-      - name
+      - args
     properties:
-      project:
-        type: string
-        example: my-project
-      name:
-        type: string
-        example: my-function
       args:
         type: object
         description: Dict with arguments
