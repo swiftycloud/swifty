@@ -758,31 +758,16 @@ func del_event(cd *cmdDesc, args []string, opts [16]string) {
 }
 
 func wait_fn(cd *cmdDesc, args []string, opts [16]string) {
-	req := swyapi.FunctionWait{
-		Project: cd.project,
-		FuncName: args[0],
-	}
-
+	ua := []string{}
 	if opts[0] != "" {
-		req.Version = opts[0]
+		ua = append(ua, "version=" + opts[0])
 	}
-
 	if opts[1] != "" {
-		tmo, err := strconv.ParseUint(opts[1], 10, 32)
-		if err != nil {
-			fatal(fmt.Errorf("Bad timeout value"))
-		}
-
-		req.Timeout = uint32(tmo)
+		ua = append(ua, "timeout=" + opts[1])
 	}
 
-	var httpTmo uint /* seconds */
-	httpTmo = uint((time.Duration(req.Timeout) * time.Millisecond) / time.Second)
-	if httpTmo <= 1 {
-		httpTmo = 1
-	}
-
-	make_faas_req2("POST", "function/wait", req, http.StatusOK, httpTmo + 10)
+	args[0] = resolve_fn(cd.project, args[0])
+	make_faas_req2("POST", url("functions/" + args[0] + "/wait", ua), nil, http.StatusOK, 300)
 }
 
 func show_code(cd *cmdDesc, args []string, opts [16]string) {

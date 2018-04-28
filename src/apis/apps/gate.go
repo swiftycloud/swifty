@@ -44,13 +44,6 @@ type TenantStatsResp struct {
 	Stats		[]TenantStats		`json:"stats"`
 }
 
-type FunctionWait struct {
-	Project		string			`json:"project"`
-	FuncName	string			`json:"name"`
-	Timeout		uint32			`json:"timeout"` /* msec */
-	Version		string			`json:"version,omitempty"`
-}
-
 type FunctionInfo struct {
 	Name		string			`json:"name,omitempty"`
 	Mware		[]string		`json:"mware,omitempty"`
