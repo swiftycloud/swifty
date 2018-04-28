@@ -315,6 +315,7 @@ func resolve_fn(project, fname string) string {
 	if project != "" {
 		ua = append(ua, "project=" + project)
 	}
+	ua = append(ua, "name=" + fname)
 	make_faas_req1("GET", url("functions", ua), http.StatusOK, nil, &ifo)
 	for _, i := range ifo {
 		if i.Name == fname {

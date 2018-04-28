@@ -975,9 +975,23 @@ func handleFunctions(ctx context.Context, w http.ResponseWriter, r *http.Request
 			return GateErrC(swy.GateBadRequest)
 		}
 
-		fns, err := dbFuncListProj(ctxSwoId(ctx, project, ""))
-		if err != nil {
-			return GateErrD(err)
+		var fns []*FunctionDesc
+		var err error
+
+		fname := q.Get("name")
+		if fname == "" {
+			fns, err = dbFuncListProj(ctxSwoId(ctx, project, ""))
+			if err != nil {
+				return GateErrD(err)
+			}
+		} else {
+			var fn *FunctionDesc
+
+			fn, err = dbFuncFind(ctxSwoId(ctx, project, fname))
+			if err != nil {
+				return GateErrD(err)
+			}
+			fns = append(fns, fn)
 		}
 
 		var ret []*swyapi.FunctionInfo
