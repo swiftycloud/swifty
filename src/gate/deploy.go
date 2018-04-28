@@ -125,44 +125,15 @@ func deployStart(ctx context.Context, params *swyapi.DeployStart) *swyapi.GateEr
 
 	for _, item := range params.Items {
 		if item.Function != nil && item.Mware == nil {
-			if item.Function.Project == "" {
-				item.Function.Project = id.Project
-			} else if item.Function.Project != id.Project {
-				return GateErrM(swy.GateBadRequest, "Cross-project deploy")
-			}
-
-			a := swyapi.FunctionAdd{
-				Name:		item.Function.FuncName,
-				Sources:	item.Function.Sources,
-				Code:		item.Function.Code,
-				Size:		item.Function.Size,
-				Mware:		item.Function.Mware,
-				S3Buckets:	item.Function.S3Buckets,
-				UserData:	item.Function.UserData,
-				AuthCtx:	item.Function.AuthCtx,
-			}
-
 			dep.Items = append(dep.Items, &DeployItemDesc{
-				Fn: getFunctionDesc(ten, item.Function.Project, &a),
+				Fn: getFunctionDesc(ten, id.Project, item.Function),
 			})
 			continue
 		}
 
 		if item.Mware != nil && item.Function == nil {
-			if item.Mware.Project == "" {
-				item.Mware.Project = id.Project
-			} else if item.Mware.Project != id.Project {
-				return GateErrM(swy.GateBadRequest, "Cross-project deploy")
-			}
-
-			a := swyapi.MwareAdd {
-				Name: item.Mware.ID,
-				Type: item.Mware.Type,
-				UserData: item.Mware.UserData,
-			}
-
 			dep.Items = append(dep.Items, &DeployItemDesc{
-				Mw: getMwareDesc(ten, item.Mware.Project, &a),
+				Mw: getMwareDesc(ten, id.Project, item.Mware),
 			})
 			continue
 		}

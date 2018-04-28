@@ -108,13 +108,6 @@ type MwareAdd struct {
 	UserData	string			`json:"userdata,omitempty"`
 }
 
-type MwareAddD struct {
-	Project		string			`json:"project"`
-	ID		string			`json:"id"`
-	Type		string			`json:"type"`
-	UserData	string			`json:"userdata,omitempty"`
-}
-
 type MwareInfo struct {
 	ID		string			`json:"id,omitempty"`
 	Name		string			`json:"name,omitempty"`
@@ -139,18 +132,6 @@ type S3Creds struct {
 	Key		string			`json:"key"`
 	Secret		string			`json:"secret"`
 	Expires		uint32			`json:"expires"` /* in seconds */
-}
-
-type FunctionAddD struct {
-	Project		string			`json:"project"`
-	FuncName	string			`json:"name"`
-	Sources		FunctionSources		`json:"sources"`
-	Code		FunctionCode		`json:"code"`
-	Size		FunctionSize		`json:"size"`
-	Mware		[]string		`json:"mware,omitempty"`
-	S3Buckets	[]string		`json:"s3buckets,omitempty"`
-	UserData	string			`json:"userdata,omitempty"`
-	AuthCtx		string			`json:"authctx,omitempty"`
 }
 
 type FunctionAdd struct {
@@ -191,8 +172,8 @@ type DeployId struct {
 }
 
 type DeployItem struct {
-	Function	*FunctionAddD		`json:"function,omitempty"`
-	Mware		*MwareAddD		`json:"mware,omitempty"`
+	Function	*FunctionAdd		`json:"function,omitempty"`
+	Mware		*MwareAdd		`json:"mware,omitempty"`
 }
 
 type DeployStart struct {

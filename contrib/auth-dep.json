@@ -1,13 +1,13 @@
 [
 	{
 		"mware": {
-			"id": "#NAME#_db",
+			"name": "#NAME#_db",
 			"type": "mongo"
 		}
 	},
 	{
 		"mware": {
-			"id": "#NAME#_auth",
+			"name": "#NAME#_auth",
 			"type": "authjwt"
 		}
 	},
