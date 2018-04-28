@@ -120,24 +120,24 @@ func deployStopItems(ctx context.Context, dep *DeployDesc, till int) *swyapi.Gat
 	return err
 }
 
-func deployStart(ctx context.Context, params *swyapi.DeployStart) (string, *swyapi.GateErr) {
+func deployStart(ctx context.Context, project string, params *swyapi.DeployStart) (string, *swyapi.GateErr) {
 	var err error
 
 	ten := fromContext(ctx).Tenant
-	id := makeSwoId(ten, params.Project, params.Name)
+	id := makeSwoId(ten, project, params.Name)
 	dep := &DeployDesc{ SwoId: *id, State: swy.DBDepStateIni, Cookie: id.Cookie() }
 
 	for _, item := range params.Items {
 		if item.Function != nil && item.Mware == nil {
 			dep.Items = append(dep.Items, &DeployItemDesc{
-				Fn: getFunctionDesc(ten, id.Project, item.Function),
+				Fn: getFunctionDesc(ten, project, item.Function),
 			})
 			continue
 		}
 
 		if item.Mware != nil && item.Function == nil {
 			dep.Items = append(dep.Items, &DeployItemDesc{
-				Mw: getMwareDesc(ten, id.Project, item.Mware),
+				Mw: getMwareDesc(ten, project, item.Mware),
 			})
 			continue
 		}

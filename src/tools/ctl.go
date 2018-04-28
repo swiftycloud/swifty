@@ -871,18 +871,25 @@ func del_mware(cd *cmdDesc, args []string, opts [16]string) {
 }
 
 func deploy_stop(cd *cmdDesc, args []string, opts [16]string) {
-	make_faas_req("deploy/stop",
-		swyapi.DeployId{Project: cd.project, Name: args[0]}, nil)
+	make_faas_req1("DELETE", "deployments/" + args[0], http.StatusOK, nil, nil)
 }
 
 func deploy_info(cd *cmdDesc, args []string, opts [16]string) {
 	var di swyapi.DeployInfo
-	make_faas_req("deploy/info",
-		swyapi.DeployId{Project: cd.project, Name: args[0]}, &di)
+	make_faas_req1("GET", "deployments/" + args[0], http.StatusOK, nil, &di)
 	fmt.Printf("State:        %s\n", di.State)
 	fmt.Printf("Items:\n")
 	for _, i := range di.Items {
 		fmt.Printf("\t%s: %s, %s\n", i.Name, i.Type, i.State)
+	}
+}
+
+func deploy_list(cd *cmdDesc, args []string, opts [16]string) {
+	var dis []*swyapi.DeployInfo
+	make_faas_req1("GET", "deployments", http.StatusOK, nil, &dis)
+	fmt.Printf("%-32s%-20s\n", "ID", "NAME")
+	for _, di := range dis {
+		fmt.Printf("%-32s%-20s (%d items)\n", di.Id, di.Name, len(di.Items))
 	}
 }
 
@@ -892,14 +899,19 @@ func deploy_start(cd *cmdDesc, args []string, opts [16]string) {
 		fatal(fmt.Errorf("Can't read desc flie: %s", err.Error()))
 	}
 
-	var items []swyapi.DeployItem
+	var items []*swyapi.DeployItem
 	err = json.Unmarshal(cont, &items)
 	if err != nil {
 		fatal(fmt.Errorf("Can't parse items: %s", err.Error()))
 	}
 
-	make_faas_req("deploy/start",
-		swyapi.DeployStart{Project: cd.project, Name: args[0], Items: items}, nil)
+	ua := []string{}
+	if cd.project != "" {
+		ua = append(ua, "project=" + cd.project)
+	}
+
+	make_faas_req1("POST", url("deployments", ua), http.StatusOK,
+		swyapi.DeployStart{Name: args[0], Items: items}, nil)
 }
 
 func s3_access(cd *cmdDesc, args []string, opts [16]string) {
@@ -1037,6 +1049,7 @@ const (
 	CMD_MADD string		= "madd"
 	CMD_MDEL string		= "mdel"
 	CMD_S3ACC string	= "s3acc"
+	CMD_DLIST string	= "dl"
 	CMD_DSTART string	= "ds"
 	CMD_DINF string		= "di"
 	CMD_DSTOP string	= "dx"
@@ -1076,6 +1089,7 @@ var cmdOrder = []string {
 	CMD_MADD,
 	CMD_MDEL,
 	CMD_S3ACC,
+	CMD_DLIST,
 	CMD_DSTART,
 	CMD_DINF,
 	CMD_DSTOP,
@@ -1123,6 +1137,7 @@ var cmdMap = map[string]*cmdDesc {
 	CMD_MADD:	&cmdDesc{ call: add_mware,	  opts: flag.NewFlagSet(CMD_MADD, flag.ExitOnError) },
 	CMD_MDEL:	&cmdDesc{ call: del_mware,	  opts: flag.NewFlagSet(CMD_MDEL, flag.ExitOnError) },
 	CMD_S3ACC:	&cmdDesc{ call: s3_access,	  opts: flag.NewFlagSet(CMD_S3ACC, flag.ExitOnError) },
+	CMD_DLIST:	&cmdDesc{ call: deploy_list,	  opts: flag.NewFlagSet(CMD_DLIST, flag.ExitOnError) },
 	CMD_DSTART:	&cmdDesc{ call: deploy_start,	  opts: flag.NewFlagSet(CMD_DSTART, flag.ExitOnError) },
 	CMD_DINF:	&cmdDesc{ call: deploy_info,	  opts: flag.NewFlagSet(CMD_DINF, flag.ExitOnError) },
 	CMD_DSTOP:	&cmdDesc{ call: deploy_stop,	  opts: flag.NewFlagSet(CMD_DSTOP, flag.ExitOnError) },
@@ -1220,9 +1235,10 @@ func main() {
 	cmdMap[CMD_S3ACC].opts.StringVar(&opts[0], "life", "60", "Lifetime (default 1 min)")
 	bindCmdUsage(CMD_S3ACC,	[]string{"BUCKET"}, "Get keys for S3", true)
 
+	bindCmdUsage(CMD_DLIST, []string{},	"List deployments", true)
 	bindCmdUsage(CMD_DSTART, []string{"NAME", "DESC"}, "Start deployment", true)
-	bindCmdUsage(CMD_DINF,	[]string{"NAME"}, "Show info about deployment", true)
-	bindCmdUsage(CMD_DSTOP,	[]string{"NAME"}, "Stop deployment", true)
+	bindCmdUsage(CMD_DINF,	[]string{"ID"}, "Show info about deployment", true)
+	bindCmdUsage(CMD_DSTOP,	[]string{"ID"}, "Stop deployment", true)
 
 	bindCmdUsage(CMD_LUSR,	[]string{}, "List users", false)
 	cmdMap[CMD_UADD].opts.StringVar(&opts[0], "name", "", "User name")

@@ -177,9 +177,8 @@ type DeployItem struct {
 }
 
 type DeployStart struct {
-	Project		string			`json:"project"`
 	Name		string			`json:"name"`
-	Items		[]DeployItem		`json:"items"`
+	Items		[]*DeployItem		`json:"items"`
 }
 
 type DeployItemInfo struct {
