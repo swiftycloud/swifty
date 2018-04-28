@@ -848,7 +848,7 @@ func add_mware(cd *cmdDesc, args []string, opts [16]string) {
 
 	if !cd.req {
 		var id string
-		make_faas_req1("PUT", "middleware" + p, http.StatusOK, &req, &id)
+		make_faas_req1("POST", "middleware" + p, http.StatusOK, &req, &id)
 		fmt.Printf("Mware %s created\n", id)
 	} else {
 		d, err := json.Marshal(req)
