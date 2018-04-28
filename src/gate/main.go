@@ -209,7 +209,7 @@ out:
 
 func handleProjectDel(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
 	var par swyapi.ProjectDel
-	var fns []FunctionDesc
+	var fns []*FunctionDesc
 	var mws []MwareDesc
 	var id *SwoId
 	var ferr *swyapi.GateErr

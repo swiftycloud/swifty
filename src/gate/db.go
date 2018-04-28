@@ -148,7 +148,7 @@ func dbFuncFindOne(q bson.M) (*FunctionDesc, error) {
 	return &v, err
 }
 
-func dbFuncFindAll(q bson.M) (vs []FunctionDesc, err error) {
+func dbFuncFindAll(q bson.M) (vs []*FunctionDesc, err error) {
 	c := dbSession.DB(DBStateDB).C(DBColFunc)
 	err = c.Find(q).All(&vs)
 	return
@@ -178,22 +178,22 @@ func dbFuncFindStates(id *SwoId, states []int) (*FunctionDesc, error) {
 	return dbFuncFindOne(bson.M{"cookie": id.Cookie(), "state": bson.M{"$in": states}})
 }
 
-func dbFuncList() ([]FunctionDesc, error) {
+func dbFuncList() ([]*FunctionDesc, error) {
 	return dbFuncFindAll(bson.M{})
 }
 
-func dbFuncListProj(id *SwoId) ([]FunctionDesc, error) {
+func dbFuncListProj(id *SwoId) ([]*FunctionDesc, error) {
 	return dbFuncFindAll(bson.M{"tennant": id.Tennant, "project": id.Project})
 }
 
-func dbFuncListMwEvent(id *SwoId, rq bson.M) ([]FunctionDesc, error) {
+func dbFuncListMwEvent(id *SwoId, rq bson.M) ([]*FunctionDesc, error) {
 	rq["tennant"] = id.Tennant
 	rq["project"] = id.Project
 
 	return dbFuncFindAll(rq)
 }
 
-func dbFuncListWithEvents() ([]FunctionDesc, error) {
+func dbFuncListWithEvents() ([]*FunctionDesc, error) {
 	return dbFuncFindAll(bson.M{"event.source": bson.M{"$ne": ""}})
 }
 
