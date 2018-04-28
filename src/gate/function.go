@@ -1,8 +1,10 @@
 package main
 
 import (
+	"encoding/base64"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"time"
 	"context"
 	"gopkg.in/mgo.v2/bson"
@@ -490,84 +492,69 @@ func (fn *FunctionDesc)delS3Bucket(ctx context.Context, bn string) error {
 	return nil
 }
 
-func updateFunction(ctx context.Context, conf *YAMLConf, id *SwoId, params *swyapi.FunctionUpdate) *swyapi.GateErr {
+func (fn *FunctionDesc)getSources() (*swyapi.FunctionSources, *swyapi.GateErr) {
+	codeFile := fnCodeLatestPath(&conf, fn) + "/" + RtDefaultScriptName(&fn.Code)
+	fnCode, err := ioutil.ReadFile(codeFile)
+	if err != nil {
+		return nil, GateErrC(swy.GateFsError)
+	}
+
+	return &swyapi.FunctionSources {
+		Type: "code",
+		Code: base64.StdEncoding.EncodeToString(fnCode),
+	}, nil
+
+}
+
+func (fn *FunctionDesc)updateSources(ctx context.Context, src *swyapi.FunctionSources) *swyapi.GateErr {
 	var err error
-	var stalled, restart bool
-	var oldver string
-	var olds int
 
 	update := make(bson.M)
+	olds := fn.State
+	oldver := fn.Src.Version
 
-	fn, err := dbFuncFindStates(id, []int{swy.DBFuncStateRdy, swy.DBFuncStateStl})
+	if olds != swy.DBFuncStateRdy && olds != swy.DBFuncStateStl {
+		return GateErrM(swy.GateGenErr, "Function should be running or stalled")
+	}
+
+	ctxlog(ctx).Debugf("Will update sources for %s", fn.SwoId.Str())
+	err = updateSources(ctx, fn, src)
 	if err != nil {
-		goto out
+		return GateErrE(swy.GateGenErr, err)
 	}
 
-	olds = fn.State
-
-	if params.Code != "" {
-		ctxlog(ctx).Debugf("Will update sources for %s", fn.SwoId.Str())
-		oldver = fn.Src.Version
-		err = updateSources(ctx, fn, params)
-		if err != nil {
-			goto out
-		}
-
-		err = tryBuildFunction(ctx, conf, fn)
-		if err != nil {
-			goto out
-		}
-
-		update["src.version"] = fn.Src.Version
-		restart = true
+	err = tryBuildFunction(ctx, &conf, fn)
+	if err != nil {
+		return GateErrE(swy.GateGenErr, err)
 	}
 
-	if len(update) == 0 {
-		ctxlog(ctx).Debugf("Nothing to update for %s", fn.SwoId.Str())
-		goto out_ne
-	}
-
-	if restart && fn.State == swy.DBFuncStateStl {
-		stalled = true
+	update["src.version"] = fn.Src.Version
+	if olds == swy.DBFuncStateStl {
 		fn.State = swy.DBFuncStateStr
 		update["state"] = fn.State
 	}
 
-	err = dbFuncUpdatePulled(fn, update, olds)
+	err = dbFuncUpdateOne(fn, update)
 	if err != nil {
 		ctxlog(ctx).Errorf("Can't update pulled %s: %s", fn.Name, err.Error())
-		err = errors.New("DB error")
-		goto out
+		return GateErrD(err)
 	}
 
-	if restart {
-		if !stalled {
-			ctxlog(ctx).Debugf("Updating deploy")
-			err = swk8sUpdate(ctx, conf, fn)
-			if err != nil {
-				/* XXX -- stalled? */
-				goto out
-			}
-		} else {
-			ctxlog(ctx).Debugf("Starting deploy")
-			err = swk8sRun(ctx, conf, fn)
-			if err != nil {
-				dbFuncSetState(ctx, fn, swy.DBFuncStateStl)
-				goto out
-			}
+	if olds == swy.DBFuncStateRdy {
+		ctxlog(ctx).Debugf("Updating deploy")
+		swk8sUpdate(ctx, &conf, fn)
+	} else {
+		ctxlog(ctx).Debugf("Starting deploy")
+		err = swk8sRun(ctx, &conf, fn)
+		if err != nil {
+			dbFuncSetState(ctx, fn, swy.DBFuncStateStl)
+			return GateErrE(swy.GateGenErr, err)
 		}
 	}
 
-	if oldver != "" {
-		GCOldSources(ctx, fn, oldver)
-	}
-
+	GCOldSources(ctx, fn, oldver)
 	logSaveEvent(fn, "updated", fmt.Sprintf("to: %s", fn.Src.Version))
-out_ne:
 	return nil
-
-out:
-	return GateErrE(swy.GateGenErr, err)
 }
 
 func removeFunctionId(ctx context.Context, conf *YAMLConf, id *SwoId) *swyapi.GateErr {

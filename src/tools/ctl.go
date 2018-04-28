@@ -628,20 +628,12 @@ func run_function(cd *cmdDesc, args []string, opts [16]string) {
 }
 
 func update_function(cd *cmdDesc, args []string, opts [16]string) {
-	var err error
-
-	req := swyapi.FunctionUpdate {
-		Project: cd.project,
-		FuncName: args[0],
-	}
+	fid := resolve_fn(cd.project, args[0])
 
 	if opts[0] != "" {
-		req.Code = encodeFile(opts[0])
+		make_faas_req1("PUT", "functions/" + fid + "/sources", http.StatusOK,
+			&swyapi.FunctionSources{Type: "code", Code: encodeFile(opts[0])}, nil)
 	}
-
-	make_faas_req("function/update", req, nil)
-
-	fid := resolve_fn(cd.project, args[0])
 
 	if opts[3] != "" {
 		op := ""
@@ -671,6 +663,8 @@ func update_function(cd *cmdDesc, args []string, opts [16]string) {
 		sz := swyapi.FunctionSize{}
 
 		if opts[1] != "" {
+			var err error
+
 			sz.Timeout, err = strconv.ParseUint(opts[1], 10, 64)
 			if err != nil {
 				fatal(fmt.Errorf("Bad tmo value %s: %s", opts[4], err.Error()))
@@ -792,9 +786,8 @@ func wait_fn(cd *cmdDesc, args []string, opts [16]string) {
 
 func show_code(cd *cmdDesc, args []string, opts [16]string) {
 	var res swyapi.FunctionSources
-	make_faas_req("function/code",
-		swyapi.FunctionXID{ Project: cd.project, FuncName: args[0], Version: opts[0], }, &res)
-
+	args[0] = resolve_fn(cd.project, args[0])
+	make_faas_req1("GET", "functions/" + args[0] + "/sources", http.StatusOK, nil, &res)
 	data, err := base64.StdEncoding.DecodeString(res.Code)
 	if err != nil {
 		fatal(err)
@@ -1211,7 +1204,6 @@ func main() {
 	bindCmdUsage(CMD_UPD,	[]string{"NAME"}, "Update a function", true)
 	bindCmdUsage(CMD_DEL,	[]string{"NAME"}, "Delete a function", true)
 	bindCmdUsage(CMD_LOGS,	[]string{"NAME"}, "Show function logs", true)
-	cmdMap[CMD_CODE].opts.StringVar(&opts[0], "version", "", "Version")
 	bindCmdUsage(CMD_CODE,  []string{"NAME"}, "Show function code", true)
 	bindCmdUsage(CMD_ON,	[]string{"NAME"}, "Activate function", true)
 	bindCmdUsage(CMD_OFF,	[]string{"NAME"}, "Deactivate function", true)

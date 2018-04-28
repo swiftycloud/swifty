@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"os"
 	"io/ioutil"
-	"encoding/base64"
 	"gopkg.in/mgo.v2/bson"
 
 	"../apis/apps"
@@ -638,65 +637,40 @@ func handleFunctionState(ctx context.Context, w http.ResponseWriter, r *http.Req
 	return nil
 }
 
-func handleFunctionUpdate(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
-	var params swyapi.FunctionUpdate
+func handleFunctionSources(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
+	fnid := mux.Vars(r)["fid"]
 
-	err := swyhttp.ReadAndUnmarshalReq(r, &params)
-	if err != nil {
-		return GateErrE(swy.GateBadRequest, err)
-	}
-
-	id := ctxSwoId(ctx, params.Project, params.FuncName)
-	ctxlog(ctx).Debugf("function/update %s", id.Str())
-
-	cerr := updateFunction(ctx, &conf, id, &params)
-	if cerr != nil {
-		return cerr
-	}
-
-	w.WriteHeader(http.StatusOK)
-	return nil
-}
-
-func handleFunctionCode(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
-	var params swyapi.FunctionXID
-	var codeFile string
-	var fnCode []byte
-
-	err := swyhttp.ReadAndUnmarshalReq(r, &params)
-	if err != nil {
-		return GateErrE(swy.GateBadRequest, err)
-	}
-
-	id := ctxSwoId(ctx, params.Project, params.FuncName)
-	ctxlog(ctx).Debugf("Get FN code %s:%s", id.Str(), params.Version)
-
-	fn, err := dbFuncFind(id)
+	fn, err := dbFuncFindOne(bson.M{"tennant": fromContext(ctx).Tenant,
+			"_id": bson.ObjectIdHex(fnid)})
 	if err != nil {
 		return GateErrD(err)
 	}
 
-	if params.Version == "" {
-		params.Version = fn.Src.Version
-	}
+	switch r.Method {
+	case "GET":
+		src, cerr := fn.getSources()
+		if cerr != nil {
+			return cerr
+		}
 
-	if fn.Src.Type != "code" {
-		return GateErrM(swy.GateNotAvail, "No single file for sources")
-	}
+		err = swyhttp.MarshalAndWrite(w, src)
+		if err != nil {
+			return GateErrE(swy.GateBadResp, err)
+		}
+	case "PUT":
+		var src swyapi.FunctionSources
 
-	codeFile = fnCodeVersionPath(&conf, fn, params.Version) + "/" + RtDefaultScriptName(&fn.Code)
-	fnCode, err = ioutil.ReadFile(codeFile)
-	if err != nil {
-		ctxlog(ctx).Errorf("Can't read file with code: %s", err.Error())
-		return GateErrC(swy.GateFsError)
-	}
+		err = swyhttp.ReadAndUnmarshalReq(r, &src)
+		if err != nil {
+			return GateErrE(swy.GateBadRequest, err)
+		}
 
-	err = swyhttp.MarshalAndWrite(w,  swyapi.FunctionSources {
-			Type: "code",
-			Code: base64.StdEncoding.EncodeToString(fnCode),
-		})
-	if err != nil {
-		return GateErrE(swy.GateBadResp, err)
+		cerr := fn.updateSources(ctx, &src)
+		if cerr != nil {
+			return cerr
+		}
+
+		w.WriteHeader(http.StatusOK)
 	}
 
 	return nil
@@ -1535,8 +1509,6 @@ func main() {
 	r.Handle("/v1/stats",			genReqHandler(handleTenantStats)).Methods("POST", "OPTIONS")
 	r.Handle("/v1/project/list",		genReqHandler(handleProjectList)).Methods("POST", "OPTIONS")
 	r.Handle("/v1/project/del",		genReqHandler(handleProjectDel)).Methods("POST", "OPTIONS")
-	r.Handle("/v1/function/update",		genReqHandler(handleFunctionUpdate)).Methods("POST", "OPTIONS")
-	r.Handle("/v1/function/code",		genReqHandler(handleFunctionCode)).Methods("POST", "OPTIONS")
 	r.Handle("/v1/function/wait",		genReqHandler(handleFunctionWait)).Methods("POST", "OPTIONS")
 
 	r.Handle("/v1/functions",		genReqHandler(handleFunctions)).Methods("GET", "POST", "OPTIONS")
@@ -1549,6 +1521,7 @@ func main() {
 	r.Handle("/v1/functions/{fid}/userdata",genReqHandler(handleFunctionUserData)).Methods("GET", "PUT", "OPTIONS")
 	r.Handle("/v1/functions/{fid}/authctx",	genReqHandler(handleFunctionAuthCtx)).Methods("GET", "PUT", "OPTIONS")
 	r.Handle("/v1/functions/{fid}/size",	genReqHandler(handleFunctionSize)).Methods("GET", "PUT", "OPTIONS")
+	r.Handle("/v1/functions/{fid}/sources",	genReqHandler(handleFunctionSources)).Methods("GET", "PUT", "OPTIONS")
 	r.Handle("/v1/functions/{fid}/middleware", genReqHandler(handleFunctionMware)).Methods("GET", "POST", "DELETE", "OPTIONS")
 	r.Handle("/v1/functions/{fid}/s3buckets",  genReqHandler(handleFunctionS3Bs)).Methods("GET", "POST", "DELETE", "OPTIONS")
 

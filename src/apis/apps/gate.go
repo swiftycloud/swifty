@@ -171,12 +171,6 @@ type FunctionAdd struct {
 	AuthCtx		string			`json:"authctx,omitempty"`
 }
 
-type FunctionUpdate struct {
-	Project		string			`json:"project"`
-	FuncName	string			`json:"name"`
-	Code		string			`json:"code"`
-}
-
 type FunctionRun struct {
 	Args		map[string]string	`json:"args,omitempty"`
 }
@@ -186,12 +180,6 @@ type FunctionRunResult struct {
 	Return		string			`json:"return"`
 	Stdout		string			`json:"stdout"`
 	Stderr		string			`json:"stderr"`
-}
-
-type FunctionXID struct {
-	Project		string			`json:"project"`
-	FuncName	string			`json:"name"`
-	Version		string			`json:"version"`
 }
 
 type ProjectItem struct {

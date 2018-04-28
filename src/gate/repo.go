@@ -82,7 +82,7 @@ co_err:
 
 var srcHandlers = map[string] struct {
 	get func (context.Context, *FunctionDesc) error
-	update func (context.Context, *FunctionDesc, *swyapi.FunctionUpdate) error
+	update func (context.Context, *FunctionDesc, *swyapi.FunctionSources) error
 	check func (string, []string) bool
 } {
 	"git": {
@@ -189,13 +189,17 @@ func getFileFromReq(ctx context.Context, fn *FunctionDesc) error {
 	return writeSource(ctx, fn, fn.Src.Code)
 }
 
-func updateSources(ctx context.Context, fn *FunctionDesc, params *swyapi.FunctionUpdate) error {
+func updateSources(ctx context.Context, fn *FunctionDesc, src *swyapi.FunctionSources) error {
+	if fn.Src.Type != src.Type {
+		return errors.New("Bad source type")
+	}
+
 	srch, ok := srcHandlers[fn.Src.Type]
 	if !ok {
 		return fmt.Errorf("Unknown sources type %s", fn.Src.Type)
 	}
 
-	return srch.update(ctx, fn, params)
+	return srch.update(ctx, fn, src)
 }
 
 func GCOldSources(ctx context.Context, fn *FunctionDesc, ver string) {
@@ -246,7 +250,7 @@ func GCOldSources(ctx context.Context, fn *FunctionDesc, ver string) {
 	}()
 }
 
-func updateGitRepo(ctx context.Context, fn *FunctionDesc, params *swyapi.FunctionUpdate) error {
+func updateGitRepo(ctx context.Context, fn *FunctionDesc, src *swyapi.FunctionSources) error {
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 
@@ -267,11 +271,11 @@ func updateGitRepo(ctx context.Context, fn *FunctionDesc, params *swyapi.Functio
 	return checkoutSources(ctx, fn)
 }
 
-func updateFileFromReq(ctx context.Context, fn *FunctionDesc, params *swyapi.FunctionUpdate) error {
+func updateFileFromReq(ctx context.Context, fn *FunctionDesc, src *swyapi.FunctionSources) error {
 	ov, _ := strconv.Atoi(fn.Src.Version)
 	fn.Src.Version = strconv.Itoa(ov + 1)
 
-	return writeSource(ctx, fn, params.Code)
+	return writeSource(ctx, fn, src.Code)
 }
 
 func cleanRepo(ctx context.Context, fn *FunctionDesc) error {
