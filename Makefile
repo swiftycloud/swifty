@@ -143,9 +143,10 @@ swifty/nodejs: swy-wdog-go kubectl/docker/wdog/nodejs/Dockerfile
 	$(Q) $(MAKE) -C kubectl/docker/wdog/nodejs all
 .PHONY: swifty/nodejs
 
-swifty/gate: swy-gate kubectl/docker/gate/Dockerfile
+swifty/gate: swy-gate kubectl/docker/gate/Dockerfile test/functions/golang/simple-user-mgmt.go
 	$(call msg-gen,$@)
 	$(Q) $(CP) swy-gate kubectl/docker/gate/swy-gate
+	$(Q) $(CP) test/functions/golang/simple-user-mgmt.go kubectl/docker/gate/umjwt0.sw
 	$(Q) $(MAKE) -C kubectl/docker/gate all
 .PHONY: swifty/gate
 

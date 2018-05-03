@@ -5,6 +5,7 @@ RUN apt-get update && apt-get install -y fortune-mod && ln -s /usr/games/fortune
 COPY swy-gate /usr/bin
 RUN chmod +x /usr/bin/swy-gate
 RUN mkdir /root/.swysecrets && chmod 0700 /root/.swysecrets
+COPY umjwt0.sw /home/swifty/swage/
 
 CMD [ "/usr/bin/swy-gate" ]
 

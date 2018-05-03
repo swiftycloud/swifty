@@ -506,8 +506,8 @@ func dbDeployDel(dep *DeployDesc) error {
 	return dbSession.DB(DBStateDB).C(DBColDeploy).Remove(bson.M{"cookie": dep.Cookie})
 }
 
-func dbDeployList() (deps []DeployDesc, err error) {
-	err = dbSession.DB(DBStateDB).C(DBColDeploy).Find(bson.M{}).All(&deps)
+func dbDeployList(q bson.M) (deps []DeployDesc, err error) {
+	err = dbSession.DB(DBStateDB).C(DBColDeploy).Find(q).All(&deps)
 	return
 }
 

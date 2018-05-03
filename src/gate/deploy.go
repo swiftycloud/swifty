@@ -134,16 +134,16 @@ func getDeployDesc(id *SwoId) *DeployDesc {
 func (dep *DeployDesc)getItems(items []*swyapi.DeployItem) *swyapi.GateErr {
 	for _, item := range items {
 		if item.Function != nil && item.Mware == nil {
-			dep.Items = append(dep.Items, &DeployItemDesc{
-				Fn: getFunctionDesc(dep.SwoId.Tennant, dep.SwoId.Project, item.Function),
-			})
+			fd := getFunctionDesc(dep.SwoId.Tennant, dep.SwoId.Project, item.Function)
+			fd.Labels = dep.Labels
+			dep.Items = append(dep.Items, &DeployItemDesc{ Fn: fd })
 			continue
 		}
 
 		if item.Mware != nil && item.Function == nil {
-			dep.Items = append(dep.Items, &DeployItemDesc{
-				Mw: getMwareDesc(dep.SwoId.Tennant, dep.SwoId.Project, item.Mware),
-			})
+			md := getMwareDesc(dep.SwoId.Tennant, dep.SwoId.Project, item.Mware)
+			md.Labels = dep.Labels
+			dep.Items = append(dep.Items, &DeployItemDesc{ Mw: md })
 			continue
 		}
 
@@ -194,7 +194,7 @@ func deployStop(ctx context.Context, dep *DeployDesc) (*swyapi.GateErr) {
 }
 
 func DeployInit(conf *YAMLConf) error {
-	deps, err := dbDeployList()
+	deps, err := dbDeployList(bson.M{})
 	if err != nil {
 		return err
 	}

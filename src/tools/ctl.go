@@ -946,6 +946,30 @@ func mware_del(args []string, opts [16]string) {
 	make_faas_req1("DELETE", "middleware/" + args[0], http.StatusOK, nil, nil)
 }
 
+func auth_cfg(cd *cmdDesc, args []string, opts [16]string) {
+	switch args[0] {
+	case "get", "inf":
+		var auths []*swyapi.AuthInfo
+		make_faas_req1("GET", "auths", http.StatusOK, nil, &auths)
+		for _, a := range auths {
+			fmt.Printf("%s (%s)\n", a.Name, a.Id)
+		}
+
+	case "on":
+		var did string
+		make_faas_req1("POST", "auths", http.StatusOK, &swyapi.AuthAdd { Name: "simple_auth" }, &did)
+		fmt.Printf("Created %s auth\n", did)
+
+	case "off":
+		var auths []*swyapi.AuthInfo
+		make_faas_req1("GET", "auths", http.StatusOK, nil, &auths)
+		for _, a := range auths {
+			fmt.Printf("Shutting down aut %s\n", a.Name)
+			make_faas_req1("DELETE", "auths/" + a.Id, http.StatusOK, nil, nil)
+		}
+	}
+}
+
 func deploy_del(args []string, opts [16]string) {
 	args[0] = resolve_dep(args[0])
 	make_faas_req1("DELETE", "deployments/" + args[0], http.StatusOK, nil, nil)
@@ -1158,6 +1182,7 @@ const (
 	CMD_MD string		= "md"
 
 	CMD_S3ACC string	= "s3acc"
+	CMD_AUTH string		= "auth"
 
 	CMD_DL string		= "dl"
 	CMD_DI string		= "di"
@@ -1206,6 +1231,7 @@ var cmdOrder = []string {
 	CMD_MD,
 
 	CMD_S3ACC,
+	CMD_AUTH,
 
 	CMD_DL,
 	CMD_DI,
@@ -1260,6 +1286,8 @@ var cmdMap = map[string]*cmdDesc {
 	CMD_MA:		&cmdDesc{ call: mware_add,	  opts: flag.NewFlagSet(CMD_MA, flag.ExitOnError) },
 	CMD_MD:		&cmdDesc{ call: mware_del,	  opts: flag.NewFlagSet(CMD_MD, flag.ExitOnError) },
 	CMD_S3ACC:	&cmdDesc{ call: s3_access,	  opts: flag.NewFlagSet(CMD_S3ACC, flag.ExitOnError) },
+	CMD_AUTH:	&cmdDesc{ call: auth_cfg,	  opts: flag.NewFlagSet(CMD_AUTH, flag.ExitOnError) },
+
 	CMD_DL:		&cmdDesc{ call: deploy_list,	  opts: flag.NewFlagSet(CMD_DL, flag.ExitOnError) },
 	CMD_DI:		&cmdDesc{ call: deploy_info,	  opts: flag.NewFlagSet(CMD_DI, flag.ExitOnError) },
 	CMD_DA:		&cmdDesc{ call: deploy_add,	  opts: flag.NewFlagSet(CMD_DA, flag.ExitOnError) },
@@ -1361,6 +1389,7 @@ func main() {
 
 	cmdMap[CMD_S3ACC].opts.StringVar(&opts[0], "life", "60", "Lifetime (default 1 min)")
 	bindCmdUsage(CMD_S3ACC,	[]string{"BUCKET"}, "Get keys for S3", true)
+	bindCmdUsage(CMD_AUTH,	[]string{"ACTION"}, "Manage project auth", true)
 
 	bindCmdUsage(CMD_DL,	[]string{},	"List deployments", true)
 	bindCmdUsage(CMD_DI,	[]string{"NAME"}, "Show info about deployment", true)

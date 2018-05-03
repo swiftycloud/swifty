@@ -1418,6 +1418,10 @@ func handleDeployment(ctx context.Context, w http.ResponseWriter, r *http.Reques
 		return GateErrD(err)
 	}
 
+	return handleOneDeployment(ctx, w, r, dd)
+}
+
+func handleOneDeployment(ctx context.Context, w http.ResponseWriter, r *http.Request, dd *DeployDesc) *swyapi.GateErr {
 	switch r.Method {
 	case "GET":
 		di, cerr := dd.toInfo(true)
@@ -1425,7 +1429,7 @@ func handleDeployment(ctx context.Context, w http.ResponseWriter, r *http.Reques
 			return cerr
 		}
 
-		err = swyhttp.MarshalAndWrite(w, di)
+		err := swyhttp.MarshalAndWrite(w, di)
 		if err != nil {
 			return GateErrE(swy.GateBadResp, err)
 		}
@@ -1440,6 +1444,88 @@ func handleDeployment(ctx context.Context, w http.ResponseWriter, r *http.Reques
 	}
 
 	return nil
+}
+
+func handleAuths(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
+	q := r.URL.Query()
+	project := q.Get("project")
+	if project == "" {
+		project = SwyDefaultProject
+	}
+
+	switch r.Method {
+	case "GET":
+		deps, err := dbDeployList(bson.M{
+					"tennant":	fromContext(ctx).Tenant,
+					"project":	project,
+					"labels":	"auth",
+				})
+		if err != nil {
+			return GateErrD(err)
+		}
+
+		var auths []*swyapi.AuthInfo
+		for _, d := range deps {
+			auths = append(auths, &swyapi.AuthInfo{ Id: d.ObjID.Hex(), Name: d.SwoId.Name })
+		}
+
+		err = swyhttp.MarshalAndWrite(w, auths)
+		if err != nil {
+			return GateErrE(swy.GateBadResp, err)
+		}
+
+	case "POST":
+		var aa swyapi.AuthAdd
+
+		err := swyhttp.ReadAndUnmarshalReq(r, &aa)
+		if err != nil {
+			return GateErrE(swy.GateBadRequest, err)
+		}
+
+		if aa.Type != "" && aa.Type != "jwt" {
+			return GateErrM(swy.GateBadRequest, "No such auth type")
+		}
+
+		dd := getDeployDesc(ctxSwoId(ctx, project, aa.Name))
+		dd.Labels = []string{ "auth" }
+		dd.getItems([]*swyapi.DeployItem {
+			{ Mware: &swyapi.MwareAdd{ Name: aa.Name + "_jwt", Type: "authjwt" } },
+			{ Mware: &swyapi.MwareAdd{ Name: aa.Name + "_mgo", Type: "mongo" } },
+			{ Function: &swyapi.FunctionAdd {
+				Name: aa.Name + "_um",
+				Code: swyapi.FunctionCode { Lang: "golang" },
+				Sources: swyapi.FunctionSources {
+					Type: "swage",
+					Swage: &swyapi.FunctionSwage { Template: "umjwt0", },
+				},
+				Mware: []string { "jwt_" + aa.Name, "mgo_" + aa.Name },
+				Url: true,
+			}},
+		})
+
+		did, cerr := deployStart(ctx, dd)
+		if cerr != nil {
+			return cerr
+		}
+
+		err = swyhttp.MarshalAndWrite(w, &did)
+		if err != nil {
+			return GateErrE(swy.GateBadResp, err)
+		}
+	}
+
+	return nil
+}
+
+func handleAuth(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
+	did := mux.Vars(r)["aid"]
+	ad, err := dbDeployGet(bson.M{"tennant": fromContext(ctx).Tenant,
+			"_id": bson.ObjectIdHex(did), "labels": "auth"})
+	if err != nil {
+		return GateErrD(err)
+	}
+
+	return handleOneDeployment(ctx, w, r, ad)
 }
 
 func handleMware(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
@@ -1666,6 +1752,9 @@ func main() {
 	r.Handle("/v1/middleware/{mid}",	genReqHandler(handleMware)).Methods("GET", "DELETE", "OPTIONS")
 
 	r.Handle("/v1/s3/access",		genReqHandler(handleS3Access)).Methods("GET", "OPTIONS")
+
+	r.Handle("/v1/auths",			genReqHandler(handleAuths)).Methods("GET", "POST", "OPTIONS")
+	r.Handle("/v1/auths/{aid}",		genReqHandler(handleAuth)).Methods("DELETE", "OPTIONS")
 
 	r.Handle("/v1/deployments",		genReqHandler(handleDeployments)).Methods("GET", "POST", "OPTIONS")
 	r.Handle("/v1/deployments/{did}",	genReqHandler(handleDeployment)).Methods("GET", "DELETE", "OPTIONS")

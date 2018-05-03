@@ -156,6 +156,8 @@ type FunctionAdd struct {
 	S3Buckets	[]string		`json:"s3buckets,omitempty"`
 	UserData	string			`json:"userdata,omitempty"`
 	AuthCtx		string			`json:"authctx,omitempty"`
+
+	Url		bool			`json:"-"`
 }
 
 type FunctionRun struct {
@@ -201,4 +203,14 @@ type DeployInfo struct {
 	Labels		[]string		`json:"labels,omitempty"`
 	State		string			`json:"state"`
 	Items		[]*DeployItemInfo	`json:"items"`
+}
+
+type AuthInfo struct {
+	Id		string			`json:"id"`
+	Name		string			`json:"name"`
+}
+
+type AuthAdd struct {
+	Name		string			`json:"name"`
+	Type		string			`json:"type"`
 }

@@ -193,6 +193,7 @@ func getFunctionDesc(tennant, project string, p_add *swyapi.FunctionAdd) *Functi
 		S3Buckets:	p_add.S3Buckets,
 		AuthCtx:	p_add.AuthCtx,
 		UserData:	p_add.UserData,
+		URL:		p_add.Url,
 	}
 
 	fn.Cookie = fn.SwoId.Cookie()
