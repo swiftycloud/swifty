@@ -888,7 +888,7 @@ func mware_list(args []string, opts [16]string) {
 		make_faas_req1("GET", url("middleware", ua), http.StatusOK, nil, &mws)
 		fmt.Printf("%-32s%-20s%-10s\n", "ID", "NAME", "TYPE")
 		for _, mw := range mws {
-			fmt.Printf("%-32s%-20s%-10s\n", mw.ID, mw.Name, mw.Type)
+			fmt.Printf("%-32s%-20s%-10s%s\n", mw.ID, mw.Name, mw.Type, strings.Join(mw.Labels, ","))
 		}
 	} else if opts[0] == "json" {
 		ua = append(ua, "details=1")
