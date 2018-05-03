@@ -236,6 +236,17 @@ paths:
           description: Need to authenticate
         '403':
           description: Bad authentication token
+  /functions/{fid}/run:
+    parameters:
+      - in: header
+        name: X-Auth-Token
+        type: string
+        required: true
+      - in: path
+        name: fid
+        type: string
+        required: true
+        description: Function ID
     post:
       tags:
         - function
