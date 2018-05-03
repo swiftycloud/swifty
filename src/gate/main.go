@@ -451,7 +451,7 @@ func handleFunctionSize(ctx context.Context, w http.ResponseWriter, r *http.Requ
 	return nil
 }
 
-func handleFunctionMware(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
+func handleFunctionMwares(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
 	fnid := mux.Vars(r)["fid"]
 
 	fn, err := dbFuncFindOne(bson.M{"tennant": fromContext(ctx).Tenant,
@@ -467,25 +467,22 @@ func handleFunctionMware(ctx context.Context, w http.ResponseWriter, r *http.Req
 			return GateErrE(swy.GateBadResp, err)
 		}
 
-	case "POST", "DELETE":
-		mids := r.URL.Query()["mwid"]
-		if len(mids) != 1 {
-			return GateErrM(swy.GateBadRequest, "Exactly one mwid needed")
+	case "POST":
+		var mid string
+
+		err := swyhttp.ReadAndUnmarshalReq(r, &mid)
+		if err != nil {
+			return GateErrE(swy.GateBadRequest, err)
 		}
 
 		mw, err := dbMwareGetOne(bson.M{"tennant": fromContext(ctx).Tenant,
 						"project": fn.SwoId.Project,
-						"_id": bson.ObjectIdHex(mids[0])})
+						"_id": bson.ObjectIdHex(mid)})
 		if err != nil {
 			return GateErrD(err)
 		}
 
-		if r.Method == "POST" {
-			err = fn.addMware(ctx, &mw)
-		} else {
-			err = fn.delMware(ctx, &mw)
-		}
-
+		err = fn.addMware(ctx, &mw)
 		if err != nil {
 			return GateErrE(swy.GateGenErr, err)
 		}
@@ -495,6 +492,38 @@ func handleFunctionMware(ctx context.Context, w http.ResponseWriter, r *http.Req
 
 	return nil
 }
+
+func handleFunctionMware(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
+	fnid := mux.Vars(r)["fid"]
+
+	fn, err := dbFuncFindOne(bson.M{"tennant": fromContext(ctx).Tenant,
+			"_id": bson.ObjectIdHex(fnid)})
+	if err != nil {
+		return GateErrD(err)
+	}
+
+	mid := mux.Vars(r)["mid"]
+
+	mw, err := dbMwareGetOne(bson.M{"tennant": fromContext(ctx).Tenant,
+			"project": fn.SwoId.Project,
+			"_id": bson.ObjectIdHex(mid)})
+	if err != nil {
+		return GateErrD(err)
+	}
+
+	switch r.Method {
+	case "DELETE":
+		err = fn.delMware(ctx, &mw)
+		if err != nil {
+			return GateErrE(swy.GateGenErr, err)
+		}
+
+		w.WriteHeader(http.StatusOK)
+	}
+
+	return nil
+}
+
 
 func handleFunctionS3Bs(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
 	fnid := mux.Vars(r)["fid"]
@@ -1553,7 +1582,8 @@ func main() {
 	r.Handle("/v1/functions/{fid}/authctx",	genReqHandler(handleFunctionAuthCtx)).Methods("GET", "PUT", "OPTIONS")
 	r.Handle("/v1/functions/{fid}/size",	genReqHandler(handleFunctionSize)).Methods("GET", "PUT", "OPTIONS")
 	r.Handle("/v1/functions/{fid}/sources",	genReqHandler(handleFunctionSources)).Methods("GET", "PUT", "OPTIONS")
-	r.Handle("/v1/functions/{fid}/middleware", genReqHandler(handleFunctionMware)).Methods("GET", "POST", "DELETE", "OPTIONS")
+	r.Handle("/v1/functions/{fid}/middleware", genReqHandler(handleFunctionMwares)).Methods("GET", "POST", "OPTIONS")
+	r.Handle("/v1/functions/{fid}/middleware/{mid}", genReqHandler(handleFunctionMware)).Methods("DELETE", "OPTIONS")
 	r.Handle("/v1/functions/{fid}/s3buckets",  genReqHandler(handleFunctionS3Bs)).Methods("GET", "POST", "DELETE", "OPTIONS")
 	r.Handle("/v1/functions/{fid}/wait",	genReqHandler(handleFunctionWait)).Methods("POST", "OPTIONS")
 

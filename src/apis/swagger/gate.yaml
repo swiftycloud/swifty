@@ -676,7 +676,7 @@ paths:
         - function
       summary: Attach mware to function
       parameters:
-        - in: query
+        - in: body
           name: mwid
           required: true
           type: string
@@ -692,16 +692,26 @@ paths:
           description: Need to authenticate
         '403':
           description: Bad authentication token
+  /functions/{fid}/middleware/{mid}:
+    parameters:
+      - in: header
+        name: X-Auth-Token
+        type: string
+        required: true
+      - in: path
+        name: fid
+        type: string
+        required: true
+        description: Function ID
+      - in: path
+        name: mid
+        type: string
+        required: true
+        description: Middleware ID
     delete:
       tags:
         - function
       summary: Detach mware from function
-      parameters:
-        - in: query
-          name: mwid
-          required: true
-          type: string
-          description: Middleware ID
       responses:
         '200':
           description: OK

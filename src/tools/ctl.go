@@ -637,15 +637,13 @@ func update_function(cd *cmdDesc, args []string, opts [16]string) {
 	}
 
 	if opts[3] != "" {
-		op := ""
 		if opts[3][0] == '+' {
-			op = "POST"
+			make_faas_req1("POST", "functions/" + fid + "/middleware", http.StatusOK, opts[3][1:], nil)
 		} else if opts[3][0] == '-' {
-			op = "DELETE"
+			make_faas_req1("DELETE", "functions/" + fid + "/middleware/" + opts[3][1:], http.StatusOK, nil, nil)
 		} else {
 			fatal(fmt.Errorf("+/- mware name"))
 		}
-		make_faas_req1(op, "functions/" + fid + "/middleware?mwid=" + opts[3][1:], http.StatusOK, nil, nil)
 	}
 
 	if opts[4] != "" {
