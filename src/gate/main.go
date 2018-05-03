@@ -669,9 +669,11 @@ func handleFunctionState(ctx context.Context, w http.ResponseWriter, r *http.Req
 			return GateErrE(swy.GateBadResp, err)
 		}
 	case "PUT":
-		state := r.URL.Query().Get("v")
-		if state == "" {
-			return GateErrC(swy.GateBadRequest)
+		var state string
+
+		err = swyhttp.ReadAndUnmarshalReq(r, &state)
+		if err != nil {
+			return GateErrE(swy.GateBadRequest, err)
 		}
 
 		cerr := setFunctionState(ctx, &conf, fn, state)

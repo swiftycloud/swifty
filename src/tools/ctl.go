@@ -694,12 +694,12 @@ func del_function(cd *cmdDesc, args []string, opts [16]string) {
 
 func on_fn(cd *cmdDesc, args []string, opts [16]string) {
 	args[0] = resolve_fn(cd.project, args[0])
-	make_faas_req1("PUT", "function/" + args[0] + "/state?v=ready", http.StatusOK, nil, nil)
+	make_faas_req1("PUT", "function/" + args[0] + "/state", http.StatusOK, "ready", nil)
 }
 
 func off_fn(cd *cmdDesc, args []string, opts [16]string) {
 	args[0] = resolve_fn(cd.project, args[0])
-	make_faas_req1("PUT", "function/" + args[0] + "/state?v=deactivated", http.StatusOK, nil, nil)
+	make_faas_req1("PUT", "function/" + args[0] + "/state", http.StatusOK, "deactivated", nil)
 }
 
 func list_events(cd *cmdDesc, args []string, opts [16]string) {

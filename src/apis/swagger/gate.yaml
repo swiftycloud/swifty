@@ -374,9 +374,10 @@ paths:
         - function
       summary: Set function state
       parameters:
-        - in: query
+        - in: body
           name: v
-          type: string
+          schema:
+            type: string
           required: true
           description: State to set
       responses:
