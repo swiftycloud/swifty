@@ -131,10 +131,8 @@ func getDeployDesc(id *SwoId) *DeployDesc {
 	return dd
 }
 
-func deployStart(ctx context.Context, dep *DeployDesc, params *swyapi.DeployStart) (string, *swyapi.GateErr) {
-	var err error
-
-	for _, item := range params.Items {
+func (dep *DeployDesc)getItems(items []*swyapi.DeployItem) *swyapi.GateErr {
+	for _, item := range items {
 		if item.Function != nil && item.Mware == nil {
 			dep.Items = append(dep.Items, &DeployItemDesc{
 				Fn: getFunctionDesc(dep.SwoId.Tennant, dep.SwoId.Project, item.Function),
@@ -149,11 +147,15 @@ func deployStart(ctx context.Context, dep *DeployDesc, params *swyapi.DeployStar
 			continue
 		}
 
-		return "", GateErrM(swy.GateBadRequest, "Bad item")
+		return GateErrM(swy.GateBadRequest, "Bad item")
 	}
 
+	return nil
+}
+
+func deployStart(ctx context.Context, dep *DeployDesc) (string, *swyapi.GateErr) {
 	dep.ObjID = bson.NewObjectId()
-	err = dbDeployAdd(dep)
+	err := dbDeployAdd(dep)
 	if err != nil {
 		return "", GateErrD(err)
 	}

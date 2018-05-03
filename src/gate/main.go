@@ -1390,7 +1390,13 @@ func handleDeployments(ctx context.Context, w http.ResponseWriter, r *http.Reque
 			return GateErrE(swy.GateBadRequest, err)
 		}
 
-		did, cerr := deployStart(ctx, getDeployDesc(ctxSwoId(ctx, project, ds.Name)), &ds)
+		dd := getDeployDesc(ctxSwoId(ctx, project, ds.Name))
+		cerr := dd.getItems(ds.Items)
+		if cerr != nil {
+			return cerr
+		}
+
+		did, cerr := deployStart(ctx, dd)
 		if cerr != nil {
 			return cerr
 		}
