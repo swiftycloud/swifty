@@ -121,24 +121,30 @@ func deployStopItems(ctx context.Context, dep *DeployDesc, till int) *swyapi.Gat
 	return err
 }
 
-func deployStart(ctx context.Context, project string, params *swyapi.DeployStart) (string, *swyapi.GateErr) {
-	var err error
+func getDeployDesc(id *SwoId) *DeployDesc {
+	dd := &DeployDesc {
+		SwoId: *id,
+		State: swy.DBDepStateIni,
+		Cookie: id.Cookie(),
+	}
 
-	ten := fromContext(ctx).Tenant
-	id := makeSwoId(ten, project, params.Name)
-	dep := &DeployDesc{ SwoId: *id, State: swy.DBDepStateIni, Cookie: id.Cookie() }
+	return dd
+}
+
+func deployStart(ctx context.Context, dep *DeployDesc, params *swyapi.DeployStart) (string, *swyapi.GateErr) {
+	var err error
 
 	for _, item := range params.Items {
 		if item.Function != nil && item.Mware == nil {
 			dep.Items = append(dep.Items, &DeployItemDesc{
-				Fn: getFunctionDesc(ten, project, item.Function),
+				Fn: getFunctionDesc(dep.SwoId.Tennant, dep.SwoId.Project, item.Function),
 			})
 			continue
 		}
 
 		if item.Mware != nil && item.Function == nil {
 			dep.Items = append(dep.Items, &DeployItemDesc{
-				Mw: getMwareDesc(ten, project, item.Mware),
+				Mw: getMwareDesc(dep.SwoId.Tennant, dep.SwoId.Project, item.Mware),
 			})
 			continue
 		}
