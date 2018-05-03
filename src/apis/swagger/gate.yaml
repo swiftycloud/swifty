@@ -224,7 +224,7 @@ paths:
     delete:
       tags:
         - function
-      summary: Create middleware
+      summary: Remove function
       responses:
         '200':
           description: OK
