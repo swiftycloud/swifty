@@ -82,6 +82,7 @@ func (i *DeployItemDesc)info(details bool) (*swyapi.DeployItemInfo) {
 type DeployDesc struct {
 	ObjID		bson.ObjectId		`bson:"_id,omitempty"`
 	SwoId					`bson:",inline"`
+	Labels		[]string		`bson:"labels"`
 	Cookie		string			`bson:"cookie"`
 	Items		[]*DeployItemDesc	`bson:"items"`
 	State		int			`bson:"state"`
@@ -162,6 +163,7 @@ func (dep *DeployDesc)toInfo(details bool) (*swyapi.DeployInfo, *swyapi.GateErr)
 	ret.Id = dep.ObjID.Hex()
 	ret.Name = dep.SwoId.Name
 	ret.State = depStates[dep.State]
+	ret.Labels = dep.Labels
 	for _, item := range dep.Items {
 		ret.Items = append(ret.Items, item.info(details))
 	}

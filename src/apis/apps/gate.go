@@ -198,6 +198,7 @@ type DeployItemInfo struct {
 type DeployInfo struct {
 	Id		string			`json:"id,omitempty"`
 	Name		string			`json:"name"`
+	Labels		[]string		`json:"labels,omitempty"`
 	State		string			`json:"state"`
 	Items		[]*DeployItemInfo	`json:"items"`
 }

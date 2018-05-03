@@ -967,7 +967,7 @@ func deploy_list(args []string, opts [16]string) {
 	make_faas_req1("GET", "deployments", http.StatusOK, nil, &dis)
 	fmt.Printf("%-32s%-20s\n", "ID", "NAME")
 	for _, di := range dis {
-		fmt.Printf("%-32s%-20s (%d items)\n", di.Id, di.Name, len(di.Items))
+		fmt.Printf("%-32s%-20s (%d items) %s\n", di.Id, di.Name, len(di.Items), strings.Join(di.Labels, ","))
 	}
 }
 
