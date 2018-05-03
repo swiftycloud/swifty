@@ -673,7 +673,8 @@ paths:
         - in: body
           name: mwid
           required: true
-          type: string
+          schema:
+            type: string
           description: Middleware ID
       responses:
         '200':
@@ -757,7 +758,8 @@ paths:
         - in: body
           name: bname
           required: true
-          type: string
+          schema:
+            type: string
           description: Bucket name
       responses:
         '200':
