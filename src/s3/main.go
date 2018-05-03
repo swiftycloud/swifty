@@ -508,7 +508,7 @@ func handlePutObject(oname string, iam *S3Iam, bucket *S3Bucket, w http.Response
 }
 
 func handleDeleteObject(oname string, iam *S3Iam, bucket *S3Bucket, w http.ResponseWriter, r *http.Request) *S3Error {
-	err := s3DeleteObject(bucket, oname)
+	err := s3DeleteObject(iam, bucket, oname)
 	if err != nil {
 		return &S3Error{ ErrorCode: S3ErrInvalidRequest, Message: err.Error() }
 	}

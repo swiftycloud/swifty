@@ -180,7 +180,7 @@ out_remove:
 	return nil, err
 }
 
-func s3DeleteObject(bucket *S3Bucket, oname string) error {
+func s3DeleteObject(iam *S3Iam, bucket *S3Bucket, oname string) error {
 	var object *S3Object
 	var objd *S3ObjectData
 	var err error
@@ -223,6 +223,10 @@ func s3DeleteObject(bucket *S3Bucket, oname string) error {
 	err = dbS3RemoveOnState(object, S3StateInactive, nil)
 	if err != nil {
 		return err
+	}
+
+	if bucket.BasicNotify != nil && bucket.BasicNotify.Delete > 0 {
+		s3Notify(iam, bucket, object, "delete")
 	}
 
 	log.Debugf("s3: Deleted %s", infoLong(object))

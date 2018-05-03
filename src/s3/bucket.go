@@ -33,6 +33,7 @@ type S3ListObjectsRP struct {
 type S3BucketNotify struct {
 	Queue				string		`bson:"queue"`
 	Put				uint32		`bson:"put"`
+	Delete				uint32		`bson:"delete"`
 }
 
 type S3Tag struct {
