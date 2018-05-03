@@ -83,6 +83,11 @@ type FunctionSize struct {
 	Burst		uint			`json:"burst,omitempty"`
 }
 
+type FunctionWait struct {
+	Timeout		uint			`json:"timeout"`
+	Version		string			`json:"version,omitempty"`
+}
+
 type FunctionEventCron struct {
 	Tab		string			`json:"tab"`
 	Args		map[string]string	`json:"args"`

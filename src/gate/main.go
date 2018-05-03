@@ -627,25 +627,18 @@ func handleFunctionWait(ctx context.Context, w http.ResponseWriter, r *http.Requ
 		return GateErrD(err)
 	}
 
-	q := r.URL.Query()
-
-	var timeout time.Duration
-	var tmo bool
-
-	ts := q.Get("timeout")
-	if ts != "" {
-		t, err := strconv.Atoi(ts)
-		if err != nil {
-			return GateErrE(swy.GateBadRequest, err)
-		}
-
-		timeout = time.Duration(t) * time.Millisecond
+	var wo swyapi.FunctionWait
+	err = swyhttp.ReadAndUnmarshalReq(r, &wo)
+	if err != nil {
+		return GateErrE(swy.GateBadRequest, err)
 	}
 
-	version := q.Get("version")
-	if version != "" {
-		ctxlog(ctx).Debugf("function/wait %s -> version >= %s, tmo %d", fn.SwoId.Str(), version, int(timeout))
-		err, tmo = waitFunctionVersion(ctx, fn, version, timeout)
+	timeout := time.Duration(wo.Timeout) * time.Millisecond
+	var tmo bool
+
+	if wo.Version != "" {
+		ctxlog(ctx).Debugf("function/wait %s -> version >= %s, tmo %d", fn.SwoId.Str(), wo.Version, int(timeout))
+		err, tmo = waitFunctionVersion(ctx, fn, wo.Version, timeout)
 		if err != nil {
 			return GateErrE(swy.GateGenErr, err)
 		}

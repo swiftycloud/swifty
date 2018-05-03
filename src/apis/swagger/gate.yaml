@@ -407,19 +407,12 @@ paths:
         - function
       summary: Wait for an event on a function
       parameters:
-        - in: query
-          name: timeout
-          type: string
+        - in: body
+          name: data
+          schema:
+            $ref: '#/definitions/FunctionWait'
           required: false
-          description: Time to wait in msec
-        - in: query
-          name: version
-          type: string
-          required: false
-          description: >-
-            When a function version equals or (!) greater than this becomes
-            available for execution, the event occurs. Note, that older versions
-            may still be there when the event happens.
+          description: Wait options
       responses:
         '200':
           description: OK
@@ -1507,6 +1500,18 @@ definitions:
       text:
         type: string
         description: Log entry text (stdout and stderr typically)
+  FunctionWait:
+    description: Wait options
+    properties:
+      timeout:
+        type: integer
+        description: Time in msec to wait for an event to occur
+      version:
+        type: string
+        description: >-
+                When a function version equals or (!) greater than this becomes
+                available for execution, the event occurs. Note, that older versions
+                may still be there when the event happens.
   FunctionRun:
     description: Function ID and arguments
     required:
