@@ -395,7 +395,7 @@ func function_list(args []string, opts [16]string) {
 
 		fmt.Printf("%-32s%-20s%-10s\n", "ID", "NAME", "STATE")
 		for _, fn := range fns {
-			fmt.Printf("%-32s%-20s%-12s\n", fn.Id, fn.Name, fn.State)
+			fmt.Printf("%-32s%-20s%-12s%s\n", fn.Id, fn.Name, fn.State, strings.Join(fn.Labels, ","))
 		}
 	} else if opts[0] == "json" {
 		ua = append(ua, "details=1")

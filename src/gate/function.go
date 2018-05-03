@@ -88,6 +88,7 @@ type FunctionDesc struct {
 	ObjID		bson.ObjectId	`bson:"_id,omitempty"`
 
 	SwoId				`bson:",inline"`
+	Labels		[]string	`bson:"labels,omitempty"`
 	Cookie		string		`bson:"cookie"`		// Some "unique" identifier
 	State		int		`bson:"state"`		// Function state
 	Mware		[]string	`bson:"mware"`
@@ -119,6 +120,7 @@ func (fn *FunctionDesc)toInfo(details bool, periods int) (*swyapi.FunctionInfo, 
 		return &swyapi.FunctionInfo{
 			Id:		fn.ObjID.Hex(),
 			Name:		fn.SwoId.Name,
+			Labels:		fn.Labels,
 			State:          fnStates[fn.State],
 		}, nil
 	}
@@ -140,6 +142,7 @@ func (fn *FunctionDesc)toInfo(details bool, periods int) (*swyapi.FunctionInfo, 
 	return &swyapi.FunctionInfo{
 		Id:		fn.ObjID.Hex(),
 		Name:		fn.SwoId.Name,
+		Labels:		fn.Labels,
 		State:          fnStates[fn.State],
 		Mware:          fn.Mware,
 		S3Buckets:	fn.S3Buckets,

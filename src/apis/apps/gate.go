@@ -46,6 +46,7 @@ type TenantStatsResp struct {
 
 type FunctionInfo struct {
 	Name		string			`json:"name,omitempty"`
+	Labels		[]string		`json:"labels,omitempty"`
 	Mware		[]string		`json:"mware,omitempty"`
 	S3Buckets	[]string		`json:"s3buckets,omitempty"`
 	State		string			`json:"state"`
