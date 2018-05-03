@@ -541,18 +541,13 @@ func handleFunctionS3Bs(ctx context.Context, w http.ResponseWriter, r *http.Requ
 			return GateErrE(swy.GateBadResp, err)
 		}
 
-	case "POST", "DELETE":
-		bnames := r.URL.Query()["name"]
-		if len(bnames) != 1 {
-			return GateErrM(swy.GateBadRequest, "Exactly one name needed")
+	case "POST":
+		var bname string
+		err := swyhttp.ReadAndUnmarshalReq(r, &bname)
+		if err != nil {
+			return GateErrE(swy.GateBadRequest, err)
 		}
-
-		if r.Method == "POST" {
-			err = fn.addS3Bucket(ctx, bnames[0])
-		} else {
-			err = fn.delS3Bucket(ctx, bnames[0])
-		}
-
+		err = fn.addS3Bucket(ctx, bname)
 		if err != nil {
 			return GateErrE(swy.GateGenErr, err)
 		}
@@ -563,6 +558,29 @@ func handleFunctionS3Bs(ctx context.Context, w http.ResponseWriter, r *http.Requ
 	return nil
 }
 
+func handleFunctionS3B(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
+	fnid := mux.Vars(r)["fid"]
+
+	fn, err := dbFuncFindOne(bson.M{"tennant": fromContext(ctx).Tenant,
+			"_id": bson.ObjectIdHex(fnid)})
+	if err != nil {
+		return GateErrD(err)
+	}
+
+	bname := mux.Vars(r)["bname"]
+
+	switch r.Method {
+	case "DELETE":
+		err = fn.delS3Bucket(ctx, bname)
+		if err != nil {
+			return GateErrE(swy.GateGenErr, err)
+		}
+
+		w.WriteHeader(http.StatusOK)
+	}
+
+	return nil
+}
 
 func handleFunctionEvent(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
 	fnid := mux.Vars(r)["fid"]
@@ -1584,7 +1602,8 @@ func main() {
 	r.Handle("/v1/functions/{fid}/sources",	genReqHandler(handleFunctionSources)).Methods("GET", "PUT", "OPTIONS")
 	r.Handle("/v1/functions/{fid}/middleware", genReqHandler(handleFunctionMwares)).Methods("GET", "POST", "OPTIONS")
 	r.Handle("/v1/functions/{fid}/middleware/{mid}", genReqHandler(handleFunctionMware)).Methods("DELETE", "OPTIONS")
-	r.Handle("/v1/functions/{fid}/s3buckets",  genReqHandler(handleFunctionS3Bs)).Methods("GET", "POST", "DELETE", "OPTIONS")
+	r.Handle("/v1/functions/{fid}/s3buckets",  genReqHandler(handleFunctionS3Bs)).Methods("GET", "POST", "OPTIONS")
+	r.Handle("/v1/functions/{fid}/s3buckets/{bname}",  genReqHandler(handleFunctionS3B)).Methods("DELETE", "OPTIONS")
 	r.Handle("/v1/functions/{fid}/wait",	genReqHandler(handleFunctionWait)).Methods("POST", "OPTIONS")
 
 	r.Handle("/v1/middleware",		genReqHandler(handleMwares)).Methods("GET", "POST", "OPTIONS")

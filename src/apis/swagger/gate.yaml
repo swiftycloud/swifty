@@ -760,8 +760,8 @@ paths:
         - function
       summary: Attach S3 bucket to function
       parameters:
-        - in: query
-          name: name
+        - in: body
+          name: bname
           required: true
           type: string
           description: Bucket name
@@ -776,16 +776,26 @@ paths:
           description: Need to authenticate
         '403':
           description: Bad authentication token
+  /functions/{fid}/s3buckets/{bname}:
+    parameters:
+      - in: header
+        name: X-Auth-Token
+        type: string
+        required: true
+      - in: path
+        name: fid
+        type: string
+        required: true
+        description: Function ID
+      - in: path
+        name: bname
+        type: string
+        required: true
+        description: Bucket name
     delete:
       tags:
         - function
       summary: Detach S3 bucket from function
-      parameters:
-        - in: query
-          name: name
-          required: true
-          type: string
-          description: Bucket name
       responses:
         '200':
           description: OK
