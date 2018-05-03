@@ -3,6 +3,7 @@ package main
 import (
 	"strings"
 	"context"
+	"path/filepath"
 	"gopkg.in/robfig/cron.v2"
 	"gopkg.in/mgo.v2/bson"
 	"../common"
@@ -19,6 +20,7 @@ type FnEventS3 struct {
 	Ns		string		`bson:"ns"`
 	Bucket		string		`bson:"bucket"`
 	Ops		string		`bson:"ops"`
+	Pattern		string		`bson:"pattern"`
 }
 
 func (s3 *FnEventS3)hasOp(op string) bool {
@@ -29,6 +31,15 @@ func (s3 *FnEventS3)hasOp(op string) bool {
 		}
 	}
 	return false
+}
+
+func (s3 *FnEventS3)matchPattern(oname string) bool {
+	if s3.Pattern == "" {
+		return true
+	}
+
+	m, err := filepath.Match(s3.Pattern, oname)
+	return err == nil && m
 }
 
 type FnEventDesc struct {
@@ -118,6 +129,7 @@ func (e *FnEventDesc)toAPI(withid bool) *swyapi.FunctionEvent {
 		ae.S3 = &swyapi.FunctionEventS3 {
 			Bucket: e.S3.Bucket,
 			Ops: e.S3.Ops,
+			Pattern: e.S3.Pattern,
 		}
 	}
 
@@ -157,6 +169,7 @@ func eventsAdd(ctx context.Context, fn *FunctionDesc, evt *swyapi.FunctionEvent)
 		ed.S3 = &FnEventS3{
 			Bucket: evt.S3.Bucket,
 			Ops: evt.S3.Ops,
+			Pattern: evt.S3.Pattern,
 		}
 	case "url":
 		/* Nothing (yet) */ ;

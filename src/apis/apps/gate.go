@@ -113,6 +113,7 @@ type FunctionEventCron struct {
 type FunctionEventS3 struct {
 	Bucket		string			`json:"bucket"`
 	Ops		string			`json:"ops,omitempty"`
+	Pattern		string			`json:"pattern,omitempty"`
 }
 
 type FunctionEvent struct {

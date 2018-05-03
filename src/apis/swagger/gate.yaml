@@ -1100,6 +1100,10 @@ definitions:
         type: string
         description: 'Comma-separated list of operations'
         example: 'put'
+      pattern:
+        type: string
+        description: 'Pattern to match the object key'
+        example: '/foo/bar/*.img'
   FunctionEvent:
     type: object
     description: Event specification

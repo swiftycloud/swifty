@@ -140,6 +140,10 @@ func handleS3Event(ctx context.Context, user string, data []byte) {
 			continue
 		}
 
+		if !ed.S3.matchPattern(evt.Object) {
+			continue
+		}
+
 		fn, err := dbFuncFindByCookie(ed.FnId)
 		if err != nil || fn == nil {
 			continue
