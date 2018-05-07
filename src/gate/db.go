@@ -107,23 +107,23 @@ func dbMwareSetStalled(mwd *MwareDesc) error {
 		bson.M{"$set": bson.M{"state": swy.DBMwareStateStl, }})
 }
 
-func dbMwareGetOne(q bson.M) (MwareDesc, error) {
+func dbMwareGetOne(q bson.M) (*MwareDesc, error) {
 	c := dbSession.DB(DBStateDB).C(DBColMware)
 	v := MwareDesc{}
 	err := c.Find(q).One(&v)
-	return v, err
+	return &v, err
 }
 
-func dbMwareGetItem(id *SwoId) (MwareDesc, error) {
+func dbMwareGetItem(id *SwoId) (*MwareDesc, error) {
 	return dbMwareGetOne(bson.M{"cookie": id.Cookie()})
 }
 
-func dbMwareGetReady(id *SwoId) (MwareDesc, error) {
+func dbMwareGetReady(id *SwoId) (*MwareDesc, error) {
 	return dbMwareGetOne(bson.M{"cookie": id.Cookie(), "state": swy.DBMwareStateRdy})
 }
 
-func dbMwareListProj(id *SwoId, mwtyp string) ([]MwareDesc, error) {
-	var recs []MwareDesc
+func dbMwareListProj(id *SwoId, mwtyp string) ([]*MwareDesc, error) {
+	var recs []*MwareDesc
 	c := dbSession.DB(DBStateDB).C(DBColMware)
 	lk := bson.M{"tennant": id.Tennant, "project": id.Project}
 	if mwtyp != "" {

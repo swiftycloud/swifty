@@ -210,7 +210,7 @@ out:
 func handleProjectDel(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
 	var par swyapi.ProjectDel
 	var fns []*FunctionDesc
-	var mws []MwareDesc
+	var mws []*MwareDesc
 	var id *SwoId
 	var ferr *swyapi.GateErr
 
@@ -482,7 +482,7 @@ func handleFunctionMwares(ctx context.Context, w http.ResponseWriter, r *http.Re
 			return GateErrD(err)
 		}
 
-		err = fn.addMware(ctx, &mw)
+		err = fn.addMware(ctx, mw)
 		if err != nil {
 			return GateErrE(swy.GateGenErr, err)
 		}
@@ -513,7 +513,7 @@ func handleFunctionMware(ctx context.Context, w http.ResponseWriter, r *http.Req
 
 	switch r.Method {
 	case "DELETE":
-		err = fn.delMware(ctx, &mw)
+		err = fn.delMware(ctx, mw)
 		if err != nil {
 			return GateErrE(swy.GateGenErr, err)
 		}
@@ -1213,9 +1213,23 @@ func handleMwares(ctx context.Context, w http.ResponseWriter, r *http.Request) *
 		details := (q.Get("details") != "")
 		mwtype := q.Get("type")
 
-		mws, err := dbMwareListProj(ctxSwoId(ctx, project, ""), mwtype)
-		if err != nil {
-			return GateErrD(err)
+		var mws []*MwareDesc
+		var err error
+
+		mname := q.Get("name")
+		if mname == "" {
+			mws, err = dbMwareListProj(ctxSwoId(ctx, project, ""), mwtype)
+			if err != nil {
+				return GateErrD(err)
+			}
+		} else {
+			var mw *MwareDesc
+
+			mw, err = dbMwareGetItem(ctxSwoId(ctx, project, mname))
+			if err != nil {
+				return GateErrD(err)
+			}
+			mws = append(mws, mw)
 		}
 
 		var ret []*swyapi.MwareInfo
@@ -1429,7 +1443,7 @@ func handleMware(ctx context.Context, w http.ResponseWriter, r *http.Request) *s
 		}
 
 	case "DELETE":
-		cerr := mwareRemove(ctx, &conf.Mware, &mw)
+		cerr := mwareRemove(ctx, &conf.Mware, mw)
 		if cerr != nil {
 			return cerr
 		}

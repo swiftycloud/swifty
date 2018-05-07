@@ -117,7 +117,7 @@ func mwareRemoveId(ctx context.Context, conf *YAMLConfMw, id *SwoId) *swyapi.Gat
 		return GateErrD(err)
 	}
 
-	return mwareRemove(ctx, conf, &item)
+	return mwareRemove(ctx, conf, item)
 }
 
 func mwareRemove(ctx context.Context, conf *YAMLConfMw, item *MwareDesc) *swyapi.GateErr {

@@ -323,7 +323,25 @@ func resolve_fn(project, fname string) string {
 		}
 	}
 
-	fatal(fmt.Errorf("\tCanname %s not resolved", fname))
+	fatal(fmt.Errorf("\tname %s not resolved", fname))
+	return ""
+}
+
+func resolve_mw(project, mname string) string {
+	var ifo []swyapi.MwareInfo
+	ua := []string{}
+	if project != "" {
+		ua = append(ua, "project=" + project)
+	}
+	ua = append(ua, "name=" + mname)
+	make_faas_req1("GET", url("middleware", ua), http.StatusOK, nil, &ifo)
+	for _, i := range ifo {
+		if i.Name == mname {
+			return i.ID
+		}
+	}
+
+	fatal(fmt.Errorf("\tname %s not resolved", mname))
 	return ""
 }
 
@@ -637,10 +655,11 @@ func update_function(cd *cmdDesc, args []string, opts [16]string) {
 	}
 
 	if opts[3] != "" {
+		mid := resolve_mw(cd.project, opts[3][1:])
 		if opts[3][0] == '+' {
-			make_faas_req1("POST", "functions/" + fid + "/middleware", http.StatusOK, opts[3][1:], nil)
+			make_faas_req1("POST", "functions/" + fid + "/middleware", http.StatusOK, mid, nil)
 		} else if opts[3][0] == '-' {
-			make_faas_req1("DELETE", "functions/" + fid + "/middleware/" + opts[3][1:], http.StatusOK, nil, nil)
+			make_faas_req1("DELETE", "functions/" + fid + "/middleware/" + mid, http.StatusOK, nil, nil)
 		} else {
 			fatal(fmt.Errorf("+/- mware name"))
 		}
@@ -831,6 +850,7 @@ func list_mware(cd *cmdDesc, args []string, opts [16]string) {
 func info_mware(cd *cmdDesc, args []string, opts [16]string) {
 	var resp swyapi.MwareInfo
 
+	args[0] = resolve_mw(cd.project, args[0])
 	make_faas_req1("GET", "middleware/" + args[0], http.StatusOK, nil, &resp)
 	fmt.Printf("Name:         %s\n", resp.Name)
 	fmt.Printf("Type:         %s\n", resp.Type)
@@ -867,6 +887,7 @@ func add_mware(cd *cmdDesc, args []string, opts [16]string) {
 }
 
 func del_mware(cd *cmdDesc, args []string, opts [16]string) {
+	args[0] = resolve_mw(cd.project, args[0])
 	make_faas_req1("DELETE", "middleware/" + args[0], http.StatusOK, nil, nil)
 }
 
@@ -1199,7 +1220,7 @@ func main() {
 	cmdMap[CMD_UPD].opts.StringVar(&opts[0], "src", "", "Source file")
 	cmdMap[CMD_UPD].opts.StringVar(&opts[1], "tmo", "", "Timeout")
 	cmdMap[CMD_UPD].opts.StringVar(&opts[2], "rl", "", "Rate (rate[:burst])")
-	cmdMap[CMD_UPD].opts.StringVar(&opts[3], "mw", "", "Mware to use, comma-separated")
+	cmdMap[CMD_UPD].opts.StringVar(&opts[3], "mw", "", "Mware to use, +/- to add/remove")
 	cmdMap[CMD_UPD].opts.StringVar(&opts[4], "data", "", "Associated text")
 	cmdMap[CMD_UPD].opts.StringVar(&opts[5], "ver", "", "Version")
 	cmdMap[CMD_UPD].opts.StringVar(&opts[6], "arg", "", "Args")
@@ -1227,10 +1248,10 @@ func main() {
 	cmdMap[CMD_MLS].opts.StringVar(&opts[0], "o", "", "Output format (NONE, json)")
 	cmdMap[CMD_MLS].opts.StringVar(&opts[1], "type", "", "Filter mware by type")
 	bindCmdUsage(CMD_MLS,	[]string{}, "List middleware", true)
-	bindCmdUsage(CMD_MINF,	[]string{"ID"}, "Middleware info", true)
+	bindCmdUsage(CMD_MINF,	[]string{"NAME"}, "Middleware info", true)
 	cmdMap[CMD_MADD].opts.StringVar(&opts[0], "data", "", "Associated text")
 	bindCmdUsage(CMD_MADD,	[]string{"NAME", "TYPE"}, "Add middleware", true)
-	bindCmdUsage(CMD_MDEL,	[]string{"ID"}, "Delete middleware", true)
+	bindCmdUsage(CMD_MDEL,	[]string{"NAME"}, "Delete middleware", true)
 
 	cmdMap[CMD_S3ACC].opts.StringVar(&opts[0], "life", "60", "Lifetime (default 1 min)")
 	bindCmdUsage(CMD_S3ACC,	[]string{"BUCKET"}, "Get keys for S3", true)

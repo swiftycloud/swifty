@@ -937,6 +937,11 @@ paths:
           type: string
           required: false
           description: Whether or not to show mware details (value itself is ignored)
+        - in: query
+          name: name
+          type: string
+          required: false
+          description: Name of a mware item to find (useful to resolve ID by name)
       responses:
         '200':
           description: OK
