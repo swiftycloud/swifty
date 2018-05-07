@@ -804,7 +804,7 @@ paths:
         '403':
           description: Bad authentication token
 
-  /functions/{fid}/events:
+  /functions/{fid}/triggers:
     parameters:
       - in: path
         name: fid
@@ -862,7 +862,7 @@ paths:
         '403':
           description: Bad authentication token
 
-  /functions/{fid}/events/{eid}:
+  /functions/{fid}/triggers/{eid}:
     parameters:
       - in: path
         name: fid
