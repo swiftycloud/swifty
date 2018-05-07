@@ -1701,7 +1701,7 @@ definitions:
     properties:
       project:
         type: string
-	description: The project to get S3 creds for
+        description: The project to get S3 creds for
       bucket:
         type: string
         description: if empty, access to "the whole s3" within the project is requested
