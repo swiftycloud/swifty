@@ -159,6 +159,7 @@ func deployStart(ctx context.Context, project string, params *swyapi.DeployStart
 func (dep *DeployDesc)toInfo(details bool) (*swyapi.DeployInfo, *swyapi.GateErr) {
 	var ret swyapi.DeployInfo
 
+	ret.Id = dep.ObjID.Hex()
 	ret.Name = dep.SwoId.Name
 	ret.State = depStates[dep.State]
 	for _, item := range dep.Items {

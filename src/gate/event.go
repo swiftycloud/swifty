@@ -108,14 +108,11 @@ func eventsInit(conf *YAMLConf) error {
 	return nil
 }
 
-func (e *FnEventDesc)toAPI(withid bool) *swyapi.FunctionEvent {
+func (e *FnEventDesc)toAPI() *swyapi.FunctionEvent {
 	ae := swyapi.FunctionEvent{
-		Name: e.Name,
-		Source: e.Source,
-	}
-
-	if withid {
-		ae.Id = e.ObjID.Hex()
+		Id:	e.ObjID.Hex(),
+		Name:	e.Name,
+		Source:	e.Source,
 	}
 
 	if e.Cron != nil {
@@ -144,7 +141,7 @@ func eventsList(fn *FunctionDesc) ([]swyapi.FunctionEvent, *swyapi.GateErr) {
 	}
 
 	for _, e := range evs {
-		ret = append(ret, *e.toAPI(true))
+		ret = append(ret, *e.toAPI())
 	}
 	return ret, nil
 }

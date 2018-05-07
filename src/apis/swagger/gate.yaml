@@ -201,7 +201,7 @@ paths:
     get:
       tags:
         - function
-      summary: Show function info (with details, without ID)
+      summary: Show function info (with details)
       parameters:
         - in: query
           name: periods
@@ -842,7 +842,7 @@ paths:
       parameters:
         - name: data
           in: body
-          description: Event trigger description (without ID)
+          description: Event trigger description
           required: true
           schema:
             $ref: '#/definitions/FunctionEvent'

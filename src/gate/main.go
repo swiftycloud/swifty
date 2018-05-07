@@ -601,7 +601,7 @@ func handleFunctionEvent(ctx context.Context, w http.ResponseWriter, r *http.Req
 
 	switch r.Method {
 	case "GET":
-		err := swyhttp.MarshalAndWrite(w, ed.toAPI(false))
+		err := swyhttp.MarshalAndWrite(w, ed.toAPI())
 		if err != nil {
 			return GateErrE(swy.GateBadResp, err)
 		}
@@ -1051,7 +1051,6 @@ func handleFunctions(ctx context.Context, w http.ResponseWriter, r *http.Request
 				return cerr
 			}
 
-			fi.Id = fn.ObjID.Hex()
 			ret = append(ret, fi)
 		}
 
@@ -1239,7 +1238,6 @@ func handleMwares(ctx context.Context, w http.ResponseWriter, r *http.Request) *
 				return cerr
 			}
 
-			mi.ID = mw.ObjID.Hex()
 			ret = append(ret, mi)
 		}
 
@@ -1359,7 +1357,6 @@ func handleDeployments(ctx context.Context, w http.ResponseWriter, r *http.Reque
 				return cerr
 			}
 
-			di.Id = d.ObjID.Hex()
 			dis = append(dis, di)
 		}
 

@@ -165,6 +165,7 @@ func (item *MwareDesc)toInfo(ctx context.Context, conf *YAMLConfMw, details bool
 	}
 
 	resp := &swyapi.MwareInfo{}
+	resp.ID = item.ObjID.Hex()
 	resp.Name = item.SwoId.Name
 	resp.Type = item.MwareType
 
