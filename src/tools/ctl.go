@@ -466,9 +466,6 @@ func function_info(args []string, opts [16]string) {
 	}
 	fmt.Printf("Version:     %s%s\n", ver, rv)
 	fmt.Printf("State:       %s\n", ifo.State)
-	if len(ifo.Mware) > 0 {
-		fmt.Printf("Mware:       %s\n", strings.Join(ifo.Mware, ", "))
-	}
 	if ifo.URL != "" {
 		fmt.Printf("URL:         %s://%s\n", gateProto(), ifo.URL)
 	}
@@ -497,6 +494,15 @@ func function_info(args []string, opts [16]string) {
 
 	if ifo.UserData != "" {
 		fmt.Printf("Data:        %s\n", ifo.UserData)
+	}
+
+	var minf []*swyapi.MwareInfo
+	make_faas_req1("GET", "functions/" + args[0] + "/middleware", http.StatusOK, nil, &minf)
+	if len(minf) != 0 {
+		fmt.Printf("Mware:\n")
+		for _, mi := range minf {
+			fmt.Printf("\t%20s %-10s(id:%s)\n", mi.Name, mi.Type, mi.ID)
+		}
 	}
 }
 

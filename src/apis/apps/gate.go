@@ -48,8 +48,6 @@ type FunctionInfo struct {
 	Name		string			`json:"name,omitempty"`
 	Project		string			`json:"project,omitempty"`
 	Labels		[]string		`json:"labels,omitempty"`
-	Mware		[]string		`json:"mware,omitempty"`
-	S3Buckets	[]string		`json:"s3buckets,omitempty"`
 	State		string			`json:"state"`
 	Version		string			`json:"version"`
 	RdyVersions	[]string		`json:"rversions"`
@@ -123,9 +121,9 @@ type MwareAdd struct {
 }
 
 type MwareInfo struct {
-	ID		string			`json:"id,omitempty"`
+	ID		string			`json:"id"`
 	Labels		[]string		`json:"labels,omitempty"`
-	Name		string			`json:"name,omitempty"`
+	Name		string			`json:"name"`
 	Project		string			`json:"project,omitempty"`
 	Type		string			`json:"type"`
 	UserData	string			`json:"userdata,omitempty"`

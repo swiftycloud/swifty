@@ -159,12 +159,15 @@ stalled:
 	return GateErrE(swy.GateGenErr, err)
 }
 
-func (item *MwareDesc)toInfo(ctx context.Context, conf *YAMLConfMw, details bool) (*swyapi.MwareInfo, *swyapi.GateErr) {
-	handler, ok := mwareHandlers[item.MwareType]
-	if !ok {
-		return nil, GateErrC(swy.GateGenErr) /* Shouldn't happen */
+func (item *MwareDesc)toFnInfo(ctx context.Context) *swyapi.MwareInfo {
+	return &swyapi.MwareInfo {
+		ID: item.ObjID.Hex(),
+		Name: item.SwoId.Name,
+		Type: item.MwareType,
 	}
+}
 
+func (item *MwareDesc)toInfo(ctx context.Context, conf *YAMLConfMw, details bool) (*swyapi.MwareInfo, *swyapi.GateErr) {
 	resp := &swyapi.MwareInfo{}
 	resp.ID = item.ObjID.Hex()
 	resp.Name = item.SwoId.Name
@@ -174,6 +177,11 @@ func (item *MwareDesc)toInfo(ctx context.Context, conf *YAMLConfMw, details bool
 
 	if details {
 		resp.UserData = item.UserData
+
+		handler, ok := mwareHandlers[item.MwareType]
+		if !ok {
+			return nil, GateErrC(swy.GateGenErr) /* Shouldn't happen */
+		}
 
 		if handler.Info != nil {
 			err := handler.Info(ctx, conf, item, resp)

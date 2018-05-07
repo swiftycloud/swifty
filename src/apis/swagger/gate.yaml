@@ -626,8 +626,7 @@ paths:
           schema:
             type: array
             items:
-              type: string
-              description: Name of attached middleware
+              $ref: '#/definitions/MwareInfo'
         '400':
           description: Bad request
           schema:
@@ -1365,20 +1364,6 @@ definitions:
       userdata:
         type: string
         description: The data provided during /add call
-      mware:
-        type: array
-        items:
-          type: string
-          example:
-            - mymariadb
-              mys3strg
-      s3buckets:
-        type: array
-        items:
-          type: string
-          example:
-            - foobucket
-              barbucket
 
   UserStatsReq:
     type: object

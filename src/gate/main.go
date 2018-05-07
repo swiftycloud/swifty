@@ -432,7 +432,22 @@ func handleFunctionMwares(ctx context.Context, w http.ResponseWriter, r *http.Re
 
 	switch r.Method {
 	case "GET":
-		err := swyhttp.MarshalAndWrite(w, fn.Mware)
+		var minf []*swyapi.MwareInfo
+		for _, mwn := range fn.Mware {
+			id := fn.SwoId
+			id.Name = mwn
+			mw, err := dbMwareGetItem(&id)
+
+			var mi *swyapi.MwareInfo
+			if err == nil {
+				mi = mw.toFnInfo(ctx)
+			} else {
+				mi = &swyapi.MwareInfo{Name: mwn}
+			}
+			minf = append(minf, mi)
+		}
+
+		err := swyhttp.MarshalAndWrite(w, minf)
 		if err != nil {
 			return GateErrE(swy.GateBadResp, err)
 		}
