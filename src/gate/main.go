@@ -296,13 +296,24 @@ func handleProjectList(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	return nil
 }
 
-func handleFunctionTriggers(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
+func fnFindForReq(ctx context.Context, r *http.Request) (*FunctionDesc, *swyapi.GateErr) {
 	fnid := mux.Vars(r)["fid"]
+	if !bson.IsObjectIdHex(fnid) {
+		return nil, GateErrM(swy.GateBadRequest, "Bad FN ID")
+	}
 
-	fn, err := dbFuncFindOne(bson.M{"tennant": fromContext(ctx).Tenant,
-			"_id": bson.ObjectIdHex(fnid)})
+	fn, err := dbFuncFindOne(bson.M{"tennant": fromContext(ctx).Tenant, "_id": bson.ObjectIdHex(fnid)})
 	if err != nil {
-		return GateErrD(err)
+		return nil, GateErrD(err)
+	}
+
+	return fn, nil
+}
+
+func handleFunctionTriggers(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
+	fn, cerr := fnFindForReq(ctx, r)
+	if cerr != nil {
+		return cerr
 	}
 
 	switch r.Method {
@@ -340,12 +351,9 @@ func handleFunctionTriggers(ctx context.Context, w http.ResponseWriter, r *http.
 }
 
 func handleFunctionUserData(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
-	fnid := mux.Vars(r)["fid"]
-
-	fn, err := dbFuncFindOne(bson.M{"tennant": fromContext(ctx).Tenant,
-			"_id": bson.ObjectIdHex(fnid)})
-	if err != nil {
-		return GateErrD(err)
+	fn, cerr := fnFindForReq(ctx, r)
+	if cerr != nil {
+		return cerr
 	}
 
 	switch r.Method {
@@ -375,12 +383,9 @@ func handleFunctionUserData(ctx context.Context, w http.ResponseWriter, r *http.
 }
 
 func handleFunctionAuthCtx(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
-	fnid := mux.Vars(r)["fid"]
-
-	fn, err := dbFuncFindOne(bson.M{"tennant": fromContext(ctx).Tenant,
-			"_id": bson.ObjectIdHex(fnid)})
-	if err != nil {
-		return GateErrD(err)
+	fn, cerr := fnFindForReq(ctx, r)
+	if cerr != nil {
+		return cerr
 	}
 
 	switch r.Method {
@@ -410,12 +415,9 @@ func handleFunctionAuthCtx(ctx context.Context, w http.ResponseWriter, r *http.R
 }
 
 func handleFunctionSize(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
-	fnid := mux.Vars(r)["fid"]
-
-	fn, err := dbFuncFindOne(bson.M{"tennant": fromContext(ctx).Tenant,
-			"_id": bson.ObjectIdHex(fnid)})
-	if err != nil {
-		return GateErrD(err)
+	fn, cerr := fnFindForReq(ctx, r)
+	if cerr != nil {
+		return cerr
 	}
 
 	switch r.Method {
@@ -455,12 +457,9 @@ func handleFunctionSize(ctx context.Context, w http.ResponseWriter, r *http.Requ
 }
 
 func handleFunctionMwares(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
-	fnid := mux.Vars(r)["fid"]
-
-	fn, err := dbFuncFindOne(bson.M{"tennant": fromContext(ctx).Tenant,
-			"_id": bson.ObjectIdHex(fnid)})
-	if err != nil {
-		return GateErrD(err)
+	fn, cerr := fnFindForReq(ctx, r)
+	if cerr != nil {
+		return cerr
 	}
 
 	switch r.Method {
@@ -476,6 +475,10 @@ func handleFunctionMwares(ctx context.Context, w http.ResponseWriter, r *http.Re
 		err := swyhttp.ReadAndUnmarshalReq(r, &mid)
 		if err != nil {
 			return GateErrE(swy.GateBadRequest, err)
+		}
+
+		if !bson.IsObjectIdHex(mid) {
+			return GateErrM(swy.GateBadRequest, "Bad MW ID value")
 		}
 
 		mw, err := dbMwareGetOne(bson.M{"tennant": fromContext(ctx).Tenant,
@@ -497,19 +500,18 @@ func handleFunctionMwares(ctx context.Context, w http.ResponseWriter, r *http.Re
 }
 
 func handleFunctionMware(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
-	fnid := mux.Vars(r)["fid"]
-
-	fn, err := dbFuncFindOne(bson.M{"tennant": fromContext(ctx).Tenant,
-			"_id": bson.ObjectIdHex(fnid)})
-	if err != nil {
-		return GateErrD(err)
+	fn, cerr := fnFindForReq(ctx, r)
+	if cerr != nil {
+		return cerr
 	}
 
 	mid := mux.Vars(r)["mid"]
+	if !bson.IsObjectIdHex(mid) {
+		return GateErrM(swy.GateBadRequest, "Bad MW ID value")
+	}
 
 	mw, err := dbMwareGetOne(bson.M{"tennant": fromContext(ctx).Tenant,
-			"project": fn.SwoId.Project,
-			"_id": bson.ObjectIdHex(mid)})
+			"project": fn.SwoId.Project, "_id": bson.ObjectIdHex(mid)})
 	if err != nil {
 		return GateErrD(err)
 	}
@@ -529,12 +531,9 @@ func handleFunctionMware(ctx context.Context, w http.ResponseWriter, r *http.Req
 
 
 func handleFunctionS3Bs(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
-	fnid := mux.Vars(r)["fid"]
-
-	fn, err := dbFuncFindOne(bson.M{"tennant": fromContext(ctx).Tenant,
-			"_id": bson.ObjectIdHex(fnid)})
-	if err != nil {
-		return GateErrD(err)
+	fn, cerr := fnFindForReq(ctx, r)
+	if cerr != nil {
+		return cerr
 	}
 
 	switch r.Method {
@@ -562,19 +561,16 @@ func handleFunctionS3Bs(ctx context.Context, w http.ResponseWriter, r *http.Requ
 }
 
 func handleFunctionS3B(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
-	fnid := mux.Vars(r)["fid"]
-
-	fn, err := dbFuncFindOne(bson.M{"tennant": fromContext(ctx).Tenant,
-			"_id": bson.ObjectIdHex(fnid)})
-	if err != nil {
-		return GateErrD(err)
+	fn, cerr := fnFindForReq(ctx, r)
+	if cerr != nil {
+		return cerr
 	}
 
 	bname := mux.Vars(r)["bname"]
 
 	switch r.Method {
 	case "DELETE":
-		err = fn.delS3Bucket(ctx, bname)
+		err := fn.delS3Bucket(ctx, bname)
 		if err != nil {
 			return GateErrE(swy.GateGenErr, err)
 		}
@@ -586,11 +582,9 @@ func handleFunctionS3B(ctx context.Context, w http.ResponseWriter, r *http.Reque
 }
 
 func handleFunctionTrigger(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
-	fnid := mux.Vars(r)["fid"]
-	fn, err := dbFuncFindOne(bson.M{"tennant": fromContext(ctx).Tenant,
-			"_id": bson.ObjectIdHex(fnid)})
-	if err != nil {
-		return GateErrD(err)
+	fn, cerr := fnFindForReq(ctx, r)
+	if cerr != nil {
+		return cerr
 	}
 
 	eid := mux.Vars(r)["eid"]
@@ -622,16 +616,13 @@ func handleFunctionTrigger(ctx context.Context, w http.ResponseWriter, r *http.R
 }
 
 func handleFunctionWait(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
-	fnid := mux.Vars(r)["fid"]
-
-	fn, err := dbFuncFindOne(bson.M{"tennant": fromContext(ctx).Tenant,
-			"_id": bson.ObjectIdHex(fnid)})
-	if err != nil {
-		return GateErrD(err)
+	fn, cerr := fnFindForReq(ctx, r)
+	if cerr != nil {
+		return cerr
 	}
 
 	var wo swyapi.FunctionWait
-	err = swyhttp.ReadAndUnmarshalReq(r, &wo)
+	err := swyhttp.ReadAndUnmarshalReq(r, &wo)
 	if err != nil {
 		return GateErrE(swy.GateBadRequest, err)
 	}
@@ -657,24 +648,21 @@ func handleFunctionWait(ctx context.Context, w http.ResponseWriter, r *http.Requ
 }
 
 func handleFunctionState(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
-	fnid := mux.Vars(r)["fid"]
-
-	fn, err := dbFuncFindOne(bson.M{"tennant": fromContext(ctx).Tenant,
-			"_id": bson.ObjectIdHex(fnid)})
-	if err != nil {
-		return GateErrD(err)
+	fn, cerr := fnFindForReq(ctx, r)
+	if cerr != nil {
+		return cerr
 	}
 
 	switch r.Method {
 	case "GET":
-		err = swyhttp.MarshalAndWrite(w, fnStates[fn.State])
+		err := swyhttp.MarshalAndWrite(w, fnStates[fn.State])
 		if err != nil {
 			return GateErrE(swy.GateBadResp, err)
 		}
 	case "PUT":
 		var state string
 
-		err = swyhttp.ReadAndUnmarshalReq(r, &state)
+		err := swyhttp.ReadAndUnmarshalReq(r, &state)
 		if err != nil {
 			return GateErrE(swy.GateBadRequest, err)
 		}
@@ -691,12 +679,9 @@ func handleFunctionState(ctx context.Context, w http.ResponseWriter, r *http.Req
 }
 
 func handleFunctionSources(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
-	fnid := mux.Vars(r)["fid"]
-
-	fn, err := dbFuncFindOne(bson.M{"tennant": fromContext(ctx).Tenant,
-			"_id": bson.ObjectIdHex(fnid)})
-	if err != nil {
-		return GateErrD(err)
+	fn, cerr := fnFindForReq(ctx, r)
+	if cerr != nil {
+		return cerr
 	}
 
 	switch r.Method {
@@ -706,14 +691,14 @@ func handleFunctionSources(ctx context.Context, w http.ResponseWriter, r *http.R
 			return cerr
 		}
 
-		err = swyhttp.MarshalAndWrite(w, src)
+		err := swyhttp.MarshalAndWrite(w, src)
 		if err != nil {
 			return GateErrE(swy.GateBadResp, err)
 		}
 	case "PUT":
 		var src swyapi.FunctionSources
 
-		err = swyhttp.ReadAndUnmarshalReq(r, &src)
+		err := swyhttp.ReadAndUnmarshalReq(r, &src)
 		if err != nil {
 			return GateErrE(swy.GateBadRequest, err)
 		}
@@ -785,12 +770,9 @@ func handleTenantStats(ctx context.Context, w http.ResponseWriter, r *http.Reque
 }
 
 func handleFunctionStats(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
-	fnid := mux.Vars(r)["fid"]
-
-	fn, err := dbFuncFindOne(bson.M{"tennant": fromContext(ctx).Tenant,
-			"_id": bson.ObjectIdHex(fnid)})
-	if err != nil {
-		return GateErrD(err)
+	fn, cerr := fnFindForReq(ctx, r)
+	if cerr != nil {
+		return cerr
 	}
 
 	switch r.Method {
@@ -805,7 +787,7 @@ func handleFunctionStats(ctx context.Context, w http.ResponseWriter, r *http.Req
 			return cerr
 		}
 
-		err = swyhttp.MarshalAndWrite(w, &swyapi.FunctionStatsResp{ Stats: stats })
+		err := swyhttp.MarshalAndWrite(w, &swyapi.FunctionStatsResp{ Stats: stats })
 		if err != nil {
 			return GateErrE(swy.GateBadResp, err)
 		}
@@ -815,12 +797,9 @@ func handleFunctionStats(ctx context.Context, w http.ResponseWriter, r *http.Req
 }
 
 func handleFunctionLogs(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
-	fnid := mux.Vars(r)["fid"]
-
-	fn, err := dbFuncFindOne(bson.M{"tennant": fromContext(ctx).Tenant,
-			"_id": bson.ObjectIdHex(fnid)})
-	if err != nil {
-		return GateErrD(err)
+	fn, cerr := fnFindForReq(ctx, r)
+	if cerr != nil {
+		return cerr
 	}
 
 	switch r.Method {
@@ -1114,12 +1093,9 @@ func handleFunctions(ctx context.Context, w http.ResponseWriter, r *http.Request
 }
 
 func handleFunction(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
-	fnid := mux.Vars(r)["fid"]
-
-	fn, err := dbFuncFindOne(bson.M{"tennant": fromContext(ctx).Tenant,
-			"_id": bson.ObjectIdHex(fnid)})
-	if err != nil {
-		return GateErrD(err)
+	fn, cerr := fnFindForReq(ctx, r)
+	if cerr != nil {
+		return cerr
 	}
 
 	switch r.Method {
@@ -1134,7 +1110,7 @@ func handleFunction(ctx context.Context, w http.ResponseWriter, r *http.Request)
 			return cerr
 		}
 
-		err = swyhttp.MarshalAndWrite(w, fi)
+		err := swyhttp.MarshalAndWrite(w, fi)
 		if err != nil {
 			return GateErrE(swy.GateBadResp, err)
 		}
@@ -1152,18 +1128,15 @@ func handleFunction(ctx context.Context, w http.ResponseWriter, r *http.Request)
 }
 
 func handleFunctionRun(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
-	fnid := mux.Vars(r)["fid"]
-
-	fn, err := dbFuncFindOne(bson.M{"tennant": fromContext(ctx).Tenant,
-			"_id": bson.ObjectIdHex(fnid)})
-	if err != nil {
-		return GateErrD(err)
+	fn, cerr := fnFindForReq(ctx, r)
+	if cerr != nil {
+		return cerr
 	}
 
 	var params swyapi.FunctionRun
 	var res *swyapi.SwdFunctionRunResult
 
-	err = swyhttp.ReadAndUnmarshalReq(r, &params)
+	err := swyhttp.ReadAndUnmarshalReq(r, &params)
 	if err != nil {
 		return GateErrE(swy.GateBadRequest, err)
 	}
@@ -1414,6 +1387,10 @@ func handleDeployments(ctx context.Context, w http.ResponseWriter, r *http.Reque
 
 func handleDeployment(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
 	did := mux.Vars(r)["did"]
+	if !bson.IsObjectIdHex(did) {
+		return GateErrM(swy.GateBadRequest, "Bad deploy ID value")
+	}
+
 	dd, err := dbDeployGet(bson.M{"tennant": fromContext(ctx).Tenant,
 			"_id": bson.ObjectIdHex(did)})
 	if err != nil {
@@ -1521,6 +1498,10 @@ func handleAuths(ctx context.Context, w http.ResponseWriter, r *http.Request) *s
 
 func handleAuth(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
 	did := mux.Vars(r)["aid"]
+	if !bson.IsObjectIdHex(did) {
+		return GateErrM(swy.GateBadRequest, "Bad auth deploy ID value")
+	}
+
 	ad, err := dbDeployGet(bson.M{"tennant": fromContext(ctx).Tenant,
 			"_id": bson.ObjectIdHex(did), "labels": "auth"})
 	if err != nil {
@@ -1532,6 +1513,10 @@ func handleAuth(ctx context.Context, w http.ResponseWriter, r *http.Request) *sw
 
 func handleMware(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
 	mid := mux.Vars(r)["mid"]
+	if !bson.IsObjectIdHex(mid) {
+		return GateErrM(swy.GateBadRequest, "Bad mware ID value")
+	}
+
 	mw, err := dbMwareGetOne(bson.M{"tennant": fromContext(ctx).Tenant,
 			"_id": bson.ObjectIdHex(mid)})
 	if err != nil {
