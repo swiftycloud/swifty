@@ -1061,23 +1061,26 @@ paths:
           description: Need to authenticate
         '403':
           description: Bad authentication token
-  /deploy/start:
-    post:
-      summary: Start deploying set of functions and middleware
-      parameters:
-        - in: header
-          name: X-Auth-Token
-          type: string
-          required: true
-        - name: data
-          in: body
-          description: Middleware to remove
-          required: true
-          schema:
-            $ref: '#/definitions/DeployStart'
+  /deployments:
+    parameters:
+      - in: header
+        name: X-Auth-Token
+        type: string
+        required: true
+      - name: project
+        in: query
+        description: Project to work on
+        required: false
+        type: string
+    get:
+      tags:
+        - deploy
+      summary: List deployments
       responses:
         '200':
           description: All objects has been /add-ed
+          schema:
+            $ref: '#/definitions/DeployInfo'
         '400':
           description: Bad request
           schema:
@@ -1086,23 +1089,24 @@ paths:
           description: Need to authenticate
         '403':
           description: Bad authentication token
-  /deploy/stop:
     post:
-      summary: Start demolishing previously deployed items
+      tags:
+        - deploy
       parameters:
-        - in: header
-          name: X-Auth-Token
-          type: string
-          required: true
         - name: data
           in: body
-          description: Middleware to remove
+          description: Middleware description
           required: true
           schema:
-            $ref: '#/definitions/DeployId'
+            $ref: '#/definitions/DeployStart'
+      summary: Create deployment
       responses:
         '200':
-          description: All objects has been /remove-ed
+          description: OK
+          schema:
+            type: string
+            description: Deployment ID
+            example: 'deadbeef'
         '400':
           description: Bad request
           schema:
@@ -1111,20 +1115,21 @@ paths:
           description: Need to authenticate
         '403':
           description: Bad authentication token
-  /deploy/info:
-    post:
-      summary: Get info about deployment
-      parameters:
-        - in: header
-          name: X-Auth-Token
-          type: string
-          required: true
-        - name: data
-          in: body
-          description: Middleware to remove
-          required: true
-          schema:
-            $ref: '#/definitions/DeployId'
+  /deployments/{did}:
+    parameters:
+      - in: header
+        name: X-Auth-Token
+        type: string
+        required: true
+      - name: did
+        in: path
+        description: Deployment ID
+        required: true
+        type: string
+    get:
+      tags:
+        - deploy
+      summary: Show info about deployment
       responses:
         '200':
           description: OK
@@ -1138,6 +1143,22 @@ paths:
           description: Need to authenticate
         '403':
           description: Bad authentication token
+    delete:
+      tags:
+        - deploy
+      summary: Remove deployment
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+          schema:
+            $ref: '#/definitions/GateError'
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad authentication token
+  
   /info/langs:
     post:
       summary: Show supported languages
@@ -1619,16 +1640,6 @@ definitions:
       expires:
         type: integer
         description: Lifetime in seconds
-  DeployId:
-    type: object
-    description: ID of an item
-    required:
-      - name
-    properties:
-      project:
-        type: string
-      name:
-        type: string
   DeployItem:
     type: object
     description: Item to deploy (function or middleware)
