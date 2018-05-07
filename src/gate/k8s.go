@@ -451,10 +451,6 @@ func waitPodPort(ctx context.Context, addr, port string) error {
 func swk8sPodUp(ctx context.Context, pod *k8sPod) {
 	ctxlog(ctx).Debugf("POD %s (%s) up deploy %s", pod.UID, pod.WdogAddr, pod.DepName)
 
-	if pod.DepName == "swd-builder" {
-		return
-	}
-
 	err := BalancerPodUp(pod)
 	if err != nil {
 		ctxlog(ctx).Errorf("Can't prep pod %s/%s: %s", pod.DepName, pod.UID, err.Error())
@@ -484,10 +480,6 @@ func swk8sPodUp(ctx context.Context, pod *k8sPod) {
 func swk8sPodDown(ctx context.Context, pod *k8sPod) {
 	ctxlog(ctx).Debugf("POD %s down deploy %s", pod.UID, pod.DepName)
 
-	if pod.DepName == "swd-builder" {
-		return
-	}
-
 	err := BalancerPodDel(pod)
 	if err != nil {
 		ctxlog(ctx).Errorf("Can't delete pod %s/%s/%s: %s",
@@ -503,6 +495,11 @@ func swk8sPodUpd(obj_old, obj_new interface{}) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	ctx = mkContext(ctx, "::k8s-notify")
+
+	dep := pn.ObjectMeta.Labels["deployment"]
+	if dep == "swy-go-builder" || dep == "swy-swift-builder" {
+		return
+	}
 
 	if po.Status.PodIP == "" && pn.Status.PodIP != "" {
 		podEvents <- &podEvent{up: true, ctx: ctx, pod: genBalancerPod(pn)}
@@ -636,6 +633,7 @@ func swk8sGetBuildPods() (map[string]string, error) {
 	for _, pod := range pods.Items {
 		build := pod.ObjectMeta.Labels["swybuild"]
 		rv[build] = pod.Status.PodIP
+		glog.Debugf("Found pod %s/%s\n", build, pod.Status.PodIP)
 	}
 
 	return rv, nil
