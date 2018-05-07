@@ -120,6 +120,7 @@ func (fn *FunctionDesc)toInfo(details bool, periods int) (*swyapi.FunctionInfo, 
 		return &swyapi.FunctionInfo{
 			Id:		fn.ObjID.Hex(),
 			Name:		fn.SwoId.Name,
+			Project:	fn.SwoId.Project,
 			Labels:		fn.Labels,
 			State:          fnStates[fn.State],
 		}, nil
@@ -142,6 +143,7 @@ func (fn *FunctionDesc)toInfo(details bool, periods int) (*swyapi.FunctionInfo, 
 	return &swyapi.FunctionInfo{
 		Id:		fn.ObjID.Hex(),
 		Name:		fn.SwoId.Name,
+		Project:	fn.SwoId.Project,
 		Labels:		fn.Labels,
 		State:          fnStates[fn.State],
 		Mware:          fn.Mware,

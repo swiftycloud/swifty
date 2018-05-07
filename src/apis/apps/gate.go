@@ -46,6 +46,7 @@ type TenantStatsResp struct {
 
 type FunctionInfo struct {
 	Name		string			`json:"name,omitempty"`
+	Project		string			`json:"project,omitempty"`
 	Labels		[]string		`json:"labels,omitempty"`
 	Mware		[]string		`json:"mware,omitempty"`
 	S3Buckets	[]string		`json:"s3buckets,omitempty"`
@@ -124,6 +125,7 @@ type MwareInfo struct {
 	ID		string			`json:"id,omitempty"`
 	Labels		[]string		`json:"labels,omitempty"`
 	Name		string			`json:"name,omitempty"`
+	Project		string			`json:"project,omitempty"`
 	Type		string			`json:"type"`
 	UserData	string			`json:"userdata,omitempty"`
 	DU		*uint64			`json:"disk_usage,omitempty"` /* in ... KB */
@@ -200,6 +202,7 @@ type DeployItemInfo struct {
 type DeployInfo struct {
 	Id		string			`json:"id,omitempty"`
 	Name		string			`json:"name"`
+	Project		string			`json:"project"`
 	Labels		[]string		`json:"labels,omitempty"`
 	State		string			`json:"state"`
 	Items		[]*DeployItemInfo	`json:"items"`

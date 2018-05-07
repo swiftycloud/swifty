@@ -1365,6 +1365,13 @@ definitions:
       name:
         type: string
         description: Function name (reported for /list/info operation)
+      project:
+        type: string
+        description: Project the FN lives in
+      labels:
+        type: array
+        items:
+          type: string
       state:
         type: string
         description: Function state
@@ -1708,6 +1715,13 @@ definitions:
       name:
         type: string
         description: Mware name
+      project:
+        type: string
+        description: Project the FN lives in
+      labels:
+        type: array
+        items:
+          type: string
       type:
         type: string
         description: Middleware type
@@ -1787,6 +1801,19 @@ definitions:
     type: object
     description: Info about deployment
     properties:
+      id:
+        type: string
+        description: Mware ID (reported for list/info operation)
+      name:
+        type: string
+        description: Mware name
+      project:
+        type: string
+        description: Project the FN lives in
+      labels:
+        type: array
+        items:
+          type: string
       state:
         type: string
         description: State of deploying -- "starting", "ready", "stalled" or "terminating"
