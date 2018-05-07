@@ -192,6 +192,7 @@ type DeployItem struct {
 
 type DeployStart struct {
 	Name		string			`json:"name"`
+	Project		string			`json:"project,omitempty"`
 	Items		[]*DeployItem		`json:"items"`
 }
 

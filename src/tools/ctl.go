@@ -999,13 +999,8 @@ func deploy_add(args []string, opts [16]string) {
 		fatal(fmt.Errorf("Can't parse items: %s", err.Error()))
 	}
 
-	ua := []string{}
-	if curCmd.project != "" {
-		ua = append(ua, "project=" + curCmd.project)
-	}
-
-	make_faas_req1("POST", url("deployments", ua), http.StatusOK,
-		swyapi.DeployStart{Name: args[0], Items: items}, nil)
+	make_faas_req1("POST", "deployments", http.StatusOK,
+		swyapi.DeployStart{ Name: args[0], Project: curCmd.project, Items: items}, nil)
 }
 
 func s3_access(args []string, opts [16]string) {

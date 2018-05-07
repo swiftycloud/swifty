@@ -1342,15 +1342,16 @@ func handleS3Access(ctx context.Context, w http.ResponseWriter, r *http.Request)
 
 func handleDeployments(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
 	q := r.URL.Query()
-	project := q.Get("project")
-	if project == "" {
-		project = SwyDefaultProject
-	}
 
 	switch r.Method {
 	case "GET":
 		var deps []*DeployDesc
 		var err error
+
+		project := q.Get("project")
+		if project == "" {
+			project = SwyDefaultProject
+		}
 
 		dname := q.Get("name")
 		if dname == "" {
@@ -1391,7 +1392,7 @@ func handleDeployments(ctx context.Context, w http.ResponseWriter, r *http.Reque
 			return GateErrE(swy.GateBadRequest, err)
 		}
 
-		dd := getDeployDesc(ctxSwoId(ctx, project, ds.Name))
+		dd := getDeployDesc(ctxSwoId(ctx, ds.Project, ds.Name))
 		cerr := dd.getItems(ds.Items)
 		if cerr != nil {
 			return cerr
