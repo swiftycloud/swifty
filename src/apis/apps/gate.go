@@ -164,6 +164,10 @@ type FunctionAdd struct {
 	Url		bool			`json:"-"`
 }
 
+type FunctionUpdate struct {
+	UserData	*string			`json:"userdata,omitempty"`
+}
+
 type FunctionRun struct {
 	Args		map[string]string	`json:"args,omitempty"`
 }

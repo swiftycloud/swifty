@@ -350,38 +350,6 @@ func handleFunctionTriggers(ctx context.Context, w http.ResponseWriter, r *http.
 	return nil
 }
 
-func handleFunctionUserData(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
-	fn, cerr := fnFindForReq(ctx, r)
-	if cerr != nil {
-		return cerr
-	}
-
-	switch r.Method {
-	case "GET":
-		err := swyhttp.MarshalAndWrite(w, fn.UserData)
-		if err != nil {
-			return GateErrE(swy.GateBadResp, err)
-		}
-
-	case "PUT":
-		var ud string
-
-		err := swyhttp.ReadAndUnmarshalReq(r, &ud)
-		if err != nil {
-			return GateErrE(swy.GateBadRequest, err)
-		}
-
-		err = fn.setUserData(ud)
-		if err != nil {
-			return GateErrE(swy.GateGenErr, err)
-		}
-
-		w.WriteHeader(http.StatusOK)
-	}
-
-	return nil
-}
-
 func handleFunctionAuthCtx(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
 	fn, cerr := fnFindForReq(ctx, r)
 	if cerr != nil {
@@ -1115,6 +1083,21 @@ func handleFunction(ctx context.Context, w http.ResponseWriter, r *http.Request)
 			return GateErrE(swy.GateBadResp, err)
 		}
 
+	case "PUT":
+		var fu swyapi.FunctionUpdate
+
+		err := swyhttp.ReadAndUnmarshalReq(r, &fu)
+		if err != nil {
+			return GateErrE(swy.GateBadRequest, err)
+		}
+
+		if fu.UserData != nil {
+			err = fn.setUserData(*fu.UserData)
+			if err != nil {
+				return GateErrE(swy.GateGenErr, err)
+			}
+		}
+
 	case "DELETE":
 		cerr := removeFunction(ctx, &conf, fn)
 		if cerr != nil {
@@ -1718,14 +1701,13 @@ func main() {
 	r.Handle("/v1/project/del",		genReqHandler(handleProjectDel)).Methods("POST", "OPTIONS")
 
 	r.Handle("/v1/functions",		genReqHandler(handleFunctions)).Methods("GET", "POST", "OPTIONS")
-	r.Handle("/v1/functions/{fid}",		genReqHandler(handleFunction)).Methods("GET", "DELETE", "OPTIONS")
+	r.Handle("/v1/functions/{fid}",		genReqHandler(handleFunction)).Methods("GET", "PUT", "DELETE", "OPTIONS")
 	r.Handle("/v1/functions/{fid}/run",	genReqHandler(handleFunctionRun)).Methods("POST", "OPTIONS")
 	r.Handle("/v1/functions/{fid}/triggers",genReqHandler(handleFunctionTriggers)).Methods("GET", "POST", "OPTIONS")
 	r.Handle("/v1/functions/{fid}/triggers/{eid}", genReqHandler(handleFunctionTrigger)).Methods("GET", "DELETE", "OPTIONS")
 	r.Handle("/v1/functions/{fid}/logs",	genReqHandler(handleFunctionLogs)).Methods("GET", "OPTIONS")
 	r.Handle("/v1/functions/{fid}/stats",	genReqHandler(handleFunctionStats)).Methods("GET", "OPTIONS")
 	r.Handle("/v1/functions/{fid}/state",	genReqHandler(handleFunctionState)).Methods("GET", "PUT", "OPTIONS")
-	r.Handle("/v1/functions/{fid}/userdata",genReqHandler(handleFunctionUserData)).Methods("GET", "PUT", "OPTIONS")
 	r.Handle("/v1/functions/{fid}/authctx",	genReqHandler(handleFunctionAuthCtx)).Methods("GET", "PUT", "OPTIONS")
 	r.Handle("/v1/functions/{fid}/size",	genReqHandler(handleFunctionSize)).Methods("GET", "PUT", "OPTIONS")
 	r.Handle("/v1/functions/{fid}/sources",	genReqHandler(handleFunctionSources)).Methods("GET", "PUT", "OPTIONS")

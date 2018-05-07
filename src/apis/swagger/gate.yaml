@@ -221,6 +221,29 @@ paths:
           description: Need to authenticate
         '403':
           description: Bad authentication token
+    put:
+      tags:
+        - function
+      summary: Set function properties (some)
+      parameters:
+        - in: body
+          name: data
+          schema:
+            $ref: '#/definitions/FunctionUpdate'
+          required: true
+          description: Parameters to update
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+          schema:
+            $ref: '#/definitions/GateError'
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad authentication token
+
     delete:
       tags:
         - function
@@ -428,58 +451,6 @@ paths:
         '524':
           description: TImeout has occurred
 
-          
-  /functions/{fid}/userdata:
-    parameters:
-      - in: header
-        name: X-Auth-Token
-        type: string
-        required: true
-      - in: path
-        name: fid
-        type: string
-        required: true
-        description: Function ID
-    get:
-      tags:
-        - function
-      summary: Get function associated text
-      responses:
-        '200':
-          description: OK
-          schema:
-            type: string
-            example: 'This is my first function :)'
-        '400':
-          description: Bad request
-          schema:
-            $ref: '#/definitions/GateError'
-        '401':
-          description: Need to authenticate
-        '403':
-          description: Bad authentication token
-    put:
-      tags:
-        - function
-      summary: Set function associated text
-      parameters:
-        - in: body
-          name: data
-          schema:
-            type: string
-          required: true
-          description: State to set
-      responses:
-        '200':
-          description: OK
-        '400':
-          description: Bad request
-          schema:
-            $ref: '#/definitions/GateError'
-        '401':
-          description: Need to authenticate
-        '403':
-          description: Bad authentication token
           
   /functions/{fid}/authctx:
     parameters:
@@ -1599,6 +1570,11 @@ definitions:
         type: integer
         description: rate-limiter burst value
         example: 10
+  FunctionUpdate:
+    properties:
+      userdata:
+        type: string
+        description: And string user wishes to keep with this FN
   FunctionAdd:
     required:
       - name

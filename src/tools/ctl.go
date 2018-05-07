@@ -717,7 +717,8 @@ func function_update(args []string, opts [16]string) {
 	}
 
 	if opts[4] != "" {
-		make_faas_req1("PUT", "functions/" + fid + "/userdata", http.StatusOK, opts[4], nil)
+		make_faas_req1("PUT", "functions/" + fid, http.StatusOK,
+				&swyapi.FunctionUpdate{UserData: &opts[4]}, nil)
 	}
 
 	if opts[7] != "" {
