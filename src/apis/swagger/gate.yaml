@@ -1101,7 +1101,7 @@ paths:
       parameters:
         - name: data
           in: body
-          description: Middleware description
+          description: Deployment description
           required: true
           schema:
             $ref: '#/definitions/DeployStart'
@@ -1153,6 +1153,108 @@ paths:
       tags:
         - deploy
       summary: Remove deployment
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+          schema:
+            $ref: '#/definitions/GateError'
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad authentication token
+
+  /auths:
+    parameters:
+      - in: header
+        name: X-Auth-Token
+        type: string
+        required: true
+      - name: project
+        in: query
+        description: Project to work on
+        required: false
+        type: string
+    get:
+      tags:
+        - deploy
+        - auth
+      summary: List AaaS ()authentication-as-a-service) deployments
+      responses:
+        '200':
+          description: All objects has been /add-ed
+          schema:
+            $ref: '#/definitions/AuthInfo'
+        '400':
+          description: Bad request
+          schema:
+            $ref: '#/definitions/GateError'
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad authentication token
+    post:
+      tags:
+        - deploy
+        - auth
+      parameters:
+        - name: data
+          in: body
+          description: AaaS description
+          required: true
+          schema:
+            $ref: '#/definitions/AuthAdd'
+      summary: Create AaaS deployment
+      responses:
+        '200':
+          description: OK
+          schema:
+            type: string
+            description: Deployment ID
+            example: 'deadbeef'
+        '400':
+          description: Bad request
+          schema:
+            $ref: '#/definitions/GateError'
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad authentication token
+  /auths/{aid}:
+    parameters:
+      - in: header
+        name: X-Auth-Token
+        type: string
+        required: true
+      - name: aid
+        in: path
+        description: Deployment ID
+        required: true
+        type: string
+    get:
+      tags:
+        - deploy
+        - auth
+      summary: Show info about AaaS deployment
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/DeployInfo'
+        '400':
+          description: Bad request
+          schema:
+            $ref: '#/definitions/GateError'
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad authentication token
+    delete:
+      tags:
+        - deploy
+        - auth
+      summary: Remove AaaS deployment
       responses:
         '200':
           description: OK
@@ -1692,3 +1794,25 @@ definitions:
         type: array
         items:
           $ref: '#/definitions/DeployItemInfo'
+          
+  AuthInfo:
+    type: object
+    description: AaaS entry description
+    properties:
+      id:
+        type: string
+        description: Deployment ID
+      name:
+        type: string
+        description: Deployment name
+        
+  AuthAdd:
+    type: object
+    description: AaaS creation request
+    properties:
+      name:
+        type: string
+      type:
+        type: string
+        description: AaaS type.
+        example: jwt
