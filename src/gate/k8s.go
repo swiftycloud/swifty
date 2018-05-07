@@ -413,6 +413,7 @@ func swk8sPodDel(obj interface{}) {
 }
 
 func waitPodPort(ctx context.Context, addr, port string) error {
+	printed := false
 	wt := 100 * time.Millisecond
 	till := time.Now().Add(SwyPodStartTmo)
 	for {
@@ -436,7 +437,10 @@ func waitPodPort(ctx context.Context, addr, port string) error {
 		 * Moreover, this port waiter is only needed when the fn
 		 * is being waited for.
 		 */
-		ctxlog(ctx).Debugf("Port %s:%s not open yet (%s) ... polling", addr, port, err.Error())
+		if !printed {
+			ctxlog(ctx).Debugf("Port %s:%s not open yet (%s) ... polling", addr, port, err.Error())
+			printed = true
+		}
 		<-time.After(wt)
 		wt += 50 * time.Millisecond
 	}
