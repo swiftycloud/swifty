@@ -1076,6 +1076,12 @@ paths:
       tags:
         - deploy
       summary: List deployments
+      parameters:
+        - in: query
+          name: name
+          type: string
+          required: false
+          description: Name of deployment to find (useful to resolve ID by name)
       responses:
         '200':
           description: All objects has been /add-ed
