@@ -998,7 +998,7 @@ paths:
         '403':
           description: Bad authentication token
   /s3/access:
-    get:
+    post:
       tags:
         - mware
         - s3
@@ -1008,11 +1008,6 @@ paths:
           name: X-Auth-Token
           type: string
           required: true
-        - name: project
-          in: query
-          description: Project to work on
-          required: false
-          type: string
         - name: data
           in: body
           description: Middleware to remove
@@ -1719,6 +1714,9 @@ definitions:
     type: object
     description: Description of the access requested
     properties:
+      project:
+        type: string
+	description: The project to get S3 creds for
       bucket:
         type: string
         description: if empty, access to "the whole s3" within the project is requested

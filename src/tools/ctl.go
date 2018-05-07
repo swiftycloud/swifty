@@ -1012,13 +1012,8 @@ func s3_access(args []string, opts [16]string) {
 
 	var creds swyapi.S3Creds
 
-	p := ""
-	if curCmd.project != "" {
-		p = "?project=" + curCmd.project
-	}
-
-	make_faas_req("s3/access" + p,
-		swyapi.S3Access{ Bucket: args[0], Lifetime: uint32(lt)}, &creds)
+	make_faas_req1("POST", "s3/access", http.StatusOK,
+		swyapi.S3Access{ Project: curCmd.project, Bucket: args[0], Lifetime: uint32(lt)}, &creds)
 	fmt.Printf("Endpoint %s\n", creds.Endpoint)
 	fmt.Printf("Key:     %s\n", creds.Key)
 	fmt.Printf("Secret:  %s\n", creds.Secret)

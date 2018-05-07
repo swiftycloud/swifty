@@ -1270,12 +1270,6 @@ func handleMwareTypes(ctx context.Context, w http.ResponseWriter, r *http.Reques
 }
 
 func handleS3Access(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
-	q := r.URL.Query()
-	project := q.Get("project")
-	if project == "" {
-		project = SwyDefaultProject
-	}
-
 	var params swyapi.S3Access
 
 	err := swyhttp.ReadAndUnmarshalReq(r, &params)
@@ -1283,7 +1277,7 @@ func handleS3Access(ctx context.Context, w http.ResponseWriter, r *http.Request)
 		return GateErrE(swy.GateBadRequest, err)
 	}
 
-	creds, cerr := mwareGetS3Creds(ctx, &conf, project, &params)
+	creds, cerr := mwareGetS3Creds(ctx, &conf, &params)
 	if cerr != nil {
 		return cerr
 	}
@@ -1720,7 +1714,7 @@ func main() {
 	r.Handle("/v1/middleware",		genReqHandler(handleMwares)).Methods("GET", "POST", "OPTIONS")
 	r.Handle("/v1/middleware/{mid}",	genReqHandler(handleMware)).Methods("GET", "DELETE", "OPTIONS")
 
-	r.Handle("/v1/s3/access",		genReqHandler(handleS3Access)).Methods("GET", "OPTIONS")
+	r.Handle("/v1/s3/access",		genReqHandler(handleS3Access)).Methods("POST", "OPTIONS")
 
 	r.Handle("/v1/auths",			genReqHandler(handleAuths)).Methods("GET", "POST", "OPTIONS")
 	r.Handle("/v1/auths/{aid}",		genReqHandler(handleAuth)).Methods("DELETE", "OPTIONS")

@@ -212,7 +212,7 @@ func GenBucketKeysS3(ctx context.Context, conf *YAMLConfMw, fid *SwoId, bucket s
 	return makeS3Envs(&conf.S3, bucket, key, skey), nil
 }
 
-func mwareGetS3Creds(ctx context.Context, conf *YAMLConf, project string, acc *swyapi.S3Access) (*swyapi.S3Creds, *swyapi.GateErr) {
+func mwareGetS3Creds(ctx context.Context, conf *YAMLConf, acc *swyapi.S3Access) (*swyapi.S3Creds, *swyapi.GateErr) {
 	creds := &swyapi.S3Creds{}
 
 	/* XXX -- for now pretend, that s3 listens on the same address as gate does */
@@ -235,7 +235,7 @@ func mwareGetS3Creds(ctx context.Context, conf *YAMLConf, project string, acc *s
 	}
 
 	var err error
-	id := makeSwoId(fromContext(ctx).Tenant, project, "")
+	id := ctxSwoId(ctx, acc.Project, "")
 	creds.Key, creds.Secret, err = s3KeyGen(&conf.Mware.S3, id.Namespace(), acc.Bucket, creds.Expires)
 	if err != nil {
 		ctxlog(ctx).Errorf("Can't get S3 keys for %s.%s", id.Str(), acc.Bucket, err.Error())
