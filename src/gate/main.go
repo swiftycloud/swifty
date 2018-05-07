@@ -1347,9 +1347,23 @@ func handleDeployments(ctx context.Context, w http.ResponseWriter, r *http.Reque
 
 	switch r.Method {
 	case "GET":
-		deps, err := dbDeployListProj(ctxSwoId(ctx, project, ""))
-		if err != nil {
-			return GateErrD(err)
+		var deps []*DeployDesc
+		var err error
+
+		dname := q.Get("name")
+		if dname == "" {
+			deps, err = dbDeployListProj(ctxSwoId(ctx, project, ""))
+			if err != nil {
+				return GateErrD(err)
+			}
+		} else {
+			var dep *DeployDesc
+
+			dep, err = dbDeployGet(bson.M{"cookie": ctxSwoId(ctx, project, dname).Cookie()})
+			if err != nil {
+				return GateErrD(err)
+			}
+			deps = append(deps, dep)
 		}
 
 		var dis []*swyapi.DeployInfo

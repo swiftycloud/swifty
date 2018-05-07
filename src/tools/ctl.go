@@ -365,6 +365,24 @@ func resolve_mw(mname string) string {
 	return ""
 }
 
+func resolve_dep(dname string) string {
+	var ifo []swyapi.DeployInfo
+	ua := []string{}
+	if curCmd.project != "" {
+		ua = append(ua, "project=" + curCmd.project)
+	}
+	ua = append(ua, "name=" + dname)
+	make_faas_req1("GET", url("deployments", ua), http.StatusOK, nil, &ifo)
+	for _, i := range ifo {
+		if i.Name == dname {
+			return i.Id
+		}
+	}
+
+	fatal(fmt.Errorf("\tname %s not resolved", dname))
+	return ""
+}
+
 func function_list(args []string, opts [16]string) {
 	ua := []string{}
 	if curCmd.project != "" {
@@ -912,11 +930,13 @@ func mware_del(args []string, opts [16]string) {
 }
 
 func deploy_del(args []string, opts [16]string) {
+	args[0] = resolve_dep(args[0])
 	make_faas_req1("DELETE", "deployments/" + args[0], http.StatusOK, nil, nil)
 }
 
 func deploy_info(args []string, opts [16]string) {
 	var di swyapi.DeployInfo
+	args[0] = resolve_dep(args[0])
 	make_faas_req1("GET", "deployments/" + args[0], http.StatusOK, nil, &di)
 	fmt.Printf("State:        %s\n", di.State)
 	fmt.Printf("Items:\n")
@@ -1326,9 +1346,9 @@ func main() {
 	bindCmdUsage(CMD_S3ACC,	[]string{"BUCKET"}, "Get keys for S3", true)
 
 	bindCmdUsage(CMD_DL,	[]string{},	"List deployments", true)
-	bindCmdUsage(CMD_DI,	[]string{"ID"}, "Show info about deployment", true)
+	bindCmdUsage(CMD_DI,	[]string{"NAME"}, "Show info about deployment", true)
 	bindCmdUsage(CMD_DA,	[]string{"NAME", "DESC"}, "Add (start) deployment", true)
-	bindCmdUsage(CMD_DD,	[]string{"ID"}, "Del (stop) deployment", true)
+	bindCmdUsage(CMD_DD,	[]string{"NAME"}, "Del (stop) deployment", true)
 
 	bindCmdUsage(CMD_UL,	[]string{}, "List users", false)
 	cmdMap[CMD_UA].opts.StringVar(&opts[0], "name", "", "User name")
