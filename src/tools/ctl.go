@@ -575,11 +575,6 @@ func parse_rate(val string) (uint, uint) {
 func function_add(args []string, opts [16]string) {
 	var err error
 
-	ua := []string{}
-	if curCmd.project != "" {
-		ua = append(ua, "project=" + curCmd.project)
-	}
-
 	sources := swyapi.FunctionSources{}
 	code := swyapi.FunctionCode{}
 
@@ -635,6 +630,7 @@ func function_add(args []string, opts [16]string) {
 
 	req := swyapi.FunctionAdd{
 		Name: args[0],
+		Project: curCmd.project,
 		Sources: sources,
 		Code: code,
 		Mware: mw,
@@ -661,7 +657,7 @@ func function_add(args []string, opts [16]string) {
 
 	if !curCmd.req {
 		var fid string
-		make_faas_req1("POST", url("functions", ua), http.StatusOK, req, &fid)
+		make_faas_req1("POST", "/functions", http.StatusOK, req, &fid)
 		fmt.Printf("Function %s created\n", fid)
 	} else {
 		d, err := json.Marshal(req)
@@ -946,7 +942,7 @@ func mware_del(args []string, opts [16]string) {
 	make_faas_req1("DELETE", "middleware/" + args[0], http.StatusOK, nil, nil)
 }
 
-func auth_cfg(cd *cmdDesc, args []string, opts [16]string) {
+func auth_cfg(args []string, opts [16]string) {
 	switch args[0] {
 	case "get", "inf":
 		var auths []*swyapi.AuthInfo

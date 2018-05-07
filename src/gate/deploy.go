@@ -134,7 +134,9 @@ func getDeployDesc(id *SwoId) *DeployDesc {
 func (dep *DeployDesc)getItems(items []*swyapi.DeployItem) *swyapi.GateErr {
 	for _, item := range items {
 		if item.Function != nil && item.Mware == nil {
-			fd := getFunctionDesc(dep.SwoId.Tennant, dep.SwoId.Project, item.Function)
+			id := dep.SwoId
+			id.Name = item.Function.Name
+			fd := getFunctionDesc(&id, item.Function)
 			fd.Labels = dep.Labels
 			dep.Items = append(dep.Items, &DeployItemDesc{ Fn: fd })
 			continue

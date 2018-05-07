@@ -167,13 +167,9 @@ func (fn *FunctionDesc)toInfo(details bool, periods int) (*swyapi.FunctionInfo, 
 	}, nil
 }
 
-func getFunctionDesc(tennant, project string, p_add *swyapi.FunctionAdd) *FunctionDesc {
+func getFunctionDesc(id *SwoId, p_add *swyapi.FunctionAdd) *FunctionDesc {
 	fn := &FunctionDesc {
-		SwoId: SwoId {
-			Tennant: tennant,
-			Project: project,
-			Name:	 p_add.Name,
-		},
+		SwoId: *id,
 		Src:		FnSrcDesc {
 			Type:		p_add.Sources.Type,
 			Repo:		p_add.Sources.Repo,

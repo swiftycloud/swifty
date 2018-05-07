@@ -1608,6 +1608,9 @@ definitions:
       name:
         type: string
         example: my-function
+      project:
+        type: string
+        example: my-project
       userdata:
         type: string
         description: And string user wishes to keep with this FN

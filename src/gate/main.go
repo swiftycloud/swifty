@@ -1015,13 +1015,13 @@ func reqPeriods(q url.Values) int {
 
 func handleFunctions(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
 	q := r.URL.Query()
-	project := q.Get("project")
-	if project == "" {
-		project = SwyDefaultProject
-	}
-
 	switch r.Method {
 	case "GET":
+		project := q.Get("project")
+		if project == "" {
+			project = SwyDefaultProject
+		}
+
 		details := (q.Get("details") != "")
 		periods := reqPeriods(q)
 		if periods < 0 {
@@ -1097,8 +1097,8 @@ func handleFunctions(ctx context.Context, w http.ResponseWriter, r *http.Request
 			}
 		}
 
-		fid, cerr := addFunction(ctx, &conf,
-				getFunctionDesc(fromContext(ctx).Tenant, project, &params))
+		id := ctxSwoId(ctx, params.Project, params.Name)
+		fid, cerr := addFunction(ctx, &conf, getFunctionDesc(id, &params))
 		if cerr != nil {
 			return cerr
 
