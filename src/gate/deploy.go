@@ -132,9 +132,9 @@ func getDeployDesc(id *SwoId) *DeployDesc {
 }
 
 func (dep *DeployDesc)getItems(items []*swyapi.DeployItem) *swyapi.GateErr {
+	id := dep.SwoId
 	for _, item := range items {
 		if item.Function != nil && item.Mware == nil {
-			id := dep.SwoId
 			id.Name = item.Function.Name
 			fd := getFunctionDesc(&id, item.Function)
 			fd.Labels = dep.Labels
@@ -143,7 +143,8 @@ func (dep *DeployDesc)getItems(items []*swyapi.DeployItem) *swyapi.GateErr {
 		}
 
 		if item.Mware != nil && item.Function == nil {
-			md := getMwareDesc(dep.SwoId.Tennant, dep.SwoId.Project, item.Mware)
+			id.Name = item.Mware.Name
+			md := getMwareDesc(&id, item.Mware)
 			md.Labels = dep.Labels
 			dep.Items = append(dep.Items, &DeployItemDesc{ Mw: md })
 			continue

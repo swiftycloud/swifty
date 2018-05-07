@@ -1701,6 +1701,10 @@ definitions:
         type: string
         description: Just an name
         example: mymariadb
+      project:
+        type: string
+        description: Project to create mware in
+        example: myproject
       type:
         type: string
         description: Middleware type

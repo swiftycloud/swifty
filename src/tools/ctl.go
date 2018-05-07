@@ -657,7 +657,7 @@ func function_add(args []string, opts [16]string) {
 
 	if !curCmd.req {
 		var fid string
-		make_faas_req1("POST", "/functions", http.StatusOK, req, &fid)
+		make_faas_req1("POST", "functions", http.StatusOK, req, &fid)
 		fmt.Printf("Function %s created\n", fid)
 	} else {
 		d, err := json.Marshal(req)
@@ -914,20 +914,16 @@ func mware_info(args []string, opts [16]string) {
 }
 
 func mware_add(args []string, opts [16]string) {
-	p := ""
-	if curCmd.project != "" {
-		p = "?project=" + curCmd.project
-	}
-
 	req := swyapi.MwareAdd {
 		Name: args[0],
+		Project: curCmd.project,
 		Type: args[1],
 		UserData: opts[0],
 	}
 
 	if !curCmd.req {
 		var id string
-		make_faas_req1("POST", "middleware" + p, http.StatusOK, &req, &id)
+		make_faas_req1("POST", "middleware", http.StatusOK, &req, &id)
 		fmt.Printf("Mware %s created\n", id)
 	} else {
 		d, err := json.Marshal(req)

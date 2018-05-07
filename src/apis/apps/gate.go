@@ -117,6 +117,7 @@ type FunctionEvent struct {
 
 type MwareAdd struct {
 	Name		string			`json:"name"`
+	Project		string			`json:"project,omitempty"`
 	Type		string			`json:"type"`
 	UserData	string			`json:"userdata,omitempty"`
 }

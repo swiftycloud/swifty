@@ -186,13 +186,9 @@ func (item *MwareDesc)toInfo(ctx context.Context, conf *YAMLConfMw, details bool
 	return resp, nil
 }
 
-func getMwareDesc(tenant, project string, params *swyapi.MwareAdd) *MwareDesc {
+func getMwareDesc(id *SwoId, params *swyapi.MwareAdd) *MwareDesc {
 	ret := &MwareDesc {
-		SwoId: SwoId {
-			Tennant:	tenant,
-			Project:	project,
-			Name:		params.Name,
-		},
+		SwoId:		*id,
 		MwareType:	params.Type,
 		State:		swy.DBMwareStatePrp,
 		UserData:	params.UserData,

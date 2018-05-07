@@ -1205,13 +1205,14 @@ func handleFunctionRun(ctx context.Context, w http.ResponseWriter, r *http.Reque
 
 func handleMwares(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
 	q := r.URL.Query()
-	project := q.Get("project")
-	if project == "" {
-		project = SwyDefaultProject
-	}
 
 	switch r.Method {
 	case "GET":
+		project := q.Get("project")
+		if project == "" {
+			project = SwyDefaultProject
+		}
+
 		details := (q.Get("details") != "")
 		mwtype := q.Get("type")
 
@@ -1259,13 +1260,13 @@ func handleMwares(ctx context.Context, w http.ResponseWriter, r *http.Request) *
 
 		ctxlog(ctx).Debugf("mware/add: %s params %v", fromContext(ctx).Tenant, params)
 
-		id, cerr := mwareSetup(ctx, &conf.Mware,
-				getMwareDesc(fromContext(ctx).Tenant, project, &params))
+		id := ctxSwoId(ctx, params.Project, params.Name)
+		mid, cerr := mwareSetup(ctx, &conf.Mware, getMwareDesc(id, &params))
 		if cerr != nil {
 			return cerr
 		}
 
-		err = swyhttp.MarshalAndWrite(w, id)
+		err = swyhttp.MarshalAndWrite(w, mid)
 		if err != nil {
 			return GateErrE(swy.GateBadResp, err)
 		}
