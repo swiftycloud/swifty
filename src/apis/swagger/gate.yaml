@@ -1501,6 +1501,9 @@ definitions:
         $ref: '#/definitions/FunctionEventCron'
       s3:
         $ref: '#/definitions/FunctionEventS3'
+      url:
+        type: string
+        description: 'Function callable URL if the source is "url"'
   FunctionSources:
     type: object
     description: Sources description

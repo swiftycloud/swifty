@@ -818,12 +818,15 @@ func event_info(args []string, opts [16]string) {
 	fmt.Printf("Name:          %s\n", e.Name)
 	fmt.Printf("Source:        %s\n", e.Source)
 	if e.Cron != nil {
-		fmt.Printf("Tab:        %s\n", e.Cron.Tab)
-		fmt.Printf("Args:       %s\n", make_args_string(e.Cron.Args))
+		fmt.Printf("Tab:           %s\n", e.Cron.Tab)
+		fmt.Printf("Args:          %s\n", make_args_string(e.Cron.Args))
 	}
 	if e.S3 != nil {
-		fmt.Printf("Bucket:     %s\n", e.S3.Bucket)
-		fmt.Printf("Ops:        %s\n", e.S3.Ops)
+		fmt.Printf("Bucket:        %s\n", e.S3.Bucket)
+		fmt.Printf("Ops:           %s\n", e.S3.Ops)
+	}
+	if e.URL != "" {
+		fmt.Printf("URL:           %s\n", e.URL)
 	}
 }
 

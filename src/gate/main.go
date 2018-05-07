@@ -581,7 +581,7 @@ func handleFunctionTrigger(ctx context.Context, w http.ResponseWriter, r *http.R
 
 	switch r.Method {
 	case "GET":
-		err := swyhttp.MarshalAndWrite(w, ed.toAPI())
+		err := swyhttp.MarshalAndWrite(w, ed.toAPI(fn))
 		if err != nil {
 			return GateErrE(swy.GateBadResp, err)
 		}

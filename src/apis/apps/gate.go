@@ -111,6 +111,7 @@ type FunctionEvent struct {
 	Source		string			`json:"source"`
 	Cron		*FunctionEventCron	`json:"cron,omitempty"`
 	S3		*FunctionEventS3	`json:"s3,omitempty"`
+	URL		string			`json:"url,omitempty"`
 }
 
 type MwareAdd struct {

@@ -111,6 +111,10 @@ func (fn *FunctionDesc)isOneShot() bool {
 
 var zeroVersion = "0"
 
+func (fn *FunctionDesc)getURL() string {
+	return conf.Daemon.Addr + "/call/" + fn.Cookie
+}
+
 func (fn *FunctionDesc)toInfo(details bool, periods int) (*swyapi.FunctionInfo, *swyapi.GateErr) {
 	var fv []string
 	var url = ""
@@ -127,7 +131,7 @@ func (fn *FunctionDesc)toInfo(details bool, periods int) (*swyapi.FunctionInfo, 
 	}
 
 	if fn.isURL() {
-		url = conf.Daemon.Addr + "/call/" + fn.Cookie
+		url = fn.getURL()
 	}
 
 	stats, cerr := getFunctionStats(fn, periods)
