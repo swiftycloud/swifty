@@ -144,6 +144,8 @@ var CORS_Headers = []string {
 var CORS_Methods = []string {
 	http.MethodPost,
 	http.MethodGet,
+	http.MethodPut,
+	http.MethodDelete,
 }
 
 type gateContext struct {
