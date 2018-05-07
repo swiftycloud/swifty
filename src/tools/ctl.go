@@ -345,7 +345,7 @@ func resolve_mw(project, mname string) string {
 	return ""
 }
 
-func list_functions(cd *cmdDesc, args []string, opts [16]string) {
+func function_list(cd *cmdDesc, args []string, opts [16]string) {
 	ua := []string{}
 	if cd.project != "" {
 		ua = append(ua, "project=" + cd.project)
@@ -411,7 +411,7 @@ func formatBytes(b uint64) string {
 	return bo
 }
 
-func info_function(cd *cmdDesc, args []string, opts [16]string) {
+func function_info(cd *cmdDesc, args []string, opts [16]string) {
 	var ifo swyapi.FunctionInfo
 	args[0] = resolve_fn(cd.project, args[0])
 	make_faas_req1("GET", "functions/" + args[0], http.StatusOK, nil, &ifo)
@@ -534,7 +534,7 @@ func parse_rate(val string) (uint, uint) {
 	return uint(rate), uint(burst)
 }
 
-func add_function(cd *cmdDesc, args []string, opts [16]string) {
+func function_add(cd *cmdDesc, args []string, opts [16]string) {
 	ua := []string{}
 	if cd.project != "" {
 		ua = append(ua, "project=" + cd.project)
@@ -646,7 +646,7 @@ func run_function(cd *cmdDesc, args []string, opts [16]string) {
 	fmt.Fprintf(os.Stderr, "%s", rres.Stderr)
 }
 
-func update_function(cd *cmdDesc, args []string, opts [16]string) {
+func function_update(cd *cmdDesc, args []string, opts [16]string) {
 	fid := resolve_fn(cd.project, args[0])
 
 	if opts[0] != "" {
@@ -697,7 +697,7 @@ func update_function(cd *cmdDesc, args []string, opts [16]string) {
 
 	if opts[5] != "" {
 		fmt.Printf("Wait FN %s\n", opts[5])
-		wait_fn(cd, []string{args[0]}, [16]string{opts[5], "15000"})
+		function_wait(cd, []string{args[0]}, [16]string{opts[5], "15000"})
 	}
 
 	if opts[6] != "" {
@@ -706,22 +706,22 @@ func update_function(cd *cmdDesc, args []string, opts [16]string) {
 	}
 }
 
-func del_function(cd *cmdDesc, args []string, opts [16]string) {
+func function_del(cd *cmdDesc, args []string, opts [16]string) {
 	args[0] = resolve_fn(cd.project, args[0])
 	make_faas_req1("DELETE", "functions/" + args[0], http.StatusOK, nil, nil)
 }
 
-func on_fn(cd *cmdDesc, args []string, opts [16]string) {
+func function_on(cd *cmdDesc, args []string, opts [16]string) {
 	args[0] = resolve_fn(cd.project, args[0])
 	make_faas_req1("PUT", "function/" + args[0] + "/state", http.StatusOK, "ready", nil)
 }
 
-func off_fn(cd *cmdDesc, args []string, opts [16]string) {
+func function_off(cd *cmdDesc, args []string, opts [16]string) {
 	args[0] = resolve_fn(cd.project, args[0])
 	make_faas_req1("PUT", "function/" + args[0] + "/state", http.StatusOK, "deactivated", nil)
 }
 
-func list_events(cd *cmdDesc, args []string, opts [16]string) {
+func event_list(cd *cmdDesc, args []string, opts [16]string) {
 	args[0] = resolve_fn(cd.project, args[0])
 	var eds []swyapi.FunctionEvent
 	make_faas_req1("GET", "functions/" + args[0] + "/triggers", http.StatusOK,  nil, &eds)
@@ -730,7 +730,7 @@ func list_events(cd *cmdDesc, args []string, opts [16]string) {
 	}
 }
 
-func add_event(cd *cmdDesc, args []string, opts [16]string) {
+func event_add(cd *cmdDesc, args []string, opts [16]string) {
 	args[0] = resolve_fn(cd.project, args[0])
 	e := swyapi.FunctionEvent {
 		Name: args[1],
@@ -753,7 +753,7 @@ func add_event(cd *cmdDesc, args []string, opts [16]string) {
 	fmt.Printf("Event %s created\n", res)
 }
 
-func info_event(cd *cmdDesc, args []string, opts [16]string) {
+func event_info(cd *cmdDesc, args []string, opts [16]string) {
 	args[0] = resolve_fn(cd.project, args[0])
 	var e swyapi.FunctionEvent
 	make_faas_req1("GET", "functions/" + args[0] + "/triggers/" + args[1], http.StatusOK,  nil, &e)
@@ -769,12 +769,12 @@ func info_event(cd *cmdDesc, args []string, opts [16]string) {
 	}
 }
 
-func del_event(cd *cmdDesc, args []string, opts [16]string) {
+func event_del(cd *cmdDesc, args []string, opts [16]string) {
 	args[0] = resolve_fn(cd.project, args[0])
 	make_faas_req1("DELETE", "functions/" + args[0] + "/triggers/" + args[1], http.StatusOK, nil, nil)
 }
 
-func wait_fn(cd *cmdDesc, args []string, opts [16]string) {
+func function_wait(cd *cmdDesc, args []string, opts [16]string) {
 	var wo swyapi.FunctionWait
 	if opts[0] != "" {
 		wo.Version = opts[0]
@@ -791,7 +791,7 @@ func wait_fn(cd *cmdDesc, args []string, opts [16]string) {
 	make_faas_req2("POST", "functions/" + args[0] + "/wait", &wo, http.StatusOK, 300)
 }
 
-func show_code(cd *cmdDesc, args []string, opts [16]string) {
+func function_code(cd *cmdDesc, args []string, opts [16]string) {
 	var res swyapi.FunctionSources
 	args[0] = resolve_fn(cd.project, args[0])
 	make_faas_req1("GET", "functions/" + args[0] + "/sources", http.StatusOK, nil, &res)
@@ -802,7 +802,7 @@ func show_code(cd *cmdDesc, args []string, opts [16]string) {
 	fmt.Printf("%s", data)
 }
 
-func show_logs(cd *cmdDesc, args []string, opts [16]string) {
+func function_logs(cd *cmdDesc, args []string, opts [16]string) {
 	var res []swyapi.FunctionLogEntry
 	args[0] = resolve_fn(cd.project, args[0])
 	make_faas_req1("GET", "functions/" + args[0] + "/logs", http.StatusOK, nil, &res)
@@ -819,7 +819,7 @@ func url(url string, args []string) string {
 	return url
 }
 
-func list_mware(cd *cmdDesc, args []string, opts [16]string) {
+func mware_list(cd *cmdDesc, args []string, opts [16]string) {
 	var mws []swyapi.MwareInfo
 	ua := []string{}
 	if cd.project != "" {
@@ -847,7 +847,7 @@ func list_mware(cd *cmdDesc, args []string, opts [16]string) {
 	}
 }
 
-func info_mware(cd *cmdDesc, args []string, opts [16]string) {
+func mware_info(cd *cmdDesc, args []string, opts [16]string) {
 	var resp swyapi.MwareInfo
 
 	args[0] = resolve_mw(cd.project, args[0])
@@ -862,7 +862,7 @@ func info_mware(cd *cmdDesc, args []string, opts [16]string) {
 	}
 }
 
-func add_mware(cd *cmdDesc, args []string, opts [16]string) {
+func mware_add(cd *cmdDesc, args []string, opts [16]string) {
 	p := ""
 	if cd.project != "" {
 		p = "?project=" + cd.project
@@ -886,12 +886,12 @@ func add_mware(cd *cmdDesc, args []string, opts [16]string) {
 	}
 }
 
-func del_mware(cd *cmdDesc, args []string, opts [16]string) {
+func mware_del(cd *cmdDesc, args []string, opts [16]string) {
 	args[0] = resolve_mw(cd.project, args[0])
 	make_faas_req1("DELETE", "middleware/" + args[0], http.StatusOK, nil, nil)
 }
 
-func deploy_stop(cd *cmdDesc, args []string, opts [16]string) {
+func deploy_del(cd *cmdDesc, args []string, opts [16]string) {
 	make_faas_req1("DELETE", "deployments/" + args[0], http.StatusOK, nil, nil)
 }
 
@@ -914,7 +914,7 @@ func deploy_list(cd *cmdDesc, args []string, opts [16]string) {
 	}
 }
 
-func deploy_start(cd *cmdDesc, args []string, opts [16]string) {
+func deploy_add(cd *cmdDesc, args []string, opts [16]string) {
 	cont, err := ioutil.ReadFile(args[1])
 	if err != nil {
 		fatal(fmt.Errorf("Can't read desc flie: %s", err.Error()))
@@ -1050,30 +1050,36 @@ const (
 	CMD_ME string		= "me"
 	CMD_STATS string	= "st"
 	CMD_PS string		= "ps"
-	CMD_LS string		= "ls"
-	CMD_INF string		= "inf"
-	CMD_ADD string		= "add"
+
 	CMD_RUN string		= "run"
-	CMD_UPD string		= "upd"
-	CMD_DEL string		= "del"
-	CMD_LOGS string		= "logs"
-	CMD_CODE string		= "code"
-	CMD_ON string		= "on"
-	CMD_OFF string		= "off"
-	CMD_WAIT string		= "wait"
+
+	CMD_FL string		= "fl"
+	CMD_FI string		= "fi"
+	CMD_FA string		= "fa"
+	CMD_FD string		= "fd"
+	CMD_FU string		= "fu"
+	CMD_FLOG string		= "flog"
+	CMD_FCOD string		= "fcod"
+	CMD_FON string		= "fon"
+	CMD_FOFF string		= "foff"
+	CMD_FW string		= "fw"
+
 	CMD_EL string		= "el"
-	CMD_EA string		= "ea"
 	CMD_EI string		= "ei"
+	CMD_EA string		= "ea"
 	CMD_ED string		= "ed"
-	CMD_MLS string		= "mls"
-	CMD_MINF string		= "minf"
-	CMD_MADD string		= "madd"
-	CMD_MDEL string		= "mdel"
+
+	CMD_ML string		= "ml"
+	CMD_MI string		= "mi"
+	CMD_MA string		= "ma"
+	CMD_MD string		= "md"
+
 	CMD_S3ACC string	= "s3acc"
-	CMD_DLIST string	= "dl"
-	CMD_DSTART string	= "ds"
-	CMD_DINF string		= "di"
-	CMD_DSTOP string	= "dx"
+
+	CMD_DL string		= "dl"
+	CMD_DI string		= "di"
+	CMD_DA string		= "da"
+	CMD_DD string		= "dd"
 	CMD_LUSR string		= "uls"
 	CMD_UADD string		= "uadd"
 	CMD_UDEL string		= "udel"
@@ -1090,30 +1096,37 @@ var cmdOrder = []string {
 	CMD_ME,
 	CMD_STATS,
 	CMD_PS,
-	CMD_LS,
-	CMD_INF,
-	CMD_ADD,
+
 	CMD_RUN,
-	CMD_UPD,
-	CMD_DEL,
-	CMD_LOGS,
-	CMD_CODE,
-	CMD_ON,
-	CMD_OFF,
-	CMD_WAIT,
+
+	CMD_FL,
+	CMD_FI,
+	CMD_FA,
+	CMD_FD,
+	CMD_FU,
+	CMD_FON,
+	CMD_FOFF,
+	CMD_FW,
+	CMD_FLOG,
+	CMD_FCOD,
+
 	CMD_EL,
-	CMD_EA,
 	CMD_EI,
+	CMD_EA,
 	CMD_ED,
-	CMD_MLS,
-	CMD_MINF,
-	CMD_MADD,
-	CMD_MDEL,
+
+	CMD_ML,
+	CMD_MI,
+	CMD_MA,
+	CMD_MD,
+
 	CMD_S3ACC,
-	CMD_DLIST,
-	CMD_DSTART,
-	CMD_DINF,
-	CMD_DSTOP,
+
+	CMD_DL,
+	CMD_DI,
+	CMD_DA,
+	CMD_DD,
+
 	CMD_LUSR,
 	CMD_UADD,
 	CMD_UDEL,
@@ -1138,30 +1151,30 @@ var cmdMap = map[string]*cmdDesc {
 	CMD_ME:		&cmdDesc{ call: manage_login,	  opts: flag.NewFlagSet(CMD_ME, flag.ExitOnError) },
 	CMD_STATS:	&cmdDesc{ call: show_stats,	  opts: flag.NewFlagSet(CMD_STATS, flag.ExitOnError) },
 	CMD_PS:		&cmdDesc{ call: list_projects,	  opts: flag.NewFlagSet(CMD_PS, flag.ExitOnError) },
-	CMD_LS:		&cmdDesc{ call: list_functions,  opts: flag.NewFlagSet(CMD_LS, flag.ExitOnError) },
-	CMD_INF:	&cmdDesc{ call: info_function,	  opts: flag.NewFlagSet(CMD_INF, flag.ExitOnError) },
-	CMD_ADD:	&cmdDesc{ call: add_function,	  opts: flag.NewFlagSet(CMD_ADD, flag.ExitOnError) },
+	CMD_FL:		&cmdDesc{ call: function_list,	  opts: flag.NewFlagSet(CMD_FL, flag.ExitOnError) },
+	CMD_FI:		&cmdDesc{ call: function_info,	  opts: flag.NewFlagSet(CMD_FI, flag.ExitOnError) },
+	CMD_FA:		&cmdDesc{ call: function_add,	  opts: flag.NewFlagSet(CMD_FA, flag.ExitOnError) },
+	CMD_FD:		&cmdDesc{ call: function_del,	  opts: flag.NewFlagSet(CMD_FD, flag.ExitOnError) },
+	CMD_FU:		&cmdDesc{ call: function_update,  opts: flag.NewFlagSet(CMD_FU, flag.ExitOnError) },
 	CMD_RUN:	&cmdDesc{ call: run_function,	  opts: flag.NewFlagSet(CMD_RUN, flag.ExitOnError) },
-	CMD_UPD:	&cmdDesc{ call: update_function, opts: flag.NewFlagSet(CMD_UPD, flag.ExitOnError) },
-	CMD_DEL:	&cmdDesc{ call: del_function,	  opts: flag.NewFlagSet(CMD_DEL, flag.ExitOnError) },
-	CMD_LOGS:	&cmdDesc{ call: show_logs,	  opts: flag.NewFlagSet(CMD_LOGS, flag.ExitOnError) },
-	CMD_CODE:	&cmdDesc{ call: show_code,	  opts: flag.NewFlagSet(CMD_CODE, flag.ExitOnError) },
-	CMD_ON:		&cmdDesc{ call: on_fn,		  opts: flag.NewFlagSet(CMD_ON, flag.ExitOnError) },
-	CMD_OFF:	&cmdDesc{ call: off_fn,	  opts: flag.NewFlagSet(CMD_OFF, flag.ExitOnError) },
-	CMD_WAIT:	&cmdDesc{ call: wait_fn,	  opts: flag.NewFlagSet(CMD_WAIT, flag.ExitOnError) },
-	CMD_EL:		&cmdDesc{ call: list_events,	  opts: flag.NewFlagSet(CMD_EL, flag.ExitOnError) },
-	CMD_EA:		&cmdDesc{ call: add_event,	  opts: flag.NewFlagSet(CMD_EA, flag.ExitOnError) },
-	CMD_EI:		&cmdDesc{ call: info_event,	  opts: flag.NewFlagSet(CMD_EI, flag.ExitOnError) },
-	CMD_ED:		&cmdDesc{ call: del_event,	  opts: flag.NewFlagSet(CMD_ED, flag.ExitOnError) },
-	CMD_MLS:	&cmdDesc{ call: list_mware,	  opts: flag.NewFlagSet(CMD_MLS, flag.ExitOnError) },
-	CMD_MINF:	&cmdDesc{ call: info_mware,	  opts: flag.NewFlagSet(CMD_INF, flag.ExitOnError) },
-	CMD_MADD:	&cmdDesc{ call: add_mware,	  opts: flag.NewFlagSet(CMD_MADD, flag.ExitOnError) },
-	CMD_MDEL:	&cmdDesc{ call: del_mware,	  opts: flag.NewFlagSet(CMD_MDEL, flag.ExitOnError) },
+	CMD_FLOG:	&cmdDesc{ call: function_logs,	  opts: flag.NewFlagSet(CMD_FLOG, flag.ExitOnError) },
+	CMD_FCOD:	&cmdDesc{ call: function_code,	  opts: flag.NewFlagSet(CMD_FCOD, flag.ExitOnError) },
+	CMD_FON:	&cmdDesc{ call: function_on,	  opts: flag.NewFlagSet(CMD_FON, flag.ExitOnError) },
+	CMD_FOFF:	&cmdDesc{ call: function_off,	  opts: flag.NewFlagSet(CMD_FOFF, flag.ExitOnError) },
+	CMD_FW:		&cmdDesc{ call: function_wait,	  opts: flag.NewFlagSet(CMD_FW, flag.ExitOnError) },
+	CMD_EL:		&cmdDesc{ call: event_list,	  opts: flag.NewFlagSet(CMD_EL, flag.ExitOnError) },
+	CMD_EA:		&cmdDesc{ call: event_add,	  opts: flag.NewFlagSet(CMD_EA, flag.ExitOnError) },
+	CMD_EI:		&cmdDesc{ call: event_info,	  opts: flag.NewFlagSet(CMD_EI, flag.ExitOnError) },
+	CMD_ED:		&cmdDesc{ call: event_del,	  opts: flag.NewFlagSet(CMD_ED, flag.ExitOnError) },
+	CMD_ML:		&cmdDesc{ call: mware_list,	  opts: flag.NewFlagSet(CMD_ML, flag.ExitOnError) },
+	CMD_MI:		&cmdDesc{ call: mware_info,	  opts: flag.NewFlagSet(CMD_MI, flag.ExitOnError) },
+	CMD_MA:		&cmdDesc{ call: mware_add,	  opts: flag.NewFlagSet(CMD_MA, flag.ExitOnError) },
+	CMD_MD:		&cmdDesc{ call: mware_del,	  opts: flag.NewFlagSet(CMD_MD, flag.ExitOnError) },
 	CMD_S3ACC:	&cmdDesc{ call: s3_access,	  opts: flag.NewFlagSet(CMD_S3ACC, flag.ExitOnError) },
-	CMD_DLIST:	&cmdDesc{ call: deploy_list,	  opts: flag.NewFlagSet(CMD_DLIST, flag.ExitOnError) },
-	CMD_DSTART:	&cmdDesc{ call: deploy_start,	  opts: flag.NewFlagSet(CMD_DSTART, flag.ExitOnError) },
-	CMD_DINF:	&cmdDesc{ call: deploy_info,	  opts: flag.NewFlagSet(CMD_DINF, flag.ExitOnError) },
-	CMD_DSTOP:	&cmdDesc{ call: deploy_stop,	  opts: flag.NewFlagSet(CMD_DSTOP, flag.ExitOnError) },
+	CMD_DL:		&cmdDesc{ call: deploy_list,	  opts: flag.NewFlagSet(CMD_DL, flag.ExitOnError) },
+	CMD_DI:		&cmdDesc{ call: deploy_info,	  opts: flag.NewFlagSet(CMD_DI, flag.ExitOnError) },
+	CMD_DA:		&cmdDesc{ call: deploy_add,	  opts: flag.NewFlagSet(CMD_DA, flag.ExitOnError) },
+	CMD_DD:		&cmdDesc{ call: deploy_del,	  opts: flag.NewFlagSet(CMD_DD, flag.ExitOnError) },
 	CMD_LUSR:	&cmdDesc{ call: list_users,	  opts: flag.NewFlagSet(CMD_LUSR, flag.ExitOnError) },
 	CMD_UADD:	&cmdDesc{ call: add_user,	  opts: flag.NewFlagSet(CMD_UADD, flag.ExitOnError) },
 	CMD_UDEL:	&cmdDesc{ call: del_user,	  opts: flag.NewFlagSet(CMD_UDEL, flag.ExitOnError) },
@@ -1204,37 +1217,37 @@ func main() {
 	bindCmdUsage(CMD_STATS,	[]string{}, "Show stats", false)
 	bindCmdUsage(CMD_PS,	[]string{}, "List projects", false)
 
-	cmdMap[CMD_LS].opts.StringVar(&opts[0], "o", "", "Output format (NONE, json)")
-	bindCmdUsage(CMD_LS,	[]string{}, "List functions", true)
-	bindCmdUsage(CMD_INF,	[]string{"NAME"}, "Function info", true)
-	cmdMap[CMD_ADD].opts.StringVar(&opts[0], "lang", "auto", "Language")
-	cmdMap[CMD_ADD].opts.StringVar(&opts[1], "src", ".", "Source file")
-	cmdMap[CMD_ADD].opts.StringVar(&opts[2], "mw", "", "Mware to use, comma-separated")
-	cmdMap[CMD_ADD].opts.StringVar(&opts[4], "tmo", "", "Timeout")
-	cmdMap[CMD_ADD].opts.StringVar(&opts[5], "rl", "", "Rate (rate[:burst])")
-	cmdMap[CMD_ADD].opts.StringVar(&opts[6], "data", "", "Any text associated with fn")
-	cmdMap[CMD_ADD].opts.StringVar(&opts[7], "env", "", "Colon-separated list of env vars")
-	cmdMap[CMD_ADD].opts.StringVar(&opts[8], "auth", "", "ID of auth mware to verify the call")
-	bindCmdUsage(CMD_ADD,	[]string{"NAME"}, "Add a function", true)
+	cmdMap[CMD_FL].opts.StringVar(&opts[0], "o", "", "Output format (NONE, json)")
+	bindCmdUsage(CMD_FL,	[]string{}, "List functions", true)
+	bindCmdUsage(CMD_FI,	[]string{"NAME"}, "Function info", true)
+	cmdMap[CMD_FA].opts.StringVar(&opts[0], "lang", "auto", "Language")
+	cmdMap[CMD_FA].opts.StringVar(&opts[1], "src", ".", "Source file")
+	cmdMap[CMD_FA].opts.StringVar(&opts[2], "mw", "", "Mware to use, comma-separated")
+	cmdMap[CMD_FA].opts.StringVar(&opts[4], "tmo", "", "Timeout")
+	cmdMap[CMD_FA].opts.StringVar(&opts[5], "rl", "", "Rate (rate[:burst])")
+	cmdMap[CMD_FA].opts.StringVar(&opts[6], "data", "", "Any text associated with fn")
+	cmdMap[CMD_FA].opts.StringVar(&opts[7], "env", "", "Colon-separated list of env vars")
+	cmdMap[CMD_FA].opts.StringVar(&opts[8], "auth", "", "ID of auth mware to verify the call")
+	bindCmdUsage(CMD_FA,	[]string{"NAME"}, "Add a function", true)
 	bindCmdUsage(CMD_RUN,	[]string{"NAME", "ARG=VAL,..."}, "Run a function", true)
-	cmdMap[CMD_UPD].opts.StringVar(&opts[0], "src", "", "Source file")
-	cmdMap[CMD_UPD].opts.StringVar(&opts[1], "tmo", "", "Timeout")
-	cmdMap[CMD_UPD].opts.StringVar(&opts[2], "rl", "", "Rate (rate[:burst])")
-	cmdMap[CMD_UPD].opts.StringVar(&opts[3], "mw", "", "Mware to use, +/- to add/remove")
-	cmdMap[CMD_UPD].opts.StringVar(&opts[4], "data", "", "Associated text")
-	cmdMap[CMD_UPD].opts.StringVar(&opts[5], "ver", "", "Version")
-	cmdMap[CMD_UPD].opts.StringVar(&opts[6], "arg", "", "Args")
-	cmdMap[CMD_UPD].opts.StringVar(&opts[7], "auth", "", "Auth context (- for off)")
-	bindCmdUsage(CMD_UPD,	[]string{"NAME"}, "Update a function", true)
-	bindCmdUsage(CMD_DEL,	[]string{"NAME"}, "Delete a function", true)
-	bindCmdUsage(CMD_LOGS,	[]string{"NAME"}, "Show function logs", true)
-	bindCmdUsage(CMD_CODE,  []string{"NAME"}, "Show function code", true)
-	bindCmdUsage(CMD_ON,	[]string{"NAME"}, "Activate function", true)
-	bindCmdUsage(CMD_OFF,	[]string{"NAME"}, "Deactivate function", true)
+	cmdMap[CMD_FU].opts.StringVar(&opts[0], "src", "", "Source file")
+	cmdMap[CMD_FU].opts.StringVar(&opts[1], "tmo", "", "Timeout")
+	cmdMap[CMD_FU].opts.StringVar(&opts[2], "rl", "", "Rate (rate[:burst])")
+	cmdMap[CMD_FU].opts.StringVar(&opts[3], "mw", "", "Mware to use, +/- to add/remove")
+	cmdMap[CMD_FU].opts.StringVar(&opts[4], "data", "", "Associated text")
+	cmdMap[CMD_FU].opts.StringVar(&opts[5], "ver", "", "Version")
+	cmdMap[CMD_FU].opts.StringVar(&opts[6], "arg", "", "Args")
+	cmdMap[CMD_FU].opts.StringVar(&opts[7], "auth", "", "Auth context (- for off)")
+	bindCmdUsage(CMD_FU,	[]string{"NAME"}, "Update a function", true)
+	bindCmdUsage(CMD_FD,	[]string{"NAME"}, "Delete a function", true)
+	bindCmdUsage(CMD_FLOG,	[]string{"NAME"}, "Show function logs", true)
+	bindCmdUsage(CMD_FCOD,  []string{"NAME"}, "Show function code", true)
+	bindCmdUsage(CMD_FON,	[]string{"NAME"}, "Activate function", true)
+	bindCmdUsage(CMD_FOFF,	[]string{"NAME"}, "Deactivate function", true)
 
-	cmdMap[CMD_WAIT].opts.StringVar(&opts[0], "version", "", "Version")
-	cmdMap[CMD_WAIT].opts.StringVar(&opts[1], "tmo", "", "Timeout")
-	bindCmdUsage(CMD_WAIT,	[]string{"NAME"}, "Wait function event", true)
+	cmdMap[CMD_FW].opts.StringVar(&opts[0], "version", "", "Version")
+	cmdMap[CMD_FW].opts.StringVar(&opts[1], "tmo", "", "Timeout")
+	bindCmdUsage(CMD_FW,	[]string{"NAME"}, "Wait function event", true)
 
 	bindCmdUsage(CMD_EL,	[]string{"NAME"}, "List events for a function", true)
 	cmdMap[CMD_EA].opts.StringVar(&opts[0], "tab", "", "Cron tab")
@@ -1245,21 +1258,21 @@ func main() {
 	bindCmdUsage(CMD_EI,	[]string{"NAME", "EID"}, "Show event info", true)
 	bindCmdUsage(CMD_ED,	[]string{"NAME", "EID"}, "Remove event", true)
 
-	cmdMap[CMD_MLS].opts.StringVar(&opts[0], "o", "", "Output format (NONE, json)")
-	cmdMap[CMD_MLS].opts.StringVar(&opts[1], "type", "", "Filter mware by type")
-	bindCmdUsage(CMD_MLS,	[]string{}, "List middleware", true)
-	bindCmdUsage(CMD_MINF,	[]string{"NAME"}, "Middleware info", true)
-	cmdMap[CMD_MADD].opts.StringVar(&opts[0], "data", "", "Associated text")
-	bindCmdUsage(CMD_MADD,	[]string{"NAME", "TYPE"}, "Add middleware", true)
-	bindCmdUsage(CMD_MDEL,	[]string{"NAME"}, "Delete middleware", true)
+	cmdMap[CMD_ML].opts.StringVar(&opts[0], "o", "", "Output format (NONE, json)")
+	cmdMap[CMD_ML].opts.StringVar(&opts[1], "type", "", "Filter mware by type")
+	bindCmdUsage(CMD_ML,	[]string{}, "List middleware", true)
+	bindCmdUsage(CMD_MI,	[]string{"NAME"}, "Middleware info", true)
+	cmdMap[CMD_MA].opts.StringVar(&opts[0], "data", "", "Associated text")
+	bindCmdUsage(CMD_MA,	[]string{"NAME", "TYPE"}, "Add middleware", true)
+	bindCmdUsage(CMD_MD,	[]string{"NAME"}, "Delete middleware", true)
 
 	cmdMap[CMD_S3ACC].opts.StringVar(&opts[0], "life", "60", "Lifetime (default 1 min)")
 	bindCmdUsage(CMD_S3ACC,	[]string{"BUCKET"}, "Get keys for S3", true)
 
-	bindCmdUsage(CMD_DLIST, []string{},	"List deployments", true)
-	bindCmdUsage(CMD_DSTART, []string{"NAME", "DESC"}, "Start deployment", true)
-	bindCmdUsage(CMD_DINF,	[]string{"ID"}, "Show info about deployment", true)
-	bindCmdUsage(CMD_DSTOP,	[]string{"ID"}, "Stop deployment", true)
+	bindCmdUsage(CMD_DL,	[]string{},	"List deployments", true)
+	bindCmdUsage(CMD_DI,	[]string{"ID"}, "Show info about deployment", true)
+	bindCmdUsage(CMD_DA,	[]string{"NAME", "DESC"}, "Add (start) deployment", true)
+	bindCmdUsage(CMD_DD,	[]string{"ID"}, "Del (stop) deployment", true)
 
 	bindCmdUsage(CMD_LUSR,	[]string{}, "List users", false)
 	cmdMap[CMD_UADD].opts.StringVar(&opts[0], "name", "", "User name")
