@@ -571,6 +571,10 @@ func handleFunctionTrigger(ctx context.Context, w http.ResponseWriter, r *http.R
 	}
 
 	eid := mux.Vars(r)["eid"]
+	if !bson.IsObjectIdHex(eid) {
+		return GateErrM(swy.GateBadRequest, "Bad event ID")
+	}
+
 	ed, err := dbFindEvent(eid)
 	if err != nil {
 		return GateErrD(err)
