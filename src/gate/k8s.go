@@ -653,7 +653,7 @@ func refreshDepsAndPods() error {
 	podiface := swk8sClientSet.Pods(v1.NamespaceDefault)
 
 	for _, fn := range(fns) {
-		if fn.State != swy.DBFuncStateRdy {
+		if fn.State != swy.DBFuncStateRdy && fn.State != swy.DBFuncStateStr {
 			continue
 		}
 
@@ -665,6 +665,21 @@ func refreshDepsAndPods() error {
 
 		dep, err := depiface.Get(fn.DepName())
 		if err != nil {
+			if k8serr.IsNotFound(err) && fn.State == swy.DBFuncStateStr {
+				/* That's OK, the deployment just didn't have time to
+				 * to get created. Just create one and ... go agead,
+				 * no replicas to check, no PODs to revitalize.
+				 */
+
+				err = swk8sRun(ctx, &conf, fn)
+				if err != nil {
+					glog.Errorf("Can't start back %s dep: %s", fn.SwoId.Str(), err.Error())
+					return err
+				}
+
+				continue
+			}
+
 			glog.Errorf("Can't get dep %s: %s", fn.DepName(), err.Error())
 			return errors.New("Error getting dep")
 		}
