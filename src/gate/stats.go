@@ -90,15 +90,20 @@ func (fs *FnStats)RunTimeUsec() uint64 {
 	return uint64(fs.RunTime/time.Microsecond)
 }
 
-type TenStats struct {
-	Tenant		string		`bson:"tenant"`
-	Called		uint64		`bsin:"called"`
+type TenStatValues struct {
+	Called		uint64		`bson:"called"`
 	RunCost		uint64		`bson:"runcost"`
 	BytesIn		uint64		`bson:"bytesin"`
 	BytesOut	uint64		`bson:"bytesout"`
+}
+
+type TenStats struct {
+	Tenant		string		`bson:"tenant"`
+	TenStatValues			`bson:",inline"`
 	Till		*time.Time	`bson:"till,omitempty"`
 
 	statsFlush			`bson:"-"`
+	onDisk		*TenStatValues	`bson:"-"`
 }
 
 func getFunctionStats(fn *FunctionDesc, periods int) ([]swyapi.FunctionStats, *swyapi.GateErr) {
@@ -251,6 +256,8 @@ func (st *FnStats)Write() {
 func (st *TenStats)Init(tenant string) error {
 	err := dbTenStatsGet(tenant, st)
 	if err == nil {
+		st.onDisk = &TenStatValues{}
+		*st.onDisk = st.TenStatValues
 		st.Tenant = tenant
 		st.statsFlush.Init(st, tenant)
 	}
@@ -258,7 +265,20 @@ func (st *TenStats)Init(tenant string) error {
 }
 
 func (st *TenStats)Write() {
-	dbTenStatsUpdate(st)
+	var now TenStatValues = st.TenStatValues
+	delta := TenStatValues {
+		Called: now.Called - st.onDisk.Called,
+		RunCost: now.RunCost - st.onDisk.RunCost,
+		BytesIn: now.BytesIn - st.onDisk.BytesIn,
+		BytesOut: now.BytesOut - st.onDisk.BytesOut,
+	}
+	err := dbTenStatsUpdate(st.Tenant, &delta)
+	if err == nil {
+		st.onDisk = &now
+	} else {
+		/* Next time we'll get here with largetr deltas */
+		glog.Errorf("Error upserting tenant stats: %s", err.Error())
+	}
 }
 
 func (fc *statsFlush)Init(writer statsWriter, id string) {

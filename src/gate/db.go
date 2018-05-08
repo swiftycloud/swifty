@@ -277,12 +277,18 @@ func dbTenStatsGetLatestArch(tenant string) (*TenStats, error) {
 	return &ret, err
 }
 
-func dbTenStatsUpdate(st *TenStats) {
+func dbTenStatsUpdate(tenant string, delta *TenStatValues) error {
 	c := dbSession.DB(DBStateDB).C(DBColTenStats)
-	_, err := c.Upsert(bson.M{"tenant": st.Tenant}, st)
-	if err != nil {
-		glog.Errorf("Error upserting tenant stats: %s", err.Error())
-	}
+	_, err := c.Upsert(bson.M{"tenant": tenant}, bson.M{
+			"$set": bson.M{"tenant": tenant},
+			"$inc": bson.M{
+				"called":	delta.Called,
+				"runcost":	delta.RunCost,
+				"bytesin":	delta.BytesIn,
+				"bytesout":	delta.BytesOut,
+			},
+		})
+	return err
 }
 
 func dbFnStatsGet(cookie string, st *FnStats) error {
