@@ -316,14 +316,37 @@ func handleFunctionTriggers(ctx context.Context, w http.ResponseWriter, r *http.
 		return cerr
 	}
 
+	q := r.URL.Query()
+
 	switch r.Method {
 	case "GET":
-		evs, erc := eventsList(fn)
-		if erc != nil {
-			return erc
+		ename := q.Get("name")
+
+		var evd []*FnEventDesc
+		var err error
+
+		if ename == "" {
+			evd, err = dbListFnEvents(fn.Cookie)
+			if err != nil {
+				return GateErrD(err)
+			}
+		} else {
+			var ev *FnEventDesc
+
+			ev, err = dbFuncEventByName(fn, ename)
+			if err != nil {
+				return GateErrD(err)
+			}
+
+			evd = append(evd, ev)
 		}
 
-		err := swyhttp.MarshalAndWrite(w, evs)
+		var evs []*swyapi.FunctionEvent
+		for _, e := range evd {
+			evs = append(evs, e.toAPI(fn))
+		}
+
+		err = swyhttp.MarshalAndWrite(w, evs)
 		if err != nil {
 			return GateErrE(swy.GateBadResp, err)
 		}

@@ -383,6 +383,19 @@ func resolve_dep(dname string) string {
 	return ""
 }
 
+func resolve_evt(fnid, name string) string {
+	var es []swyapi.FunctionEvent
+	make_faas_req1("GET", "functions/" + fnid + "/triggers?name=" + name, http.StatusOK,  nil, &es)
+	for _, e := range es {
+		if e.Name == name {
+			return e.Id
+		}
+	}
+
+	fatal(fmt.Errorf("\tname %s not resolved", name))
+	return ""
+}
+
 func function_list(args []string, opts [16]string) {
 	ua := []string{}
 	if curCmd.project != "" {
@@ -813,6 +826,7 @@ func event_add(args []string, opts [16]string) {
 
 func event_info(args []string, opts [16]string) {
 	args[0] = resolve_fn(args[0])
+	args[1] = resolve_evt(args[0], args[1])
 	var e swyapi.FunctionEvent
 	make_faas_req1("GET", "functions/" + args[0] + "/triggers/" + args[1], http.StatusOK,  nil, &e)
 	fmt.Printf("Name:          %s\n", e.Name)
@@ -832,6 +846,7 @@ func event_info(args []string, opts [16]string) {
 
 func event_del(args []string, opts [16]string) {
 	args[0] = resolve_fn(args[0])
+	args[1] = resolve_evt(args[0], args[1])
 	make_faas_req1("DELETE", "functions/" + args[0] + "/triggers/" + args[1], http.StatusOK, nil, nil)
 }
 
@@ -1367,9 +1382,9 @@ func main() {
 	cmdMap[CMD_EA].opts.StringVar(&opts[1], "args", "", "Cron args")
 	cmdMap[CMD_EA].opts.StringVar(&opts[0], "buck", "", "S3 bucket")
 	cmdMap[CMD_EA].opts.StringVar(&opts[1], "ops", "", "S3 ops")
-	bindCmdUsage(CMD_EA,	[]string{"NAME", "NAME", "SRC"}, "Add event", true)
-	bindCmdUsage(CMD_EI,	[]string{"NAME", "EID"}, "Show event info", true)
-	bindCmdUsage(CMD_ED,	[]string{"NAME", "EID"}, "Remove event", true)
+	bindCmdUsage(CMD_EA,	[]string{"NAME", "ENAME", "SRC"}, "Add event", true)
+	bindCmdUsage(CMD_EI,	[]string{"NAME", "ENAME"}, "Show event info", true)
+	bindCmdUsage(CMD_ED,	[]string{"NAME", "ENAME"}, "Remove event", true)
 
 	cmdMap[CMD_ML].opts.StringVar(&opts[0], "o", "", "Output format (NONE, json)")
 	cmdMap[CMD_ML].opts.StringVar(&opts[1], "type", "", "Filter mware by type")

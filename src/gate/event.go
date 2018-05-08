@@ -137,19 +137,6 @@ func (e *FnEventDesc)toAPI(fn *FunctionDesc) *swyapi.FunctionEvent {
 	return &ae
 }
 
-func eventsList(fn *FunctionDesc) ([]swyapi.FunctionEvent, *swyapi.GateErr) {
-	var ret []swyapi.FunctionEvent
-	evs, err := dbListFnEvents(fn.Cookie)
-	if err != nil {
-		return ret, GateErrD(err)
-	}
-
-	for _, e := range evs {
-		ret = append(ret, *e.toAPI(fn))
-	}
-	return ret, nil
-}
-
 func eventsAdd(ctx context.Context, fn *FunctionDesc, evt *swyapi.FunctionEvent) (string, *swyapi.GateErr) {
 	ed := &FnEventDesc{
 		ObjID: bson.NewObjectId(),
@@ -242,12 +229,12 @@ func clearAllEvents(ctx context.Context, fn *FunctionDesc) error {
 	}
 
 	for _, e := range evs {
-		err = eventStop(ctx, &e)
+		err = eventStop(ctx, e)
 		if err != nil {
 			return err
 		}
 
-		err = dbRemoveEvent(&e)
+		err = dbRemoveEvent(e)
 		if err != nil {
 			return err
 		}

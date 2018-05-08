@@ -790,6 +790,12 @@ paths:
         - triggers
         - function
       summary: List event triggers for the function
+      parameters:
+        - in: query
+          name: name
+          type: string
+          required: false
+          description: Name of an event to find (useful to resolve ID by name)
       responses:
         '200':
           description: OK

@@ -522,8 +522,8 @@ func dbDeployStateUpdate(dep *DeployDesc, state int) error {
 			bson.M{"$set": bson.M{"state": state}})
 }
 
-func dbListFnEvents(fnid string) ([]FnEventDesc, error) {
-	var ret []FnEventDesc
+func dbListFnEvents(fnid string) ([]*FnEventDesc, error) {
+	var ret []*FnEventDesc
 	err := dbSession.DB(DBStateDB).C(DBColEvents).Find(bson.M{"fnid": fnid}).All(&ret)
 	return ret, err
 }
@@ -541,6 +541,12 @@ func dbAddEvent(ed *FnEventDesc) error {
 func dbFindEvent(id string) (*FnEventDesc, error) {
 	var ed FnEventDesc
 	err := dbSession.DB(DBStateDB).C(DBColEvents).Find(bson.M{"_id": bson.ObjectIdHex(id)}).One(&ed)
+	return &ed, err
+}
+
+func dbFuncEventByName(fn *FunctionDesc, name string) (*FnEventDesc, error) {
+	var ed FnEventDesc
+	err := dbSession.DB(DBStateDB).C(DBColEvents).Find(bson.M{"fnid": fn.Cookie, "name": name}).One(&ed)
 	return &ed, err
 }
 
