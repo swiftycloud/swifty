@@ -310,12 +310,22 @@ func dbFnStatsGetArch(id string, nr int) ([]FnStats, error) {
 	return ret, err
 }
 
-func dbFnStatsUpdate(st *FnStats) {
+func dbFnStatsUpdate(cookie string, delta *FnStatValues, lastCall time.Time) error {
 	c := dbSession.DB(DBStateDB).C(DBColFnStats)
-	_, err := c.Upsert(bson.M{"cookie": st.Cookie}, st)
-	if err != nil {
-		glog.Errorf("Error upserting fn stats: %s", err.Error())
-	}
+	_, err := c.Upsert(bson.M{"cookie": cookie}, bson.M{
+			"$set": bson.M{"cookie": cookie},
+			"$inc": bson.M{
+				"called":	delta.Called,
+				"timeouts":	delta.Timeouts,
+				"errors":	delta.Errors,
+				"rtime":	delta.RunTime,
+				"bytesin":	delta.BytesIn,
+				"bytesout":	delta.BytesOut,
+				"runcost":	delta.RunCost,
+			},
+			"$max": bson.M{"lastcall": lastCall},
+		})
+	return err
 }
 
 func dbFnStatsDrop(cookie string, st *FnStats) error {

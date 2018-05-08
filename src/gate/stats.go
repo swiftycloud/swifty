@@ -25,10 +25,7 @@ type statsFlush struct {
 	writer		statsWriter
 }
 
-type FnStats struct {
-//	ObjID		bson.ObjectId	`bson:"_id,omitempty"`
-	Cookie		string		`bson:"cookie"`
-
+type FnStatValues struct {
 	Called		uint64		`bson:"called"`
 	Timeouts	uint64		`bson:"timeouts"`
 	Errors		uint64		`bson:"errors"`
@@ -42,10 +39,17 @@ type FnStats struct {
 	 * billing to change the tennant.
 	 */
 	RunCost		uint64		`bson:"runcost"`
+}
+
+type FnStats struct {
+//	ObjID		bson.ObjectId	`bson:"_id,omitempty"`
+	Cookie		string		`bson:"cookie"`
+	FnStatValues			`bson:",inline"`
 	Dropped		*time.Time	`bson:"dropped,omitempty"`
 	Till		*time.Time	`bson:"till,omitempty"`
 
 	statsFlush			`bson:"-"`
+	onDisk		*FnStatValues	`bson:"-"`
 }
 
 func (fs *FnStats)GBS() float64 {
@@ -243,6 +247,8 @@ func statsDrop(fn *FunctionDesc) error {
 func (st *FnStats)Init(fn *FunctionDesc) error {
 	err := dbFnStatsGet(fn.Cookie, st)
 	if err == nil {
+		st.onDisk = &FnStatValues{}
+		*st.onDisk = st.FnStatValues
 		st.Cookie = fn.Cookie
 		st.statsFlush.Init(st, fn.Cookie)
 	}
@@ -250,7 +256,22 @@ func (st *FnStats)Init(fn *FunctionDesc) error {
 }
 
 func (st *FnStats)Write() {
-	dbFnStatsUpdate(st)
+	var now FnStatValues = st.FnStatValues
+	delta := FnStatValues {
+		Called: now.Called - st.onDisk.Called,
+		Timeouts: now.Timeouts - st.onDisk.Timeouts,
+		Errors: now.Errors - st.onDisk.Errors,
+		RunTime: now.RunTime - st.onDisk.RunTime,
+		BytesIn: now.BytesIn - st.onDisk.BytesIn,
+		BytesOut: now.BytesOut - st.onDisk.BytesOut,
+		RunCost: now.RunCost - st.onDisk.RunCost,
+	}
+	err := dbFnStatsUpdate(st.Cookie, &delta, now.LastCall)
+	if err == nil {
+		st.onDisk = &now
+	} else {
+		glog.Errorf("Error upserting fn stats: %s", err.Error())
+	}
 }
 
 func (st *TenStats)Init(tenant string) error {
