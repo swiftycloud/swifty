@@ -426,9 +426,14 @@ func (fn *FunctionDesc)setSize(ctx context.Context, sz *swyapi.FunctionSize) err
 }
 
 func (fn *FunctionDesc)addMware(ctx context.Context, mw *MwareDesc) error {
-	err := dbFuncUpdate(bson.M{"_id": fn.ObjID}, bson.M{"$push": bson.M{"mware":mw.SwoId.Name}})
+	err := dbFuncUpdate(bson.M{"_id": fn.ObjID, "mware": bson.M{"$ne": mw.SwoId.Name}},
+				bson.M{"$push": bson.M{"mware":mw.SwoId.Name}})
 	if err != nil {
-		return err
+		if dbNF(err) {
+			return fmt.Errorf("Mware %s already there", mw.SwoId.Name)
+		} else {
+			return err
+		}
 	}
 
 	fn.Mware = append(fn.Mware, mw.SwoId.Name)
@@ -464,9 +469,14 @@ func (fn *FunctionDesc)delMware(ctx context.Context, mw *MwareDesc) error {
 }
 
 func (fn *FunctionDesc)addS3Bucket(ctx context.Context, b string) error {
-	err := dbFuncUpdate(bson.M{"_id": fn.ObjID}, bson.M{"$push": bson.M{"s3buckets":b}})
+	err := dbFuncUpdate(bson.M{"_id": fn.ObjID, "s3buckets": bson.M{"$ne": b}},
+				bson.M{"$push": bson.M{"s3buckets":b}})
 	if err != nil {
-		return err
+		if dbNF(err) {
+			return fmt.Errorf("Bucket already there")
+		} else {
+			return err
+		}
 	}
 
 	fn.S3Buckets = append(fn.S3Buckets, b)

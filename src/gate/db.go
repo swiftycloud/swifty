@@ -37,6 +37,10 @@ type DBLogRec struct {
 
 var dbSession *mgo.Session
 
+func dbNF(err error) bool {
+	return err == mgo.ErrNotFound
+}
+
 func dbTenantGetLimits(tenant string) (*swyapi.UserLimits, error) {
 	c := dbSession.DB(DBTenantDB).C(DBColLimits)
 	var v swyapi.UserLimits
