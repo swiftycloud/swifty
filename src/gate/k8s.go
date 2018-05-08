@@ -14,6 +14,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/pkg/fields"
 
+	"../common"
 	"path/filepath"
 	"context"
 	"strconv"
@@ -639,6 +640,51 @@ func swk8sGetBuildPods() (map[string]string, error) {
 	return rv, nil
 }
 
+func refreshDepsAndPods() error {
+	fns, err := dbFuncList()
+	if err != nil {
+		return errors.New("Error listing FNs")
+	}
+
+	depiface := swk8sClientSet.Extensions().Deployments(v1.NamespaceDefault)
+	podiface := swk8sClientSet.Pods(v1.NamespaceDefault)
+
+	for _, fn := range(fns) {
+		if fn.State != swy.DBFuncStateRdy {
+			continue
+		}
+
+		dep, err := depiface.Get(fn.DepName())
+		if err != nil {
+			glog.Errorf("Can't get dep %s: %s", fn.DepName(), err.Error())
+			return errors.New("Error getting dep")
+		}
+
+		glog.Debugf("Chk replicas for %s", fn.SwoId.Str())
+		if *dep.Spec.Replicas > 1 {
+			glog.Debugf("Found grown-up (%d) deployment %s", *dep.Spec.Replicas, dep.Name)
+			err = scalerInit(fn, uint32(*dep.Spec.Replicas))
+			if err != nil {
+				glog.Errorf("Can't reinit scaler: %s", err.Error())
+				return err
+			}
+		}
+
+		pods, err := podiface.List(v1.ListOptions{ LabelSelector: "swyrun=" + fn.Cookie[:32] })
+		if err != nil {
+			glog.Errorf("Error listing PODs: %s", err.Error())
+			return errors.New("Error listing PODs")
+		}
+
+		glog.Debugf("Chk PODs for %s", fn.SwoId.Str())
+		for _, pod := range pods.Items {
+			glog.Debugf("Found pod %s %s\n", pod.Name, pod.Status.PodIP)
+		}
+	}
+
+	return nil
+}
+
 func swk8sInit(conf *YAMLConf, config_path string) error {
 	config_path = filepath.Dir(config_path) + "/kubeconfig"
 	kubeconfig := flag.String("kubeconfig", config_path, "path to the kubeconfig file")
@@ -656,12 +702,6 @@ func swk8sInit(conf *YAMLConf, config_path string) error {
 		return err
 	}
 
-	err = scalerInit()
-	if err != nil {
-		glog.Errorf("Can't sart scaler: %s", err.Error())
-		return err
-	}
-
 	watchlist := cache.NewListWatchFromClient(swk8sClientSet.Core().RESTClient(),
 							"pods", v1.NamespaceDefault,
 							fields.Everything())
@@ -674,6 +714,12 @@ func swk8sInit(conf *YAMLConf, config_path string) error {
 						})
 	stop := make(chan struct{})
 	go controller.Run(stop)
+
+	err = refreshDepsAndPods()
+	if err != nil {
+		glog.Errorf("Can't sart scaler: %s", err.Error())
+		return err
+	}
 
 	return nil
 }

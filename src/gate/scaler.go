@@ -3,11 +3,8 @@ package main
 import (
 	"fmt"
 	"context"
-	"k8s.io/client-go/pkg/api/v1"
-	"errors"
 	"sync"
 	"time"
-	"../common"
 )
 
 func condWaitTmo(cond *sync.Cond, tmo time.Duration) {
@@ -96,51 +93,15 @@ func balancerFnDepGrow(ctx context.Context, fdm *FnMemData, goal uint32) {
 	fdm.lock.Unlock()
 }
 
-func scalerInit() error {
-	fns, err := dbFuncList()
+func scalerInit(fn *FunctionDesc, tgt uint32) error {
+	fdm, err := memdGetFn(fn)
 	if err != nil {
-		return errors.New("Error listing FNs")
+		return fmt.Errorf("Can't get fdmd for %s: %s", fn.SwoId.Str(), err.Error())
 	}
 
-	depiface := swk8sClientSet.Extensions().Deployments(v1.NamespaceDefault)
-	podiface := swk8sClientSet.Pods(v1.NamespaceDefault)
-
-	for _, fn := range(fns) {
-		if fn.State != swy.DBFuncStateRdy {
-			continue
-		}
-
-		dep, err := depiface.Get(fn.DepName())
-		if err != nil {
-			glog.Errorf("Can't get dep %s: %s", fn.DepName(), err.Error())
-			return errors.New("Error getting dep")
-		}
-
-		glog.Debugf("Chk replicas for %s", fn.SwoId.Str())
-		if *dep.Spec.Replicas > 1 {
-			glog.Debugf("Found grown-up (%d) deployment %s", *dep.Spec.Replicas, dep.Name)
-
-			fdm, err := memdGetFn(fn)
-			if err != nil {
-				return fmt.Errorf("Can't get fdmd for %s: %s", fn.SwoId.Str(), err.Error())
-			}
-
-			fdm.bd.goal = uint32(*dep.Spec.Replicas)
-			fdm.bd.wakeup = sync.NewCond(&fdm.lock)
-			go balancerFnScaler(fdm)
-		}
-
-		pods, err := podiface.List(v1.ListOptions{ LabelSelector: "swyrun=" + fn.Cookie[:32] })
-		if err != nil {
-			glog.Errorf("Error listing PODs: %s", err.Error())
-			return errors.New("Error listing PODs")
-		}
-
-		glog.Debugf("Chk PODs for %s", fn.SwoId.Str())
-		for _, pod := range pods.Items {
-			glog.Debugf("Found pod %s %s\n", pod.Name, pod.Status.PodIP)
-		}
-	}
+	fdm.bd.goal = tgt
+	fdm.bd.wakeup = sync.NewCond(&fdm.lock)
+	go balancerFnScaler(fdm)
 
 	return nil
 }
