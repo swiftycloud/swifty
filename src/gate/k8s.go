@@ -648,6 +648,11 @@ func refreshDepsAndPods() error {
 		return errors.New("Error listing FNs")
 	}
 
+	err = dbBalancerPodDelStuck()
+	if err != nil {
+		return fmt.Errorf("Can't drop stuck PODs: %s", err.Error)
+	}
+
 	ctx := context.Background()
 	depiface := swk8sClientSet.Extensions().Deployments(v1.NamespaceDefault)
 	podiface := swk8sClientSet.Pods(v1.NamespaceDefault)

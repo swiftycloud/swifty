@@ -440,6 +440,16 @@ func dbBalancerPodDel(pod *k8sPod) (error) {
 	return nil
 }
 
+func dbBalancerPodDelStuck() (error) {
+	c := dbSession.DB(DBStateDB).C(DBColBalancerRS)
+	_, err := c.RemoveAll(bson.M{ "fnid": bson.M{"$exists": false}})
+	if err == mgo.ErrNotFound {
+		err = nil
+	}
+
+	return err
+}
+
 func dbBalancerPodDelAll(fnid string) (error) {
 	c := dbSession.DB(DBStateDB).C(DBColBalancerRS)
 	_, err := c.RemoveAll(bson.M{ "fnid": fnid })
