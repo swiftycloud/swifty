@@ -784,12 +784,12 @@ func function_del(args []string, opts [16]string) {
 
 func function_on(args []string, opts [16]string) {
 	args[0] = resolve_fn(args[0])
-	make_faas_req1("PUT", "function/" + args[0] + "/state", http.StatusOK, "ready", nil)
+	make_faas_req1("PUT", "functions/" + args[0] + "/state", http.StatusOK, "ready", nil)
 }
 
 func function_off(args []string, opts [16]string) {
 	args[0] = resolve_fn(args[0])
-	make_faas_req1("PUT", "function/" + args[0] + "/state", http.StatusOK, "deactivated", nil)
+	make_faas_req1("PUT", "functions/" + args[0] + "/state", http.StatusOK, "deactivated", nil)
 }
 
 func event_list(args []string, opts [16]string) {
