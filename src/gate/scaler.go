@@ -103,6 +103,7 @@ func scalerInit() error {
 	}
 
 	depiface := swk8sClientSet.Extensions().Deployments(v1.NamespaceDefault)
+	podiface := swk8sClientSet.Pods(v1.NamespaceDefault)
 
 	for _, fn := range(fns) {
 		if fn.State != swy.DBFuncStateRdy {
@@ -115,25 +116,30 @@ func scalerInit() error {
 			return errors.New("Error getting dep")
 		}
 
-		glog.Debugf("Chk replicas for %s/%s", fn.SwoId.Str(), fn.DepName())
-		if *dep.Spec.Replicas <= 1 {
-			continue
+		glog.Debugf("Chk replicas for %s", fn.SwoId.Str())
+		if *dep.Spec.Replicas > 1 {
+			glog.Debugf("Found grown-up (%d) deployment %s", *dep.Spec.Replicas, dep.Name)
+
+			fdm, err := memdGetFn(fn)
+			if err != nil {
+				return fmt.Errorf("Can't get fdmd for %s: %s", fn.SwoId.Str(), err.Error())
+			}
+
+			fdm.bd.goal = uint32(*dep.Spec.Replicas)
+			fdm.bd.wakeup = sync.NewCond(&fdm.lock)
+			go balancerFnScaler(fdm)
 		}
 
-		id := makeSwoId(
-			dep.ObjectMeta.Labels["tenant"],
-			dep.ObjectMeta.Labels["project"],
-			dep.ObjectMeta.Labels["function"])
-		glog.Debugf("Found %s grown-up (%d) deployment for %s", dep.Name, *dep.Spec.Replicas, id.Str())
-
-		fdm, err := memdGetFn(fn)
+		pods, err := podiface.List(v1.ListOptions{ LabelSelector: "swyrun=" + fn.Cookie[:32] })
 		if err != nil {
-			return fmt.Errorf("Can't get fdmd for %s: %s", id.Str(), err.Error())
+			glog.Errorf("Error listing PODs: %s", err.Error())
+			return errors.New("Error listing PODs")
 		}
 
-		fdm.bd.goal = uint32(*dep.Spec.Replicas)
-		fdm.bd.wakeup = sync.NewCond(&fdm.lock)
-		go balancerFnScaler(fdm)
+		glog.Debugf("Chk PODs for %s", fn.SwoId.Str())
+		for _, pod := range pods.Items {
+			glog.Debugf("Found pod %s %s\n", pod.Name, pod.Status.PodIP)
+		}
 	}
 
 	return nil

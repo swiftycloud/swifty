@@ -633,7 +633,7 @@ func swk8sGetBuildPods() (map[string]string, error) {
 	for _, pod := range pods.Items {
 		build := pod.ObjectMeta.Labels["swybuild"]
 		rv[build] = pod.Status.PodIP
-		glog.Debugf("Found pod %s/%s\n", build, pod.Status.PodIP)
+		glog.Debugf("Found building POD %s/%s\n", build, pod.Status.PodIP)
 	}
 
 	return rv, nil
