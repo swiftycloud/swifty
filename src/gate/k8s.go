@@ -449,13 +449,11 @@ func waitPodPort(ctx context.Context, addr, port string) error {
 	return nil
 }
 
-func swk8sPodUp(ctx context.Context, pod *k8sPod) {
-	ctxlog(ctx).Debugf("POD %s (%s) up deploy %s", pod.UID, pod.WdogAddr, pod.DepName)
-
+func swk8sPodUp(ctx context.Context, pod *k8sPod) error {
 	err := BalancerPodUp(pod)
 	if err != nil {
 		ctxlog(ctx).Errorf("Can't prep pod %s/%s: %s", pod.DepName, pod.UID, err.Error())
-		return
+		return err
 	}
 
 	go func() {
@@ -476,6 +474,8 @@ func swk8sPodUp(ctx context.Context, pod *k8sPod) {
 
 		notifyPodUp(ctx, pod)
 	}()
+
+	return nil
 }
 
 func swk8sPodDown(ctx context.Context, pod *k8sPod) {
@@ -525,6 +525,8 @@ func podEventLoop() {
 	for {
 		evt := <-podEvents
 		if evt.up {
+			ctxlog(evt.ctx).Debugf("POD %s (%s) up deploy %s",
+					evt.pod.UID, evt.pod.WdogAddr, evt.pod.DepName)
 			swk8sPodUp(evt.ctx, evt.pod)
 		} else {
 			swk8sPodDown(evt.ctx, evt.pod)
@@ -646,12 +648,19 @@ func refreshDepsAndPods() error {
 		return errors.New("Error listing FNs")
 	}
 
+	ctx := context.Background()
 	depiface := swk8sClientSet.Extensions().Deployments(v1.NamespaceDefault)
 	podiface := swk8sClientSet.Pods(v1.NamespaceDefault)
 
 	for _, fn := range(fns) {
 		if fn.State != swy.DBFuncStateRdy {
 			continue
+		}
+
+		err := dbBalancerPodDelAll(fn.Cookie)
+		if err != nil {
+			glog.Errorf("Can't flush PODs info: %s", err.Error())
+			return err
 		}
 
 		dep, err := depiface.Get(fn.DepName())
@@ -679,6 +688,11 @@ func refreshDepsAndPods() error {
 		glog.Debugf("Chk PODs for %s", fn.SwoId.Str())
 		for _, pod := range pods.Items {
 			glog.Debugf("Found pod %s %s\n", pod.Name, pod.Status.PodIP)
+			err = swk8sPodUp(ctx, genBalancerPod(&pod))
+			if err != nil {
+				glog.Errorf("Can't refresh POD: %s", err.Error())
+				return err
+			}
 		}
 	}
 
