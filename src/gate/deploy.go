@@ -173,7 +173,7 @@ func (dep *DeployDesc)toInfo(details bool) (*swyapi.DeployInfo, *swyapi.GateErr)
 
 	ret.Id = dep.ObjID.Hex()
 	ret.Name = dep.SwoId.Name
-	ret.Name = dep.SwoId.Project
+	ret.Project = dep.SwoId.Project
 	ret.State = depStates[dep.State]
 	ret.Labels = dep.Labels
 	for _, item := range dep.Items {

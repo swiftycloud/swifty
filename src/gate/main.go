@@ -1496,7 +1496,7 @@ func handleAuths(ctx context.Context, w http.ResponseWriter, r *http.Request) *s
 					Type: "swage",
 					Swage: &swyapi.FunctionSwage { Template: "umjwt0", },
 				},
-				Mware: []string { "jwt_" + aa.Name, "mgo_" + aa.Name },
+				Mware: []string { aa.Name + "_jwt", aa.Name + "_mgo" },
 				Url: true,
 			}},
 		})
