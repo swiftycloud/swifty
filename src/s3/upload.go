@@ -174,7 +174,7 @@ func VerifyUploadUID(bucket *S3Bucket, oname, uid string) error {
 	return nil
 }
 
-func s3UploadRemoveLocked(bucket *S3Bucket, upload *S3Upload) (error) {
+func s3UploadRemoveLocked(bucket *S3Bucket, upload *S3Upload, data bool) (error) {
 	var objd []*S3ObjectData
 	var err error
 
@@ -183,18 +183,20 @@ func s3UploadRemoveLocked(bucket *S3Bucket, upload *S3Upload) (error) {
 		return err
 	}
 
-	err = dbS3FindAll(bson.M{"ref-id": upload.ObjID}, &objd)
-	if err != nil {
-		if err != mgo.ErrNotFound {
-			log.Errorf("s3: Can't find parts %s: %s",
-				infoLong(upload), err.Error())
-			return err
-		}
-	} else {
-		for _, od := range objd {
-			err = s3ObjectDataDelOne(bucket, od.OCookie, od)
-			if err != nil {
+	if data {
+		err = dbS3FindAll(bson.M{"ref-id": upload.ObjID}, &objd)
+		if err != nil {
+			if err != mgo.ErrNotFound {
+				log.Errorf("s3: Can't find parts %s: %s",
+					infoLong(upload), err.Error())
 				return err
+			}
+		} else {
+			for _, od := range objd {
+				err = s3ObjectDataDelOne(bucket, od.OCookie, od)
+				if err != nil {
+					return err
+				}
 			}
 		}
 	}
@@ -297,7 +299,7 @@ func s3UploadFini(iam *S3Iam, bucket *S3Bucket, uid string,
 		return nil, err
 	}
 
-	err = s3UploadRemoveLocked(bucket, &upload)
+	err = s3UploadRemoveLocked(bucket, &upload, true)
 	if err != nil {
 		// Don't fail here since object is already committed
 		log.Errorf("s3: Can't remove %s: %s",
@@ -422,7 +424,7 @@ func s3UploadAbort(bucket *S3Bucket, oname, uid string) error {
 		return err
 	}
 
-	err = s3UploadRemoveLocked(bucket, &upload)
+	err = s3UploadRemoveLocked(bucket, &upload, true)
 	if err != nil {
 		upload.dbUnlock()
 		return err
