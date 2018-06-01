@@ -116,7 +116,7 @@ func (bucket *S3Bucket)FindObject(oname string) (*S3Object, error) {
 }
 
 func s3ConvertObject(iam *S3Iam, bucket *S3Bucket, upload *S3Upload) (*S3Object, error) {
-	var objd *S3ObjectData
+	var objp *S3ObjectPart
 	var err error
 	var pipe *mgo.Pipe
 	var iter *mgo.Iter
@@ -125,14 +125,14 @@ func s3ConvertObject(iam *S3Iam, bucket *S3Bucket, upload *S3Upload) (*S3Object,
 	hasher := md5.New()
 
 	/* FIXME -- migrate data, not read and write back */
-	pipe = dbS3Pipe(objd,
+	pipe = dbS3Pipe(objp,
 		[]bson.M{{"$match": bson.M{"ref-id": upload.ObjID}},
 			{"$sort": bson.M{"part": 1} }})
 	iter = pipe.Iter()
-	for iter.Next(&objd) {
-		if objd.State != S3StateActive { continue }
-		hasher.Write(objd.Data)
-		size += objd.Size
+	for iter.Next(&objp) {
+		if objp.State != S3StateActive { continue }
+		hasher.Write(objp.Data)
+		size += objp.Size
 	}
 	if err = iter.Close(); err != nil {
 		log.Errorf("s3: Can't close iter on %s: %s",
@@ -187,7 +187,7 @@ out_remove:
 }
 func s3AddObject(iam *S3Iam, bucket *S3Bucket, oname string,
 		acl string, data []byte) (*S3Object, error) {
-	var objd *S3ObjectData
+	var objp *S3ObjectPart
 	var err error
 
 	object := &S3Object {
@@ -217,14 +217,14 @@ func s3AddObject(iam *S3Iam, bucket *S3Bucket, oname string,
 		goto out_remove
 	}
 
-	objd, err = s3ObjectDataAdd(iam, object.ObjID, bucket.BCookie,
+	objp, err = s3ObjectPartAdd(iam, object.ObjID, bucket.BCookie,
 					object.OCookie, 0, data)
 	if err != nil {
 		goto out_acc
 	}
 
 	err = dbS3SetOnState(object, S3StateActive, nil,
-		bson.M{ "state": S3StateActive, "etag": objd.ETag })
+		bson.M{ "state": S3StateActive, "etag": objp.ETag })
 	if err != nil {
 		goto out
 	}
@@ -244,7 +244,7 @@ func s3AddObject(iam *S3Iam, bucket *S3Bucket, oname string,
 	return object, nil
 
 out:
-	s3ObjectDataDelOne(bucket, object.OCookie, objd)
+	s3ObjectPartDelOne(bucket, object.OCookie, objp)
 out_acc:
 	bucket.dbDelObj(object.Size, -1)
 out_remove:
@@ -254,7 +254,7 @@ out_remove:
 
 func s3DeleteObject(iam *S3Iam, bucket *S3Bucket, oname string) error {
 	var object *S3Object
-	var objd []*S3ObjectData
+	var objp []*S3ObjectPart
 	var err error
 
 	object, err = bucket.FindObject(oname)
@@ -275,14 +275,14 @@ func s3DeleteObject(iam *S3Iam, bucket *S3Bucket, oname string) error {
 		return err
 	}
 
-	objd, err = s3ObjectDataFind(object.ObjID)
+	objp, err = s3ObjectPartFind(object.ObjID)
 	if err != nil {
 		log.Errorf("s3: Can't find object data %s: %s",
 			infoLong(object), err.Error())
 		return err
 	}
 
-	err = s3ObjectDataDel(bucket, object.OCookie, objd)
+	err = s3ObjectPartDel(bucket, object.OCookie, objp)
 	if err != nil {
 		return err
 	}
@@ -306,11 +306,11 @@ func s3DeleteObject(iam *S3Iam, bucket *S3Bucket, oname string) error {
 }
 
 func s3ReadObjectData(bucket *S3Bucket, object *S3Object) ([]byte, error) {
-	var objd []*S3ObjectData
+	var objp []*S3ObjectPart
 	var res []byte
 	var err error
 
-	objd, err = s3ObjectDataFindFull(object.ObjID)
+	objp, err = s3ObjectPartFindFull(object.ObjID)
 	if err != nil {
 		if err != mgo.ErrNotFound {
 			log.Errorf("s3: Can't find object data %s: %s",
@@ -320,7 +320,7 @@ func s3ReadObjectData(bucket *S3Bucket, object *S3Object) ([]byte, error) {
 		return nil, err
 	}
 
-	res, err = s3ObjectDataGet(bucket, object.OCookie, objd)
+	res, err = s3ObjectPartGet(bucket, object.OCookie, objp)
 	if err != nil {
 		return nil, err
 	}

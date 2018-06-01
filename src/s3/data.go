@@ -8,7 +8,7 @@ import (
 	"fmt"
 )
 
-type S3ObjectData struct {
+type S3ObjectPart struct {
 	ObjID				bson.ObjectId	`bson:"_id,omitempty"`
 	IamObjID			bson.ObjectId	`bson:"iam-id,omitempty"`
 
@@ -26,12 +26,12 @@ type S3ObjectData struct {
 }
 
 func s3RepairObjectData() error {
-	var objds []S3ObjectData
+	var objps []S3ObjectPart
 	var err error
 
 	log.Debugf("s3: Running object data consistency test")
 
-	err = dbS3FindAllInactive(&objds)
+	err = dbS3FindAllInactive(&objps)
 	if err != nil {
 		if err == mgo.ErrNotFound {
 			return nil
@@ -40,19 +40,19 @@ func s3RepairObjectData() error {
 		return err
 	}
 
-	for _, objd := range objds {
+	for _, objp := range objps {
 		var object S3Object
 		var bucket S3Bucket
 
-		log.Debugf("s3: Detected stale object data %s", infoLong(&objd))
+		log.Debugf("s3: Detected stale object data %s", infoLong(&objp))
 
-		query_ref := bson.M{ "_id": objd.RefID }
+		query_ref := bson.M{ "_id": objp.RefID }
 
 		err = dbS3FindOne(query_ref, &object)
 		if err != nil {
 			if err != mgo.ErrNotFound {
 				log.Errorf("s3: Can't find object on data %s: %s",
-					infoLong(&objd), err.Error())
+					infoLong(&objp), err.Error())
 				return err
 			}
 		} else {
@@ -78,29 +78,29 @@ func s3RepairObjectData() error {
 			if err = dbS3Remove(&object); err != nil {
 				if err != mgo.ErrNotFound {
 					log.Errorf("s3: Can't remove object on data %s: %s",
-						infoLong(&objd), err.Error())
+						infoLong(&objp), err.Error())
 					return err
 				}
 			}
-			log.Debugf("s3: Removed object on data %s: %s", infoLong(&objd), err.Error())
+			log.Debugf("s3: Removed object on data %s: %s", infoLong(&objp), err.Error())
 
 		}
 
-		if objd.Data == nil {
-			err = radosDeleteObject(objd.BCookie, objd.OCookie)
+		if objp.Data == nil {
+			err = radosDeleteObject(objp.BCookie, objp.OCookie)
 			if err != nil {
 				log.Errorf("s3: %s/%s backend object data may stale",
-					objd.BCookie, objd.OCookie)
+					objp.BCookie, objp.OCookie)
 			}
 		}
 
-		err = dbS3Remove(&objd)
+		err = dbS3Remove(&objp)
 		if err != nil {
-			log.Debugf("s3: Can't remove object data %s", infoLong(&objd))
+			log.Debugf("s3: Can't remove object data %s", infoLong(&objp))
 			return err
 		}
 
-		log.Debugf("s3: Removed stale object data %s", infoLong(&objd))
+		log.Debugf("s3: Removed stale object data %s", infoLong(&objp))
 	}
 
 	log.Debugf("s3: Object data consistency passed")
@@ -111,11 +111,11 @@ func s3DeactivateObjectData(refID bson.ObjectId) error {
 	update := bson.M{ "$set": bson.M{ "state": S3StateInactive } }
 	query  := bson.M{ "ref-id": refID }
 
-	return dbS3Update(query, update, false, &S3ObjectData{})
+	return dbS3Update(query, update, false, &S3ObjectPart{})
 }
 
-func s3ObjectDataFind(refID bson.ObjectId) ([]*S3ObjectData, error) {
-	var res []*S3ObjectData
+func s3ObjectPartFind(refID bson.ObjectId) ([]*S3ObjectPart, error) {
+	var res []*S3ObjectPart
 
 	err := dbS3FindAllFields(bson.M{"ref-id": refID, "state": S3StateActive}, bson.M{"data": 0}, &res)
 	if err != nil {
@@ -125,8 +125,8 @@ func s3ObjectDataFind(refID bson.ObjectId) ([]*S3ObjectData, error) {
 	return res, nil
 }
 
-func s3ObjectDataFindFull(refID bson.ObjectId) ([]*S3ObjectData, error) {
-	var res []*S3ObjectData
+func s3ObjectPartFindFull(refID bson.ObjectId) ([]*S3ObjectPart, error) {
+	var res []*S3ObjectPart
 
 	err := dbS3FindAllSorted(bson.M{"ref-id": refID, "state": S3StateActive}, "part",  &res)
 	if err != nil {
@@ -136,11 +136,11 @@ func s3ObjectDataFindFull(refID bson.ObjectId) ([]*S3ObjectData, error) {
 	return res, nil
 }
 
-func s3ObjectDataAdd(iam *S3Iam, refid bson.ObjectId, bucket_bid, object_bid string, part int, data []byte) (*S3ObjectData, error) {
-	var objd *S3ObjectData
+func s3ObjectPartAdd(iam *S3Iam, refid bson.ObjectId, bucket_bid, object_bid string, part int, data []byte) (*S3ObjectPart, error) {
+	var objp *S3ObjectPart
 	var err error
 
-	objd = &S3ObjectData {
+	objp = &S3ObjectPart {
 		ObjID:		bson.NewObjectId(),
 		IamObjID:	iam.ObjID,
 		State:		S3StateNone,
@@ -154,19 +154,19 @@ func s3ObjectDataAdd(iam *S3Iam, refid bson.ObjectId, bucket_bid, object_bid str
 		CreationTime:	time.Now().Format(time.RFC3339),
 	}
 
-	if err = dbS3Insert(objd); err != nil {
+	if err = dbS3Insert(objp); err != nil {
 		goto out
 	}
 
-	if radosDisabled || objd.Size <= S3StorageSizePerObj {
-		if objd.Size > S3StorageSizePerObj {
-			log.Errorf("s3: Too big %s", infoLong(objd))
+	if radosDisabled || objp.Size <= S3StorageSizePerObj {
+		if objp.Size > S3StorageSizePerObj {
+			log.Errorf("s3: Too big %s", infoLong(objp))
 			err = fmt.Errorf("s3: Object is too big")
 			goto out
 		}
 
 		update := bson.M{ "$set": bson.M{ "data": data }}
-		err = dbS3Update(nil, update, true, objd)
+		err = dbS3Update(nil, update, true, objp)
 		if err != nil {
 			goto out
 		}
@@ -177,24 +177,24 @@ func s3ObjectDataAdd(iam *S3Iam, refid bson.ObjectId, bucket_bid, object_bid str
 		}
 	}
 
-	if err = dbS3SetState(objd, S3StateActive, nil); err != nil {
-		if objd.Data == nil {
+	if err = dbS3SetState(objp, S3StateActive, nil); err != nil {
+		if objp.Data == nil {
 			radosDeleteObject(bucket_bid, object_bid)
 		}
 		goto out
 	}
 
-	log.Debugf("s3: Added %s", infoLong(objd))
-	return objd, nil
+	log.Debugf("s3: Added %s", infoLong(objp))
+	return objp, nil
 
 out:
-	dbS3Remove(objd)
+	dbS3Remove(objp)
 	return nil, err
 }
 
-func s3ObjectDataDel(bucket *S3Bucket, ocookie string, objd []*S3ObjectData) (error) {
-	for _, od := range objd {
-		err := s3ObjectDataDelOne(bucket, ocookie, od)
+func s3ObjectPartDel(bucket *S3Bucket, ocookie string, objp []*S3ObjectPart) (error) {
+	for _, od := range objp {
+		err := s3ObjectPartDelOne(bucket, ocookie, od)
 		if err != nil {
 			return err
 		}
@@ -203,35 +203,35 @@ func s3ObjectDataDel(bucket *S3Bucket, ocookie string, objd []*S3ObjectData) (er
 	return nil
 }
 
-func s3ObjectDataDelOne(bucket *S3Bucket, ocookie string, objd *S3ObjectData) (error) {
+func s3ObjectPartDelOne(bucket *S3Bucket, ocookie string, objp *S3ObjectPart) (error) {
 	var err error
 
-	err = dbS3SetState(objd, S3StateInactive, nil)
+	err = dbS3SetState(objp, S3StateInactive, nil)
 	if err != nil {
 		return err
 	}
 
-	if objd.Data == nil {
+	if objp.Data == nil {
 		err = radosDeleteObject(bucket.BCookie, ocookie)
 		if err != nil {
 			return err
 		}
 	}
 
-	err = dbS3RemoveOnState(objd, S3StateInactive, nil)
+	err = dbS3RemoveOnState(objp, S3StateInactive, nil)
 	if err != nil {
 		return err
 	}
 
-	log.Debugf("s3: Deleted %s", infoLong(objd))
+	log.Debugf("s3: Deleted %s", infoLong(objp))
 	return nil
 }
 
-func s3ObjectDataGet(bucket *S3Bucket, ocookie string, objd []*S3ObjectData) ([]byte, error) {
+func s3ObjectPartGet(bucket *S3Bucket, ocookie string, objp []*S3ObjectPart) ([]byte, error) {
 	var res []byte
 
-	for _, od := range objd {
-		x, err := s3ObjectDataGetOne(bucket, ocookie, od)
+	for _, od := range objp {
+		x, err := s3ObjectPartGetOne(bucket, ocookie, od)
 		if err != nil {
 			return nil, err
 		}
@@ -242,12 +242,12 @@ func s3ObjectDataGet(bucket *S3Bucket, ocookie string, objd []*S3ObjectData) ([]
 	return res, nil
 }
 
-func s3ObjectDataGetOne(bucket *S3Bucket, ocookie string, objd *S3ObjectData) ([]byte, error) {
+func s3ObjectPartGetOne(bucket *S3Bucket, ocookie string, objp *S3ObjectPart) ([]byte, error) {
 	var res []byte
 	var err error
 
-	if objd.Data == nil {
-		res, err = radosReadObject(bucket.BCookie, ocookie, uint64(objd.Size), 0)
+	if objp.Data == nil {
+		res, err = radosReadObject(bucket.BCookie, ocookie, uint64(objp.Size), 0)
 		if err != nil {
 			return nil, err
 		}
@@ -255,5 +255,5 @@ func s3ObjectDataGetOne(bucket *S3Bucket, ocookie string, objd *S3ObjectData) ([
 		return res, nil
 	}
 
-	return objd.Data, nil
+	return objp.Data, nil
 }

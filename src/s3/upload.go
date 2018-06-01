@@ -43,7 +43,7 @@ func s3RepairUploadsInactive() error {
 
 		update := bson.M{ "$set": bson.M{ "state": S3StateInactive } }
 		query := bson.M{ "ref-id": upload.ObjID }
-		if err = dbS3Update(query, update, false, &S3ObjectData{}); err != nil {
+		if err = dbS3Update(query, update, false, &S3ObjectPart{}); err != nil {
 			if err != mgo.ErrNotFound {
 				log.Errorf("s3: Can't deactivate parts on upload %s: %s",
 					infoLong(&upload), err.Error())
@@ -64,12 +64,12 @@ func s3RepairUploadsInactive() error {
 }
 
 func s3RepairPartsInactive() error {
-	var objd []*S3ObjectData
+	var objp []*S3ObjectPart
 	var err error
 
 	log.Debugf("s3: Processing inactive datas")
 
-	if err = dbS3FindAllInactive(&objd); err != nil {
+	if err = dbS3FindAllInactive(&objp); err != nil {
 		log.Debugf("Found zero inactives: %s", err.Error())
 		if err == mgo.ErrNotFound {
 			return nil
@@ -78,9 +78,9 @@ func s3RepairPartsInactive() error {
 		return err
 	}
 
-	log.Debugf("Found %d inactives", len(objd))
+	log.Debugf("Found %d inactives", len(objp))
 
-	for _, od := range objd {
+	for _, od := range objp {
 		log.Debugf("s3: Detected stale part %s", infoLong(&od))
 
 		if err = s3DeactivateObjectData(od.ObjID); err != nil {
@@ -175,7 +175,7 @@ func VerifyUploadUID(bucket *S3Bucket, oname, uid string) error {
 }
 
 func s3UploadRemoveLocked(bucket *S3Bucket, upload *S3Upload, data bool) (error) {
-	var objd []*S3ObjectData
+	var objp []*S3ObjectPart
 	var err error
 
 	err = dbS3SetState(upload, S3StateInactive, nil)
@@ -184,7 +184,7 @@ func s3UploadRemoveLocked(bucket *S3Bucket, upload *S3Upload, data bool) (error)
 	}
 
 	if data {
-		err = dbS3FindAll(bson.M{"ref-id": upload.ObjID}, &objd)
+		err = dbS3FindAll(bson.M{"ref-id": upload.ObjID}, &objp)
 		if err != nil {
 			if err != mgo.ErrNotFound {
 				log.Errorf("s3: Can't find parts %s: %s",
@@ -192,8 +192,8 @@ func s3UploadRemoveLocked(bucket *S3Bucket, upload *S3Upload, data bool) (error)
 				return err
 			}
 		} else {
-			for _, od := range objd {
-				err = s3ObjectDataDelOne(bucket, od.OCookie, od)
+			for _, od := range objp {
+				err = s3ObjectPartDelOne(bucket, od.OCookie, od)
 				if err != nil {
 					return err
 				}
@@ -238,7 +238,7 @@ func s3UploadInit(iam *S3Iam, bucket *S3Bucket, oname, acl string) (*S3Upload, e
 
 func s3UploadPart(iam *S3Iam, bucket *S3Bucket, oname,
 			uid string, partno int, data []byte) (string, error) {
-	var objd *S3ObjectData
+	var objp *S3ObjectPart
 	var upload S3Upload
 	var err error
 
@@ -258,19 +258,19 @@ func s3UploadPart(iam *S3Iam, bucket *S3Bucket, oname,
 		return "", err
 	}
 
-	objd, err = s3ObjectDataAdd(iam, upload.ObjID, bucket.BCookie, upload.UCookie(oname, partno), partno, data)
+	objp, err = s3ObjectPartAdd(iam, upload.ObjID, bucket.BCookie, upload.UCookie(oname, partno), partno, data)
 	if err != nil {
 		upload.dbRefDec()
-		log.Errorf("s3: Can't store data %s: %s", infoLong(objd), err.Error())
+		log.Errorf("s3: Can't store data %s: %s", infoLong(objp), err.Error())
 		return "", err
 	}
 
-	ioSize.Observe(float64(objd.Size) / KiB)
+	ioSize.Observe(float64(objp.Size) / KiB)
 
 	upload.dbRefDec()
 
-	log.Debugf("s3: Inserted %s", infoLong(objd))
-	return objd.ETag, nil
+	log.Debugf("s3: Inserted %s", infoLong(objp))
+	return objp.ETag, nil
 }
 
 func s3UploadFini(iam *S3Iam, bucket *S3Bucket, uid string,
@@ -356,7 +356,7 @@ func s3Uploads(iam *S3Iam, bname string) (*swys3api.S3MpuList,  *S3Error) {
 
 func s3UploadList(bucket *S3Bucket, oname, uid string) (*swys3api.S3MpuPartList, error) {
 	var res swys3api.S3MpuPartList
-	var objd []*S3ObjectData
+	var objp []*S3ObjectPart
 	var upload S3Upload
 	var err error
 
@@ -380,7 +380,7 @@ func s3UploadList(bucket *S3Bucket, oname, uid string) (*swys3api.S3MpuPartList,
 	res.IsTruncated		= false
 
 	err = dbS3FindAll(bson.M{"ref-id": upload.ObjID,
-				"state": S3StateActive}, &objd)
+				"state": S3StateActive}, &objp)
 	if err != nil {
 		if err == mgo.ErrNotFound {
 			goto out
@@ -389,7 +389,7 @@ func s3UploadList(bucket *S3Bucket, oname, uid string) (*swys3api.S3MpuPartList,
 			infoLong(&upload), err.Error())
 		return nil, err
 	} else {
-		for _, od := range objd {
+		for _, od := range objp {
 			res.Part = append(res.Part,
 				swys3api.S3MpuPart{
 					PartNumber:	int(od.Part),
