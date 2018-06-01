@@ -257,3 +257,36 @@ func s3ObjectPartGetOne(bucket *S3Bucket, ocookie string, objp *S3ObjectPart) ([
 
 	return objp.Data, nil
 }
+
+func s3ObjectPartsResum(upload *S3Upload) (int64, string, error) {
+	var objp *S3ObjectPart
+	var pipe *mgo.Pipe
+	var iter *mgo.Iter
+	var size int64
+
+	hasher := md5.New()
+
+	pipe = dbS3Pipe(objp,
+		[]bson.M{{"$match": bson.M{"ref-id": upload.ObjID}},
+			{"$sort": bson.M{"part": 1} }})
+	iter = pipe.Iter()
+	for iter.Next(&objp) {
+		if objp.State != S3StateActive {
+			continue
+		}
+		if objp.Data == nil {
+			/* XXX Too bad :( */
+			return 0, "", fmt.Errorf("Can't finish upload")
+		}
+
+		hasher.Write(objp.Data)
+		size += objp.Size
+	}
+	if err := iter.Close(); err != nil {
+		log.Errorf("s3: Can't close iter on %s: %s",
+			infoLong(&upload), err.Error())
+		return 0, "", err
+	}
+
+	return size, fmt.Sprintf("%x", hasher.Sum(nil)), nil
+}

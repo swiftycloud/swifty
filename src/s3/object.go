@@ -4,8 +4,6 @@ import (
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 	"time"
-	"fmt"
-	"crypto/md5"
 
 	"../apis/apps/s3"
 )
@@ -116,28 +114,10 @@ func (bucket *S3Bucket)FindObject(oname string) (*S3Object, error) {
 }
 
 func s3ConvertObject(iam *S3Iam, bucket *S3Bucket, upload *S3Upload) (*S3Object, error) {
-	var objp *S3ObjectPart
 	var err error
-	var pipe *mgo.Pipe
-	var iter *mgo.Iter
-	var size int64
 
-	hasher := md5.New()
-
-	/* FIXME -- migrate data, not read and write back */
-	pipe = dbS3Pipe(objp,
-		[]bson.M{{"$match": bson.M{"ref-id": upload.ObjID}},
-			{"$sort": bson.M{"part": 1} }})
-	iter = pipe.Iter()
-	for iter.Next(&objp) {
-		if objp.State != S3StateActive { continue }
-		hasher.Write(objp.Data)
-		size += objp.Size
-	}
-	if err = iter.Close(); err != nil {
-		log.Errorf("s3: Can't close iter on %s: %s",
-			infoLong(&upload), err.Error())
-		upload.dbUnlock()
+	size, etag, err := s3ObjectPartsResum(upload)
+	if err != nil {
 		return nil, err
 	}
 
@@ -157,7 +137,7 @@ func s3ConvertObject(iam *S3Iam, bucket *S3Bucket, upload *S3Upload) (*S3Object,
 
 		Version:	1,
 		Size:		size,
-		ETag:		fmt.Sprintf("%x", hasher.Sum(nil)),
+		ETag:		etag,
 		BucketObjID:	bucket.ObjID,
 		OCookie:	bucket.OCookie(upload.Key, 1),
 	}
