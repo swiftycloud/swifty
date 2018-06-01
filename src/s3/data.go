@@ -137,6 +137,17 @@ func s3DeactivateObjectData(refID bson.ObjectId) error {
 func s3ObjectDataFind(refID bson.ObjectId) (*S3ObjectData, error) {
 	var res S3ObjectData
 
+	err := dbS3FindOneFields(bson.M{"ref-id": refID, "state": S3StateActive}, bson.M{"data": 0}, &res)
+	if err != nil {
+		return nil, err
+	}
+
+	return &res, nil
+}
+
+func s3ObjectDataFindFull(refID bson.ObjectId) (*S3ObjectData, error) {
+	var res S3ObjectData
+
 	err := dbS3FindOne(bson.M{"ref-id": refID, "state": S3StateActive}, &res)
 	if err != nil {
 		return nil, err

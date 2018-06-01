@@ -239,7 +239,7 @@ func s3ReadObjectData(bucket *S3Bucket, object *S3Object) ([]byte, error) {
 	var res []byte
 	var err error
 
-	objd, err = s3ObjectDataFind(object.ObjID)
+	objd, err = s3ObjectDataFindFull(object.ObjID)
 	if err != nil {
 		if err != mgo.ErrNotFound {
 			log.Errorf("s3: Can't find object data %s: %s",
