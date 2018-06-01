@@ -36,11 +36,12 @@ type S3ObjectPorps struct {
 type S3Object struct {
 	ObjID				bson.ObjectId	`bson:"_id,omitempty"`
 	IamObjID			bson.ObjectId	`bson:"iam-id,omitempty"`
+	OCookie				string		`bson:"ocookie"`
+
 	MTime				int64		`bson:"mtime,omitempty"`
 	State				uint32		`bson:"state"`
 
 	BucketObjID			bson.ObjectId	`bson:"bucket-id,omitempty"`
-	BackendID			string		`bson:"bid"`
 	Version				int		`bson:"version"`
 	Size				int64		`bson:"size"`
 	ETag				string		`bson:"etag"`
@@ -103,7 +104,7 @@ func s3RepairObject() error {
 func (bucket *S3Bucket)FindObject(oname string) (*S3Object, error) {
 	var res S3Object
 
-	query := bson.M{ "bid": bucket.ObjectBID(oname, 1), "state": S3StateActive }
+	query := bson.M{ "ocookie": bucket.OCookie(oname, 1), "state": S3StateActive }
 	err := dbS3FindOne(query, &res)
 	if err != nil {
 		return nil, err
@@ -132,7 +133,7 @@ func s3AddObject(iam *S3Iam, bucket *S3Bucket, oname string,
 		Version:	1,
 		Size:		size,
 		BucketObjID:	bucket.ObjID,
-		BackendID:	bucket.ObjectBID(oname, 1),
+		OCookie:	bucket.OCookie(oname, 1),
 	}
 
 	if err = dbS3Insert(object); err != nil {
@@ -146,7 +147,7 @@ func s3AddObject(iam *S3Iam, bucket *S3Bucket, oname string,
 	}
 
 	objd, etag, err = s3ObjectDataAdd(iam, object.ObjID, bucket.BCookie,
-					object.BackendID, data)
+					object.OCookie, data)
 	if err != nil {
 		goto out_acc
 	}

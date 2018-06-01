@@ -75,7 +75,7 @@ func (bucket *S3Bucket)UploadUID(oname string) string {
 }
 
 // Object key in backend and index in DB for lookup
-func (bucket *S3Bucket)ObjectBID(oname string, version int) string {
+func (bucket *S3Bucket)OCookie(oname string, version int) string {
 	if version != 1 {
 		log.Errorf("@verioning is not yet supported")
 		version = 1
