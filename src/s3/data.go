@@ -21,7 +21,7 @@ type S3ObjectData struct {
 	CreationTime			string		`bson:"creation-time,omitempty"`
 	Size				int64		`bson:"size"`
 	Part				uint		`bson:"part"`
-	ETag				[md5.Size]byte	`bson:"etag"`
+	ETag				string		`bson:"etag"`
 	Data				[]byte		`bson:"data,omitempty"`
 }
 
@@ -150,7 +150,7 @@ func s3ObjectDataAdd(iam *S3Iam, refid bson.ObjectId, bucket_bid, object_bid str
 		OCookie:	object_bid,
 		Size:		int64(len(data)),
 		Part:		uint(part),
-		ETag:		md5.Sum(data),
+		ETag:		fmt.Sprintf("%x", md5.Sum(data)),
 		CreationTime:	time.Now().Format(time.RFC3339),
 	}
 
