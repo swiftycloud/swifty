@@ -274,12 +274,8 @@ func s3UploadPart(iam *S3Iam, bucket *S3Bucket, oname,
 func s3UploadFini(iam *S3Iam, bucket *S3Bucket, uid string,
 			compete *swys3api.S3MpuFiniParts) (*swys3api.S3MpuFini, error) {
 	var res swys3api.S3MpuFini
-	var objd *S3ObjectData
 	var object *S3Object
 	var upload S3Upload
-	var pipe *mgo.Pipe
-	var iter *mgo.Iter
-	var data []byte
 	var err error
 
 	query := bson.M{"uid": uid, "state": S3StateActive}
@@ -293,23 +289,7 @@ func s3UploadFini(iam *S3Iam, bucket *S3Bucket, uid string,
 		return nil, err
 	}
 
-	/* FIXME -- migrate data, not read and write back */
-	pipe = dbS3Pipe(objd,
-		[]bson.M{{"$match": bson.M{"ref-id": upload.ObjID}},
-			{"$sort": bson.M{"part": 1} }})
-	iter = pipe.Iter()
-	for iter.Next(&objd) {
-		if objd.State != S3StateActive { continue }
-		data = append(data, objd.Data ...)
-	}
-	if err = iter.Close(); err != nil {
-		log.Errorf("s3: Can't close iter on %s: %s",
-			infoLong(&upload), err.Error())
-		upload.dbUnlock()
-		return nil, err
-	}
-
-	object, err = s3AddObject(iam, bucket, upload.Key, upload.Acl, data)
+	object, err = s3ConvertObject(iam, bucket, &upload)
 	if err != nil {
 		log.Errorf("s3: Can't insert object on %s: %s",
 			infoLong(&upload), err.Error())

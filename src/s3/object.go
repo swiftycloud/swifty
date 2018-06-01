@@ -113,6 +113,90 @@ func (bucket *S3Bucket)FindObject(oname string) (*S3Object, error) {
 	return &res,nil
 }
 
+func s3ConvertObject(iam *S3Iam, bucket *S3Bucket, upload *S3Upload) (*S3Object, error) {
+	var objd *S3ObjectData
+	var err error
+	var pipe *mgo.Pipe
+	var iter *mgo.Iter
+	var data []byte
+
+	/* FIXME -- migrate data, not read and write back */
+	pipe = dbS3Pipe(objd,
+		[]bson.M{{"$match": bson.M{"ref-id": upload.ObjID}},
+			{"$sort": bson.M{"part": 1} }})
+	iter = pipe.Iter()
+	for iter.Next(&objd) {
+		if objd.State != S3StateActive { continue }
+		data = append(data, objd.Data ...)
+	}
+	if err = iter.Close(); err != nil {
+		log.Errorf("s3: Can't close iter on %s: %s",
+			infoLong(&upload), err.Error())
+		upload.dbUnlock()
+		return nil, err
+	}
+
+	object := &S3Object {
+		ObjID:		bson.NewObjectId(),
+		IamObjID:	iam.ObjID,
+		State:		S3StateNone,
+
+		S3ObjectPorps: S3ObjectPorps {
+			Key:		upload.Key,
+			Acl:		upload.Acl,
+			CreationTime:	time.Now().Format(time.RFC3339),
+		},
+
+		Version:	1,
+		Size:		int64(len(data)),
+		BucketObjID:	bucket.ObjID,
+		OCookie:	bucket.OCookie(upload.Key, 1),
+	}
+
+	if err = dbS3Insert(object); err != nil {
+		return nil, err
+	}
+	log.Debugf("s3: Inserted %s", infoLong(object))
+
+	err = bucket.dbAddObj(object.Size, 1)
+	if err != nil {
+		goto out_remove
+	}
+
+	objd, err = s3ObjectDataAdd(iam, object.ObjID, bucket.BCookie,
+					object.OCookie, 0, data)
+	if err != nil {
+		goto out_acc
+	}
+
+	err = dbS3SetOnState(object, S3StateActive, nil,
+		bson.M{ "state": S3StateActive, "etag": objd.ETag })
+	if err != nil {
+		goto out
+	}
+
+	bucket.dbCmtObj(object.Size, -1)
+	if err != nil {
+		goto out
+	}
+
+	ioSize.Observe(float64(object.Size) / KiB)
+
+	if bucket.BasicNotify != nil && bucket.BasicNotify.Put > 0 {
+		s3Notify(iam, bucket, object, "put")
+	}
+
+	log.Debugf("s3: Added %s", infoLong(object))
+	return object, nil
+
+out:
+	s3ObjectDataDelOne(bucket, object.OCookie, objd)
+out_acc:
+	bucket.dbDelObj(object.Size, -1)
+out_remove:
+	dbS3Remove(object)
+	return nil, err
+}
 func s3AddObject(iam *S3Iam, bucket *S3Bucket, oname string,
 		acl string, data []byte) (*S3Object, error) {
 	var objd *S3ObjectData
