@@ -188,7 +188,7 @@ func VerifyUploadUID(bucket *S3Bucket, oname, uid string) error {
 	return nil
 }
 
-func s3UploadRemoveLocked(upload *S3Upload) (error) {
+func s3UploadRemoveLocked(bucket *S3Bucket, upload *S3Upload) (error) {
 	var parts []S3UploadPart
 	var objd *S3ObjectData
 	var err error
@@ -215,7 +215,7 @@ func s3UploadRemoveLocked(upload *S3Upload) (error) {
 					return err
 				}
 			}
-			err = s3ObjectDataDel(objd)
+			err = s3ObjectDataDel(bucket, objd)
 			if err != nil {
 				return err
 			}
@@ -316,14 +316,14 @@ func s3UploadPart(iam *S3Iam, bucket *S3Bucket, oname,
 
 	if err = dbS3Insert(part); err != nil {
 		upload.dbRefDec()
-		s3ObjectDataDel(objd)
+		s3ObjectDataDel(bucket, objd)
 		log.Errorf("s3: Can't insert %s: %s", infoLong(part), err.Error())
 		return "", err
 	}
 
 	if err = dbS3SetState(part, S3StateActive, nil); err != nil {
 		upload.dbRefDec()
-		s3ObjectDataDel(objd)
+		s3ObjectDataDel(bucket, objd)
 		log.Errorf("s3: Can't activate %s: %s", infoLong(part), err.Error())
 		return "", err
 	}
@@ -384,7 +384,7 @@ func s3UploadFini(iam *S3Iam, bucket *S3Bucket, uid string,
 		return nil, err
 	}
 
-	err = s3UploadRemoveLocked(&upload)
+	err = s3UploadRemoveLocked(bucket, &upload)
 	if err != nil {
 		// Don't fail here since object is already committed
 		log.Errorf("s3: Can't remove %s: %s",
@@ -509,7 +509,7 @@ func s3UploadAbort(bucket *S3Bucket, oname, uid string) error {
 		return err
 	}
 
-	err = s3UploadRemoveLocked(&upload)
+	err = s3UploadRemoveLocked(bucket, &upload)
 	if err != nil {
 		upload.dbUnlock()
 		return err

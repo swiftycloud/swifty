@@ -173,7 +173,7 @@ func s3AddObject(iam *S3Iam, bucket *S3Bucket, oname string,
 	return object, nil
 
 out:
-	s3ObjectDataDel(objd)
+	s3ObjectDataDel(bucket, objd)
 out_acc:
 	bucket.dbDelObj(object.Size, -1)
 out_remove:
@@ -211,7 +211,7 @@ func s3DeleteObject(iam *S3Iam, bucket *S3Bucket, oname string) error {
 		return err
 	}
 
-	err = s3ObjectDataDel(objd)
+	err = s3ObjectDataDel(bucket, objd)
 	if err != nil {
 		return err
 	}
@@ -249,7 +249,7 @@ func s3ReadObjectData(bucket *S3Bucket, object *S3Object) ([]byte, error) {
 		return nil, err
 	}
 
-	res, err = s3ObjectDataGet(objd)
+	res, err = s3ObjectDataGet(bucket, objd)
 	if err != nil {
 		return nil, err
 	}
