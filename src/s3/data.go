@@ -20,6 +20,7 @@ type S3ObjectData struct {
 	OCookie				string		`bson:"ocookie,omitempty"`
 	CreationTime			string		`bson:"creation-time,omitempty"`
 	Size				int64		`bson:"size"`
+	ETag				[md5.Size]byte	`bson:"etag"`
 	Data				[]byte		`bson:"data,omitempty"`
 }
 
@@ -144,7 +145,7 @@ func s3ObjectDataFind(refID bson.ObjectId) (*S3ObjectData, error) {
 	return &res, nil
 }
 
-func s3ObjectDataAdd(iam *S3Iam, refid bson.ObjectId, bucket_bid, object_bid string, data []byte) (*S3ObjectData, string, error) {
+func s3ObjectDataAdd(iam *S3Iam, refid bson.ObjectId, bucket_bid, object_bid string, data []byte) (*S3ObjectData, error) {
 	var objd *S3ObjectData
 	var err error
 
@@ -157,6 +158,7 @@ func s3ObjectDataAdd(iam *S3Iam, refid bson.ObjectId, bucket_bid, object_bid str
 		BCookie:	bucket_bid,
 		OCookie:	object_bid,
 		Size:		int64(len(data)),
+		ETag:		md5.Sum(data),
 		CreationTime:	time.Now().Format(time.RFC3339),
 	}
 
@@ -191,11 +193,11 @@ func s3ObjectDataAdd(iam *S3Iam, refid bson.ObjectId, bucket_bid, object_bid str
 	}
 
 	log.Debugf("s3: Added %s", infoLong(objd))
-	return objd, fmt.Sprintf("%x", md5.Sum(data)), nil
+	return objd, nil
 
 out:
 	dbS3Remove(objd)
-	return nil, "", nil
+	return nil, err
 }
 
 func s3ObjectDataDel(bucket *S3Bucket, ocookie string, objd *S3ObjectData) (error) {

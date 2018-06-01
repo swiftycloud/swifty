@@ -272,7 +272,6 @@ func s3UploadPart(iam *S3Iam, bucket *S3Bucket, oname,
 	var objd *S3ObjectData
 	var part *S3UploadPart
 	var upload S3Upload
-	var etag string
 	var err error
 
 	err = VerifyUploadUID(bucket, oname, uid)
@@ -305,14 +304,14 @@ func s3UploadPart(iam *S3Iam, bucket *S3Bucket, oname,
 		Size:		int64(len(data)),
 	}
 
-	objd, etag, err = s3ObjectDataAdd(iam, part.ObjID, bucket.BCookie, part.UCookie, data)
+	objd, err = s3ObjectDataAdd(iam, part.ObjID, bucket.BCookie, part.UCookie, data)
 	if err != nil {
 		upload.dbRefDec()
 		log.Errorf("s3: Can't store data %s: %s", infoLong(part), err.Error())
 		return "", err
 	}
 
-	part.ETag = etag
+	part.ETag = fmt.Sprintf("%x", objd.ETag)
 
 	if err = dbS3Insert(part); err != nil {
 		upload.dbRefDec()

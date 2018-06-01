@@ -3,6 +3,7 @@ package main
 import (
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
+	"fmt"
 	"time"
 
 	"../apis/apps/s3"
@@ -116,7 +117,6 @@ func (bucket *S3Bucket)FindObject(oname string) (*S3Object, error) {
 func s3AddObject(iam *S3Iam, bucket *S3Bucket, oname string,
 		acl string, size int64, data []byte) (*S3Object, error) {
 	var objd *S3ObjectData
-	var etag string
 	var err error
 
 	object := &S3Object {
@@ -146,14 +146,14 @@ func s3AddObject(iam *S3Iam, bucket *S3Bucket, oname string,
 		goto out_remove
 	}
 
-	objd, etag, err = s3ObjectDataAdd(iam, object.ObjID, bucket.BCookie,
+	objd, err = s3ObjectDataAdd(iam, object.ObjID, bucket.BCookie,
 					object.OCookie, data)
 	if err != nil {
 		goto out_acc
 	}
 
 	err = dbS3SetOnState(object, S3StateActive, nil,
-		bson.M{ "state": S3StateActive, "etag": etag })
+		bson.M{ "state": S3StateActive, "etag": fmt.Sprintf("%x", objd.ETag) })
 	if err != nil {
 		goto out
 	}
