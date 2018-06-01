@@ -97,6 +97,13 @@ for cmd in ['object-add']:
     spp.add_argument('--file', dest = 'file', help = 'Content from file')
     spp.add_argument('--size', dest = 'size', help = 'Object size')
 
+for cmd in ['object-get']:
+    spp = sp.add_parser(cmd, help = 'Get object')
+    spp.add_argument('--name', dest = 'name', help = 'Bucket name', required = True)
+    spp.add_argument('--key', dest = 'key', help = 'Object name')
+    spp.add_argument('--file', dest = 'file', help = 'Content from file')
+    spp.add_argument('--size', dest = 'size', help = 'Object size')
+
 for cmd in ['object-copy']:
     spp = sp.add_parser(cmd, help = 'Copy object')
     spp.add_argument('--name', dest = 'name', help = 'Bucket name', required = True)
@@ -392,6 +399,27 @@ if args.cmd == 'object-add':
         print("\tDone")
     except:
         print("ERROR: Can't create object")
+
+if args.cmd == 'object-get':
+    if args.key == None:
+        args.key = genObjectName()
+    if args.file == None:
+        if args.size == None:
+            args.size = 64
+        else:
+            args.size = int(args.size)
+        body = genRandomData(args.size)
+    else:
+        with open(args.file, 'rb') as f:
+            body = f.read()
+            f.close()
+    print("Getting object %s/%s" % (args.name, args.key))
+    try:
+        resp = s3.get_object(Bucket = args.name, Key = args.key)
+        print("\tDone")
+        print(resp['Body'].read())
+    except:
+        print("ERROR: Can't get object")
 
 if args.cmd == 'object-copy':
     print("Copying object %s/%s -> %s/%s" % \
