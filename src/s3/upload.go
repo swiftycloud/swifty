@@ -215,7 +215,7 @@ func s3UploadRemoveLocked(bucket *S3Bucket, upload *S3Upload) (error) {
 					return err
 				}
 			}
-			err = s3ObjectDataDel(bucket, objd)
+			err = s3ObjectDataDel(bucket, part.UCookie, objd)
 			if err != nil {
 				return err
 			}
@@ -316,14 +316,14 @@ func s3UploadPart(iam *S3Iam, bucket *S3Bucket, oname,
 
 	if err = dbS3Insert(part); err != nil {
 		upload.dbRefDec()
-		s3ObjectDataDel(bucket, objd)
+		s3ObjectDataDel(bucket, part.UCookie, objd)
 		log.Errorf("s3: Can't insert %s: %s", infoLong(part), err.Error())
 		return "", err
 	}
 
 	if err = dbS3SetState(part, S3StateActive, nil); err != nil {
 		upload.dbRefDec()
-		s3ObjectDataDel(bucket, objd)
+		s3ObjectDataDel(bucket, part.UCookie, objd)
 		log.Errorf("s3: Can't activate %s: %s", infoLong(part), err.Error())
 		return "", err
 	}

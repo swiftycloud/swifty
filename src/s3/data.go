@@ -198,7 +198,7 @@ out:
 	return nil, "", nil
 }
 
-func s3ObjectDataDel(bucket *S3Bucket, objd *S3ObjectData) (error) {
+func s3ObjectDataDel(bucket *S3Bucket, ocookie string, objd *S3ObjectData) (error) {
 	var err error
 
 	err = dbS3SetState(objd, S3StateInactive, nil)
@@ -207,7 +207,7 @@ func s3ObjectDataDel(bucket *S3Bucket, objd *S3ObjectData) (error) {
 	}
 
 	if objd.Data == nil {
-		err = radosDeleteObject(bucket.BCookie, objd.OCookie)
+		err = radosDeleteObject(bucket.BCookie, ocookie)
 		if err != nil {
 			return err
 		}
@@ -222,13 +222,12 @@ func s3ObjectDataDel(bucket *S3Bucket, objd *S3ObjectData) (error) {
 	return nil
 }
 
-func s3ObjectDataGet(bucket *S3Bucket, objd *S3ObjectData) ([]byte, error) {
+func s3ObjectDataGet(bucket *S3Bucket, ocookie string, objd *S3ObjectData) ([]byte, error) {
 	var res []byte
 	var err error
 
 	if objd.Data == nil {
-		res, err = radosReadObject(bucket.BCookie, objd.OCookie,
-						uint64(objd.Size), 0)
+		res, err = radosReadObject(bucket.BCookie, ocookie, uint64(objd.Size), 0)
 		if err != nil {
 			return nil, err
 		}
