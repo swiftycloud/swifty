@@ -11,11 +11,12 @@ import (
 type S3ObjectData struct {
 	ObjID				bson.ObjectId	`bson:"_id,omitempty"`
 	IamObjID			bson.ObjectId	`bson:"iam-id,omitempty"`
+	DCookie				string		`bson:"dcookie"`
+
 	MTime				int64		`bson:"mtime,omitempty"`
 	State				uint32		`bson:"state"`
 
 	RefID				bson.ObjectId	`bson:"ref-id,omitempty"`
-	BackendID			string		`bson:"bid"`
 	BucketBID			string		`bson:"bucket-bid,omitempty"`
 	ObjectBID			string		`bson:"object-bid,omitempty"`
 	CreationTime			string		`bson:"creation-time,omitempty"`
@@ -154,7 +155,7 @@ func s3ObjectDataAdd(iam *S3Iam, refid bson.ObjectId, bucket_bid, object_bid str
 		State:		S3StateNone,
 
 		RefID:		refid,
-		BackendID:	ObjdBID(bucket_bid, object_bid),
+		DCookie:	DCookie(bucket_bid, object_bid),
 		BucketBID:	bucket_bid,
 		ObjectBID:	object_bid,
 		Size:		int64(len(data)),

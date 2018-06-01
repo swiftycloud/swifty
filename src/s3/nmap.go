@@ -89,6 +89,6 @@ func (upload *S3Upload)UCookie(oname string, part int) string {
 }
 
 // Object data mapped to object/bucket or part/upload pairs
-func ObjdBID(bucket_bid, object_bid string) string {
+func DCookie(bucket_bid, object_bid string) string {
 	return sha256sum([]byte(bucket_bid + object_bid))
 }
