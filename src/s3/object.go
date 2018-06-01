@@ -3,7 +3,6 @@ package main
 import (
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
-	"fmt"
 	"time"
 
 	"../apis/apps/s3"
@@ -153,7 +152,7 @@ func s3AddObject(iam *S3Iam, bucket *S3Bucket, oname string,
 	}
 
 	err = dbS3SetOnState(object, S3StateActive, nil,
-		bson.M{ "state": S3StateActive, "etag": fmt.Sprintf("%x", objd.ETag) })
+		bson.M{ "state": S3StateActive, "etag": objd.ETag })
 	if err != nil {
 		goto out
 	}

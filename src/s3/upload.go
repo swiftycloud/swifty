@@ -268,7 +268,7 @@ func s3UploadPart(iam *S3Iam, bucket *S3Bucket, oname,
 	upload.dbRefDec()
 
 	log.Debugf("s3: Inserted %s", infoLong(objd))
-	return fmt.Sprintf("%x", objd.ETag), nil
+	return objd.ETag, nil
 }
 
 func s3UploadFini(iam *S3Iam, bucket *S3Bucket, uid string,
@@ -412,7 +412,7 @@ func s3UploadList(bucket *S3Bucket, oname, uid string) (*swys3api.S3MpuPartList,
 				swys3api.S3MpuPart{
 					PartNumber:	int(od.Part),
 					LastModified:	od.CreationTime,
-					ETag:		fmt.Sprintf("%x", od.ETag),
+					ETag:		od.ETag,
 					Size:		od.Size,
 				})
 		}
