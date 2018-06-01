@@ -11,7 +11,6 @@ import (
 type S3ObjectData struct {
 	ObjID				bson.ObjectId	`bson:"_id,omitempty"`
 	IamObjID			bson.ObjectId	`bson:"iam-id,omitempty"`
-	DCookie				string		`bson:"dcookie"`
 
 	MTime				int64		`bson:"mtime,omitempty"`
 	State				uint32		`bson:"state"`
@@ -155,7 +154,6 @@ func s3ObjectDataAdd(iam *S3Iam, refid bson.ObjectId, bucket_bid, object_bid str
 		State:		S3StateNone,
 
 		RefID:		refid,
-		DCookie:	DCookie(bucket_bid, object_bid),
 		BucketBID:	bucket_bid,
 		ObjectBID:	object_bid,
 		Size:		int64(len(data)),
