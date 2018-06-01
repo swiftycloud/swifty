@@ -4,6 +4,8 @@ import (
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 	"time"
+	"fmt"
+	"crypto/md5"
 
 	"../apis/apps/s3"
 )
@@ -118,7 +120,9 @@ func s3ConvertObject(iam *S3Iam, bucket *S3Bucket, upload *S3Upload) (*S3Object,
 	var err error
 	var pipe *mgo.Pipe
 	var iter *mgo.Iter
-	var data []byte
+	var size int64
+
+	hasher := md5.New()
 
 	/* FIXME -- migrate data, not read and write back */
 	pipe = dbS3Pipe(objd,
@@ -127,7 +131,8 @@ func s3ConvertObject(iam *S3Iam, bucket *S3Bucket, upload *S3Upload) (*S3Object,
 	iter = pipe.Iter()
 	for iter.Next(&objd) {
 		if objd.State != S3StateActive { continue }
-		data = append(data, objd.Data ...)
+		hasher.Write(objd.Data)
+		size += objd.Size
 	}
 	if err = iter.Close(); err != nil {
 		log.Errorf("s3: Can't close iter on %s: %s",
@@ -137,9 +142,12 @@ func s3ConvertObject(iam *S3Iam, bucket *S3Bucket, upload *S3Upload) (*S3Object,
 	}
 
 	object := &S3Object {
-		ObjID:		bson.NewObjectId(),
+		/* We just inherit the objid form another collection
+		 * not to update all the data objects
+		 */
+		ObjID:		upload.ObjID,
 		IamObjID:	iam.ObjID,
-		State:		S3StateNone,
+		State:		S3StateActive,
 
 		S3ObjectPorps: S3ObjectPorps {
 			Key:		upload.Key,
@@ -148,7 +156,8 @@ func s3ConvertObject(iam *S3Iam, bucket *S3Bucket, upload *S3Upload) (*S3Object,
 		},
 
 		Version:	1,
-		Size:		int64(len(data)),
+		Size:		size,
+		ETag:		fmt.Sprintf("%x", hasher.Sum(nil)),
 		BucketObjID:	bucket.ObjID,
 		OCookie:	bucket.OCookie(upload.Key, 1),
 	}
@@ -156,28 +165,11 @@ func s3ConvertObject(iam *S3Iam, bucket *S3Bucket, upload *S3Upload) (*S3Object,
 	if err = dbS3Insert(object); err != nil {
 		return nil, err
 	}
-	log.Debugf("s3: Inserted %s", infoLong(object))
+	log.Debugf("s3: Converted %s", infoLong(object))
 
-	err = bucket.dbAddObj(object.Size, 1)
+	err = bucket.dbAddObj(object.Size, 0)
 	if err != nil {
 		goto out_remove
-	}
-
-	objd, err = s3ObjectDataAdd(iam, object.ObjID, bucket.BCookie,
-					object.OCookie, 0, data)
-	if err != nil {
-		goto out_acc
-	}
-
-	err = dbS3SetOnState(object, S3StateActive, nil,
-		bson.M{ "state": S3StateActive, "etag": objd.ETag })
-	if err != nil {
-		goto out
-	}
-
-	bucket.dbCmtObj(object.Size, -1)
-	if err != nil {
-		goto out
 	}
 
 	ioSize.Observe(float64(object.Size) / KiB)
@@ -189,10 +181,6 @@ func s3ConvertObject(iam *S3Iam, bucket *S3Bucket, upload *S3Upload) (*S3Object,
 	log.Debugf("s3: Added %s", infoLong(object))
 	return object, nil
 
-out:
-	s3ObjectDataDelOne(bucket, object.OCookie, objd)
-out_acc:
-	bucket.dbDelObj(object.Size, -1)
 out_remove:
 	dbS3Remove(object)
 	return nil, err

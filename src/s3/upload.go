@@ -299,7 +299,7 @@ func s3UploadFini(iam *S3Iam, bucket *S3Bucket, uid string,
 		return nil, err
 	}
 
-	err = s3UploadRemoveLocked(bucket, &upload, true)
+	err = s3UploadRemoveLocked(bucket, &upload, false)
 	if err != nil {
 		// Don't fail here since object is already committed
 		log.Errorf("s3: Can't remove %s: %s",
