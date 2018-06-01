@@ -113,6 +113,8 @@ func dbConnect(conf *YAMLConf) error {
 	dbColMap[reflect.TypeOf(&S3ObjectData{})] = DBColS3ObjectData
 	dbColMap[reflect.TypeOf([]S3ObjectData{})] = DBColS3ObjectData
 	dbColMap[reflect.TypeOf(&[]S3ObjectData{})] = DBColS3ObjectData
+	dbColMap[reflect.TypeOf([]*S3ObjectData{})] = DBColS3ObjectData
+	dbColMap[reflect.TypeOf(&[]*S3ObjectData{})] = DBColS3ObjectData
 
 	return nil
 }

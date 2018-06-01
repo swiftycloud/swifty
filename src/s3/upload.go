@@ -67,15 +67,18 @@ func s3RepairPartsInactive() error {
 	var objd []*S3ObjectData
 	var err error
 
-	log.Debugf("s3: Processing inactive parts")
+	log.Debugf("s3: Processing inactive datas")
 
 	if err = dbS3FindAllInactive(&objd); err != nil {
+		log.Debugf("Found zero inactives: %s", err.Error())
 		if err == mgo.ErrNotFound {
 			return nil
 		}
 		log.Errorf("s3: s3RepairPartsInactive failed: %s", err.Error())
 		return err
 	}
+
+	log.Debugf("Found %d inactives", len(objd))
 
 	for _, od := range objd {
 		log.Debugf("s3: Detected stale part %s", infoLong(&od))
@@ -292,7 +295,7 @@ func s3UploadFini(iam *S3Iam, bucket *S3Bucket, uid string,
 	}
 
 	/* FIXME -- migrate data, not read and write back */
-	pipe = dbS3Pipe(&objd,
+	pipe = dbS3Pipe(objd,
 		[]bson.M{{"$match": bson.M{"ref-id": upload.ObjID}},
 			{"$sort": bson.M{"part": 1} }})
 	iter = pipe.Iter()
