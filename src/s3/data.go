@@ -39,7 +39,6 @@ func s3RepairObjectData() error {
 	}
 
 	for _, objd := range objds {
-		var part S3UploadPart
 		var object S3Object
 		var bucket S3Bucket
 
@@ -49,6 +48,8 @@ func s3RepairObjectData() error {
 
 		err = dbS3FindOne(query_ref, &object)
 		if err != nil {
+			var part S3UploadPart
+
 			if err != mgo.ErrNotFound {
 				log.Errorf("s3: Can't find object on data %s: %s",
 					infoLong(&objd), err.Error())
@@ -100,8 +101,7 @@ func s3RepairObjectData() error {
 					return err
 				}
 			}
-			log.Debugf("s3: Removed object on data %s: %s",
-				infoLong(&part), infoLong(&objd), err.Error())
+			log.Debugf("s3: Removed object on data %s: %s", infoLong(&objd), err.Error())
 
 		}
 
