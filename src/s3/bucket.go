@@ -49,10 +49,11 @@ type S3BucketEncrypt struct {
 type S3Bucket struct {
 	ObjID				bson.ObjectId	`bson:"_id,omitempty"`
 	IamObjID			bson.ObjectId	`bson:"iam-id,omitempty"`
+	BCookie				string		`bson:"bcookie,omitempty"`
+
 	MTime				int64		`bson:"mtime,omitempty"`
 	State				uint32		`bson:"state"`
 
-	BackendID			string		`bson:"bid,omitempty"`
 	NamespaceID			string		`bson:"nsid,omitempty"`
 	CreationTime			string		`bson:"creation-time,omitempty"`
 
@@ -148,7 +149,7 @@ func (iam *S3Iam)FindBucket(bname string) (*S3Bucket, error) {
 	account, err := iam.s3AccountLookup()
 	if err != nil { return nil, err }
 
-	query := bson.M{ "bid": account.BucketBID(bname), "state": S3StateActive }
+	query := bson.M{ "bcookie": account.BCookie(bname), "state": S3StateActive }
 	err = dbS3FindOne(query, &res)
 	if err != nil {
 		if err != mgo.ErrNotFound {
@@ -239,10 +240,9 @@ func s3RepairBucketInactive() error {
 	for _, bucket := range buckets {
 		log.Debugf("s3: Detected stale bucket %s", infoLong(&bucket))
 
-		err = radosDeletePool(bucket.BackendID)
+		err = radosDeletePool(bucket.BCookie)
 		if err != nil {
-			log.Errorf("s3: %s backend bucket may stale",
-				bucket.BackendID)
+			log.Errorf("s3: %s backend bucket may stale", bucket.BCookie)
 		}
 
 		err = dbS3Remove(&bucket)
@@ -292,7 +292,7 @@ func s3InsertBucket(iam *S3Iam, bname, canned_acl string) (*S3Error) {
 
 		Name:		bname,
 		CannedAcl:	canned_acl,
-		BackendID:	account.BucketBID(bname),
+		BCookie:	account.BCookie(bname),
 		NamespaceID:	account.NamespaceID(),
 		CreationTime:	time.Now().Format(time.RFC3339),
 		MaxObjects:	S3StorageMaxObjects,
@@ -303,7 +303,7 @@ func s3InsertBucket(iam *S3Iam, bname, canned_acl string) (*S3Error) {
 		return &S3Error{ ErrorCode: S3ErrInternalError }
 	}
 
-	err = radosCreatePool(bucket.BackendID, uint64(bucket.MaxObjects), uint64(bucket.MaxBytes))
+	err = radosCreatePool(bucket.BCookie, uint64(bucket.MaxObjects), uint64(bucket.MaxBytes))
 	if err != nil {
 		goto out_nopool
 	}
@@ -316,7 +316,7 @@ func s3InsertBucket(iam *S3Iam, bname, canned_acl string) (*S3Error) {
 	return nil
 
 out:
-	radosDeletePool(bucket.BackendID)
+	radosDeletePool(bucket.BCookie)
 out_nopool:
 	bucket.dbRemove()
 	return &S3Error{ ErrorCode: S3ErrInternalError }
@@ -345,7 +345,7 @@ func s3DeleteBucket(iam *S3Iam, bname, acl string) (*S3Error) {
 		return &S3Error{ ErrorCode: S3ErrInternalError }
 	}
 
-	err = radosDeletePool(bucket.BackendID)
+	err = radosDeletePool(bucket.BCookie)
 	if err != nil {
 		return &S3Error{ ErrorCode: S3ErrInternalError }
 	}

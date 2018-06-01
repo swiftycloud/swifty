@@ -304,7 +304,7 @@ func s3UploadPart(iam *S3Iam, bucket *S3Bucket, oname,
 		Size:		int64(len(data)),
 	}
 
-	objd, etag, err = s3ObjectDataAdd(iam, part.ObjID, bucket.BackendID, part.BackendID, data)
+	objd, etag, err = s3ObjectDataAdd(iam, part.ObjID, bucket.BCookie, part.BackendID, data)
 	if err != nil {
 		upload.dbRefDec()
 		log.Errorf("s3: Can't store data %s: %s", infoLong(part), err.Error())

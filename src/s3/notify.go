@@ -13,8 +13,8 @@ import (
 func notifyFindBucket(params *swys3api.S3Subscribe) (*S3Bucket, error) {
 	var bucket S3Bucket
 
-	bid := BIDFromNames(params.Namespace, params.Bucket)
-	err := dbS3FindOne(bson.M{ "bid": bid, "state": S3StateActive }, &bucket)
+	cookie := BCookie(params.Namespace, params.Bucket)
+	err := dbS3FindOne(bson.M{ "bcookie": cookie, "state": S3StateActive }, &bucket)
 	if err != nil {
 		return nil, err
 	}

@@ -55,23 +55,23 @@ func (account *S3Account) IamUser(user string) string {
 	return account.User + ":" + user
 }
 
-func BIDFromNames(namespace, bucket string) string {
-	return sha256sum([]byte(namespace + bucket))
-}
-
 // Bucket grouping by namespace in DB for lookup
 func (account *S3Account) NamespaceID() string {
 	return sha256sum([]byte(account.Namespace))
 }
 
 // Bucket pool name and index in DB for lookup
-func (account *S3Account)BucketBID(bname string) string {
-	return BIDFromNames(account.Namespace, bname)
+func BCookie(namespace, bucket string) string {
+	return sha256sum([]byte(namespace + bucket))
+}
+
+func (account *S3Account)BCookie(bname string) string {
+	return BCookie(account.Namespace, bname)
 }
 
 // UploadID for DB lookup
 func (bucket *S3Bucket)UploadUID(oname string) string {
-	return sha256sum([]byte(bucket.BackendID + oname))
+	return sha256sum([]byte(bucket.BCookie + oname))
 }
 
 // Object key in backend and index in DB for lookup
@@ -80,7 +80,7 @@ func (bucket *S3Bucket)ObjectBID(oname string, version int) string {
 		log.Errorf("@verioning is not yet supported")
 		version = 1
 	}
-	return sha256sum([]byte(bucket.BackendID + oname + strconv.Itoa(version)))
+	return sha256sum([]byte(bucket.BCookie + oname + strconv.Itoa(version)))
 }
 
 // Object part key in backend and index in DB for lookup

@@ -69,7 +69,7 @@ func dbConnect(conf *YAMLConf) error {
 	index.Key = []string{"user"}
 	dbSession.DB(DBName).C(DBColS3Iams).EnsureIndex(index)
 
-	index.Key = []string{"bid"}
+	index.Key = []string{"bcookie"}
 	dbSession.DB(DBName).C(DBColS3Buckets).EnsureIndex(index)
 
 	index.Key = []string{"bid"}
@@ -182,7 +182,7 @@ func infoLong(o interface{}) (string) {
 	case reflect.TypeOf(&S3Bucket{}):
 		bucket := o.(*S3Bucket)
 		return fmt.Sprintf("{ S3Bucket: %s/%s/%s/%d/%s }",
-			bucket.ObjID, bucket.BackendID,
+			bucket.ObjID, bucket.BCookie,
 			bucket.NamespaceID, bucket.State,
 			bucket.Name)
 	case reflect.TypeOf(&S3ObjectData{}):
