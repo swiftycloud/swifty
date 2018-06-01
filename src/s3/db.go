@@ -109,10 +109,6 @@ func dbConnect(conf *YAMLConf) error {
 	dbColMap[reflect.TypeOf(&S3Upload{})] = DBColS3Uploads
 	dbColMap[reflect.TypeOf([]S3Upload{})] = DBColS3Uploads
 	dbColMap[reflect.TypeOf(&[]S3Upload{})] = DBColS3Uploads
-	dbColMap[reflect.TypeOf(S3UploadPart{})] = DBColS3Uploads
-	dbColMap[reflect.TypeOf(&S3UploadPart{})] = DBColS3Uploads
-	dbColMap[reflect.TypeOf([]S3UploadPart{})] = DBColS3Uploads
-	dbColMap[reflect.TypeOf(&[]S3UploadPart{})] = DBColS3Uploads
 	dbColMap[reflect.TypeOf(S3ObjectData{})] = DBColS3ObjectData
 	dbColMap[reflect.TypeOf(&S3ObjectData{})] = DBColS3ObjectData
 	dbColMap[reflect.TypeOf([]S3ObjectData{})] = DBColS3ObjectData
@@ -199,12 +195,6 @@ func infoLong(o interface{}) (string) {
 		return fmt.Sprintf("{ S3Upload: %s/%s/%s/%d/%s }",
 			upload.ObjID, upload.BucketObjID,
 			upload.UploadID, upload.Ref, upload.Key)
-	case reflect.TypeOf(&S3UploadPart{}):
-		part := o.(*S3UploadPart)
-		return fmt.Sprintf("{ S3UploadPart: %s/%s/%s/%d/%s }",
-			part.ObjID, part.UploadObjID,
-			part.UCookie, part.Part,
-			part.Key)
 	}
 	return "{ Unknown type }"
 }

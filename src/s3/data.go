@@ -50,31 +50,10 @@ func s3RepairObjectData() error {
 
 		err = dbS3FindOne(query_ref, &object)
 		if err != nil {
-			var part S3UploadPart
-
 			if err != mgo.ErrNotFound {
 				log.Errorf("s3: Can't find object on data %s: %s",
 					infoLong(&objd), err.Error())
 				return err
-			}
-
-			err = dbS3FindOne(query_ref, &part)
-			if err != nil {
-				if err != mgo.ErrNotFound {
-					log.Errorf("s3: Can't find part on data %s: %s",
-						infoLong(&objd), err.Error())
-					return err
-				}
-			} else {
-				if err = dbS3Remove(&part); err != nil {
-					if err != mgo.ErrNotFound {
-						log.Errorf("s3: Can't remove part on data %s: %s",
-							infoLong(&objd), err.Error())
-						return err
-					}
-				}
-				log.Debugf("s3: Removed part on data %s: %s",
-					infoLong(&part), infoLong(&objd), err.Error())
 			}
 		} else {
 			query_bucket := bson.M{ "_id": object.BucketObjID }

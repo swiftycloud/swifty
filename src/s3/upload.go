@@ -10,23 +10,6 @@ import (
 	"../apis/apps/s3"
 )
 
-type S3UploadPart struct {
-	ObjID				bson.ObjectId	`bson:"_id,omitempty"`
-	IamObjID			bson.ObjectId	`bson:"iam-id,omitempty"`
-	UCookie				string		`bson:"ucookie"`
-
-	MTime				int64		`bson:"mtime,omitempty"`
-	State				uint32		`bson:"state"`
-
-	UploadObjID			bson.ObjectId	`bson:"upload-id,omitempty"`
-
-	Part				int		`bson:"part"`
-	Size				int64		`bson:"size"`
-	ETag				string		`bson:"etag"`
-	Data				[]byte		`bson:"data,omitempty"`
-	S3ObjectPorps					`bson:",inline"`
-}
-
 type S3Upload struct {
 	ObjID				bson.ObjectId	`bson:"_id,omitempty"`
 	IamObjID			bson.ObjectId	`bson:"iam-id,omitempty"`
@@ -59,8 +42,8 @@ func s3RepairUploadsInactive() error {
 		log.Debugf("s3: Detected stale upload %s", infoLong(&upload))
 
 		update := bson.M{ "$set": bson.M{ "state": S3StateInactive } }
-		query := bson.M{ "upload-id": upload.ObjID }
-		if err = dbS3Update(query, update, false, &S3UploadPart{}); err != nil {
+		query := bson.M{ "ref-id": upload.ObjID }
+		if err = dbS3Update(query, update, false, &S3ObjectData{}); err != nil {
 			if err != mgo.ErrNotFound {
 				log.Errorf("s3: Can't deactivate parts on upload %s: %s",
 					infoLong(&upload), err.Error())
@@ -81,12 +64,12 @@ func s3RepairUploadsInactive() error {
 }
 
 func s3RepairPartsInactive() error {
-	var parts []S3UploadPart
+	var objd []*S3ObjectData
 	var err error
 
 	log.Debugf("s3: Processing inactive parts")
 
-	if err = dbS3FindAllInactive(&parts); err != nil {
+	if err = dbS3FindAllInactive(&objd); err != nil {
 		if err == mgo.ErrNotFound {
 			return nil
 		}
@@ -94,24 +77,24 @@ func s3RepairPartsInactive() error {
 		return err
 	}
 
-	for _, part := range parts {
-		log.Debugf("s3: Detected stale part %s", infoLong(&part))
+	for _, od := range objd {
+		log.Debugf("s3: Detected stale part %s", infoLong(&od))
 
-		if err = s3DeactivateObjectData(part.ObjID); err != nil {
+		if err = s3DeactivateObjectData(od.ObjID); err != nil {
 			if err != mgo.ErrNotFound {
 				log.Errorf("s3: Can't deactivate data on part %s: %s",
-					infoLong(&part), err.Error())
+					infoLong(&od), err.Error())
 				return err
 			}
 		}
 
-		err = dbS3Remove(&part)
+		err = dbS3Remove(&od)
 		if err != nil {
-			log.Debugf("s3: Can't remove part %s", infoLong(&part))
+			log.Debugf("s3: Can't remove part %s", infoLong(&od))
 			return err
 		}
 
-		log.Debugf("s3: Removed stale part %s", infoLong(&part))
+		log.Debugf("s3: Removed stale part %s", infoLong(&od))
 	}
 
 	return nil
@@ -189,7 +172,7 @@ func VerifyUploadUID(bucket *S3Bucket, oname, uid string) error {
 }
 
 func s3UploadRemoveLocked(bucket *S3Bucket, upload *S3Upload) (error) {
-	var parts []S3UploadPart
+	var objd []*S3ObjectData
 	var err error
 
 	err = dbS3SetState(upload, S3StateInactive, nil)
@@ -197,7 +180,7 @@ func s3UploadRemoveLocked(bucket *S3Bucket, upload *S3Upload) (error) {
 		return err
 	}
 
-	err = dbS3FindAll(bson.M{"upload-id": upload.ObjID}, &parts)
+	err = dbS3FindAll(bson.M{"ref-id": upload.ObjID}, &objd)
 	if err != nil {
 		if err != mgo.ErrNotFound {
 			log.Errorf("s3: Can't find parts %s: %s",
@@ -205,28 +188,8 @@ func s3UploadRemoveLocked(bucket *S3Bucket, upload *S3Upload) (error) {
 			return err
 		}
 	} else {
-		for _, part := range parts {
-			var objd []*S3ObjectData
-
-			objd, err = s3ObjectDataFind(part.ObjID)
-			if err != nil {
-				if err != mgo.ErrNotFound {
-					log.Errorf("s3: Can't find data on part %s: %s",
-						infoLong(&part), err.Error())
-					return err
-				}
-			}
-			err = s3ObjectDataDel(bucket, part.UCookie, objd)
-			if err != nil {
-				return err
-			}
-
-			err = dbS3SetState(&part, S3StateInactive, nil)
-			if err != nil {
-				return err
-			}
-
-			err = dbS3RemoveOnState(&part, S3StateInactive, nil)
+		for _, od := range objd {
+			err = s3ObjectDataDelOne(bucket, od.OCookie, od)
 			if err != nil {
 				return err
 			}
@@ -271,7 +234,6 @@ func s3UploadInit(iam *S3Iam, bucket *S3Bucket, oname, acl string) (*S3Upload, e
 func s3UploadPart(iam *S3Iam, bucket *S3Bucket, oname,
 			uid string, partno int, data []byte) (string, error) {
 	var objd *S3ObjectData
-	var part *S3UploadPart
 	var upload S3Upload
 	var err error
 
@@ -291,55 +253,25 @@ func s3UploadPart(iam *S3Iam, bucket *S3Bucket, oname,
 		return "", err
 	}
 
-	part = &S3UploadPart{
-		ObjID:		bson.NewObjectId(),
-		IamObjID:	iam.ObjID,
-		State:		S3StateNone,
-
-		S3ObjectPorps: S3ObjectPorps {
-			CreationTime:	time.Now().Format(time.RFC3339),
-		},
-		UploadObjID:	upload.ObjID,
-		UCookie:	upload.UCookie(oname, partno),
-		Part:		partno,
-		Size:		int64(len(data)),
-	}
-
-	objd, err = s3ObjectDataAdd(iam, part.ObjID, bucket.BCookie, part.UCookie, partno, data)
+	objd, err = s3ObjectDataAdd(iam, upload.ObjID, bucket.BCookie, upload.UCookie(oname, partno), partno, data)
 	if err != nil {
 		upload.dbRefDec()
-		log.Errorf("s3: Can't store data %s: %s", infoLong(part), err.Error())
+		log.Errorf("s3: Can't store data %s: %s", infoLong(objd), err.Error())
 		return "", err
 	}
 
-	part.ETag = fmt.Sprintf("%x", objd.ETag)
-
-	if err = dbS3Insert(part); err != nil {
-		upload.dbRefDec()
-		s3ObjectDataDelOne(bucket, part.UCookie, objd)
-		log.Errorf("s3: Can't insert %s: %s", infoLong(part), err.Error())
-		return "", err
-	}
-
-	if err = dbS3SetState(part, S3StateActive, nil); err != nil {
-		upload.dbRefDec()
-		s3ObjectDataDelOne(bucket, part.UCookie, objd)
-		log.Errorf("s3: Can't activate %s: %s", infoLong(part), err.Error())
-		return "", err
-	}
-
-	ioSize.Observe(float64(part.Size) / KiB)
+	ioSize.Observe(float64(objd.Size) / KiB)
 
 	upload.dbRefDec()
 
-	log.Debugf("s3: Inserted %s", infoLong(part))
-	return part.ETag, nil
+	log.Debugf("s3: Inserted %s", infoLong(objd))
+	return fmt.Sprintf("%x", objd.ETag), nil
 }
 
 func s3UploadFini(iam *S3Iam, bucket *S3Bucket, uid string,
 			compete *swys3api.S3MpuFiniParts) (*swys3api.S3MpuFini, error) {
 	var res swys3api.S3MpuFini
-	var part S3UploadPart
+	var objd *S3ObjectData
 	var object *S3Object
 	var upload S3Upload
 	var pipe *mgo.Pipe
@@ -359,21 +291,15 @@ func s3UploadFini(iam *S3Iam, bucket *S3Bucket, uid string,
 		return nil, err
 	}
 
-	pipe = dbS3Pipe(&upload,
-		[]bson.M{{"$match": bson.M{"upload-id": upload.ObjID}},
+	/* FIXME -- migrate data, not read and write back */
+	pipe = dbS3Pipe(&objd,
+		[]bson.M{{"$match": bson.M{"ref-id": upload.ObjID}},
 			{"$sort": bson.M{"part": 1} }})
 	iter = pipe.Iter()
-	for iter.Next(&part) {
-		if part.State != S3StateActive { continue }
-		objd, err := s3ObjectDataFind(part.ObjID)
-		if err != nil {
-			return nil, err
-		}
-
-		for _, od := range objd {
-			size += od.Size
-			data = append(data, od.Data ...)
-		}
+	for iter.Next(&objd) {
+		if objd.State != S3StateActive { continue }
+		size += objd.Size
+		data = append(data, objd.Data ...)
 	}
 	if err = iter.Close(); err != nil {
 		log.Errorf("s3: Can't close iter on %s: %s",
@@ -447,7 +373,7 @@ func s3Uploads(iam *S3Iam, bname string) (*swys3api.S3MpuList,  *S3Error) {
 
 func s3UploadList(bucket *S3Bucket, oname, uid string) (*swys3api.S3MpuPartList, error) {
 	var res swys3api.S3MpuPartList
-	var parts []S3UploadPart
+	var objd []*S3ObjectData
 	var upload S3Upload
 	var err error
 
@@ -470,8 +396,8 @@ func s3UploadList(bucket *S3Bucket, oname, uid string) (*swys3api.S3MpuPartList,
 	res.MaxParts		= 1000
 	res.IsTruncated		= false
 
-	err = dbS3FindAll(bson.M{"upload-id": upload.ObjID,
-				"state": S3StateActive}, &parts)
+	err = dbS3FindAll(bson.M{"ref-id": upload.ObjID,
+				"state": S3StateActive}, &objd)
 	if err != nil {
 		if err == mgo.ErrNotFound {
 			goto out
@@ -480,13 +406,13 @@ func s3UploadList(bucket *S3Bucket, oname, uid string) (*swys3api.S3MpuPartList,
 			infoLong(&upload), err.Error())
 		return nil, err
 	} else {
-		for _, part := range parts {
+		for _, od := range objd {
 			res.Part = append(res.Part,
 				swys3api.S3MpuPart{
-					PartNumber:	int(part.Part),
-					LastModified:	part.CreationTime,
-					ETag:		part.ETag,
-					Size:		part.Size,
+					PartNumber:	int(od.Part),
+					LastModified:	od.CreationTime,
+					ETag:		fmt.Sprintf("%x", od.ETag),
+					Size:		od.Size,
 				})
 		}
 	}
