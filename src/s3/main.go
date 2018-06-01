@@ -465,7 +465,7 @@ func handleCopyObject(copy_source, oname string, iam *S3Iam, bucket *S3Bucket, w
 		return &S3Error{ ErrorCode: S3ErrInvalidRequest, Message: err.Error() }
 	}
 
-	object, err = s3AddObject(iam, bucket, oname, canned_acl, int64(len(body)), body)
+	object, err = s3AddObject(iam, bucket, oname, canned_acl, body)
 	if err != nil {
 		return &S3Error{ ErrorCode: S3ErrInvalidRequest, Message: err.Error() }
 	}
@@ -483,10 +483,10 @@ func handlePutObject(oname string, iam *S3Iam, bucket *S3Bucket, w http.Response
 		return handleCopyObject(copy_source, oname, iam, bucket, w, r)
 	}
 
-	object_size, err := strconv.ParseInt(r.Header.Get("Content-Length"), 10, 64)
-	if err != nil {
-		object_size = 0
-	}
+	//object_size, err := strconv.ParseInt(r.Header.Get("Content-Length"), 10, 64)
+	//if err != nil {
+	//	object_size = 0
+	//}
 
 	canned_acl := r.Header.Get("x-amz-acl")
 	if verifyAclValue(canned_acl, BucketCannedAcls) == false {
@@ -498,7 +498,7 @@ func handlePutObject(oname string, iam *S3Iam, bucket *S3Bucket, w http.Response
 		return &S3Error{ ErrorCode: S3ErrIncompleteBody }
 	}
 
-	_, err = s3AddObject(iam, bucket, oname, canned_acl, object_size, body)
+	_, err = s3AddObject(iam, bucket, oname, canned_acl, body)
 	if err != nil {
 		return &S3Error{ ErrorCode: S3ErrInvalidRequest, Message: err.Error() }
 	}

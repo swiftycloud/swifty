@@ -280,7 +280,6 @@ func s3UploadFini(iam *S3Iam, bucket *S3Bucket, uid string,
 	var pipe *mgo.Pipe
 	var iter *mgo.Iter
 	var data []byte
-	var size int64
 	var err error
 
 	query := bson.M{"uid": uid, "state": S3StateActive}
@@ -301,7 +300,6 @@ func s3UploadFini(iam *S3Iam, bucket *S3Bucket, uid string,
 	iter = pipe.Iter()
 	for iter.Next(&objd) {
 		if objd.State != S3StateActive { continue }
-		size += objd.Size
 		data = append(data, objd.Data ...)
 	}
 	if err = iter.Close(); err != nil {
@@ -311,7 +309,7 @@ func s3UploadFini(iam *S3Iam, bucket *S3Bucket, uid string,
 		return nil, err
 	}
 
-	object, err = s3AddObject(iam, bucket, upload.Key, upload.Acl, size, data)
+	object, err = s3AddObject(iam, bucket, upload.Key, upload.Acl, data)
 	if err != nil {
 		log.Errorf("s3: Can't insert object on %s: %s",
 			infoLong(&upload), err.Error())

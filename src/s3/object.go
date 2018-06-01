@@ -115,7 +115,7 @@ func (bucket *S3Bucket)FindObject(oname string) (*S3Object, error) {
 }
 
 func s3AddObject(iam *S3Iam, bucket *S3Bucket, oname string,
-		acl string, size int64, data []byte) (*S3Object, error) {
+		acl string, data []byte) (*S3Object, error) {
 	var objd *S3ObjectData
 	var err error
 
@@ -131,7 +131,7 @@ func s3AddObject(iam *S3Iam, bucket *S3Bucket, oname string,
 		},
 
 		Version:	1,
-		Size:		size,
+		Size:		int64(len(data)),
 		BucketObjID:	bucket.ObjID,
 		OCookie:	bucket.OCookie(oname, 1),
 	}
