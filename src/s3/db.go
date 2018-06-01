@@ -186,7 +186,7 @@ func infoLong(o interface{}) (string) {
 		objd := o.(*S3ObjectData)
 		return fmt.Sprintf("{ S3ObjectData: %s/%s/%s/%s/%d/%d }",
 			objd.ObjID, objd.RefID,
-			objd.BucketBID, objd.ObjectBID,
+			objd.BCookie, objd.OCookie,
 			objd.State, objd.Size)
 	case reflect.TypeOf(&S3Object{}):
 		object := o.(*S3Object)

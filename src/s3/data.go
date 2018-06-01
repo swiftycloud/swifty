@@ -16,8 +16,8 @@ type S3ObjectData struct {
 	State				uint32		`bson:"state"`
 
 	RefID				bson.ObjectId	`bson:"ref-id,omitempty"`
-	BucketBID			string		`bson:"bucket-bid,omitempty"`
-	ObjectBID			string		`bson:"object-bid,omitempty"`
+	BCookie				string		`bson:"bcookie,omitempty"`
+	OCookie				string		`bson:"ocookie,omitempty"`
 	CreationTime			string		`bson:"creation-time,omitempty"`
 	Size				int64		`bson:"size"`
 	Data				[]byte		`bson:"data,omitempty"`
@@ -106,10 +106,10 @@ func s3RepairObjectData() error {
 		}
 
 		if objd.Data == nil {
-			err = radosDeleteObject(objd.BucketBID, objd.ObjectBID)
+			err = radosDeleteObject(objd.BCookie, objd.OCookie)
 			if err != nil {
 				log.Errorf("s3: %s/%s backend object data may stale",
-					objd.BucketBID, objd.ObjectBID)
+					objd.BCookie, objd.OCookie)
 			}
 		}
 
@@ -154,8 +154,8 @@ func s3ObjectDataAdd(iam *S3Iam, refid bson.ObjectId, bucket_bid, object_bid str
 		State:		S3StateNone,
 
 		RefID:		refid,
-		BucketBID:	bucket_bid,
-		ObjectBID:	object_bid,
+		BCookie:	bucket_bid,
+		OCookie:	object_bid,
 		Size:		int64(len(data)),
 		CreationTime:	time.Now().Format(time.RFC3339),
 	}
@@ -177,7 +177,7 @@ func s3ObjectDataAdd(iam *S3Iam, refid bson.ObjectId, bucket_bid, object_bid str
 			goto out
 		}
 	} else {
-		err = radosWriteObject(objd.BucketBID, objd.ObjectBID, data, 0)
+		err = radosWriteObject(objd.BCookie, objd.OCookie, data, 0)
 		if err != nil {
 			goto out
 		}
@@ -185,7 +185,7 @@ func s3ObjectDataAdd(iam *S3Iam, refid bson.ObjectId, bucket_bid, object_bid str
 
 	if err = dbS3SetState(objd, S3StateActive, nil); err != nil {
 		if objd.Data == nil {
-			radosDeleteObject(objd.BucketBID, objd.ObjectBID)
+			radosDeleteObject(objd.BCookie, objd.OCookie)
 		}
 		goto out
 	}
@@ -207,7 +207,7 @@ func s3ObjectDataDel(objd *S3ObjectData) (error) {
 	}
 
 	if objd.Data == nil {
-		err = radosDeleteObject(objd.BucketBID, objd.ObjectBID)
+		err = radosDeleteObject(objd.BCookie, objd.OCookie)
 		if err != nil {
 			return err
 		}
@@ -227,7 +227,7 @@ func s3ObjectDataGet(objd *S3ObjectData) ([]byte, error) {
 	var err error
 
 	if objd.Data == nil {
-		res, err = radosReadObject(objd.BucketBID, objd.ObjectBID,
+		res, err = radosReadObject(objd.BCookie, objd.OCookie,
 						uint64(objd.Size), 0)
 		if err != nil {
 			return nil, err
