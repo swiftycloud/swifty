@@ -177,7 +177,7 @@ func s3ObjectDataAdd(iam *S3Iam, refid bson.ObjectId, bucket_bid, object_bid str
 			goto out
 		}
 	} else {
-		err = radosWriteObject(objd.BCookie, objd.OCookie, data, 0)
+		err = radosWriteObject(bucket_bid, object_bid, data, 0)
 		if err != nil {
 			goto out
 		}
@@ -185,7 +185,7 @@ func s3ObjectDataAdd(iam *S3Iam, refid bson.ObjectId, bucket_bid, object_bid str
 
 	if err = dbS3SetState(objd, S3StateActive, nil); err != nil {
 		if objd.Data == nil {
-			radosDeleteObject(objd.BCookie, objd.OCookie)
+			radosDeleteObject(bucket_bid, object_bid)
 		}
 		goto out
 	}
