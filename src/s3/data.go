@@ -20,6 +20,7 @@ type S3ObjectData struct {
 	OCookie				string		`bson:"ocookie,omitempty"`
 	CreationTime			string		`bson:"creation-time,omitempty"`
 	Size				int64		`bson:"size"`
+	Part				uint		`bson:"part"`
 	ETag				[md5.Size]byte	`bson:"etag"`
 	Data				[]byte		`bson:"data,omitempty"`
 }
@@ -134,29 +135,29 @@ func s3DeactivateObjectData(refID bson.ObjectId) error {
 	return dbS3Update(query, update, false, &S3ObjectData{})
 }
 
-func s3ObjectDataFind(refID bson.ObjectId) (*S3ObjectData, error) {
-	var res S3ObjectData
+func s3ObjectDataFind(refID bson.ObjectId) ([]*S3ObjectData, error) {
+	var res []*S3ObjectData
 
-	err := dbS3FindOneFields(bson.M{"ref-id": refID, "state": S3StateActive}, bson.M{"data": 0}, &res)
+	err := dbS3FindAllFields(bson.M{"ref-id": refID, "state": S3StateActive}, bson.M{"data": 0}, &res)
 	if err != nil {
 		return nil, err
 	}
 
-	return &res, nil
+	return res, nil
 }
 
-func s3ObjectDataFindFull(refID bson.ObjectId) (*S3ObjectData, error) {
-	var res S3ObjectData
+func s3ObjectDataFindFull(refID bson.ObjectId) ([]*S3ObjectData, error) {
+	var res []*S3ObjectData
 
-	err := dbS3FindOne(bson.M{"ref-id": refID, "state": S3StateActive}, &res)
+	err := dbS3FindAllSorted(bson.M{"ref-id": refID, "state": S3StateActive}, "part",  &res)
 	if err != nil {
 		return nil, err
 	}
 
-	return &res, nil
+	return res, nil
 }
 
-func s3ObjectDataAdd(iam *S3Iam, refid bson.ObjectId, bucket_bid, object_bid string, data []byte) (*S3ObjectData, error) {
+func s3ObjectDataAdd(iam *S3Iam, refid bson.ObjectId, bucket_bid, object_bid string, part int, data []byte) (*S3ObjectData, error) {
 	var objd *S3ObjectData
 	var err error
 
@@ -169,6 +170,7 @@ func s3ObjectDataAdd(iam *S3Iam, refid bson.ObjectId, bucket_bid, object_bid str
 		BCookie:	bucket_bid,
 		OCookie:	object_bid,
 		Size:		int64(len(data)),
+		Part:		uint(part),
 		ETag:		md5.Sum(data),
 		CreationTime:	time.Now().Format(time.RFC3339),
 	}
@@ -211,7 +213,18 @@ out:
 	return nil, err
 }
 
-func s3ObjectDataDel(bucket *S3Bucket, ocookie string, objd *S3ObjectData) (error) {
+func s3ObjectDataDel(bucket *S3Bucket, ocookie string, objd []*S3ObjectData) (error) {
+	for _, od := range objd {
+		err := s3ObjectDataDelOne(bucket, ocookie, od)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func s3ObjectDataDelOne(bucket *S3Bucket, ocookie string, objd *S3ObjectData) (error) {
 	var err error
 
 	err = dbS3SetState(objd, S3StateInactive, nil)
@@ -235,7 +248,22 @@ func s3ObjectDataDel(bucket *S3Bucket, ocookie string, objd *S3ObjectData) (erro
 	return nil
 }
 
-func s3ObjectDataGet(bucket *S3Bucket, ocookie string, objd *S3ObjectData) ([]byte, error) {
+func s3ObjectDataGet(bucket *S3Bucket, ocookie string, objd []*S3ObjectData) ([]byte, error) {
+	var res []byte
+
+	for _, od := range objd {
+		x, err := s3ObjectDataGetOne(bucket, ocookie, od)
+		if err != nil {
+			return nil, err
+		}
+
+		res = append(res, x...)
+	}
+
+	return res, nil
+}
+
+func s3ObjectDataGetOne(bucket *S3Bucket, ocookie string, objd *S3ObjectData) ([]byte, error) {
 	var res []byte
 	var err error
 

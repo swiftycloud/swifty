@@ -147,7 +147,7 @@ func s3AddObject(iam *S3Iam, bucket *S3Bucket, oname string,
 	}
 
 	objd, err = s3ObjectDataAdd(iam, object.ObjID, bucket.BCookie,
-					object.OCookie, data)
+					object.OCookie, 0, data)
 	if err != nil {
 		goto out_acc
 	}
@@ -173,7 +173,7 @@ func s3AddObject(iam *S3Iam, bucket *S3Bucket, oname string,
 	return object, nil
 
 out:
-	s3ObjectDataDel(bucket, object.OCookie, objd)
+	s3ObjectDataDelOne(bucket, object.OCookie, objd)
 out_acc:
 	bucket.dbDelObj(object.Size, -1)
 out_remove:
@@ -183,7 +183,7 @@ out_remove:
 
 func s3DeleteObject(iam *S3Iam, bucket *S3Bucket, oname string) error {
 	var object *S3Object
-	var objd *S3ObjectData
+	var objd []*S3ObjectData
 	var err error
 
 	object, err = bucket.FindObject(oname)
@@ -235,7 +235,7 @@ func s3DeleteObject(iam *S3Iam, bucket *S3Bucket, oname string) error {
 }
 
 func s3ReadObjectData(bucket *S3Bucket, object *S3Object) ([]byte, error) {
-	var objd *S3ObjectData
+	var objd []*S3ObjectData
 	var res []byte
 	var err error
 

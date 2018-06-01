@@ -190,7 +190,6 @@ func VerifyUploadUID(bucket *S3Bucket, oname, uid string) error {
 
 func s3UploadRemoveLocked(bucket *S3Bucket, upload *S3Upload) (error) {
 	var parts []S3UploadPart
-	var objd *S3ObjectData
 	var err error
 
 	err = dbS3SetState(upload, S3StateInactive, nil)
@@ -207,6 +206,8 @@ func s3UploadRemoveLocked(bucket *S3Bucket, upload *S3Upload) (error) {
 		}
 	} else {
 		for _, part := range parts {
+			var objd []*S3ObjectData
+
 			objd, err = s3ObjectDataFind(part.ObjID)
 			if err != nil {
 				if err != mgo.ErrNotFound {
@@ -304,7 +305,7 @@ func s3UploadPart(iam *S3Iam, bucket *S3Bucket, oname,
 		Size:		int64(len(data)),
 	}
 
-	objd, err = s3ObjectDataAdd(iam, part.ObjID, bucket.BCookie, part.UCookie, data)
+	objd, err = s3ObjectDataAdd(iam, part.ObjID, bucket.BCookie, part.UCookie, partno, data)
 	if err != nil {
 		upload.dbRefDec()
 		log.Errorf("s3: Can't store data %s: %s", infoLong(part), err.Error())
@@ -315,14 +316,14 @@ func s3UploadPart(iam *S3Iam, bucket *S3Bucket, oname,
 
 	if err = dbS3Insert(part); err != nil {
 		upload.dbRefDec()
-		s3ObjectDataDel(bucket, part.UCookie, objd)
+		s3ObjectDataDelOne(bucket, part.UCookie, objd)
 		log.Errorf("s3: Can't insert %s: %s", infoLong(part), err.Error())
 		return "", err
 	}
 
 	if err = dbS3SetState(part, S3StateActive, nil); err != nil {
 		upload.dbRefDec()
-		s3ObjectDataDel(bucket, part.UCookie, objd)
+		s3ObjectDataDelOne(bucket, part.UCookie, objd)
 		log.Errorf("s3: Can't activate %s: %s", infoLong(part), err.Error())
 		return "", err
 	}
@@ -364,9 +365,15 @@ func s3UploadFini(iam *S3Iam, bucket *S3Bucket, uid string,
 	iter = pipe.Iter()
 	for iter.Next(&part) {
 		if part.State != S3StateActive { continue }
+		objd, err := s3ObjectDataFind(part.ObjID)
+		if err != nil {
+			return nil, err
+		}
 
-		size += part.Size
-		data = append(data, part.Data ...)
+		for _, od := range objd {
+			size += od.Size
+			data = append(data, od.Data ...)
+		}
 	}
 	if err = iter.Close(); err != nil {
 		log.Errorf("s3: Can't close iter on %s: %s",

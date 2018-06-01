@@ -334,6 +334,14 @@ func dbS3FindOneFields(query bson.M, sel bson.M, o interface{}) (error) {
 	return dbSession.DB(DBName).C(dbColl(o)).Find(query).Select(sel).One(o)
 }
 
+func dbS3FindAllFields(query bson.M, sel bson.M, o interface{}) (error) {
+	return dbSession.DB(DBName).C(dbColl(o)).Find(query).Select(sel).All(o)
+}
+
+func dbS3FindAllSorted(query bson.M, sort string, o interface{}) (error) {
+	return dbSession.DB(DBName).C(dbColl(o)).Find(query).Sort(sort).All(o)
+}
+
 func dbS3FindAll(query bson.M, o interface{}) (error) {
 	return dbSession.DB(DBName).C(dbColl(o)).Find(query).All(o)
 }
