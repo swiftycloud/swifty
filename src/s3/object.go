@@ -299,7 +299,8 @@ func s3ReadObjectData(bucket *S3Bucket, object *S3Object) ([]byte, error) {
 		return nil, err
 	}
 
-	res, err = s3ObjectPartGet(bucket, object.OCookie, objp)
+	/* FIXME -- push io.Writer and write data into it, do not carry bytes over */
+	res, err = s3ObjectPartRead(bucket, object.OCookie, objp)
 	if err != nil {
 		return nil, err
 	}

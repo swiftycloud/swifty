@@ -22,7 +22,97 @@ type S3ObjectPart struct {
 	Size				int64		`bson:"size"`
 	Part				uint		`bson:"part"`
 	ETag				string		`bson:"etag"`
-	Data				[]byte		`bson:"data,omitempty"`
+	Chunks				[]bson.ObjectId	`bson:"chunks"`
+}
+
+type S3DataChunk struct {
+	ObjID		bson.ObjectId	`bson:"_id,omitempty"`
+	Bytes		[]byte		`bson:"bytes"`
+}
+
+func s3ReadChunks(part *S3ObjectPart) ([]byte, error) {
+	var res []byte
+
+	if len(part.Chunks) == 0 {
+		return radosReadObject(part.BCookie, part.OCookie, uint64(part.Size), 0)
+	}
+
+	for _, cid := range part.Chunks {
+		var ch S3DataChunk
+
+		err := dbS3FindOne(bson.M{"_id": cid}, &ch)
+		if err != nil {
+			return nil, err
+		}
+
+		res = append(res, ch.Bytes...)
+	}
+
+	return res, nil
+}
+
+func s3WriteChunks(part *S3ObjectPart, data []byte) error {
+	var err error
+
+	if !radosDisabled && part.Size > S3StorageSizePerObj {
+		return radosWriteObject(part.BCookie, part.OCookie, data, 0)
+	}
+
+	dlen := int64(len(data))
+	for off := int64(0); off < dlen; off += S3StorageSizePerObj {
+		l := S3StorageSizePerObj
+		if off + l >= dlen {
+			l = dlen - off /* Trailing chunk */
+		}
+
+		chunk := &S3DataChunk {
+			ObjID:	bson.NewObjectId(),
+			Bytes:	data[off:off+l],
+		}
+
+		err = dbS3Insert(chunk)
+		if err != nil {
+			goto out
+		}
+
+		part.Chunks = append(part.Chunks, chunk.ObjID)
+	}
+
+	err = dbS3Update(bson.M{"_id": part.ObjID},
+			bson.M{ "$set": bson.M{ "chunks": part.Chunks }},
+			false, &S3ObjectPart{})
+	if err != nil {
+		goto out
+	}
+
+	return nil
+
+out:
+	if len(part.Chunks) != 0 {
+		s3DeleteChunks(part)
+	}
+	return err
+}
+
+func s3DeleteChunks(part *S3ObjectPart) error {
+	var err error
+
+	if len(part.Chunks) == 0 {
+		err = radosDeleteObject(part.BCookie, part.OCookie)
+	} else {
+		for _, ch := range part.Chunks {
+			er := dbS3Remove(&S3DataChunk{ObjID: ch})
+			if err != nil {
+				err = er
+			}
+		}
+	}
+	if err != nil {
+		log.Errorf("s3: %s/%s backend object data may stale",
+			part.BCookie, part.OCookie)
+	}
+
+	return err
 }
 
 func s3RepairObjectData() error {
@@ -86,13 +176,7 @@ func s3RepairObjectData() error {
 
 		}
 
-		if objp.Data == nil {
-			err = radosDeleteObject(objp.BCookie, objp.OCookie)
-			if err != nil {
-				log.Errorf("s3: %s/%s backend object data may stale",
-					objp.BCookie, objp.OCookie)
-			}
-		}
+		s3DeleteChunks(&objp)
 
 		err = dbS3Remove(&objp)
 		if err != nil {
@@ -158,29 +242,13 @@ func s3ObjectPartAdd(iam *S3Iam, refid bson.ObjectId, bucket_bid, object_bid str
 		goto out
 	}
 
-	if radosDisabled || objp.Size <= S3StorageSizePerObj {
-		if objp.Size > S3StorageSizePerObj {
-			log.Errorf("s3: Too big %s", infoLong(objp))
-			err = fmt.Errorf("s3: Object is too big")
-			goto out
-		}
-
-		update := bson.M{ "$set": bson.M{ "data": data }}
-		err = dbS3Update(nil, update, true, objp)
-		if err != nil {
-			goto out
-		}
-	} else {
-		err = radosWriteObject(bucket_bid, object_bid, data, 0)
-		if err != nil {
-			goto out
-		}
+	err = s3WriteChunks(objp, data)
+	if err != nil {
+		goto out
 	}
 
 	if err = dbS3SetState(objp, S3StateActive, nil); err != nil {
-		if objp.Data == nil {
-			radosDeleteObject(bucket_bid, object_bid)
-		}
+		s3DeleteChunks(objp)
 		goto out
 	}
 
@@ -211,11 +279,9 @@ func s3ObjectPartDelOne(bucket *S3Bucket, ocookie string, objp *S3ObjectPart) (e
 		return err
 	}
 
-	if objp.Data == nil {
-		err = radosDeleteObject(bucket.BCookie, ocookie)
-		if err != nil {
-			return err
-		}
+	err = s3DeleteChunks(objp)
+	if err != nil {
+		return err
 	}
 
 	err = dbS3RemoveOnState(objp, S3StateInactive, nil)
@@ -227,11 +293,11 @@ func s3ObjectPartDelOne(bucket *S3Bucket, ocookie string, objp *S3ObjectPart) (e
 	return nil
 }
 
-func s3ObjectPartGet(bucket *S3Bucket, ocookie string, objp []*S3ObjectPart) ([]byte, error) {
+func s3ObjectPartRead(bucket *S3Bucket, ocookie string, objp []*S3ObjectPart) ([]byte, error) {
 	var res []byte
 
 	for _, od := range objp {
-		x, err := s3ObjectPartGetOne(bucket, ocookie, od)
+		x, err := s3ReadChunks(od)
 		if err != nil {
 			return nil, err
 		}
@@ -240,22 +306,6 @@ func s3ObjectPartGet(bucket *S3Bucket, ocookie string, objp []*S3ObjectPart) ([]
 	}
 
 	return res, nil
-}
-
-func s3ObjectPartGetOne(bucket *S3Bucket, ocookie string, objp *S3ObjectPart) ([]byte, error) {
-	var res []byte
-	var err error
-
-	if objp.Data == nil {
-		res, err = radosReadObject(bucket.BCookie, ocookie, uint64(objp.Size), 0)
-		if err != nil {
-			return nil, err
-		}
-
-		return res, nil
-	}
-
-	return objp.Data, nil
 }
 
 func s3ObjectPartsResum(upload *S3Upload) (int64, string, error) {
@@ -274,12 +324,21 @@ func s3ObjectPartsResum(upload *S3Upload) (int64, string, error) {
 		if objp.State != S3StateActive {
 			continue
 		}
-		if objp.Data == nil {
+		if len(objp.Chunks) == 0 {
 			/* XXX Too bad :( */
 			return 0, "", fmt.Errorf("Can't finish upload")
 		}
 
-		hasher.Write(objp.Data)
+		for _, cid := range objp.Chunks {
+			var ch S3DataChunk
+
+			err := dbS3FindOne(bson.M{"_id": cid}, &ch)
+			if err != nil {
+				return 0, "", err
+			}
+
+			hasher.Write(ch.Bytes)
+		}
 		size += objp.Size
 	}
 	if err := iter.Close(); err != nil {
