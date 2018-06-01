@@ -84,7 +84,7 @@ func (bucket *S3Bucket)OCookie(oname string, version int) string {
 }
 
 // Object part key in backend and index in DB for lookup
-func (upload *S3Upload)ObjectBID(oname string, part int) string {
+func (upload *S3Upload)UCookie(oname string, part int) string {
 	return sha256sum([]byte(upload.UploadID + oname + strconv.Itoa(part)))
 }
 

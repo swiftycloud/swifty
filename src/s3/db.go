@@ -81,7 +81,7 @@ func dbConnect(conf *YAMLConf) error {
 	index.Key = []string{"uid"}
 	dbSession.DB(DBName).C(DBColS3Uploads).EnsureIndex(index)
 
-	index.Key = []string{"bid"}
+	index.Key = []string{"ucookie"}
 	dbSession.DB(DBName).C(DBColS3Uploads).EnsureIndex(index)
 
 	index.Key = []string{"access-key-id"}
@@ -206,7 +206,7 @@ func infoLong(o interface{}) (string) {
 		part := o.(*S3UploadPart)
 		return fmt.Sprintf("{ S3UploadPart: %s/%s/%s/%d/%s }",
 			part.ObjID, part.UploadObjID,
-			part.BackendID, part.Part,
+			part.UCookie, part.Part,
 			part.Key)
 	}
 	return "{ Unknown type }"

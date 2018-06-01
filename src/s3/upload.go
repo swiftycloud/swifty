@@ -13,11 +13,12 @@ import (
 type S3UploadPart struct {
 	ObjID				bson.ObjectId	`bson:"_id,omitempty"`
 	IamObjID			bson.ObjectId	`bson:"iam-id,omitempty"`
+	UCookie				string		`bson:"ucookie"`
+
 	MTime				int64		`bson:"mtime,omitempty"`
 	State				uint32		`bson:"state"`
 
 	UploadObjID			bson.ObjectId	`bson:"upload-id,omitempty"`
-	BackendID			string		`bson:"bid"`
 
 	Part				int		`bson:"part"`
 	Size				int64		`bson:"size"`
@@ -299,12 +300,12 @@ func s3UploadPart(iam *S3Iam, bucket *S3Bucket, oname,
 			CreationTime:	time.Now().Format(time.RFC3339),
 		},
 		UploadObjID:	upload.ObjID,
-		BackendID:	upload.ObjectBID(oname, partno),
+		UCookie:	upload.UCookie(oname, partno),
 		Part:		partno,
 		Size:		int64(len(data)),
 	}
 
-	objd, etag, err = s3ObjectDataAdd(iam, part.ObjID, bucket.BCookie, part.BackendID, data)
+	objd, etag, err = s3ObjectDataAdd(iam, part.ObjID, bucket.BCookie, part.UCookie, data)
 	if err != nil {
 		upload.dbRefDec()
 		log.Errorf("s3: Can't store data %s: %s", infoLong(part), err.Error())
