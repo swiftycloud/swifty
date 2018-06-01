@@ -20,6 +20,7 @@ const (
 	DBColS3Objects				= "S3Objects"
 	DBColS3Uploads				= "S3Uploads"
 	DBColS3ObjectData			= "S3ObjectData"
+	DBColS3DataChunks			= "S3DataChunks"
 	DBColS3AccessKeys			= "S3AccessKeys"
 )
 
@@ -115,6 +116,12 @@ func dbConnect(conf *YAMLConf) error {
 	dbColMap[reflect.TypeOf(&[]S3ObjectPart{})] = DBColS3ObjectData
 	dbColMap[reflect.TypeOf([]*S3ObjectPart{})] = DBColS3ObjectData
 	dbColMap[reflect.TypeOf(&[]*S3ObjectPart{})] = DBColS3ObjectData
+	dbColMap[reflect.TypeOf(S3DataChunk{})] = DBColS3DataChunks
+	dbColMap[reflect.TypeOf(&S3DataChunk{})] = DBColS3DataChunks
+	dbColMap[reflect.TypeOf([]S3DataChunk{})] = DBColS3DataChunks
+	dbColMap[reflect.TypeOf(&[]S3DataChunk{})] = DBColS3DataChunks
+	dbColMap[reflect.TypeOf([]*S3DataChunk{})] = DBColS3DataChunks
+	dbColMap[reflect.TypeOf(&[]*S3DataChunk{})] = DBColS3DataChunks
 
 	return nil
 }
