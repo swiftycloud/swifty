@@ -217,8 +217,7 @@ func s3AddObject(iam *S3Iam, bucket *S3Bucket, oname string,
 		goto out_remove
 	}
 
-	objp, err = s3ObjectPartAdd(iam, object.ObjID, bucket.BCookie,
-					object.OCookie, 0, data)
+	objp, err = s3ObjectPartAdd(iam, object.ObjID, bucket.BCookie, object.OCookie, 0, data)
 	if err != nil {
 		goto out_acc
 	}
