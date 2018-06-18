@@ -116,57 +116,48 @@ func (fn *FunctionDesc)getURL() string {
 }
 
 func (fn *FunctionDesc)toInfo(details bool, periods int) (*swyapi.FunctionInfo, *swyapi.GateErr) {
-	var fv []string
-	var url = ""
-	var err error
-
-	if !details {
-		return &swyapi.FunctionInfo{
-			Id:		fn.ObjID.Hex(),
-			Name:		fn.SwoId.Name,
-			Project:	fn.SwoId.Project,
-			Labels:		fn.Labels,
-			State:          fnStates[fn.State],
-		}, nil
-	}
-
-	if fn.isURL() {
-		url = fn.getURL()
-	}
-
-	stats, cerr := getFunctionStats(fn, periods)
-	if err != nil {
-		return nil, cerr
-	}
-
-	fv, err = dbBalancerRSListVersions(fn.Cookie)
-	if err != nil {
-		return nil, GateErrD(err)
-	}
-
-	return &swyapi.FunctionInfo{
+	fi := &swyapi.FunctionInfo {
 		Id:		fn.ObjID.Hex(),
 		Name:		fn.SwoId.Name,
 		Project:	fn.SwoId.Project,
 		Labels:		fn.Labels,
 		State:          fnStates[fn.State],
-		Version:        fn.Src.Version,
-		RdyVersions:    fv,
-		URL:		url,
-		Code:		swyapi.FunctionCode{
+	}
+
+	if details {
+		var err error
+		var cerr *swyapi.GateErr
+
+		if fn.isURL() {
+			fi.URL = fn.getURL()
+		}
+
+		fi.Stats, cerr = getFunctionStats(fn, periods)
+		if err != nil {
+			return nil, cerr
+		}
+
+		fi.RdyVersions, err = dbBalancerRSListVersions(fn.Cookie)
+		if err != nil {
+			return nil, GateErrD(err)
+		}
+
+		fi.Version = fn.Src.Version
+		fi.AuthCtx = fn.AuthCtx
+		fi.UserData = fn.UserData
+		fi.Code = swyapi.FunctionCode{
 			Lang:		fn.Code.Lang,
 			Env:		fn.Code.Env,
-		},
-		Stats: stats,
-		Size:		swyapi.FunctionSize {
+		}
+		fi.Size = swyapi.FunctionSize {
 			Memory:		fn.Size.Mem,
 			Timeout:	fn.Size.Tmo,
 			Rate:		fn.Size.Rate,
 			Burst:		fn.Size.Burst,
-		},
-		AuthCtx:	fn.AuthCtx,
-		UserData:	fn.UserData,
-	}, nil
+		}
+	}
+
+	return fi, nil
 }
 
 func getFunctionDesc(id *SwoId, p_add *swyapi.FunctionAdd) *FunctionDesc {

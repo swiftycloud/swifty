@@ -168,12 +168,13 @@ func (item *MwareDesc)toFnInfo(ctx context.Context) *swyapi.MwareInfo {
 }
 
 func (item *MwareDesc)toInfo(ctx context.Context, conf *YAMLConfMw, details bool) (*swyapi.MwareInfo, *swyapi.GateErr) {
-	resp := &swyapi.MwareInfo{}
-	resp.ID = item.ObjID.Hex()
-	resp.Name = item.SwoId.Name
-	resp.Project = item.SwoId.Project
-	resp.Type = item.MwareType
-	resp.Labels = item.Labels
+	resp := &swyapi.MwareInfo{
+		ID:		item.ObjID.Hex(),
+		Name:		item.SwoId.Name,
+		Project:	item.SwoId.Project,
+		Type:		item.MwareType,
+		Labels:		item.Labels,
+	}
 
 	if details {
 		resp.UserData = item.UserData

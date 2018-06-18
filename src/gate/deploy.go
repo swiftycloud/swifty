@@ -169,18 +169,19 @@ func deployStart(ctx context.Context, dep *DeployDesc) (string, *swyapi.GateErr)
 }
 
 func (dep *DeployDesc)toInfo(details bool) (*swyapi.DeployInfo, *swyapi.GateErr) {
-	var ret swyapi.DeployInfo
+	ret := &swyapi.DeployInfo {
+		Id:		dep.ObjID.Hex(),
+		Name:		dep.SwoId.Name,
+		Project:	dep.SwoId.Project,
+		State:		depStates[dep.State],
+		Labels:		dep.Labels,
+	}
 
-	ret.Id = dep.ObjID.Hex()
-	ret.Name = dep.SwoId.Name
-	ret.Project = dep.SwoId.Project
-	ret.State = depStates[dep.State]
-	ret.Labels = dep.Labels
 	for _, item := range dep.Items {
 		ret.Items = append(ret.Items, item.info(details))
 	}
 
-	return &ret, nil
+	return ret, nil
 }
 
 func deployStop(ctx context.Context, dep *DeployDesc) (*swyapi.GateErr) {
