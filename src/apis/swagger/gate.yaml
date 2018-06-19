@@ -1063,6 +1063,11 @@ paths:
           type: string
           required: false
           description: Name of deployment to find (useful to resolve ID by name)
+        - in: query
+          name: label
+          type: string
+          required: false
+          description: Filter output by label(s)
       responses:
         '200':
           description: All objects has been /add-ed

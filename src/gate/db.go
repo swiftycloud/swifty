@@ -551,8 +551,12 @@ func dbDeployList(q bson.M) (deps []DeployDesc, err error) {
 	return
 }
 
-func dbDeployListProj(id *SwoId) (deps []*DeployDesc, err error) {
-	err = dbSession.DB(DBStateDB).C(DBColDeploy).Find(bson.M{"tennant":id.Tennant,"project":id.Project}).All(&deps)
+func dbDeployListProj(id *SwoId, labels []string) (deps []*DeployDesc, err error) {
+	q := bson.D{{"tennant", id.Tennant}, {"project", id.Project}}
+	for _, l := range labels {
+		q = append(q, bson.DocElem{"labels", l})
+	}
+	err = dbSession.DB(DBStateDB).C(DBColDeploy).Find(q).All(&deps)
 	return
 }
 

@@ -1016,7 +1016,13 @@ func deploy_info(args []string, opts [16]string) {
 
 func deploy_list(args []string, opts [16]string) {
 	var dis []*swyapi.DeployInfo
-	make_faas_req1("GET", "deployments", http.StatusOK, nil, &dis)
+	ua := []string{}
+	if opts[0] != "" {
+		for _, l := range strings.Split(opts[0], ",") {
+			ua = append(ua, "label=" + l)
+		}
+	}
+	make_faas_req1("GET", url("deployments", ua), http.StatusOK, nil, &dis)
 	fmt.Printf("%-32s%-20s\n", "ID", "NAME")
 	for _, di := range dis {
 		fmt.Printf("%-32s%-20s (%d items) %s\n", di.Id, di.Name, len(di.Items), strings.Join(di.Labels, ","))
@@ -1411,6 +1417,7 @@ func main() {
 	bindCmdUsage(CMD_S3ACC,	[]string{"BUCKET"}, "Get keys for S3", true)
 	bindCmdUsage(CMD_AUTH,	[]string{"ACTION"}, "Manage project auth", true)
 
+	cmdMap[CMD_DL].opts.StringVar(&opts[0], "label", "", "Labels, comma-separated")
 	bindCmdUsage(CMD_DL,	[]string{},	"List deployments", true)
 	bindCmdUsage(CMD_DI,	[]string{"NAME"}, "Show info about deployment", true)
 	bindCmdUsage(CMD_DA,	[]string{"NAME", "DESC"}, "Add (start) deployment", true)

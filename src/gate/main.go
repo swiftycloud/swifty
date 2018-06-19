@@ -1348,7 +1348,7 @@ func handleDeployments(ctx context.Context, w http.ResponseWriter, r *http.Reque
 
 		dname := q.Get("name")
 		if dname == "" {
-			deps, err = dbDeployListProj(ctxSwoId(ctx, project, ""))
+			deps, err = dbDeployListProj(ctxSwoId(ctx, project, ""), q["label"])
 			if err != nil {
 				return GateErrD(err)
 			}
