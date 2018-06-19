@@ -152,7 +152,7 @@ func dbFuncFindOne(q bson.M) (*FunctionDesc, error) {
 	return &v, err
 }
 
-func dbFuncFindAll(q bson.M) (vs []*FunctionDesc, err error) {
+func dbFuncFindAll(q interface{}) (vs []*FunctionDesc, err error) {
 	c := dbSession.DB(DBStateDB).C(DBColFunc)
 	err = c.Find(q).All(&vs)
 	return
@@ -186,8 +186,15 @@ func dbFuncList() ([]*FunctionDesc, error) {
 	return dbFuncFindAll(bson.M{})
 }
 
-func dbFuncListProj(id *SwoId) ([]*FunctionDesc, error) {
-	return dbFuncFindAll(bson.M{"tennant": id.Tennant, "project": id.Project})
+func dbFuncListProj(id *SwoId, labels []string) ([]*FunctionDesc, error) {
+	q := bson.D{{"tennant", id.Tennant}, {"project", id.Project}}
+	for _, l := range labels {
+		q = append(q, bson.DocElem{"labels", l})
+	}
+
+	glog.Debugf("Find fns: %v", q)
+
+	return dbFuncFindAll(q)/*bson.M{"tennant": id.Tennant, "project": id.Project})*/
 }
 
 func dbFuncListMwEvent(id *SwoId, rq bson.M) ([]*FunctionDesc, error) {

@@ -402,6 +402,12 @@ func function_list(args []string, opts [16]string) {
 		ua = append(ua, "project=" + curCmd.project)
 	}
 
+	if opts[1] != "" {
+		for _, l := range strings.Split(opts[1], ",") {
+			ua = append(ua, "label=" + l)
+		}
+	}
+
 	if opts[0] == "" {
 		var fns []swyapi.FunctionInfo
 		make_faas_req1("GET", url("functions", ua), http.StatusOK, nil, &fns)
@@ -1346,6 +1352,7 @@ func main() {
 	bindCmdUsage(CMD_PS,	[]string{}, "List projects", false)
 
 	cmdMap[CMD_FL].opts.StringVar(&opts[0], "o", "", "Output format (NONE, json)")
+	cmdMap[CMD_FL].opts.StringVar(&opts[1], "label", "", "Labels, comma-separated")
 	bindCmdUsage(CMD_FL,	[]string{}, "List functions", true)
 	bindCmdUsage(CMD_FI,	[]string{"NAME"}, "Function info", true)
 	cmdMap[CMD_FA].opts.StringVar(&opts[0], "lang", "auto", "Language")

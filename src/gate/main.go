@@ -224,7 +224,7 @@ func handleProjectDel(ctx context.Context, w http.ResponseWriter, r *http.Reques
 
 	id = ctxSwoId(ctx, par.Project, "")
 
-	fns, err = dbFuncListProj(id)
+	fns, err = dbFuncListProj(id, []string{})
 	if err != nil {
 		return GateErrD(err)
 	}
@@ -1022,10 +1022,11 @@ func handleFunctions(ctx context.Context, w http.ResponseWriter, r *http.Request
 
 		fname := q.Get("name")
 		if fname == "" {
-			fns, err = dbFuncListProj(ctxSwoId(ctx, project, ""))
+			fns, err = dbFuncListProj(ctxSwoId(ctx, project, ""), q["label"])
 			if err != nil {
 				return GateErrD(err)
 			}
+			glog.Debugf("Found %d fns", len(fns))
 		} else {
 			var fn *FunctionDesc
 
