@@ -910,6 +910,11 @@ func mware_list(args []string, opts [16]string) {
 	if opts[1] != "" {
 		ua = append(ua, "type=" + opts[1])
 	}
+	if opts[2] != "" {
+		for _, l := range strings.Split(opts[2], ",") {
+			ua = append(ua, "label=" + l)
+		}
+	}
 
 	if opts[0] == "" {
 		make_faas_req1("GET", url("middleware", ua), http.StatusOK, nil, &mws)
@@ -1395,6 +1400,7 @@ func main() {
 
 	cmdMap[CMD_ML].opts.StringVar(&opts[0], "o", "", "Output format (NONE, json)")
 	cmdMap[CMD_ML].opts.StringVar(&opts[1], "type", "", "Filter mware by type")
+	cmdMap[CMD_ML].opts.StringVar(&opts[2], "label", "", "Labels, comma-separated")
 	bindCmdUsage(CMD_ML,	[]string{}, "List middleware", true)
 	bindCmdUsage(CMD_MI,	[]string{"NAME"}, "Middleware info", true)
 	cmdMap[CMD_MA].opts.StringVar(&opts[0], "data", "", "Associated text")

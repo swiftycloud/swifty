@@ -237,7 +237,7 @@ func handleProjectDel(ctx context.Context, w http.ResponseWriter, r *http.Reques
 		}
 	}
 
-	mws, err = dbMwareListProj(id, "")
+	mws, err = dbMwareListProj(id, "", []string{})
 	if err != nil {
 		return GateErrD(err)
 	}
@@ -1220,7 +1220,7 @@ func handleMwares(ctx context.Context, w http.ResponseWriter, r *http.Request) *
 
 		mname := q.Get("name")
 		if mname == "" {
-			mws, err = dbMwareListProj(ctxSwoId(ctx, project, ""), mwtype)
+			mws, err = dbMwareListProj(ctxSwoId(ctx, project, ""), mwtype, q["label"])
 			if err != nil {
 				return GateErrD(err)
 			}
