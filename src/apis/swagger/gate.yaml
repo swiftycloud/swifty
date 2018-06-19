@@ -145,6 +145,11 @@ paths:
           type: string
           required: false
           description: Name of a function to find (useful to resolve ID by name)
+        - in: query
+          name: label
+          type: string
+          required: false
+          description: Filter output by label(s)
       responses:
         '200':
           description: OK
@@ -918,6 +923,11 @@ paths:
           type: string
           required: false
           description: Name of a mware item to find (useful to resolve ID by name)
+        - in: query
+          name: label
+          type: string
+          required: false
+          description: Filter output by label(s)
       responses:
         '200':
           description: OK
