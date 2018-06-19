@@ -135,6 +135,11 @@ func (dep *DeployDesc)getItems(items []*swyapi.DeployItem) *swyapi.GateErr {
 	id := dep.SwoId
 	for _, item := range items {
 		if item.Function != nil && item.Mware == nil {
+			er := swyFixSize(&item.Function.Size, &conf)
+			if er != nil {
+				return GateErrE(swy.GateBadRequest, er)
+			}
+
 			id.Name = item.Function.Name
 			fd := getFunctionDesc(&id, item.Function)
 			fd.Labels = dep.Labels
