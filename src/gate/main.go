@@ -1729,6 +1729,7 @@ func main() {
 		return
 	}
 
+	glog.Debugf("Flavor: %s", Flavor)
 	glog.Debugf("PROXY: %v", SwdProxyOK)
 
 	r := mux.NewRouter()
