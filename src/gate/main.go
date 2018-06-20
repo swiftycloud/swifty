@@ -657,37 +657,6 @@ func handleFunctionWait(ctx context.Context, w http.ResponseWriter, r *http.Requ
 	return nil
 }
 
-func handleFunctionState(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
-	fn, cerr := fnFindForReq(ctx, r)
-	if cerr != nil {
-		return cerr
-	}
-
-	switch r.Method {
-	case "GET":
-		err := swyhttp.MarshalAndWrite(w, fnStates[fn.State])
-		if err != nil {
-			return GateErrE(swy.GateBadResp, err)
-		}
-	case "PUT":
-		var state string
-
-		err := swyhttp.ReadAndUnmarshalReq(r, &state)
-		if err != nil {
-			return GateErrE(swy.GateBadRequest, err)
-		}
-
-		cerr := setFunctionState(ctx, &conf, fn, state)
-		if cerr != nil {
-			return cerr
-		}
-
-		w.WriteHeader(http.StatusOK)
-	}
-
-	return nil
-}
-
 func handleFunctionSources(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
 	fn, cerr := fnFindForReq(ctx, r)
 	if cerr != nil {
@@ -1138,6 +1107,13 @@ func handleFunction(ctx context.Context, w http.ResponseWriter, r *http.Request)
 			err = fn.setUserData(*fu.UserData)
 			if err != nil {
 				return GateErrE(swy.GateGenErr, err)
+			}
+		}
+
+		if fu.State != "" {
+			cerr := setFunctionState(ctx, &conf, fn, fu.State)
+			if cerr != nil {
+				return cerr
 			}
 		}
 
@@ -1748,7 +1724,6 @@ func main() {
 	r.Handle("/v1/functions/{fid}/triggers/{eid}", genReqHandler(handleFunctionTrigger)).Methods("GET", "DELETE", "OPTIONS")
 	r.Handle("/v1/functions/{fid}/logs",	genReqHandler(handleFunctionLogs)).Methods("GET", "OPTIONS")
 	r.Handle("/v1/functions/{fid}/stats",	genReqHandler(handleFunctionStats)).Methods("GET", "OPTIONS")
-	r.Handle("/v1/functions/{fid}/state",	genReqHandler(handleFunctionState)).Methods("GET", "PUT", "OPTIONS")
 	r.Handle("/v1/functions/{fid}/authctx",	genReqHandler(handleFunctionAuthCtx)).Methods("GET", "PUT", "OPTIONS")
 	r.Handle("/v1/functions/{fid}/size",	genReqHandler(handleFunctionSize)).Methods("GET", "PUT", "OPTIONS")
 	r.Handle("/v1/functions/{fid}/sources",	genReqHandler(handleFunctionSources)).Methods("GET", "PUT", "OPTIONS")

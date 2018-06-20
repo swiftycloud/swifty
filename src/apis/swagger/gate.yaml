@@ -236,7 +236,7 @@ paths:
           schema:
             $ref: '#/definitions/FunctionUpdate'
           required: true
-          description: Parameters to update
+          description: Parameters to update. Note, that this is not an atomic call, each of the parameters from argument gets update one-by-one without rolling back any if some fails. Once some update fails, the call stops. So it's recommended to call this with only a single parameter set.
       responses:
         '200':
           description: OK
@@ -359,58 +359,6 @@ paths:
             type: array
             items:
               $ref: '#/definitions/FunctionStatsResp'
-        '400':
-          description: Bad request
-          schema:
-            $ref: '#/definitions/GateError'
-        '401':
-          description: Need to authenticate
-        '403':
-          description: Bad authentication token
-          
-  /functions/{fid}/state:
-    parameters:
-      - in: header
-        name: X-Auth-Token
-        type: string
-        required: true
-      - in: path
-        name: fid
-        type: string
-        required: true
-        description: Function ID
-    get:
-      tags:
-        - function
-      summary: Get function state
-      responses:
-        '200':
-          description: OK
-          schema:
-            type: string
-            example: 'ready, deactivated'
-        '400':
-          description: Bad request
-          schema:
-            $ref: '#/definitions/GateError'
-        '401':
-          description: Need to authenticate
-        '403':
-          description: Bad authentication token
-    put:
-      tags:
-        - function
-      summary: Set function state
-      parameters:
-        - in: body
-          name: v
-          schema:
-            type: string
-          required: true
-          description: State to set
-      responses:
-        '200':
-          description: OK
         '400':
           description: Bad request
           schema:
@@ -1579,6 +1527,9 @@ definitions:
       userdata:
         type: string
         description: And string user wishes to keep with this FN
+      state/:
+        type: string
+        description: State to set (e.g. "ready" or "deactivted")
   FunctionAdd:
     required:
       - name

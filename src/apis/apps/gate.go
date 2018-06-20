@@ -166,6 +166,7 @@ type FunctionAdd struct {
 
 type FunctionUpdate struct {
 	UserData	*string			`json:"userdata,omitempty"`
+	State		string			`json:"state,omitempty"`
 }
 
 type FunctionRun struct {
