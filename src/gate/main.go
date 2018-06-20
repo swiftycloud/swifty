@@ -1492,7 +1492,10 @@ func handleAuths(ctx context.Context, w http.ResponseWriter, r *http.Request) *s
 			{ Mware: &swyapi.MwareAdd{ Name: aa.Name + "_mgo", Type: "mongo" } },
 			{ Function: &swyapi.FunctionAdd {
 				Name: aa.Name + "_um",
-				Code: swyapi.FunctionCode { Lang: "golang" },
+				Code: swyapi.FunctionCode {
+					Lang: "golang",
+					Env: []string{ "SWIFTY_AUTH_NAME=" + aa.Name },
+				},
 				Sources: swyapi.FunctionSources {
 					Type: "swage",
 					Swage: &swyapi.FunctionSwage { Template: "umjwt0", },

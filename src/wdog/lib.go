@@ -105,18 +105,17 @@ func AuthContext() (*AuthCtx, error) {
 
 		ctx = &AuthCtx{}
 
-		auc := os.Getenv("SWIFTY_AUTHJWT_MWARE")
-		mgo := os.Getenv("SWIFTY_AUTHJWT_MONGO")
-		if mgo == "" || auc == "" {
+		aun := os.Getenv("SWIFTY_AUTH_NAME")
+		if aun == "" {
 			return nil, errors.New("No authjwt middleware attached")
 		}
 
-		db, err := MongoDatabase(mgo)
+		db, err := MongoDatabase(aun + "_mgo")
 		if err != nil {
 			return nil, errors.New("No mongo for authjwn found")
 		}
 
-		key := os.Getenv("MWARE_AUTHJWT" + strings.ToUpper(auc) + "_SIGNKEY")
+		key := os.Getenv("MWARE_AUTHJWT" + strings.ToUpper(aun + "_jwt") + "_SIGNKEY")
 		if key == "" {
 			return nil, errors.New("No authjwt key found")
 		}

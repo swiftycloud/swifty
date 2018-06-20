@@ -46,7 +46,7 @@ func doSignin(auth *swifty.AuthCtx, args map[string]string) interface{} {
 		return &authResp{Error: "Invalid credentials"}
 	}
 
-	jwt, err := auth.MakeJWT(map[string]interface{}{ "userid": args["userid"] })
+	jwt, err := auth.MakeJWT(map[string]interface{}{ "userid": args["userid"], "cookie": urec["_id"] })
 	if err != nil {
 		return &authResp{Error: "Error signing in"}
 	}
