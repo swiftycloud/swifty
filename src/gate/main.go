@@ -27,6 +27,7 @@ import (
 	"../common/http"
 	"../common/keystone"
 	"../common/secrets"
+	"../common/xratelimit"
 )
 
 var SwyModeDevel bool
@@ -833,22 +834,38 @@ func makeArgMap(sopq *statsOpaque, r *http.Request) map[string]string {
 	return args
 }
 
+var grl *xratelimit.RL
+
 func ratelimited(fmd *FnMemData) bool {
+	var frl, trl *xratelimit.RL
+
 	/* Per-function RL first, as it's ... more likely to fail */
-	frl := fmd.crl
+	frl = fmd.crl
 	if frl != nil && !frl.Get() {
-		return true
+		goto f
 	}
 
-	trl := fmd.td.crl
+	trl = fmd.td.crl
 	if trl != nil && !trl.Get() {
-		if frl != nil {
-			frl.Put()
-		}
-		return true
+		goto t
+	}
+
+	if grl != nil && !grl.Get() {
+		goto g
 	}
 
 	return false
+
+g:
+	if trl != nil {
+		trl.Put()
+	}
+t:
+	if frl != nil {
+		frl.Put()
+	}
+f:
+	return true
 }
 
 func rslimited(fmd *FnMemData) bool {
@@ -1706,6 +1723,10 @@ func main() {
 	if err != nil || len(gateSecPas) < 16 {
 		glog.Errorf("Secrets pass should be decodable and at least 16 bytes long")
 		return
+	}
+
+	if Flavor == "lite" {
+		grl = xratelimit.MakeRL(0, 1000)
 	}
 
 	glog.Debugf("Flavor: %s", Flavor)

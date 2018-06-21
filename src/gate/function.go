@@ -305,6 +305,10 @@ func swyFixSize(sz *swyapi.FunctionSize, conf *YAMLConf) error {
 		return errors.New("Too big timeout")
 	}
 
+	if Flavor == "lite" && sz.Timeout > 3000 {
+		sz.Timeout = 3000 /* Max 3 seconds */
+	}
+
 	if sz.Memory == 0 {
 		sz.Memory = conf.Runtime.Memory.Def
 	} else if sz.Memory > conf.Runtime.Memory.Max ||
