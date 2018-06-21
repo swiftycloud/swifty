@@ -249,4 +249,5 @@ var MwareS3 = MwareOps {
 	Init:		InitS3,
 	Fini:		FiniS3,
 	GenSec:		GenBucketKeysS3,
+	LiteOK:		true,
 }

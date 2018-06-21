@@ -122,4 +122,5 @@ var MwareAuthJWT = MwareOps {
 	Init:	InitAuthJWT,
 	Fini:	FiniAuthJWT,
 	GetEnv:	GetEnvAuthJWT,
+	LiteOK:	true,
 }

@@ -92,4 +92,5 @@ var MwareMongo = MwareOps {
 	Fini:	FiniMongo,
 	GetEnv:	GetEnvMongo,
 	Info:	InfoMongo,
+	LiteOK:	true,
 }

@@ -44,6 +44,7 @@ type MwareOps struct {
 	GetEnv	func(conf *YAMLConfMw, mwd *MwareDesc) ([][2]string)
 	Info	func(ctx context.Context, conf *YAMLConfMw, mwd *MwareDesc, ifo *swyapi.MwareInfo) (error)
 	Devel	bool
+	LiteOK	bool
 }
 
 func mkEnvId(name, mwType, envName, value string) [2]string {
@@ -230,6 +231,11 @@ func mwareSetup(ctx context.Context, conf *YAMLConfMw, mwd *MwareDesc) (string, 
 	}
 
 	if handler.Devel && !SwyModeDevel {
+		err = fmt.Errorf("Bad mware type %s", mwd.MwareType)
+		goto outdb
+	}
+
+	if Flavor == "lite" && !handler.LiteOK {
 		err = fmt.Errorf("Bad mware type %s", mwd.MwareType)
 		goto outdb
 	}
