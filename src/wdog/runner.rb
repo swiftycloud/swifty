@@ -1,7 +1,18 @@
 #!/usr/local/bin/ruby
 
 require 'json'
+
+begin
 require '/function/script.rb'
+def CallMain(args)
+	res = Main(args)
+	return "0:" + JSON.generate(res)
+end
+rescue ScriptError
+def CallMain(args)
+	return "2:Error loading script"
+end
+end
 
 qfd = ARGV[0].to_i
 ofd = ARGV[1].to_i
@@ -43,9 +54,9 @@ loop do
 	args = JSON.parse(str)
 
 	begin
-		res = Main(args)
-		ret = "0:" + JSON.generate(res)
+		ret = CallMain(args)
 	rescue
+		puts "Exception running FN"
 		ret = "1:Exception"
 	end
 
