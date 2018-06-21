@@ -145,6 +145,13 @@ swifty/nodejs: swy-wdog-go kubectl/docker/wdog/nodejs/Dockerfile
 	$(Q) $(MAKE) -C kubectl/docker/wdog/nodejs all
 .PHONY: swifty/nodejs
 
+swifty/ruby: swy-wdog-go kubectl/docker/wdog/ruby/Dockerfile
+	$(call msg-gen,$@)
+	$(Q) $(CP) swy-wdog-go kubectl/docker/wdog/ruby/swy-wdog
+	$(Q) $(CP) src/wdog/runner.rb kubectl/docker/wdog/ruby/
+	$(Q) $(MAKE) -C kubectl/docker/wdog/ruby all
+.PHONY: swifty/ruby
+
 swifty/gate: swy-gate kubectl/docker/gate/Dockerfile test/functions/golang/simple-user-mgmt.go
 	$(call msg-gen,$@)
 	$(Q) $(CP) swy-gate kubectl/docker/gate/swy-gate

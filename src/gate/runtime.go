@@ -30,11 +30,17 @@ var nodejs_info = rt_info {
 	CodePath:	"/function",
 }
 
+var ruby_info = rt_info {
+	Ext:		"rb",
+	CodePath:	"/function",
+}
+
 var rt_handlers = map[string]*rt_info {
 	"python":	&py_info,
 	"golang":	&golang_info,
 	"swift":	&swift_info,
 	"nodejs":	&nodejs_info,
+	"ruby":		&ruby_info,
 }
 
 func RtLangEnabled(lang string) bool {

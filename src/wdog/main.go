@@ -139,6 +139,7 @@ var runners = map[string]string {
 	"python": "/usr/bin/swy-runner.py",
 	"swift": "/swift/swycode/debug/function",
 	"nodejs": "/home/swifty/runner-js.sh",
+	"ruby": "/home/swifty/runner.rb",
 }
 
 func startQnR(runner *Runner) error {
