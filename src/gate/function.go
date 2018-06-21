@@ -115,6 +115,15 @@ func (fn *FunctionDesc)getURL() string {
 	return conf.Daemon.Addr + "/call/" + fn.Cookie
 }
 
+func (fn *FunctionDesc)getURLEvt() *swyapi.FunctionEvent {
+	return &swyapi.FunctionEvent {
+		Id:	SwyURLEventID,
+		Name:	"Inalienable API",
+		Source:	"url",
+		URL:	fn.getURL(),
+	}
+}
+
 func (fn *FunctionDesc)toInfo(details bool, periods int) (*swyapi.FunctionInfo, *swyapi.GateErr) {
 	fi := &swyapi.FunctionInfo {
 		Id:		fn.ObjID.Hex(),

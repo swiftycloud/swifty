@@ -330,6 +330,10 @@ func list_projects(args []string, opts [16]string) {
 }
 
 func resolve_fn(fname string) string {
+	if strings.HasPrefix(fname, ":") {
+		return fname[1:]
+	}
+
 	var ifo []swyapi.FunctionInfo
 	ua := []string{}
 	if curCmd.project != "" {
@@ -348,6 +352,10 @@ func resolve_fn(fname string) string {
 }
 
 func resolve_mw(mname string) string {
+	if strings.HasPrefix(mname, ":") {
+		return mname[1:]
+	}
+
 	var ifo []swyapi.MwareInfo
 	ua := []string{}
 	if curCmd.project != "" {
@@ -366,6 +374,10 @@ func resolve_mw(mname string) string {
 }
 
 func resolve_dep(dname string) string {
+	if strings.HasPrefix(dname, ":") {
+		return dname[1:]
+	}
+
 	var ifo []swyapi.DeployInfo
 	ua := []string{}
 	if curCmd.project != "" {
@@ -384,6 +396,10 @@ func resolve_dep(dname string) string {
 }
 
 func resolve_evt(fnid, name string) string {
+	if strings.HasPrefix(name, ":") {
+		return name[1:]
+	}
+
 	var es []swyapi.FunctionEvent
 	make_faas_req1("GET", "functions/" + fnid + "/triggers?name=" + name, http.StatusOK,  nil, &es)
 	for _, e := range es {

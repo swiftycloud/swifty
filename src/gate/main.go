@@ -43,6 +43,7 @@ const (
 	SwyDepScaleupRelax time.Duration	= 16 * time.Second
 	SwyDepScaledownStep time.Duration	= 8 * time.Second
 	SwyTenantLimitsUpdPeriod time.Duration	= 120 * time.Second
+	SwyURLEventID				= "000URL"
 )
 
 var glog *zap.SugaredLogger
@@ -325,6 +326,7 @@ func handleFunctionTriggers(ctx context.Context, w http.ResponseWriter, r *http.
 
 		var evd []*FnEventDesc
 		var err error
+		var hasUrl = false
 
 		if ename == "" {
 			evd, err = dbListFnEvents(fn.Cookie)
@@ -344,7 +346,15 @@ func handleFunctionTriggers(ctx context.Context, w http.ResponseWriter, r *http.
 
 		var evs []*swyapi.FunctionEvent
 		for _, e := range evd {
+			if e.Source == "url" {
+				hasUrl = true
+			}
+
 			evs = append(evs, e.toAPI(fn))
+		}
+
+		if fn.URL && !hasUrl {
+			evs = append(evs, fn.getURLEvt())
 		}
 
 		err = swyhttp.MarshalAndWrite(w, evs)
@@ -595,6 +605,19 @@ func handleFunctionTrigger(ctx context.Context, w http.ResponseWriter, r *http.R
 	}
 
 	eid := mux.Vars(r)["eid"]
+	if eid == SwyURLEventID {
+		if r.Method == "DELETE" {
+			return GateErrM(swy.GateBadRequest, "Cannot remove URL from this FN")
+		}
+
+		err := swyhttp.MarshalAndWrite(w, fn.getURLEvt())
+		if err != nil {
+			return GateErrE(swy.GateBadResp, err)
+		}
+
+		return nil
+	}
+
 	if !bson.IsObjectIdHex(eid) {
 		return GateErrM(swy.GateBadRequest, "Bad event ID")
 	}
