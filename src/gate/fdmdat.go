@@ -49,50 +49,7 @@ func memdGetCond(cookie string) *FnMemData {
 	}
 }
 
-var LiteLimits swyapi.FunctionLimits = swyapi.FunctionLimits {
-	Rate:		1000,
-	Burst:		0,
-	MaxInProj:	128,
-	GBS:		1024.0,
-	BytesOut:	1024 * 1024,
-}
-
-func ClampLimits(ul *swyapi.UserLimits) {
-	if ul.Fn == nil {
-		ul.Fn = &LiteLimits
-		return
-	}
-
-	if ul.Fn.Rate == 0 {
-		ul.Fn.Rate = LiteLimits.Rate
-		ul.Fn.Burst = LiteLimits.Burst
-	} else {
-		if ul.Fn.Rate > LiteLimits.Rate {
-			ul.Fn.Rate = LiteLimits.Rate
-		}
-		if ul.Fn.Burst > LiteLimits.Burst {
-			ul.Fn.Burst = LiteLimits.Burst
-		}
-	}
-
-	if ul.Fn.MaxInProj > LiteLimits.MaxInProj {
-		ul.Fn.MaxInProj = LiteLimits.MaxInProj
-	}
-
-	if ul.Fn.GBS > LiteLimits.GBS {
-		ul.Fn.GBS = LiteLimits.GBS
-	}
-
-	if ul.Fn.BytesOut > LiteLimits.BytesOut {
-		ul.Fn.BytesOut = LiteLimits.BytesOut
-	}
-}
-
 func setupLimits(ten string, td *TenantMemData, ul *swyapi.UserLimits, off *TenStats) {
-	if Flavor == "lite" {
-		ClampLimits(ul)
-	}
-
 	if ul.Fn != nil {
 		td.fnlim = ul.Fn.MaxInProj
 
