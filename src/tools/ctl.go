@@ -558,13 +558,18 @@ func detect_language(path string, typ string) string {
 		return ""
 	}
 
-	pyr := regexp.MustCompile("^def\\s+main\\s*\\(")
+	rur := regexp.MustCompile("^def\\s+Main\\s*\\(.*\\)[^:]*$")
+	pyr := regexp.MustCompile("^def\\s+main\\s*\\(.*\\):")
 	gor := regexp.MustCompile("^func\\s+Main\\s*\\(.*interface\\s*{\\s*}")
 	swr := regexp.MustCompile("^func\\s+Main\\s*\\(.*->\\s*Encodable")
 	jsr := regexp.MustCompile("^exports.Main\\s*=\\s*function")
 
 	lines := strings.Split(string(cont), "\n")
 	for _, ln := range(lines) {
+		if rur.MatchString(ln) {
+			return "ruby"
+		}
+
 		if pyr.MatchString(ln) {
 			return "python"
 		}
