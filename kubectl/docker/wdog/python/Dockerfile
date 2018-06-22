@@ -4,6 +4,7 @@ WORKDIR /home
 
 RUN pip install pymysql pymongo boto3
 COPY swy-wdog /usr/bin/
+COPY swy-runner /usr/bin/
 COPY swifty.py /swifty/
 COPY swy-runner.py /usr/bin/
 RUN chmod +x /usr/bin/swy-wdog

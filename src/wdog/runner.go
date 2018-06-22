@@ -4,9 +4,6 @@ import (
 	"fmt"
 	"encoding/json"
 	"xqueue"
-	"os"
-	"syscall"
-	"strconv"
 )
 
 type runnerRes struct {
@@ -15,18 +12,12 @@ type runnerRes struct {
 }
 
 func main() {
-	q, err := xqueue.OpenQueue(os.Args[1])
+
+	q, err := xqueue.OpenQueue("3")
 	if err != nil {
-		fmt.Printf("Can't open queue %s: %s", os.Args[1], err.Error())
+		fmt.Printf("Can't open queue 3: %s", err.Error())
 		return
 	}
-
-	fd, _ := strconv.Atoi(os.Args[2])
-	syscall.Dup2(fd, 1)
-	syscall.Close(fd)
-	fd, _ = strconv.Atoi(os.Args[3])
-	syscall.Dup2(fd, 2)
-	syscall.Close(fd)
 
 	for {
 		var args map[string]string

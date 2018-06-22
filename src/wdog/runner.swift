@@ -4,17 +4,7 @@ import Glibc
 public typealias Byte = UInt8
 
 var qfd: Int32
-qfd = Int32(CommandLine.arguments[1])!
-
-var fd: Int32
-
-fd = Int32(CommandLine.arguments[2])!
-dup2(fd, 1)
-close(fd)
-
-fd = Int32(CommandLine.arguments[3])!
-dup2(fd, 2)
-close(fd)
+qfd = 3
 
 func load(data: [Byte]) -> [String:String] {
 	return try! JSONDecoder().decode([String:String].self, from: Data(bytes: data))

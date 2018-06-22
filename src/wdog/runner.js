@@ -3,17 +3,7 @@
 require('libsys/shim')
 require('libjs/shim')
 var script = require('/function/script.js')
-
-var qfd = parseInt(process.argv[2], 10)
-
-var fd = parseInt(process.argv[3], 10)
-libsys.syscall(33, fd, 1)
-libjs.close(fd)
-
-var fd = parseInt(process.argv[4], 10)
-libsys.syscall(33, fd, 2)
-libjs.close(fd)
-
+var qfd = 3
 var buf = Buffer.alloc(1024)
 
 function recv() {

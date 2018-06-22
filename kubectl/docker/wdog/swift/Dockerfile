@@ -3,6 +3,7 @@ FROM swift:latest
 WORKDIR /home
 
 COPY swy-wdog /usr/bin/
+COPY swy-runner /usr/bin/
 RUN chmod +x /usr/bin/swy-wdog
 COPY runner.swift /swift/runner/Sources/main.swift
 COPY Package.swift /swift/runner/

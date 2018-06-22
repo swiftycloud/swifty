@@ -14,17 +14,7 @@ def CallMain(args)
 end
 end
 
-qfd = ARGV[0].to_i
-ofd = ARGV[1].to_i
-efd = ARGV[2].to_i
-
-Kernel.syscall 33, ofd, 1
-Kernel.syscall 33, efd, 2
-
-Kernel.syscall 3, ofd
-Kernel.syscall 3, efd
-
-queue = IO.for_fd qfd
+queue = IO.for_fd 3
 
 def recv(q)
 	ret = ""

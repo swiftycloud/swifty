@@ -18,20 +18,11 @@ try:
 except:
     swycode = None
     etype, value, tb = sys.exc_info()
-    swyres = { "code": 503, "return": '%s' % value }
+    swyres = "2:Error loading script (%s)" % value
     swytb = ''.join(traceback.format_exception(etype, value, tb))
 
-fd = int(sys.argv[1])
-q = socket.fromfd(fd, socket.AF_UNIX, socket.SOCK_SEQPACKET)
-os.close(fd)
-
-fd = int(sys.argv[2])
-os.dup2(fd, 1)
-os.close(fd)
-
-fd = int(sys.argv[3])
-os.dup2(fd, 2)
-os.close(fd)
+q = socket.fromfd(3, socket.AF_UNIX, socket.SOCK_SEQPACKET)
+os.close(3)
 
 def readmsg(sk):
     data = b''

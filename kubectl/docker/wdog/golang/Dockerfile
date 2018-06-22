@@ -5,6 +5,7 @@ RUN go get github.com/go-sql-driver/mysql
 RUN go get gopkg.in/mgo.v2
 RUN go get golang.org/x/crypto/bcrypt
 COPY swy-wdog /usr/bin/
+COPY swy-runner /usr/bin/
 RUN chmod +x /usr/bin/swy-wdog
 COPY runner.go /go/src/swyrunner/
 COPY lib.go /go/src/swifty/

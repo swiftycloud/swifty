@@ -10,6 +10,7 @@ TAGS
 version.go
 swy-gate
 swy-wdog-*
+swy-runner
 swy-admd
 swy-pgrest
 swy-mquotad

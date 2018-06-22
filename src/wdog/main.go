@@ -84,6 +84,32 @@ func restartLocal(runner *Runner) {
 	startQnR(runner)
 }
 
+func makeExecutablePath(path string) {
+	s := strings.Split(path, "/")
+	sp := ""
+	for _, p := range s[1:] {
+		sp += "/" + p
+
+		st, _ := os.Stat(sp)
+		os.Chmod(sp, st.Mode() | 0005)
+	}
+}
+
+
+/*
+ * Kuber mounts all volumes with root-only perms. This hass been
+ * dicussed in the github PR-s, but so far no good solutions. Thus
+ * explicitly grant r and x bits for everything that needs it.
+ */
+func prepareVolume(lang string) {
+	switch lang {
+	case "python", "ruby", "nodejs":
+		exec.Command("chmod", "-R", "o+rX", "/function").Run()
+	case "swift", "golang":
+		makeExecutablePath(runners[lang])
+	}
+}
+
 func makeLocalRunner(lang string, tmous int64) (*Runner, error) {
 	var err error
 	p := make([]int, 2)
@@ -110,6 +136,8 @@ func makeLocalRunner(lang string, tmous int64) (*Runner, error) {
 	syscall.SetNonblock(p[0], true)
 	syscall.CloseOnExec(p[0])
 	runner.fine = os.NewFile(uintptr(p[0]), "runner.stderr")
+
+	prepareVolume(lang)
 
 	err = startQnR(runner)
 	if err != nil {
@@ -140,7 +168,10 @@ func startQnR(runner *Runner) error {
 		return fmt.Errorf("Can't set receive timeout: %s", err.Error())
 	}
 
-	runner.l.cmd = exec.Command(runners[runner.l.lang], runner.q.GetId(), runner.l.fout, runner.l.ferr)
+	runner.l.cmd = exec.Command("/usr/bin/swy-runner",
+					runner.l.fout, runner.l.ferr,
+					runner.q.GetId(),
+					runners[runner.l.lang])
 	err = runner.l.cmd.Start()
 	if err != nil {
 		return fmt.Errorf("Can't start runner: %s", err.Error())
