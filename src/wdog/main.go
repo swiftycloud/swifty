@@ -84,21 +84,6 @@ func restartLocal(runner *Runner) {
 	startQnR(runner)
 }
 
-func runLocal(runner *Runner, body []byte) (*swyapi.SwdFunctionRunResult, error) {
-	runner.lock.Lock()
-	if runner.l.proxy {
-		runner.lock.Unlock()
-		return nil, errors.New("Runner proxified")
-	}
-
-	res, err := doRun(runner, body)
-	if err != nil || res.Code != 0 {
-		restartLocal(runner)
-	}
-	runner.lock.Unlock()
-	return res, err
-}
-
 func makeLocalRunner(lang string, tmous int64) (*Runner, error) {
 	var err error
 	p := make([]int, 2)
@@ -329,7 +314,9 @@ func handleRun(runner *Runner, w http.ResponseWriter, r *http.Request) {
 	}
 
 	code = http.StatusInternalServerError
+	runner.lock.Lock()
 	result, err = runner.run(runner, body)
+	runner.lock.Unlock()
 	if err != nil {
 		goto out
 	}
@@ -456,20 +443,26 @@ er:
 }
 
 func runProxy(runner *Runner, body []byte) (*swyapi.SwdFunctionRunResult, error) {
-	runner.lock.Lock()
 	if runner.p.wc == nil {
-		runner.lock.Unlock()
 		return nil, errors.New("Already closed")
 	}
 
 	res, err := doRun(runner, body)
 	if err != nil || res.Code != 0 {
 		restartProxy(runner)
-		runner.lock.Unlock()
-	} else {
-		runner.lock.Unlock()
+	}
+	return res, err
+}
+
+func runLocal(runner *Runner, body []byte) (*swyapi.SwdFunctionRunResult, error) {
+	if runner.l.proxy {
+		return nil, errors.New("Runner proxified")
 	}
 
+	res, err := doRun(runner, body)
+	if err != nil || res.Code != 0 {
+		restartLocal(runner)
+	}
 	return res, err
 }
 
