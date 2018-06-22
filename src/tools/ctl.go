@@ -546,6 +546,15 @@ func check_lang(args []string, opts [16]string) {
 	fmt.Printf("%s\n", l)
 }
 
+func check_ext(path, ext, typ string) string {
+	if strings.HasSuffix(path, ext) {
+		return typ
+	}
+
+	fatal(fmt.Errorf("%s lang detected, but extention is not %s", typ, ext))
+	return ""
+}
+
 func detect_language(path string, typ string) string {
 	if typ != "code" {
 		fatal(fmt.Errorf("can't detect repo language"))
@@ -567,23 +576,23 @@ func detect_language(path string, typ string) string {
 	lines := strings.Split(string(cont), "\n")
 	for _, ln := range(lines) {
 		if rur.MatchString(ln) {
-			return "ruby"
+			return check_ext(path, ".rb", "ruby")
 		}
 
 		if pyr.MatchString(ln) {
-			return "python"
+			return check_ext(path, ".py", "python")
 		}
 
 		if gor.MatchString(ln) {
-			return "golang"
+			return check_ext(path, ".go", "golang")
 		}
 
 		if swr.MatchString(ln) {
-			return "swift"
+			return check_ext(path, ".swift", "swift")
 		}
 
 		if jsr.MatchString(ln) {
-			return "nodejs"
+			return check_ext(path, ".js", "nodejs")
 		}
 	}
 
