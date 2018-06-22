@@ -31,7 +31,8 @@ type Runner struct {
 	fin	*os.File
 	fine	*os.File
 
-	run	func(*Runner, []byte) (*swyapi.SwdFunctionRunResult, error)
+	ready	bool
+	restart	func(*Runner)
 	l	*localRunner
 	p	*proxyRunner
 }
@@ -42,7 +43,6 @@ type localRunner struct {
 	tmous	int64
 	fout	string
 	ferr	string
-	proxy	bool
 }
 
 type proxyRunner struct {
@@ -89,7 +89,7 @@ func makeLocalRunner(lang string, tmous int64) (*Runner, error) {
 	p := make([]int, 2)
 
 	lr := &localRunner{lang: lang, tmous: tmous}
-	runner := &Runner {l: lr, run: runLocal}
+	runner := &Runner {l: lr, restart: restartLocal, ready: true}
 
 	err = syscall.Pipe(p)
 	if err != nil {
@@ -315,7 +315,14 @@ func handleRun(runner *Runner, w http.ResponseWriter, r *http.Request) {
 
 	code = http.StatusInternalServerError
 	runner.lock.Lock()
-	result, err = runner.run(runner, body)
+	if runner.ready {
+		result, err = doRun(runner, body)
+		if err != nil || result.Code != 0 {
+			runner.restart(runner)
+		}
+	} else {
+		err = errors.New("Runner not ready")
+	}
 	runner.lock.Unlock()
 	if err != nil {
 		goto out
@@ -425,7 +432,7 @@ func makeProxyRunner(rkey string) (*Runner, error) {
 	/* FIXME -- up above we might have leaked the received FDs... */
 
 	pr = &proxyRunner{rkey: rkey, wc: c}
-	runner = &Runner{p: pr, run: runProxy}
+	runner = &Runner{p: pr, restart: restartProxy, ready: true}
 	runner.fin = os.NewFile(uintptr(rfds[0]), "runner.stdout")
 	runner.fine = os.NewFile(uintptr(rfds[1]), "runner.stderr")
 	runner.q = xqueue.OpenQueueFd(rfds[2])
@@ -442,30 +449,6 @@ er:
 	return nil, err
 }
 
-func runProxy(runner *Runner, body []byte) (*swyapi.SwdFunctionRunResult, error) {
-	if runner.p.wc == nil {
-		return nil, errors.New("Already closed")
-	}
-
-	res, err := doRun(runner, body)
-	if err != nil || res.Code != 0 {
-		restartProxy(runner)
-	}
-	return res, err
-}
-
-func runLocal(runner *Runner, body []byte) (*swyapi.SwdFunctionRunResult, error) {
-	if runner.l.proxy {
-		return nil, errors.New("Runner proxified")
-	}
-
-	res, err := doRun(runner, body)
-	if err != nil || res.Code != 0 {
-		restartLocal(runner)
-	}
-	return res, err
-}
-
 func restartProxy(runner *Runner) {
 	runner.q.Close()
 	runner.fin.Close()
@@ -474,6 +457,7 @@ func restartProxy(runner *Runner) {
 	prox_runners.Delete(runner.p.rkey)
 
 	runner.p.wc = nil
+	runner.ready = false
 }
 
 func handleProxy(w http.ResponseWriter, req *http.Request) {
@@ -557,14 +541,14 @@ func startCResponder(runner *Runner, podip string) error {
 				goto skip
 			}
 
-			runner.l.proxy = true
+			runner.ready = false
 			runner.lock.Unlock()
 
 			cln.Read(b)
 			log.Debugf("Proxy disconnected, restarting runner")
 
 			runner.lock.Lock()
-			runner.l.proxy = false
+			runner.ready = true
 			restartLocal(runner)
 
 		skip:
