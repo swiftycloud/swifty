@@ -41,6 +41,13 @@ func dbNF(err error) bool {
 	return err == mgo.ErrNotFound
 }
 
+func ctxObjId(ctx context.Context, id string) bson.M {
+	return bson.M {
+		"tennant": fromContext(ctx).Tenant,
+		"_id": bson.ObjectIdHex(id),
+	}
+}
+
 func dbTenantGetLimits(tenant string) (*swyapi.UserLimits, error) {
 	c := dbSession.DB(DBTenantDB).C(DBColLimits)
 	var v swyapi.UserLimits

@@ -304,7 +304,7 @@ func fnFindForReq(ctx context.Context, r *http.Request) (*FunctionDesc, *swyapi.
 		return nil, GateErrM(swy.GateBadRequest, "Bad FN ID")
 	}
 
-	fn, err := dbFuncFindOne(bson.M{"tennant": fromContext(ctx).Tenant, "_id": bson.ObjectIdHex(fnid)})
+	fn, err := dbFuncFindOne(ctxObjId(ctx, fnid))
 	if err != nil {
 		return nil, GateErrD(err)
 	}
@@ -498,9 +498,9 @@ func handleFunctionMwares(ctx context.Context, w http.ResponseWriter, r *http.Re
 			return GateErrM(swy.GateBadRequest, "Bad MW ID value")
 		}
 
-		mw, err := dbMwareGetOne(bson.M{"tennant": fromContext(ctx).Tenant,
-						"project": fn.SwoId.Project,
-						"_id": bson.ObjectIdHex(mid)})
+		oid := ctxObjId(ctx, mid)
+		oid["project"] = fn.SwoId.Project
+		mw, err := dbMwareGetOne(oid)
 		if err != nil {
 			return GateErrD(err)
 		}
@@ -527,8 +527,9 @@ func handleFunctionMware(ctx context.Context, w http.ResponseWriter, r *http.Req
 		return GateErrM(swy.GateBadRequest, "Bad MW ID value")
 	}
 
-	mw, err := dbMwareGetOne(bson.M{"tennant": fromContext(ctx).Tenant,
-			"project": fn.SwoId.Project, "_id": bson.ObjectIdHex(mid)})
+	oid := ctxObjId(ctx, mid)
+	oid["project"] = fn.SwoId.Project
+	mw, err := dbMwareGetOne(oid)
 	if err != nil {
 		return GateErrD(err)
 	}
@@ -1427,8 +1428,7 @@ func handleDeployment(ctx context.Context, w http.ResponseWriter, r *http.Reques
 		return GateErrM(swy.GateBadRequest, "Bad deploy ID value")
 	}
 
-	dd, err := dbDeployGet(bson.M{"tennant": fromContext(ctx).Tenant,
-			"_id": bson.ObjectIdHex(did)})
+	dd, err := dbDeployGet(ctxObjId(ctx, did))
 	if err != nil {
 		return GateErrD(err)
 	}
@@ -1541,8 +1541,9 @@ func handleAuth(ctx context.Context, w http.ResponseWriter, r *http.Request) *sw
 		return GateErrM(swy.GateBadRequest, "Bad auth deploy ID value")
 	}
 
-	ad, err := dbDeployGet(bson.M{"tennant": fromContext(ctx).Tenant,
-			"_id": bson.ObjectIdHex(did), "labels": "auth"})
+	oid := ctxObjId(ctx, did)
+	oid["labels"] = "auth"
+	ad, err := dbDeployGet(oid)
 	if err != nil {
 		return GateErrD(err)
 	}
@@ -1556,8 +1557,7 @@ func handleMware(ctx context.Context, w http.ResponseWriter, r *http.Request) *s
 		return GateErrM(swy.GateBadRequest, "Bad mware ID value")
 	}
 
-	mw, err := dbMwareGetOne(bson.M{"tennant": fromContext(ctx).Tenant,
-			"_id": bson.ObjectIdHex(mid)})
+	mw, err := dbMwareGetOne(ctxObjId(ctx, mid))
 	if err != nil {
 		return GateErrD(err)
 	}
