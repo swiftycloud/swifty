@@ -96,11 +96,11 @@ func deployStartItems(ctx context.Context, dep *DeployDesc) {
 		}
 
 		deployStopItems(ctx, dep, i)
-		dbDeployStateUpdate(dep, swy.DBDepStateStl)
+		dbDeployStateUpdate(ctx, dep, swy.DBDepStateStl)
 		return
 	}
 
-	dbDeployStateUpdate(dep, swy.DBDepStateRdy)
+	dbDeployStateUpdate(ctx, dep, swy.DBDepStateRdy)
 	return
 }
 
@@ -163,7 +163,7 @@ func (dep *DeployDesc)getItems(items []*swyapi.DeployItem) *swyapi.GateErr {
 
 func deployStart(ctx context.Context, dep *DeployDesc) (string, *swyapi.GateErr) {
 	dep.ObjID = bson.NewObjectId()
-	err := dbDeployAdd(dep)
+	err := dbDeployAdd(ctx, dep)
 	if err != nil {
 		return "", GateErrD(err)
 	}
@@ -195,7 +195,7 @@ func deployStop(ctx context.Context, dep *DeployDesc) (*swyapi.GateErr) {
 		return cerr
 	}
 
-	err := dbDeployDel(dep)
+	err := dbDeployDel(ctx, dep)
 	if err != nil {
 		return GateErrD(err)
 	}
@@ -204,7 +204,7 @@ func deployStop(ctx context.Context, dep *DeployDesc) (*swyapi.GateErr) {
 }
 
 func DeployInit(ctx context.Context, conf *YAMLConf) error {
-	deps, err := dbDeployList(bson.M{})
+	deps, err := dbDeployList(ctx, bson.M{})
 	if err != nil {
 		return err
 	}

@@ -539,26 +539,26 @@ func dbProjectListAll(ten string) (fn []string, mw []string, err error) {
 	return
 }
 
-func dbDeployAdd(dep *DeployDesc) error {
+func dbDeployAdd(ctx context.Context, dep *DeployDesc) error {
 	return dbSession.DB(DBStateDB).C(DBColDeploy).Insert(dep)
 }
 
-func dbDeployGet(q bson.M) (*DeployDesc, error) {
+func dbDeployGet(ctx context.Context, q bson.M) (*DeployDesc, error) {
 	var dep DeployDesc
 	err := dbSession.DB(DBStateDB).C(DBColDeploy).Find(q).One(&dep)
 	return &dep, err
 }
 
-func dbDeployDel(dep *DeployDesc) error {
+func dbDeployDel(ctx context.Context, dep *DeployDesc) error {
 	return dbSession.DB(DBStateDB).C(DBColDeploy).Remove(bson.M{"cookie": dep.Cookie})
 }
 
-func dbDeployList(q bson.M) (deps []DeployDesc, err error) {
+func dbDeployList(ctx context.Context, q bson.M) (deps []DeployDesc, err error) {
 	err = dbSession.DB(DBStateDB).C(DBColDeploy).Find(q).All(&deps)
 	return
 }
 
-func dbDeployListProj(id *SwoId, labels []string) (deps []*DeployDesc, err error) {
+func dbDeployListProj(ctx context.Context, id *SwoId, labels []string) (deps []*DeployDesc, err error) {
 	q := bson.D{{"tennant", id.Tennant}, {"project", id.Project}}
 	for _, l := range labels {
 		q = append(q, bson.DocElem{"labels", l})
@@ -567,7 +567,7 @@ func dbDeployListProj(id *SwoId, labels []string) (deps []*DeployDesc, err error
 	return
 }
 
-func dbDeployStateUpdate(dep *DeployDesc, state int) error {
+func dbDeployStateUpdate(ctx context.Context, dep *DeployDesc, state int) error {
 	dep.State = state
 	return dbSession.DB(DBStateDB).C(DBColDeploy).Update(bson.M{"cookie": dep.Cookie},
 			bson.M{"$set": bson.M{"state": state}})

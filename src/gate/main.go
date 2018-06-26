@@ -1365,14 +1365,14 @@ func handleDeployments(ctx context.Context, w http.ResponseWriter, r *http.Reque
 
 		dname := q.Get("name")
 		if dname == "" {
-			deps, err = dbDeployListProj(ctxSwoId(ctx, project, ""), q["label"])
+			deps, err = dbDeployListProj(ctx, ctxSwoId(ctx, project, ""), q["label"])
 			if err != nil {
 				return GateErrD(err)
 			}
 		} else {
 			var dep *DeployDesc
 
-			dep, err = dbDeployGet(bson.M{"cookie": ctxSwoId(ctx, project, dname).Cookie()})
+			dep, err = dbDeployGet(ctx, bson.M{"cookie": ctxSwoId(ctx, project, dname).Cookie()})
 			if err != nil {
 				return GateErrD(err)
 			}
@@ -1428,7 +1428,7 @@ func handleDeployment(ctx context.Context, w http.ResponseWriter, r *http.Reques
 		return GateErrM(swy.GateBadRequest, "Bad deploy ID value")
 	}
 
-	dd, err := dbDeployGet(ctxObjId(ctx, did))
+	dd, err := dbDeployGet(ctx, ctxObjId(ctx, did))
 	if err != nil {
 		return GateErrD(err)
 	}
@@ -1470,7 +1470,7 @@ func handleAuths(ctx context.Context, w http.ResponseWriter, r *http.Request) *s
 
 	switch r.Method {
 	case "GET":
-		deps, err := dbDeployList(bson.M{
+		deps, err := dbDeployList(ctx, bson.M{
 					"tennant":	fromContext(ctx).Tenant,
 					"project":	project,
 					"labels":	"auth",
@@ -1543,7 +1543,7 @@ func handleAuth(ctx context.Context, w http.ResponseWriter, r *http.Request) *sw
 
 	oid := ctxObjId(ctx, did)
 	oid["labels"] = "auth"
-	ad, err := dbDeployGet(oid)
+	ad, err := dbDeployGet(ctx, oid)
 	if err != nil {
 		return GateErrD(err)
 	}
