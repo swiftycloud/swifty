@@ -113,7 +113,7 @@ func startListener(req *mq_listener_req) error {
 	}
 
 	go func() {
-		ctx := context.Background()
+		ctx := mkContext("::mq")
 		ctxlog(ctx).Debugf("mq: Getting messages for %s", key)
 	loop:
 		for {

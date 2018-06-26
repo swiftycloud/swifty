@@ -55,6 +55,8 @@ var cronRunner *cron.Cron
 
 func cronEventStart(ctx context.Context, evt *FnEventDesc) error {
 	id, err := cronRunner.AddFunc(evt.Cron.Tab, func() {
+		cctx := mkContext("::cron")
+
 		fn, err := dbFuncFindByCookie(evt.FnId)
 		if err != nil || fn == nil {
 			glog.Errorf("Can't find FN %s to run Cron event", evt.FnId)
@@ -65,7 +67,7 @@ func cronEventStart(ctx context.Context, evt *FnEventDesc) error {
 			return
 		}
 
-		_, err = doRun(context.Background(), fn, "cron", evt.Cron.Args)
+		_, err = doRun(cctx, fn, "cron", evt.Cron.Args)
 		if err != nil {
 			ctxlog(ctx).Errorf("cron: Error running FN %s", err.Error())
 		}
@@ -83,7 +85,7 @@ func cronEventStop(ctx context.Context, evt *FnEventDesc) error {
 	return nil
 }
 
-func eventsInit(conf *YAMLConf) error {
+func eventsInit(ctx context.Context, conf *YAMLConf) error {
 	cronRunner = cron.New()
 	cronRunner.Start()
 
@@ -92,7 +94,6 @@ func eventsInit(conf *YAMLConf) error {
 		return err
 	}
 
-	ctx := context.Background()
 	for _, ed := range evs {
 		err = cronEventStart(ctx, &ed)
 		if err != nil {

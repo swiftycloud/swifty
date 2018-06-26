@@ -203,13 +203,12 @@ func deployStop(ctx context.Context, dep *DeployDesc) (*swyapi.GateErr) {
 	return nil
 }
 
-func DeployInit(conf *YAMLConf) error {
+func DeployInit(ctx context.Context, conf *YAMLConf) error {
 	deps, err := dbDeployList(bson.M{})
 	if err != nil {
 		return err
 	}
 
-	ctx := context.Background()
 	for _, dep := range deps {
 		if dep.State == swy.DBDepStateIni {
 			glog.Debugf("Will restart deploy %s in state %d", dep.SwoId.Str(), dep.State)

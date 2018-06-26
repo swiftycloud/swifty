@@ -159,8 +159,8 @@ type gateContext struct {
 
 var reqIds uint64
 
-func mkContext(parent context.Context, tenant string) context.Context {
-	return &gateContext{parent, tenant, atomic.AddUint64(&reqIds, 1)}
+func mkContext(tenant string) context.Context {
+	return &gateContext{context.Background(), tenant, atomic.AddUint64(&reqIds, 1)}
 }
 
 func fromContext(ctx context.Context) *gateContext {
@@ -922,7 +922,7 @@ func handleFunctionCall(w http.ResponseWriter, r *http.Request) {
 
 	sopq := statsStart()
 
-	ctx := context.Background()
+	ctx := mkContext("::call")
 	fnId := mux.Vars(r)["fnid"]
 
 	fmd, err = memdGet(fnId)
@@ -1586,7 +1586,7 @@ func handleMware(ctx context.Context, w http.ResponseWriter, r *http.Request) *s
 	return nil
 }
 
-func handleGenericReq(ctx context.Context, r *http.Request) (string, int, error) {
+func handleGenericReq(r *http.Request) (string, int, error) {
 	token := r.Header.Get("X-Auth-Token")
 	if token == "" {
 		return "", http.StatusUnauthorized, fmt.Errorf("Auth token not provided")
@@ -1623,21 +1623,15 @@ func handleGenericReq(ctx context.Context, r *http.Request) (string, int, error)
 
 func genReqHandler(cb func(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		var ctx context.Context
-		var cancel context.CancelFunc
-
 		if swyhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
 
-		ctx, cancel = context.WithCancel(context.Background())
-		defer cancel()
-
-		tennant, code, err := handleGenericReq(ctx, r)
+		tennant, code, err := handleGenericReq(r)
 		if err != nil {
 			http.Error(w, err.Error(), code)
 			return
 		}
 
-		ctx = mkContext(ctx, tennant)
+		ctx := mkContext(tennant)
 		cerr := cb(ctx, w, r)
 		if cerr != nil {
 			ctxlog(ctx).Errorf("Error in callback: %s", cerr.Message)
@@ -1799,7 +1793,9 @@ func main() {
 				err.Error())
 	}
 
-	err = eventsInit(&conf)
+	ctx := mkContext("::init")
+
+	err = eventsInit(ctx, &conf)
 	if err != nil {
 		glog.Fatalf("Can't setup events: %s", err.Error())
 	}
@@ -1809,7 +1805,7 @@ func main() {
 		glog.Fatalf("Can't setup stats: %s", err.Error())
 	}
 
-	err = swk8sInit(&conf, config_path)
+	err = swk8sInit(ctx, &conf, config_path)
 	if err != nil {
 		glog.Fatalf("Can't setup connection to kubernetes: %s",
 				err.Error())
@@ -1825,7 +1821,7 @@ func main() {
 		glog.Fatalf("Can't set up builder: %s", err.Error())
 	}
 
-	err = DeployInit(&conf)
+	err = DeployInit(ctx, &conf)
 	if err != nil {
 		glog.Fatalf("Can't set up deploys: %s", err.Error())
 	}

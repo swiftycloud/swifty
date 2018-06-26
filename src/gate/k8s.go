@@ -493,9 +493,7 @@ func swk8sPodUpd(obj_old, obj_new interface{}) {
 	po := obj_old.(*v1.Pod)
 	pn := obj_new.(*v1.Pod)
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	ctx = mkContext(ctx, "::k8s-notify")
+	ctx := mkContext("::k8s-notify")
 
 	dep := pn.ObjectMeta.Labels["deployment"]
 	if dep == "swy-go-builder" || dep == "swy-swift-builder" {
@@ -642,7 +640,7 @@ func swk8sGetBuildPods() (map[string]string, error) {
 	return rv, nil
 }
 
-func refreshDepsAndPods() error {
+func refreshDepsAndPods(ctx context.Context) error {
 	fns, err := dbFuncList()
 	if err != nil {
 		return errors.New("Error listing FNs")
@@ -653,7 +651,6 @@ func refreshDepsAndPods() error {
 		return fmt.Errorf("Can't drop stuck PODs: %s", err.Error)
 	}
 
-	ctx := context.Background()
 	depiface := swk8sClientSet.Extensions().Deployments(v1.NamespaceDefault)
 	podiface := swk8sClientSet.Pods(v1.NamespaceDefault)
 
@@ -719,7 +716,7 @@ func refreshDepsAndPods() error {
 	return nil
 }
 
-func swk8sInit(conf *YAMLConf, config_path string) error {
+func swk8sInit(ctx context.Context, conf *YAMLConf, config_path string) error {
 	config_path = filepath.Dir(config_path) + "/kubeconfig"
 	kubeconfig := flag.String("kubeconfig", config_path, "path to the kubeconfig file")
 	flag.Parse()
@@ -749,7 +746,7 @@ func swk8sInit(conf *YAMLConf, config_path string) error {
 	stop := make(chan struct{})
 	go controller.Run(stop)
 
-	err = refreshDepsAndPods()
+	err = refreshDepsAndPods(ctx)
 	if err != nil {
 		glog.Errorf("Can't sart scaler: %s", err.Error())
 		return err
