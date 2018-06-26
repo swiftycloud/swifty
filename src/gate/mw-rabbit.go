@@ -92,7 +92,7 @@ func mqEvent(ctx context.Context, mwid, queue, userid, data string) {
 
 	ctxlog(ctx).Debugf("mq: Resolved client to project %s", mware.Project)
 
-	funcs, err := dbFuncListMwEvent(&mware.SwoId, bson.M {
+	funcs, err := dbFuncListMwEvent(ctx, &mware.SwoId, bson.M {
 		"event.source": "mware",
 		"event.mwid": mware.SwoId.Name,
 		"event.mqueue": queue,

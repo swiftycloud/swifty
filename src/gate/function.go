@@ -204,14 +204,14 @@ func validateFuncName(params *swyapi.FunctionAdd) error {
 	return swy.CheckName(params.Name, 50)
 }
 
-func checkCount(id *SwoId) error {
+func checkCount(ctx context.Context, id *SwoId) error {
 	tmd, err := tendatGet(id.Tennant)
 	if err != nil {
 		return err
 	}
 
 	if tmd.fnlim != 0 {
-		nr, err := dbFuncCountProj(id)
+		nr, err := dbFuncCountProj(ctx, id)
 		if err != nil {
 			return err
 		}
@@ -232,13 +232,13 @@ func addFunction(ctx context.Context, conf *YAMLConf, fn *FunctionDesc) (string,
 
 	fn.ObjID = bson.NewObjectId()
 	fn.State = swy.DBFuncStateIni
-	err = dbFuncAdd(fn)
+	err = dbFuncAdd(ctx, fn)
 	if err != nil {
 		ctxlog(ctx).Errorf("Can't add function %s: %s", fn.SwoId.Str(), err.Error())
 		return "", GateErrD(err)
 	}
 
-	err = checkCount(&fn.SwoId)
+	err = checkCount(ctx, &fn.SwoId)
 	if err != nil {
 		goto out_clean_func
 	}
@@ -252,7 +252,7 @@ func addFunction(ctx context.Context, conf *YAMLConf, fn *FunctionDesc) (string,
 
 	fn.State = swy.DBFuncStateStr
 
-	err = dbFuncUpdateAdded(fn)
+	err = dbFuncUpdateAdded(ctx, fn)
 	if err != nil {
 		ctxlog(ctx).Errorf("Can't update added %s: %s", fn.SwoId.Str(), err.Error())
 		err = errors.New("DB error")
@@ -293,7 +293,7 @@ out_clean_repo:
 		goto stalled
 	}
 out_clean_func:
-	erc = dbFuncRemove(fn)
+	erc = dbFuncRemove(ctx, fn)
 	if erc != nil {
 		goto stalled
 	}
@@ -328,8 +328,8 @@ func swyFixSize(sz *swyapi.FunctionSize, conf *YAMLConf) error {
 	return nil
 }
 
-func (fn *FunctionDesc)setUserData(ud string) error {
-	err := dbFuncUpdateOne(fn, bson.M{"userdata": ud})
+func (fn *FunctionDesc)setUserData(ctx context.Context, ud string) error {
+	err := dbFuncUpdateOne(ctx, fn, bson.M{"userdata": ud})
 	if err == nil {
 		fn.UserData = ud
 	}
@@ -347,7 +347,7 @@ func (fn *FunctionDesc)setAuthCtx(ctx context.Context, ac string) error {
 		}
 	}
 
-	err = dbFuncUpdateOne(fn, bson.M{"authctx": ac})
+	err = dbFuncUpdateOne(ctx, fn, bson.M{"authctx": ac})
 	if err == nil {
 		fn.AuthCtx = ac
 		fdm := memdGetCond(fn.Cookie)
@@ -389,7 +389,7 @@ func (fn *FunctionDesc)setSize(ctx context.Context, sz *swyapi.FunctionSize) err
 		rlfix = true
 	}
 
-	err := dbFuncUpdateOne(fn, update)
+	err := dbFuncUpdateOne(ctx, fn, update)
 	if err != nil {
 		return err
 	}
@@ -430,7 +430,7 @@ func (fn *FunctionDesc)setSize(ctx context.Context, sz *swyapi.FunctionSize) err
 }
 
 func (fn *FunctionDesc)addMware(ctx context.Context, mw *MwareDesc) error {
-	err := dbFuncUpdate(bson.M{"_id": fn.ObjID, "mware": bson.M{"$ne": mw.SwoId.Name}},
+	err := dbFuncUpdate(ctx, bson.M{"_id": fn.ObjID, "mware": bson.M{"$ne": mw.SwoId.Name}},
 				bson.M{"$push": bson.M{"mware":mw.SwoId.Name}})
 	if err != nil {
 		if dbNF(err) {
@@ -460,7 +460,7 @@ func (fn *FunctionDesc)delMware(ctx context.Context, mw *MwareDesc) error {
 		return errors.New("Mware not attached")
 	}
 
-	err := dbFuncUpdate(bson.M{"_id": fn.ObjID}, bson.M{"$pull": bson.M{"mware":fn.Mware[found]}})
+	err := dbFuncUpdate(ctx, bson.M{"_id": fn.ObjID}, bson.M{"$pull": bson.M{"mware":fn.Mware[found]}})
 	if err != nil {
 		return err
 	}
@@ -473,7 +473,7 @@ func (fn *FunctionDesc)delMware(ctx context.Context, mw *MwareDesc) error {
 }
 
 func (fn *FunctionDesc)addS3Bucket(ctx context.Context, b string) error {
-	err := dbFuncUpdate(bson.M{"_id": fn.ObjID, "s3buckets": bson.M{"$ne": b}},
+	err := dbFuncUpdate(ctx, bson.M{"_id": fn.ObjID, "s3buckets": bson.M{"$ne": b}},
 				bson.M{"$push": bson.M{"s3buckets":b}})
 	if err != nil {
 		if dbNF(err) {
@@ -503,7 +503,7 @@ func (fn *FunctionDesc)delS3Bucket(ctx context.Context, bn string) error {
 		return errors.New("Bucket not attached")
 	}
 
-	err := dbFuncUpdate(bson.M{"_id": fn.ObjID}, bson.M{"$pull": bson.M{"s3buckets":bn}})
+	err := dbFuncUpdate(ctx, bson.M{"_id": fn.ObjID}, bson.M{"$pull": bson.M{"s3buckets":bn}})
 	if err != nil {
 		return err
 	}
@@ -557,7 +557,7 @@ func (fn *FunctionDesc)updateSources(ctx context.Context, src *swyapi.FunctionSo
 		update["state"] = fn.State
 	}
 
-	err = dbFuncUpdateOne(fn, update)
+	err = dbFuncUpdateOne(ctx, fn, update)
 	if err != nil {
 		ctxlog(ctx).Errorf("Can't update pulled %s: %s", fn.Name, err.Error())
 		return GateErrD(err)
@@ -581,7 +581,7 @@ func (fn *FunctionDesc)updateSources(ctx context.Context, src *swyapi.FunctionSo
 }
 
 func removeFunctionId(ctx context.Context, conf *YAMLConf, id *SwoId) *swyapi.GateErr {
-	fn, err := dbFuncFind(id)
+	fn, err := dbFuncFind(ctx, id)
 	if err != nil {
 		return GateErrD(err)
 	}
@@ -607,7 +607,7 @@ func removeFunction(ctx context.Context, conf *YAMLConf, fn *FunctionDesc) *swya
 	ctxlog(ctx).Debugf("Forget function %s", fn.SwoId.Str())
 	// Allow to remove function if only we're in known state,
 	// otherwise wait for function building to complete
-	err = dbFuncSetStateCond(&fn.SwoId, swy.DBFuncStateTrm, fn.State)
+	err = dbFuncSetStateCond(ctx, &fn.SwoId, swy.DBFuncStateTrm, fn.State)
 	if err != nil {
 		ctxlog(ctx).Errorf("Can't terminate function %s: %s", fn.SwoId.Str(), err.Error())
 		return GateErrM(swy.GateGenErr, "Cannot terminate fn")
@@ -651,7 +651,7 @@ func removeFunction(ctx context.Context, conf *YAMLConf, fn *FunctionDesc) *swya
 	memdGone(fn)
 
 	ctxlog(ctx).Debugf("`- and ...")
-	err = dbFuncRemove(fn)
+	err = dbFuncRemove(ctx, fn)
 	if err != nil {
 		goto later
 	}
@@ -700,7 +700,7 @@ func fnWaiterKick(cookie string) {
 }
 
 func notifyPodTmo(ctx context.Context, cookie string) {
-	fn, err := dbFuncFindByCookie(cookie)
+	fn, err := dbFuncFindByCookie(ctx, cookie)
 	if err != nil || fn == nil {
 		ctxlog(ctx).Errorf("POD timeout %s error: %s", cookie, err.Error())
 		return
@@ -712,7 +712,7 @@ func notifyPodTmo(ctx context.Context, cookie string) {
 }
 
 func notifyPodUp(ctx context.Context, pod *k8sPod) {
-	fn, err := dbFuncFind(&pod.SwoId)
+	fn, err := dbFuncFind(ctx, &pod.SwoId)
 	if err != nil {
 		goto out
 	}
@@ -734,7 +734,7 @@ out:
 func deactivateFunction(ctx context.Context, conf *YAMLConf, fn *FunctionDesc) *swyapi.GateErr {
 	var err error
 
-	err = dbFuncSetStateCond(&fn.SwoId, swy.DBFuncStateDea, swy.DBFuncStateRdy)
+	err = dbFuncSetStateCond(ctx, &fn.SwoId, swy.DBFuncStateDea, swy.DBFuncStateRdy)
 	if err != nil {
 		ctxlog(ctx).Errorf("Can't deactivate function %s: %s", fn.SwoId.Name, err.Error())
 		return GateErrM(swy.GateGenErr, "Cannot deactivate function")

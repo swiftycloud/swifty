@@ -147,7 +147,7 @@ func fndatGetOrInit(ctx context.Context, cookie string, fn *FunctionDesc) (*FnMe
 	}
 
 	if fn == nil {
-		fn, err = dbFuncFindByCookie(cookie)
+		fn, err = dbFuncFindByCookie(ctx, cookie)
 		if err != nil || fn == nil {
 			return nil, err
 		}

@@ -147,38 +147,38 @@ func dbMwareListProj(ctx context.Context, id *SwoId, mwtyp string, labels []stri
 	return recs, err
 }
 
-func dbFuncCount() (int, error) {
+func dbFuncCount(ctx context.Context) (int, error) {
 	return dbSession.DB(DBStateDB).C(DBColFunc).Count()
 }
 
-func dbFuncCountProj(id *SwoId) (int, error) {
+func dbFuncCountProj(ctx context.Context, id *SwoId) (int, error) {
 	return dbSession.DB(DBStateDB).C(DBColFunc).Find(bson.M{"tenant": id.Tennant, "project": id.Project}).Count()
 }
 
-func dbFuncFindOne(q bson.M) (*FunctionDesc, error) {
+func dbFuncFindOne(ctx context.Context, q bson.M) (*FunctionDesc, error) {
 	c := dbSession.DB(DBStateDB).C(DBColFunc)
 	var v FunctionDesc
 	err := c.Find(q).One(&v)
 	return &v, err
 }
 
-func dbFuncFindAll(q interface{}) (vs []*FunctionDesc, err error) {
+func dbFuncFindAll(ctx context.Context, q interface{}) (vs []*FunctionDesc, err error) {
 	c := dbSession.DB(DBStateDB).C(DBColFunc)
 	err = c.Find(q).All(&vs)
 	return
 }
 
-func dbFuncUpdate(q, ch bson.M) (error) {
+func dbFuncUpdate(ctx context.Context, q, ch bson.M) (error) {
 	c := dbSession.DB(DBStateDB).C(DBColFunc)
 	return c.Update(q, ch)
 }
 
-func dbFuncFind(id *SwoId) (*FunctionDesc, error) {
-	return dbFuncFindOne(bson.M{"cookie": id.Cookie()})
+func dbFuncFind(ctx context.Context, id *SwoId) (*FunctionDesc, error) {
+	return dbFuncFindOne(ctx, bson.M{"cookie": id.Cookie()})
 }
 
-func dbFuncFindByCookie(cookie string) (*FunctionDesc, error) {
-	fn, err := dbFuncFindOne(bson.M{"cookie": cookie})
+func dbFuncFindByCookie(ctx context.Context, cookie string) (*FunctionDesc, error) {
+	fn, err := dbFuncFindOne(ctx, bson.M{"cookie": cookie})
 	if err != nil {
 		fn = nil
 		if err == mgo.ErrNotFound {
@@ -188,15 +188,15 @@ func dbFuncFindByCookie(cookie string) (*FunctionDesc, error) {
 	return fn, err
 }
 
-func dbFuncFindStates(id *SwoId, states []int) (*FunctionDesc, error) {
-	return dbFuncFindOne(bson.M{"cookie": id.Cookie(), "state": bson.M{"$in": states}})
+func dbFuncFindStates(ctx context.Context, id *SwoId, states []int) (*FunctionDesc, error) {
+	return dbFuncFindOne(ctx, bson.M{"cookie": id.Cookie(), "state": bson.M{"$in": states}})
 }
 
-func dbFuncList() ([]*FunctionDesc, error) {
-	return dbFuncFindAll(bson.M{})
+func dbFuncList(ctx context.Context) ([]*FunctionDesc, error) {
+	return dbFuncFindAll(ctx, bson.M{})
 }
 
-func dbFuncListProj(id *SwoId, labels []string) ([]*FunctionDesc, error) {
+func dbFuncListProj(ctx context.Context, id *SwoId, labels []string) ([]*FunctionDesc, error) {
 	q := bson.D{{"tennant", id.Tennant}, {"project", id.Project}}
 	for _, l := range labels {
 		q = append(q, bson.DocElem{"labels", l})
@@ -204,29 +204,29 @@ func dbFuncListProj(id *SwoId, labels []string) ([]*FunctionDesc, error) {
 
 	glog.Debugf("Find fns: %v", q)
 
-	return dbFuncFindAll(q)/*bson.M{"tennant": id.Tennant, "project": id.Project})*/
+	return dbFuncFindAll(ctx, q)/*bson.M{"tennant": id.Tennant, "project": id.Project})*/
 }
 
-func dbFuncListMwEvent(id *SwoId, rq bson.M) ([]*FunctionDesc, error) {
+func dbFuncListMwEvent(ctx context.Context, id *SwoId, rq bson.M) ([]*FunctionDesc, error) {
 	rq["tennant"] = id.Tennant
 	rq["project"] = id.Project
 
-	return dbFuncFindAll(rq)
+	return dbFuncFindAll(ctx, rq)
 }
 
-func dbFuncListWithEvents() ([]*FunctionDesc, error) {
-	return dbFuncFindAll(bson.M{"event.source": bson.M{"$ne": ""}})
+func dbFuncListWithEvents(ctx context.Context) ([]*FunctionDesc, error) {
+	return dbFuncFindAll(ctx, bson.M{"event.source": bson.M{"$ne": ""}})
 }
 
-func dbFuncSetStateCond(id *SwoId, state, ostate int) error {
-	return dbFuncUpdate(
+func dbFuncSetStateCond(ctx context.Context, id *SwoId, state, ostate int) error {
+	return dbFuncUpdate(ctx,
 		bson.M{"cookie": id.Cookie(), "state": ostate},
 		bson.M{"$set": bson.M{"state": state}})
 }
 
 func dbFuncSetState(ctx context.Context, fn *FunctionDesc, state int) error {
 	fn.State = state
-	err := dbFuncUpdate(
+	err := dbFuncUpdate(ctx,
 		bson.M{"cookie": fn.Cookie, "state": bson.M{"$ne": state}},
 		bson.M{"$set": bson.M{"state": state}})
 	if err != nil {
@@ -237,8 +237,8 @@ func dbFuncSetState(ctx context.Context, fn *FunctionDesc, state int) error {
 	return err
 }
 
-func dbFuncUpdateAdded(fn *FunctionDesc) error {
-	return dbFuncUpdate(
+func dbFuncUpdateAdded(ctx context.Context, fn *FunctionDesc) error {
+	return dbFuncUpdate(ctx,
 		bson.M{"cookie": fn.Cookie},
 		bson.M{"$set": bson.M{
 				"src": &fn.Src,
@@ -246,22 +246,22 @@ func dbFuncUpdateAdded(fn *FunctionDesc) error {
 			}})
 }
 
-func dbFuncUpdatePulled(fn *FunctionDesc, update bson.M, olds int) error {
-	return dbFuncUpdate(
+func dbFuncUpdatePulled(ctx context.Context, fn *FunctionDesc, update bson.M, olds int) error {
+	return dbFuncUpdate(ctx,
 		bson.M{"cookie": fn.Cookie, "state": olds},
 		bson.M{"$set": update })
 }
 
-func dbFuncUpdateOne(fn *FunctionDesc, update bson.M) error {
-	return dbFuncUpdate(bson.M{"_id": fn.ObjID}, bson.M{"$set": update })
+func dbFuncUpdateOne(ctx context.Context, fn *FunctionDesc, update bson.M) error {
+	return dbFuncUpdate(ctx, bson.M{"_id": fn.ObjID}, bson.M{"$set": update })
 }
 
-func dbFuncAdd(desc *FunctionDesc) error {
+func dbFuncAdd(ctx context.Context, desc *FunctionDesc) error {
 	c := dbSession.DB(DBStateDB).C(DBColFunc)
 	return c.Insert(desc)
 }
 
-func dbFuncRemove(fn *FunctionDesc) error {
+func dbFuncRemove(ctx context.Context, fn *FunctionDesc) error {
 	c := dbSession.DB(DBStateDB).C(DBColFunc)
 	return c.Remove(bson.M{"cookie": fn.Cookie});
 }
@@ -595,7 +595,7 @@ func dbFindEvent(id string) (*FnEventDesc, error) {
 	return &ed, err
 }
 
-func dbFuncEventByName(fn *FunctionDesc, name string) (*FnEventDesc, error) {
+func dbFuncEventByName(ctx context.Context, fn *FunctionDesc, name string) (*FnEventDesc, error) {
 	var ed FnEventDesc
 	err := dbSession.DB(DBStateDB).C(DBColEvents).Find(bson.M{"fnid": fn.Cookie, "name": name}).One(&ed)
 	return &ed, err

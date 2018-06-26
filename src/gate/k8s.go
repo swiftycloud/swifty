@@ -641,7 +641,7 @@ func swk8sGetBuildPods() (map[string]string, error) {
 }
 
 func refreshDepsAndPods(ctx context.Context) error {
-	fns, err := dbFuncList()
+	fns, err := dbFuncList(ctx)
 	if err != nil {
 		return errors.New("Error listing FNs")
 	}

@@ -50,7 +50,7 @@ func (i *DeployItemDesc)info(ctx context.Context, details bool) (*swyapi.DeployI
 		ret := &swyapi.DeployItemInfo{Type: "function", Name: i.Fn.SwoId.Name}
 
 		if details {
-			fn, err := dbFuncFind(&i.Fn.SwoId)
+			fn, err := dbFuncFind(ctx, &i.Fn.SwoId)
 			if err == nil {
 				ret.State = fnStates[fn.State]
 			} else {

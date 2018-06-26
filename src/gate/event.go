@@ -57,7 +57,7 @@ func cronEventStart(ctx context.Context, evt *FnEventDesc) error {
 	id, err := cronRunner.AddFunc(evt.Cron.Tab, func() {
 		cctx := mkContext("::cron")
 
-		fn, err := dbFuncFindByCookie(evt.FnId)
+		fn, err := dbFuncFindByCookie(cctx, evt.FnId)
 		if err != nil || fn == nil {
 			glog.Errorf("Can't find FN %s to run Cron event", evt.FnId)
 			return

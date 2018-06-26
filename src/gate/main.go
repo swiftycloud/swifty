@@ -226,7 +226,7 @@ func handleProjectDel(ctx context.Context, w http.ResponseWriter, r *http.Reques
 
 	id = ctxSwoId(ctx, par.Project, "")
 
-	fns, err = dbFuncListProj(id, []string{})
+	fns, err = dbFuncListProj(ctx, id, []string{})
 	if err != nil {
 		return GateErrD(err)
 	}
@@ -304,7 +304,7 @@ func fnFindForReq(ctx context.Context, r *http.Request) (*FunctionDesc, *swyapi.
 		return nil, GateErrM(swy.GateBadRequest, "Bad FN ID")
 	}
 
-	fn, err := dbFuncFindOne(ctxObjId(ctx, fnid))
+	fn, err := dbFuncFindOne(ctx, ctxObjId(ctx, fnid))
 	if err != nil {
 		return nil, GateErrD(err)
 	}
@@ -336,7 +336,7 @@ func handleFunctionTriggers(ctx context.Context, w http.ResponseWriter, r *http.
 		} else {
 			var ev *FnEventDesc
 
-			ev, err = dbFuncEventByName(fn, ename)
+			ev, err = dbFuncEventByName(ctx, fn, ename)
 			if err != nil {
 				return GateErrD(err)
 			}
@@ -1032,7 +1032,7 @@ func handleFunctions(ctx context.Context, w http.ResponseWriter, r *http.Request
 
 		fname := q.Get("name")
 		if fname == "" {
-			fns, err = dbFuncListProj(ctxSwoId(ctx, project, ""), q["label"])
+			fns, err = dbFuncListProj(ctx, ctxSwoId(ctx, project, ""), q["label"])
 			if err != nil {
 				return GateErrD(err)
 			}
@@ -1040,7 +1040,7 @@ func handleFunctions(ctx context.Context, w http.ResponseWriter, r *http.Request
 		} else {
 			var fn *FunctionDesc
 
-			fn, err = dbFuncFind(ctxSwoId(ctx, project, fname))
+			fn, err = dbFuncFind(ctx, ctxSwoId(ctx, project, fname))
 			if err != nil {
 				return GateErrD(err)
 			}
@@ -1145,7 +1145,7 @@ func handleFunction(ctx context.Context, w http.ResponseWriter, r *http.Request)
 		}
 
 		if fu.UserData != nil {
-			err = fn.setUserData(*fu.UserData)
+			err = fn.setUserData(ctx, *fu.UserData)
 			if err != nil {
 				return GateErrE(swy.GateGenErr, err)
 			}

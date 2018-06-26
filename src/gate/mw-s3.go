@@ -144,7 +144,7 @@ func handleS3Event(ctx context.Context, user string, data []byte) {
 			continue
 		}
 
-		fn, err := dbFuncFindByCookie(ed.FnId)
+		fn, err := dbFuncFindByCookie(ctx, ed.FnId)
 		if err != nil || fn == nil {
 			continue
 		}
