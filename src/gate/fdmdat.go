@@ -117,22 +117,25 @@ func tendatGetOrInit(ctx context.Context, tenant string) (*TenantMemData, error)
 		lret.stats.Start()
 		go func() {
 			for {
-				cctx := mkContext("::tenlimupd")
+				cctx, done := mkContext("::tenlimupd")
 
 				time.Sleep(SwyTenantLimitsUpdPeriod)
 				ul, err := dbTenantGetLimits(cctx, tenant)
 				if err != nil {
-					glog.Errorf("No way to read user limits: %s", err.Error())
+					ctxlog(cctx).Errorf("No way to read user limits: %s", err.Error())
+					done(cctx)
 					continue
 				}
 
 				off, err := dbTenStatsGetLatestArch(cctx, tenant)
 				if err != nil {
-					glog.Errorf("No way to read user latest stats: %s", err.Error())
+					ctxlog(cctx).Errorf("No way to read user latest stats: %s", err.Error())
+					done(cctx)
 					continue
 				}
 
 				setupLimits(tenant, lret, ul, off)
+				done(cctx)
 			}
 		}()
 	}

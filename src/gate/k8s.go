@@ -493,12 +493,13 @@ func swk8sPodUpd(obj_old, obj_new interface{}) {
 	po := obj_old.(*v1.Pod)
 	pn := obj_new.(*v1.Pod)
 
-	ctx := mkContext("::k8s-notify")
-
 	dep := pn.ObjectMeta.Labels["deployment"]
 	if dep == "swy-go-builder" || dep == "swy-swift-builder" {
 		return
 	}
+
+	ctx, done := mkContext("::k8s-notify")
+	defer done(ctx)
 
 	if po.Status.PodIP == "" && pn.Status.PodIP != "" {
 		podEvents <- &podEvent{up: true, ctx: ctx, pod: genBalancerPod(pn)}

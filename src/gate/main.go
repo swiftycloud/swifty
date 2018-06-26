@@ -159,8 +159,9 @@ type gateContext struct {
 
 var reqIds uint64
 
-func mkContext(tenant string) context.Context {
-	return &gateContext{context.Background(), tenant, atomic.AddUint64(&reqIds, 1)}
+func mkContext(tenant string) (context.Context, func(context.Context)) {
+	gctx := &gateContext{context.Background(), tenant, atomic.AddUint64(&reqIds, 1)}
+	return gctx, func(ctx context.Context) { }
 }
 
 func fromContext(ctx context.Context) *gateContext {
@@ -922,7 +923,9 @@ func handleFunctionCall(w http.ResponseWriter, r *http.Request) {
 
 	sopq := statsStart()
 
-	ctx := mkContext("::call")
+	ctx, done := mkContext("::call")
+	defer done(ctx)
+
 	fnId := mux.Vars(r)["fnid"]
 
 	fmd, err = memdGet(ctx, fnId)
@@ -1631,7 +1634,9 @@ func genReqHandler(cb func(ctx context.Context, w http.ResponseWriter, r *http.R
 			return
 		}
 
-		ctx := mkContext(tennant)
+		ctx, done := mkContext(tennant)
+		defer done(ctx)
+
 		cerr := cb(ctx, w, r)
 		if cerr != nil {
 			ctxlog(ctx).Errorf("Error in callback: %s", cerr.Message)
@@ -1793,7 +1798,7 @@ func main() {
 				err.Error())
 	}
 
-	ctx := mkContext("::init")
+	ctx, done := mkContext("::init")
 
 	err = eventsInit(ctx, &conf)
 	if err != nil {
@@ -1830,6 +1835,8 @@ func main() {
 	if err != nil {
 		glog.Fatalf("Can't set up prometheus: %s", err.Error())
 	}
+
+	done(ctx)
 
 	err = swyhttp.ListenAndServe(
 		&http.Server{

@@ -113,22 +113,23 @@ func startListener(req *mq_listener_req) error {
 	}
 
 	go func() {
-		ctx := mkContext("::mq")
-		ctxlog(ctx).Debugf("mq: Getting messages for %s", key)
+		glog.Debugf("mq: Getting messages for %s", key)
 	loop:
 		for {
-			ctxlog(ctx).Debugf("mq: >")
+			glog.Debugf("mq: >")
 			select {
 			case d := <-msgs:
+				ctx, done := mkContext("::mq")
 				ctxlog(ctx).Debugf("mq: Received message [%s] from [%s]", d.Body, d.UserId)
 				req.cb(ctx, d.UserId, d.Body)
+				done(ctx)
 			case <-cons.done:
-				ctxlog(ctx).Debugf("mq: Done")
+				glog.Debugf("mq: Done")
 				break loop
 			}
-			ctxlog(ctx).Debugf("mq: <")
+			glog.Debugf("mq: <")
 		}
-		ctxlog(ctx).Debugf("mq: Stop getting messages")
+		glog.Debugf("mq: Stop getting messages")
 	}()
 
 	consumers[key] = cons

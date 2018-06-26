@@ -55,7 +55,8 @@ var cronRunner *cron.Cron
 
 func cronEventStart(ctx context.Context, evt *FnEventDesc) error {
 	id, err := cronRunner.AddFunc(evt.Cron.Tab, func() {
-		cctx := mkContext("::cron")
+		cctx, done := mkContext("::cron")
+		defer done(cctx)
 
 		fn, err := dbFuncFindByCookie(cctx, evt.FnId)
 		if err != nil || fn == nil {
