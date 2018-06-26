@@ -21,7 +21,7 @@ func makeSwoId(tennant, project, name string) *SwoId {
 }
 
 func ctxSwoId(ctx context.Context, project, name string) *SwoId {
-	return makeSwoId(fromContext(ctx).Tenant, project, name)
+	return makeSwoId(gctx(ctx).Tenant, project, name)
 }
 
 func (id *SwoId) Str() string {

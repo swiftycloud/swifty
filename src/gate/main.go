@@ -164,7 +164,7 @@ func mkContext(tenant string) (context.Context, func(context.Context)) {
 	return gctx, func(ctx context.Context) { }
 }
 
-func fromContext(ctx context.Context) *gateContext {
+func gctx(ctx context.Context) *gateContext {
 	return ctx.(*gateContext)
 }
 
@@ -274,8 +274,8 @@ func handleProjectList(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		return GateErrE(swy.GateBadRequest, err)
 	}
 
-	ctxlog(ctx).Debugf("List projects for %s", fromContext(ctx).Tenant)
-	fns, mws, err = dbProjectListAll(ctx, fromContext(ctx).Tenant)
+	ctxlog(ctx).Debugf("List projects for %s", gctx(ctx).Tenant)
+	fns, mws, err = dbProjectListAll(ctx, gctx(ctx).Tenant)
 	if err != nil {
 		return GateErrD(err)
 	}
@@ -727,7 +727,7 @@ func handleTenantStats(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		return GateErrE(swy.GateBadRequest, err)
 	}
 
-	ten := fromContext(ctx).Tenant
+	ten := gctx(ctx).Tenant
 	ctxlog(ctx).Debugf("Get FN stats %s", ten)
 
 	td, err := tendatGet(ctx, ten)
@@ -1277,7 +1277,7 @@ func handleMwares(ctx context.Context, w http.ResponseWriter, r *http.Request) *
 			return GateErrE(swy.GateBadRequest, err)
 		}
 
-		ctxlog(ctx).Debugf("mware/add: %s params %v", fromContext(ctx).Tenant, params)
+		ctxlog(ctx).Debugf("mware/add: %s params %v", gctx(ctx).Tenant, params)
 
 		id := ctxSwoId(ctx, params.Project, params.Name)
 		mid, cerr := mwareSetup(ctx, &conf.Mware, getMwareDesc(id, &params))
@@ -1474,7 +1474,7 @@ func handleAuths(ctx context.Context, w http.ResponseWriter, r *http.Request) *s
 	switch r.Method {
 	case "GET":
 		deps, err := dbDeployList(ctx, bson.M{
-					"tennant":	fromContext(ctx).Tenant,
+					"tennant":	gctx(ctx).Tenant,
 					"project":	project,
 					"labels":	"auth",
 				})

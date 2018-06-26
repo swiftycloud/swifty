@@ -43,7 +43,7 @@ func dbNF(err error) bool {
 
 func ctxObjId(ctx context.Context, id string) bson.M {
 	return bson.M {
-		"tennant": fromContext(ctx).Tenant,
+		"tennant": gctx(ctx).Tenant,
 		"_id": bson.ObjectIdHex(id),
 	}
 }
