@@ -163,10 +163,8 @@ var reqIds uint64
 
 func mkContext(tenant string) (context.Context, func(context.Context)) {
 	gatectx := &gateContext{context.Background(), tenant, atomic.AddUint64(&reqIds, 1), session.Copy()}
-	ctxlog(gatectx).Debugf("Create context for %s", tenant)
 	return gatectx, func(ctx context.Context) {
 				gctx(ctx).S.Close()
-				ctxlog(ctx).Debugf("Close context for %s", tenant)
 			}
 }
 
