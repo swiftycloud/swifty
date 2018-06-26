@@ -239,7 +239,7 @@ func handleProjectDel(ctx context.Context, w http.ResponseWriter, r *http.Reques
 		}
 	}
 
-	mws, err = dbMwareListProj(id, "", []string{})
+	mws, err = dbMwareListProj(ctx, id, "", []string{})
 	if err != nil {
 		return GateErrD(err)
 	}
@@ -405,7 +405,7 @@ func handleFunctionAuthCtx(ctx context.Context, w http.ResponseWriter, r *http.R
 			return GateErrE(swy.GateBadRequest, err)
 		}
 
-		err = fn.setAuthCtx(ac)
+		err = fn.setAuthCtx(ctx, ac)
 		if err != nil {
 			return GateErrE(swy.GateGenErr, err)
 		}
@@ -470,7 +470,7 @@ func handleFunctionMwares(ctx context.Context, w http.ResponseWriter, r *http.Re
 		for _, mwn := range fn.Mware {
 			id := fn.SwoId
 			id.Name = mwn
-			mw, err := dbMwareGetItem(&id)
+			mw, err := dbMwareGetItem(ctx, &id)
 
 			var mi *swyapi.MwareInfo
 			if err == nil {
@@ -500,7 +500,7 @@ func handleFunctionMwares(ctx context.Context, w http.ResponseWriter, r *http.Re
 
 		oid := ctxObjId(ctx, mid)
 		oid["project"] = fn.SwoId.Project
-		mw, err := dbMwareGetOne(oid)
+		mw, err := dbMwareGetOne(ctx, oid)
 		if err != nil {
 			return GateErrD(err)
 		}
@@ -529,7 +529,7 @@ func handleFunctionMware(ctx context.Context, w http.ResponseWriter, r *http.Req
 
 	oid := ctxObjId(ctx, mid)
 	oid["project"] = fn.SwoId.Project
-	mw, err := dbMwareGetOne(oid)
+	mw, err := dbMwareGetOne(ctx, oid)
 	if err != nil {
 		return GateErrD(err)
 	}
@@ -786,7 +786,7 @@ func handleFunctionStats(ctx context.Context, w http.ResponseWriter, r *http.Req
 			return GateErrC(swy.GateBadRequest)
 		}
 
-		stats, cerr := getFunctionStats(fn, periods)
+		stats, cerr := getFunctionStats(ctx, fn, periods)
 		if cerr != nil {
 			return cerr
 		}
@@ -925,7 +925,7 @@ func handleFunctionCall(w http.ResponseWriter, r *http.Request) {
 	ctx := mkContext("::call")
 	fnId := mux.Vars(r)["fnid"]
 
-	fmd, err = memdGet(fnId)
+	fmd, err = memdGet(ctx, fnId)
 	if err != nil {
 		code = http.StatusInternalServerError
 		err = errors.New("Error getting function")
@@ -1049,7 +1049,7 @@ func handleFunctions(ctx context.Context, w http.ResponseWriter, r *http.Request
 
 		var ret []*swyapi.FunctionInfo
 		for _, fn := range fns {
-			fi, cerr := fn.toInfo(details, periods)
+			fi, cerr := fn.toInfo(ctx, details, periods)
 			if cerr != nil {
 				return cerr
 			}
@@ -1126,7 +1126,7 @@ func handleFunction(ctx context.Context, w http.ResponseWriter, r *http.Request)
 			return GateErrC(swy.GateBadRequest)
 		}
 
-		fi, cerr := fn.toInfo(true, periods)
+		fi, cerr := fn.toInfo(ctx, true, periods)
 		if cerr != nil {
 			return cerr
 		}
@@ -1237,14 +1237,14 @@ func handleMwares(ctx context.Context, w http.ResponseWriter, r *http.Request) *
 
 		mname := q.Get("name")
 		if mname == "" {
-			mws, err = dbMwareListProj(ctxSwoId(ctx, project, ""), mwtype, q["label"])
+			mws, err = dbMwareListProj(ctx, ctxSwoId(ctx, project, ""), mwtype, q["label"])
 			if err != nil {
 				return GateErrD(err)
 			}
 		} else {
 			var mw *MwareDesc
 
-			mw, err = dbMwareGetItem(ctxSwoId(ctx, project, mname))
+			mw, err = dbMwareGetItem(ctx, ctxSwoId(ctx, project, mname))
 			if err != nil {
 				return GateErrD(err)
 			}
@@ -1381,7 +1381,7 @@ func handleDeployments(ctx context.Context, w http.ResponseWriter, r *http.Reque
 
 		var dis []*swyapi.DeployInfo
 		for _, d := range deps {
-			di, cerr := d.toInfo(false)
+			di, cerr := d.toInfo(ctx, false)
 			if cerr != nil {
 				return cerr
 			}
@@ -1439,7 +1439,7 @@ func handleDeployment(ctx context.Context, w http.ResponseWriter, r *http.Reques
 func handleOneDeployment(ctx context.Context, w http.ResponseWriter, r *http.Request, dd *DeployDesc) *swyapi.GateErr {
 	switch r.Method {
 	case "GET":
-		di, cerr := dd.toInfo(true)
+		di, cerr := dd.toInfo(ctx, true)
 		if cerr != nil {
 			return cerr
 		}
@@ -1557,7 +1557,7 @@ func handleMware(ctx context.Context, w http.ResponseWriter, r *http.Request) *s
 		return GateErrM(swy.GateBadRequest, "Bad mware ID value")
 	}
 
-	mw, err := dbMwareGetOne(ctxObjId(ctx, mid))
+	mw, err := dbMwareGetOne(ctx, ctxObjId(ctx, mid))
 	if err != nil {
 		return GateErrD(err)
 	}
@@ -1826,7 +1826,7 @@ func main() {
 		glog.Fatalf("Can't set up deploys: %s", err.Error())
 	}
 
-	err = PrometheusInit(&conf)
+	err = PrometheusInit(ctx, &conf)
 	if err != nil {
 		glog.Fatalf("Can't set up prometheus: %s", err.Error())
 	}

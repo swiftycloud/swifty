@@ -85,7 +85,7 @@ func FiniRabbitMQ(ctx context.Context, conf *YAMLConfMw, mwd *MwareDesc) error {
 }
 
 func mqEvent(ctx context.Context, mwid, queue, userid, data string) {
-	mware, err := dbMwareGetOne(bson.M{"mwaretype": "rabbit", "client": userid})
+	mware, err := dbMwareGetOne(ctx, bson.M{"mwaretype": "rabbit", "client": userid})
 	if err != nil {
 		return
 	}

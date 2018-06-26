@@ -45,7 +45,7 @@ func (i *DeployItemDesc)stop(ctx context.Context) *swyapi.GateErr {
 	return GateErrM(swy.GateGenErr, "Bad deploy item")
 }
 
-func (i *DeployItemDesc)info(details bool) (*swyapi.DeployItemInfo) {
+func (i *DeployItemDesc)info(ctx context.Context, details bool) (*swyapi.DeployItemInfo) {
 	if i.Fn != nil {
 		ret := &swyapi.DeployItemInfo{Type: "function", Name: i.Fn.SwoId.Name}
 
@@ -65,7 +65,7 @@ func (i *DeployItemDesc)info(details bool) (*swyapi.DeployItemInfo) {
 		ret := &swyapi.DeployItemInfo{Type: "mware", Name: i.Mw.SwoId.Name}
 
 		if details {
-			mw, err := dbMwareGetItem(&i.Mw.SwoId)
+			mw, err := dbMwareGetItem(ctx, &i.Mw.SwoId)
 			if err == nil {
 				ret.State = mwStates[mw.State]
 			} else {
@@ -173,7 +173,7 @@ func deployStart(ctx context.Context, dep *DeployDesc) (string, *swyapi.GateErr)
 	return dep.ObjID.Hex(), nil
 }
 
-func (dep *DeployDesc)toInfo(details bool) (*swyapi.DeployInfo, *swyapi.GateErr) {
+func (dep *DeployDesc)toInfo(ctx context.Context, details bool) (*swyapi.DeployInfo, *swyapi.GateErr) {
 	ret := &swyapi.DeployInfo {
 		Id:		dep.ObjID.Hex(),
 		Name:		dep.SwoId.Name,
@@ -183,7 +183,7 @@ func (dep *DeployDesc)toInfo(details bool) (*swyapi.DeployInfo, *swyapi.GateErr)
 	}
 
 	for _, item := range dep.Items {
-		ret.Items = append(ret.Items, item.info(details))
+		ret.Items = append(ret.Items, item.info(ctx, details))
 	}
 
 	return ret, nil

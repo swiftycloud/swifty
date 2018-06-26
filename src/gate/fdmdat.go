@@ -3,6 +3,7 @@ package main
 import (
 	"sync"
 	"time"
+	"context"
 	"../common/xratelimit"
 	"../apis/apps"
 )
@@ -32,12 +33,12 @@ type TenantMemData struct {
 	BOut_l, BOut_o	uint64
 }
 
-func memdGetFn(fn *FunctionDesc) (*FnMemData, error) {
-	return fndatGetOrInit(fn.Cookie, fn)
+func memdGetFn(ctx context.Context, fn *FunctionDesc) (*FnMemData, error) {
+	return fndatGetOrInit(ctx, fn.Cookie, fn)
 }
 
-func memdGet(cookie string) (*FnMemData, error) {
-	return fndatGetOrInit(cookie, nil)
+func memdGet(ctx context.Context, cookie string) (*FnMemData, error) {
+	return fndatGetOrInit(ctx, cookie, nil)
 }
 
 func memdGetCond(cookie string) *FnMemData {
@@ -137,7 +138,7 @@ func tendatGetOrInit(tenant string) (*TenantMemData, error) {
 	return lret, nil
 }
 
-func fndatGetOrInit(cookie string, fn *FunctionDesc) (*FnMemData, error) {
+func fndatGetOrInit(ctx context.Context, cookie string, fn *FunctionDesc) (*FnMemData, error) {
 	var err error
 
 	ret, ok := fdmd.Load(cookie)
@@ -171,7 +172,7 @@ func fndatGetOrInit(cookie string, fn *FunctionDesc) (*FnMemData, error) {
 	nret.public = fn.isURL()
 	nret.depname = fn.DepName()
 	if fn.AuthCtx != "" {
-		nret.ac, err = authCtxGet(fn.SwoId, fn.AuthCtx)
+		nret.ac, err = authCtxGet(ctx, fn.SwoId, fn.AuthCtx)
 		if err != nil {
 			return nil, err
 		}

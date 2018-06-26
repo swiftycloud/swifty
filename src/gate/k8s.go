@@ -160,7 +160,7 @@ func swk8sGenEnvVar(ctx context.Context, fn *FunctionDesc, wd_port int) []v1.Env
 			})
 
 	for _, mw := range fn.Mware {
-		mwc, err := mwareGetCookie(fn.SwoId, mw)
+		mwc, err := mwareGetCookie(ctx, fn.SwoId, mw)
 		if err != nil {
 			ctxlog(ctx).Errorf("No mware %s for %s", mw, fn.SwoId.Str())
 			continue
@@ -689,7 +689,7 @@ func refreshDepsAndPods(ctx context.Context) error {
 		glog.Debugf("Chk replicas for %s", fn.SwoId.Str())
 		if *dep.Spec.Replicas > 1 {
 			glog.Debugf("Found grown-up (%d) deployment %s", *dep.Spec.Replicas, dep.Name)
-			err = scalerInit(fn, uint32(*dep.Spec.Replicas))
+			err = scalerInit(ctx, fn, uint32(*dep.Spec.Replicas))
 			if err != nil {
 				glog.Errorf("Can't reinit scaler: %s", err.Error())
 				return err

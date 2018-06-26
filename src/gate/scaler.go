@@ -93,8 +93,8 @@ func balancerFnDepGrow(ctx context.Context, fdm *FnMemData, goal uint32) {
 	fdm.lock.Unlock()
 }
 
-func scalerInit(fn *FunctionDesc, tgt uint32) error {
-	fdm, err := memdGetFn(fn)
+func scalerInit(ctx context.Context, fn *FunctionDesc, tgt uint32) error {
+	fdm, err := memdGetFn(ctx, fn)
 	if err != nil {
 		return fmt.Errorf("Can't get fdmd for %s: %s", fn.SwoId.Str(), err.Error())
 	}

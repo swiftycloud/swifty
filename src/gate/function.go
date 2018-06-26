@@ -124,7 +124,7 @@ func (fn *FunctionDesc)getURLEvt() *swyapi.FunctionEvent {
 	}
 }
 
-func (fn *FunctionDesc)toInfo(details bool, periods int) (*swyapi.FunctionInfo, *swyapi.GateErr) {
+func (fn *FunctionDesc)toInfo(ctx context.Context, details bool, periods int) (*swyapi.FunctionInfo, *swyapi.GateErr) {
 	fi := &swyapi.FunctionInfo {
 		Id:		fn.ObjID.Hex(),
 		Name:		fn.SwoId.Name,
@@ -141,7 +141,7 @@ func (fn *FunctionDesc)toInfo(details bool, periods int) (*swyapi.FunctionInfo, 
 			fi.URL = fn.getURL()
 		}
 
-		fi.Stats, cerr = getFunctionStats(fn, periods)
+		fi.Stats, cerr = getFunctionStats(ctx, fn, periods)
 		if err != nil {
 			return nil, cerr
 		}
@@ -336,12 +336,12 @@ func (fn *FunctionDesc)setUserData(ud string) error {
 	return err
 }
 
-func (fn *FunctionDesc)setAuthCtx(ac string) error {
+func (fn *FunctionDesc)setAuthCtx(ctx context.Context, ac string) error {
 	var nac *AuthCtx
 	var err error
 
 	if ac != "" {
-		nac, err = authCtxGet(fn.SwoId, ac)
+		nac, err = authCtxGet(ctx, fn.SwoId, ac)
 		if err != nil {
 			return err
 		}
@@ -629,7 +629,7 @@ func removeFunction(ctx context.Context, conf *YAMLConf, fn *FunctionDesc) *swya
 	}
 
 	ctxlog(ctx).Debugf("`- drop stats")
-	err = statsDrop(fn)
+	err = statsDrop(ctx, fn)
 	if err != nil {
 		goto later
 	}

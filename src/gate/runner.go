@@ -19,7 +19,7 @@ type podConn struct {
 }
 
 func doRun(ctx context.Context, fn *FunctionDesc, event string, args map[string]string) (*swyapi.SwdFunctionRunResult, error) {
-	fmd, err := memdGetFn(fn)
+	fmd, err := memdGetFn(ctx, fn)
 	if err != nil {
 		ctxlog(ctx).Errorf("Can't %s memdat: %s", fn.Cookie, err.Error())
 		return nil, err

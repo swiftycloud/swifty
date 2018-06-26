@@ -58,7 +58,7 @@ func dbTenantGetLimits(tenant string) (*swyapi.UserLimits, error) {
 	return &v, err
 }
 
-func dbMwareCount() (map[string]int, error) {
+func dbMwareCount(ctx context.Context) (map[string]int, error) {
 	var counts []struct {
 		Id	string	`bson:"_id"`
 		Count	int	`bson:"count"`
@@ -83,12 +83,12 @@ func dbMwareCount() (map[string]int, error) {
 	return ret, nil
 }
 
-func dbMwareAdd(desc *MwareDesc) error {
+func dbMwareAdd(ctx context.Context, desc *MwareDesc) error {
 	c := dbSession.DB(DBStateDB).C(DBColMware)
 	return c.Insert(desc)
 }
 
-func dbMwareUpdateAdded(desc *MwareDesc) error {
+func dbMwareUpdateAdded(ctx context.Context, desc *MwareDesc) error {
 	desc.State = swy.DBMwareStateRdy
 	c := dbSession.DB(DBStateDB).C(DBColMware)
 	return c.Update(bson.M{"cookie": desc.Cookie},
@@ -100,40 +100,40 @@ func dbMwareUpdateAdded(desc *MwareDesc) error {
 			}})
 }
 
-func dbMwareTerminate(mwd *MwareDesc) error {
+func dbMwareTerminate(ctx context.Context, mwd *MwareDesc) error {
 	c := dbSession.DB(DBStateDB).C(DBColMware)
 	return c.Update(
 		bson.M{"cookie": mwd.Cookie, "state": bson.M{"$in": []int{swy.DBMwareStateRdy, swy.DBMwareStateStl}}},
 		bson.M{"$set": bson.M{"state": swy.DBMwareStateTrm, }})
 }
 
-func dbMwareRemove(mwd *MwareDesc) error {
+func dbMwareRemove(ctx context.Context, mwd *MwareDesc) error {
 	c := dbSession.DB(DBStateDB).C(DBColMware)
 	return c.Remove(bson.M{"cookie": mwd.Cookie})
 }
 
-func dbMwareSetStalled(mwd *MwareDesc) error {
+func dbMwareSetStalled(ctx context.Context, mwd *MwareDesc) error {
 	c := dbSession.DB(DBStateDB).C(DBColMware)
 	return c.Update( bson.M{"cookie": mwd.Cookie, },
 		bson.M{"$set": bson.M{"state": swy.DBMwareStateStl, }})
 }
 
-func dbMwareGetOne(q bson.M) (*MwareDesc, error) {
+func dbMwareGetOne(ctx context.Context, q bson.M) (*MwareDesc, error) {
 	c := dbSession.DB(DBStateDB).C(DBColMware)
 	v := MwareDesc{}
 	err := c.Find(q).One(&v)
 	return &v, err
 }
 
-func dbMwareGetItem(id *SwoId) (*MwareDesc, error) {
-	return dbMwareGetOne(bson.M{"cookie": id.Cookie()})
+func dbMwareGetItem(ctx context.Context, id *SwoId) (*MwareDesc, error) {
+	return dbMwareGetOne(ctx, bson.M{"cookie": id.Cookie()})
 }
 
-func dbMwareGetReady(id *SwoId) (*MwareDesc, error) {
-	return dbMwareGetOne(bson.M{"cookie": id.Cookie(), "state": swy.DBMwareStateRdy})
+func dbMwareGetReady(ctx context.Context, id *SwoId) (*MwareDesc, error) {
+	return dbMwareGetOne(ctx, bson.M{"cookie": id.Cookie(), "state": swy.DBMwareStateRdy})
 }
 
-func dbMwareListProj(id *SwoId, mwtyp string, labels []string) ([]*MwareDesc, error) {
+func dbMwareListProj(ctx context.Context, id *SwoId, mwtyp string, labels []string) ([]*MwareDesc, error) {
 	var recs []*MwareDesc
 	c := dbSession.DB(DBStateDB).C(DBColMware)
 	lk := bson.D{{"tennant", id.Tennant}, {"project", id.Project}}

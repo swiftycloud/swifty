@@ -2,6 +2,7 @@ package main
 
 import (
 	"time"
+	"context"
 	"../apis/apps"
 	"../common"
 	"../common/http"
@@ -110,10 +111,10 @@ type TenStats struct {
 	onDisk		*TenStatValues	`bson:"-"`
 }
 
-func getFunctionStats(fn *FunctionDesc, periods int) ([]swyapi.FunctionStats, *swyapi.GateErr) {
+func getFunctionStats(ctx context.Context, fn *FunctionDesc, periods int) ([]swyapi.FunctionStats, *swyapi.GateErr) {
 	var stats []swyapi.FunctionStats
 
-	prev, err := statsGet(fn)
+	prev, err := statsGet(ctx, fn)
 	if err != nil {
 		return nil, GateErrM(swy.GateGenErr, "Error getting stats")
 	}
@@ -163,8 +164,8 @@ type statsOpaque struct {
 	bodySz		int
 }
 
-func statsGet(fn *FunctionDesc) (*FnStats, error) {
-	md, err := memdGetFn(fn)
+func statsGet(ctx context.Context, fn *FunctionDesc) (*FnStats, error) {
+	md, err := memdGetFn(ctx, fn)
 	if err != nil {
 		return nil, err
 	} else {
@@ -231,8 +232,8 @@ func statsInit(conf *YAMLConf) error {
 	return nil
 }
 
-func statsDrop(fn *FunctionDesc) error {
-	md, err := memdGetFn(fn)
+func statsDrop(ctx context.Context, fn *FunctionDesc) error {
+	md, err := memdGetFn(ctx, fn)
 	if err != nil {
 		return err
 	}

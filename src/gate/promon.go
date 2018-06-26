@@ -4,6 +4,7 @@ import (
 	"github.com/gorilla/mux"
 	"net/http"
 	"time"
+	"context"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
@@ -57,7 +58,7 @@ var (
 	)
 )
 
-func PrometheusInit(conf *YAMLConf) error {
+func PrometheusInit(ctx context.Context, conf *YAMLConf) error {
 	nr, err := dbFuncCount()
 	if err != nil {
 		return err
@@ -66,7 +67,7 @@ func PrometheusInit(conf *YAMLConf) error {
 	gateFunctions.Set(float64(nr))
 	prometheus.MustRegister(gateFunctions)
 
-	nrs, err := dbMwareCount()
+	nrs, err := dbMwareCount(ctx)
 	if err != nil {
 		return err
 	}

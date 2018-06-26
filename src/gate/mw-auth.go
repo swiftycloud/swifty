@@ -27,10 +27,10 @@ type AuthCtx struct {
 	signKey		string
 }
 
-func authCtxGet(id SwoId, ac string) (*AuthCtx, error) {
+func authCtxGet(ctx context.Context, id SwoId, ac string) (*AuthCtx, error) {
 	id.Name = ac
 
-	item, err := dbMwareGetReady(&id)
+	item, err := dbMwareGetReady(ctx, &id)
 	if err != nil {
 		return nil, err
 	}

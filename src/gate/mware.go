@@ -63,9 +63,9 @@ func mwGenUserPassEnvs(mwd *MwareDesc, mwaddr string) ([][2]string) {
 	}
 }
 
-func mwareGetCookie(id SwoId, name string) (string, error) {
+func mwareGetCookie(ctx context.Context, id SwoId, name string) (string, error) {
 	id.Name = name
-	mw, err := dbMwareGetReady(&id)
+	mw, err := dbMwareGetReady(ctx, &id)
 	if err != nil {
 		return "", fmt.Errorf("No such mware: %s", id.Str())
 	}
@@ -114,7 +114,7 @@ func mwareGenerateSecret(ctx context.Context, fid *SwoId, typ, id string) ([][2]
 }
 
 func mwareRemoveId(ctx context.Context, conf *YAMLConfMw, id *SwoId) *swyapi.GateErr {
-	item, err := dbMwareGetItem(id)
+	item, err := dbMwareGetItem(ctx, id)
 	if err != nil {
 		return GateErrD(err)
 	}
@@ -128,7 +128,7 @@ func mwareRemove(ctx context.Context, conf *YAMLConfMw, item *MwareDesc) *swyapi
 		return GateErrC(swy.GateGenErr) /* Shouldn't happen */
 	}
 
-	err := dbMwareTerminate(item)
+	err := dbMwareTerminate(ctx, item)
 	if err != nil {
 		ctxlog(ctx).Errorf("Can't terminate mware %s", item.SwoId.Str())
 		return GateErrM(swy.GateGenErr, "Cannot terminate mware")
@@ -146,7 +146,7 @@ func mwareRemove(ctx context.Context, conf *YAMLConfMw, item *MwareDesc) *swyapi
 		goto stalled
 	}
 
-	err = dbMwareRemove(item)
+	err = dbMwareRemove(ctx, item)
 	if err != nil {
 		ctxlog(ctx).Errorf("Can't remove mware %s: %s", item.SwoId.Str(), err.Error())
 		goto stalled
@@ -156,7 +156,7 @@ func mwareRemove(ctx context.Context, conf *YAMLConfMw, item *MwareDesc) *swyapi
 	return nil
 
 stalled:
-	dbMwareSetStalled(item)
+	dbMwareSetStalled(ctx, item)
 	return GateErrE(swy.GateGenErr, err)
 }
 
@@ -216,7 +216,7 @@ func mwareSetup(ctx context.Context, conf *YAMLConfMw, mwd *MwareDesc) (string, 
 	ctxlog(ctx).Debugf("set up wmare %s:%s", mwd.SwoId.Str(), mwd.MwareType)
 
 	mwd.ObjID = bson.NewObjectId()
-	err = dbMwareAdd(mwd)
+	err = dbMwareAdd(ctx, mwd)
 	if err != nil {
 		ctxlog(ctx).Errorf("Can't add mware %s: %s", mwd.SwoId.Str(), err.Error())
 		return "", GateErrD(err)
@@ -258,7 +258,7 @@ func mwareSetup(ctx context.Context, conf *YAMLConfMw, mwd *MwareDesc) (string, 
 		goto outs
 	}
 
-	err = dbMwareUpdateAdded(mwd)
+	err = dbMwareUpdateAdded(ctx, mwd)
 	if err != nil {
 		ctxlog(ctx).Errorf("Can't update added %s: %s", mwd.SwoId.Str(), err.Error())
 		err = errors.New("DB error")
@@ -278,7 +278,7 @@ outh:
 		goto stalled
 	}
 outdb:
-	erc = dbMwareRemove(mwd)
+	erc = dbMwareRemove(ctx, mwd)
 	if erc != nil {
 		goto stalled
 	}
@@ -288,6 +288,6 @@ out:
 	return "", GateErrE(swy.GateGenErr, err)
 
 stalled:
-	dbMwareSetStalled(mwd)
+	dbMwareSetStalled(ctx, mwd)
 	goto out
 }
