@@ -205,7 +205,7 @@ func validateFuncName(params *swyapi.FunctionAdd) error {
 }
 
 func checkCount(ctx context.Context, id *SwoId) error {
-	tmd, err := tendatGet(id.Tennant)
+	tmd, err := tendatGet(ctx, id.Tennant)
 	if err != nil {
 		return err
 	}

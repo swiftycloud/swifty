@@ -729,7 +729,7 @@ func handleTenantStats(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	ten := fromContext(ctx).Tenant
 	ctxlog(ctx).Debugf("Get FN stats %s", ten)
 
-	td, err := tendatGet(ten)
+	td, err := tendatGet(ctx, ten)
 	if err != nil {
 		return GateErrD(err)
 	}
@@ -740,7 +740,7 @@ func handleTenantStats(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	if params.Periods > 0 {
 		var atst []TenStats
 
-		atst, err = dbTenStatsGetArch(ten, params.Periods)
+		atst, err = dbTenStatsGetArch(ctx, ten, params.Periods)
 		if err != nil {
 			return GateErrD(err)
 		}

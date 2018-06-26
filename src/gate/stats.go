@@ -13,7 +13,7 @@ const (
 )
 
 type statsWriter interface {
-	Write()
+	Write(ctx context.Context)
 }
 
 type statsFlush struct {
@@ -122,7 +122,7 @@ func getFunctionStats(ctx context.Context, fn *FunctionDesc, periods int) ([]swy
 	if periods > 0 {
 		var afst []FnStats
 
-		afst, err = dbFnStatsGetArch(fn.Cookie, periods)
+		afst, err = dbFnStatsGetArch(ctx, fn.Cookie, periods)
 		if err != nil {
 			return nil, GateErrD(err)
 		}
@@ -224,8 +224,9 @@ func statsInit(conf *YAMLConf) error {
 	statsFlushReqs = make(chan *statsFlush)
 	go func() {
 		for {
+			ctx := mkContext("::statswrite")
 			fc := <-statsFlushReqs
-			fc.writer.Write()
+			fc.writer.Write(ctx)
 			fc.flushed <- true
 		}
 	}()
@@ -242,11 +243,11 @@ func statsDrop(ctx context.Context, fn *FunctionDesc) error {
 		md.stats.Stop()
 	}
 
-	return dbFnStatsDrop(fn.Cookie, &md.stats)
+	return dbFnStatsDrop(ctx, fn.Cookie, &md.stats)
 }
 
-func (st *FnStats)Init(fn *FunctionDesc) error {
-	err := dbFnStatsGet(fn.Cookie, st)
+func (st *FnStats)Init(ctx context.Context, fn *FunctionDesc) error {
+	err := dbFnStatsGet(ctx, fn.Cookie, st)
 	if err == nil {
 		st.onDisk = &FnStatValues{}
 		*st.onDisk = st.FnStatValues
@@ -256,7 +257,7 @@ func (st *FnStats)Init(fn *FunctionDesc) error {
 	return err
 }
 
-func (st *FnStats)Write() {
+func (st *FnStats)Write(ctx context.Context) {
 	var now FnStatValues = st.FnStatValues
 	delta := FnStatValues {
 		Called: now.Called - st.onDisk.Called,
@@ -267,7 +268,7 @@ func (st *FnStats)Write() {
 		BytesOut: now.BytesOut - st.onDisk.BytesOut,
 		RunCost: now.RunCost - st.onDisk.RunCost,
 	}
-	err := dbFnStatsUpdate(st.Cookie, &delta, now.LastCall)
+	err := dbFnStatsUpdate(ctx, st.Cookie, &delta, now.LastCall)
 	if err == nil {
 		st.onDisk = &now
 	} else {
@@ -275,8 +276,8 @@ func (st *FnStats)Write() {
 	}
 }
 
-func (st *TenStats)Init(tenant string) error {
-	err := dbTenStatsGet(tenant, st)
+func (st *TenStats)Init(ctx context.Context, tenant string) error {
+	err := dbTenStatsGet(ctx, tenant, st)
 	if err == nil {
 		st.onDisk = &TenStatValues{}
 		*st.onDisk = st.TenStatValues
@@ -286,7 +287,7 @@ func (st *TenStats)Init(tenant string) error {
 	return err
 }
 
-func (st *TenStats)Write() {
+func (st *TenStats)Write(ctx context.Context) {
 	var now TenStatValues = st.TenStatValues
 	delta := TenStatValues {
 		Called: now.Called - st.onDisk.Called,
@@ -294,7 +295,7 @@ func (st *TenStats)Write() {
 		BytesIn: now.BytesIn - st.onDisk.BytesIn,
 		BytesOut: now.BytesOut - st.onDisk.BytesOut,
 	}
-	err := dbTenStatsUpdate(st.Tenant, &delta)
+	err := dbTenStatsUpdate(ctx, st.Tenant, &delta)
 	if err == nil {
 		st.onDisk = &now
 	} else {

@@ -266,7 +266,7 @@ func dbFuncRemove(ctx context.Context, fn *FunctionDesc) error {
 	return c.Remove(bson.M{"cookie": fn.Cookie});
 }
 
-func dbTenStatsGet(tenant string, st *TenStats) error {
+func dbTenStatsGet(ctx context.Context, tenant string, st *TenStats) error {
 	c := dbSession.DB(DBStateDB).C(DBColTenStats)
 	err := c.Find(bson.M{"tenant": tenant}).One(st)
 	if err == mgo.ErrNotFound {
@@ -275,7 +275,7 @@ func dbTenStatsGet(tenant string, st *TenStats) error {
 	return err
 }
 
-func dbTenStatsGetArch(tenant string, nr int) ([]TenStats, error) {
+func dbTenStatsGetArch(ctx context.Context, tenant string, nr int) ([]TenStats, error) {
 	var ret []TenStats
 	c := dbSession.DB(DBStateDB).C(DBColTenStatsA)
 	err := c.Find(bson.M{"tenant": tenant}).Sort("-till").Limit(nr).All(&ret)
@@ -285,16 +285,16 @@ func dbTenStatsGetArch(tenant string, nr int) ([]TenStats, error) {
 	return ret, err
 }
 
-func dbTenStatsGetLatestArch(tenant string) (*TenStats, error) {
+func dbTenStatsGetLatestArch(ctx context.Context, tenant string) (*TenStats, error) {
 	var ret TenStats
-	a, err := dbTenStatsGetArch(tenant, 1)
+	a, err := dbTenStatsGetArch(ctx, tenant, 1)
 	if len(a) != 0 {
 		ret = a[0]
 	}
 	return &ret, err
 }
 
-func dbTenStatsUpdate(tenant string, delta *TenStatValues) error {
+func dbTenStatsUpdate(ctx context.Context, tenant string, delta *TenStatValues) error {
 	c := dbSession.DB(DBStateDB).C(DBColTenStats)
 	_, err := c.Upsert(bson.M{"tenant": tenant}, bson.M{
 			"$set": bson.M{"tenant": tenant},
@@ -308,7 +308,7 @@ func dbTenStatsUpdate(tenant string, delta *TenStatValues) error {
 	return err
 }
 
-func dbFnStatsGet(cookie string, st *FnStats) error {
+func dbFnStatsGet(ctx context.Context, cookie string, st *FnStats) error {
 	c := dbSession.DB(DBStateDB).C(DBColFnStats)
 	err := c.Find(bson.M{"cookie": cookie}).One(st)
 	if err == mgo.ErrNotFound {
@@ -317,7 +317,7 @@ func dbFnStatsGet(cookie string, st *FnStats) error {
 	return err
 }
 
-func dbFnStatsGetArch(id string, nr int) ([]FnStats, error) {
+func dbFnStatsGetArch(ctx context.Context, id string, nr int) ([]FnStats, error) {
 	var ret []FnStats
 	c := dbSession.DB(DBStateDB).C(DBColFnStatsA)
 	err := c.Find(bson.M{"cookie": id}).Sort("-till").Limit(nr).All(&ret)
@@ -327,7 +327,7 @@ func dbFnStatsGetArch(id string, nr int) ([]FnStats, error) {
 	return ret, err
 }
 
-func dbFnStatsUpdate(cookie string, delta *FnStatValues, lastCall time.Time) error {
+func dbFnStatsUpdate(ctx context.Context, cookie string, delta *FnStatValues, lastCall time.Time) error {
 	c := dbSession.DB(DBStateDB).C(DBColFnStats)
 	_, err := c.Upsert(bson.M{"cookie": cookie}, bson.M{
 			"$set": bson.M{"cookie": cookie},
@@ -345,7 +345,7 @@ func dbFnStatsUpdate(cookie string, delta *FnStatValues, lastCall time.Time) err
 	return err
 }
 
-func dbFnStatsDrop(cookie string, st *FnStats) error {
+func dbFnStatsDrop(ctx context.Context, cookie string, st *FnStats) error {
 	if st.Called != 0 {
 		n := time.Now()
 		st.Dropped = &n

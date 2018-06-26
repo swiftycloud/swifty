@@ -81,18 +81,18 @@ func setupLimits(ten string, td *TenantMemData, ul *swyapi.UserLimits, off *TenS
 	}
 }
 
-func tendatGet(tenant string) (*TenantMemData, error) {
-	return tendatGetOrInit(tenant)
+func tendatGet(ctx context.Context, tenant string) (*TenantMemData, error) {
+	return tendatGetOrInit(ctx, tenant)
 }
 
-func tendatGetOrInit(tenant string) (*TenantMemData, error) {
+func tendatGetOrInit(ctx context.Context, tenant string) (*TenantMemData, error) {
 	ret, ok := tdat.Load(tenant)
 	if ok {
 		return ret.(*TenantMemData), nil
 	}
 
 	nret := &TenantMemData{}
-	err := nret.stats.Init(tenant)
+	err := nret.stats.Init(ctx, tenant)
 	if err != nil {
 		return nil, err
 	}
@@ -102,7 +102,7 @@ func tendatGetOrInit(tenant string) (*TenantMemData, error) {
 		return nil, err
 	}
 
-	off, err := dbTenStatsGetLatestArch(tenant)
+	off, err := dbTenStatsGetLatestArch(ctx, tenant)
 	if err != nil {
 		return nil, err
 	}
@@ -117,6 +117,8 @@ func tendatGetOrInit(tenant string) (*TenantMemData, error) {
 		lret.stats.Start()
 		go func() {
 			for {
+				cctx := mkContext("::tenlimupd")
+
 				time.Sleep(SwyTenantLimitsUpdPeriod)
 				ul, err := dbTenantGetLimits(tenant)
 				if err != nil {
@@ -124,7 +126,7 @@ func tendatGetOrInit(tenant string) (*TenantMemData, error) {
 					continue
 				}
 
-				off, err := dbTenStatsGetLatestArch(tenant)
+				off, err := dbTenStatsGetLatestArch(cctx, tenant)
 				if err != nil {
 					glog.Errorf("No way to read user latest stats: %s", err.Error())
 					continue
@@ -154,12 +156,12 @@ func fndatGetOrInit(ctx context.Context, cookie string, fn *FunctionDesc) (*FnMe
 	}
 
 	nret := &FnMemData{}
-	err = nret.stats.Init(fn)
+	err = nret.stats.Init(ctx, fn)
 	if err != nil {
 		return nil, err
 	}
 
-	nret.td, err = tendatGetOrInit(fn.SwoId.Tennant)
+	nret.td, err = tendatGetOrInit(ctx, fn.SwoId.Tennant)
 	if err != nil {
 		return nil, err
 	}
