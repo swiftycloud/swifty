@@ -15,10 +15,10 @@ const (
 	DBColPlans	= "Plans"
 )
 
-var dbSession *mgo.Session
+var session *mgo.Session
 
-func dbGetUserLimits(conf *YAMLConf, id string) (*swyapi.UserLimits, error) {
-	c := dbSession.DB(DBTenantDB).C(DBColLimits)
+func dbGetUserLimits(ses *mgo.Session, conf *YAMLConf, id string) (*swyapi.UserLimits, error) {
+	c := ses.DB(DBTenantDB).C(DBColLimits)
 	var v swyapi.UserLimits
 	err := c.Find(bson.M{"id":id}).One(&v)
 	if err == mgo.ErrNotFound {
@@ -27,8 +27,8 @@ func dbGetUserLimits(conf *YAMLConf, id string) (*swyapi.UserLimits, error) {
 	return &v, err
 }
 
-func dbGetPlanLimits(conf *YAMLConf, id string) (*swyapi.UserLimits, error) {
-	c := dbSession.DB(DBTenantDB).C(DBColPlans)
+func dbGetPlanLimits(ses *mgo.Session, conf *YAMLConf, id string) (*swyapi.UserLimits, error) {
+	c := ses.DB(DBTenantDB).C(DBColPlans)
 	var v swyapi.UserLimits
 	err := c.Find(bson.M{"planid":id}).One(&v)
 	if err == mgo.ErrNotFound {
@@ -37,14 +37,14 @@ func dbGetPlanLimits(conf *YAMLConf, id string) (*swyapi.UserLimits, error) {
 	return &v, err
 }
 
-func dbSetUserLimits(conf *YAMLConf, limits *swyapi.UserLimits) error {
-	c := dbSession.DB(DBTenantDB).C(DBColLimits)
+func dbSetUserLimits(ses *mgo.Session, conf *YAMLConf, limits *swyapi.UserLimits) error {
+	c := ses.DB(DBTenantDB).C(DBColLimits)
 	_, err := c.Upsert(bson.M{"id":limits.Id}, limits)
 	return err
 }
 
-func dbDelUserLimits(conf *YAMLConf, id string) {
-	c := dbSession.DB(DBTenantDB).C(DBColLimits)
+func dbDelUserLimits(ses *mgo.Session, conf *YAMLConf, id string) {
+	c := ses.DB(DBTenantDB).C(DBColLimits)
 	c.Remove(bson.M{"id":id})
 }
 
@@ -59,17 +59,14 @@ func dbConnect(conf *YAMLConf) error {
 		Username:	dbc.User,
 		Password:	admdSecrets[dbc.Pass]}
 
-	session, err := mgo.DialWithInfo(&info);
+	session, err = mgo.DialWithInfo(&info);
 	if err != nil {
 		log.Errorf("dbConnect: Can't dial to %s with db %s (%s)",
 				conf.DB, DBTenantDB, err.Error())
 		return err
 	}
 
-	defer session.Close()
 	session.SetMode(mgo.Monotonic, true)
-
-	dbSession = session.Copy()
 
 	log.Debugf("Connected to mongo:%s", DBTenantDB)
 	return nil

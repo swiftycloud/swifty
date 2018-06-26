@@ -297,6 +297,9 @@ func handleAddUser(w http.ResponseWriter, r *http.Request) {
 	var params swyapi.AddUser
 	var code = http.StatusBadRequest
 
+	ses := session.Copy()
+	defer ses.Close()
+
 	if swyhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
 
 	td, code, err := handleAdminReq(r, &params)
@@ -317,13 +320,13 @@ func handleAddUser(w http.ResponseWriter, r *http.Request) {
 	if params.PlanId != "" {
 		var plim *swyapi.UserLimits
 
-		plim, err = dbGetPlanLimits(&conf, params.PlanId)
+		plim, err = dbGetPlanLimits(ses, &conf, params.PlanId)
 		if err != nil {
 			goto out
 		}
 
 		plim.Id = params.Id
-		err = dbSetUserLimits(&conf, plim)
+		err = dbSetUserLimits(ses, &conf, plim)
 		if err != nil {
 			goto out
 		}
@@ -331,7 +334,7 @@ func handleAddUser(w http.ResponseWriter, r *http.Request) {
 
 	err = ksAddUserAndProject(conf.kc, &params)
 	if err != nil {
-		dbDelUserLimits(&conf, params.Id)
+		dbDelUserLimits(ses, &conf, params.Id)
 		goto out
 	}
 
@@ -345,6 +348,9 @@ out:
 
 func handleSetLimits(w http.ResponseWriter, r *http.Request) {
 	if swyhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
+
+	ses := session.Copy()
+	defer ses.Close()
 
 	var params swyapi.UserLimits
 
@@ -362,7 +368,7 @@ func handleSetLimits(w http.ResponseWriter, r *http.Request) {
 	if params.PlanId != "" {
 		var plim *swyapi.UserLimits
 
-		plim, err = dbGetPlanLimits(&conf, params.PlanId)
+		plim, err = dbGetPlanLimits(ses, &conf, params.PlanId)
 		if err != nil {
 			goto out
 		}
@@ -392,7 +398,7 @@ func handleSetLimits(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	err = dbSetUserLimits(&conf, &params)
+	err = dbSetUserLimits(ses, &conf, &params)
 	if err != nil {
 		goto out
 	}
@@ -406,6 +412,9 @@ out:
 
 func handleGetLimits(w http.ResponseWriter, r *http.Request) {
 	if swyhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
+
+	ses := session.Copy()
+	defer ses.Close()
 
 	var params swyapi.UserInfo
 	var ulim *swyapi.UserLimits
@@ -421,7 +430,7 @@ func handleGetLimits(w http.ResponseWriter, r *http.Request) {
 		goto out
 	}
 
-	ulim, err = dbGetUserLimits(&conf, params.Id)
+	ulim, err = dbGetUserLimits(ses, &conf, params.Id)
 	if err != nil {
 		goto out
 	}
