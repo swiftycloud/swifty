@@ -2,7 +2,7 @@ package main
 
 import (
 	"go.uber.org/zap"
-
+	"gopkg.in/mgo.v2"
 	"github.com/gorilla/mux"
 
 	"io/ioutil"
@@ -95,11 +95,22 @@ func setupLogger(conf *YAMLConf) {
 
 type s3Context struct {
 	context.Context
+	S	*mgo.Session
+}
+
+func Dbs(ctx context.Context) *mgo.Session {
+	return ctx.(*s3Context).S
 }
 
 func mkContext(id string) (context.Context, func(context.Context)) {
-	ctx := &s3Context{context.Background()}
-	return ctx, func(c context.Context) {}
+	ctx := &s3Context{
+		context.Background(),
+		session.Copy(),
+	}
+
+	return ctx, func(c context.Context) {
+				Dbs(c).Close()
+			}
 }
 
 var CORS_Headers = []string {
