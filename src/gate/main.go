@@ -5,6 +5,7 @@ import (
 
 	"github.com/gorilla/mux"
 
+	"gopkg.in/mgo.v2"
 	"encoding/json"
 	"encoding/hex"
 	"net/http"
@@ -155,13 +156,18 @@ type gateContext struct {
 	context.Context
 	Tenant	string
 	ReqId	uint64
+	S	*mgo.Session
 }
 
 var reqIds uint64
 
 func mkContext(tenant string) (context.Context, func(context.Context)) {
-	gctx := &gateContext{context.Background(), tenant, atomic.AddUint64(&reqIds, 1)}
-	return gctx, func(ctx context.Context) { }
+	gatectx := &gateContext{context.Background(), tenant, atomic.AddUint64(&reqIds, 1), session.Copy()}
+	ctxlog(gatectx).Debugf("Create context for %s", tenant)
+	return gatectx, func(ctx context.Context) {
+				gctx(ctx).S.Close()
+				ctxlog(ctx).Debugf("Close context for %s", tenant)
+			}
 }
 
 func gctx(ctx context.Context) *gateContext {

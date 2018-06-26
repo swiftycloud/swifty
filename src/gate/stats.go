@@ -224,8 +224,8 @@ func statsInit(conf *YAMLConf) error {
 	statsFlushReqs = make(chan *statsFlush)
 	go func() {
 		for {
-			ctx, done := mkContext("::statswrite")
 			fc := <-statsFlushReqs
+			ctx, done := mkContext("::statswrite")
 			fc.writer.Write(ctx)
 			done(ctx)
 			fc.flushed <- true
