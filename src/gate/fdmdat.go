@@ -97,7 +97,7 @@ func tendatGetOrInit(ctx context.Context, tenant string) (*TenantMemData, error)
 		return nil, err
 	}
 
-	ul, err := dbTenantGetLimits(tenant)
+	ul, err := dbTenantGetLimits(ctx, tenant)
 	if err != nil {
 		return nil, err
 	}
@@ -120,7 +120,7 @@ func tendatGetOrInit(ctx context.Context, tenant string) (*TenantMemData, error)
 				cctx := mkContext("::tenlimupd")
 
 				time.Sleep(SwyTenantLimitsUpdPeriod)
-				ul, err := dbTenantGetLimits(tenant)
+				ul, err := dbTenantGetLimits(cctx, tenant)
 				if err != nil {
 					glog.Errorf("No way to read user limits: %s", err.Error())
 					continue

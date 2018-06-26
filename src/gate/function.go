@@ -284,7 +284,7 @@ func addFunction(ctx context.Context, conf *YAMLConf, fn *FunctionDesc) (string,
 		}
 	}
 
-	logSaveEvent(fn, "registered", "")
+	logSaveEvent(ctx, fn, "registered", "")
 	return fn.ObjID.Hex(), nil
 
 out_clean_repo:
@@ -576,7 +576,7 @@ func (fn *FunctionDesc)updateSources(ctx context.Context, src *swyapi.FunctionSo
 	}
 
 	GCOldSources(ctx, fn, oldver)
-	logSaveEvent(fn, "updated", fmt.Sprintf("to: %s", fn.Src.Version))
+	logSaveEvent(ctx, fn, "updated", fmt.Sprintf("to: %s", fn.Src.Version))
 	return nil
 }
 
@@ -635,7 +635,7 @@ func removeFunction(ctx context.Context, conf *YAMLConf, fn *FunctionDesc) *swya
 	}
 
 	ctxlog(ctx).Debugf("`- remove logs")
-	err = logRemove(fn)
+	err = logRemove(ctx, fn)
 	if err != nil {
 		ctxlog(ctx).Errorf("logs %s remove error: %s", fn.SwoId.Str(), err.Error())
 		goto later
@@ -706,7 +706,7 @@ func notifyPodTmo(ctx context.Context, cookie string) {
 		return
 	}
 
-	logSaveEvent(fn, "POD", "Start timeout")
+	logSaveEvent(ctx, fn, "POD", "Start timeout")
 	swk8sRemove(ctx, &conf, fn)
 	dbFuncSetState(ctx, fn, swy.DBFuncStateStl)
 }
@@ -718,7 +718,7 @@ func notifyPodUp(ctx context.Context, pod *k8sPod) {
 	}
 
 	if fn.State != swy.DBFuncStateRdy {
-		logSaveEvent(fn, "Ready", "")
+		logSaveEvent(ctx, fn, "Ready", "")
 		dbFuncSetState(ctx, fn, swy.DBFuncStateRdy)
 		if fn.isOneShot() {
 			runFunctionOnce(ctx, fn)

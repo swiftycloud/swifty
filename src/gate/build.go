@@ -42,7 +42,7 @@ func buildFunction(ctx context.Context, conf *YAMLConf, addr string, fn *Functio
 	}
 
 	if wd_result.Code != 0 {
-		logSaveResult(fn.Cookie, "build", wd_result.Stdout, wd_result.Stderr)
+		logSaveResult(ctx, fn.Cookie, "build", wd_result.Stdout, wd_result.Stderr)
 		return fmt.Errorf("Error building function")
 	}
 

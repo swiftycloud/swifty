@@ -48,7 +48,7 @@ func ctxObjId(ctx context.Context, id string) bson.M {
 	}
 }
 
-func dbTenantGetLimits(tenant string) (*swyapi.UserLimits, error) {
+func dbTenantGetLimits(ctx context.Context, tenant string) (*swyapi.UserLimits, error) {
 	c := dbSession.DB(DBTenantDB).C(DBColLimits)
 	var v swyapi.UserLimits
 	err := c.Find(bson.M{"id":tenant}).One(&v)
@@ -366,7 +366,7 @@ func dbFnStatsDrop(ctx context.Context, cookie string, st *FnStats) error {
 	return err
 }
 
-func logSaveResult(fnCookie, event, stdout, stderr string) {
+func logSaveResult(ctx context.Context, fnCookie, event, stdout, stderr string) {
 	c := dbSession.DB(DBStateDB).C(DBColLogs)
 	text := fmt.Sprintf("out: [%s], err: [%s]", stdout, stderr)
 	c.Insert(DBLogRec{
@@ -377,7 +377,7 @@ func logSaveResult(fnCookie, event, stdout, stderr string) {
 	})
 }
 
-func logSaveEvent(fn *FunctionDesc, event, text string) {
+func logSaveEvent(ctx context.Context, fn *FunctionDesc, event, text string) {
 	c := dbSession.DB(DBStateDB).C(DBColLogs)
 	c.Insert(DBLogRec{
 		FnId:		fn.Cookie,
@@ -387,19 +387,19 @@ func logSaveEvent(fn *FunctionDesc, event, text string) {
 	})
 }
 
-func logGetFor(id *SwoId) ([]DBLogRec, error) {
+func logGetFor(ctx context.Context, id *SwoId) ([]DBLogRec, error) {
 	var logs []DBLogRec
 	c := dbSession.DB(DBStateDB).C(DBColLogs)
 	err := c.Find(bson.M{"fnid": id.Cookie()}).All(&logs)
 	return logs, err
 }
 
-func logGetCalls(id *SwoId) (int, error) {
+func logGetCalls(ctx context.Context, id *SwoId) (int, error) {
 	c := dbSession.DB(DBStateDB).C(DBColLogs)
 	return c.Find(bson.M{"fnid": id.Cookie(), "event": "run"}).Count()
 }
 
-func logRemove(fn *FunctionDesc) error {
+func logRemove(ctx context.Context, fn *FunctionDesc) error {
 	c := dbSession.DB(DBStateDB).C(DBColLogs)
 	_, err := c.RemoveAll(bson.M{"fnid": fn.Cookie})
 	if err == mgo.ErrNotFound {
@@ -527,7 +527,7 @@ func dbBalancerGetConnExact(ctx context.Context, fnid, version string) (*podConn
 	return &podConn{Addr: v.WdogAddr, Port: v.WdogPort}, nil
 }
 
-func dbProjectListAll(ten string) (fn []string, mw []string, err error) {
+func dbProjectListAll(ctx context.Context, ten string) (fn []string, mw []string, err error) {
 	c := dbSession.DB(DBStateDB).C(DBColFunc)
 	err = c.Find(bson.M{"tennant": ten}).Distinct("project", &fn)
 	if err != nil {
@@ -573,23 +573,23 @@ func dbDeployStateUpdate(ctx context.Context, dep *DeployDesc, state int) error 
 			bson.M{"$set": bson.M{"state": state}})
 }
 
-func dbListFnEvents(fnid string) ([]*FnEventDesc, error) {
+func dbListFnEvents(ctx context.Context, fnid string) ([]*FnEventDesc, error) {
 	var ret []*FnEventDesc
 	err := dbSession.DB(DBStateDB).C(DBColEvents).Find(bson.M{"fnid": fnid}).All(&ret)
 	return ret, err
 }
 
-func dbListEvents(q bson.M) ([]FnEventDesc, error) {
+func dbListEvents(ctx context.Context, q bson.M) ([]FnEventDesc, error) {
 	var ret []FnEventDesc
 	err := dbSession.DB(DBStateDB).C(DBColEvents).Find(q).All(&ret)
 	return ret, err
 }
 
-func dbAddEvent(ed *FnEventDesc) error {
+func dbAddEvent(ctx context.Context, ed *FnEventDesc) error {
 	return dbSession.DB(DBStateDB).C(DBColEvents).Insert(ed)
 }
 
-func dbFindEvent(id string) (*FnEventDesc, error) {
+func dbFindEvent(ctx context.Context, id string) (*FnEventDesc, error) {
 	var ed FnEventDesc
 	err := dbSession.DB(DBStateDB).C(DBColEvents).Find(bson.M{"_id": bson.ObjectIdHex(id)}).One(&ed)
 	return &ed, err
@@ -601,11 +601,11 @@ func dbFuncEventByName(ctx context.Context, fn *FunctionDesc, name string) (*FnE
 	return &ed, err
 }
 
-func dbUpdateEvent(ed *FnEventDesc) error {
+func dbUpdateEvent(ctx context.Context, ed *FnEventDesc) error {
 	return dbSession.DB(DBStateDB).C(DBColEvents).Update(bson.M{"_id": ed.ObjID}, ed)
 }
 
-func dbRemoveEvent(ed *FnEventDesc) error {
+func dbRemoveEvent(ctx context.Context, ed *FnEventDesc) error {
 	return dbSession.DB(DBStateDB).C(DBColEvents).Remove(bson.M{"_id": ed.ObjID})
 }
 

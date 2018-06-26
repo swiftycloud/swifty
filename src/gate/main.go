@@ -274,7 +274,7 @@ func handleProjectList(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	}
 
 	ctxlog(ctx).Debugf("List projects for %s", fromContext(ctx).Tenant)
-	fns, mws, err = dbProjectListAll(fromContext(ctx).Tenant)
+	fns, mws, err = dbProjectListAll(ctx, fromContext(ctx).Tenant)
 	if err != nil {
 		return GateErrD(err)
 	}
@@ -329,7 +329,7 @@ func handleFunctionTriggers(ctx context.Context, w http.ResponseWriter, r *http.
 		var hasUrl = false
 
 		if ename == "" {
-			evd, err = dbListFnEvents(fn.Cookie)
+			evd, err = dbListFnEvents(ctx, fn.Cookie)
 			if err != nil {
 				return GateErrD(err)
 			}
@@ -623,7 +623,7 @@ func handleFunctionTrigger(ctx context.Context, w http.ResponseWriter, r *http.R
 		return GateErrM(swy.GateBadRequest, "Bad event ID")
 	}
 
-	ed, err := dbFindEvent(eid)
+	ed, err := dbFindEvent(ctx, eid)
 	if err != nil {
 		return GateErrD(err)
 	}
@@ -808,7 +808,7 @@ func handleFunctionLogs(ctx context.Context, w http.ResponseWriter, r *http.Requ
 
 	switch r.Method {
 	case "GET":
-		logs, err := logGetFor(&fn.SwoId)
+		logs, err := logGetFor(ctx, &fn.SwoId)
 		if err != nil {
 			return GateErrD(err)
 		}

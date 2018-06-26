@@ -84,7 +84,7 @@ func doRunConn(ctx context.Context, conn *podConn, cookie, event string, args ma
 	}
 
 	if res.Stdout != "" || res.Stderr != "" {
-		logSaveResult(cookie, event, res.Stdout, res.Stderr)
+		logSaveResult(ctx, cookie, event, res.Stdout, res.Stderr)
 	}
 
 	return res, nil

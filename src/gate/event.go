@@ -89,7 +89,7 @@ func eventsInit(ctx context.Context, conf *YAMLConf) error {
 	cronRunner = cron.New()
 	cronRunner.Start()
 
-	evs, err := dbListEvents(bson.M{"source":"cron"})
+	evs, err := dbListEvents(ctx, bson.M{"source":"cron"})
 	if err != nil {
 		return err
 	}
@@ -100,7 +100,7 @@ func eventsInit(ctx context.Context, conf *YAMLConf) error {
 			return err
 		}
 
-		err = dbUpdateEvent(&ed)
+		err = dbUpdateEvent(ctx, &ed)
 		if err != nil {
 			return err
 		}
@@ -166,7 +166,7 @@ func eventsAdd(ctx context.Context, fn *FunctionDesc, evt *swyapi.FunctionEvent)
 		return "", GateErrM(swy.GateBadRequest, "Unsupported event type")
 	}
 
-	err = dbAddEvent(ed)
+	err = dbAddEvent(ctx, ed)
 	if err != nil {
 		return "", GateErrD(err)
 	}
@@ -180,14 +180,14 @@ func eventsAdd(ctx context.Context, fn *FunctionDesc, evt *swyapi.FunctionEvent)
 		err = urlEventStart(ctx, ed)
 	}
 	if err != nil {
-		dbRemoveEvent(ed)
+		dbRemoveEvent(ctx, ed)
 		return "", GateErrM(swy.GateGenErr, "Can't setup event")
 	}
 
-	err = dbUpdateEvent(ed)
+	err = dbUpdateEvent(ctx, ed)
 	if err != nil {
 		eventStop(ctx, ed)
-		dbRemoveEvent(ed)
+		dbRemoveEvent(ctx, ed)
 		return "", GateErrD(err)
 	}
 
@@ -215,7 +215,7 @@ func eventsDelete(ctx context.Context, fn *FunctionDesc, ed *FnEventDesc) *swyap
 		return GateErrM(swy.GateGenErr, "Can't stop event")
 	}
 
-	err = dbRemoveEvent(ed)
+	err = dbRemoveEvent(ctx, ed)
 	if err != nil {
 		return GateErrD(err)
 	}
@@ -224,7 +224,7 @@ func eventsDelete(ctx context.Context, fn *FunctionDesc, ed *FnEventDesc) *swyap
 }
 
 func clearAllEvents(ctx context.Context, fn *FunctionDesc) error {
-	evs, err := dbListFnEvents(fn.Cookie)
+	evs, err := dbListFnEvents(ctx, fn.Cookie)
 	if err != nil {
 		return err
 	}
@@ -235,7 +235,7 @@ func clearAllEvents(ctx context.Context, fn *FunctionDesc) error {
 			return err
 		}
 
-		err = dbRemoveEvent(e)
+		err = dbRemoveEvent(ctx, e)
 		if err != nil {
 			return err
 		}
