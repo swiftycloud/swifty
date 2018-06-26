@@ -10,6 +10,7 @@ import (
 	"encoding/xml"
 	"net/http"
 	"net/url"
+	"context"
 	"strings"
 	"strconv"
 	"errors"
@@ -92,6 +93,15 @@ func setupLogger(conf *YAMLConf) {
 	log = logger.Sugar()
 }
 
+type s3Context struct {
+	context.Context
+}
+
+func mkContext(id string) (context.Context, func(context.Context)) {
+	ctx := &s3Context{context.Background()}
+	return ctx, func(c context.Context) {}
+}
+
 var CORS_Headers = []string {
 	swys3api.SwyS3_AccessKey,
 	swys3api.SwyS3_AdminToken,
@@ -141,7 +151,7 @@ func logRequest(r *http.Request) {
 	log.Debug(strings.Join(request, "\n"))
 }
 
-func handleBucketCloudWatch(iam *S3Iam, akey *S3AccessKey, w http.ResponseWriter, r *http.Request) *S3Error {
+func handleBucketCloudWatch(ctx context.Context, iam *S3Iam, akey *S3AccessKey, w http.ResponseWriter, r *http.Request) *S3Error {
 	var bname, v string
 
 	content_type := r.Header.Get("Content-Type")
@@ -192,7 +202,7 @@ func handleBucketCloudWatch(iam *S3Iam, akey *S3AccessKey, w http.ResponseWriter
 		}
 	}
 
-	res, e := s3GetBucketMetricOutput(iam, bname, urlValue(request_map, "MetricName"))
+	res, e := s3GetBucketMetricOutput(ctx, iam, bname, urlValue(request_map, "MetricName"))
 	if e != nil { return e }
 
 	HTTPRespXML(w, res)
@@ -200,23 +210,23 @@ func handleBucketCloudWatch(iam *S3Iam, akey *S3AccessKey, w http.ResponseWriter
 }
 
 // List all buckets belonging to an account
-func handleListBuckets(iam *S3Iam, w http.ResponseWriter, r *http.Request) *S3Error {
-	buckets, err := s3ListBuckets(iam)
+func handleListBuckets(ctx context.Context, iam *S3Iam, w http.ResponseWriter, r *http.Request) *S3Error {
+	buckets, err := s3ListBuckets(ctx, iam)
 	if err != nil { return err }
 
 	HTTPRespXML(w, buckets)
 	return nil
 }
 
-func handleListUploads(bname string, iam *S3Iam, w http.ResponseWriter, r *http.Request) *S3Error {
-	uploads, err := s3Uploads(iam, bname)
+func handleListUploads(ctx context.Context, bname string, iam *S3Iam, w http.ResponseWriter, r *http.Request) *S3Error {
+	uploads, err := s3Uploads(ctx, iam, bname)
 	if err != nil { return err }
 
 	HTTPRespXML(w, uploads)
 	return nil
 }
 
-func handleListObjects(bname string, iam *S3Iam, w http.ResponseWriter, r *http.Request) *S3Error {
+func handleListObjects(ctx context.Context, bname string, iam *S3Iam, w http.ResponseWriter, r *http.Request) *S3Error {
 	listType := getURLValue(r, "list-type")
 	if listType != "2" {
 		return &S3Error{
@@ -237,20 +247,20 @@ func handleListObjects(bname string, iam *S3Iam, w http.ResponseWriter, r *http.
 		params.MaxKeys, _ = strconv.ParseInt(v, 10, 64)
 	}
 
-	objects, err := s3ListBucket(iam, bname, params)
+	objects, err := s3ListBucket(ctx, iam, bname, params)
 	if err != nil { return err }
 
 	HTTPRespXML(w, objects)
 	return nil
 }
 
-func handlePutBucket(bname string, iam *S3Iam, w http.ResponseWriter, r *http.Request) *S3Error {
+func handlePutBucket(ctx context.Context, bname string, iam *S3Iam, w http.ResponseWriter, r *http.Request) *S3Error {
 	canned_acl := r.Header.Get("x-amz-acl")
 	if verifyAclValue(canned_acl, BucketCannedAcls) == false {
 		canned_acl = swys3api.S3BucketAclCannedPrivate
 	}
 
-	if err := s3InsertBucket(iam, bname, canned_acl); err != nil {
+	if err := s3InsertBucket(ctx, iam, bname, canned_acl); err != nil {
 		return err
 	}
 
@@ -258,8 +268,8 @@ func handlePutBucket(bname string, iam *S3Iam, w http.ResponseWriter, r *http.Re
 	return nil
 }
 
-func handleDeleteBucket(bname string, iam *S3Iam, w http.ResponseWriter, r *http.Request) *S3Error {
-	err := s3DeleteBucket(iam, bname, "")
+func handleDeleteBucket(ctx context.Context, bname string, iam *S3Iam, w http.ResponseWriter, r *http.Request) *S3Error {
+	err := s3DeleteBucket(ctx, iam, bname, "")
 	if err != nil { return err }
 
 	w.WriteHeader(http.StatusOK)
@@ -276,7 +286,7 @@ func handleAccessBucket(bname string, iam *S3Iam, w http.ResponseWriter, r *http
 	return nil
 }
 
-func handleBucket(iam *S3Iam, akey *S3AccessKey, w http.ResponseWriter, r *http.Request) *S3Error {
+func handleBucket(ctx context.Context, iam *S3Iam, akey *S3AccessKey, w http.ResponseWriter, r *http.Request) *S3Error {
 	var bname string = mux.Vars(r)["BucketName"]
 	var policy = &iam.Policy
 
@@ -285,7 +295,7 @@ func handleBucket(iam *S3Iam, akey *S3AccessKey, w http.ResponseWriter, r *http.
 			//
 			// A special case where we
 			// hande some subset of cloudwatch
-			return handleBucketCloudWatch(iam, akey, w, r)
+			return handleBucketCloudWatch(ctx, iam, akey, w, r)
 		} else if r.Method != http.MethodGet {
 			return &S3Error{ ErrorCode: S3ErrInvalidBucketName }
 		}
@@ -296,24 +306,24 @@ func handleBucket(iam *S3Iam, akey *S3AccessKey, w http.ResponseWriter, r *http.
 		if bname == "" {
 			apiCalls.WithLabelValues("b", "ls").Inc()
 			if !policy.isRoot() { goto e_access }
-			return handleListBuckets(iam, w, r)
+			return handleListBuckets(ctx, iam, w, r)
 		}
 		if _, ok := getURLParam(r, "uploads"); ok {
 			if !policy.mayAccess(bname) { goto e_access }
 			apiCalls.WithLabelValues("u", "ls").Inc()
-			return handleListUploads(bname, iam, w, r)
+			return handleListUploads(ctx, bname, iam, w, r)
 		}
 		if !policy.mayAccess(bname) { goto e_access }
 		apiCalls.WithLabelValues("o", "ls").Inc()
-		return handleListObjects(bname, iam, w, r)
+		return handleListObjects(ctx, bname, iam, w, r)
 	case http.MethodPut:
 		if !policy.isRoot() { goto e_access }
 		apiCalls.WithLabelValues("b", "put").Inc()
-		return handlePutBucket(bname, iam, w, r)
+		return handlePutBucket(ctx, bname, iam, w, r)
 	case http.MethodDelete:
 		if !policy.isRoot() { goto e_access }
 		apiCalls.WithLabelValues("b", "del").Inc()
-		return handleDeleteBucket(bname, iam, w, r)
+		return handleDeleteBucket(ctx, bname, iam, w, r)
 	case http.MethodHead:
 		if !policy.mayAccess(bname) { goto e_access }
 		apiCalls.WithLabelValues("b", "acc").Inc()
@@ -328,7 +338,7 @@ e_access:
 	return &S3Error{ ErrorCode: S3ErrAccessDenied }
 }
 
-func handleUploadFini(uploadId string, iam *S3Iam, bucket *S3Bucket, w http.ResponseWriter, r *http.Request) *S3Error {
+func handleUploadFini(ctx context.Context, uploadId string, iam *S3Iam, bucket *S3Bucket, w http.ResponseWriter, r *http.Request) *S3Error {
 	var complete swys3api.S3MpuFiniParts
 
 	body, err := ioutil.ReadAll(r.Body)
@@ -341,7 +351,7 @@ func handleUploadFini(uploadId string, iam *S3Iam, bucket *S3Bucket, w http.Resp
 		return &S3Error{ ErrorCode: S3ErrMissingRequestBodyError }
 	}
 
-	resp, err := s3UploadFini(iam, bucket, uploadId, &complete)
+	resp, err := s3UploadFini(ctx, iam, bucket, uploadId, &complete)
 	if err != nil {
 		return &S3Error{ ErrorCode: S3ErrInvalidRequest, Message: err.Error() }
 	}
@@ -350,14 +360,14 @@ func handleUploadFini(uploadId string, iam *S3Iam, bucket *S3Bucket, w http.Resp
 	return nil
 }
 
-func handleUploadInit(oname string, iam *S3Iam, bucket *S3Bucket, w http.ResponseWriter, r *http.Request) *S3Error {
+func handleUploadInit(ctx context.Context, oname string, iam *S3Iam, bucket *S3Bucket, w http.ResponseWriter, r *http.Request) *S3Error {
 
 	canned_acl := r.Header.Get("x-amz-acl")
 	if verifyAclValue(canned_acl, BucketCannedAcls) == false {
 		canned_acl = swys3api.S3BucketAclCannedPrivate
 	}
 
-	upload, err := s3UploadInit(iam, bucket, oname, canned_acl)
+	upload, err := s3UploadInit(ctx, iam, bucket, oname, canned_acl)
 	if err != nil {
 		return &S3Error{ ErrorCode: S3ErrInvalidRequest, Message: err.Error() }
 	}
@@ -372,8 +382,8 @@ func handleUploadInit(oname string, iam *S3Iam, bucket *S3Bucket, w http.Respons
 	return nil
 }
 
-func handleUploadListParts(uploadId, oname string, iam *S3Iam, bucket *S3Bucket, w http.ResponseWriter, r *http.Request) *S3Error {
-	resp, err := s3UploadList(bucket, oname, uploadId)
+func handleUploadListParts(ctx context.Context, uploadId, oname string, iam *S3Iam, bucket *S3Bucket, w http.ResponseWriter, r *http.Request) *S3Error {
+	resp, err := s3UploadList(ctx, bucket, oname, uploadId)
 	if err != nil {
 		return &S3Error{ ErrorCode: S3ErrInvalidRequest, Message: err.Error() }
 	}
@@ -382,7 +392,7 @@ func handleUploadListParts(uploadId, oname string, iam *S3Iam, bucket *S3Bucket,
 	return nil
 }
 
-func handleUploadPart(uploadId, oname string, iam *S3Iam, bucket *S3Bucket, w http.ResponseWriter, r *http.Request) *S3Error {
+func handleUploadPart(ctx context.Context, uploadId, oname string, iam *S3Iam, bucket *S3Bucket, w http.ResponseWriter, r *http.Request) *S3Error {
 	var etag string
 	var partno int
 
@@ -397,7 +407,7 @@ func handleUploadPart(uploadId, oname string, iam *S3Iam, bucket *S3Bucket, w ht
 		return &S3Error{ ErrorCode: S3ErrIncompleteBody }
 	}
 
-	etag, err = s3UploadPart(iam, bucket, oname, uploadId, partno, body)
+	etag, err = s3UploadPart(ctx, iam, bucket, oname, uploadId, partno, body)
 	if err != nil {
 		return &S3Error{ ErrorCode: S3ErrInvalidRequest, Message: err.Error() }
 	}
@@ -407,8 +417,8 @@ func handleUploadPart(uploadId, oname string, iam *S3Iam, bucket *S3Bucket, w ht
 	return nil
 }
 
-func handleUploadAbort(uploadId, oname string, iam *S3Iam, bucket *S3Bucket, w http.ResponseWriter, r *http.Request) *S3Error {
-	err := s3UploadAbort(bucket, oname, uploadId)
+func handleUploadAbort(ctx context.Context, uploadId, oname string, iam *S3Iam, bucket *S3Bucket, w http.ResponseWriter, r *http.Request) *S3Error {
+	err := s3UploadAbort(ctx, bucket, oname, uploadId)
 	if err != nil {
 		return &S3Error{ ErrorCode: S3ErrInvalidRequest, Message: err.Error() }
 	}
@@ -417,8 +427,8 @@ func handleUploadAbort(uploadId, oname string, iam *S3Iam, bucket *S3Bucket, w h
 	return nil
 }
 
-func handleGetObject(oname string, iam *S3Iam, bucket *S3Bucket, w http.ResponseWriter, r *http.Request) *S3Error {
-	body, err := s3ReadObject(bucket, oname, 0, 1)
+func handleGetObject(ctx context.Context, oname string, iam *S3Iam, bucket *S3Bucket, w http.ResponseWriter, r *http.Request) *S3Error {
+	body, err := s3ReadObject(ctx, bucket, oname, 0, 1)
 	if err != nil {
 		return &S3Error{ ErrorCode: S3ErrInvalidRequest, Message: err.Error() }
 	}
@@ -428,7 +438,7 @@ func handleGetObject(oname string, iam *S3Iam, bucket *S3Bucket, w http.Response
 	return nil
 }
 
-func handleCopyObject(copy_source, oname string, iam *S3Iam, bucket *S3Bucket, w http.ResponseWriter, r *http.Request) *S3Error {
+func handleCopyObject(ctx context.Context, copy_source, oname string, iam *S3Iam, bucket *S3Bucket, w http.ResponseWriter, r *http.Request) *S3Error {
 	var bname_source, oname_source string
 	var bucket_source *S3Bucket
 	var object *S3Object
@@ -455,17 +465,17 @@ func handleCopyObject(copy_source, oname string, iam *S3Iam, bucket *S3Bucket, w
 		return &S3Error{ ErrorCode: S3ErrAccessDenied }
 	}
 
-	bucket_source, err = iam.FindBucket(bname_source)
+	bucket_source, err = iam.FindBucket(ctx, bname_source)
 	if err != nil {
 		return &S3Error{ ErrorCode: S3ErrInvalidBucketName }
 	}
 
-	body, err := s3ReadObject(bucket_source, oname_source, 0, 1)
+	body, err := s3ReadObject(ctx, bucket_source, oname_source, 0, 1)
 	if err != nil {
 		return &S3Error{ ErrorCode: S3ErrInvalidRequest, Message: err.Error() }
 	}
 
-	object, err = s3AddObject(iam, bucket, oname, canned_acl, body)
+	object, err = s3AddObject(ctx, iam, bucket, oname, canned_acl, body)
 	if err != nil {
 		return &S3Error{ ErrorCode: S3ErrInvalidRequest, Message: err.Error() }
 	}
@@ -477,10 +487,10 @@ func handleCopyObject(copy_source, oname string, iam *S3Iam, bucket *S3Bucket, w
 	return nil
 }
 
-func handlePutObject(oname string, iam *S3Iam, bucket *S3Bucket, w http.ResponseWriter, r *http.Request) *S3Error {
+func handlePutObject(ctx context.Context, oname string, iam *S3Iam, bucket *S3Bucket, w http.ResponseWriter, r *http.Request) *S3Error {
 	copy_source := r.Header.Get("X-Amz-Copy-Source")
 	if copy_source != "" {
-		return handleCopyObject(copy_source, oname, iam, bucket, w, r)
+		return handleCopyObject(ctx, copy_source, oname, iam, bucket, w, r)
 	}
 
 	//object_size, err := strconv.ParseInt(r.Header.Get("Content-Length"), 10, 64)
@@ -498,7 +508,7 @@ func handlePutObject(oname string, iam *S3Iam, bucket *S3Bucket, w http.Response
 		return &S3Error{ ErrorCode: S3ErrIncompleteBody }
 	}
 
-	_, err = s3AddObject(iam, bucket, oname, canned_acl, body)
+	_, err = s3AddObject(ctx, iam, bucket, oname, canned_acl, body)
 	if err != nil {
 		return &S3Error{ ErrorCode: S3ErrInvalidRequest, Message: err.Error() }
 	}
@@ -507,8 +517,8 @@ func handlePutObject(oname string, iam *S3Iam, bucket *S3Bucket, w http.Response
 	return nil
 }
 
-func handleDeleteObject(oname string, iam *S3Iam, bucket *S3Bucket, w http.ResponseWriter, r *http.Request) *S3Error {
-	err := s3DeleteObject(iam, bucket, oname)
+func handleDeleteObject(ctx context.Context, oname string, iam *S3Iam, bucket *S3Bucket, w http.ResponseWriter, r *http.Request) *S3Error {
+	err := s3DeleteObject(ctx, iam, bucket, oname)
 	if err != nil {
 		return &S3Error{ ErrorCode: S3ErrInvalidRequest, Message: err.Error() }
 	}
@@ -527,7 +537,7 @@ func handleAccessObject(bname, oname string, iam *S3Iam, w http.ResponseWriter, 
 	return nil
 }
 
-func handleObject(iam *S3Iam, akey *S3AccessKey, w http.ResponseWriter, r *http.Request) *S3Error {
+func handleObject(ctx context.Context, iam *S3Iam, akey *S3AccessKey, w http.ResponseWriter, r *http.Request) *S3Error {
 	var bname string = mux.Vars(r)["BucketName"]
 	var oname string = mux.Vars(r)["ObjName"]
 	var policy = &iam.Policy
@@ -544,7 +554,7 @@ func handleObject(iam *S3Iam, akey *S3AccessKey, w http.ResponseWriter, r *http.
 		goto e_access
 	}
 
-	bucket, err = iam.FindBucket(bname)
+	bucket, err = iam.FindBucket(ctx, bname)
 	if err != nil {
 		return &S3Error{ ErrorCode: S3ErrInvalidBucketName }
 	}
@@ -553,33 +563,33 @@ func handleObject(iam *S3Iam, akey *S3AccessKey, w http.ResponseWriter, r *http.
 	case http.MethodPost:
 		if uploadId, ok := getURLParam(r, "uploadId"); ok {
 			apiCalls.WithLabelValues("u", "fin").Inc()
-			return handleUploadFini(uploadId, iam, bucket, w, r)
+			return handleUploadFini(ctx, uploadId, iam, bucket, w, r)
 		} else if _, ok := getURLParam(r, "uploads"); ok {
 			apiCalls.WithLabelValues("u", "ini").Inc()
-			return handleUploadInit(oname, iam, bucket, w, r)
+			return handleUploadInit(ctx, oname, iam, bucket, w, r)
 		}
 		return &S3Error{ ErrorCode: S3ErrMethodNotAllowed }
 	case http.MethodGet:
 		if uploadId, ok := getURLParam(r, "uploadId"); ok {
 			apiCalls.WithLabelValues("u", "lp").Inc()
-			return handleUploadListParts(uploadId, oname, iam, bucket, w, r)
+			return handleUploadListParts(ctx, uploadId, oname, iam, bucket, w, r)
 		}
 		apiCalls.WithLabelValues("o", "get").Inc()
-		return handleGetObject(oname, iam, bucket, w, r)
+		return handleGetObject(ctx, oname, iam, bucket, w, r)
 	case http.MethodPut:
 		if uploadId, ok := getURLParam(r, "uploadId"); ok {
 			apiCalls.WithLabelValues("u", "put").Inc()
-			return handleUploadPart(uploadId, oname, iam, bucket, w, r)
+			return handleUploadPart(ctx, uploadId, oname, iam, bucket, w, r)
 		}
 		apiCalls.WithLabelValues("o", "put").Inc()
-		return handlePutObject(oname, iam, bucket, w, r)
+		return handlePutObject(ctx, oname, iam, bucket, w, r)
 	case http.MethodDelete:
 		if uploadId, ok := getURLParam(r, "uploadId"); ok {
 			apiCalls.WithLabelValues("u", "del").Inc()
-			return handleUploadAbort(uploadId, oname, iam, bucket, w, r)
+			return handleUploadAbort(ctx, uploadId, oname, iam, bucket, w, r)
 		}
 		apiCalls.WithLabelValues("o", "del").Inc()
-		return handleDeleteObject(oname, iam, bucket, w, r)
+		return handleDeleteObject(ctx, oname, iam, bucket, w, r)
 	case http.MethodHead:
 		apiCalls.WithLabelValues("o", "acc").Inc()
 		return handleAccessObject(bname, oname, iam, w, r)
@@ -594,13 +604,16 @@ e_access:
 	return &S3Error{ ErrorCode: S3ErrAccessDenied }
 }
 
-func handleS3API(cb func(iam *S3Iam, akey *S3AccessKey, w http.ResponseWriter, r *http.Request) *S3Error) http.Handler {
+func handleS3API(cb func(ctx context.Context, iam *S3Iam, akey *S3AccessKey, w http.ResponseWriter, r *http.Request) *S3Error) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var akey *S3AccessKey
 		var iam *S3Iam
 		var err error
 
 		defer r.Body.Close()
+
+		ctx, done := mkContext("s3 req")
+		defer done(ctx)
 
 		logRequest(r)
 
@@ -609,14 +622,14 @@ func handleS3API(cb func(iam *S3Iam, akey *S3AccessKey, w http.ResponseWriter, r
 		// Admin is allowed to process without signing a request
 		if s3VerifyAdmin(r) == nil {
 			access_key := r.Header.Get(swys3api.SwyS3_AccessKey)
-			akey, err = LookupAccessKey(access_key)
+			akey, err = LookupAccessKey(ctx, access_key)
 		} else {
-			akey, err = s3VerifyAuthorization(r)
+			akey, err = s3VerifyAuthorization(ctx, r)
 		}
 
 		if err == nil {
 			if !akey.Expired() {
-				iam, err = akey.s3IamFind()
+				iam, err = akey.s3IamFind(ctx)
 			} else {
 				err = fmt.Errorf("The access key is expired")
 			}
@@ -624,13 +637,13 @@ func handleS3API(cb func(iam *S3Iam, akey *S3AccessKey, w http.ResponseWriter, r
 
 		if akey == nil || iam == nil || err != nil {
 			HTTPRespError(w, S3ErrAccessDenied, err.Error())
-		} else if e := cb(iam, akey, w, r); e != nil {
+		} else if e := cb(ctx, iam, akey, w, r); e != nil {
 			HTTPRespS3Error(w, e)
 		}
 	})
 }
 
-func handleKeygen(w http.ResponseWriter, r *http.Request) {
+func handleKeygen(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	var akey *S3AccessKey
 	var kg swys3api.S3CtlKeyGen
 	var err error
@@ -646,7 +659,7 @@ func handleKeygen(w http.ResponseWriter, r *http.Request) {
 		goto out
 	}
 
-	akey, err = genNewAccessKey(kg.Namespace, kg.Bucket, kg.Lifetime)
+	akey, err = genNewAccessKey(ctx, kg.Namespace, kg.Bucket, kg.Lifetime)
 	if err != nil {
 		goto out
 	}
@@ -665,7 +678,7 @@ out:
 	http.Error(w, err.Error(), http.StatusBadRequest)
 }
 
-func handleKeydel(w http.ResponseWriter, r *http.Request) {
+func handleKeydel(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	var kd swys3api.S3CtlKeyDel
 	var err error
 
@@ -679,7 +692,7 @@ func handleKeydel(w http.ResponseWriter, r *http.Request) {
 		goto out
 	}
 
-	err = dbRemoveAccessKey(kd.AccessKeyID)
+	err = dbRemoveAccessKey(ctx, kd.AccessKeyID)
 	if err != nil {
 		goto out
 	}
@@ -694,6 +707,9 @@ func handleAdminOp(w http.ResponseWriter, r *http.Request) {
 	var op string = mux.Vars(r)["op"]
 	var err error
 
+	ctx, done := mkContext("adminreq")
+	defer done(ctx)
+
 	if swyhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
 
 	err = s3VerifyAdmin(r)
@@ -704,10 +720,10 @@ func handleAdminOp(w http.ResponseWriter, r *http.Request) {
 
 	switch op {
 	case "keygen":
-		handleKeygen(w, r)
+		handleKeygen(ctx, w, r)
 		return
 	case "keydel":
-		handleKeydel(w, r)
+		handleKeydel(ctx, w, r)
 		return
 	}
 
@@ -718,6 +734,9 @@ func handleNotify(w http.ResponseWriter, r *http.Request, subscribe bool) {
 	var params swys3api.S3Subscribe
 
 	if swyhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
+
+	ctx, done := mkContext("notifyreq")
+	defer done(ctx)
 
 	/* For now make it admin-only op */
 	err := s3VerifyAdmin(r)
@@ -732,9 +751,9 @@ func handleNotify(w http.ResponseWriter, r *http.Request, subscribe bool) {
 	}
 
 	if subscribe {
-		err = s3Subscribe(&params)
+		err = s3Subscribe(ctx, &params)
 	} else {
-		err = s3Unsubscribe(&params)
+		err = s3Unsubscribe(ctx, &params)
 	}
 
 	if err != nil {
@@ -827,6 +846,8 @@ func main() {
 				err.Error())
 	}
 
+	ctx, done := mkContext("init")
+
 	err = radosInit(&conf)
 	if err != nil {
 		log.Fatalf("Can't setup connection to rados: %s",
@@ -838,7 +859,7 @@ func main() {
 		log.Fatalf("Can't setup notifications: %s", err.Error())
 	}
 
-	err = dbRepair()
+	err = dbRepair(ctx)
 	if err != nil {
 		log.Fatalf("Can't process db test/repair: %s", err.Error())
 	}
@@ -852,6 +873,8 @@ func main() {
 	if err != nil {
 		log.Fatalf("Can't setup prometheus: %s", err.Error())
 	}
+
+	done(ctx)
 
 	go func() {
 		adminsrv = &http.Server{

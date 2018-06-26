@@ -2,6 +2,7 @@ package main
 
 import (
 	"gopkg.in/mgo.v2/bson"
+	"context"
 	"github.com/streadway/amqp"
 	"encoding/json"
 	"strings"
@@ -10,11 +11,11 @@ import (
 	"../apis/apps/s3"
 )
 
-func notifyFindBucket(params *swys3api.S3Subscribe) (*S3Bucket, error) {
+func notifyFindBucket(ctx context.Context, params *swys3api.S3Subscribe) (*S3Bucket, error) {
 	var bucket S3Bucket
 
 	cookie := BCookie(params.Namespace, params.Bucket)
-	err := dbS3FindOne(bson.M{ "bcookie": cookie, "state": S3StateActive }, &bucket)
+	err := dbS3FindOne(ctx, bson.M{ "bcookie": cookie, "state": S3StateActive }, &bucket)
 	if err != nil {
 		return nil, err
 	}
@@ -22,8 +23,8 @@ func notifyFindBucket(params *swys3api.S3Subscribe) (*S3Bucket, error) {
 	return &bucket, nil
 }
 
-func s3Subscribe(params *swys3api.S3Subscribe) error {
-	bucket, err := notifyFindBucket(params)
+func s3Subscribe(ctx context.Context, params *swys3api.S3Subscribe) error {
+	bucket, err := notifyFindBucket(ctx, params)
 	if err != nil {
 		return err
 	}
@@ -38,11 +39,11 @@ func s3Subscribe(params *swys3api.S3Subscribe) error {
 	}
 
 	query := bson.M{ "state": S3StateActive }
-	return dbS3Update(query, update, false, bucket)
+	return dbS3Update(ctx, query, update, false, bucket)
 }
 
-func s3Unsubscribe(params *swys3api.S3Subscribe) error {
-	bucket, err := notifyFindBucket(params)
+func s3Unsubscribe(ctx context.Context, params *swys3api.S3Subscribe) error {
+	bucket, err := notifyFindBucket(ctx, params)
 	if err != nil {
 		return err
 	}
@@ -54,13 +55,13 @@ func s3Unsubscribe(params *swys3api.S3Subscribe) error {
 	update := bson.M{"$inc": ops}
 
 	query := bson.M{ "state": S3StateActive }
-	return dbS3Update(query, update, false, bucket)
+	return dbS3Update(ctx, query, update, false, bucket)
 }
 
 var nChan *amqp.Channel
 
-func s3Notify(iam *S3Iam, bucket *S3Bucket, object *S3Object, op string) {
-	account, err := iam.s3AccountLookup()
+func s3Notify(ctx context.Context, iam *S3Iam, bucket *S3Bucket, object *S3Object, op string) {
+	account, err := iam.s3AccountLookup(ctx)
 	if err != nil { return }
 
 	data, err := json.Marshal(&swys3api.S3Event{

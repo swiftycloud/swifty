@@ -5,6 +5,7 @@ import (
 	"gopkg.in/mgo.v2/bson"
 	"strings"
 	"regexp"
+	"context"
 	"sort"
 	"time"
 
@@ -88,21 +89,21 @@ type S3Bucket struct {
 	MaxBytes			int64		`bson:"max-bytes"`
 }
 
-func s3DirtifyBucket(id bson.ObjectId) error {
+func s3DirtifyBucket(ctx context.Context, id bson.ObjectId) error {
 	query := bson.M{ "_id": id, "ref": bson.M{ "$eq":  0 } }
 	update := bson.M{ "$set": bson.M{ "ref": 1 } }
 
-	return dbS3Update(query, update, false, &S3Bucket{})
+	return dbS3Update(ctx, query, update, false, &S3Bucket{})
 }
 
-func (bucket *S3Bucket)dbRemove() (error) {
+func (bucket *S3Bucket)dbRemove(ctx context.Context) (error) {
 	query := bson.M{ "cnt-objects": 0 }
-	return dbS3RemoveOnState(bucket, S3StateInactive, query)
+	return dbS3RemoveOnState(ctx, bucket, S3StateInactive, query)
 }
 
-func (bucket *S3Bucket)dbCmtObj(size, ref int64) (error) {
+func (bucket *S3Bucket)dbCmtObj(ctx context.Context, size, ref int64) (error) {
 	m := bson.M{ "ref": ref }
-	err := dbS3Update(bson.M{ "state": S3StateActive },
+	err := dbS3Update(ctx, bson.M{ "state": S3StateActive },
 		bson.M{ "$inc": m }, true, bucket)
 	if err != nil {
 		log.Errorf("s3: Can't !account %d bytes %s: %s",
@@ -114,9 +115,9 @@ func (bucket *S3Bucket)dbCmtObj(size, ref int64) (error) {
 	return err
 }
 
-func (bucket *S3Bucket)dbAddObj(size, ref int64) (error) {
+func (bucket *S3Bucket)dbAddObj(ctx context.Context, size, ref int64) (error) {
 	m := bson.M{ "cnt-objects": 1, "cnt-bytes": size, "ref": ref }
-	err := dbS3Update(bson.M{ "state": S3StateActive },
+	err := dbS3Update(ctx, bson.M{ "state": S3StateActive },
 		bson.M{ "$inc": m }, true, bucket)
 	if err != nil {
 		log.Errorf("s3: Can't +account %d bytes %s: %s",
@@ -128,9 +129,9 @@ func (bucket *S3Bucket)dbAddObj(size, ref int64) (error) {
 	return err
 }
 
-func (bucket *S3Bucket)dbDelObj(size, ref int64) (error) {
+func (bucket *S3Bucket)dbDelObj(ctx context.Context, size, ref int64) (error) {
 	m := bson.M{ "cnt-objects": -1, "cnt-bytes": -size, "ref": ref  }
-	err := dbS3Update(bson.M{ "state": S3StateActive },
+	err := dbS3Update(ctx, bson.M{ "state": S3StateActive },
 		bson.M{ "$inc": m }, true, bucket)
 	if err != nil {
 		log.Errorf("s3: Can't -account %d bytes %s: %s",
@@ -142,15 +143,15 @@ func (bucket *S3Bucket)dbDelObj(size, ref int64) (error) {
 	return err
 }
 
-func (iam *S3Iam)FindBucket(bname string) (*S3Bucket, error) {
+func (iam *S3Iam)FindBucket(ctx context.Context, bname string) (*S3Bucket, error) {
 	var res S3Bucket
 	var err error
 
-	account, err := iam.s3AccountLookup()
+	account, err := iam.s3AccountLookup(ctx)
 	if err != nil { return nil, err }
 
 	query := bson.M{ "bcookie": account.BCookie(bname), "state": S3StateActive }
-	err = dbS3FindOne(query, &res)
+	err = dbS3FindOne(ctx, query, &res)
 	if err != nil {
 		if err != mgo.ErrNotFound {
 			log.Errorf("s3: Can't find bucket %s/%s: %s",
@@ -162,13 +163,13 @@ func (iam *S3Iam)FindBucket(bname string) (*S3Bucket, error) {
 	return &res, nil
 }
 
-func s3RepairBucketReference(bucket *S3Bucket) error {
+func s3RepairBucketReference(ctx context.Context, bucket *S3Bucket) error {
 	var cnt_objects int64 = 0
 	var cnt_bytes int64 = 0
 	var objects []S3Object
 
 	query := bson.M{ "bucket-id": bucket.ObjID, "state": S3StateActive }
-	err := dbS3FindAll(query, &objects)
+	err := dbS3FindAll(ctx, query, &objects)
 	if err != nil {
 		if err != mgo.ErrNotFound {
 			log.Errorf("s3: Can't find objects on bucket %s: %s",
@@ -185,7 +186,7 @@ func s3RepairBucketReference(bucket *S3Bucket) error {
 
 	update := bson.M{ "$set": bson.M{ "cnt-objects": cnt_objects,
 			"cnt-bytes": cnt_bytes, "ref": 0} }
-	err = dbS3Update(nil, update, false, bucket)
+	err = dbS3Update(ctx, nil, update, false, bucket)
 	if err != nil {
 		log.Errorf("s3: Can't repair bucket %s: %s",
 			infoLong(bucket), err.Error())
@@ -196,13 +197,13 @@ func s3RepairBucketReference(bucket *S3Bucket) error {
 	return nil
 }
 
-func s3RepairBucketReferenced() error {
+func s3RepairBucketReferenced(ctx context.Context) error {
 	var buckets []S3Bucket
 	var err error
 
 	log.Debugf("s3: Processing referenced buckets")
 
-	err = dbS3FindAll(bson.M{ "ref":  bson.M{ "$ne": 0 } }, &buckets)
+	err = dbS3FindAll(ctx, bson.M{ "ref":  bson.M{ "$ne": 0 } }, &buckets)
 	if err != nil {
 		if err == mgo.ErrNotFound {
 			return nil
@@ -213,7 +214,7 @@ func s3RepairBucketReferenced() error {
 
 	for _, bucket := range buckets {
 		log.Debugf("s3: Detected referenced bucket %s", infoLong(&bucket))
-		err = s3RepairBucketReference(&bucket)
+		err = s3RepairBucketReference(ctx, &bucket)
 		if err != nil {
 			return err
 		}
@@ -222,13 +223,13 @@ func s3RepairBucketReferenced() error {
 	return nil
 }
 
-func s3RepairBucketInactive() error {
+func s3RepairBucketInactive(ctx context.Context) error {
 	var buckets []S3Bucket
 	var err error
 
 	log.Debugf("s3: Processing inactive buckets")
 
-	err = dbS3FindAllInactive(&buckets)
+	err = dbS3FindAllInactive(ctx, &buckets)
 	if err != nil {
 		if err == mgo.ErrNotFound {
 			return nil
@@ -245,7 +246,7 @@ func s3RepairBucketInactive() error {
 			log.Errorf("s3: %s backend bucket may stale", bucket.BCookie)
 		}
 
-		err = dbS3Remove(&bucket)
+		err = dbS3Remove(ctx, &bucket)
 		if err != nil {
 			log.Debugf("s3: Can't remove bucket %s", infoLong(&bucket))
 			return err
@@ -257,16 +258,16 @@ func s3RepairBucketInactive() error {
 	return nil
 }
 
-func s3RepairBucket() error {
+func s3RepairBucket(ctx context.Context) error {
 	var err error
 
 	log.Debugf("s3: Running buckets consistency test")
 
-	if err = s3RepairBucketInactive(); err != nil {
+	if err = s3RepairBucketInactive(ctx); err != nil {
 		return err
 	}
 
-	if err = s3RepairBucketReferenced(); err != nil {
+	if err = s3RepairBucketReferenced(ctx); err != nil {
 		return err
 	}
 
@@ -274,10 +275,10 @@ func s3RepairBucket() error {
 	return nil
 }
 
-func s3InsertBucket(iam *S3Iam, bname, canned_acl string) (*S3Error) {
+func s3InsertBucket(ctx context.Context, iam *S3Iam, bname, canned_acl string) (*S3Error) {
 	var err error
 
-	account, err := iam.s3AccountLookup()
+	account, err := iam.s3AccountLookup(ctx)
 	if err != nil {
 		if err == mgo.ErrNotFound {
 			return &S3Error{ ErrorCode: S3ErrNoSuchBucket }
@@ -299,7 +300,7 @@ func s3InsertBucket(iam *S3Iam, bname, canned_acl string) (*S3Error) {
 		MaxBytes:	S3StorageMaxBytes,
 	}
 
-	if err = dbS3Insert(bucket); err != nil {
+	if err = dbS3Insert(ctx, bucket); err != nil {
 		return &S3Error{ ErrorCode: S3ErrInternalError }
 	}
 
@@ -308,7 +309,7 @@ func s3InsertBucket(iam *S3Iam, bname, canned_acl string) (*S3Error) {
 		goto out_nopool
 	}
 
-	if err = dbS3SetState(bucket, S3StateActive, nil); err != nil {
+	if err = dbS3SetState(ctx, bucket, S3StateActive, nil); err != nil {
 		goto out
 	}
 
@@ -318,15 +319,15 @@ func s3InsertBucket(iam *S3Iam, bname, canned_acl string) (*S3Error) {
 out:
 	radosDeletePool(bucket.BCookie)
 out_nopool:
-	bucket.dbRemove()
+	bucket.dbRemove(ctx)
 	return &S3Error{ ErrorCode: S3ErrInternalError }
 }
 
-func s3DeleteBucket(iam *S3Iam, bname, acl string) (*S3Error) {
+func s3DeleteBucket(ctx context.Context, iam *S3Iam, bname, acl string) (*S3Error) {
 	var bucket *S3Bucket
 	var err error
 
-	bucket, err = iam.FindBucket(bname)
+	bucket, err = iam.FindBucket(ctx, bname)
 	if err != nil {
 		if err == mgo.ErrNotFound {
 			return &S3Error{ ErrorCode: S3ErrNoSuchBucket }
@@ -334,7 +335,7 @@ func s3DeleteBucket(iam *S3Iam, bname, acl string) (*S3Error) {
 		return &S3Error{ ErrorCode: S3ErrInternalError }
 	}
 
-	err = dbS3SetState(bucket, S3StateInactive, bson.M{"cnt-objects": 0})
+	err = dbS3SetState(ctx, bucket, S3StateInactive, bson.M{"cnt-objects": 0})
 	if err != nil {
 		if err == mgo.ErrNotFound {
 			if bucket.CntObjects > 0 {
@@ -350,7 +351,7 @@ func s3DeleteBucket(iam *S3Iam, bname, acl string) (*S3Error) {
 		return &S3Error{ ErrorCode: S3ErrInternalError }
 	}
 
-	err = bucket.dbRemove()
+	err = bucket.dbRemove(ctx)
 	if err != nil {
 		return &S3Error{ ErrorCode: S3ErrInternalError }
 	}
@@ -359,14 +360,14 @@ func s3DeleteBucket(iam *S3Iam, bname, acl string) (*S3Error) {
 	return nil
 }
 
-func (bucket *S3Bucket)dbFindAll(query bson.M) ([]S3Object, error) {
+func (bucket *S3Bucket)dbFindAll(ctx context.Context, query bson.M) ([]S3Object, error) {
 	if query == nil { query = make(bson.M) }
 	var res []S3Object
 
 	query["bucket-id"] = bucket.ObjID
 	query["state"] = S3StateActive
 
-	err := dbS3FindAll(query, &res)
+	err := dbS3FindAll(ctx, query, &res)
 	if err != nil {
 		return nil, err
 	}
@@ -374,11 +375,11 @@ func (bucket *S3Bucket)dbFindAll(query bson.M) ([]S3Object, error) {
 	return res, nil
 }
 
-func s3GetBucketMetricOutput(iam *S3Iam, bname, metric_name string) (*swys3api.S3GetMetricStatisticsOutput, *S3Error) {
+func s3GetBucketMetricOutput(ctx context.Context, iam *S3Iam, bname, metric_name string) (*swys3api.S3GetMetricStatisticsOutput, *S3Error) {
 	var res swys3api.S3GetMetricStatisticsOutput
 	var point swys3api.S3Datapoint
 
-	bucket, err := iam.FindBucket(bname)
+	bucket, err := iam.FindBucket(ctx, bname)
 	if err != nil {
 		if err == mgo.ErrNotFound {
 			return nil, &S3Error{ ErrorCode: S3ErrNoSuchBucket }
@@ -434,7 +435,7 @@ func (params *S3ListObjectsRP) Validate() (bool) {
 	return true
 }
 
-func s3ListBucket(iam *S3Iam, bname string, params *S3ListObjectsRP) (*swys3api.S3Bucket, *S3Error) {
+func s3ListBucket(ctx context.Context, iam *S3Iam, bname string, params *S3ListObjectsRP) (*swys3api.S3Bucket, *S3Error) {
 	var start_after, cont_after bool
 	var prefixes_map map[string]bool
 	var list swys3api.S3Bucket
@@ -448,7 +449,7 @@ func s3ListBucket(iam *S3Iam, bname string, params *S3ListObjectsRP) (*swys3api.
 		return nil, &S3Error{ ErrorCode: S3ErrInvalidArgument }
 	}
 
-	bucket, err = iam.FindBucket(bname)
+	bucket, err = iam.FindBucket(ctx, bname)
 	if err != nil {
 		if err == mgo.ErrNotFound {
 			return nil, &S3Error{ ErrorCode: S3ErrNoSuchBucket }
@@ -475,7 +476,7 @@ func s3ListBucket(iam *S3Iam, bname string, params *S3ListObjectsRP) (*swys3api.
 
 	prefixes_map = make(map[string]bool)
 
-	pipe = dbS3Pipe(&object, []bson.M{{"$match": query}, {"$sort": bson.M{"key": 1}}})
+	pipe = dbS3Pipe(ctx, &object, []bson.M{{"$match": query}, {"$sort": bson.M{"key": 1}}})
 	iter = pipe.Iter()
 	for iter.Next(&object) {
 		if start_after {
@@ -543,12 +544,12 @@ func s3ListBucket(iam *S3Iam, bname string, params *S3ListObjectsRP) (*swys3api.
 	return &list, nil
 }
 
-func s3ListBuckets(iam *S3Iam) (*swys3api.S3BucketList, *S3Error) {
+func s3ListBuckets(ctx context.Context, iam *S3Iam) (*swys3api.S3BucketList, *S3Error) {
 	var list swys3api.S3BucketList
 	var buckets []S3Bucket
 	var err error
 
-	buckets, err = iam.FindBuckets()
+	buckets, err = iam.FindBuckets(ctx)
 	if err != nil {
 		if err == mgo.ErrNotFound {
 			return nil, &S3Error{ ErrorCode: S3ErrNoSuchBucket }

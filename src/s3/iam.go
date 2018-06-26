@@ -3,6 +3,7 @@ package main
 import (
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
+	"context"
 	"time"
 	"fmt"
 )
@@ -33,7 +34,7 @@ type S3Iam struct {
 	User				string		`bson:"user,omitempty"`
 }
 
-func s3AccountInsert(namespace, user string) (*S3Account, error) {
+func s3AccountInsert(ctx context.Context, namespace, user string) (*S3Account, error) {
 	var account S3Account
 	var err error
 
@@ -59,7 +60,7 @@ func s3AccountInsert(namespace, user string) (*S3Account, error) {
 	update := bson.M{ "$setOnInsert": insert }
 
 	log.Debugf("s3: Upserting namespace %s", namespace)
-	if err = dbS3Upsert(query, update, &account); err != nil {
+	if err = dbS3Upsert(ctx, query, update, &account); err != nil {
 		return nil, err
 	}
 
@@ -67,12 +68,12 @@ func s3AccountInsert(namespace, user string) (*S3Account, error) {
 	return &account, nil
 }
 
-func (iam *S3Iam) s3AccountLookup() (*S3Account, error) {
+func (iam *S3Iam) s3AccountLookup(ctx context.Context) (*S3Account, error) {
 	var account S3Account
 	var err error
 
 	query := bson.M{ "_id": iam.AccountObjID, "state": S3StateActive }
-	err = dbS3FindOne(query, &account)
+	err = dbS3FindOne(ctx, query, &account)
 	if err != nil {
 		if err != mgo.ErrNotFound {
 			log.Errorf("s3: Can't find account %s: %s",
@@ -84,7 +85,7 @@ func (iam *S3Iam) s3AccountLookup() (*S3Account, error) {
 	return &account, nil
 }
 
-func s3FindFullAccessIam(namespace string) (*S3Iam, error) {
+func s3FindFullAccessIam(ctx context.Context, namespace string) (*S3Iam, error) {
 	var account S3Account
 	var iams []S3Iam
 	var query bson.M
@@ -95,13 +96,13 @@ func s3FindFullAccessIam(namespace string) (*S3Iam, error) {
 	}
 
 	query = bson.M{ "namespace": namespace, "state": S3StateActive }
-	err = dbS3FindOne(query, &account)
+	err = dbS3FindOne(ctx, query, &account)
 	if err != nil {
 		return nil, err
 	}
 
 	query = bson.M{ "account-id" : account.ObjID, "state": S3StateActive }
-	err = dbS3FindAll(query, &iams)
+	err = dbS3FindAll(ctx, query, &iams)
 	if err == nil {
 		for _, iam := range iams {
 			if iam.Policy.isRoot() {
@@ -113,8 +114,8 @@ func s3FindFullAccessIam(namespace string) (*S3Iam, error) {
 	return nil, err
 }
 
-func s3AccountDelete(account *S3Account) (error) {
-	err := dbS3SetState(account, S3StateInactive, nil)
+func s3AccountDelete(ctx context.Context, account *S3Account) (error) {
+	err := dbS3SetState(ctx, account, S3StateInactive, nil)
 	if err != nil {
 		if err == mgo.ErrNotFound {
 			return nil
@@ -124,12 +125,12 @@ func s3AccountDelete(account *S3Account) (error) {
 
 	// FIXME Delete related iams/keys/buckets
 
-	dbS3Remove(account)
+	dbS3Remove(ctx, account)
 	log.Debugf("s3: Deleted %s", infoLong(account))
 	return nil
 }
 
-func s3IamInsert(account *S3Account, policy *S3Policy, user string) (*S3Iam, error) {
+func s3IamInsert(ctx context.Context, account *S3Account, policy *S3Policy, user string) (*S3Iam, error) {
 	var iam S3Iam
 	var err error
 
@@ -150,7 +151,7 @@ func s3IamInsert(account *S3Account, policy *S3Policy, user string) (*S3Iam, err
 	update := bson.M{ "$setOnInsert": insert }
 
 	log.Debugf("s3: Upserting iam %s", account.IamUser(user))
-	if err = dbS3Upsert(query, update, &iam); err != nil {
+	if err = dbS3Upsert(ctx, query, update, &iam); err != nil {
 		return nil, err
 	}
 
@@ -158,23 +159,23 @@ func s3IamInsert(account *S3Account, policy *S3Policy, user string) (*S3Iam, err
 	return &iam, nil
 }
 
-func s3IamDelete(iam *S3Iam) (error) {
-	if err := dbS3SetState(iam, S3StateInactive, nil); err != nil {
+func s3IamDelete(ctx context.Context, iam *S3Iam) (error) {
+	if err := dbS3SetState(ctx, iam, S3StateInactive, nil); err != nil {
 		if err == mgo.ErrNotFound {
 			return nil
 		}
 		return err
 	}
 
-	dbS3Remove(iam)
+	dbS3Remove(ctx, iam)
 	log.Debugf("s3: Deleted %s", infoLong(iam))
 	return nil
 }
 
-func s3LookupIam(query bson.M) ([]S3Iam, error) {
+func s3LookupIam(ctx context.Context, query bson.M) ([]S3Iam, error) {
 	var res []S3Iam
 
-	err := dbS3FindAll(query, &res)
+	err := dbS3FindAll(ctx, query, &res)
 	if err != nil {
 		return nil, err
 	}
@@ -182,9 +183,9 @@ func s3LookupIam(query bson.M) ([]S3Iam, error) {
 	return res, nil
 }
 
-func (akey *S3AccessKey) s3IamFind() (*S3Iam, error) {
+func (akey *S3AccessKey) s3IamFind(ctx context.Context) (*S3Iam, error) {
 	query := bson.M{"_id": akey.IamObjID, "state": S3StateActive }
-	iams, err := s3LookupIam(query)
+	iams, err := s3LookupIam(ctx, query)
 	if err != nil {
 		return nil, err
 	} else if len(iams) > 0 {

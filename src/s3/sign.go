@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"crypto/hmac"
+	"context"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -54,7 +55,7 @@ func makeSha256(data []byte) []byte {
 	return hash.Sum(nil)
 }
 
-func (ctx *AuthContext) ParseAuthorization(authHeader string) error {
+func (actx *AuthContext) ParseAuthorization(authHeader string) error {
 	var hasAWSAuthHeaderPrefix bool
 	var elems []string
 	var e string
@@ -89,10 +90,10 @@ func (ctx *AuthContext) ParseAuthorization(authHeader string) error {
 			if len(creds) < 5 {
 				return fmt.Errorf("s3: Wrong credential %s in header", e)
 			}
-			ctx.AccessKey		= creds[0]
-			ctx.ShortTimeStamp	= creds[1]
-			ctx.Region		= creds[2]
-			ctx.Service		= creds[3]
+			actx.AccessKey		= creds[0]
+			actx.ShortTimeStamp	= creds[1]
+			actx.Region		= creds[2]
+			actx.Service		= creds[3]
 			if (creds[3] != AWS4ServiceS3 &&
 				creds[3] != AWS4ServiceCW) ||
 				creds[4] != AWS4Request {
@@ -100,14 +101,14 @@ func (ctx *AuthContext) ParseAuthorization(authHeader string) error {
 			}
 			break
 		case "SignedHeaders":
-			ctx.SignedHeaders = strings.Split(e[pos+1:], ";")
-			if len(ctx.SignedHeaders) < 1 {
+			actx.SignedHeaders = strings.Split(e[pos+1:], ";")
+			if len(actx.SignedHeaders) < 1 {
 				return fmt.Errorf("s3: Wrong signed header %s in header", e)
 			}
-			sort.Strings(ctx.SignedHeaders)
+			sort.Strings(actx.SignedHeaders)
 			break;
 		case "Signature":
-			ctx.Signature = e[pos+1:]
+			actx.Signature = e[pos+1:]
 			break
 		}
 	}
@@ -115,30 +116,30 @@ func (ctx *AuthContext) ParseAuthorization(authHeader string) error {
 	// Verify fields
 	if !hasAWSAuthHeaderPrefix {
 		return fmt.Errorf("s3: No %s prefix detected", AWSAuthHeaderPrefix)
-	} else if ctx.Signature == "" {
+	} else if actx.Signature == "" {
 		return fmt.Errorf("s3: Empty signature decected")
-	} else if len(ctx.SignedHeaders) < 1 {
+	} else if len(actx.SignedHeaders) < 1 {
 		return fmt.Errorf("s3: Empty signed headers decected")
-	} else if ctx.AccessKey == "" || ctx.ShortTimeStamp == "" ||
-		ctx.Region == "" {
+	} else if actx.AccessKey == "" || actx.ShortTimeStamp == "" ||
+		actx.Region == "" {
 		return fmt.Errorf("s3: Empty credentials decected")
 	}
 
 	return nil
 }
 
-func (ctx *AuthContext) BuildBodyDigest(r *http.Request) (error) {
-	if ctx.ContentSha256 == AWSUnsignedPayload {
-		ctx.BodyDigest = AWSUnsignedPayload
+func (actx *AuthContext) BuildBodyDigest(r *http.Request) (error) {
+	if actx.ContentSha256 == AWSUnsignedPayload {
+		actx.BodyDigest = AWSUnsignedPayload
 	} else if r.Body == nil {
-		ctx.BodyDigest = AWSEmptyStringSHA256
+		actx.BodyDigest = AWSEmptyStringSHA256
 	} else {
 		buf, err := ioutil.ReadAll(r.Body)
 		if err != nil {
 			return err
 		}
 		r.Body = ioutil.NopCloser(bytes.NewBuffer(buf))
-		ctx.BodyDigest = hex.EncodeToString(makeSha256(buf))
+		actx.BodyDigest = hex.EncodeToString(makeSha256(buf))
 	}
 	return nil
 }
@@ -161,7 +162,7 @@ func getHeader(r *http.Request, name string) string {
 	return strings.TrimSpace(r.Header.Get(name))
 }
 
-func (ctx *AuthContext) BuildCanonicalString(r *http.Request) {
+func (actx *AuthContext) BuildCanonicalString(r *http.Request) {
 	var members []string
 	var keys []string
 
@@ -196,7 +197,7 @@ func (ctx *AuthContext) BuildCanonicalString(r *http.Request) {
 	}
 
 	// Canonical headers
-	for _, k := range ctx.SignedHeaders {
+	for _, k := range actx.SignedHeaders {
 		if k == "host" {
 			members = append(members, "host:" + strings.TrimSpace(r.Host))
 			continue
@@ -206,87 +207,87 @@ func (ctx *AuthContext) BuildCanonicalString(r *http.Request) {
 	members = append(members, "")
 
 	// SignedHeaders
-	members = append(members, strings.Join(ctx.SignedHeaders, ";"))
+	members = append(members, strings.Join(actx.SignedHeaders, ";"))
 
 	// HashedPayload
-	members = append(members, ctx.BodyDigest)
+	members = append(members, actx.BodyDigest)
 
-	ctx.CanonicalString = strings.Join(members, "\n")
+	actx.CanonicalString = strings.Join(members, "\n")
 }
 
-func (ctx *AuthContext) BuildSigningKey(secret string) {
+func (actx *AuthContext) BuildSigningKey(secret string) {
 	a := makeHmac([]byte("AWS4" + secret),
-			[]byte(ctx.ShortTimeStamp))
-	b := makeHmac(a, []byte(ctx.Region))
-	c := makeHmac(b, []byte(ctx.Service))
-	ctx.SigningKey = makeHmac(c, []byte(AWS4Request))
+			[]byte(actx.ShortTimeStamp))
+	b := makeHmac(a, []byte(actx.Region))
+	c := makeHmac(b, []byte(actx.Service))
+	actx.SigningKey = makeHmac(c, []byte(AWS4Request))
 }
 
-func (ctx *AuthContext) BuildStringToSign() {
-	ctx.StringToSign = strings.Join([]string{
+func (actx *AuthContext) BuildStringToSign() {
+	actx.StringToSign = strings.Join([]string{
 		AWSAuthHeaderPrefix,
-		ctx.LongTimeStamp,
+		actx.LongTimeStamp,
 		strings.Join([]string{
-			ctx.ShortTimeStamp,
-			ctx.Region,
-			ctx.Service,
+			actx.ShortTimeStamp,
+			actx.Region,
+			actx.Service,
 			AWS4Request,
 		}, "/"),
-		hex.EncodeToString(makeSha256([]byte(ctx.CanonicalString))),
+		hex.EncodeToString(makeSha256([]byte(actx.CanonicalString))),
 	}, "\n")
 }
 
-func (ctx *AuthContext) BuildSignature() {
-	signature := makeHmac(ctx.SigningKey, []byte(ctx.StringToSign))
-	ctx.BuiltSignature = hex.EncodeToString(signature)
+func (actx *AuthContext) BuildSignature() {
+	signature := makeHmac(actx.SigningKey, []byte(actx.StringToSign))
+	actx.BuiltSignature = hex.EncodeToString(signature)
 }
 
-func s3VerifyAuthorizationHeaders(r *http.Request, authHeader string) (*S3AccessKey, error) {
+func s3VerifyAuthorizationHeaders(ctx context.Context, r *http.Request, authHeader string) (*S3AccessKey, error) {
 	var akey *S3AccessKey
-	var ctx AuthContext
+	var actx AuthContext
 	var err error
 
-	err = ctx.ParseAuthorization(authHeader)
+	err = actx.ParseAuthorization(authHeader)
 	if err != nil {
 		log.Error(err.Error())
 		return nil, err
 	}
 
-	akey, err = LookupAccessKey(ctx.AccessKey)
+	akey, err = LookupAccessKey(ctx, actx.AccessKey)
 	if err != nil {
 		log.Error(err.Error())
 		return nil, err
 	}
 
-	ctx.BuildSigningKey(s3DecryptAccessKeySecret(akey))
-	ctx.LongTimeStamp = getHeader(r, "X-Amz-Date")
-	ctx.ContentSha256 = getHeader(r, "X-Amz-Content-Sha256")
+	actx.BuildSigningKey(s3DecryptAccessKeySecret(akey))
+	actx.LongTimeStamp = getHeader(r, "X-Amz-Date")
+	actx.ContentSha256 = getHeader(r, "X-Amz-Content-Sha256")
 
-	err = ctx.BuildBodyDigest(r)
+	err = actx.BuildBodyDigest(r)
 	if err != nil {
 		log.Error(err.Error())
 		return nil, err
 	}
 
-	ctx.BuildCanonicalString(r)
-	ctx.BuildStringToSign()
-	ctx.BuildSignature()
+	actx.BuildCanonicalString(r)
+	actx.BuildStringToSign()
+	actx.BuildSignature()
 
 	log.Debugf("s3: s3VerifyAuthorizationHeaders: %s %s",
-		ctx.Signature, ctx.BuiltSignature)
-	if ctx.Signature == ctx.BuiltSignature {
+		actx.Signature, actx.BuiltSignature)
+	if actx.Signature == actx.BuiltSignature {
 		return akey, nil
 	}
 
 	return nil, fmt.Errorf("Signature mismatch")
 }
 
-func s3VerifyAuthorization(r *http.Request) (*S3AccessKey, error) {
+func s3VerifyAuthorization(ctx context.Context, r *http.Request) (*S3AccessKey, error) {
 	var authHeader string
 
 	authHeader = getHeader(r, "Authorization")
 	if authHeader != "" {
-		return s3VerifyAuthorizationHeaders(r, authHeader)
+		return s3VerifyAuthorizationHeaders(ctx, r, authHeader)
 	}
 
 	return nil, fmt.Errorf("Unsupported authorization type")

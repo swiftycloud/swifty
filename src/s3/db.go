@@ -4,6 +4,7 @@ import (
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 
+	"context"
 	"reflect"
 	"time"
 	"fmt"
@@ -131,24 +132,24 @@ func dbDisconnect() {
 	dbSession = nil
 }
 
-func dbRepair() error {
+func dbRepair(ctx context.Context) error {
 	var err error
 
 	log.Debugf("s3: Running db consistency test/repair")
 
-	if err = s3RepairUpload(); err != nil {
+	if err = s3RepairUpload(ctx); err != nil {
 		return err
 	}
 
-	if err = s3RepairObject(); err != nil {
+	if err = s3RepairObject(ctx); err != nil {
 		return err
 	}
 
-	if err = s3RepairObjectData(); err != nil {
+	if err = s3RepairObjectData(ctx); err != nil {
 		return err
 	}
 
-	if err = s3RepairBucket(); err != nil {
+	if err = s3RepairBucket(ctx); err != nil {
 		return err
 	}
 
@@ -235,7 +236,7 @@ func dbS3SetMTime(o interface{}) {
 	}
 }
 
-func dbS3Insert(o interface{}) (error) {
+func dbS3Insert(ctx context.Context, o interface{}) (error) {
 	dbS3SetMTime(o)
 
 	err := dbSession.DB(DBName).C(dbColl(o)).Insert(o)
@@ -245,7 +246,7 @@ func dbS3Insert(o interface{}) (error) {
 	return err
 }
 
-func dbS3Update(query bson.M, update bson.M, retnew bool, o interface{}) (error) {
+func dbS3Update(ctx context.Context, query bson.M, update bson.M, retnew bool, o interface{}) (error) {
 	if query == nil { query = make(bson.M) }
 
 	dbS3SetObjID(o, query)
@@ -262,7 +263,7 @@ func dbS3Update(query bson.M, update bson.M, retnew bool, o interface{}) (error)
 	return err
 }
 
-func dbS3Upsert(query bson.M, update bson.M, o interface{}) (error) {
+func dbS3Upsert(ctx context.Context, query bson.M, update bson.M, o interface{}) (error) {
 	if query == nil { query = make(bson.M) }
 
 	c := dbSession.DB(DBName).C(dbColl(o))
@@ -276,13 +277,13 @@ func dbS3Upsert(query bson.M, update bson.M, o interface{}) (error) {
 	return err
 }
 
-func dbS3SetOnState(o interface{}, state uint32, query bson.M, fields bson.M) (error) {
+func dbS3SetOnState(ctx context.Context, o interface{}, state uint32, query bson.M, fields bson.M) (error) {
 	if query == nil { query = make(bson.M) }
 
 	query["state"] = bson.M{"$in": s3StateTransition[state]}
 	update := bson.M{"$set": fields}
 
-	err := dbS3Update(query, update, true, o)
+	err := dbS3Update(ctx, query, update, true, o)
 	if err != nil {
 		log.Errorf("s3: Can't set state %d on %s: %s",
 			state, infoLong(o), err.Error())
@@ -290,11 +291,11 @@ func dbS3SetOnState(o interface{}, state uint32, query bson.M, fields bson.M) (e
 	return err
 }
 
-func dbS3SetState(o interface{}, state uint32, query bson.M) (error) {
-	return dbS3SetOnState(o, state, query, bson.M{"state": state})
+func dbS3SetState(ctx context.Context, o interface{}, state uint32, query bson.M) (error) {
+	return dbS3SetOnState(ctx, o, state, query, bson.M{"state": state})
 }
 
-func dbS3RemoveCond(o interface{}, query bson.M) (error) {
+func dbS3RemoveCond(ctx context.Context, o interface{}, query bson.M) (error) {
 	if query == nil { query = make(bson.M) }
 
 	dbS3SetObjID(o, query)
@@ -313,45 +314,45 @@ func dbS3RemoveCond(o interface{}, query bson.M) (error) {
 	return err
 }
 
-func dbS3RemoveOnState(o interface{}, state uint32, query bson.M) (error) {
+func dbS3RemoveOnState(ctx context.Context, o interface{}, state uint32, query bson.M) (error) {
 	if query == nil { query = make(bson.M) }
 
 	query["state"] = state
 
-	return dbS3RemoveCond(o, query)
+	return dbS3RemoveCond(ctx, o, query)
 }
 
-func dbS3Remove(o interface{}) (error) {
-	return dbS3RemoveCond(o, nil)
+func dbS3Remove(ctx context.Context, o interface{}) (error) {
+	return dbS3RemoveCond(ctx, o, nil)
 }
 
-func dbS3FindOne(query bson.M, o interface{}) (error) {
+func dbS3FindOne(ctx context.Context, query bson.M, o interface{}) (error) {
 	return dbSession.DB(DBName).C(dbColl(o)).Find(query).One(o)
 }
 
-func dbS3FindOneFields(query bson.M, sel bson.M, o interface{}) (error) {
+func dbS3FindOneFields(ctx context.Context, query bson.M, sel bson.M, o interface{}) (error) {
 	return dbSession.DB(DBName).C(dbColl(o)).Find(query).Select(sel).One(o)
 }
 
-func dbS3FindAllFields(query bson.M, sel bson.M, o interface{}) (error) {
+func dbS3FindAllFields(ctx context.Context, query bson.M, sel bson.M, o interface{}) (error) {
 	return dbSession.DB(DBName).C(dbColl(o)).Find(query).Select(sel).All(o)
 }
 
-func dbS3FindAllSorted(query bson.M, sort string, o interface{}) (error) {
+func dbS3FindAllSorted(ctx context.Context, query bson.M, sort string, o interface{}) (error) {
 	return dbSession.DB(DBName).C(dbColl(o)).Find(query).Sort(sort).All(o)
 }
 
-func dbS3FindAll(query bson.M, o interface{}) (error) {
+func dbS3FindAll(ctx context.Context, query bson.M, o interface{}) (error) {
 	return dbSession.DB(DBName).C(dbColl(o)).Find(query).All(o)
 }
 
-func dbS3FindAllInactive(o interface{}) (error) {
+func dbS3FindAllInactive(ctx context.Context, o interface{}) (error) {
 	states := bson.M{ "$in": []uint32{ S3StateNone, S3StateInactive } }
 	query := bson.M{ "state": states }
 
-	return dbS3FindAll(query, o)
+	return dbS3FindAll(ctx, query, o)
 }
 
-func dbS3Pipe(o interface{}, pipeline interface{}) (*mgo.Pipe) {
+func dbS3Pipe(ctx context.Context, o interface{}, pipeline interface{}) (*mgo.Pipe) {
 	return dbSession.DB(DBName).C(dbColl(o)).Pipe(pipeline)
 }

@@ -3,6 +3,7 @@ package main
 import (
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
+	"context"
 	"time"
 
 	"../apis/apps/s3"
@@ -49,13 +50,13 @@ type S3Object struct {
 	S3ObjectPorps					`bson:",inline"`
 }
 
-func s3RepairObjectInactive() error {
+func s3RepairObjectInactive(ctx context.Context) error {
 	var objects []S3Object
 	var err error
 
 	log.Debugf("s3: Processing inactive objects")
 
-	err = dbS3FindAllInactive(&objects)
+	err = dbS3FindAllInactive(ctx, &objects)
 	if err != nil {
 		if err == mgo.ErrNotFound {
 			return nil
@@ -67,7 +68,7 @@ func s3RepairObjectInactive() error {
 	for _, object := range objects {
 		log.Debugf("s3: Detected stale object %s", infoLong(&object))
 
-		if err = s3DeactivateObjectData(object.ObjID); err != nil {
+		if err = s3DeactivateObjectData(ctx, object.ObjID); err != nil {
 			if err != mgo.ErrNotFound {
 				log.Errorf("s3: Can't find object data %s: %s",
 					infoLong(object), err.Error())
@@ -75,7 +76,7 @@ func s3RepairObjectInactive() error {
 			}
 		}
 
-		err = dbS3Remove(&object)
+		err = dbS3Remove(ctx, &object)
 		if err != nil {
 			log.Errorf("s3: Can't delete object %s: %s",
 				infoLong(&object), err.Error())
@@ -88,12 +89,12 @@ func s3RepairObjectInactive() error {
 	return nil
 }
 
-func s3RepairObject() error {
+func s3RepairObject(ctx context.Context) error {
 	var err error
 
 	log.Debugf("s3: Running objects consistency test")
 
-	if err = s3RepairObjectInactive(); err != nil {
+	if err = s3RepairObjectInactive(ctx); err != nil {
 		return err
 	}
 
@@ -101,11 +102,11 @@ func s3RepairObject() error {
 	return nil
 }
 
-func (bucket *S3Bucket)FindObject(oname string) (*S3Object, error) {
+func (bucket *S3Bucket)FindObject(ctx context.Context, oname string) (*S3Object, error) {
 	var res S3Object
 
 	query := bson.M{ "ocookie": bucket.OCookie(oname, 1), "state": S3StateActive }
-	err := dbS3FindOne(query, &res)
+	err := dbS3FindOne(ctx, query, &res)
 	if err != nil {
 		return nil, err
 	}
@@ -113,10 +114,10 @@ func (bucket *S3Bucket)FindObject(oname string) (*S3Object, error) {
 	return &res,nil
 }
 
-func s3ConvertObject(iam *S3Iam, bucket *S3Bucket, upload *S3Upload) (*S3Object, error) {
+func s3ConvertObject(ctx context.Context, iam *S3Iam, bucket *S3Bucket, upload *S3Upload) (*S3Object, error) {
 	var err error
 
-	size, etag, err := s3ObjectPartsResum(upload)
+	size, etag, err := s3ObjectPartsResum(ctx, upload)
 	if err != nil {
 		return nil, err
 	}
@@ -142,12 +143,12 @@ func s3ConvertObject(iam *S3Iam, bucket *S3Bucket, upload *S3Upload) (*S3Object,
 		OCookie:	bucket.OCookie(upload.Key, 1),
 	}
 
-	if err = dbS3Insert(object); err != nil {
+	if err = dbS3Insert(ctx, object); err != nil {
 		return nil, err
 	}
 	log.Debugf("s3: Converted %s", infoLong(object))
 
-	err = bucket.dbAddObj(object.Size, 0)
+	err = bucket.dbAddObj(ctx, object.Size, 0)
 	if err != nil {
 		goto out_remove
 	}
@@ -155,17 +156,17 @@ func s3ConvertObject(iam *S3Iam, bucket *S3Bucket, upload *S3Upload) (*S3Object,
 	ioSize.Observe(float64(object.Size) / KiB)
 
 	if bucket.BasicNotify != nil && bucket.BasicNotify.Put > 0 {
-		s3Notify(iam, bucket, object, "put")
+		s3Notify(ctx, iam, bucket, object, "put")
 	}
 
 	log.Debugf("s3: Added %s", infoLong(object))
 	return object, nil
 
 out_remove:
-	dbS3Remove(object)
+	dbS3Remove(ctx, object)
 	return nil, err
 }
-func s3AddObject(iam *S3Iam, bucket *S3Bucket, oname string,
+func s3AddObject(ctx context.Context, iam *S3Iam, bucket *S3Bucket, oname string,
 		acl string, data []byte) (*S3Object, error) {
 	var objp *S3ObjectPart
 	var err error
@@ -187,28 +188,28 @@ func s3AddObject(iam *S3Iam, bucket *S3Bucket, oname string,
 		OCookie:	bucket.OCookie(oname, 1),
 	}
 
-	if err = dbS3Insert(object); err != nil {
+	if err = dbS3Insert(ctx, object); err != nil {
 		return nil, err
 	}
 	log.Debugf("s3: Inserted %s", infoLong(object))
 
-	err = bucket.dbAddObj(object.Size, 1)
+	err = bucket.dbAddObj(ctx, object.Size, 1)
 	if err != nil {
 		goto out_remove
 	}
 
-	objp, err = s3ObjectPartAdd(iam, object.ObjID, bucket.BCookie, object.OCookie, 0, data)
+	objp, err = s3ObjectPartAdd(ctx, iam, object.ObjID, bucket.BCookie, object.OCookie, 0, data)
 	if err != nil {
 		goto out_acc
 	}
 
-	err = dbS3SetOnState(object, S3StateActive, nil,
+	err = dbS3SetOnState(ctx, object, S3StateActive, nil,
 		bson.M{ "state": S3StateActive, "etag": objp.ETag })
 	if err != nil {
 		goto out
 	}
 
-	bucket.dbCmtObj(object.Size, -1)
+	bucket.dbCmtObj(ctx, object.Size, -1)
 	if err != nil {
 		goto out
 	}
@@ -216,27 +217,27 @@ func s3AddObject(iam *S3Iam, bucket *S3Bucket, oname string,
 	ioSize.Observe(float64(object.Size) / KiB)
 
 	if bucket.BasicNotify != nil && bucket.BasicNotify.Put > 0 {
-		s3Notify(iam, bucket, object, "put")
+		s3Notify(ctx, iam, bucket, object, "put")
 	}
 
 	log.Debugf("s3: Added %s", infoLong(object))
 	return object, nil
 
 out:
-	s3ObjectPartDelOne(bucket, object.OCookie, objp)
+	s3ObjectPartDelOne(ctx, bucket, object.OCookie, objp)
 out_acc:
-	bucket.dbDelObj(object.Size, -1)
+	bucket.dbDelObj(ctx, object.Size, -1)
 out_remove:
-	dbS3Remove(object)
+	dbS3Remove(ctx, object)
 	return nil, err
 }
 
-func s3DeleteObject(iam *S3Iam, bucket *S3Bucket, oname string) error {
+func s3DeleteObject(ctx context.Context, iam *S3Iam, bucket *S3Bucket, oname string) error {
 	var object *S3Object
 	var objp []*S3ObjectPart
 	var err error
 
-	object, err = bucket.FindObject(oname)
+	object, err = bucket.FindObject(ctx, oname)
 	if err != nil {
 		if err == mgo.ErrNotFound {
 			return nil
@@ -246,7 +247,7 @@ func s3DeleteObject(iam *S3Iam, bucket *S3Bucket, oname string) error {
 		return err
 	}
 
-	err = dbS3SetState(object, S3StateInactive, nil)
+	err = dbS3SetState(ctx, object, S3StateInactive, nil)
 	if err != nil {
 		if err == mgo.ErrNotFound {
 			return nil
@@ -254,42 +255,42 @@ func s3DeleteObject(iam *S3Iam, bucket *S3Bucket, oname string) error {
 		return err
 	}
 
-	objp, err = s3ObjectPartFind(object.ObjID)
+	objp, err = s3ObjectPartFind(ctx, object.ObjID)
 	if err != nil {
 		log.Errorf("s3: Can't find object data %s: %s",
 			infoLong(object), err.Error())
 		return err
 	}
 
-	err = s3ObjectPartDel(bucket, object.OCookie, objp)
+	err = s3ObjectPartDel(ctx, bucket, object.OCookie, objp)
 	if err != nil {
 		return err
 	}
 
-	err = bucket.dbDelObj(object.Size, 0)
+	err = bucket.dbDelObj(ctx, object.Size, 0)
 	if err != nil {
 		return err
 	}
 
-	err = dbS3RemoveOnState(object, S3StateInactive, nil)
+	err = dbS3RemoveOnState(ctx, object, S3StateInactive, nil)
 	if err != nil {
 		return err
 	}
 
 	if bucket.BasicNotify != nil && bucket.BasicNotify.Delete > 0 {
-		s3Notify(iam, bucket, object, "delete")
+		s3Notify(ctx, iam, bucket, object, "delete")
 	}
 
 	log.Debugf("s3: Deleted %s", infoLong(object))
 	return nil
 }
 
-func s3ReadObjectData(bucket *S3Bucket, object *S3Object) ([]byte, error) {
+func s3ReadObjectData(ctx context.Context, bucket *S3Bucket, object *S3Object) ([]byte, error) {
 	var objp []*S3ObjectPart
 	var res []byte
 	var err error
 
-	objp, err = s3ObjectPartFindFull(object.ObjID)
+	objp, err = s3ObjectPartFindFull(ctx, object.ObjID)
 	if err != nil {
 		if err != mgo.ErrNotFound {
 			log.Errorf("s3: Can't find object data %s: %s",
@@ -300,7 +301,7 @@ func s3ReadObjectData(bucket *S3Bucket, object *S3Object) ([]byte, error) {
 	}
 
 	/* FIXME -- push io.Writer and write data into it, do not carry bytes over */
-	res, err = s3ObjectPartRead(bucket, object.OCookie, objp)
+	res, err = s3ObjectPartRead(ctx, bucket, object.OCookie, objp)
 	if err != nil {
 		return nil, err
 	}
@@ -309,11 +310,11 @@ func s3ReadObjectData(bucket *S3Bucket, object *S3Object) ([]byte, error) {
 	return res, err
 }
 
-func s3ReadObject(bucket *S3Bucket, oname string, part, version int) ([]byte, error) {
+func s3ReadObject(ctx context.Context, bucket *S3Bucket, oname string, part, version int) ([]byte, error) {
 	var object *S3Object
 	var err error
 
-	object, err = bucket.FindObject(oname)
+	object, err = bucket.FindObject(ctx, oname)
 	if err != nil {
 		if err == mgo.ErrNotFound {
 			return nil, err
@@ -323,5 +324,5 @@ func s3ReadObject(bucket *S3Bucket, oname string, part, version int) ([]byte, er
 		return nil, err
 	}
 
-	return s3ReadObjectData(bucket, object)
+	return s3ReadObjectData(ctx, bucket, object)
 }

@@ -11,7 +11,9 @@ func gcInit(period uint32) error {
 
 	go func() {
 		for {
-			gc_keys();
+			ctx, done := mkContext("GC keys")
+			gc_keys(ctx);
+			done(ctx)
 			time.Sleep(time.Duration(period) * time.Second)
 		}
 	}()
