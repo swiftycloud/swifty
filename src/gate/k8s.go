@@ -450,7 +450,7 @@ func waitPodPort(ctx context.Context, addr, port string) error {
 }
 
 func swk8sPodUp(ctx context.Context, pod *k8sPod) error {
-	err := BalancerPodUp(pod)
+	err := BalancerPodUp(ctx, pod)
 	if err != nil {
 		ctxlog(ctx).Errorf("Can't prep pod %s/%s: %s", pod.DepName, pod.UID, err.Error())
 		return err
@@ -464,7 +464,7 @@ func swk8sPodUp(ctx context.Context, pod *k8sPod) error {
 			return
 		}
 
-		err = BalancerPodRdy(pod)
+		err = BalancerPodRdy(ctx, pod)
 		if err != nil {
 			ctxlog(ctx).Errorf("Can't add pod %s/%s/%s: %s",
 					pod.DepName, pod.UID,
@@ -481,7 +481,7 @@ func swk8sPodUp(ctx context.Context, pod *k8sPod) error {
 func swk8sPodDown(ctx context.Context, pod *k8sPod) {
 	ctxlog(ctx).Debugf("POD %s down deploy %s", pod.UID, pod.DepName)
 
-	err := BalancerPodDel(pod)
+	err := BalancerPodDel(ctx, pod)
 	if err != nil {
 		ctxlog(ctx).Errorf("Can't delete pod %s/%s/%s: %s",
 				pod.DepName, pod.UID,
@@ -646,7 +646,7 @@ func refreshDepsAndPods(ctx context.Context) error {
 		return errors.New("Error listing FNs")
 	}
 
-	err = dbBalancerPodDelStuck()
+	err = dbBalancerPodDelStuck(ctx)
 	if err != nil {
 		return fmt.Errorf("Can't drop stuck PODs: %s", err.Error)
 	}
@@ -659,7 +659,7 @@ func refreshDepsAndPods(ctx context.Context) error {
 			continue
 		}
 
-		err := dbBalancerPodDelAll(fn.Cookie)
+		err := dbBalancerPodDelAll(ctx, fn.Cookie)
 		if err != nil {
 			glog.Errorf("Can't flush PODs info: %s", err.Error())
 			return err

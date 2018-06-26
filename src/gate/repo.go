@@ -255,7 +255,7 @@ func GCOldSources(ctx context.Context, fn *FunctionDesc, ver string) {
 		tmo := 16 * 60 * time.Second
 
 		for {
-			vers, err := dbBalancerRSListVersions(cookie)
+			vers, err := dbBalancerRSListVersions(ctx, cookie)
 			if err != nil {
 				break /* What to do? */
 			}

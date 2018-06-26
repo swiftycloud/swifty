@@ -408,14 +408,14 @@ func logRemove(fn *FunctionDesc) error {
 	return err
 }
 
-func dbBalancerRSListVersions(cookie string) ([]string, error) {
+func dbBalancerRSListVersions(ctx context.Context, cookie string) ([]string, error) {
 	var fv []string
 	c := dbSession.DB(DBStateDB).C(DBColBalancerRS)
 	err := c.Find(bson.M{"fnid": cookie }).Distinct("fnversion", &fv)
 	return fv, err
 }
 
-func dbBalancerPodAdd(pod *k8sPod) error {
+func dbBalancerPodAdd(ctx context.Context, pod *k8sPod) error {
 	c := dbSession.DB(DBStateDB).C(DBColBalancerRS)
 	err := c.Insert(bson.M{
 			"uid":		pod.UID,
@@ -430,7 +430,7 @@ func dbBalancerPodAdd(pod *k8sPod) error {
 	return nil
 }
 
-func dbBalancerPodUpd(fnId string, pod *k8sPod) error {
+func dbBalancerPodUpd(ctx context.Context, fnId string, pod *k8sPod) error {
 	c := dbSession.DB(DBStateDB).C(DBColBalancerRS)
 	err := c.Update(bson.M{"uid": pod.UID}, bson.M{"$set": bson.M {
 			"fnid":		fnId,
@@ -443,7 +443,7 @@ func dbBalancerPodUpd(fnId string, pod *k8sPod) error {
 	return nil
 }
 
-func dbBalancerPodDel(pod *k8sPod) (error) {
+func dbBalancerPodDel(ctx context.Context, pod *k8sPod) (error) {
 	c := dbSession.DB(DBStateDB).C(DBColBalancerRS)
 	err := c.Remove(bson.M{ "uid":	pod.UID, })
 	if err != nil {
@@ -457,7 +457,7 @@ func dbBalancerPodDel(pod *k8sPod) (error) {
 	return nil
 }
 
-func dbBalancerPodDelStuck() (error) {
+func dbBalancerPodDelStuck(ctx context.Context) (error) {
 	c := dbSession.DB(DBStateDB).C(DBColBalancerRS)
 	_, err := c.RemoveAll(bson.M{ "fnid": bson.M{"$exists": false}})
 	if err == mgo.ErrNotFound {
@@ -467,7 +467,7 @@ func dbBalancerPodDelStuck() (error) {
 	return err
 }
 
-func dbBalancerPodDelAll(fnid string) (error) {
+func dbBalancerPodDelAll(ctx context.Context, fnid string) (error) {
 	c := dbSession.DB(DBStateDB).C(DBColBalancerRS)
 	_, err := c.RemoveAll(bson.M{ "fnid": fnid })
 	if err == mgo.ErrNotFound {
@@ -487,7 +487,7 @@ type balancerEntry struct {
 	Version		string		`bson:"fnversion"`
 }
 
-func dbBalancerGetConnsByCookie(cookie string) ([]podConn, error) {
+func dbBalancerGetConnsByCookie(ctx context.Context, cookie string) ([]podConn, error) {
 	var v []balancerEntry
 
 	c := dbSession.DB(DBStateDB).C(DBColBalancerRS)
@@ -509,7 +509,7 @@ func dbBalancerGetConnsByCookie(cookie string) ([]podConn, error) {
 	return ret, nil
 }
 
-func dbBalancerGetConnExact(fnid, version string) (*podConn, error) {
+func dbBalancerGetConnExact(ctx context.Context, fnid, version string) (*podConn, error) {
 	var v balancerEntry
 
 	c := dbSession.DB(DBStateDB).C(DBColBalancerRS)

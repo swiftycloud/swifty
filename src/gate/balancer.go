@@ -22,11 +22,11 @@ func (bd *BalancerDat)Flush() {
 	bd.pods = []podConn{}
 }
 
-func BalancerPodDel(pod *k8sPod) error {
+func BalancerPodDel(ctx context.Context, pod *k8sPod) error {
 	fnid := pod.SwoId.Cookie()
 	balancerPodsFlush(fnid)
 
-	err := dbBalancerPodDel(pod)
+	err := dbBalancerPodDel(ctx, pod)
 	if err != nil {
 		return fmt.Errorf("Pod del error: %s", err.Error())
 	}
@@ -35,16 +35,16 @@ func BalancerPodDel(pod *k8sPod) error {
 	return nil
 }
 
-func BalancerPodUp(pod *k8sPod) error {
-	return dbBalancerPodAdd(pod)
+func BalancerPodUp(ctx context.Context, pod *k8sPod) error {
+	return dbBalancerPodAdd(ctx, pod)
 }
 
-func BalancerPodRdy(pod *k8sPod) error {
+func BalancerPodRdy(ctx context.Context, pod *k8sPod) error {
 	fnid := pod.SwoId.Cookie()
 
 	balancerPodsFlush(fnid)
 
-	err := dbBalancerPodUpd(fnid, pod)
+	err := dbBalancerPodUpd(ctx, fnid, pod)
 	if err != nil {
 		return fmt.Errorf("Add error: %s", err.Error())
 	}
@@ -65,7 +65,7 @@ func BalancerDelete(ctx context.Context, fnid string) (error) {
 		fdm.lock.Unlock()
 	}
 
-	err := dbBalancerPodDelAll(fnid)
+	err := dbBalancerPodDelAll(ctx, fnid)
 	if err != nil {
 		return fmt.Errorf("POD del all error: %s", err.Error())
 	}
@@ -94,7 +94,7 @@ func balancerGetConnExact(ctx context.Context, cookie, version string) (*podConn
 	 * We can lookup id.Cookie() here, but ... it's manual run,
 	 * let's also make sure the FN exists at all
 	 */
-	ap, err := dbBalancerGetConnExact(cookie, version)
+	ap, err := dbBalancerGetConnExact(ctx, cookie, version)
 	if ap == nil {
 		if err == nil {
 			return nil, GateErrM(swy.GateGenErr, "Nothing to run (yet)")
@@ -114,7 +114,7 @@ func balancerGetConnAny(ctx context.Context, cookie string, fdm *FnMemData) (*po
 
 	aps = fdm.bd.pods
 	if len(aps) == 0 {
-		aps, err = dbBalancerGetConnsByCookie(cookie)
+		aps, err = dbBalancerGetConnsByCookie(ctx, cookie)
 		if aps == nil {
 			if err == nil {
 				return nil, errors.New("No available PODs")

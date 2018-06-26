@@ -146,7 +146,7 @@ func (fn *FunctionDesc)toInfo(ctx context.Context, details bool, periods int) (*
 			return nil, cerr
 		}
 
-		fi.RdyVersions, err = dbBalancerRSListVersions(fn.Cookie)
+		fi.RdyVersions, err = dbBalancerRSListVersions(ctx, fn.Cookie)
 		if err != nil {
 			return nil, GateErrD(err)
 		}
@@ -672,7 +672,7 @@ func waitFunctionVersion(ctx context.Context, fn *FunctionDesc, version string, 
 
 	for {
 		ctxlog(ctx).Debugf("Check %s for %s", fn.SwoId.Str(), version)
-		vers, err := dbBalancerRSListVersions(fn.Cookie)
+		vers, err := dbBalancerRSListVersions(ctx, fn.Cookie)
 		if err != nil {
 			break
 		}
