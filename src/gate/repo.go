@@ -253,6 +253,8 @@ func GCOldSources(ctx context.Context, fn *FunctionDesc, ver string) {
 
 	go func() {
 		tmo := 16 * 60 * time.Second
+		ctx, done := mkContext("::gcoldsource")
+		defer done(ctx)
 
 		for {
 			vers, err := dbBalancerRSListVersions(ctx, cookie)

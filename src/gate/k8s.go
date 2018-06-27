@@ -457,6 +457,9 @@ func swk8sPodUp(ctx context.Context, pod *k8sPod) error {
 	}
 
 	go func() {
+		ctx, done := mkContext("::podwait")
+		defer done(ctx)
+
 		err = waitPodPort(ctx, pod.WdogAddr, pod.WdogPort)
 		if err != nil {
 			ctxlog(ctx).Errorf("POD %s port wait err: %s",
@@ -502,9 +505,9 @@ func swk8sPodUpd(obj_old, obj_new interface{}) {
 	defer done(ctx)
 
 	if po.Status.PodIP == "" && pn.Status.PodIP != "" {
-		podEvents <- &podEvent{up: true, ctx: ctx, pod: genBalancerPod(pn)}
+		podEvents <- &podEvent{up: true, pod: genBalancerPod(pn)}
 	} else if po.Status.PodIP != "" && pn.Status.PodIP == "" {
-		podEvents <- &podEvent{up: false, ctx: ctx, pod: genBalancerPod(pn)}
+		podEvents <- &podEvent{up: false, pod: genBalancerPod(pn)}
 	} else if po.Status.PodIP != "" && pn.Status.PodIP != "" {
 		if po.Status.PodIP != pn.Status.PodIP {
 			glog.Errorf("BAD news: POD IP has changed, while shouldn't")
@@ -514,7 +517,6 @@ func swk8sPodUpd(obj_old, obj_new interface{}) {
 
 type podEvent struct {
 	up	bool
-	ctx	context.Context
 	pod	*k8sPod
 }
 
@@ -523,13 +525,16 @@ var podEvents chan *podEvent
 func podEventLoop() {
 	for {
 		evt := <-podEvents
+
+		ctx, done := mkContext("::podevent")
 		if evt.up {
-			ctxlog(evt.ctx).Debugf("POD %s (%s) up deploy %s",
+			ctxlog(ctx).Debugf("POD %s (%s) up deploy %s",
 					evt.pod.UID, evt.pod.WdogAddr, evt.pod.DepName)
-			swk8sPodUp(evt.ctx, evt.pod)
+			swk8sPodUp(ctx, evt.pod)
 		} else {
-			swk8sPodDown(evt.ctx, evt.pod)
+			swk8sPodDown(ctx, evt.pod)
 		}
+		done(ctx)
 	}
 }
 

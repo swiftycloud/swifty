@@ -262,6 +262,9 @@ func addFunction(ctx context.Context, conf *YAMLConf, fn *FunctionDesc) (string,
 	build, bAddr = RtNeedToBuild(&fn.Code)
 	if build {
 		go func() {
+			ctx, done := mkContext("::build")
+			defer done(ctx)
+
 			err = buildFunction(ctx, conf, bAddr, fn)
 			if err != nil {
 				goto bstalled

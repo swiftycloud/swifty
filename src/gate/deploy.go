@@ -88,7 +88,10 @@ type DeployDesc struct {
 	State		int			`bson:"state"`
 }
 
-func deployStartItems(ctx context.Context, dep *DeployDesc) {
+func deployStartItems(dep *DeployDesc) {
+	ctx, done := mkContext("::deploy start")
+	defer done(ctx)
+
 	for i, item := range dep.Items {
 		cerr := item.start(ctx)
 		if cerr == nil {
@@ -168,7 +171,7 @@ func deployStart(ctx context.Context, dep *DeployDesc) (string, *swyapi.GateErr)
 		return "", GateErrD(err)
 	}
 
-	go deployStartItems(ctx, dep)
+	go deployStartItems(dep)
 
 	return dep.ObjID.Hex(), nil
 }
@@ -213,7 +216,7 @@ func DeployInit(ctx context.Context, conf *YAMLConf) error {
 		if dep.State == swy.DBDepStateIni {
 			glog.Debugf("Will restart deploy %s in state %d", dep.SwoId.Str(), dep.State)
 			deployStopItems(ctx, &dep, len(dep.Items))
-			go deployStartItems(ctx, &dep)
+			go deployStartItems(&dep)
 		}
 	}
 
