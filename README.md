@@ -14,6 +14,8 @@ source $HOME/.bashrc
 ### install libs
 ```
 yum install librados2-devel
+yum install glibc-headers
+yum groupinstall "Development Libraries"
 ```
 
 ### clone swifty project
