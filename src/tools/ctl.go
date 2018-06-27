@@ -1017,13 +1017,21 @@ func auth_cfg(args []string, opts [16]string) {
 
 	case "on":
 		var did string
-		make_faas_req1("POST", "auths", http.StatusOK, &swyapi.AuthAdd { Name: "simple_auth" }, &did)
+		name := opts[0]
+		if name == "" {
+			name = "simple_auth"
+		}
+		make_faas_req1("POST", "auths", http.StatusOK, &swyapi.AuthAdd { Name: name }, &did)
 		fmt.Printf("Created %s auth\n", did)
 
 	case "off":
 		var auths []*swyapi.AuthInfo
 		make_faas_req1("GET", "auths", http.StatusOK, nil, &auths)
 		for _, a := range auths {
+			if opts[0] != "" && a.Name != opts[0] {
+				continue
+			}
+
 			fmt.Printf("Shutting down aut %s\n", a.Name)
 			make_faas_req1("DELETE", "auths/" + a.Id, http.StatusOK, nil, nil)
 		}
@@ -1447,6 +1455,7 @@ func main() {
 
 	cmdMap[CMD_S3ACC].opts.StringVar(&opts[0], "life", "60", "Lifetime (default 1 min)")
 	bindCmdUsage(CMD_S3ACC,	[]string{"BUCKET"}, "Get keys for S3", true)
+	cmdMap[CMD_AUTH].opts.StringVar(&opts[0], "name", "", "Name for auth")
 	bindCmdUsage(CMD_AUTH,	[]string{"ACTION"}, "Manage project auth", true)
 
 	cmdMap[CMD_DL].opts.StringVar(&opts[0], "label", "", "Labels, comma-separated")
