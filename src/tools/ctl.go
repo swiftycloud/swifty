@@ -1086,15 +1086,27 @@ func deploy_add(args []string, opts [16]string) {
 }
 
 func s3_access(args []string, opts [16]string) {
-	lt, err := strconv.Atoi(opts[0])
-	if err != nil {
-		fatal(fmt.Errorf("Bad lifetie value: %s", err.Error()))
+	acc := swyapi.S3Access {
+		Project: curCmd.project,
+		Lifetime: uint32(60),
+	}
+
+	if opts[0] != "" {
+		lt, err := strconv.Atoi(opts[0])
+		if err != nil {
+			fatal(fmt.Errorf("Bad lifetie value: %s", err.Error()))
+		}
+		acc.Lifetime = uint32(lt)
+	}
+
+	if args[0] != "/" {
+		acc.Bucket = args[0]
 	}
 
 	var creds swyapi.S3Creds
 
-	make_faas_req1("POST", "s3/access", http.StatusOK,
-		swyapi.S3Access{ Project: curCmd.project, Bucket: args[0], Lifetime: uint32(lt)}, &creds)
+	make_faas_req1("POST", "s3/access", http.StatusOK, acc, &creds)
+
 	fmt.Printf("Endpoint %s\n", creds.Endpoint)
 	fmt.Printf("Key:     %s\n", creds.Key)
 	fmt.Printf("Secret:  %s\n", creds.Secret)
