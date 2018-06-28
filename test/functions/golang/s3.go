@@ -19,27 +19,50 @@ func s3session() *s3.S3 {
 		panic("No bucket attached")
 	}
 
-	ses := session.Must(session.NewSession())
+	ses := session.Must(session.NewSessionWithOptions(session.Options{
+		Config: aws.Config{
+			Region: aws.String("internal"),
+			Credentials: credentials.NewStaticCredentials(akey, asec, ""),
+			Endpoint: aws.String("http://" + addr),
+			S3ForcePathStyle: aws.Bool(true),
+			S3UseAccelerate: aws.Bool(false),
+		},
+	}))
 
-	return s3.New(ses, &aws.Config{
-		Region: aws.String("internal"),
-		Credentials: credentials.NewStaticCredentials(akey, asec, ""),
-		Endpoint: aws.String(addr),
-	})
+	return s3.New(ses)
 }
 
-func main() {
+func Main(args map[string]string) interface{} {
 	svc := s3session()
 
-	result, err := svc.ListBuckets(&s3.ListBucketsInput{})
+	input := &s3.ListObjectsV2Input{
+		Bucket:  aws.String("images"),
+	}
+
+	result, err := svc.ListObjectsV2(input)
 	if err != nil {
 		if aerr, ok := err.(awserr.Error); ok {
-			fmt.Println(aerr.Error())
+			switch aerr.Code() {
+			case s3.ErrCodeNoSuchBucket:
+				fmt.Println(s3.ErrCodeNoSuchBucket, aerr.Error())
+			default:
+				fmt.Println(aerr.Error())
+			}
 		} else {
 			fmt.Println(err.Error())
 		}
-		panic("Can't list buckets")
+		panic("Can't list objects")
 	}
 
-	fmt.Println(result)
+	fmt.Printf("Answered:\n")
+	onames := []string{}
+	for _, obj := range result.Contents {
+		onames = append(onames, *obj.Key)
+	}
+
+	return onames
+}
+
+func main() {
+	Main(nil)
 }
