@@ -68,7 +68,7 @@ docker stop swys3 && docker rm swys3
 docker run -d --net=host --name=swys3 -v /etc/swifty:/etc/swifty -v /root/.swysecrets:/root/.swysecrets -v /etc/letsencrypt:/etc/letsencrypt swifty/s3
 ```
 
-#### build on slaves
+### build on slaves
 
 ```
 cd /home/swifty
