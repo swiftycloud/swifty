@@ -61,12 +61,30 @@ func Main(args map[string]string) interface{} {
 
 	var profile map[string]interface{}
 
-	if args["action"] == "create" {
-		err = json.Unmarshal([]byte(args["_SWY_BODY_"]), &profile)
+	if args["action"] == "get" {
+		err = db.C("data").Find(bson.M{"cookie": claims["cookie"]}).One(&profile)
 		if err != nil {
 			return pError(err.Error())
 		}
 
+		return profile
+	}
+
+	if args["action"] == "delete" {
+		err = db.C("data").Remove(bson.M{"cookie": claims["cookie"]})
+		if err != nil {
+			return pError(err.Error())
+		}
+
+		return "OK"
+	}
+
+	err = json.Unmarshal([]byte(args["_SWY_BODY_"]), &profile)
+	if err != nil {
+		return pError(err.Error())
+	}
+
+	if args["action"] == "create" {
 		/*
 		 * The defaul auth function generates "cookie" field in the
 		 * claims that contain unique user ID. This ID is now the key
@@ -81,17 +99,10 @@ func Main(args map[string]string) interface{} {
 		return "OK"
 	}
 
-	if args["action"] == "get" {
-		err = db.C("data").Find(bson.M{"cookie": claims["cookie"]}).One(&profile)
-		if err != nil {
-			return pError(err.Error())
-		}
-
-		return profile
-	}
-
-	if args["action"] == "delete" {
-		err = db.C("data").Remove(bson.M{"cookie": claims["cookie"]})
+	if args["action"] == "update" {
+		profile["cookie"] = claims["cookie"]
+		err = db.C("data").Update(bson.M{"cookie": claims["cookie"]},
+				bson.M{"$set": profile})
 		if err != nil {
 			return pError(err.Error())
 		}
