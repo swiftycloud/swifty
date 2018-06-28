@@ -1,3 +1,5 @@
+## Istall this tools and libs on gw, mw, slave0, slave1
+
 ### install golang
 ```
 dnf install golang
@@ -33,12 +35,55 @@ go get k8s.io/client-go/...
 go get ./...
 ```
 
-### build project
+### build on gw
 ```
 cd /home/swifty
-make all
+make swifty/gate
+make swifty/admd
 ```
 
+## Execute this commands on appropriate hosts
+
+### run docker containers on gw
+
+```
+docker stop swygate && docker rm swygate
+docker stop swyadmd && docker rm swyadmd
+
+docker run -d --net=host --name=swygate -v /etc/swifty:/etc/swifty -v /root/.swysecrets:/root/.swysecrets -v /etc/letsencrypt:/etc/letsencrypt swifty/gate
+docker run -d --net=host --name=swyadmd -v /etc/swifty:/etc/swifty -v /root/.swysecrets:/root/.swysecrets -v /etc/letsencrypt:/etc/letsencrypt swifty/admd
+```
+
+### build on mw
+
+```
+cd /home/swifty
+make swifty/s3
+```
+
+### run docker containers on mw
+
+```
+docker stop swys3 && docker rm swys3
+docker run -d --net=host --name=swys3 -v /etc/swifty:/etc/swifty -v /root/.swysecrets:/root/.swysecrets -v /etc/letsencrypt:/etc/letsencrypt swifty/s3
+```
+
+#### build on slaves
+
+```
+cd /home/swifty
+make swifty/golang
+make swifty/swift
+```
+
+### after previous step execute on gw
+
+```
+cd /home/swifty/kubectl/deploy
+kubectl apply -f gobuild-dep.yaml (or for the first time kubectl create -f gobuild-dep.yaml)
+kubectl apply -f swiftbuild-dep.yaml (or for the first time kubectl create -f swiftbuild-dep.yaml)
+docker restart swygate
+```
 
 # swifty
 (С)SwiftyCloud OU, 2018
