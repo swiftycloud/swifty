@@ -152,6 +152,17 @@ var CORS_Methods = []string {
 	http.MethodDelete,
 }
 
+/* These are headers and methods, that might come to /call call */
+var CORS_Clnt_Headers = []string {
+	"Content-Type",
+	"Content-Length",
+	"Authorization",
+}
+
+var CORS_Clnt_Methods = []string {
+	http.MethodPost,
+}
+
 type gateContext struct {
 	context.Context
 	Tenant	string
@@ -923,7 +934,7 @@ func handleFunctionCall(w http.ResponseWriter, r *http.Request) {
 	var fmd *FnMemData
 	var conn *podConn
 
-	if swyhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
+	if swyhttp.HandleCORS(w, r, CORS_Clnt_Methods, CORS_Clnt_Headers) { return }
 
 	sopq := statsStart()
 
