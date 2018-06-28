@@ -317,7 +317,7 @@ func swyFixSize(sz *swyapi.FunctionSize, conf *YAMLConf) error {
 		return errors.New("Too big timeout")
 	}
 
-	if Flavor == "lite" && sz.Timeout > 3000 {
+	if isLite() && sz.Timeout > 3000 {
 		sz.Timeout = 3000 /* Max 3 seconds */
 	}
 

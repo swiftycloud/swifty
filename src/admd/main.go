@@ -500,6 +500,8 @@ func setupLogger(conf *YAMLConf) {
 	log = logger.Sugar()
 }
 
+func isLite() bool { return Flavor == "lite" }
+
 func main() {
 	var config_path string
 	var devel bool
@@ -558,7 +560,7 @@ func main() {
 			Addr:         conf.Daemon.Address,
 			WriteTimeout: 60 * time.Second,
 			ReadTimeout:  60 * time.Second,
-		}, conf.Daemon.HTTPS, devel, func(s string) { log.Debugf(s) })
+		}, conf.Daemon.HTTPS, devel || isLite(), func(s string) { log.Debugf(s) })
 	if err != nil {
 		log.Errorf("ListenAndServe: %s", err.Error())
 	}

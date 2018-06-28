@@ -235,7 +235,7 @@ func mwareSetup(ctx context.Context, conf *YAMLConfMw, mwd *MwareDesc) (string, 
 		goto outdb
 	}
 
-	if Flavor == "lite" && !handler.LiteOK {
+	if isLite() && !handler.LiteOK {
 		err = fmt.Errorf("Bad mware type %s", mwd.MwareType)
 		goto outdb
 	}

@@ -29,6 +29,8 @@ var s3Secrets map[string]string
 var s3SecKey []byte
 var S3ModeDevel bool
 
+func isLite() bool { return Flavor == "lite" }
+
 type YAMLConfCeph struct {
 	ConfigPath	string			`yaml:"config-path"`
 }
@@ -907,7 +909,7 @@ func main() {
 			Addr:         conf.Daemon.Addr,
 			WriteTimeout: 60 * time.Second,
 			ReadTimeout:  60 * time.Second,
-		}, conf.Daemon.HTTPS, S3ModeDevel, func(s string) { log.Debugf(s) })
+		}, conf.Daemon.HTTPS, S3ModeDevel || isLite(), func(s string) { log.Debugf(s) })
 	if err != nil {
 		log.Errorf("ListenAndServe: gatesrv %s", err.Error())
 	}

@@ -36,6 +36,8 @@ var SwdProxyOK bool
 var gateSecrets map[string]string
 var gateSecPas []byte
 
+func isLite() bool { return Flavor == "lite" }
+
 const (
 	SwyDefaultProject string		= "default"
 	SwyPodStartTmo time.Duration		= 120 * time.Second
@@ -1762,7 +1764,7 @@ func main() {
 		return
 	}
 
-	if Flavor == "lite" {
+	if isLite() {
 		grl = xratelimit.MakeRL(0, 1000)
 	}
 
@@ -1859,7 +1861,7 @@ func main() {
 			Addr:         conf.Daemon.Addr,
 			WriteTimeout: 60 * time.Second,
 			ReadTimeout:  60 * time.Second,
-		}, conf.Daemon.HTTPS, SwyModeDevel, func(s string) { glog.Debugf(s) })
+		}, conf.Daemon.HTTPS, SwyModeDevel || isLite(), func(s string) { glog.Debugf(s) })
 	if err != nil {
 		glog.Errorf("ListenAndServe: %s", err.Error())
 	}
