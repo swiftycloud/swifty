@@ -45,7 +45,6 @@ while True:
     if swycode != None:
         args = json.loads(data)
         try:
-            now = time.time()
             res = swycode.main(args)
             res = "0:" + json.dumps(res)
         except:
