@@ -539,6 +539,15 @@ func function_info(args []string, opts [16]string) {
 			fmt.Printf("\t%20s %-10s(id:%s)\n", mi.Name, mi.Type, mi.ID)
 		}
 	}
+
+	var bkts []string
+	make_faas_req1("GET", "functions/" + args[0] + "/s3buckets", http.StatusOK, nil, &bkts)
+	if len(bkts) != 0 {
+		fmt.Printf("Buckets:\n")
+		for _, bkt := range bkts {
+			fmt.Printf("\t%20s\n", bkt)
+		}
+	}
 }
 
 func check_lang(args []string, opts [16]string) {
@@ -768,6 +777,16 @@ func function_update(args []string, opts [16]string) {
 			make_faas_req1("DELETE", "functions/" + fid + "/middleware/" + mid, http.StatusOK, nil, nil)
 		} else {
 			fatal(fmt.Errorf("+/- mware name"))
+		}
+	}
+
+	if opts[8] != "" {
+		if opts[8][0] == '+' {
+			make_faas_req1("POST", "functions/" + fid + "/s3buckets", http.StatusOK, opts[8][1:], nil)
+		} else if opts[8][0] == '-' {
+			make_faas_req1("DELETE", "functions/" + fid + "/s3buckets/" + opts[8][1:], http.StatusOK, nil, nil)
+		} else {
+			fatal(fmt.Errorf("+/- bucket name"))
 		}
 	}
 
@@ -1436,6 +1455,7 @@ func main() {
 	cmdMap[CMD_FU].opts.StringVar(&opts[5], "ver", "", "Version")
 	cmdMap[CMD_FU].opts.StringVar(&opts[6], "arg", "", "Args")
 	cmdMap[CMD_FU].opts.StringVar(&opts[7], "auth", "", "Auth context (- for off)")
+	cmdMap[CMD_FU].opts.StringVar(&opts[8], "s3b", "", "Bucket to use, +/- to add/remove")
 	bindCmdUsage(CMD_FU,	[]string{"NAME"}, "Update a function", true)
 	bindCmdUsage(CMD_FD,	[]string{"NAME"}, "Delete a function", true)
 	bindCmdUsage(CMD_FLOG,	[]string{"NAME"}, "Show function logs", true)
