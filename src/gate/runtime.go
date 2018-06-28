@@ -53,6 +53,10 @@ func RtNeedToBuild(scr *FnCodeDesc) (bool, string) {
 	return rh.Build, rh.BuildIP
 }
 
+func RtSetBuilder(lang, ip string) {
+	rt_handlers[lang].BuildIP = ip
+}
+
 /* Path where the sources would appear in container */
 func RtCodePath(scr *FnCodeDesc) string {
 	return rt_handlers[scr.Lang].CodePath

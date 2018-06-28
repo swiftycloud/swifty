@@ -380,6 +380,17 @@ type k8sPod struct {
 	UID		string
 }
 
+func (pod *k8sPod)Build() string {
+	if pod.DepName == "swy-go-builder" {
+		return "golang"
+	}
+	if pod.DepName == "swy-swift-builder" {
+		return "swift"
+	}
+
+	return ""
+}
+
 func genBalancerPod(pod *v1.Pod) (*k8sPod) {
 	r := &k8sPod {
 		DepName:	pod.ObjectMeta.Labels["deployment"],
@@ -450,6 +461,13 @@ func waitPodPort(ctx context.Context, addr, port string) error {
 }
 
 func swk8sPodUp(ctx context.Context, pod *k8sPod) error {
+	bld := pod.Build()
+	if bld != "" {
+		ctxlog(ctx).Debugf("Update %s builder to %s", bld, pod.WdogAddr)
+		RtSetBuilder(bld, pod.WdogAddr)
+		return nil
+	}
+
 	err := BalancerPodUp(ctx, pod)
 	if err != nil {
 		ctxlog(ctx).Errorf("Can't prep pod %s/%s: %s", pod.DepName, pod.UID, err.Error())
@@ -482,6 +500,10 @@ func swk8sPodUp(ctx context.Context, pod *k8sPod) error {
 }
 
 func swk8sPodDown(ctx context.Context, pod *k8sPod) {
+	if pod.Build() != "" {
+		return
+	}
+
 	ctxlog(ctx).Debugf("POD %s down deploy %s", pod.UID, pod.DepName)
 
 	err := BalancerPodDel(ctx, pod)
@@ -495,14 +517,6 @@ func swk8sPodDown(ctx context.Context, pod *k8sPod) {
 func swk8sPodUpd(obj_old, obj_new interface{}) {
 	po := obj_old.(*v1.Pod)
 	pn := obj_new.(*v1.Pod)
-
-	dep := pn.ObjectMeta.Labels["deployment"]
-	if dep == "swy-go-builder" || dep == "swy-swift-builder" {
-		return
-	}
-
-	ctx, done := mkContext("::k8s-notify")
-	defer done(ctx)
 
 	if po.Status.PodIP == "" && pn.Status.PodIP != "" {
 		podEvents <- &podEvent{up: true, pod: genBalancerPod(pn)}
