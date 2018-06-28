@@ -24,6 +24,10 @@
  *    curl -X POST -H 'Authorization: Bearer $USER_JWT' '$THIS_FN_URL?action=create' -d '$JSON_WITH_PROFILE'
  * -. Check user profile
  *    curl -X POST -H 'Authorization: Bearer $USER_JWT' '$THIS_FN_URL?action=get'
+ * -. Update user profile
+ *    curl -X POST -H 'Authorization: Bearer $USER_JWT' '$THIS_FN_URL?action=update' -d '$JSON_WITH_UPDATE'
+ *    The json string with update IS the list of fields to be pdated, the
+ *    whole profile is NOT replaced with the new value.
  *
  * The code below keeps user profiles in DB "profiles" collection "data". You
  * can change any of it. E.g. you can use the step 1 auth's DB as your profiles
