@@ -14,6 +14,10 @@ import (
 	"gopkg.in/mgo.v2"
 	"database/sql"
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/aws/aws-sdk-go/aws/credentials"
 )
 
 var _mgoSessions sync.Map
@@ -148,4 +152,31 @@ func (ctx *AuthCtx)MakeJWT(claims map[string]interface{}) (string, error) {
 	hasher.Write([]byte(unsigned))
 
 	return unsigned + "." + encodeBytes(hasher.Sum(nil)), nil
+}
+
+func S3Bucket(bname string) (*s3.S3, error) {
+	return S3BucketProt(bname, "https")
+}
+
+func S3BucketProt(bname, prot string) (*s3.S3, error) {
+	bname = strings.ToUpper(bname)
+	addr := os.Getenv("MWARE_S3" + bname + "_ADDR")
+	akey := os.Getenv("MWARE_S3" + bname + "_KEY")
+	asec := os.Getenv("MWARE_S3" + bname + "_SECRET")
+
+	if addr == "" || akey == "" || asec == "" {
+		return nil, errors.New("No bucket attached")
+	}
+
+	ses := session.Must(session.NewSessionWithOptions(session.Options{
+		Config: aws.Config {
+			Region: aws.String("internal"),
+			Credentials: credentials.NewStaticCredentials(akey, asec, ""),
+			Endpoint: aws.String(prot + "://" + addr),
+			S3ForcePathStyle: aws.Bool(true),
+			S3UseAccelerate: aws.Bool(false),
+		},
+	}))
+
+	return s3.New(ses), nil
 }
