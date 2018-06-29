@@ -5,6 +5,7 @@ import (
 	"strings"
 	"io/ioutil"
 	"swifty"
+	"encoding/json"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -29,29 +30,18 @@ func Main(args map[string]string) interface{} {
 		panic("Can't get bkt")
 	}
 
-	if args["action"] == "list" {
-		input := &s3.ListObjectsV2Input{
-			Bucket:  aws.String("images"),
-		}
+	var claims map[string]interface{}
 
-		result, err := svc.ListObjectsV2(input)
-		if err != nil {
-			showS3Err(err)
-			panic("Can't list objects")
-		}
-
-		onames := []string{}
-		for _, obj := range result.Contents {
-			onames = append(onames, *obj.Key)
-		}
-
-		return onames
+	err = json.Unmarshal([]byte(args["_SWY_JWT_CLAIMS_"]), &claims)
+	if err != nil {
+		fmt.Println(err)
+		panic("Can't unmarshal claims")
 	}
 
 	if args["action"] == "put" {
 		input := &s3.PutObjectInput{
 			Bucket:	aws.String("images"),
-			Key:	aws.String(args["name"]),
+			Key:	aws.String(claims["cookie"].(string)),
 			Body:	aws.ReadSeekCloser(strings.NewReader(args["_SWY_BODY_"])),
 		}
 
@@ -67,7 +57,7 @@ func Main(args map[string]string) interface{} {
 	if args["action"] == "get" {
 		input := &s3.GetObjectInput{
 			Bucket: aws.String("images"),
-			Key:    aws.String(args["name"]),
+			Key:    aws.String(claims["cookie"].(string)),
 		}
 
 		result, err := svc.GetObject(input)
@@ -81,7 +71,22 @@ func Main(args map[string]string) interface{} {
 			panic(fmt.Errorf("Can't read body: %s", err.Error()))
 		}
 
-		return string(v)
+		return map[string]interface{} { "img": string(v) }
+	}
+
+	if args["action"] == "del" {
+		input := &s3.DeleteObjectInput{
+			Bucket: aws.String("images"),
+			Key:    aws.String(claims["cookie"].(string)),
+		}
+
+		_, err := svc.DeleteObject(input)
+		if err != nil {
+			showS3Err(err)
+			panic("Can't put object")
+		}
+
+		return "OK"
 	}
 
 	return "Bad request"
