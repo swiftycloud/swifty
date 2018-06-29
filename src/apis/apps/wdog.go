@@ -8,6 +8,16 @@ type SwdFunctionBuild struct {
 	Sources		string		`json:"sources"`
 }
 
+/*
+ * This type is not seen by wdog itself, instead, it's described
+ * by each wdog runner by smth like "Request"
+ */
+type SwdFunctionRun struct {
+	Args		map[string]string	`json:"args,omitempty"`
+	Body		interface{}		`json:"body,omitempty"`
+	Claims		map[string]string	`json:"claims,omitempty"` // JWT
+}
+
 type SwdFunctionRunResult struct {
 	Return		string		`json:"return"`
 	Code		int		`json:"code"`

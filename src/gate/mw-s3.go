@@ -155,11 +155,11 @@ func handleS3Event(ctx context.Context, user string, data []byte) {
 
 		/* FIXME -- this is synchronous */
 		_, err = doRun(ctx, fn, "s3:" + evt.Op + ":" + evt.Bucket,
-				map[string]string {
+				&swyapi.SwdFunctionRun{Args: map[string]string {
 					"bucket": evt.Bucket,
 					"object": evt.Object,
 					"op": evt.Op,
-				})
+				}})
 		if err != nil {
 			ctxlog(ctx).Errorf("s3: Error running FN %s", err.Error())
 		}

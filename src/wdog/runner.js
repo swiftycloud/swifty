@@ -30,11 +30,11 @@ function send(res) {
 }
 
 for (;;) {
-	var req = recv()
-	var args = JSON.parse(req)
+	var str = recv()
+	var req = JSON.parse(str)
 	var res
 	try {
-		var ret = script.Main(args)
+		var ret = script.Main(req)
 		res = "0:" + JSON.stringify(ret)
 	} catch (err) {
 		res = "1:Exception"

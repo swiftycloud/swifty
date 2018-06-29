@@ -1,3 +1,3 @@
-func Main(args: [String:String]) -> Encodable {
-	return ["message": "hw:swift:" + args["name"]!]
+func Main(rq: Request) -> Encodable {
+	return ["message": "hw:swift:" + rq.args!["name"]!]
 }

@@ -1,3 +1,3 @@
-def main(args):
-    print(args)
-    return {"args": args}
+def Main(req):
+    print(req)
+    return {"name": req.args["name"]}

@@ -18,7 +18,7 @@ type podConn struct {
 	Port	string
 }
 
-func doRun(ctx context.Context, fn *FunctionDesc, event string, args map[string]string) (*swyapi.SwdFunctionRunResult, error) {
+func doRun(ctx context.Context, fn *FunctionDesc, event string, args *swyapi.SwdFunctionRun) (*swyapi.SwdFunctionRunResult, error) {
 	fmd, err := memdGetFn(ctx, fn)
 	if err != nil {
 		ctxlog(ctx).Errorf("Can't %s memdat: %s", fn.Cookie, err.Error())
@@ -40,7 +40,7 @@ func doRun(ctx context.Context, fn *FunctionDesc, event string, args map[string]
 	return res, err
 }
 
-func talkHTTP(addr, port, url string, args map[string]string) (*swyapi.SwdFunctionRunResult, error) {
+func talkHTTP(addr, port, url string, args *swyapi.SwdFunctionRun) (*swyapi.SwdFunctionRunResult, error) {
 	var resp *http.Response
 	var res swyapi.SwdFunctionRunResult
 	var err error
@@ -67,7 +67,7 @@ func talkHTTP(addr, port, url string, args map[string]string) (*swyapi.SwdFuncti
 	return &res, nil
 }
 
-func doRunConn(ctx context.Context, conn *podConn, cookie, event string, args map[string]string) (*swyapi.SwdFunctionRunResult, error) {
+func doRunConn(ctx context.Context, conn *podConn, cookie, event string, args *swyapi.SwdFunctionRun) (*swyapi.SwdFunctionRunResult, error) {
 	var res *swyapi.SwdFunctionRunResult
 	var err error
 
@@ -95,7 +95,7 @@ out:
 
 func runFunctionOnce(ctx context.Context, fn *FunctionDesc) {
 	ctxlog(ctx).Debugf("oneshot RUN for %s", fn.SwoId.Str())
-	doRun(ctx, fn, "oneshot", map[string]string{})
+	doRun(ctx, fn, "oneshot", &swyapi.SwdFunctionRun{})
 	ctxlog(ctx).Debugf("oneshor %s finished", fn.SwoId.Str())
 
 	swk8sRemove(ctx, &conf, fn)

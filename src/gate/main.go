@@ -853,23 +853,24 @@ func fnCallable(fn *FunctionDesc) bool {
 	return fn.isURL() && (fn.State == swy.DBFuncStateRdy)
 }
 
-func makeArgMap(sopq *statsOpaque, r *http.Request) map[string]string {
+func makeArgs(sopq *statsOpaque, r *http.Request) *swyapi.SwdFunctionRun {
 	defer r.Body.Close()
 
-	args := make(map[string]string)
+	args := &swyapi.SwdFunctionRun{}
+	args.Args = make(map[string]string)
 
 	for k, v := range r.URL.Query() {
 		if len(v) < 1 {
 			continue
 		}
 
-		args[k] = v[0]
+		args.Args[k] = v[0]
 		sopq.argsSz += len(k) + len(v[0])
 	}
 
 	body, err := ioutil.ReadAll(r.Body)
 	if err == nil && len(body) > 0 {
-		args[SwyBodyArg] = string(body)
+		args.Body = string(body) /* FIXME -- read content type and apply */
 		sopq.bodySz = len(body)
 	}
 
@@ -929,7 +930,7 @@ func rslimited(fmd *FnMemData) bool {
 }
 
 func handleFunctionCall(w http.ResponseWriter, r *http.Request) {
-	var arg_map map[string]string
+	var args *swyapi.SwdFunctionRun
 	var res *swyapi.SwdFunctionRunResult
 	var err error
 	var code int
@@ -978,23 +979,17 @@ func handleFunctionCall(w http.ResponseWriter, r *http.Request) {
 	}
 
 
-	arg_map = makeArgMap(sopq, r)
+	args = makeArgs(sopq, r)
 
 	if fmd.ac != nil {
-		var auth_args map[string]string
-
-		auth_args, err = fmd.ac.Verify(r)
+		args.Claims, err = fmd.ac.Verify(r)
 		if err != nil {
 			code = http.StatusUnauthorized
 			goto out
 		}
-
-		for k, v:= range(auth_args) {
-			arg_map[k] = v
-		}
 	}
 
-	res, err = doRunConn(ctx, conn, fnId, "call", arg_map)
+	res, err = doRunConn(ctx, conn, fnId, "call", args)
 	if err != nil {
 		code = http.StatusInternalServerError
 		goto out
@@ -1213,7 +1208,8 @@ func handleFunctionRun(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		return errc
 	}
 
-	res, err = doRunConn(ctx, conn, fn.Cookie, "run", params.Args)
+	res, err = doRunConn(ctx, conn, fn.Cookie, "run",
+			&swyapi.SwdFunctionRun{Args: params.Args})
 	if err != nil {
 		return GateErrE(swy.GateGenErr, err)
 	}

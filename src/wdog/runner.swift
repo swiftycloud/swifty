@@ -6,8 +6,14 @@ public typealias Byte = UInt8
 var qfd: Int32
 qfd = 3
 
-func load(data: [Byte]) -> [String:String] {
-	return try! JSONDecoder().decode([String:String].self, from: Data(bytes: data))
+struct Request: Codable {
+	var args: [String:String]?
+	var body: [Byte]?
+	var claims: [String:String]?
+}
+
+func load(data: [Byte]) -> Request {
+	return try! JSONDecoder().decode(Request.self, from: Data(bytes: data))
 }
 
 func save(obj: Encodable) -> Data {
@@ -27,8 +33,8 @@ while true {
 	var msg = [Byte](repeating: 0x0, count: 1024)
 	recv(qfd, &msg, 1024, 0)
 
-	let args = load(data: msg)
-	let ret = Main(args: args)
+	let rq = load(data: msg)
+	let ret = Main(rq: rq)
 	var out = save(obj: ret)
 
 	var pointer: UnsafePointer<UInt8>! = nil

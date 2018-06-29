@@ -1,15 +1,16 @@
 #!/usr/local/bin/ruby
 
 require 'json'
+require 'ostruct'
 
 begin
 require '/function/script.rb'
-def CallMain(args)
-	res = Main(args)
+def CallMain(req)
+	res = Main(req)
 	return "0:" + JSON.generate(res)
 end
 rescue ScriptError
-def CallMain(args)
+def CallMain(req)
 	return "2:Error loading script"
 end
 end
@@ -41,10 +42,10 @@ end
 
 loop do
 	str = recv(queue)
-	args = JSON.parse(str)
+	req = JSON.parse(str, object_class: OpenStruct)
 
 	begin
-		ret = CallMain(args)
+		ret = CallMain(req)
 	rescue
 		puts "Exception running FN"
 		ret = "1:Exception"

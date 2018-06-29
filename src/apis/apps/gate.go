@@ -60,10 +60,10 @@ type FunctionInfo struct {
 	Id		string			`json:"id"`
 }
 
-type RunCmd struct {
-	Exe		string			`json:"exe"`
-	Args		[]string		`json:"args,omitempty"`
-}
+//type RunCmd struct {
+//	Exe		string			`json:"exe"`
+//	Args		[]interface{}		`json:"args,omitempty"`
+//}
 
 type FunctionCode struct {
 	Lang		string			`json:"lang"`

@@ -11,6 +11,12 @@ type runnerRes struct {
 	Return	string		`json:"return"`
 }
 
+type Request struct {
+	Args		map[string]string	`json:"args,omitempty"`
+	Body		interface{}		`json:"body,omitempty"`
+	Claims		map[string]string	`json:"claims,omitempty"` // JWT
+}
+
 func main() {
 
 	q, err := xqueue.OpenQueue("3")
@@ -20,15 +26,15 @@ func main() {
 	}
 
 	for {
-		var args map[string]string
+		var req Request
 
-		err = q.Recv(&args)
+		err = q.Recv(&req)
 		if err != nil {
 			fmt.Printf("Can't receive message: %s", err.Error())
 			return
 		}
 
-		res := Main(args)
+		res := Main(&req)
 
 		var resb []byte
 		resb, err = json.Marshal(res)

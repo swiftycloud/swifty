@@ -577,7 +577,7 @@ func detect_language(path string, typ string) string {
 	}
 
 	rur := regexp.MustCompile("^def\\s+Main\\s*\\(.*\\)[^:]*$")
-	pyr := regexp.MustCompile("^def\\s+main\\s*\\(.*\\):")
+	pyr := regexp.MustCompile("^def\\s+Main\\s*\\(.*\\):")
 	gor := regexp.MustCompile("^func\\s+Main\\s*\\(.*interface\\s*{\\s*}")
 	swr := regexp.MustCompile("^func\\s+Main\\s*\\(.*->\\s*Encodable")
 	jsr := regexp.MustCompile("^exports.Main\\s*=\\s*function")

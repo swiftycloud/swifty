@@ -43,9 +43,9 @@ while True:
     data = readmsg(q)
 
     if swycode != None:
-        args = json.loads(data)
+        req = type('request', (object,), json.loads(data))
         try:
-            res = swycode.main(args)
+            res = swycode.Main(req)
             res = "0:" + json.dumps(res)
         except:
             print("Exception running FN:")
