@@ -47,7 +47,7 @@ func authCtxGet(ctx context.Context, id SwoId, ac string) (*AuthCtx, error) {
 	return nil, fmt.Errorf("BUG: Not an auth mware %s", item.MwareType)
 }
 
-func (ac *AuthCtx)Verify(r *http.Request) (map[string]string, error) {
+func (ac *AuthCtx)Verify(r *http.Request) (map[string]interface{}, error) {
 	auth := r.Header.Get("Authorization")
 	if auth == "" {
 		return nil, errors.New("Authorization header required")
@@ -96,7 +96,13 @@ func (ac *AuthCtx)Verify(r *http.Request) (map[string]string, error) {
 		return nil, errors.New("Bad JWT claims")
 	}
 
-	return map[string]string{SwyJWTClaimsArg: string(cb)}, nil
+	var claims map[string]interface{}
+	err = json.Unmarshal(cb, &claims)
+	if err != nil {
+		return nil, errors.New("Bad JWT claims: " + err.Error())
+	}
+
+	return claims, nil
 }
 
 func InitAuthJWT(ctx context.Context, conf *YAMLConfMw, mwd *MwareDesc) (error) {

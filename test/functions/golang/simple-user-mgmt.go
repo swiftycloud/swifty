@@ -80,7 +80,7 @@ func doLeave(auth *swifty.AuthCtx, args map[string]string) interface{} {
 	return &authResp{}
 }
 
-func Main(args map[string]string) interface{} {
+func Main(req *Request) interface{} {
 	auth, err := swifty.AuthContext()
 
 	if err != nil {
@@ -88,13 +88,13 @@ func Main(args map[string]string) interface{} {
 		panic("Can't get auth context")
 	}
 
-	switch args["action"] {
+	switch req.Args["action"] {
 	case "signup":
-		return doSignup(auth, args)
+		return doSignup(auth, req.Args)
 	case "signin":
-		return doSignin(auth, args)
+		return doSignin(auth, req.Args)
 	case "leave":
-		return doLeave(auth, args)
+		return doLeave(auth, req.Args)
 	}
 
 	return "Invalid action"
