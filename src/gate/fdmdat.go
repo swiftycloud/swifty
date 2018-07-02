@@ -33,12 +33,16 @@ type TenantMemData struct {
 	BOut_l, BOut_o	uint64
 }
 
+func memdGetFnForRemoval(ctx context.Context, fn *FunctionDesc) (*FnMemData, error) {
+	return fndatGetOrInit(ctx, fn.Cookie, fn, true)
+}
+
 func memdGetFn(ctx context.Context, fn *FunctionDesc) (*FnMemData, error) {
-	return fndatGetOrInit(ctx, fn.Cookie, fn)
+	return fndatGetOrInit(ctx, fn.Cookie, fn, false)
 }
 
 func memdGet(ctx context.Context, cookie string) (*FnMemData, error) {
-	return fndatGetOrInit(ctx, cookie, nil)
+	return fndatGetOrInit(ctx, cookie, nil, false)
 }
 
 func memdGetCond(cookie string) *FnMemData {
@@ -143,7 +147,7 @@ func tendatGetOrInit(ctx context.Context, tenant string) (*TenantMemData, error)
 	return lret, nil
 }
 
-func fndatGetOrInit(ctx context.Context, cookie string, fn *FunctionDesc) (*FnMemData, error) {
+func fndatGetOrInit(ctx context.Context, cookie string, fn *FunctionDesc, forRemoval bool) (*FnMemData, error) {
 	var err error
 
 	ret, ok := fdmd.Load(cookie)
@@ -176,7 +180,7 @@ func fndatGetOrInit(ctx context.Context, cookie string, fn *FunctionDesc) (*FnMe
 	nret.mem = fn.Size.Mem
 	nret.public = fn.isURL()
 	nret.depname = fn.DepName()
-	if fn.AuthCtx != "" {
+	if fn.AuthCtx != "" && !forRemoval {
 		nret.ac, err = authCtxGet(ctx, fn.SwoId, fn.AuthCtx)
 		if err != nil {
 			return nil, err
