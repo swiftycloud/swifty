@@ -5,4 +5,8 @@ def Main(req):
         print(req.claims)
     except:
         print("no claims")
+    try:
+        print(req.body)
+    except:
+        print("no body")
     return {"name": req.args["name"], "method": req.method, "path": req.path}
