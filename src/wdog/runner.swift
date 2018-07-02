@@ -11,6 +11,7 @@ struct Request: Codable {
 	var body: [Byte]?
 	var claims: [String:String]?
 	var request: String?
+	var path: String?
 }
 
 func load(data: [Byte]) -> Request {

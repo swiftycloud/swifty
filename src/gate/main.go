@@ -881,6 +881,14 @@ func makeArgs(sopq *statsOpaque, r *http.Request) *swyapi.SwdFunctionRun {
 
 	args.Method = r.Method
 
+	p := strings.SplitN(r.URL.Path, "/", 4)
+	if len(p) >= 4 {
+		args.Path = &p[3]
+	} else {
+		empty := ""
+		args.Path = &empty
+	}
+
 	return args
 }
 
@@ -1810,7 +1818,7 @@ func main() {
 	r.Handle("/v1/info/langs",		genReqHandler(handleLanguages)).Methods("POST", "OPTIONS")
 	r.Handle("/v1/info/mwares",		genReqHandler(handleMwareTypes)).Methods("POST", "OPTIONS")
 
-	r.HandleFunc("/call/{fnid}",			handleFunctionCall).Methods("GET", "PUT", "POST", "DELETE", "PATCH", "HEAD", "OPTIONS")
+	r.PathPrefix("/call/{fnid}").Methods("GET", "PUT", "POST", "DELETE", "PATCH", "HEAD", "OPTIONS").HandlerFunc(handleFunctionCall)
 
 	err = dbConnect(&conf)
 	if err != nil {

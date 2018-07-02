@@ -16,6 +16,7 @@ type Request struct {
 	Body		interface{}		`json:"body,omitempty"`
 	Claims		map[string]string	`json:"claims,omitempty"` // JWT
 	Method		string			`json:"request,omitempty"`
+	Path		string			`json:"path,omitempty"`
 }
 
 func main() {

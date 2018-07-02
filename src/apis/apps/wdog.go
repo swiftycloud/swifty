@@ -17,6 +17,7 @@ type SwdFunctionRun struct {
 	Body		interface{}		`json:"body,omitempty"`
 	Claims		map[string]string	`json:"claims,omitempty"` // JWT
 	Method		string			`json:"method,omitempty"`
+	Path		*string			`json:"path,omitempty"`
 }
 
 type SwdFunctionRunResult struct {
