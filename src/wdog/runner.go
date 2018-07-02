@@ -15,11 +15,13 @@ type Request struct {
 }
 
 type Responce struct {
+	Status	int
 }
 
 type RunnerRes struct {
 	Res	int
 	Ret	string
+	Status	int
 }
 
 func use(resp *Responce) {}
@@ -43,8 +45,6 @@ func main() {
 
 		res, resp := Main(&req)
 
-		use(resp)
-
 		var b []byte
 		b, err = json.Marshal(res)
 		if err != nil {
@@ -52,7 +52,13 @@ func main() {
 			return
 		}
 
-		err = q.Send(&RunnerRes{ Res: 0, Ret: string(b) })
+		out := &RunnerRes { Res: 0, Ret: string(b) }
+
+		if resp != nil {
+			out.Status = resp.Status
+		}
+
+		err = q.Send(out)
 		if err != nil {
 			fmt.Printf("Can't send responce: %s", err.Error())
 			return

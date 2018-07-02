@@ -197,6 +197,7 @@ func readLines(f *os.File) string {
 
 type RunnerRes struct {
 	Res	int
+	Status	int
 	Ret	string
 }
 
@@ -220,7 +221,8 @@ func doRun(runner *Runner, body []byte) (*swyapi.SwdFunctionRunResult, error) {
 
 	if err == nil {
 		if out.Res == 0 {
-			ret.Code = 0
+			fmt.Printf("Will report %d\n", out.Status)
+			ret.Code = out.Status
 		} else {
 			ret.Code = -http.StatusInternalServerError
 		}
