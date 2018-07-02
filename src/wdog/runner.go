@@ -13,7 +13,7 @@ type runnerRes struct {
 
 type Request struct {
 	Args		map[string]string	`json:"args,omitempty"`
-	Body		interface{}		`json:"body,omitempty"`
+	Body		string			`json:"body,omitempty"`
 	Claims		map[string]interface{}	`json:"claims,omitempty"` // JWT
 	Method		string			`json:"request,omitempty"`
 	Path		string			`json:"path,omitempty"`
