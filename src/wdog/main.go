@@ -195,6 +195,11 @@ func readLines(f *os.File) string {
 	}
 }
 
+type RunnerRes struct {
+	Res	int
+	Ret	string
+}
+
 func doRun(runner *Runner, body []byte) (*swyapi.SwdFunctionRunResult, error) {
 	var err error
 
@@ -204,8 +209,8 @@ func doRun(runner *Runner, body []byte) (*swyapi.SwdFunctionRunResult, error) {
 		return nil, fmt.Errorf("Can't send args: %s", err.Error())
 	}
 
-	var res string
-	res, err = runner.q.RecvStr()
+	var out RunnerRes
+	err = runner.q.Recv(&out)
 
 	ret := &swyapi.SwdFunctionRunResult{
 		Stdout: readLines(runner.fin),
@@ -214,23 +219,23 @@ func doRun(runner *Runner, body []byte) (*swyapi.SwdFunctionRunResult, error) {
 	}
 
 	if err == nil {
-		if res[0] == '0' {
+		if out.Res == 0 {
 			ret.Code = 0
 		} else {
-			ret.Code = http.StatusInternalServerError
+			ret.Code = -http.StatusInternalServerError
 		}
-		ret.Return = res[2:]
+		ret.Return = out.Ret
 	} else {
 		switch {
 		case err == io.EOF:
-			ret.Code = http.StatusInternalServerError
+			ret.Code = -http.StatusInternalServerError
 			ret.Return = "exited"
 		case err == xqueue.TIMEOUT:
-			ret.Code = swyhttp.StatusTimeoutOccurred
+			ret.Code = -swyhttp.StatusTimeoutOccurred
 			ret.Return = "timeout"
 		default:
 			log.Errorf("Can't read data back: %s", err.Error())
-			ret.Code = http.StatusInternalServerError
+			ret.Code = -http.StatusInternalServerError
 			ret.Return = "unknown"
 		}
 	}

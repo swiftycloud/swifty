@@ -46,14 +46,14 @@ while True:
         print(data)
         req = type('request', (object,), json.loads(data))
         try:
-            res = swycode.Main(req)
-            res = "0:" + json.dumps(res)
+            res, resb = swycode.Main(req)
+            res = { "res": 0, "ret": json.dumps(res) }
         except:
             print("Exception running FN:")
             traceback.print_exc()
-            res = "1:Exception"
+            res = { "res": 1, "ret": "Exception" }
     else:
         print(swytb)
-        res = swyres
+        res = { "res": 2, "ret": swyres }
 
-    sendmsg(q, res.encode('utf-8'))
+    sendmsg(q, json.dumps(res).encode('utf-8'))

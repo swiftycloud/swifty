@@ -6,12 +6,12 @@ require 'ostruct'
 begin
 require '/function/script.rb'
 def CallMain(req)
-	res = Main(req)
-	return "0:" + JSON.generate(res)
+	res, resp = Main(req)
+	return JSON.generate({:res => 0, :ret => JSON.generate(res)})
 end
 rescue ScriptError
 def CallMain(req)
-	return "2:Error loading script"
+	return JSON.generate({:res => 2, :ret => "Error loading script"})
 end
 end
 

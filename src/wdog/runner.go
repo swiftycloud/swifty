@@ -6,11 +6,6 @@ import (
 	"xqueue"
 )
 
-type runnerRes struct {
-	Code	int		`json:"code"`
-	Return	string		`json:"return"`
-}
-
 type Request struct {
 	Args		map[string]string	`json:"args,omitempty"`
 	Body		string			`json:"body,omitempty"`
@@ -18,6 +13,16 @@ type Request struct {
 	Method		string			`json:"request,omitempty"`
 	Path		string			`json:"path,omitempty"`
 }
+
+type Responce struct {
+}
+
+type RunnerRes struct {
+	Res	int
+	Ret	string
+}
+
+func use(resp *Responce) {}
 
 func main() {
 
@@ -36,16 +41,18 @@ func main() {
 			return
 		}
 
-		res := Main(&req)
+		res, resp := Main(&req)
 
-		var resb []byte
-		resb, err = json.Marshal(res)
+		use(resp)
+
+		var b []byte
+		b, err = json.Marshal(res)
 		if err != nil {
 			fmt.Printf("Can't marshal the result: %s", err.Error())
 			return
 		}
 
-		err = q.SendBytes([]byte("0:" + string(resb)))
+		err = q.Send(&RunnerRes{ Res: 0, Ret: string(b) })
 		if err != nil {
 			fmt.Printf("Can't send responce: %s", err.Error())
 			return

@@ -35,12 +35,12 @@ for (;;) {
 	var res
 	try {
 		var ret = script.Main(req)
-		res = "0:" + JSON.stringify(ret)
+		res = { res: 0, ret: JSON.stringify(ret) }
 	} catch (err) {
-		res = "1:Exception"
+		res = { res: 0, ret: "Exception" }
 	}
 
-	send(res)
+	send(JSON.stringify(res))
 }
 
 process.exit(1)

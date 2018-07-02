@@ -14,6 +14,11 @@ struct Request: Codable {
 	var path: String?
 }
 
+struct Result: Codable {
+	var res: Int
+	var ret: String
+}
+
 func load(data: [Byte]) -> Request {
 	return try! JSONDecoder().decode(Request.self, from: Data(bytes: data))
 }
@@ -28,7 +33,7 @@ func save(obj: Encodable) -> Data {
 	}
 
 	let jstr = String(data: try! JSONEncoder().encode(EncWrap(o:obj)), encoding: .utf8)!
-	return ("0:" + jstr).data(using: String.Encoding.utf8)!
+	return try! JSONEncoder().encode(Result(res: 0, ret: jstr))
 }
 
 while true {
