@@ -1,3 +1,3 @@
 def Main(req):
     print(req)
-    return {"name": req.args["name"]}
+    return {"name": req.args["name"], "method": req.method}

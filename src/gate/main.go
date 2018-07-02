@@ -163,6 +163,11 @@ var CORS_Clnt_Headers = []string {
 
 var CORS_Clnt_Methods = []string {
 	http.MethodPost,
+	http.MethodPut,
+	http.MethodPatch,
+	http.MethodGet,
+	http.MethodDelete,
+	http.MethodHead,
 }
 
 type gateContext struct {
@@ -873,6 +878,8 @@ func makeArgs(sopq *statsOpaque, r *http.Request) *swyapi.SwdFunctionRun {
 		args.Body = string(body) /* FIXME -- read content type and apply */
 		sopq.bodySz = len(body)
 	}
+
+	args.Method = r.Method
 
 	return args
 }
@@ -1803,7 +1810,7 @@ func main() {
 	r.Handle("/v1/info/langs",		genReqHandler(handleLanguages)).Methods("POST", "OPTIONS")
 	r.Handle("/v1/info/mwares",		genReqHandler(handleMwareTypes)).Methods("POST", "OPTIONS")
 
-	r.HandleFunc("/call/{fnid}",			handleFunctionCall).Methods("POST", "OPTIONS")
+	r.HandleFunc("/call/{fnid}",			handleFunctionCall).Methods("GET", "PUT", "POST", "DELETE", "PATCH", "HEAD", "OPTIONS")
 
 	err = dbConnect(&conf)
 	if err != nil {
