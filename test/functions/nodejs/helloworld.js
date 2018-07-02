@@ -1,3 +1,3 @@
-exports.Main = function(args) {
-    return { message: "hw:nodejs:" + args.name }
+exports.Main = function(rq) {
+    return { message: "hw:nodejs2:" + rq.args.name }
 }

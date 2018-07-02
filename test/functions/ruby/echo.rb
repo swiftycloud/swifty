@@ -3,5 +3,5 @@ def Main(req)
 	puts req.args
 	puts req.claims
 	STDOUT.flush
-	return { "message" => "hw:ruby:" + req.args["name"] }
+	return { "myname" => "hw:ruby:" + req.args["name"] }, nil
 end

@@ -1013,14 +1013,18 @@ func handleFunctionCall(w http.ResponseWriter, r *http.Request) {
 		goto out
 	}
 
-	if res.Code != 0 {
-		code = res.Code
+	if res.Code < 0 {
+		code = -res.Code
 		err = errors.New(res.Return)
 		goto out
 	}
 
+	if res.Code == 0 {
+		res.Code = http.StatusOK
+	}
+
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.WriteHeader(http.StatusOK)
+	w.WriteHeader(res.Code)
 	w.Write([]byte(res.Return))
 
 	statsUpdate(fmd, sopq, res)
