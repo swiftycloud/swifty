@@ -367,7 +367,7 @@ func handleFunctionTriggers(ctx context.Context, w http.ResponseWriter, r *http.
 			evd = append(evd, ev)
 		}
 
-		var evs []*swyapi.FunctionEvent
+		evs := []*swyapi.FunctionEvent{}
 		for _, e := range evd {
 			if e.Source == "url" {
 				hasUrl = true
@@ -489,7 +489,7 @@ func handleFunctionMwares(ctx context.Context, w http.ResponseWriter, r *http.Re
 
 	switch r.Method {
 	case "GET":
-		var minf []*swyapi.MwareInfo
+		minf := []*swyapi.MwareInfo{}
 		for _, mwn := range fn.Mware {
 			id := fn.SwoId
 			id.Name = mwn
@@ -1084,7 +1084,7 @@ func handleFunctions(ctx context.Context, w http.ResponseWriter, r *http.Request
 			fns = append(fns, fn)
 		}
 
-		var ret []*swyapi.FunctionInfo
+		ret := []*swyapi.FunctionInfo{}
 		for _, fn := range fns {
 			fi, cerr := fn.toInfo(ctx, details, periods)
 			if cerr != nil {
@@ -1289,7 +1289,7 @@ func handleMwares(ctx context.Context, w http.ResponseWriter, r *http.Request) *
 			mws = append(mws, mw)
 		}
 
-		var ret []*swyapi.MwareInfo
+		ret := []*swyapi.MwareInfo{}
 		for _, mw := range mws {
 			mi, cerr := mw.toInfo(ctx, &conf.Mware, details)
 			if cerr != nil {
@@ -1417,7 +1417,7 @@ func handleDeployments(ctx context.Context, w http.ResponseWriter, r *http.Reque
 			deps = append(deps, dep)
 		}
 
-		var dis []*swyapi.DeployInfo
+		dis := []*swyapi.DeployInfo{}
 		for _, d := range deps {
 			di, cerr := d.toInfo(ctx, false)
 			if cerr != nil {
