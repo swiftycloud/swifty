@@ -1,0 +1,11 @@
+The text file describes what we have and want to have in languages
+(go -- golang, py -- python, ru - ruby, js -- nodejs, sw -- swift)
+
+Feature				go py ru js sw
+Lib				+  +
+   Mongo			+  +
+   Maria			+  +
+   S3				+  +
+   Auth				+
+Responce			+  +  +
+   Code				+
