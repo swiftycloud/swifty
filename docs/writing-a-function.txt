@@ -1,0 +1,76 @@
+Here's a guide helping to code a function for swifty.
+Swifty supports several programming languages, so there are
+common things, that apply to all, and some specific.
+
+== Summary ==
+
+First of all, the "function" from swifty point of view is a
+language, well, function called Main (capitalized, yes). The
+function accepts one argument called "request" which carries
+arguments, http method, URL sub-path and more. The function
+returns 2 arguments, the first one is anything that's JSON
+encodable, the 2nd one is used to control the details of what
+should be done after the function execution.
+
+== Request ==
+
+The request is language-specific object, that contains the
+following fields in it:
+
+- args   -- query arguments
+- body   -- request body (string)
+- method -- request method (get, put, delete, post, head, patch)
+- claims -- JWT claims object when authentication is ON
+- path   -- URL subpath that was used to call function
+
+Few words about the URL subpath. Swifty functions get called by
+the URLs looking like
+
+  https://swifty.cloud/call/{functionid}[/{subpath}]
+
+the /call/{funcitonid} part is mandatory, while the /{subpath}
+may be of any length and passed as is into function.
+
+== Responce ==
+
+In simple cases functions return anything JSON-encodable which
+gets returned by swifty to http request in body. The content type
+is set to 'application/json', the status code is 200 (OK).
+
+Repsonce object (2nd return value) can be used to change this
+behavior in the future (NOTE: nothing is implemented yet). The
+responce may be a language-specific no-value thing if no
+actions are needed.
+
+Actions that are planned to be supported:
+
+- http status code to return
+- body content type
+- async events
+
+
+Now examples of functions just returning the "foo" argument value
+
+== Go ==
+package main
+func Main(req *Request) (interface{}, *Responce) {
+	return req.Args["foo"], nil
+}
+
+== Python ==
+def Main(req):
+	return req.args["foo"], None
+
+== Ruby ==
+def Main(req)
+	return req.args["foo"], nil
+
+== JS ==
+exports.Main = function(rq) {
+	return req.args.foo, null
+}
+
+== Swift ==
+func Main(rq: Request) -> (Encodable, Responce) {
+	return rq.args!["foo"], nil
+}
