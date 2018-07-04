@@ -1,0 +1,39 @@
+When writing a function one may attach a swifty library
+to its code that provides some handy facilities. All
+libs are heavily language-specific.
+
+== Golang ==
+
+import (
+	"swifty"
+)
+
+* func MongoDatabase(mwn string) (*mgo.Database, error)
+returns a mongo database pointer for the middleware of the given name
+
+* func MariaConn(mwn string) (*sql.DB, error)
+the same for maria/mysql middleware
+
+* func AuthContext() (*AuthCtx, error)
+returns an object, that can is used by auth-as-a-service function
+
+** AuthCtx.UsersCol
+pointer to mongo collection with users
+
+** func (ctx *AuthCtx)MakeJWT(claims map[string]interface{}) (string, error)
+encodes claims into JWT
+
+* func S3Bucket(bname string) (*s3.S3, error)
+returns pointer to AWS SDK S3 object to access the given bucket
+
+== Python ==
+import swifty
+* def MongoDatabase(mwname):
+returns a mongo database pointer for the middleware of the given name
+
+* def MariaConn(mwname):
+the same for maria/mysql middleware
+
+
+
+Other langs do not have theis libs yet.
