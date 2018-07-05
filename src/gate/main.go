@@ -876,7 +876,8 @@ func makeArgs(sopq *statsOpaque, r *http.Request) *swyapi.SwdFunctionRun {
 	body, err := ioutil.ReadAll(r.Body)
 	if err == nil && len(body) > 0 {
 		ct := r.Header.Get("Content-Type")
-		if ct == "application/json" {
+		ctp := strings.SplitN(ct, ";", 2)
+		if len(ctp) > 0 && ctp[0] == "application/json" {
 			args.Body = string(body)
 			sopq.bodySz = len(body)
 		} /* XXX What else? */
