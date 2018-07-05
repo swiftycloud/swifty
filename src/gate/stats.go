@@ -165,7 +165,7 @@ type statsOpaque struct {
 }
 
 func statsGet(ctx context.Context, fn *FunctionDesc) (*FnStats, error) {
-	md, err := memdGetFnForRemoval(ctx, fn)
+	md, err := memdGetFn(ctx, fn)
 	if err != nil {
 		return nil, err
 	} else {
@@ -235,7 +235,7 @@ func statsInit(conf *YAMLConf) error {
 }
 
 func statsDrop(ctx context.Context, fn *FunctionDesc) error {
-	md, err := memdGetFn(ctx, fn)
+	md, err := memdGetFnForRemoval(ctx, fn)
 	if err != nil {
 		return err
 	}
