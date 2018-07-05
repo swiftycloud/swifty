@@ -1,11 +1,11 @@
 package main
 
-func Main(args map[string]string) interface{} {
-	if args["act"] == "panic" {
-		panic(args["message"])
+func Main(rq *Request) (interface{}, *Responce) {
+	if rq.Args["act"] == "panic" {
+		panic(rq.Args["message"])
 	} else {
-		print(args["act"])
+		print(rq.Args["act"])
 	}
 
-	return "done"
+	return "done", nil
 }

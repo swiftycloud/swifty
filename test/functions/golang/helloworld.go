@@ -1,5 +1,5 @@
 package main
 
-func Main(args map[string]string) interface{} {
-	return map[string]string{"message": "hw:golang:" + args["name"]}
+func Main(rq *Request) (interface{}, *Responce) {
+	return map[string]string{"message": "hw:golang:" + rq.Args["name"]}, nil
 }

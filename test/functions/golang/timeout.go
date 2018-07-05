@@ -5,8 +5,8 @@ import (
 	"strconv"
 )
 
-func Main(args map[string]string) interface{} {
-	tmo, _ := strconv.Atoi(args["tmo"])
+func Main(rq *Request) (interface{}, *Responce) {
+	tmo, _ := strconv.Atoi(rq.Args["tmo"])
 	time.Sleep(time.Duration(tmo) * time.Millisecond)
-	return "slept:" + args["tmo"]
+	return "slept:" + rq.Args["tmo"], nil
 }

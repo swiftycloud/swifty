@@ -5,15 +5,15 @@ import (
 	"swifty"
 )
 
-func Main(args map[string]string) interface{} {
-	db, err := swifty.MariaConn(args["dbname"])
+func Main(rq *Request) (interface{}, *Responce) {
+	db, err := swifty.MariaConn(rq.Args["dbname"])
 	if err != nil {
 		fmt.Println(err)
 		panic("Can't get maria conn")
 	}
 
 	res := "invalid"
-	if args["action"] == "create" {
+	if rq.Args["action"] == "create" {
 		_, err = db.Exec("CREATE TABLE `data` (`key` varchar(255), `val` varchar(255))")
 		if err != nil {
 			fmt.Println(err)
@@ -21,28 +21,28 @@ func Main(args map[string]string) interface{} {
 		}
 
 		res = "done"
-	} else if args["action"] == "insert" {
+	} else if rq.Args["action"] == "insert" {
 		stmt, err := db.Prepare("INSERT INTO `data`(`key`, `val`) VALUES(?,?)")
 		if err != nil {
 			fmt.Println(err)
 			panic("Can't prepare insert")
 		}
 
-		_, err = stmt.Exec(args["key"], args["val"])
+		_, err = stmt.Exec(rq.Args["key"], rq.Args["val"])
 		if err != nil {
 			fmt.Println(err)
 			panic("Can't insert")
 		}
 
 		res = "done"
-	} else if args["action"] == "select" {
+	} else if rq.Args["action"] == "select" {
 		stmt, err := db.Prepare("SELECT `val` FROM `data` WHERE `key` = ?")
 		if err != nil {
 			fmt.Println(err)
 			panic("Can't prepare select")
 		}
 
-		rows, err := stmt.Query(args["key"])
+		rows, err := stmt.Query(rq.Args["key"])
 		if err != nil {
 			fmt.Println(err)
 			panic("Can't query foo")
@@ -62,5 +62,5 @@ func Main(args map[string]string) interface{} {
 		}
 	}
 
-	return map[string]string{"res": res}
+	return map[string]string{"res": res}, nil
 }

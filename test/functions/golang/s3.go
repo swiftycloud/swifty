@@ -24,25 +24,17 @@ func showS3Err(err error) {
 	}
 }
 
-func Main(args map[string]string) interface{} {
+func Main(rq *Request) (interface{}, *Responce) {
 	svc, err := swifty.S3BucketProt("images", "http")
 	if err != nil {
 		panic("Can't get bkt")
 	}
 
-	var claims map[string]interface{}
-
-	err = json.Unmarshal([]byte(args["_SWY_JWT_CLAIMS_"]), &claims)
-	if err != nil {
-		fmt.Println(err)
-		panic("Can't unmarshal claims")
-	}
-
-	if args["action"] == "put" {
+	if rq.Args["action"] == "put" {
 		input := &s3.PutObjectInput{
 			Bucket:	aws.String("images"),
-			Key:	aws.String(claims["cookie"].(string)),
-			Body:	aws.ReadSeekCloser(strings.NewReader(args["_SWY_BODY_"])),
+			Key:	aws.String(rq.Claims["cookie"].(string)),
+			Body:	aws.ReadSeekCloser(strings.NewReader(rq.Body)),
 		}
 
 		_, err := svc.PutObject(input)
@@ -54,10 +46,10 @@ func Main(args map[string]string) interface{} {
 		return "OK"
 	}
 
-	if args["action"] == "get" {
+	if rq.Args["action"] == "get" {
 		input := &s3.GetObjectInput{
 			Bucket: aws.String("images"),
-			Key:    aws.String(claims["cookie"].(string)),
+			Key:    aws.String(rq.Claims["cookie"].(string)),
 		}
 
 		result, err := svc.GetObject(input)
@@ -74,10 +66,10 @@ func Main(args map[string]string) interface{} {
 		return map[string]interface{} { "img": string(v) }
 	}
 
-	if args["action"] == "del" {
+	if rq.Args["action"] == "del" {
 		input := &s3.DeleteObjectInput{
 			Bucket: aws.String("images"),
-			Key:    aws.String(claims["cookie"].(string)),
+			Key:    aws.String(rq.Claims["cookie"].(string)),
 		}
 
 		_, err := svc.DeleteObject(input)
