@@ -21,11 +21,11 @@
  * Now call this FN with obtained JWT
  *
  * -. Create user profile
- *    curl -X POST -H 'Authorization: Bearer $USER_JWT' '$THIS_FN_URL?action=create' -d '$JSON_WITH_PROFILE'
+ *    curl -X PUT -H 'Authorization: Bearer $USER_JWT' '$THIS_FN_URL' -H 'Content-type: application/json' -d '$JSON_WITH_PROFILE'
  * -. Check user profile
- *    curl -X POST -H 'Authorization: Bearer $USER_JWT' '$THIS_FN_URL?action=get'
+ *    curl -X GET -H 'Authorization: Bearer $USER_JWT' '$THIS_FN_URL'
  * -. Update user profile
- *    curl -X POST -H 'Authorization: Bearer $USER_JWT' '$THIS_FN_URL?action=update' -d '$JSON_WITH_UPDATE'
+ *    curl -X POST -H 'Authorization: Bearer $USER_JWT' '$THIS_FN_URL' -H 'Content-type: application/json' -d '$JSON_WITH_UPDATE'
  *    The json string with update IS the list of fields to be pdated, the
  *    whole profile is NOT replaced with the new value.
  *
@@ -48,71 +48,63 @@ func pError(err string) map[string]string {
 	return map[string]string{"status": "error", "error": err}
 }
 
-func Main(args map[string]string) interface{} {
+func Main(rq *Request) (interface{}, *Responce) {
 	db, err := swifty.MongoDatabase("profiles")
 	if err != nil {
 		fmt.Println(err)
 		panic("Can't get mgo dbase")
 	}
 
-	var claims map[string]interface{}
-
-	err = json.Unmarshal([]byte(args["_SWY_JWT_CLAIMS_"]), &claims)
-	if err != nil {
-		fmt.Println(err)
-		panic("Can't unmarshal claims")
-	}
-
 	var profile map[string]interface{}
 
-	if args["action"] == "get" {
-		err = db.C("data").Find(bson.M{"cookie": claims["cookie"]}).One(&profile)
+	if rq.Method == "GET" {
+		err = db.C("data").Find(bson.M{"cookie": rq.Claims["cookie"]}).One(&profile)
 		if err != nil {
-			return pError(err.Error())
+			return pError(err.Error()), nil
 		}
 
-		return profile
+		return profile, nil
 	}
 
-	if args["action"] == "delete" {
-		err = db.C("data").Remove(bson.M{"cookie": claims["cookie"]})
+	if rq.Method == "DELETE" {
+		err = db.C("data").Remove(bson.M{"cookie": rq.Claims["cookie"]})
 		if err != nil {
-			return pError(err.Error())
+			return pError(err.Error()), nil
 		}
 
-		return "OK"
+		return "OK", nil
 	}
 
-	err = json.Unmarshal([]byte(args["_SWY_BODY_"]), &profile)
+	err = json.Unmarshal([]byte(rq.Body), &profile)
 	if err != nil {
-		return pError(err.Error())
+		return pError(err.Error()), nil
 	}
 
-	if args["action"] == "create" {
+	if rq.Method == "PUT" {
 		/*
 		 * The defaul auth function generates "cookie" field in the
 		 * claims that contain unique user ID. This ID is now the key
 		 * in profiles collection.
 		 */
-		profile["cookie"] = claims["cookie"]
+		profile["cookie"] = rq.Claims["cookie"]
 		err = db.C("data").Insert(profile)
 		if err != nil {
-			return pError(err.Error())
+			return pError(err.Error()), nil
 		}
 
-		return "OK"
+		return "OK", nil
 	}
 
-	if args["action"] == "update" {
-		profile["cookie"] = claims["cookie"]
-		err = db.C("data").Update(bson.M{"cookie": claims["cookie"]},
+	if rq.Method == "POST" {
+		profile["cookie"] = rq.Claims["cookie"]
+		err = db.C("data").Update(bson.M{"cookie": rq.Claims["cookie"]},
 				bson.M{"$set": profile})
 		if err != nil {
-			return pError(err.Error())
+			return pError(err.Error()), nil
 		}
 
-		return "OK"
+		return "OK", nil
 	}
 
-	return pError("Bad action")
+	return pError("Bad action"), nil
 }
