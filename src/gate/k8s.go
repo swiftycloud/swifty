@@ -422,6 +422,21 @@ func swk8sPodAdd(obj interface{}) {
 }
 
 func swk8sPodDel(obj interface{}) {
+	po := obj.(*v1.Pod)
+
+/*
+ *	poc := ""
+ *	for _, cond := range po.Status.Conditions {
+ *		poc += string(cond.Type) + "=" + string(cond.Status) + ","
+ *	}
+ *
+ *	glog.Debugf("POD events\n%s:%s:%s:%s:%s ->DELETE\n",
+ *		po.ObjectMeta.Labels["deployment"], po.ObjectMeta.UID, po.Status.PodIP, po.Status.Phase, poc)
+ */
+
+	if po.Status.PodIP != "" {
+		podEvents <- &podEvent{up: false, pod: genBalancerPod(po)}
+	}
 }
 
 func waitPodPort(ctx context.Context, addr, port string) error {
@@ -517,6 +532,21 @@ func swk8sPodDown(ctx context.Context, pod *k8sPod) {
 func swk8sPodUpd(obj_old, obj_new interface{}) {
 	po := obj_old.(*v1.Pod)
 	pn := obj_new.(*v1.Pod)
+
+/*
+ *	poc := ""
+ *	pnc := ""
+ *	for _, cond := range po.Status.Conditions {
+ *		poc += string(cond.Type) + "=" + string(cond.Status) + ","
+ *	}
+ *	for _, cond := range pn.Status.Conditions {
+ *		pnc += string(cond.Type) + "=" + string(cond.Status) + ","
+ *	}
+ *
+ *	glog.Debugf("POD events\n%s:%s:%s:%s:%s ->\n%s:%s:%s:%s:%s\n",
+ *		po.ObjectMeta.Labels["deployment"], po.ObjectMeta.UID, po.Status.PodIP, po.Status.Phase, poc,
+ *		pn.ObjectMeta.Labels["deployment"], pn.ObjectMeta.UID, pn.Status.PodIP, pn.Status.Phase, pnc)
+ */
 
 	if po.Status.PodIP == "" && pn.Status.PodIP != "" {
 		podEvents <- &podEvent{up: true, pod: genBalancerPod(pn)}
