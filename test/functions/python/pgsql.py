@@ -3,11 +3,11 @@ import os
 
 dbconn = None
 
-def gcon(args):
+def gcon(req):
     global dbconn
     if dbconn == None:
         print("New connection")
-        mwn = args['dbname'].upper()
+        mwn = req.args['dbname'].upper()
         dbaddr = os.getenv('MWARE_' + mwn + '_ADDR')
         dbuser = os.getenv('MWARE_' + mwn + '_USER')
         dbpass = os.getenv('MWARE_' + mwn + '_PASS')
@@ -18,18 +18,18 @@ def gcon(args):
         print("Reuse connection")
     return dbconn
 
-def main(args):
-    db = gcon(args)
+def main(req.args):
+    db = gcon(req.args)
     res = "invalid"
-    if args['action'] == 'create':
+    if req.args['action'] == 'create':
         db.execute("CREATE TABLE data (id SERIAL PRIMARY KEY, key CHAR(64), val CHAR(64))")
         res = "done"
-    elif args['action'] == 'insert':
+    elif req.args['action'] == 'insert':
         ins = db.prepare("INSERT INTO data (key, val) VALUES ($1, $2)")
-        ins(args['key'], args['val'])
+        ins(req.args['key'], req.args['val'])
         res = "done"
-    elif args['action'] == 'select':
+    elif req.args['action'] == 'select':
         sel = db.prepare("SELECT val FROM data WHERE key = $1")
-        res = sel(args['key'])
+        res = sel(req.args['key'])
 
-    return { "res": res }
+    return { "res": res }, None

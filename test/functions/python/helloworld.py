@@ -1,2 +1,2 @@
-def main(args):
-    return {"message": "hw:python:%s" % args['name']}
+def main(req):
+    return {"message": "hw:python:%s" % req.args['name']}, None

@@ -1,3 +1,3 @@
-def main(args):
-    print("Object %s created in bucket %s" % (args['object'], args['bucket']))
-    return {}
+def main(req):
+    print("Object %s created in bucket %s" % (req.args['object'], req.args['bucket']))
+    return {}, None
