@@ -1,3 +1,18 @@
+/*
+ * Simple user management for swifty Auth-as-a-Service
+ *
+ * This FN is typically activated as a part of Auth deployment created
+ * by the PUT /auths API call.
+ *
+ * API in this FN is
+ *
+ * curl 'swifty.cloud:8686/call/{fnid}/signup?userid={userid}&password={password}'
+ * curl 'swifty.cloud:8686/call/{fnid}/signin?userid={userid}&password={password}'
+ * curl 'swifty.cloud:8686/call/{fnid}/leave?userid={userid}&password={password}'
+ *
+ * The exact http method isn't checked and doesn't matter.
+ */
+
 package main
 
 import (
@@ -88,7 +103,7 @@ func Main(req *Request) (interface{}, *Responce) {
 		panic("Can't get auth context")
 	}
 
-	switch req.Args["action"] {
+	switch req.Path {
 	case "signup":
 		return doSignup(auth, req.Args), nil
 	case "signin":
