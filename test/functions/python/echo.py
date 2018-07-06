@@ -9,4 +9,4 @@ def Main(req):
         print(req.body)
     except:
         print("no body")
-    return {"name": req.args["name"] }, None
+    return {"name": req.args["name"] }, {"status": 201}

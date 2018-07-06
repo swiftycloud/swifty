@@ -48,6 +48,11 @@ while True:
         try:
             res, resb = swycode.Main(req)
             res = { "res": 0, "ret": json.dumps(res) }
+            if resb != None:
+                try:
+                    res["status"] = int(resb["status"])
+                except:
+                    pass
         except:
             print("Exception running FN:")
             traceback.print_exc()
