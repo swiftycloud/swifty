@@ -7,7 +7,11 @@ begin
 require '/function/script.rb'
 def CallMain(req)
 	res, resp = Main(req)
-	return JSON.generate({:res => 0, :ret => JSON.generate(res)})
+	ret = {:res => 0, :ret => JSON.generate(res)}
+	if resp != nil
+		ret["status"] = resp["status"].to_i
+	end
+	return JSON.generate(ret)
 end
 rescue ScriptError
 def CallMain(req)
