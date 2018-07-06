@@ -130,33 +130,29 @@ func s3AccountDelete(ctx context.Context, account *S3Account) (error) {
 	return nil
 }
 
-func s3IamInsert(ctx context.Context, account *S3Account, policy *S3Policy, user string) (*S3Iam, error) {
-	var iam S3Iam
+func s3IamNew(ctx context.Context, account *S3Account, policy *S3Policy) (*S3Iam, error) {
+	var iam *S3Iam
 	var err error
 
 	id := bson.NewObjectId()
-	insert := bson.M{
-		"_id":			id,
-		"mtime":		current_timestamp(),
-		"state":		S3StateActive,
-
-		"aws-id":		sha256sum([]byte(id.String())),
-		"account-id":		account.ObjID,
-
-		"policy":		*policy,
-		"creation-time":	time.Now().Format(time.RFC3339),
-		"user":			account.IamUser(user),
+	iam = &S3Iam {
+		ObjID:		id,
+		MTime:		current_timestamp(),
+		State:		S3StateActive,
+		AwsID:		sha256sum([]byte(id.String())),
+		AccountObjID:	account.ObjID,
+		Policy:		*policy,
+		CreationTime:	time.Now().Format(time.RFC3339),
+		User:		account.IamUser(id.Hex()),
 	}
-	query := bson.M{ "user": account.IamUser(user), "state": S3StateActive }
-	update := bson.M{ "$setOnInsert": insert }
 
-	log.Debugf("s3: Upserting iam %s", account.IamUser(user))
-	if err = dbS3Upsert(ctx, query, update, &iam); err != nil {
+	log.Debugf("s3: Upserting iam %s", iam.User)
+	if err = dbS3Insert(ctx, iam); err != nil {
 		return nil, err
 	}
 
 	log.Debugf("s3: Upserted %s", infoLong(&iam))
-	return &iam, nil
+	return iam, nil
 }
 
 func s3IamDelete(ctx context.Context, iam *S3Iam) (error) {

@@ -4,6 +4,7 @@ import (
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 
+	"errors"
 	"context"
 	"crypto/rand"
 	"fmt"
@@ -58,23 +59,30 @@ func (akey *S3AccessKey) Expired() bool {
 //
 
 func getEndlessKey(ctx context.Context, account *S3Account, policy *S3Policy) (*S3AccessKey, error) {
-	query := bson.M{ "account-id" : account.ObjID, "state": S3StateActive }
-	if iams, err := s3LookupIam(ctx, query); err == nil {
-		for _, iam := range iams {
-			var akey S3AccessKey
+	var res []*S3AccessKey
 
-			if !policy.isEqual(&iam.Policy) {
-				continue
-			}
+	query := bson.M{"account-id": account.ObjID, "state": S3StateActive,
+			"expiration-timestamp": bson.M{"$eq": S3TimeStampMax }}
+	err := dbS3FindAll(ctx, query, &res)
+	if err != nil {
+		return nil, err
+	}
 
-			query = bson.M{"iam-id": iam.ObjID, "state": S3StateActive,
-				"expiration-timestamp": bson.M{ "$eq": S3TimeStampMax }}
-			if err = dbS3FindOne(ctx, query, &akey); err == nil {
-				return &akey, nil
-			}
+	for _, key := range res {
+		var iam S3Iam
+
+		err = dbS3FindOne(ctx, bson.M{"_id": key.IamObjID, "state": S3StateActive}, &iam)
+		if err != nil {
+			/* Shouldn't happen, but ... */
+			continue
+		}
+
+		if policy.isEqual(&iam.Policy) {
+			return key, nil
 		}
 	}
-	return nil, fmt.Errorf("No suitable iam found")
+
+	return nil, errors.New("Not found")
 }
 
 func genNewAccessKey(ctx context.Context, namespace, bname string, lifetime uint32) (*S3AccessKey, error) {
@@ -107,14 +115,9 @@ func genNewAccessKey(ctx context.Context, namespace, bname string, lifetime uint
 		}
 	}
 
-	iam, err = s3IamInsert(ctx, account, policy, bname)
+	iam, err = s3IamNew(ctx, account, policy)
 	if err != nil {
 		goto out_1
-	}
-
-	if iam.Policy.isEqual(policy) == false {
-		err = fmt.Errorf("s3: Can't genarate iam with policy changed")
-		goto out_2
 	}
 
 	akey = &S3AccessKey {

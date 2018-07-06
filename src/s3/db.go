@@ -101,6 +101,8 @@ func dbConnect(conf *YAMLConf) error {
 	dbColMap[reflect.TypeOf(&S3AccessKey{})] = DBColS3AccessKeys
 	dbColMap[reflect.TypeOf([]S3AccessKey{})] = DBColS3AccessKeys
 	dbColMap[reflect.TypeOf(&[]S3AccessKey{})] = DBColS3AccessKeys
+	dbColMap[reflect.TypeOf([]*S3AccessKey{})] = DBColS3AccessKeys
+	dbColMap[reflect.TypeOf(&[]*S3AccessKey{})] = DBColS3AccessKeys
 	dbColMap[reflect.TypeOf(S3Bucket{})] = DBColS3Buckets
 	dbColMap[reflect.TypeOf(&S3Bucket{})] = DBColS3Buckets
 	dbColMap[reflect.TypeOf([]S3Bucket{})] = DBColS3Buckets
