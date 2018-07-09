@@ -33,6 +33,7 @@
 import boto3
 import os
 import json
+import base64
 
 def Main(req):
     addr = os.getenv('MWARE_S3IMAGES_ADDR')
@@ -42,19 +43,18 @@ def Main(req):
     s3 = boto3.session.Session().client(service_name = 's3',
             aws_access_key_id = akey, aws_secret_access_key = asec, endpoint_url = 'http://' + addr + '/')
 
-    if req.method == 'PUT':
-        s3.put_object(Bucket = 'images', Key = req.claims['cookie'], Body = req.body)
+    if req.method == 'POST':
+        body = base64.b64decode(req.body)
+        s3.put_object(Bucket = 'images', Key = req.claims['cookie'], Body = body)
         return 'OK', None
 
     if req.method == 'GET':
         resp = s3.get_object(Bucket = 'images', Key = req.claims['cookie'])
-        if resp['ContentLength'] <= 0:
-            return 'ERROR', None
-
-        return { 'img': resp['Body'].read().decode('utf-8') }, None
+        body = base64.b64encode(resp['Body'].read()).decode('utf-8')
+        return { 'img': body }, None
 
     if req.method == 'DELETE':
         s3.delete_object(Bucket = 'images', Key = req.claims['cookie'])
         return 'OK', None
 
-    return 'ERROR', None
+    return 'ERROR', { 'status': 503 }
