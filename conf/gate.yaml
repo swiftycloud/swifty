@@ -6,7 +6,6 @@ keystone:
 daemon:
         address: "swy0-web:8686"
         sources:
-                share: "/home/swifty-volume"
                 clone: "/home/swifty/local-sources"
         loglevel: "debug"
         prometheus: "swy0:9012"
@@ -41,5 +40,6 @@ runtime:
                 def: 128
         max-replicas: 32
 wdog:
+        volume: "/home/swifty-volume"
         port: 8687
 swage: "/home/swifty/swage"

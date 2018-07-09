@@ -31,7 +31,7 @@ func fnCodeLatestDir(fn *FunctionDesc) string {
 }
 
 func fnCodeVersionPath(conf *YAMLConf, fn *FunctionDesc, version string) string {
-	return conf.Daemon.Sources.Share + "/" + fnCodeVersionDir(fn, version)
+	return conf.Wdog.Volume + "/" + fnCodeVersionDir(fn, version)
 }
 
 func fnCodeLatestPath(conf *YAMLConf, fn *FunctionDesc) string {
@@ -237,7 +237,7 @@ func updateSources(ctx context.Context, fn *FunctionDesc, src *swyapi.FunctionSo
 }
 
 func GCOldSources(ctx context.Context, fn *FunctionDesc, ver string) {
-	np, err := swy.DropDirPrep(conf.Daemon.Sources.Share, fnCodeVersionDir(fn, ver))
+	np, err := swy.DropDirPrep(conf.Wdog.Volume, fnCodeVersionDir(fn, ver))
 	if err != nil {
 		ctxlog(ctx).Errorf("Leaking %s sources till FN removal (err %s)", ver, err.Error())
 		return
@@ -326,7 +326,7 @@ func cleanRepo(ctx context.Context, fn *FunctionDesc) error {
 		ctxlog(ctx).Debugf("Will remove %s repo clone via %s", fn.SwoId.Str(), td)
 	}
 
-	td, err = swy.DropDir(conf.Daemon.Sources.Share, sd)
+	td, err = swy.DropDir(conf.Wdog.Volume, sd)
 	if err != nil {
 		return err
 	}
