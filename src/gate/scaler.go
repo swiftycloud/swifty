@@ -28,7 +28,7 @@ up:
 		goto up
 	}
 relax:
-	condWaitTmo(fdm.bd.wakeup, SwyDepScaleupRelax)
+	condWaitTmo(fdm.bd.wakeup, DepScaleupRelax)
 
 down:
 	if fdm.bd.goal <= 1 {
@@ -41,7 +41,7 @@ down:
 	}
 
 	fdm.bd.goal--
-	condWaitTmo(fdm.bd.wakeup, SwyDepScaledownStep)
+	condWaitTmo(fdm.bd.wakeup, DepScaledownStep)
 	if fdm.bd.goal == 0 {
 		goto fin
 	}

@@ -442,7 +442,7 @@ func swk8sPodDel(obj interface{}) {
 func waitPodPort(ctx context.Context, addr, port string) error {
 	printed := false
 	wt := 100 * time.Millisecond
-	till := time.Now().Add(SwyPodStartTmo)
+	till := time.Now().Add(PodStartTmo)
 	for {
 		conn, err := net.Dial("tcp", addr + ":" + port)
 		if err == nil {

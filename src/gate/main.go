@@ -40,10 +40,10 @@ func isLite() bool { return Flavor == "lite" }
 
 const (
 	DefaultProject string			= "default"
-	SwyPodStartTmo time.Duration		= 120 * time.Second
-	SwyDepScaleupRelax time.Duration	= 16 * time.Second
-	SwyDepScaledownStep time.Duration	= 8 * time.Second
-	SwyTenantLimitsUpdPeriod time.Duration	= 120 * time.Second
+	PodStartTmo time.Duration		= 120 * time.Second
+	DepScaleupRelax time.Duration		= 16 * time.Second
+	DepScaledownStep time.Duration		= 8 * time.Second
+	TenantLimitsUpdPeriod time.Duration	= 120 * time.Second
 	URLEventID				= "000URL"
 	SwageDir				= "swage"
 	CloneDir				= "clone"
