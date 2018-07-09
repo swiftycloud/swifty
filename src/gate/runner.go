@@ -71,6 +71,8 @@ func doRunConn(ctx context.Context, conn *podConn, cookie, event string, args *s
 	var res *swyapi.SwdFunctionRunResult
 	var err error
 
+	args.Event = event
+
 	if SwdProxyOK {
 		res, err = talkHTTP(conn.Host, strconv.Itoa(conf.Wdog.Port),
 				cookie + "/" + strings.Replace(conn.Addr, ".", "_", -1), args)

@@ -7,6 +7,7 @@ var qfd: Int32
 qfd = 3
 
 struct Request: Codable {
+	var event: String?
 	var args: [String:String]?
 	var body: [Byte]?
 	var claims: [String:String]?

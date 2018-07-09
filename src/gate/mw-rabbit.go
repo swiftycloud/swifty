@@ -107,7 +107,7 @@ func mqEvent(ctx context.Context, mwid, queue, userid, data string) {
 	for _, fn := range funcs {
 		ctxlog(ctx).Debugf("mq: `- [%s]", fn)
 		/* FIXME -- this is synchronous */
-		_, err := doRun(ctx, fn, "mware:" + mwid + ":" + queue,
+		_, err := doRun(ctx, fn, "mq",
 				&swyapi.SwdFunctionRun{Body: data})
 		if err != nil {
 			ctxlog(ctx).Errorf("mq: Error running FN %s", err.Error())

@@ -13,6 +13,7 @@ type SwdFunctionBuild struct {
  * by each wdog runner by smth like "Request"
  */
 type SwdFunctionRun struct {
+	Event		string			`json:"event"`
 	Args		map[string]string	`json:"args,omitempty"`
 	ContentType	string			`json:"content,omitempty"`
 	Body		string			`json:"body,omitempty"`
