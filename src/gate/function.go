@@ -117,7 +117,7 @@ func (fn *FunctionDesc)getURL() string {
 
 func (fn *FunctionDesc)getURLEvt() *swyapi.FunctionEvent {
 	return &swyapi.FunctionEvent {
-		Id:	SwyURLEventID,
+		Id:	URLEventID,
 		Name:	"Inalienable API",
 		Source:	"url",
 		URL:	fn.getURL(),

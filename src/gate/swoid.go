@@ -14,7 +14,7 @@ type SwoId struct {
 
 func makeSwoId(tennant, project, name string) *SwoId {
 	if project == "" {
-		project = SwyDefaultProject
+		project = DefaultProject
 	}
 
 	return &SwoId{Tennant: tennant, Project: project, Name: name}

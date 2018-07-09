@@ -39,12 +39,12 @@ var gateSecPas []byte
 func isLite() bool { return Flavor == "lite" }
 
 const (
-	SwyDefaultProject string		= "default"
+	DefaultProject string			= "default"
 	SwyPodStartTmo time.Duration		= 120 * time.Second
 	SwyDepScaleupRelax time.Duration	= 16 * time.Second
 	SwyDepScaledownStep time.Duration	= 8 * time.Second
 	SwyTenantLimitsUpdPeriod time.Duration	= 120 * time.Second
-	SwyURLEventID				= "000URL"
+	URLEventID				= "000URL"
 	SwageDir				= "swage"
 	CloneDir				= "clone"
 )
@@ -624,7 +624,7 @@ func handleFunctionTrigger(ctx context.Context, w http.ResponseWriter, r *http.R
 	}
 
 	eid := mux.Vars(r)["eid"]
-	if eid == SwyURLEventID {
+	if eid == URLEventID {
 		if r.Method == "DELETE" {
 			return GateErrM(swy.GateBadRequest, "Cannot remove URL from this FN")
 		}
@@ -1067,7 +1067,7 @@ func handleFunctions(ctx context.Context, w http.ResponseWriter, r *http.Request
 	case "GET":
 		project := q.Get("project")
 		if project == "" {
-			project = SwyDefaultProject
+			project = DefaultProject
 		}
 
 		details := (q.Get("details") != "")
@@ -1291,7 +1291,7 @@ func handleMwares(ctx context.Context, w http.ResponseWriter, r *http.Request) *
 	case "GET":
 		project := q.Get("project")
 		if project == "" {
-			project = SwyDefaultProject
+			project = DefaultProject
 		}
 
 		details := (q.Get("details") != "")
@@ -1425,7 +1425,7 @@ func handleDeployments(ctx context.Context, w http.ResponseWriter, r *http.Reque
 
 		project := q.Get("project")
 		if project == "" {
-			project = SwyDefaultProject
+			project = DefaultProject
 		}
 
 		dname := q.Get("name")
@@ -1530,7 +1530,7 @@ func handleAuths(ctx context.Context, w http.ResponseWriter, r *http.Request) *s
 	q := r.URL.Query()
 	project := q.Get("project")
 	if project == "" {
-		project = SwyDefaultProject
+		project = DefaultProject
 	}
 
 	switch r.Method {
