@@ -60,6 +60,11 @@ type FunctionInfo struct {
 	Id		string			`json:"id"`
 }
 
+type FunctionMdat struct {
+	RL		[]uint			`json:"rl"`
+	BR		[]uint			`json:"br"`
+}
+
 //type RunCmd struct {
 //	Exe		string			`json:"exe"`
 //	Args		[]interface{}		`json:"args,omitempty"`

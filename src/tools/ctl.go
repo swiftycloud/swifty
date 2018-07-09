@@ -550,6 +550,18 @@ func function_info(args []string, opts [16]string) {
 	}
 }
 
+func function_minfo(args []string, opts [16]string) {
+	var ifo swyapi.FunctionMdat
+	args[0] = resolve_fn(args[0])
+	make_faas_req1("GET", "functions/" + args[0] + "/mdat", http.StatusOK, nil, &ifo)
+	if len(ifo.RL) != 0 {
+		fmt.Printf("RL: %d/%d (%d left)\n", ifo.RL[1], ifo.RL[2], ifo.RL[0])
+	}
+	if len(ifo.BR) != 0 {
+		fmt.Printf("BR: %d:%d -> %d\n", ifo.BR[0], ifo.BR[1], ifo.BR[2])
+	}
+}
+
 func check_lang(args []string, opts [16]string) {
 	l := detect_language(opts[0], "code")
 	fmt.Printf("%s\n", l)
@@ -1257,6 +1269,7 @@ const (
 
 	CMD_FL string		= "fl"
 	CMD_FI string		= "fi"
+	CMD_FIM string		= "fim"
 	CMD_FA string		= "fa"
 	CMD_FD string		= "fd"
 	CMD_FU string		= "fu"
@@ -1306,6 +1319,7 @@ var cmdOrder = []string {
 
 	CMD_FL,
 	CMD_FI,
+	CMD_FIM,
 	CMD_FA,
 	CMD_FD,
 	CMD_FU,
@@ -1363,6 +1377,7 @@ var cmdMap = map[string]*cmdDesc {
 	CMD_PS:		&cmdDesc{ call: list_projects,	  opts: flag.NewFlagSet(CMD_PS, flag.ExitOnError) },
 	CMD_FL:		&cmdDesc{ call: function_list,	  opts: flag.NewFlagSet(CMD_FL, flag.ExitOnError) },
 	CMD_FI:		&cmdDesc{ call: function_info,	  opts: flag.NewFlagSet(CMD_FI, flag.ExitOnError) },
+	CMD_FIM:	&cmdDesc{ call: function_minfo,	  opts: flag.NewFlagSet(CMD_FIM, flag.ExitOnError) },
 	CMD_FA:		&cmdDesc{ call: function_add,	  opts: flag.NewFlagSet(CMD_FA, flag.ExitOnError) },
 	CMD_FD:		&cmdDesc{ call: function_del,	  opts: flag.NewFlagSet(CMD_FD, flag.ExitOnError) },
 	CMD_FU:		&cmdDesc{ call: function_update,  opts: flag.NewFlagSet(CMD_FU, flag.ExitOnError) },
@@ -1437,6 +1452,7 @@ func main() {
 	cmdMap[CMD_FL].opts.StringVar(&opts[1], "label", "", "Labels, comma-separated")
 	bindCmdUsage(CMD_FL,	[]string{}, "List functions", true)
 	bindCmdUsage(CMD_FI,	[]string{"NAME"}, "Function info", true)
+	bindCmdUsage(CMD_FIM,	[]string{"NAME"}, "Function memdat info", true)
 	cmdMap[CMD_FA].opts.StringVar(&opts[0], "lang", "auto", "Language")
 	cmdMap[CMD_FA].opts.StringVar(&opts[1], "src", ".", "Source file")
 	cmdMap[CMD_FA].opts.StringVar(&opts[2], "mw", "", "Mware to use, comma-separated")

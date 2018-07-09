@@ -124,6 +124,19 @@ func (fn *FunctionDesc)getURLEvt() *swyapi.FunctionEvent {
 	}
 }
 
+func (fn *FunctionDesc)toMInfo(ctx context.Context) *swyapi.FunctionMdat {
+	var fid swyapi.FunctionMdat
+	fdm := memdGetCond(fn.Cookie)
+	if fdm != nil {
+		if fdm.crl != nil {
+			fid.RL = fdm.crl.If()
+		}
+
+		fid.BR = []uint { uint(fdm.bd.rover[0]), uint(fdm.bd.rover[1]), uint(fdm.bd.goal) }
+	}
+	return &fid
+}
+
 func (fn *FunctionDesc)toInfo(ctx context.Context, details bool, periods int) (*swyapi.FunctionInfo, *swyapi.GateErr) {
 	fi := &swyapi.FunctionInfo {
 		Id:		fn.ObjID.Hex(),

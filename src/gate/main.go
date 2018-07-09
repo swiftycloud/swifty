@@ -1167,6 +1167,21 @@ func handleFunctions(ctx context.Context, w http.ResponseWriter, r *http.Request
 	return nil
 }
 
+func handleFunctionMdat(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
+	fn, cerr := fnFindForReq(ctx, r)
+	if cerr != nil {
+		return cerr
+	}
+
+	fid := fn.toMInfo(ctx)
+	err := swyhttp.MarshalAndWrite(w, fid)
+	if err != nil {
+		return GateErrE(swy.GateBadResp, err)
+	}
+
+	return nil
+}
+
 func handleFunction(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
 	fn, cerr := fnFindForReq(ctx, r)
 	if cerr != nil {
@@ -1827,6 +1842,7 @@ func main() {
 	r.Handle("/v1/functions/{fid}/s3buckets",  genReqHandler(handleFunctionS3Bs)).Methods("GET", "POST", "OPTIONS")
 	r.Handle("/v1/functions/{fid}/s3buckets/{bname}",  genReqHandler(handleFunctionS3B)).Methods("DELETE", "OPTIONS")
 	r.Handle("/v1/functions/{fid}/wait",	genReqHandler(handleFunctionWait)).Methods("POST", "OPTIONS")
+	r.Handle("/v1/functions/{fid}/mdat",	genReqHandler(handleFunctionMdat)).Methods("GET")
 
 	r.Handle("/v1/middleware",		genReqHandler(handleMwares)).Methods("GET", "POST", "OPTIONS")
 	r.Handle("/v1/middleware/{mid}",	genReqHandler(handleMware)).Methods("GET", "DELETE", "OPTIONS")
