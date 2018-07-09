@@ -140,5 +140,5 @@ func balancerGetConnAny(ctx context.Context, cookie string, fdm *FnMemData) (*po
 }
 
 func balancerPutConn(fdm *FnMemData) {
-	atomic.AddUint32(&fdm.bd.rover[1])
+	atomic.AddUint32(&fdm.bd.rover[1], 1)
 }
