@@ -47,6 +47,8 @@ const (
 	SwyDepScaledownStep time.Duration	= 8 * time.Second
 	SwyTenantLimitsUpdPeriod time.Duration	= 120 * time.Second
 	SwyURLEventID				= "000URL"
+	SwageDir				= "swage"
+	CloneDir				= "clone"
 )
 
 var glog *zap.SugaredLogger
@@ -56,13 +58,8 @@ type YAMLConfSwd struct {
 	Port		int			`yaml:"port"`
 }
 
-type YAMLConfSources struct {
-	Clone		string			`yaml:"clone"`
-}
-
 type YAMLConfDaemon struct {
 	Addr		string			`yaml:"address"`
-	Sources		YAMLConfSources		`yaml:"sources"`
 	LogLevel	string			`yaml:"loglevel"`
 	Prometheus	string			`yaml:"prometheus"`
 	HTTPS		*swyhttp.YAMLConfHTTPS	`yaml:"https,omitempty"`
@@ -127,13 +124,13 @@ type YAMLConfRt struct {
 }
 
 type YAMLConf struct {
+	Home		string			`yaml:"home"`
 	DB		string			`yaml:"db"`
 	Daemon		YAMLConfDaemon		`yaml:"daemon"`
 	Keystone	YAMLConfKeystone	`yaml:"keystone"`
 	Mware		YAMLConfMw		`yaml:"middleware"`
 	Runtime		YAMLConfRt		`yaml:"runtime"`
 	Wdog		YAMLConfSwd		`yaml:"wdog"`
-	Swage		string			`yaml:"swage"`
 }
 
 var conf YAMLConf

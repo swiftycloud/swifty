@@ -39,7 +39,7 @@ func fnCodeLatestPath(conf *YAMLConf, fn *FunctionDesc) string {
 }
 
 func fnRepoClone(fn *FunctionDesc) string {
-	return conf.Daemon.Sources.Clone + "/" + fnCodeDir(fn)
+	return conf.Home + "/" + CloneDir + "/" + fnCodeDir(fn)
 }
 
 func checkoutSources(ctx context.Context, fn *FunctionDesc) error {
@@ -203,7 +203,7 @@ func swageFile(ctx context.Context, fn *FunctionDesc) error {
 		return errors.New("Bad swage name")
 	}
 
-	fnCode, err := ioutil.ReadFile(conf.Swage + "/" + fn.Code.Lang + "/" + tf + ".sw")
+	fnCode, err := ioutil.ReadFile(conf.Home + "/" + SwageDir + "/" + fn.Code.Lang + "/" + tf + ".sw")
 	if err != nil {
 		return errors.New("Can't read swage")
 	}
@@ -317,7 +317,7 @@ func updateFileFromReq(ctx context.Context, fn *FunctionDesc, src *swyapi.Functi
 func cleanRepo(ctx context.Context, fn *FunctionDesc) error {
 	sd := fnCodeDir(fn)
 
-	td, err := swy.DropDir(conf.Daemon.Sources.Clone, sd)
+	td, err := swy.DropDir(conf.Home + "/" + CloneDir, sd)
 	if err != nil {
 		return err
 	}

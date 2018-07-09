@@ -1,12 +1,11 @@
 ---
+home: "/home/swifty"
 db: "swygate:DBPASS@127.0.0.1:27017"
 keystone:
         address: "swy0:5000"
         domain: "swifty"
 daemon:
         address: "swy0-web:8686"
-        sources:
-                clone: "/home/swifty/local-sources"
         loglevel: "debug"
         prometheus: "swy0:9012"
         https:
@@ -42,4 +41,3 @@ runtime:
 wdog:
         volume: "/home/swifty-volume"
         port: 8687
-swage: "/home/swifty/swage"
