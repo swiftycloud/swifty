@@ -184,7 +184,6 @@ func statsUpdate(fmd *FnMemData, op *statsOpaque, res *swyapi.SwdFunctionRunResu
 	gateCalls.WithLabelValues("calls").Inc()
 
 	fmd.lock.Lock()
-	fmd.bd.rover[1]++
 	fmd.stats.Called++
 	if res.Code != 0 {
 		if res.Code == swyhttp.StatusTimeoutOccurred {

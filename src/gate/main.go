@@ -1013,7 +1013,7 @@ func handleFunctionCall(w http.ResponseWriter, r *http.Request) {
 		goto out
 	}
 
-
+	defer balancerPutConn(fmd)
 	args = makeArgs(sopq, r)
 
 	if fmd.ac != nil {
