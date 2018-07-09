@@ -41,8 +41,6 @@ func isLite() bool { return Flavor == "lite" }
 const (
 	SwyDefaultProject string		= "default"
 	SwyPodStartTmo time.Duration		= 120 * time.Second
-	SwyBodyArg string			= "_SWY_BODY_"
-	SwyJWTClaimsArg string			= "_SWY_JWT_CLAIMS_"
 	SwyDepScaleupRelax time.Duration	= 16 * time.Second
 	SwyDepScaledownStep time.Duration	= 8 * time.Second
 	SwyTenantLimitsUpdPeriod time.Duration	= 120 * time.Second
