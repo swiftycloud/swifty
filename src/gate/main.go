@@ -98,7 +98,7 @@ type YAMLConfPostgres struct {
 
 type YAMLConfS3 struct {
 	Creds		string			`yaml:"creds"`
-	AdminPort	string			`yaml:"admport"`
+	API		string			`yaml:"api"`
 	Notify		string			`yaml:"notify"`
 	HiddenKeyTmo	uint32			`yaml:"hidden-key-timeout"`
 	c		*swy.XCreds

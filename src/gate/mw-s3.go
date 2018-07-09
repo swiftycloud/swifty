@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"context"
-	"strings"
 	"net/http"
 	"encoding/json"
 	"gopkg.in/mgo.v2/bson"
@@ -14,7 +13,7 @@ import (
 )
 
 func s3KeyGen(conf *YAMLConfS3, namespace, bucket string, lifetime uint32) (string, string, error) {
-	addr := conf.c.AddrP(conf.AdminPort)
+	addr := conf.c.Addr()
 
 	resp, err := swyhttp.MarshalAndPost(
 		&swyhttp.RestReq{
@@ -47,7 +46,7 @@ func s3KeyGen(conf *YAMLConfS3, namespace, bucket string, lifetime uint32) (stri
 }
 
 func s3KeyDel(conf *YAMLConfS3, key string) error {
-	addr := conf.c.AddrP(conf.AdminPort)
+	addr := conf.c.Addr()
 
 	_, err := swyhttp.MarshalAndPost(
 		&swyhttp.RestReq{
@@ -78,7 +77,7 @@ const (
 )
 
 func s3Subscribe(ctx context.Context, conf *YAMLConfMw, evt *FnEventS3) error {
-	addr := conf.S3.c.AddrP(conf.S3.AdminPort)
+	addr := conf.S3.c.Addr()
 
 	_, err := swyhttp.MarshalAndPost(
 		&swyhttp.RestReq{
@@ -100,7 +99,7 @@ func s3Subscribe(ctx context.Context, conf *YAMLConfMw, evt *FnEventS3) error {
 }
 
 func s3Unsubscribe(ctx context.Context, conf *YAMLConfMw, evt *FnEventS3) error {
-	addr := conf.S3.c.AddrP(conf.S3.AdminPort)
+	addr := conf.S3.c.Addr()
 
 	_, err := swyhttp.MarshalAndPost(
 		&swyhttp.RestReq{
@@ -191,9 +190,17 @@ func s3EventStop(ctx context.Context, evt *FnEventDesc) error {
 	return err
 }
 
+func s3Endpoint(conf *YAMLConfS3, public bool) string {
+	/*
+	 * XXX 2 -- functions may go directly to S3 host, but certificates
+	 * and routing may kill us
+	 */
+	return conf.API
+}
+
 func makeS3Envs(conf *YAMLConfS3, bucket, key, skey string) [][2]string {
 	var ret [][2]string
-	ret = append(ret, mkEnvId(bucket, "s3", "ADDR", conf.c.Addr()))
+	ret = append(ret, mkEnvId(bucket, "s3", "ADDR", s3Endpoint(conf, false)))
 	ret = append(ret, mkEnvId(bucket, "s3", "KEY", key))
 	ret = append(ret, mkEnvId(bucket, "s3", "SECRET", skey))
 	return ret
@@ -215,10 +222,7 @@ func GenBucketKeysS3(ctx context.Context, conf *YAMLConfMw, fid *SwoId, bucket s
 func mwareGetS3Creds(ctx context.Context, conf *YAMLConf, acc *swyapi.S3Access) (*swyapi.S3Creds, *swyapi.GateErr) {
 	creds := &swyapi.S3Creds{}
 
-	/* XXX -- for now pretend, that s3 listens on the same address as gate does */
-	gateAP := strings.Split(conf.Daemon.Addr, ":")
-	creds.Endpoint = gateAP[0] + ":" + conf.Mware.S3.c.Port
-
+	creds.Endpoint = s3Endpoint(&conf.Mware.S3, true)
 	creds.Expires = acc.Lifetime
 
 	for _, acc := range(acc.Access) {
