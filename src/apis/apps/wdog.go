@@ -14,6 +14,7 @@ type SwdFunctionBuild struct {
  */
 type SwdFunctionRun struct {
 	Args		map[string]string	`json:"args,omitempty"`
+	ContentType	string			`json:"content,omitempty"`
 	Body		string			`json:"body,omitempty"`
 	Claims		map[string]interface{}	`json:"claims,omitempty"` // JWT
 	Method		string			`json:"method,omitempty"`

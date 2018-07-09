@@ -877,10 +877,26 @@ func makeArgs(sopq *statsOpaque, r *http.Request) *swyapi.SwdFunctionRun {
 	if err == nil && len(body) > 0 {
 		ct := r.Header.Get("Content-Type")
 		ctp := strings.SplitN(ct, ";", 2)
-		if len(ctp) > 0 && ctp[0] == "application/json" {
-			args.Body = string(body)
-			sopq.bodySz = len(body)
-		} /* XXX What else? */
+		if len(ctp) > 0 {
+			/*
+			 * Some comments on the content/type
+			 * THe text/plain type is simple
+			 * The app/json type means, there's an object
+			 * inside and we can decode it rigt in the
+			 * runner. On the other hand, decoding the
+			 * json into a struct, rather into a generic
+			 * map is better for compile-able languages.
+			 * Any binary type is better to be handled
+			 * with asyncs, as binary data can be big and
+			 * tranferring is back and firth is not good.
+			 */
+			switch ctp[0] {
+			case "application/json", "text/plain":
+				args.ContentType = ctp[0]
+				args.Body = string(body)
+				sopq.bodySz = len(body)
+			}
+		}
 	}
 
 	args.Method = r.Method
