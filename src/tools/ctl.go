@@ -953,7 +953,7 @@ func function_logs(args []string, opts [16]string) {
 	make_faas_req1("GET", "functions/" + args[0] + "/logs", http.StatusOK, nil, &res)
 
 	for _, le := range res {
-		fmt.Printf("%36s%8s: %s\n", le.Ts, le.Event, le.Text)
+		fmt.Printf("%36s%12s: %s\n", le.Ts, le.Event, le.Text)
 	}
 }
 

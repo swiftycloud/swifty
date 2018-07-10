@@ -13,9 +13,17 @@ func condWaitTmo(cond *sync.Cond, tmo time.Duration) {
 	d.Stop()
 }
 
+func scalerLog(fdm *FnMemData, msg string) {
+	ctx, done := mkContext("::scaler")
+	defer done(ctx)
+
+	ctxlog(ctx).Debugf("Scale %s %s to %d", fdm.depname, msg, fdm.bd.goal)
+	logSaveEvent(ctx, fdm.fnid, fmt.Sprintf("scale %s -> %d", msg, fdm.bd.goal))
+}
+
 func balancerFnScaler(fdm *FnMemData) {
 up:
-	glog.Debugf("Scale %s up to %d", fdm.depname, fdm.bd.goal)
+	scalerLog(fdm, "up")
 	goal := swk8sDepScaleUp(fdm.depname, fdm.bd.goal)
 
 	fdm.lock.Lock()
@@ -54,7 +62,7 @@ down:
 	}
 
 	fdm.lock.Unlock()
-	glog.Debugf("Scale %s down to %d", fdm.depname, fdm.bd.goal)
+	scalerLog(fdm, "down")
 	goal = swk8sDepScaleDown(fdm.depname, fdm.bd.goal)
 	fdm.lock.Lock()
 

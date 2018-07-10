@@ -15,6 +15,7 @@ type FnMemData struct {
 	public	bool
 	mem	uint64
 	depname	string
+	fnid	string
 	ac	*AuthCtx
 	bd	BalancerDat
 	crl	*xratelimit.RL
@@ -180,6 +181,8 @@ func fndatGetOrInit(ctx context.Context, cookie string, fn *FunctionDesc, forRem
 	nret.mem = fn.Size.Mem
 	nret.public = fn.isURL()
 	nret.depname = fn.DepName()
+	nret.fnid = fn.Cookie
+
 	if fn.AuthCtx != "" && !forRemoval {
 		nret.ac, err = authCtxGet(ctx, fn.SwoId, fn.AuthCtx)
 		if err != nil {

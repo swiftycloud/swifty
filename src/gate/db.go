@@ -368,20 +368,32 @@ func dbFnStatsDrop(ctx context.Context, cookie string, st *FnStats) error {
 
 func logSaveResult(ctx context.Context, fnCookie, event, stdout, stderr string) {
 	c := gctx(ctx).S.DB(DBStateDB).C(DBColLogs)
-	text := fmt.Sprintf("out: [%s], err: [%s]", stdout, stderr)
-	c.Insert(DBLogRec{
-		FnId:		fnCookie,
-		Event:		event,
-		Time:		time.Now(),
-		Text:		text,
-	})
+	tm := time.Now()
+
+	if stdout != "" {
+		c.Insert(DBLogRec{
+			FnId:		fnCookie,
+			Event:		"stdout." + event,
+			Time:		tm,
+			Text:		stdout,
+		})
+	}
+
+	if stderr != "" {
+		c.Insert(DBLogRec{
+			FnId:		fnCookie,
+			Event:		"stderr." + event,
+			Time:		tm,
+			Text:		stderr,
+		})
+	}
 }
 
-func logSaveEvent(ctx context.Context, fn *FunctionDesc, event, text string) {
+func logSaveEvent(ctx context.Context, fnid, text string) {
 	c := gctx(ctx).S.DB(DBStateDB).C(DBColLogs)
 	c.Insert(DBLogRec{
-		FnId:		fn.Cookie,
-		Event:		event,
+		FnId:		fnid,
+		Event:		"event",
 		Time:		time.Now(),
 		Text:		text,
 	})
