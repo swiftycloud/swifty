@@ -52,7 +52,7 @@ const (
 var glog *zap.SugaredLogger
 
 type YAMLConfSwd struct {
-	Volume		string			`yaml:"share"`
+	Volume		string			`yaml:"volume"`
 	Port		int			`yaml:"port"`
 }
 
