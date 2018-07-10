@@ -41,3 +41,4 @@ runtime:
 wdog:
         volume: "/home/swifty-volume"
         port: 8687
+logs-keep: 1

@@ -616,6 +616,25 @@ func dbRemoveEvent(ctx context.Context, ed *FnEventDesc) error {
 	return gctx(ctx).S.DB(DBStateDB).C(DBColEvents).Remove(bson.M{"_id": ed.ObjID})
 }
 
+func LogsCleanerInit(ctx context.Context, conf *YAMLConf) error {
+	if conf.LogsKeepDays > 0 {
+		ctxlog(ctx).Debugf("Start logs cleaner (%d days old)", conf.LogsKeepDays)
+		go func() {
+			for {
+				time.Sleep(LogsCleanPeriod)
+
+				ctx, done := mkContext("::logsgc")
+				c := gctx(ctx).S.DB(DBStateDB).C(DBColLogs)
+				dur := time.Now().AddDate(0, 0, -conf.LogsKeepDays)
+				c.RemoveAll(bson.M{"ts": bson.M{"$lt": dur }})
+				ctxlog(ctx).Debugf("Cleaned logs < %s", dur.String())
+				done(ctx)
+			}
+		}()
+	}
+	return nil
+}
+
 func dbConnect(conf *YAMLConf) error {
 	var err error
 

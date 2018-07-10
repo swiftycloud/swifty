@@ -47,6 +47,7 @@ const (
 	URLEventID				= "000URL"
 	SwageDir				= "swage"
 	CloneDir				= "clone"
+	LogsCleanPeriod				= 30 * 60 * time.Second
 )
 
 var glog *zap.SugaredLogger
@@ -129,6 +130,7 @@ type YAMLConf struct {
 	Mware		YAMLConfMw		`yaml:"middleware"`
 	Runtime		YAMLConfRt		`yaml:"runtime"`
 	Wdog		YAMLConfSwd		`yaml:"wdog"`
+	LogsKeepDays	int			`yaml:"logs-keep"`
 }
 
 var conf YAMLConf
@@ -1892,6 +1894,11 @@ func main() {
 	err = DeployInit(ctx, &conf)
 	if err != nil {
 		glog.Fatalf("Can't set up deploys: %s", err.Error())
+	}
+
+	err = LogsCleanerInit(ctx, &conf)
+	if err != nil {
+		glog.Fatalf("Can't start logs cleaner: %s", err.Error())
 	}
 
 	err = PrometheusInit(ctx, &conf)
