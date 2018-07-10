@@ -402,13 +402,8 @@ func logSaveEvent(ctx context.Context, fnid, text string) {
 func logGetFor(ctx context.Context, id *SwoId) ([]DBLogRec, error) {
 	var logs []DBLogRec
 	c := gctx(ctx).S.DB(DBStateDB).C(DBColLogs)
-	err := c.Find(bson.M{"fnid": id.Cookie()}).All(&logs)
+	err := c.Find(bson.M{"fnid": id.Cookie()}).Sort("ts").All(&logs)
 	return logs, err
-}
-
-func logGetCalls(ctx context.Context, id *SwoId) (int, error) {
-	c := gctx(ctx).S.DB(DBStateDB).C(DBColLogs)
-	return c.Find(bson.M{"fnid": id.Cookie(), "event": "run"}).Count()
 }
 
 func logRemove(ctx context.Context, fn *FunctionDesc) error {
