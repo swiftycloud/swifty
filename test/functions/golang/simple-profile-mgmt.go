@@ -80,7 +80,7 @@ func Main(rq *Request) (interface{}, *Responce) {
 		return pError(err.Error()), nil
 	}
 
-	if rq.Method == "PUT" {
+	if rq.Method == "POST" {
 		/*
 		 * The defaul auth function generates "cookie" field in the
 		 * claims that contain unique user ID. This ID is now the key
@@ -95,7 +95,7 @@ func Main(rq *Request) (interface{}, *Responce) {
 		return "OK", nil
 	}
 
-	if rq.Method == "POST" {
+	if rq.Method == "PUT" {
 		profile["cookie"] = rq.Claims["cookie"]
 		err = db.C("data").Update(bson.M{"cookie": rq.Claims["cookie"]},
 				bson.M{"$set": profile})
