@@ -950,7 +950,13 @@ func function_code(args []string, opts [16]string) {
 func function_logs(args []string, opts [16]string) {
 	var res []swyapi.FunctionLogEntry
 	args[0] = resolve_fn(args[0])
-	make_faas_req1("GET", "functions/" + args[0] + "/logs", http.StatusOK, nil, &res)
+
+	fa := []string{}
+	if opts[0] != "" {
+		fa = append(fa, "last=" + opts[0])
+	}
+
+	make_faas_req1("GET", url("functions/" + args[0] + "/logs", fa), http.StatusOK, nil, &res)
 
 	for _, le := range res {
 		fmt.Printf("%36s%12s: %s\n", le.Ts, le.Event, le.Text)
@@ -1474,6 +1480,7 @@ func main() {
 	cmdMap[CMD_FU].opts.StringVar(&opts[8], "s3b", "", "Bucket to use, +/- to add/remove")
 	bindCmdUsage(CMD_FU,	[]string{"NAME"}, "Update a function", true)
 	bindCmdUsage(CMD_FD,	[]string{"NAME"}, "Delete a function", true)
+	cmdMap[CMD_FLOG].opts.StringVar(&opts[0], "last", "", "Last N 'duration' period")
 	bindCmdUsage(CMD_FLOG,	[]string{"NAME"}, "Show function logs", true)
 	bindCmdUsage(CMD_FCOD,  []string{"NAME"}, "Show function code", true)
 	bindCmdUsage(CMD_FON,	[]string{"NAME"}, "Activate function", true)

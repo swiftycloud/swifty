@@ -820,6 +820,21 @@ func handleFunctionStats(ctx context.Context, w http.ResponseWriter, r *http.Req
 	return nil
 }
 
+func getSince(r *http.Request) (*time.Time, *swyapi.GateErr) {
+	s := r.URL.Query().Get("last")
+	if s == "" {
+		return nil, nil
+	}
+
+	d, err := time.ParseDuration(s)
+	if err != nil {
+		return nil, GateErrE(swy.GateBadRequest, err)
+	}
+
+	t := time.Now().Add(-d)
+	return &t, nil
+}
+
 func handleFunctionLogs(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
 	fn, cerr := fnFindForReq(ctx, r)
 	if cerr != nil {
@@ -828,7 +843,12 @@ func handleFunctionLogs(ctx context.Context, w http.ResponseWriter, r *http.Requ
 
 	switch r.Method {
 	case "GET":
-		logs, err := logGetFor(ctx, &fn.SwoId)
+		since, cerr := getSince(r)
+		if cerr != nil {
+			return cerr
+		}
+
+		logs, err := logGetFor(ctx, &fn.SwoId, since)
 		if err != nil {
 			return GateErrD(err)
 		}

@@ -311,6 +311,11 @@ paths:
         type: string
         required: true
         description: Function ID
+      - in: query
+        name: last
+        type: string
+        required: false
+        description: "Get logs for last pariod. Format is ([0-9]+h)?([0-9]+m)?([0-9]+s)?"
     get:
       tags:
         - function

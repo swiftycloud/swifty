@@ -399,10 +399,14 @@ func logSaveEvent(ctx context.Context, fnid, text string) {
 	})
 }
 
-func logGetFor(ctx context.Context, id *SwoId) ([]DBLogRec, error) {
+func logGetFor(ctx context.Context, id *SwoId, since *time.Time) ([]DBLogRec, error) {
 	var logs []DBLogRec
 	c := gctx(ctx).S.DB(DBStateDB).C(DBColLogs)
-	err := c.Find(bson.M{"fnid": id.Cookie()}).Sort("ts").All(&logs)
+	q := bson.M{"fnid": id.Cookie()}
+	if since != nil {
+		q["ts"] = bson.M{"$gt": since}
+	}
+	err := c.Find(q).Sort("ts").All(&logs)
 	return logs, err
 }
 
