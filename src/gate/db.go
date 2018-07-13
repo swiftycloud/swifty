@@ -63,6 +63,10 @@ func dbRemoveId(ctx context.Context, o interface{}, id bson.ObjectId) error {
 	return dbRemove(ctx, o, bson.M{"_id": id})
 }
 
+func dbInsert(ctx context.Context, o interface{}) error {
+	return gctx(ctx).S.DB(DBStateDB).C(dbColl(o)).Insert(o)
+}
+
 type DBLogRec struct {
 	FnId		string		`bson:"fnid"`
 	Event		string		`bson:"event"`
@@ -116,11 +120,6 @@ func dbMwareCount(ctx context.Context) (map[string]int, error) {
 	}
 
 	return ret, nil
-}
-
-func dbMwareAdd(ctx context.Context, desc *MwareDesc) error {
-	c := gctx(ctx).S.DB(DBStateDB).C(DBColMware)
-	return c.Insert(desc)
 }
 
 func dbMwareUpdateAdded(ctx context.Context, desc *MwareDesc) error {
@@ -284,11 +283,6 @@ func dbFuncUpdatePulled(ctx context.Context, fn *FunctionDesc, update bson.M, ol
 
 func dbFuncUpdateOne(ctx context.Context, fn *FunctionDesc, update bson.M) error {
 	return dbFuncUpdate(ctx, bson.M{"_id": fn.ObjID}, bson.M{"$set": update })
-}
-
-func dbFuncAdd(ctx context.Context, desc *FunctionDesc) error {
-	c := gctx(ctx).S.DB(DBStateDB).C(DBColFunc)
-	return c.Insert(desc)
 }
 
 func dbTenStatsGet(ctx context.Context, tenant string, st *TenStats) error {
@@ -575,10 +569,6 @@ func dbProjectListAll(ctx context.Context, ten string) (fn []string, mw []string
 	return
 }
 
-func dbDeployAdd(ctx context.Context, dep *DeployDesc) error {
-	return gctx(ctx).S.DB(DBStateDB).C(DBColDeploy).Insert(dep)
-}
-
 func dbDeployGet(ctx context.Context, q bson.M) (*DeployDesc, error) {
 	var dep DeployDesc
 	err := gctx(ctx).S.DB(DBStateDB).C(DBColDeploy).Find(q).One(&dep)
@@ -617,10 +607,6 @@ func dbListEvents(ctx context.Context, q bson.M) ([]FnEventDesc, error) {
 	return ret, err
 }
 
-func dbAddEvent(ctx context.Context, ed *FnEventDesc) error {
-	return gctx(ctx).S.DB(DBStateDB).C(DBColEvents).Insert(ed)
-}
-
 func dbFindEvent(ctx context.Context, id string) (*FnEventDesc, error) {
 	var ed FnEventDesc
 	err := gctx(ctx).S.DB(DBStateDB).C(DBColEvents).Find(bson.M{"_id": bson.ObjectIdHex(id)}).One(&ed)
@@ -650,11 +636,6 @@ func dbRepoGetOne(ctx context.Context, q bson.M) (*RepoDesc, error) {
 	v := RepoDesc{}
 	err := c.Find(q).One(&v)
 	return &v, err
-}
-
-func dbRepoAdd(ctx context.Context, rd *RepoDesc) error {
-	c := gctx(ctx).S.DB(DBStateDB).C(DBColRepos)
-	return c.Insert(rd)
 }
 
 func dbRepoDeactivate(ctx context.Context, rd *RepoDesc) error {

@@ -245,7 +245,7 @@ func (fn *FunctionDesc)Add(ctx context.Context, conf *YAMLConf) (string, *swyapi
 
 	fn.ObjID = bson.NewObjectId()
 	fn.State = swy.DBFuncStateIni
-	err = dbFuncAdd(ctx, fn)
+	err = dbInsert(ctx, fn)
 	if err != nil {
 		ctxlog(ctx).Errorf("Can't add function %s: %s", fn.SwoId.Str(), err.Error())
 		return "", GateErrD(err)

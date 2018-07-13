@@ -167,7 +167,7 @@ func eventsAdd(ctx context.Context, fn *FunctionDesc, evt *swyapi.FunctionEvent)
 		return "", GateErrM(swy.GateBadRequest, "Unsupported event type")
 	}
 
-	err = dbAddEvent(ctx, ed)
+	err = dbInsert(ctx, ed)
 	if err != nil {
 		return "", GateErrD(err)
 	}

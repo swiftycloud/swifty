@@ -166,7 +166,7 @@ func (dep *DeployDesc)getItems(items []*swyapi.DeployItem) *swyapi.GateErr {
 
 func deployStart(ctx context.Context, dep *DeployDesc) (string, *swyapi.GateErr) {
 	dep.ObjID = bson.NewObjectId()
-	err := dbDeployAdd(ctx, dep)
+	err := dbInsert(ctx, dep)
 	if err != nil {
 		return "", GateErrD(err)
 	}

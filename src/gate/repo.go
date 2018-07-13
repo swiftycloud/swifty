@@ -77,7 +77,7 @@ func (rd *RepoDesc)Attach(ctx context.Context, conf *YAMLConf) (string, *swyapi.
 	rd.ObjID = bson.NewObjectId()
 	rd.State = swy.DBRepoStateCln
 
-	err := dbRepoAdd(ctx, rd)
+	err := dbInsert(ctx, rd)
 	if err != nil {
 		return "", GateErrD(err)
 	}

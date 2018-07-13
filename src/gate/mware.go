@@ -216,7 +216,7 @@ func (mwd *MwareDesc)Setup(ctx context.Context, conf *YAMLConfMw) (string, *swya
 	ctxlog(ctx).Debugf("set up wmare %s:%s", mwd.SwoId.Str(), mwd.MwareType)
 
 	mwd.ObjID = bson.NewObjectId()
-	err = dbMwareAdd(ctx, mwd)
+	err = dbInsert(ctx, mwd)
 	if err != nil {
 		ctxlog(ctx).Errorf("Can't add mware %s: %s", mwd.SwoId.Str(), err.Error())
 		return "", GateErrD(err)
