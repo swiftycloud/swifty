@@ -232,6 +232,14 @@ out:
 	http.Error(w, err.Error(), resp)
 }
 
+func commonReq(project string, labels []string) bson.D {
+	q := bson.D{{"project", project}}
+	for _, l := range labels {
+		q = append(q, bson.DocElem{"labels", l})
+	}
+	return q
+}
+
 func handleProjectDel(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
 	var par swyapi.ProjectDel
 	var fns []*FunctionDesc
@@ -246,7 +254,7 @@ func handleProjectDel(ctx context.Context, w http.ResponseWriter, r *http.Reques
 
 	id = ctxSwoId(ctx, par.Project, "")
 
-	fns, err = dbFuncListProj(ctx, id, []string{})
+	err = dbFindAllCommon(ctx, commonReq(par.Project, []string{}), &fns)
 	if err != nil {
 		return GateErrD(err)
 	}
@@ -259,7 +267,7 @@ func handleProjectDel(ctx context.Context, w http.ResponseWriter, r *http.Reques
 		}
 	}
 
-	mws, err = dbMwareListProj(ctx, id, "", []string{})
+	err = dbFindAllCommon(ctx, commonReq(par.Project, []string{}), &mws)
 	if err != nil {
 		return GateErrD(err)
 	}
@@ -1103,7 +1111,7 @@ func handleFunctions(ctx context.Context, w http.ResponseWriter, r *http.Request
 
 		fname := q.Get("name")
 		if fname == "" {
-			fns, err = dbFuncListProj(ctx, ctxSwoId(ctx, project, ""), q["label"])
+			err = dbFindAllCommon(ctx, commonReq(project, q["label"]), &fns)
 			if err != nil {
 				return GateErrD(err)
 			}
@@ -1325,7 +1333,11 @@ func handleMwares(ctx context.Context, w http.ResponseWriter, r *http.Request) *
 
 		mname := q.Get("name")
 		if mname == "" {
-			mws, err = dbMwareListProj(ctx, ctxSwoId(ctx, project, ""), mwtype, q["label"])
+			q := commonReq(project, q["label"])
+			if mwtype != "" {
+				q = append(q, bson.DocElem{"mwaretype", mwtype})
+			}
+			err = dbFindAllCommon(ctx, q, &mws)
 			if err != nil {
 				return GateErrD(err)
 			}
@@ -1385,12 +1397,14 @@ func handleRepos(ctx context.Context, w http.ResponseWriter, r *http.Request) *s
 
 	switch r.Method {
 	case "GET":
+		var reps []*RepoDesc
+
 		project := q.Get("project")
 		if project == "" {
 			project = DefaultProject
 		}
 
-		reps, err := dbReposListProj(ctx, ctxSwoId(ctx, project, ""))
+		err := dbFindAllCommon(ctx, commonReq(project, []string{}), &reps)
 		if err != nil {
 			return GateErrD(err)
 		}
@@ -1545,7 +1559,7 @@ func handleDeployments(ctx context.Context, w http.ResponseWriter, r *http.Reque
 
 		dname := q.Get("name")
 		if dname == "" {
-			deps, err = dbDeployListProj(ctx, ctxSwoId(ctx, project, ""), q["label"])
+			err = dbFindAllCommon(ctx, commonReq(project, q["label"]), &deps)
 			if err != nil {
 				return GateErrD(err)
 			}

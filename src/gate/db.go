@@ -36,14 +36,24 @@ func init() {
 	dbColMap = make(map[reflect.Type]string)
 	dbColMap[reflect.TypeOf(MwareDesc{})] = DBColMware
 	dbColMap[reflect.TypeOf(&MwareDesc{})] = DBColMware
+	dbColMap[reflect.TypeOf([]*MwareDesc{})] = DBColMware
+	dbColMap[reflect.TypeOf(&[]*MwareDesc{})] = DBColMware
 	dbColMap[reflect.TypeOf(FunctionDesc{})] = DBColFunc
 	dbColMap[reflect.TypeOf(&FunctionDesc{})] = DBColFunc
+	dbColMap[reflect.TypeOf([]*FunctionDesc{})] = DBColFunc
+	dbColMap[reflect.TypeOf(&[]*FunctionDesc{})] = DBColFunc
 	dbColMap[reflect.TypeOf(DeployDesc{})] = DBColDeploy
 	dbColMap[reflect.TypeOf(&DeployDesc{})] = DBColDeploy
+	dbColMap[reflect.TypeOf([]*DeployDesc{})] = DBColDeploy
+	dbColMap[reflect.TypeOf(&[]*DeployDesc{})] = DBColDeploy
 	dbColMap[reflect.TypeOf(FnEventDesc{})] = DBColEvents
 	dbColMap[reflect.TypeOf(&FnEventDesc{})] = DBColEvents
+	dbColMap[reflect.TypeOf([]*FnEventDesc{})] = DBColEvents
+	dbColMap[reflect.TypeOf(&[]*FnEventDesc{})] = DBColEvents
 	dbColMap[reflect.TypeOf(RepoDesc{})] = DBColRepos
 	dbColMap[reflect.TypeOf(&RepoDesc{})] = DBColRepos
+	dbColMap[reflect.TypeOf([]*RepoDesc{})] = DBColRepos
+	dbColMap[reflect.TypeOf(&[]*RepoDesc{})] = DBColRepos
 }
 
 func dbColl(object interface{}) (string) {
@@ -65,6 +75,15 @@ func dbRemoveId(ctx context.Context, o interface{}, id bson.ObjectId) error {
 
 func dbInsert(ctx context.Context, o interface{}) error {
 	return gctx(ctx).S.DB(DBStateDB).C(dbColl(o)).Insert(o)
+}
+
+func dbFindAll(ctx context.Context, q interface{}, o interface{}) error {
+	return gctx(ctx).S.DB(DBStateDB).C(dbColl(o)).Find(q).All(o)
+}
+
+func dbFindAllCommon(ctx context.Context, q bson.D, o interface{}) error {
+	q = append(q, bson.DocElem{"tennant", gctx(ctx).Tenant})
+	return dbFindAll(ctx, q, o)
 }
 
 type DBLogRec struct {
@@ -162,20 +181,6 @@ func dbMwareGetReady(ctx context.Context, id *SwoId) (*MwareDesc, error) {
 	return dbMwareGetOne(ctx, bson.M{"cookie": id.Cookie(), "state": swy.DBMwareStateRdy})
 }
 
-func dbMwareListProj(ctx context.Context, id *SwoId, mwtyp string, labels []string) ([]*MwareDesc, error) {
-	var recs []*MwareDesc
-	c := gctx(ctx).S.DB(DBStateDB).C(DBColMware)
-	lk := bson.D{{"tennant", id.Tennant}, {"project", id.Project}}
-	if mwtyp != "" {
-		lk = append(lk, bson.DocElem{"mwaretype", mwtyp})
-	}
-	for _, l := range labels {
-		lk = append(lk, bson.DocElem{"labels", l})
-	}
-	err := c.Find(lk).All(&recs)
-	return recs, err
-}
-
 func dbFuncCount(ctx context.Context) (int, error) {
 	return gctx(ctx).S.DB(DBStateDB).C(DBColFunc).Count()
 }
@@ -219,17 +224,6 @@ func dbFuncFindByCookie(ctx context.Context, cookie string) (*FunctionDesc, erro
 
 func dbFuncList(ctx context.Context) ([]*FunctionDesc, error) {
 	return dbFuncFindAll(ctx, bson.M{})
-}
-
-func dbFuncListProj(ctx context.Context, id *SwoId, labels []string) ([]*FunctionDesc, error) {
-	q := bson.D{{"tennant", id.Tennant}, {"project", id.Project}}
-	for _, l := range labels {
-		q = append(q, bson.DocElem{"labels", l})
-	}
-
-	glog.Debugf("Find fns: %v", q)
-
-	return dbFuncFindAll(ctx, q)/*bson.M{"tennant": id.Tennant, "project": id.Project})*/
 }
 
 func dbFuncListMwEvent(ctx context.Context, id *SwoId, rq bson.M) ([]*FunctionDesc, error) {
@@ -576,15 +570,6 @@ func dbDeployList(ctx context.Context, q bson.M) (deps []DeployDesc, err error) 
 	return
 }
 
-func dbDeployListProj(ctx context.Context, id *SwoId, labels []string) (deps []*DeployDesc, err error) {
-	q := bson.D{{"tennant", id.Tennant}, {"project", id.Project}}
-	for _, l := range labels {
-		q = append(q, bson.DocElem{"labels", l})
-	}
-	err = gctx(ctx).S.DB(DBStateDB).C(DBColDeploy).Find(q).All(&deps)
-	return
-}
-
 func dbDeployStateUpdate(ctx context.Context, dep *DeployDesc, state int) error {
 	dep.State = state
 	return gctx(ctx).S.DB(DBStateDB).C(DBColDeploy).Update(bson.M{"cookie": dep.Cookie},
@@ -617,14 +602,6 @@ func dbFuncEventByName(ctx context.Context, fn *FunctionDesc, name string) (*FnE
 
 func dbUpdateEvent(ctx context.Context, ed *FnEventDesc) error {
 	return gctx(ctx).S.DB(DBStateDB).C(DBColEvents).Update(bson.M{"_id": ed.ObjID}, ed)
-}
-
-func dbReposListProj(ctx context.Context, id *SwoId) ([]*RepoDesc, error) {
-	var recs []*RepoDesc
-	c := gctx(ctx).S.DB(DBStateDB).C(DBColRepos)
-	lk := bson.D{{"tennant", id.Tennant}, {"project", id.Project}}
-	err := c.Find(lk).All(&recs)
-	return recs, err
 }
 
 func dbRepoGetOne(ctx context.Context, q bson.M) (*RepoDesc, error) {
