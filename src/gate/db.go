@@ -4,6 +4,7 @@ import (
 	"time"
 	"fmt"
 	"context"
+	"reflect"
 
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
@@ -28,6 +29,39 @@ const (
 	DBColEvents	= "Events"
 	DBColRepos	= "Repos"
 )
+
+var dbColMap map[reflect.Type]string
+
+func init() {
+	dbColMap = make(map[reflect.Type]string)
+	dbColMap[reflect.TypeOf(MwareDesc{})] = DBColMware
+	dbColMap[reflect.TypeOf(&MwareDesc{})] = DBColMware
+	dbColMap[reflect.TypeOf(FunctionDesc{})] = DBColFunc
+	dbColMap[reflect.TypeOf(&FunctionDesc{})] = DBColFunc
+	dbColMap[reflect.TypeOf(DeployDesc{})] = DBColDeploy
+	dbColMap[reflect.TypeOf(&DeployDesc{})] = DBColDeploy
+	dbColMap[reflect.TypeOf(FnEventDesc{})] = DBColEvents
+	dbColMap[reflect.TypeOf(&FnEventDesc{})] = DBColEvents
+	dbColMap[reflect.TypeOf(RepoDesc{})] = DBColRepos
+	dbColMap[reflect.TypeOf(&RepoDesc{})] = DBColRepos
+}
+
+func dbColl(object interface{}) (string) {
+	typ := reflect.TypeOf(object)
+	if name, ok := dbColMap[typ]; ok {
+		return name
+	}
+	glog.Fatalf("Unmapped object %s", typ.String())
+	return ""
+}
+
+func dbRemove(ctx context.Context, o interface{}, q bson.M) error {
+	return gctx(ctx).S.DB(DBStateDB).C(dbColl(o)).Remove(q)
+}
+
+func dbRemoveId(ctx context.Context, o interface{}, id bson.ObjectId) error {
+	return dbRemove(ctx, o, bson.M{"_id": id})
+}
 
 type DBLogRec struct {
 	FnId		string		`bson:"fnid"`
@@ -106,11 +140,6 @@ func dbMwareTerminate(ctx context.Context, mwd *MwareDesc) error {
 	return c.Update(
 		bson.M{"cookie": mwd.Cookie, "state": bson.M{"$in": []int{swy.DBMwareStateRdy, swy.DBMwareStateStl}}},
 		bson.M{"$set": bson.M{"state": swy.DBMwareStateTrm, }})
-}
-
-func dbMwareRemove(ctx context.Context, mwd *MwareDesc) error {
-	c := gctx(ctx).S.DB(DBStateDB).C(DBColMware)
-	return c.Remove(bson.M{"cookie": mwd.Cookie})
 }
 
 func dbMwareSetStalled(ctx context.Context, mwd *MwareDesc) error {
@@ -260,11 +289,6 @@ func dbFuncUpdateOne(ctx context.Context, fn *FunctionDesc, update bson.M) error
 func dbFuncAdd(ctx context.Context, desc *FunctionDesc) error {
 	c := gctx(ctx).S.DB(DBStateDB).C(DBColFunc)
 	return c.Insert(desc)
-}
-
-func dbFuncRemove(ctx context.Context, fn *FunctionDesc) error {
-	c := gctx(ctx).S.DB(DBStateDB).C(DBColFunc)
-	return c.Remove(bson.M{"cookie": fn.Cookie});
 }
 
 func dbTenStatsGet(ctx context.Context, tenant string, st *TenStats) error {
@@ -561,10 +585,6 @@ func dbDeployGet(ctx context.Context, q bson.M) (*DeployDesc, error) {
 	return &dep, err
 }
 
-func dbDeployDel(ctx context.Context, dep *DeployDesc) error {
-	return gctx(ctx).S.DB(DBStateDB).C(DBColDeploy).Remove(bson.M{"cookie": dep.Cookie})
-}
-
 func dbDeployList(ctx context.Context, q bson.M) (deps []DeployDesc, err error) {
 	err = gctx(ctx).S.DB(DBStateDB).C(DBColDeploy).Find(q).All(&deps)
 	return
@@ -617,10 +637,6 @@ func dbUpdateEvent(ctx context.Context, ed *FnEventDesc) error {
 	return gctx(ctx).S.DB(DBStateDB).C(DBColEvents).Update(bson.M{"_id": ed.ObjID}, ed)
 }
 
-func dbRemoveEvent(ctx context.Context, ed *FnEventDesc) error {
-	return gctx(ctx).S.DB(DBStateDB).C(DBColEvents).Remove(bson.M{"_id": ed.ObjID})
-}
-
 func dbReposListProj(ctx context.Context, id *SwoId) ([]*RepoDesc, error) {
 	var recs []*RepoDesc
 	c := gctx(ctx).S.DB(DBStateDB).C(DBColRepos)
@@ -646,11 +662,6 @@ func dbRepoDeactivate(ctx context.Context, rd *RepoDesc) error {
 	return c.Update(
 		bson.M{"_id": rd.ObjID},
 		bson.M{"$set": bson.M{"state": swy.DBRepoStateRem, }})
-}
-
-func dbRepoRemove(ctx context.Context, rd *RepoDesc) error {
-	c := gctx(ctx).S.DB(DBStateDB).C(DBColRepos)
-	return c.Remove(bson.M{"_id": rd.ObjID})
 }
 
 func LogsCleanerInit(ctx context.Context, conf *YAMLConf) error {

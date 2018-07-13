@@ -198,7 +198,7 @@ func deployStop(ctx context.Context, dep *DeployDesc) (*swyapi.GateErr) {
 		return cerr
 	}
 
-	err := dbDeployDel(ctx, dep)
+	err := dbRemoveId(ctx, &DeployDesc{}, dep.ObjID)
 	if err != nil {
 		return GateErrD(err)
 	}

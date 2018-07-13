@@ -309,7 +309,7 @@ out_clean_repo:
 		goto stalled
 	}
 out_clean_func:
-	erc = dbFuncRemove(ctx, fn)
+	erc = dbRemoveId(ctx, &FunctionDesc{}, fn.ObjID)
 	if erc != nil {
 		goto stalled
 	}
@@ -667,7 +667,7 @@ func (fn *FunctionDesc)Remove(ctx context.Context, conf *YAMLConf) *swyapi.GateE
 	memdGone(fn)
 
 	ctxlog(ctx).Debugf("`- and ...")
-	err = dbFuncRemove(ctx, fn)
+	err = dbRemoveId(ctx, &FunctionDesc{}, fn.ObjID)
 	if err != nil {
 		goto later
 	}

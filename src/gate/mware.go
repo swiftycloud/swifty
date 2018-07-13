@@ -146,7 +146,7 @@ func (item *MwareDesc)Remove(ctx context.Context, conf *YAMLConfMw) *swyapi.Gate
 		goto stalled
 	}
 
-	err = dbMwareRemove(ctx, item)
+	err = dbRemoveId(ctx, &MwareDesc{}, item.ObjID)
 	if err != nil {
 		ctxlog(ctx).Errorf("Can't remove mware %s: %s", item.SwoId.Str(), err.Error())
 		goto stalled
@@ -278,7 +278,7 @@ outh:
 		goto stalled
 	}
 outdb:
-	erc = dbMwareRemove(ctx, mwd)
+	erc = dbRemoveId(ctx, &MwareDesc{}, mwd.ObjID)
 	if erc != nil {
 		goto stalled
 	}

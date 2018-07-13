@@ -97,7 +97,7 @@ func (rd *RepoDesc)Detach(ctx context.Context, conf *YAMLConf) *swyapi.GateErr {
 
 	/* FIXME -- drop dir here */
 
-	err = dbRepoRemove(ctx, rd)
+	err = dbRemoveId(ctx, &RepoDesc{}, rd.ObjID)
 	if err != nil {
 		return GateErrD(err)
 	}
