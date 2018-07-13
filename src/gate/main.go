@@ -1380,6 +1380,97 @@ func handleMwares(ctx context.Context, w http.ResponseWriter, r *http.Request) *
 	return nil
 }
 
+func handleRepos(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
+	q := r.URL.Query()
+
+	switch r.Method {
+	case "GET":
+		project := q.Get("project")
+		if project == "" {
+			project = DefaultProject
+		}
+
+		reps, err := dbReposListProj(ctx, ctxSwoId(ctx, project, ""))
+		if err != nil {
+			return GateErrD(err)
+		}
+
+		ret := []*swyapi.RepoInfo{}
+		for _, rp := range reps {
+			ri, cerr := rp.toInfo(ctx, &conf, false)
+			if cerr != nil {
+				return cerr
+			}
+
+			ret = append(ret, ri)
+		}
+
+		err = swyhttp.MarshalAndWrite(w, &ret)
+		if err != nil {
+			return GateErrE(swy.GateBadResp, err)
+		}
+
+	case "POST":
+		var params swyapi.RepoAdd
+
+		err := swyhttp.ReadAndUnmarshalReq(r, &params)
+		if err != nil {
+			return GateErrE(swy.GateBadRequest, err)
+		}
+
+		ctxlog(ctx).Debugf("repo/add: %s params %v", gctx(ctx).Tenant, params)
+
+		id := ctxSwoId(ctx, params.Project, params.URL)
+		rp := getRepoDesc(id, &params)
+		rid, cerr := rp.Attach(ctx, &conf)
+		if cerr != nil {
+			return cerr
+		}
+
+		err = swyhttp.MarshalAndWrite(w, rid)
+		if err != nil {
+			return GateErrE(swy.GateBadResp, err)
+		}
+	}
+
+	return nil
+}
+
+func handleRepo(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
+	rid := mux.Vars(r)["rid"]
+	if !bson.IsObjectIdHex(rid) {
+		return GateErrM(swy.GateBadRequest, "Bad repo ID value")
+	}
+
+	rd, err := dbRepoGetOne(ctx, ctxObjId(ctx, rid))
+	if err != nil {
+		return GateErrD(err)
+	}
+
+	switch r.Method {
+	case "GET":
+		ri, cerr := rd.toInfo(ctx, &conf, true)
+		if cerr != nil {
+			return cerr
+		}
+
+		err = swyhttp.MarshalAndWrite(w, ri)
+		if err != nil {
+			return GateErrE(swy.GateBadResp, err)
+		}
+
+	case "DELETE":
+		cerr := rd.Detach(ctx, &conf)
+		if cerr != nil {
+			return cerr
+		}
+
+		w.WriteHeader(http.StatusOK)
+	}
+
+	return nil
+}
+
 func handleLanguages(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
 	var ret []string
 
@@ -1865,6 +1956,9 @@ func main() {
 
 	r.Handle("/v1/middleware",		genReqHandler(handleMwares)).Methods("GET", "POST", "OPTIONS")
 	r.Handle("/v1/middleware/{mid}",	genReqHandler(handleMware)).Methods("GET", "DELETE", "OPTIONS")
+
+	r.Handle("/v1/repos",			genReqHandler(handleRepos)).Methods("GET", "POST", "OPTIONS")
+	r.Handle("/v1/repos/{rid}",		genReqHandler(handleRepo)).Methods("GET", "DELETE", "OPTIONS")
 
 	r.Handle("/v1/s3/access",		genReqHandler(handleS3Access)).Methods("POST", "OPTIONS")
 

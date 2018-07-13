@@ -1,6 +1,7 @@
 package main
 
 import (
+	"gopkg.in/mgo.v2/bson"
 	"fmt"
 	"bytes"
 	"strings"
@@ -40,6 +41,68 @@ func fnCodeLatestPath(conf *YAMLConf, fn *FunctionDesc) string {
 
 func fnRepoClone(fn *FunctionDesc) string {
 	return conf.Home + "/" + CloneDir + "/" + fnCodeDir(fn)
+}
+
+var repStates = map[int]string {
+	swy.DBRepoStateCln:	"cloning",
+	swy.DBRepoStateRem:	"removing",
+}
+
+type RepoDesc struct {
+	// These objects are kept in Mongo, which requires the below
+	// field to be present...
+	ObjID		bson.ObjectId	`bson:"_id,omitempty"`
+	SwoId				`bson:",inline"`
+	State		int		`bson:"state"`
+}
+
+func getRepoDesc(id *SwoId, params *swyapi.RepoAdd) *RepoDesc {
+	return &RepoDesc {
+		SwoId:	*id,
+	}
+}
+
+func (rd *RepoDesc)toInfo(ctx context.Context, conf *YAMLConf, details bool) (*swyapi.RepoInfo, *swyapi.GateErr) {
+	r := &swyapi.RepoInfo {
+		ID:		rd.ObjID.Hex(),
+		URL:		rd.SwoId.Name,
+		Project:	rd.SwoId.Project,
+		State:		repStates[rd.State],
+	}
+
+	return r, nil
+}
+
+func (rd *RepoDesc)Attach(ctx context.Context, conf *YAMLConf) (string, *swyapi.GateErr) {
+	rd.ObjID = bson.NewObjectId()
+	rd.State = swy.DBRepoStateCln
+
+	err := dbRepoAdd(ctx, rd)
+	if err != nil {
+		return "", GateErrD(err)
+	}
+
+	/* FIXME -- start cloning the guy */
+
+	return rd.ObjID.Hex(), nil
+}
+
+func (rd *RepoDesc)Detach(ctx context.Context, conf *YAMLConf) *swyapi.GateErr {
+	err := dbRepoDeactivate(ctx, rd)
+	if err != nil {
+		return GateErrD(err)
+	}
+
+	rd.State = swy.DBRepoStateRem
+
+	/* FIXME -- drop dir here */
+
+	err = dbRepoRemove(ctx, rd)
+	if err != nil {
+		return GateErrD(err)
+	}
+
+	return nil
 }
 
 func checkoutSources(ctx context.Context, fn *FunctionDesc) error {

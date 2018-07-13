@@ -26,6 +26,7 @@ const (
 	DBColDeploy	= "Deploy"
 	DBColLimits	= "Limits"
 	DBColEvents	= "Events"
+	DBColRepos	= "Repos"
 )
 
 type DBLogRec struct {
@@ -618,6 +619,38 @@ func dbUpdateEvent(ctx context.Context, ed *FnEventDesc) error {
 
 func dbRemoveEvent(ctx context.Context, ed *FnEventDesc) error {
 	return gctx(ctx).S.DB(DBStateDB).C(DBColEvents).Remove(bson.M{"_id": ed.ObjID})
+}
+
+func dbReposListProj(ctx context.Context, id *SwoId) ([]*RepoDesc, error) {
+	var recs []*RepoDesc
+	c := gctx(ctx).S.DB(DBStateDB).C(DBColRepos)
+	lk := bson.D{{"tennant", id.Tennant}, {"project", id.Project}}
+	err := c.Find(lk).All(&recs)
+	return recs, err
+}
+
+func dbRepoGetOne(ctx context.Context, q bson.M) (*RepoDesc, error) {
+	c := gctx(ctx).S.DB(DBStateDB).C(DBColRepos)
+	v := RepoDesc{}
+	err := c.Find(q).One(&v)
+	return &v, err
+}
+
+func dbRepoAdd(ctx context.Context, rd *RepoDesc) error {
+	c := gctx(ctx).S.DB(DBStateDB).C(DBColRepos)
+	return c.Insert(rd)
+}
+
+func dbRepoDeactivate(ctx context.Context, rd *RepoDesc) error {
+	c := gctx(ctx).S.DB(DBStateDB).C(DBColRepos)
+	return c.Update(
+		bson.M{"_id": rd.ObjID},
+		bson.M{"$set": bson.M{"state": swy.DBRepoStateRem, }})
+}
+
+func dbRepoRemove(ctx context.Context, rd *RepoDesc) error {
+	c := gctx(ctx).S.DB(DBStateDB).C(DBColRepos)
+	return c.Remove(bson.M{"_id": rd.ObjID})
 }
 
 func LogsCleanerInit(ctx context.Context, conf *YAMLConf) error {

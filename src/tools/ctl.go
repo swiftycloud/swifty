@@ -1122,6 +1122,36 @@ func deploy_add(args []string, opts [16]string) {
 		swyapi.DeployStart{ Name: args[0], Project: curCmd.project, Items: items}, nil)
 }
 
+func repo_list(args []string, opts [16]string) {
+	var ris []*swyapi.RepoInfo
+	make_faas_req1("GET", "repos", http.StatusOK, nil, &ris)
+	fmt.Printf("%-32s%-12s%s\n", "ID", "STATE", "URL")
+	for _, ri := range ris {
+		fmt.Printf("%-32s%-12s%s\n", ri.ID, ri.State, ri.URL)
+	}
+}
+
+func repo_info(args []string, opts [16]string) {
+	var ri swyapi.RepoInfo
+	make_faas_req1("GET", "repos/" + args[0], http.StatusOK, nil, &ri)
+	fmt.Printf("State:     %s\n", ri.State)
+	fmt.Printf("URL:       %s\n", ri.URL)
+}
+
+func repo_add(args []string, opts [16]string) {
+	ra := swyapi.RepoAdd {
+		Project:	curCmd.project,
+		URL:		args[0],
+	}
+	var id string
+	make_faas_req1("POST", "repos", http.StatusOK, &ra, &id)
+	fmt.Printf("%s repo attached\n", id)
+}
+
+func repo_del(args []string, opts [16]string) {
+	make_faas_req1("DELETE", "repos/" + args[0], http.StatusOK, nil, nil)
+}
+
 func s3_access(args []string, opts [16]string) {
 	acc := swyapi.S3Access {
 		Project: curCmd.project,
@@ -1303,6 +1333,11 @@ const (
 	CMD_DA string		= "da"
 	CMD_DD string		= "dd"
 
+	CMD_RL string		= "rl"
+	CMD_RI string		= "ri"
+	CMD_RA string		= "ra"
+	CMD_RD string		= "rd"
+
 	CMD_UL string		= "ul"
 	CMD_UI string		= "ui"
 	CMD_UA string		= "ua"
@@ -1352,6 +1387,11 @@ var cmdOrder = []string {
 	CMD_DI,
 	CMD_DA,
 	CMD_DD,
+
+	CMD_RL,
+	CMD_RI,
+	CMD_RA,
+	CMD_RD,
 
 	CMD_UL,
 	CMD_UI,
@@ -1408,6 +1448,11 @@ var cmdMap = map[string]*cmdDesc {
 	CMD_DI:		&cmdDesc{ call: deploy_info,	  opts: flag.NewFlagSet(CMD_DI, flag.ExitOnError) },
 	CMD_DA:		&cmdDesc{ call: deploy_add,	  opts: flag.NewFlagSet(CMD_DA, flag.ExitOnError) },
 	CMD_DD:		&cmdDesc{ call: deploy_del,	  opts: flag.NewFlagSet(CMD_DD, flag.ExitOnError) },
+
+	CMD_RL:		&cmdDesc{ call: repo_list,	  opts: flag.NewFlagSet(CMD_RL, flag.ExitOnError) },
+	CMD_RI:		&cmdDesc{ call: repo_info,	  opts: flag.NewFlagSet(CMD_RI, flag.ExitOnError) },
+	CMD_RA:		&cmdDesc{ call: repo_add,	  opts: flag.NewFlagSet(CMD_RA, flag.ExitOnError) },
+	CMD_RD:		&cmdDesc{ call: repo_del,	  opts: flag.NewFlagSet(CMD_RD, flag.ExitOnError) },
 
 	CMD_UL:		&cmdDesc{ call: user_list,	  opts: flag.NewFlagSet(CMD_UL, flag.ExitOnError), adm: true },
 	CMD_UI:		&cmdDesc{ call: user_info,	  opts: flag.NewFlagSet(CMD_UI, flag.ExitOnError), adm: true },
@@ -1518,6 +1563,11 @@ func main() {
 	bindCmdUsage(CMD_DI,	[]string{"NAME"}, "Show info about deployment", true)
 	bindCmdUsage(CMD_DA,	[]string{"NAME", "DESC"}, "Add (start) deployment", true)
 	bindCmdUsage(CMD_DD,	[]string{"NAME"}, "Del (stop) deployment", true)
+
+	bindCmdUsage(CMD_RL,	[]string{},	"List repos", true)
+	bindCmdUsage(CMD_RI,	[]string{"ID"}, "Show info about repo", true)
+	bindCmdUsage(CMD_RA,	[]string{"URL"}, "Attach repo", true)
+	bindCmdUsage(CMD_RD,	[]string{"ID"}, "Detach repo", true)
 
 	bindCmdUsage(CMD_UL,	[]string{}, "List users", false)
 	cmdMap[CMD_UA].opts.StringVar(&opts[0], "name", "", "User name")
