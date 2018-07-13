@@ -209,7 +209,9 @@ func deployStop(ctx context.Context, dep *DeployDesc) (*swyapi.GateErr) {
 }
 
 func DeployInit(ctx context.Context, conf *YAMLConf) error {
-	deps, err := dbDeployList(ctx, bson.M{})
+	var deps []*DeployDesc
+
+	err := dbFindAll(ctx, bson.M{}, &deps)
 	if err != nil {
 		return err
 	}
@@ -217,8 +219,8 @@ func DeployInit(ctx context.Context, conf *YAMLConf) error {
 	for _, dep := range deps {
 		if dep.State == swy.DBDepStateIni {
 			glog.Debugf("Will restart deploy %s in state %d", dep.SwoId.Str(), dep.State)
-			deployStopItems(ctx, &dep, len(dep.Items))
-			go deployStartItems(&dep)
+			deployStopItems(ctx, dep, len(dep.Items))
+			go deployStartItems(dep)
 		}
 	}
 

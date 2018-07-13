@@ -1677,11 +1677,9 @@ func handleAuths(ctx context.Context, w http.ResponseWriter, r *http.Request) *s
 
 	switch r.Method {
 	case "GET":
-		deps, err := dbDeployList(ctx, bson.M{
-					"tennant":	gctx(ctx).Tenant,
-					"project":	project,
-					"labels":	"auth",
-				})
+		var deps []*DeployDesc
+
+		err := dbFindAllCommon(ctx, commonReq(project, []string{"auth"}), &deps)
 		if err != nil {
 			return GateErrD(err)
 		}

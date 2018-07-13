@@ -482,11 +482,6 @@ func dbProjectListAll(ctx context.Context, ten string) (fn []string, mw []string
 	return
 }
 
-func dbDeployList(ctx context.Context, q bson.M) (deps []DeployDesc, err error) {
-	err = gctx(ctx).S.DB(DBStateDB).C(DBColDeploy).Find(q).All(&deps)
-	return
-}
-
 func dbDeployStateUpdate(ctx context.Context, dep *DeployDesc, state int) error {
 	dep.State = state
 	return gctx(ctx).S.DB(DBStateDB).C(DBColDeploy).Update(bson.M{"cookie": dep.Cookie},
