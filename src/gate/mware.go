@@ -36,6 +36,20 @@ var mwStates = map[int]string {
 	swy.DBMwareStateNo:	"dead",
 }
 
+func (mw *MwareDesc)ToState(ctx context.Context, st, from int) error {
+	q := bson.M{"_id": mw.ObjID}
+	if from != -1 {
+		q["state"] = from
+	}
+
+	err := dbUpdateSet(ctx, q, bson.M{"state": st}, &MwareDesc{})
+	if err == nil {
+		mw.State = st
+	}
+
+	return err
+}
+
 type MwareOps struct {
 	Init	func(ctx context.Context, conf *YAMLConfMw, mwd *MwareDesc) (error)
 	Fini	func(ctx context.Context, conf *YAMLConfMw, mwd *MwareDesc) (error)
@@ -135,7 +149,7 @@ func (item *MwareDesc)Remove(ctx context.Context, conf *YAMLConfMw) *swyapi.Gate
 		return GateErrC(swy.GateGenErr) /* Shouldn't happen */
 	}
 
-	err := dbMwareTerminate(ctx, item)
+	err := item.ToState(ctx, swy.DBMwareStateTrm, item.State)
 	if err != nil {
 		ctxlog(ctx).Errorf("Can't terminate mware %s", item.SwoId.Str())
 		return GateErrM(swy.GateGenErr, "Cannot terminate mware")
@@ -163,7 +177,7 @@ func (item *MwareDesc)Remove(ctx context.Context, conf *YAMLConfMw) *swyapi.Gate
 	return nil
 
 stalled:
-	dbMwareSetStalled(ctx, item)
+	item.ToState(ctx, swy.DBMwareStateStl, -1)
 	return GateErrE(swy.GateGenErr, err)
 }
 
@@ -300,6 +314,6 @@ out:
 	return "", GateErrE(swy.GateGenErr, err)
 
 stalled:
-	dbMwareSetStalled(ctx, mwd)
+	mwd.ToState(ctx, swy.DBMwareStateStl, -1)
 	goto out
 }

@@ -153,19 +153,6 @@ func dbMwareCount(ctx context.Context) (map[string]int, error) {
 	return ret, nil
 }
 
-func dbMwareTerminate(ctx context.Context, mwd *MwareDesc) error {
-	c := gctx(ctx).S.DB(DBStateDB).C(DBColMware)
-	return c.Update(
-		bson.M{"cookie": mwd.Cookie, "state": bson.M{"$in": []int{swy.DBMwareStateRdy, swy.DBMwareStateStl}}},
-		bson.M{"$set": bson.M{"state": swy.DBMwareStateTrm, }})
-}
-
-func dbMwareSetStalled(ctx context.Context, mwd *MwareDesc) error {
-	c := gctx(ctx).S.DB(DBStateDB).C(DBColMware)
-	return c.Update( bson.M{"cookie": mwd.Cookie, },
-		bson.M{"$set": bson.M{"state": swy.DBMwareStateStl, }})
-}
-
 func dbFuncCount(ctx context.Context) (int, error) {
 	return gctx(ctx).S.DB(DBStateDB).C(DBColFunc).Count()
 }
