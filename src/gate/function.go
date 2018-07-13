@@ -265,7 +265,10 @@ func (fn *FunctionDesc)Add(ctx context.Context, conf *YAMLConf) (string, *swyapi
 
 	fn.State = swy.DBFuncStateStr
 
-	err = dbFuncUpdateAdded(ctx, fn)
+	err = dbUpdateId(ctx, fn.ObjID, bson.M{
+			"src": &fn.Src,
+			"state": fn.State,
+		}, &FunctionDesc{})
 	if err != nil {
 		ctxlog(ctx).Errorf("Can't update added %s: %s", fn.SwoId.Str(), err.Error())
 		err = errors.New("DB error")
@@ -345,7 +348,7 @@ func swyFixSize(sz *swyapi.FunctionSize, conf *YAMLConf) error {
 }
 
 func (fn *FunctionDesc)setUserData(ctx context.Context, ud string) error {
-	err := dbFuncUpdateOne(ctx, fn, bson.M{"userdata": ud})
+	err := dbUpdateId(ctx, fn.ObjID, bson.M{"userdata": ud}, &FunctionDesc{})
 	if err == nil {
 		fn.UserData = ud
 	}
@@ -363,7 +366,7 @@ func (fn *FunctionDesc)setAuthCtx(ctx context.Context, ac string) error {
 		}
 	}
 
-	err = dbFuncUpdateOne(ctx, fn, bson.M{"authctx": ac})
+	err = dbUpdateId(ctx, fn.ObjID, bson.M{"authctx": ac}, &FunctionDesc{})
 	if err == nil {
 		fn.AuthCtx = ac
 		fdm := memdGetCond(fn.Cookie)
@@ -405,7 +408,7 @@ func (fn *FunctionDesc)setSize(ctx context.Context, sz *swyapi.FunctionSize) err
 		rlfix = true
 	}
 
-	err := dbFuncUpdateOne(ctx, fn, update)
+	err := dbUpdateId(ctx, fn.ObjID, update, &FunctionDesc{})
 	if err != nil {
 		return err
 	}
@@ -573,7 +576,7 @@ func (fn *FunctionDesc)updateSources(ctx context.Context, src *swyapi.FunctionSo
 		update["state"] = fn.State
 	}
 
-	err = dbFuncUpdateOne(ctx, fn, update)
+	err = dbUpdateId(ctx, fn.ObjID, update, &FunctionDesc{})
 	if err != nil {
 		ctxlog(ctx).Errorf("Can't update pulled %s: %s", fn.Name, err.Error())
 		return GateErrD(err)

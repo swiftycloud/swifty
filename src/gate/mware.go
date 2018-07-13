@@ -265,7 +265,12 @@ func (mwd *MwareDesc)Setup(ctx context.Context, conf *YAMLConfMw) (string, *swya
 		goto outs
 	}
 
-	err = dbMwareUpdateAdded(ctx, mwd)
+	mwd.State = swy.DBMwareStateRdy
+	err = dbUpdateId(ctx, mwd.ObjID, bson.M {
+				"client":	mwd.Client,
+				"secret":	mwd.Secret,
+				"namespace":	mwd.Namespace,
+				"state":	mwd.State }, &MwareDesc{})
 	if err != nil {
 		ctxlog(ctx).Errorf("Can't update added %s: %s", mwd.SwoId.Str(), err.Error())
 		err = errors.New("DB error")

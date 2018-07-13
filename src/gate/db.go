@@ -90,6 +90,14 @@ func dbFind(ctx context.Context, q bson.M, o interface{}) error {
 	return gctx(ctx).S.DB(DBStateDB).C(dbColl(o)).Find(q).One(o)
 }
 
+func dbUpdateSet(ctx context.Context, q bson.M, u bson.M, typ interface{}) error {
+	return gctx(ctx).S.DB(DBStateDB).C(dbColl(typ)).Update(q, bson.M{"$set": u })
+}
+
+func dbUpdateId(ctx context.Context, id bson.ObjectId, u bson.M, typ interface{}) error {
+	return dbUpdateSet(ctx, bson.M{"_id": id}, u, typ)
+}
+
 type DBLogRec struct {
 	FnId		string		`bson:"fnid"`
 	Event		string		`bson:"event"`
@@ -145,18 +153,6 @@ func dbMwareCount(ctx context.Context) (map[string]int, error) {
 	return ret, nil
 }
 
-func dbMwareUpdateAdded(ctx context.Context, desc *MwareDesc) error {
-	desc.State = swy.DBMwareStateRdy
-	c := gctx(ctx).S.DB(DBStateDB).C(DBColMware)
-	return c.Update(bson.M{"cookie": desc.Cookie},
-		bson.M{"$set": bson.M{
-				"client":	desc.Client,
-				"secret":	desc.Secret,
-				"namespace":	desc.Namespace,
-				"state":	desc.State,
-			}})
-}
-
 func dbMwareTerminate(ctx context.Context, mwd *MwareDesc) error {
 	c := gctx(ctx).S.DB(DBStateDB).C(DBColMware)
 	return c.Update(
@@ -200,25 +196,6 @@ func dbFuncSetState(ctx context.Context, fn *FunctionDesc, state int) error {
 	}
 
 	return err
-}
-
-func dbFuncUpdateAdded(ctx context.Context, fn *FunctionDesc) error {
-	return dbFuncUpdate(ctx,
-		bson.M{"cookie": fn.Cookie},
-		bson.M{"$set": bson.M{
-				"src": &fn.Src,
-				"state": fn.State,
-			}})
-}
-
-func dbFuncUpdatePulled(ctx context.Context, fn *FunctionDesc, update bson.M, olds int) error {
-	return dbFuncUpdate(ctx,
-		bson.M{"cookie": fn.Cookie, "state": olds},
-		bson.M{"$set": update })
-}
-
-func dbFuncUpdateOne(ctx context.Context, fn *FunctionDesc, update bson.M) error {
-	return dbFuncUpdate(ctx, bson.M{"_id": fn.ObjID}, bson.M{"$set": update })
 }
 
 func dbTenStatsGet(ctx context.Context, tenant string, st *TenStats) error {
