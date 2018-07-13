@@ -94,16 +94,8 @@ func mqEvent(ctx context.Context, mwid, queue, userid, data string) {
 
 	ctxlog(ctx).Debugf("mq: Resolved client to project %s", mware.Project)
 
-	funcs, err := dbFuncListMwEvent(ctx, &mware.SwoId, bson.M {
-		"event.source": "mware",
-		"event.mwid": mware.SwoId.Name,
-		"event.mqueue": queue,
-	})
-	if err != nil {
-		/* FIXME -- this should be notified? Or what? */
-		ctxlog(ctx).Errorf("mq: Can't list functions for event")
-		return
-	}
+	var funcs []*FunctionDesc
+	/* FIXME -- list FNs with events here, now they are in separate DB */
 
 	for _, fn := range funcs {
 		ctxlog(ctx).Debugf("mq: `- [%s]", fn)

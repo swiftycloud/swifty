@@ -14,6 +14,8 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/pkg/fields"
 
+	"gopkg.in/mgo.v2/bson"
+
 	"../common"
 	"path/filepath"
 	"context"
@@ -691,7 +693,9 @@ func swk8sGetBuildPods() (map[string]string, error) {
 }
 
 func refreshDepsAndPods(ctx context.Context) error {
-	fns, err := dbFuncList(ctx)
+	var fns []*FunctionDesc
+
+	err := dbFindAll(ctx, bson.M{}, &fns)
 	if err != nil {
 		return errors.New("Error listing FNs")
 	}

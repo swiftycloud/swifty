@@ -178,30 +178,9 @@ func dbFuncCountProj(ctx context.Context, id *SwoId) (int, error) {
 	return gctx(ctx).S.DB(DBStateDB).C(DBColFunc).Find(bson.M{"tenant": id.Tennant, "project": id.Project}).Count()
 }
 
-func dbFuncFindAll(ctx context.Context, q interface{}) (vs []*FunctionDesc, err error) {
-	c := gctx(ctx).S.DB(DBStateDB).C(DBColFunc)
-	err = c.Find(q).All(&vs)
-	return
-}
-
 func dbFuncUpdate(ctx context.Context, q, ch bson.M) (error) {
 	c := gctx(ctx).S.DB(DBStateDB).C(DBColFunc)
 	return c.Update(q, ch)
-}
-
-func dbFuncList(ctx context.Context) ([]*FunctionDesc, error) {
-	return dbFuncFindAll(ctx, bson.M{})
-}
-
-func dbFuncListMwEvent(ctx context.Context, id *SwoId, rq bson.M) ([]*FunctionDesc, error) {
-	rq["tennant"] = id.Tennant
-	rq["project"] = id.Project
-
-	return dbFuncFindAll(ctx, rq)
-}
-
-func dbFuncListWithEvents(ctx context.Context) ([]*FunctionDesc, error) {
-	return dbFuncFindAll(ctx, bson.M{"event.source": bson.M{"$ne": ""}})
 }
 
 func dbFuncSetStateCond(ctx context.Context, id *SwoId, state, ostate int) error {
