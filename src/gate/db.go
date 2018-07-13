@@ -217,10 +217,6 @@ func dbFuncFindByCookie(ctx context.Context, cookie string) (*FunctionDesc, erro
 	return fn, err
 }
 
-func dbFuncFindStates(ctx context.Context, id *SwoId, states []int) (*FunctionDesc, error) {
-	return dbFuncFindOne(ctx, bson.M{"cookie": id.Cookie(), "state": bson.M{"$in": states}})
-}
-
 func dbFuncList(ctx context.Context) ([]*FunctionDesc, error) {
 	return dbFuncFindAll(ctx, bson.M{})
 }
