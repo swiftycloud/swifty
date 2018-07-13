@@ -21,12 +21,12 @@ type DeployItemDesc struct {
 
 func (i *DeployItemDesc)start(ctx context.Context) *swyapi.GateErr {
 	if i.Fn != nil {
-		_, cerr := addFunction(ctx, &conf, i.Fn)
+		_, cerr := i.Fn.Add(ctx, &conf)
 		return cerr
 	}
 
 	if i.Mw != nil {
-		_, cerr := mwareSetup(ctx, &conf.Mware, i.Mw)
+		_, cerr := i.Mw.Setup(ctx, &conf.Mware)
 		return cerr
 	}
 

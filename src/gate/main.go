@@ -1169,7 +1169,8 @@ func handleFunctions(ctx context.Context, w http.ResponseWriter, r *http.Request
 		}
 
 		id := ctxSwoId(ctx, params.Project, params.Name)
-		fid, cerr := addFunction(ctx, &conf, getFunctionDesc(id, &params))
+		fd := getFunctionDesc(id, &params)
+		fid, cerr := fd.Add(ctx, &conf)
 		if cerr != nil {
 			return cerr
 
@@ -1238,14 +1239,14 @@ func handleFunction(ctx context.Context, w http.ResponseWriter, r *http.Request)
 		}
 
 		if fu.State != "" {
-			cerr := setFunctionState(ctx, &conf, fn, fu.State)
+			cerr := fn.setState(ctx, &conf, fu.State)
 			if cerr != nil {
 				return cerr
 			}
 		}
 
 	case "DELETE":
-		cerr := removeFunction(ctx, &conf, fn)
+		cerr := fn.Remove(ctx, &conf)
 		if cerr != nil {
 			return cerr
 		}
@@ -1364,7 +1365,8 @@ func handleMwares(ctx context.Context, w http.ResponseWriter, r *http.Request) *
 		ctxlog(ctx).Debugf("mware/add: %s params %v", gctx(ctx).Tenant, params)
 
 		id := ctxSwoId(ctx, params.Project, params.Name)
-		mid, cerr := mwareSetup(ctx, &conf.Mware, getMwareDesc(id, &params))
+		mw := getMwareDesc(id, &params)
+		mid, cerr := mw.Setup(ctx, &conf.Mware)
 		if cerr != nil {
 			return cerr
 		}
@@ -1662,7 +1664,7 @@ func handleMware(ctx context.Context, w http.ResponseWriter, r *http.Request) *s
 		}
 
 	case "DELETE":
-		cerr := mwareRemove(ctx, &conf.Mware, mw)
+		cerr := mw.Remove(ctx, &conf.Mware)
 		if cerr != nil {
 			return cerr
 		}

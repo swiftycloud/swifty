@@ -119,10 +119,10 @@ func mwareRemoveId(ctx context.Context, conf *YAMLConfMw, id *SwoId) *swyapi.Gat
 		return GateErrD(err)
 	}
 
-	return mwareRemove(ctx, conf, item)
+	return item.Remove(ctx, conf)
 }
 
-func mwareRemove(ctx context.Context, conf *YAMLConfMw, item *MwareDesc) *swyapi.GateErr {
+func (item *MwareDesc)Remove(ctx context.Context, conf *YAMLConfMw) *swyapi.GateErr {
 	handler, ok := mwareHandlers[item.MwareType]
 	if !ok {
 		return GateErrC(swy.GateGenErr) /* Shouldn't happen */
@@ -208,7 +208,7 @@ func getMwareDesc(id *SwoId, params *swyapi.MwareAdd) *MwareDesc {
 	return ret
 }
 
-func mwareSetup(ctx context.Context, conf *YAMLConfMw, mwd *MwareDesc) (string, *swyapi.GateErr) {
+func (mwd *MwareDesc)Setup(ctx context.Context, conf *YAMLConfMw) (string, *swyapi.GateErr) {
 	var handler *MwareOps
 	var ok bool
 	var err, erc error

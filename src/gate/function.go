@@ -236,7 +236,7 @@ func checkCount(ctx context.Context, id *SwoId) error {
 	return nil
 }
 
-func addFunction(ctx context.Context, conf *YAMLConf, fn *FunctionDesc) (string, *swyapi.GateErr) {
+func (fn *FunctionDesc)Add(ctx context.Context, conf *YAMLConf) (string, *swyapi.GateErr) {
 	var err, erc error
 	var build bool
 	var bAddr string
@@ -602,10 +602,10 @@ func removeFunctionId(ctx context.Context, conf *YAMLConf, id *SwoId) *swyapi.Ga
 		return GateErrD(err)
 	}
 
-	return removeFunction(ctx, conf, fn)
+	return fn.Remove(ctx, conf)
 }
 
-func removeFunction(ctx context.Context, conf *YAMLConf, fn *FunctionDesc) *swyapi.GateErr {
+func (fn *FunctionDesc)Remove(ctx context.Context, conf *YAMLConf) *swyapi.GateErr {
 	var err error
 
 	switch fn.State {
@@ -772,7 +772,7 @@ func activateFunction(ctx context.Context, conf *YAMLConf, fn *FunctionDesc) *sw
 	return nil
 }
 
-func setFunctionState(ctx context.Context, conf *YAMLConf, fn *FunctionDesc, st string) *swyapi.GateErr {
+func (fn *FunctionDesc)setState(ctx context.Context, conf *YAMLConf, st string) *swyapi.GateErr {
 	switch st {
 	case fnStates[swy.DBFuncStateDea]:
 		return deactivateFunction(ctx, conf, fn)
