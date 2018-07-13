@@ -101,5 +101,5 @@ func runFunctionOnce(ctx context.Context, fn *FunctionDesc) {
 	ctxlog(ctx).Debugf("oneshor %s finished", fn.SwoId.Str())
 
 	swk8sRemove(ctx, &conf, fn)
-	dbFuncSetState(ctx, fn, swy.DBFuncStateStl);
+	fn.ToState(ctx, swy.DBFuncStateStl, -1)
 }

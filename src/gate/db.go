@@ -179,25 +179,6 @@ func dbFuncUpdate(ctx context.Context, q, ch bson.M) (error) {
 	return c.Update(q, ch)
 }
 
-func dbFuncSetStateCond(ctx context.Context, id *SwoId, state, ostate int) error {
-	return dbFuncUpdate(ctx,
-		bson.M{"cookie": id.Cookie(), "state": ostate},
-		bson.M{"$set": bson.M{"state": state}})
-}
-
-func dbFuncSetState(ctx context.Context, fn *FunctionDesc, state int) error {
-	fn.State = state
-	err := dbFuncUpdate(ctx,
-		bson.M{"cookie": fn.Cookie, "state": bson.M{"$ne": state}},
-		bson.M{"$set": bson.M{"state": state}})
-	if err != nil {
-		ctxlog(ctx).Errorf("dbFuncSetState: Can't change function %s state: %s",
-				fn.Name, err.Error())
-	}
-
-	return err
-}
-
 func dbTenStatsGet(ctx context.Context, tenant string, st *TenStats) error {
 	c := gctx(ctx).S.DB(DBStateDB).C(DBColTenStats)
 	err := c.Find(bson.M{"tenant": tenant}).One(st)

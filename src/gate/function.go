@@ -109,6 +109,20 @@ func (fn *FunctionDesc)isOneShot() bool {
 	return false
 }
 
+func (fn *FunctionDesc)ToState(ctx context.Context, st, from int) error {
+	q := bson.M{"_id": fn.ObjID}
+	if from != -1 {
+		q["state"] = from
+	}
+
+	err := dbUpdateSet(ctx, q, bson.M{"state": st}, &FunctionDesc{})
+	if err == nil {
+		fn.State = st
+	}
+
+	return err
+}
+
 var zeroVersion = "0"
 
 func (fn *FunctionDesc)getURL() string {
@@ -294,7 +308,7 @@ func (fn *FunctionDesc)Add(ctx context.Context, conf *YAMLConf) (string, *swyapi
 			return
 
 		bstalled:
-			dbFuncSetState(ctx, fn, swy.DBFuncStateStl)
+			fn.ToState(ctx, swy.DBFuncStateStl, -1)
 		}()
 	} else {
 		err = swk8sRun(ctx, conf, fn)
@@ -322,7 +336,7 @@ out:
 	return "", GateErrE(swy.GateGenErr, err)
 
 stalled:
-	dbFuncSetState(ctx, fn, swy.DBFuncStateStl)
+	fn.ToState(ctx, swy.DBFuncStateStl, -1)
 	goto out
 }
 
@@ -589,7 +603,7 @@ func (fn *FunctionDesc)updateSources(ctx context.Context, src *swyapi.FunctionSo
 		ctxlog(ctx).Debugf("Starting deploy")
 		err = swk8sRun(ctx, &conf, fn)
 		if err != nil {
-			dbFuncSetState(ctx, fn, swy.DBFuncStateStl)
+			fn.ToState(ctx, swy.DBFuncStateStl, -1)
 			return GateErrE(swy.GateGenErr, err)
 		}
 	}
@@ -612,12 +626,14 @@ func removeFunctionId(ctx context.Context, conf *YAMLConf, id *SwoId) *swyapi.Ga
 
 func (fn *FunctionDesc)Remove(ctx context.Context, conf *YAMLConf) *swyapi.GateErr {
 	var err error
+	var dea bool
 
 	switch fn.State {
+	case swy.DBFuncStateDea:
+		dea = true
 	case swy.DBFuncStateStr:
 	case swy.DBFuncStateRdy:
 	case swy.DBFuncStateStl:
-	case swy.DBFuncStateDea:
 	case swy.DBFuncStateTrm:
 		;
 	default:
@@ -628,13 +644,13 @@ func (fn *FunctionDesc)Remove(ctx context.Context, conf *YAMLConf) *swyapi.GateE
 	ctxlog(ctx).Debugf("Forget function %s", fn.SwoId.Str())
 	// Allow to remove function if only we're in known state,
 	// otherwise wait for function building to complete
-	err = dbFuncSetStateCond(ctx, &fn.SwoId, swy.DBFuncStateTrm, fn.State)
+	err = fn.ToState(ctx, swy.DBFuncStateTrm, fn.State)
 	if err != nil {
 		ctxlog(ctx).Errorf("Can't terminate function %s: %s", fn.SwoId.Str(), err.Error())
 		return GateErrM(swy.GateGenErr, "Cannot terminate fn")
 	}
 
-	if !fn.isOneShot() && (fn.State != swy.DBFuncStateDea) {
+	if !fn.isOneShot() && !dea {
 		ctxlog(ctx).Debugf("`- delete deploy")
 		err = swk8sRemove(ctx, conf, fn)
 		if err != nil {
@@ -729,7 +745,7 @@ func notifyPodUp(ctx context.Context, pod *k8sPod) {
 	}
 
 	if fn.State != swy.DBFuncStateRdy {
-		dbFuncSetState(ctx, &fn, swy.DBFuncStateRdy)
+		fn.ToState(ctx, swy.DBFuncStateRdy, -1)
 		if fn.isOneShot() {
 			runFunctionOnce(ctx, &fn)
 		}
@@ -744,16 +760,19 @@ out:
 func deactivateFunction(ctx context.Context, conf *YAMLConf, fn *FunctionDesc) *swyapi.GateErr {
 	var err error
 
-	err = dbFuncSetStateCond(ctx, &fn.SwoId, swy.DBFuncStateDea, swy.DBFuncStateRdy)
+	if fn.State != swy.DBFuncStateRdy {
+		return GateErrM(swy.GateGenErr, "Function is not ready")
+	}
+
+	err = fn.ToState(ctx, swy.DBFuncStateDea, fn.State)
 	if err != nil {
-		ctxlog(ctx).Errorf("Can't deactivate function %s: %s", fn.SwoId.Name, err.Error())
 		return GateErrM(swy.GateGenErr, "Cannot deactivate function")
 	}
 
 	err = swk8sRemove(ctx, conf, fn)
 	if err != nil {
 		ctxlog(ctx).Errorf("Can't remove deployment: %s", err.Error())
-		dbFuncSetState(ctx, fn, swy.DBFuncStateRdy)
+		fn.ToState(ctx, swy.DBFuncStateRdy, -1)
 		return GateErrM(swy.GateGenErr, "Cannot deactivate function")
 	}
 
@@ -767,11 +786,14 @@ func activateFunction(ctx context.Context, conf *YAMLConf, fn *FunctionDesc) *sw
 		return GateErrM(swy.GateGenErr, "Function is not deactivated")
 	}
 
-	dbFuncSetState(ctx, fn, swy.DBFuncStateStr)
+	err = fn.ToState(ctx, swy.DBFuncStateStr, swy.DBFuncStateDea)
+	if err != nil {
+		return GateErrM(swy.GateGenErr, "Cannot activate function")
+	}
 
 	err = swk8sRun(ctx, conf, fn)
 	if err != nil {
-		dbFuncSetState(ctx, fn, swy.DBFuncStateDea)
+		fn.ToState(ctx, swy.DBFuncStateDea, -1)
 		ctxlog(ctx).Errorf("Can't start deployment: %s", err.Error())
 		return GateErrM(swy.GateGenErr, "Cannot activate FN")
 	}
