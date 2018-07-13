@@ -64,10 +64,15 @@ func mwGenUserPassEnvs(mwd *MwareDesc, mwaddr string) ([][2]string) {
 }
 
 func mwareGetCookie(ctx context.Context, id SwoId, name string) (string, error) {
+	var mw MwareDesc
+
 	id.Name = name
-	mw, err := dbMwareGetReady(ctx, &id)
+	err := dbFind(ctx, id.dbReq(), &mw)
 	if err != nil {
 		return "", fmt.Errorf("No such mware: %s", id.Str())
+	}
+	if mw.State != swy.DBMwareStateRdy {
+		return "", errors.New("Mware not ready")
 	}
 
 	return mw.Cookie, nil
@@ -114,7 +119,9 @@ func mwareGenerateSecret(ctx context.Context, fid *SwoId, typ, id string) ([][2]
 }
 
 func mwareRemoveId(ctx context.Context, conf *YAMLConfMw, id *SwoId) *swyapi.GateErr {
-	item, err := dbMwareGetItem(ctx, id)
+	var item MwareDesc
+
+	err := dbFind(ctx, id.dbReq(), &item)
 	if err != nil {
 		return GateErrD(err)
 	}

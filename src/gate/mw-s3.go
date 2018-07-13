@@ -143,8 +143,10 @@ func handleS3Event(ctx context.Context, user string, data []byte) {
 			continue
 		}
 
-		fn, err := dbFuncFindByCookie(ctx, ed.FnId)
-		if err != nil || fn == nil {
+		var fn FunctionDesc
+
+		err := dbFind(ctx, bson.M{"cookie": ed.FnId}, &fn)
+		if err != nil {
 			continue
 		}
 
@@ -153,7 +155,7 @@ func handleS3Event(ctx context.Context, user string, data []byte) {
 		}
 
 		/* FIXME -- this is synchronous */
-		_, err = doRun(ctx, fn, "s3",
+		_, err = doRun(ctx, &fn, "s3",
 				&swyapi.SwdFunctionRun{Args: map[string]string {
 					"bucket": evt.Bucket,
 					"object": evt.Object,

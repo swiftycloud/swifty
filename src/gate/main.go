@@ -332,12 +332,14 @@ func fnFindForReq(ctx context.Context, r *http.Request) (*FunctionDesc, *swyapi.
 		return nil, GateErrM(swy.GateBadRequest, "Bad FN ID")
 	}
 
-	fn, err := dbFuncFindOne(ctx, ctxObjId(ctx, fnid))
+	var fn FunctionDesc
+
+	err := dbFind(ctx, ctxObjId(ctx, fnid), &fn)
 	if err != nil {
 		return nil, GateErrD(err)
 	}
 
-	return fn, nil
+	return &fn, nil
 }
 
 func handleFunctionTriggers(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
@@ -498,9 +500,12 @@ func handleFunctionMwares(ctx context.Context, w http.ResponseWriter, r *http.Re
 		for _, mwn := range fn.Mware {
 			id := fn.SwoId
 			id.Name = mwn
-			mw, err := dbMwareGetItem(ctx, &id)
 
+			var mw MwareDesc
 			var mi *swyapi.MwareInfo
+
+			err := dbFind(ctx, id.dbReq(), &mw)
+
 			if err == nil {
 				mi = mw.toFnInfo(ctx)
 			} else {
@@ -526,14 +531,16 @@ func handleFunctionMwares(ctx context.Context, w http.ResponseWriter, r *http.Re
 			return GateErrM(swy.GateBadRequest, "Bad MW ID value")
 		}
 
+		var mw MwareDesc
+
 		oid := ctxObjId(ctx, mid)
 		oid["project"] = fn.SwoId.Project
-		mw, err := dbMwareGetOne(ctx, oid)
+		err = dbFind(ctx, oid, &mw)
 		if err != nil {
 			return GateErrD(err)
 		}
 
-		err = fn.addMware(ctx, mw)
+		err = fn.addMware(ctx, &mw)
 		if err != nil {
 			return GateErrE(swy.GateGenErr, err)
 		}
@@ -555,16 +562,18 @@ func handleFunctionMware(ctx context.Context, w http.ResponseWriter, r *http.Req
 		return GateErrM(swy.GateBadRequest, "Bad MW ID value")
 	}
 
+	var mw MwareDesc
+
 	oid := ctxObjId(ctx, mid)
 	oid["project"] = fn.SwoId.Project
-	mw, err := dbMwareGetOne(ctx, oid)
+	err := dbFind(ctx, oid, &mw)
 	if err != nil {
 		return GateErrD(err)
 	}
 
 	switch r.Method {
 	case "DELETE":
-		err = fn.delMware(ctx, mw)
+		err = fn.delMware(ctx, &mw)
 		if err != nil {
 			return GateErrE(swy.GateGenErr, err)
 		}
@@ -1117,13 +1126,13 @@ func handleFunctions(ctx context.Context, w http.ResponseWriter, r *http.Request
 			}
 			glog.Debugf("Found %d fns", len(fns))
 		} else {
-			var fn *FunctionDesc
+			var fn FunctionDesc
 
-			fn, err = dbFuncFind(ctx, ctxSwoId(ctx, project, fname))
+			err = dbFind(ctx, ctxSwoId(ctx, project, fname).dbReq(), &fn)
 			if err != nil {
 				return GateErrD(err)
 			}
-			fns = append(fns, fn)
+			fns = append(fns, &fn)
 		}
 
 		ret := []*swyapi.FunctionInfo{}
@@ -1342,13 +1351,13 @@ func handleMwares(ctx context.Context, w http.ResponseWriter, r *http.Request) *
 				return GateErrD(err)
 			}
 		} else {
-			var mw *MwareDesc
+			var mw MwareDesc
 
-			mw, err = dbMwareGetItem(ctx, ctxSwoId(ctx, project, mname))
+			err = dbFind(ctx, ctxSwoId(ctx, project, mname).dbReq(), &mw)
 			if err != nil {
 				return GateErrD(err)
 			}
-			mws = append(mws, mw)
+			mws = append(mws, &mw)
 		}
 
 		ret := []*swyapi.MwareInfo{}
@@ -1456,7 +1465,9 @@ func handleRepo(ctx context.Context, w http.ResponseWriter, r *http.Request) *sw
 		return GateErrM(swy.GateBadRequest, "Bad repo ID value")
 	}
 
-	rd, err := dbRepoGetOne(ctx, ctxObjId(ctx, rid))
+	var rd RepoDesc
+
+	err := dbFind(ctx, ctxObjId(ctx, rid), &rd)
 	if err != nil {
 		return GateErrD(err)
 	}
@@ -1564,13 +1575,13 @@ func handleDeployments(ctx context.Context, w http.ResponseWriter, r *http.Reque
 				return GateErrD(err)
 			}
 		} else {
-			var dep *DeployDesc
+			var dep DeployDesc
 
-			dep, err = dbDeployGet(ctx, bson.M{"cookie": ctxSwoId(ctx, project, dname).Cookie()})
+			err = dbFind(ctx, ctxSwoId(ctx, project, dname).dbReq(), &dep)
 			if err != nil {
 				return GateErrD(err)
 			}
-			deps = append(deps, dep)
+			deps = append(deps, &dep)
 		}
 
 		dis := []*swyapi.DeployInfo{}
@@ -1622,12 +1633,14 @@ func handleDeployment(ctx context.Context, w http.ResponseWriter, r *http.Reques
 		return GateErrM(swy.GateBadRequest, "Bad deploy ID value")
 	}
 
-	dd, err := dbDeployGet(ctx, ctxObjId(ctx, did))
+	var dd DeployDesc
+
+	err := dbFind(ctx, ctxObjId(ctx, did), &dd)
 	if err != nil {
 		return GateErrD(err)
 	}
 
-	return handleOneDeployment(ctx, w, r, dd)
+	return handleOneDeployment(ctx, w, r, &dd)
 }
 
 func handleOneDeployment(ctx context.Context, w http.ResponseWriter, r *http.Request, dd *DeployDesc) *swyapi.GateErr {
@@ -1735,14 +1748,17 @@ func handleAuth(ctx context.Context, w http.ResponseWriter, r *http.Request) *sw
 		return GateErrM(swy.GateBadRequest, "Bad auth deploy ID value")
 	}
 
+	var ad DeployDesc
+
 	oid := ctxObjId(ctx, did)
 	oid["labels"] = "auth"
-	ad, err := dbDeployGet(ctx, oid)
+
+	err := dbFind(ctx, oid, &ad)
 	if err != nil {
 		return GateErrD(err)
 	}
 
-	return handleOneDeployment(ctx, w, r, ad)
+	return handleOneDeployment(ctx, w, r, &ad)
 }
 
 func handleMware(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
@@ -1751,7 +1767,8 @@ func handleMware(ctx context.Context, w http.ResponseWriter, r *http.Request) *s
 		return GateErrM(swy.GateBadRequest, "Bad mware ID value")
 	}
 
-	mw, err := dbMwareGetOne(ctx, ctxObjId(ctx, mid))
+	var mw MwareDesc
+	err := dbFind(ctx, ctxObjId(ctx, mid), &mw)
 	if err != nil {
 		return GateErrD(err)
 	}

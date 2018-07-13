@@ -86,6 +86,10 @@ func dbFindAllCommon(ctx context.Context, q bson.D, o interface{}) error {
 	return dbFindAll(ctx, q, o)
 }
 
+func dbFind(ctx context.Context, q bson.M, o interface{}) error {
+	return gctx(ctx).S.DB(DBStateDB).C(dbColl(o)).Find(q).One(o)
+}
+
 type DBLogRec struct {
 	FnId		string		`bson:"fnid"`
 	Event		string		`bson:"event"`
@@ -166,34 +170,12 @@ func dbMwareSetStalled(ctx context.Context, mwd *MwareDesc) error {
 		bson.M{"$set": bson.M{"state": swy.DBMwareStateStl, }})
 }
 
-func dbMwareGetOne(ctx context.Context, q bson.M) (*MwareDesc, error) {
-	c := gctx(ctx).S.DB(DBStateDB).C(DBColMware)
-	v := MwareDesc{}
-	err := c.Find(q).One(&v)
-	return &v, err
-}
-
-func dbMwareGetItem(ctx context.Context, id *SwoId) (*MwareDesc, error) {
-	return dbMwareGetOne(ctx, bson.M{"cookie": id.Cookie()})
-}
-
-func dbMwareGetReady(ctx context.Context, id *SwoId) (*MwareDesc, error) {
-	return dbMwareGetOne(ctx, bson.M{"cookie": id.Cookie(), "state": swy.DBMwareStateRdy})
-}
-
 func dbFuncCount(ctx context.Context) (int, error) {
 	return gctx(ctx).S.DB(DBStateDB).C(DBColFunc).Count()
 }
 
 func dbFuncCountProj(ctx context.Context, id *SwoId) (int, error) {
 	return gctx(ctx).S.DB(DBStateDB).C(DBColFunc).Find(bson.M{"tenant": id.Tennant, "project": id.Project}).Count()
-}
-
-func dbFuncFindOne(ctx context.Context, q bson.M) (*FunctionDesc, error) {
-	c := gctx(ctx).S.DB(DBStateDB).C(DBColFunc)
-	var v FunctionDesc
-	err := c.Find(q).One(&v)
-	return &v, err
 }
 
 func dbFuncFindAll(ctx context.Context, q interface{}) (vs []*FunctionDesc, err error) {
@@ -205,21 +187,6 @@ func dbFuncFindAll(ctx context.Context, q interface{}) (vs []*FunctionDesc, err 
 func dbFuncUpdate(ctx context.Context, q, ch bson.M) (error) {
 	c := gctx(ctx).S.DB(DBStateDB).C(DBColFunc)
 	return c.Update(q, ch)
-}
-
-func dbFuncFind(ctx context.Context, id *SwoId) (*FunctionDesc, error) {
-	return dbFuncFindOne(ctx, bson.M{"cookie": id.Cookie()})
-}
-
-func dbFuncFindByCookie(ctx context.Context, cookie string) (*FunctionDesc, error) {
-	fn, err := dbFuncFindOne(ctx, bson.M{"cookie": cookie})
-	if err != nil {
-		fn = nil
-		if err == mgo.ErrNotFound {
-			err = nil
-		}
-	}
-	return fn, err
 }
 
 func dbFuncList(ctx context.Context) ([]*FunctionDesc, error) {
@@ -559,12 +526,6 @@ func dbProjectListAll(ctx context.Context, ten string) (fn []string, mw []string
 	return
 }
 
-func dbDeployGet(ctx context.Context, q bson.M) (*DeployDesc, error) {
-	var dep DeployDesc
-	err := gctx(ctx).S.DB(DBStateDB).C(DBColDeploy).Find(q).One(&dep)
-	return &dep, err
-}
-
 func dbDeployList(ctx context.Context, q bson.M) (deps []DeployDesc, err error) {
 	err = gctx(ctx).S.DB(DBStateDB).C(DBColDeploy).Find(q).All(&deps)
 	return
@@ -602,13 +563,6 @@ func dbFuncEventByName(ctx context.Context, fn *FunctionDesc, name string) (*FnE
 
 func dbUpdateEvent(ctx context.Context, ed *FnEventDesc) error {
 	return gctx(ctx).S.DB(DBStateDB).C(DBColEvents).Update(bson.M{"_id": ed.ObjID}, ed)
-}
-
-func dbRepoGetOne(ctx context.Context, q bson.M) (*RepoDesc, error) {
-	c := gctx(ctx).S.DB(DBStateDB).C(DBColRepos)
-	v := RepoDesc{}
-	err := c.Find(q).One(&v)
-	return &v, err
 }
 
 func dbRepoDeactivate(ctx context.Context, rd *RepoDesc) error {

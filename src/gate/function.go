@@ -597,7 +597,9 @@ func (fn *FunctionDesc)updateSources(ctx context.Context, src *swyapi.FunctionSo
 }
 
 func removeFunctionId(ctx context.Context, conf *YAMLConf, id *SwoId) *swyapi.GateErr {
-	fn, err := dbFuncFind(ctx, id)
+	var fn FunctionDesc
+
+	err := dbFind(ctx, id.dbReq(), &fn)
 	if err != nil {
 		return GateErrD(err)
 	}
@@ -716,15 +718,17 @@ func fnWaiterKick(cookie string) {
 }
 
 func notifyPodUp(ctx context.Context, pod *k8sPod) {
-	fn, err := dbFuncFind(ctx, &pod.SwoId)
+	var fn FunctionDesc
+
+	err := dbFind(ctx, pod.SwoId.dbReq(), &fn)
 	if err != nil {
 		goto out
 	}
 
 	if fn.State != swy.DBFuncStateRdy {
-		dbFuncSetState(ctx, fn, swy.DBFuncStateRdy)
+		dbFuncSetState(ctx, &fn, swy.DBFuncStateRdy)
 		if fn.isOneShot() {
-			runFunctionOnce(ctx, fn)
+			runFunctionOnce(ctx, &fn)
 		}
 	}
 

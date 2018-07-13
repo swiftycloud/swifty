@@ -28,11 +28,15 @@ type AuthCtx struct {
 }
 
 func authCtxGet(ctx context.Context, id SwoId, ac string) (*AuthCtx, error) {
-	id.Name = ac
+	var item MwareDesc
 
-	item, err := dbMwareGetReady(ctx, &id)
+	id.Name = ac
+	err := dbFind(ctx, id.dbReq(), &item)
 	if err != nil {
 		return nil, err
+	}
+	if item.State != swy.DBMwareStateRdy {
+		return nil, errors.New("Mware not ready")
 	}
 
 	if item.MwareType == "authjwt" {

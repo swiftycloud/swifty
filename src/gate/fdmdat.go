@@ -6,6 +6,7 @@ import (
 	"context"
 	"../common/xratelimit"
 	"../apis/apps"
+	"gopkg.in/mgo.v2/bson"
 )
 
 var fdmd sync.Map
@@ -157,8 +158,13 @@ func fndatGetOrInit(ctx context.Context, cookie string, fn *FunctionDesc, forRem
 	}
 
 	if fn == nil {
-		fn, err = dbFuncFindByCookie(ctx, cookie)
-		if err != nil || fn == nil {
+		var fnd FunctionDesc
+
+		err = dbFind(ctx, bson.M{"cookie": cookie}, &fnd)
+		if err != nil {
+			if dbNF(err) {
+				err = nil /* XXX -- why? */
+			}
 			return nil, err
 		}
 	}

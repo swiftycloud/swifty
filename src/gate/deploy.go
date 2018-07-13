@@ -50,7 +50,8 @@ func (i *DeployItemDesc)info(ctx context.Context, details bool) (*swyapi.DeployI
 		ret := &swyapi.DeployItemInfo{Type: "function", Name: i.Fn.SwoId.Name}
 
 		if details {
-			fn, err := dbFuncFind(ctx, &i.Fn.SwoId)
+			var fn FunctionDesc
+			err := dbFind(ctx, i.Fn.SwoId.dbReq(), &fn)
 			if err == nil {
 				ret.State = fnStates[fn.State]
 			} else {
@@ -65,7 +66,8 @@ func (i *DeployItemDesc)info(ctx context.Context, details bool) (*swyapi.DeployI
 		ret := &swyapi.DeployItemInfo{Type: "mware", Name: i.Mw.SwoId.Name}
 
 		if details {
-			mw, err := dbMwareGetItem(ctx, &i.Mw.SwoId)
+			var mw MwareDesc
+			err := dbFind(ctx, i.Mw.SwoId.dbReq(), &mw)
 			if err == nil {
 				ret.State = mwStates[mw.State]
 			} else {

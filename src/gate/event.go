@@ -58,8 +58,10 @@ func cronEventStart(ctx context.Context, evt *FnEventDesc) error {
 		cctx, done := mkContext("::cron")
 		defer done(cctx)
 
-		fn, err := dbFuncFindByCookie(cctx, evt.FnId)
-		if err != nil || fn == nil {
+		var fn FunctionDesc
+
+		err := dbFind(cctx, bson.M{"cookie": evt.FnId}, &fn)
+		if err != nil {
 			glog.Errorf("Can't find FN %s to run Cron event", evt.FnId)
 			return
 		}
@@ -68,7 +70,7 @@ func cronEventStart(ctx context.Context, evt *FnEventDesc) error {
 			return
 		}
 
-		_, err = doRun(cctx, fn, "cron", &swyapi.SwdFunctionRun{Args: evt.Cron.Args})
+		_, err = doRun(cctx, &fn, "cron", &swyapi.SwdFunctionRun{Args: evt.Cron.Args})
 		if err != nil {
 			ctxlog(ctx).Errorf("cron: Error running FN %s", err.Error())
 		}
