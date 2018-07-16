@@ -240,5 +240,6 @@ type RepoInfo struct {
 	ID		string			`json:"id"`
 	URL		string			`json:"url"`
 	State		string			`json:"state"`
+	Commit		string			`json:"commit"`
 	UserData	string			`json:"userdata,omitempty"`
 }

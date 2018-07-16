@@ -1136,6 +1136,9 @@ func repo_info(args []string, opts [16]string) {
 	make_faas_req1("GET", "repos/" + args[0], http.StatusOK, nil, &ri)
 	fmt.Printf("State:     %s\n", ri.State)
 	fmt.Printf("URL:       %s\n", ri.URL)
+	if ri.Commit != "" {
+		fmt.Printf("Commit:    %s\n", ri.Commit)
+	}
 }
 
 func repo_add(args []string, opts [16]string) {

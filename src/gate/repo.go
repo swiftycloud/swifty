@@ -39,13 +39,19 @@ func fnCodeLatestPath(conf *YAMLConf, fn *FunctionDesc) string {
 	return fnCodeVersionPath(conf, fn, fn.Src.Version)
 }
 
+func cloneDir() string {
+	return conf.Home + "/" + CloneDir
+}
+
 func fnRepoClone(fn *FunctionDesc) string {
-	return conf.Home + "/" + CloneDir + "/" + fnCodeDir(fn)
+	return cloneDir() + "/" + fnCodeDir(fn)
 }
 
 var repStates = map[int]string {
 	swy.DBRepoStateCln:	"cloning",
+	swy.DBRepoStateStl:	"stalled",
 	swy.DBRepoStateRem:	"removing",
+	swy.DBRepoStateRdy:	"ready",
 }
 
 type RepoDesc struct {
@@ -54,19 +60,33 @@ type RepoDesc struct {
 	ObjID		bson.ObjectId	`bson:"_id,omitempty"`
 	SwoId				`bson:",inline"`
 	State		int		`bson:"state"`
+	Commit		string		`bson:"commit,omitempty"`
+	UserData	string		`bson:"userdata,omitempty"`
 }
+
+func (rd *RepoDesc)Path() string {
+	return rd.SwoId.Tennant + "/" + rd.ObjID.Hex()
+}
+
+func (rd *RepoDesc)URL() string { return rd.SwoId.Name }
 
 func getRepoDesc(id *SwoId, params *swyapi.RepoAdd) *RepoDesc {
 	return &RepoDesc {
-		SwoId:	*id,
+		SwoId:		*id,
+		UserData:	params.UserData,
 	}
 }
 
 func (rd *RepoDesc)toInfo(ctx context.Context, conf *YAMLConf, details bool) (*swyapi.RepoInfo, *swyapi.GateErr) {
 	r := &swyapi.RepoInfo {
 		ID:		rd.ObjID.Hex(),
-		URL:		rd.SwoId.Name,
+		URL:		rd.URL(),
 		State:		repStates[rd.State],
+		Commit:		rd.Commit,
+	}
+
+	if details {
+		r.UserData = rd.UserData
 	}
 
 	return r, nil
@@ -81,7 +101,7 @@ func (rd *RepoDesc)Attach(ctx context.Context, conf *YAMLConf) (string, *swyapi.
 		return "", GateErrD(err)
 	}
 
-	/* FIXME -- start cloning the guy */
+	go cloneRepo(rd)
 
 	return rd.ObjID.Hex(), nil
 }
@@ -94,7 +114,10 @@ func (rd *RepoDesc)Detach(ctx context.Context, conf *YAMLConf) *swyapi.GateErr {
 
 	rd.State = swy.DBRepoStateRem
 
-	/* FIXME -- drop dir here */
+	_, err = swy.DropDir(cloneDir(), rd.Path())
+	if err != nil {
+		return GateErrE(swy.GateFsError, err)
+	}
 
 	err = dbRemoveId(ctx, &RepoDesc{}, rd.ObjID)
 	if err != nil {
@@ -104,21 +127,31 @@ func (rd *RepoDesc)Detach(ctx context.Context, conf *YAMLConf) *swyapi.GateErr {
 	return nil
 }
 
-func checkoutSources(ctx context.Context, fn *FunctionDesc) error {
+func gitCommit(dir string) (string, error) {
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
-	share_to := "?"
 
-	cloned_to := fnRepoClone(fn)
-	cmd := exec.Command("git", "-C", cloned_to, "log", "-n1", "--pretty=format:%H")
+	cmd := exec.Command("git", "-C", dir, "log", "-n1", "--pretty=format:%H")
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	err := cmd.Run()
 	if err != nil {
-		goto co_err
+		return "", err
 	}
 
-	fn.Src.Version = stdout.String()
+	return stdout.String(), nil
+}
+
+func checkoutSources(ctx context.Context, fn *FunctionDesc) error {
+	var err error
+
+	share_to := "?"
+	cloned_to := fnRepoClone(fn)
+
+	fn.Src.Version, err = gitCommit(cloned_to)
+	if err != nil {
+		goto co_err
+	}
 
 	// Bring the necessary deps
 	err = update_deps(ctx, cloned_to)
@@ -149,7 +182,7 @@ var srcHandlers = map[string] struct {
 	check func (string, []string) bool
 } {
 	"git": {
-		get:	cloneGitRepo,
+		get:	getFileFromRepo,
 		update:	updateGitRepo,
 	},
 
@@ -191,40 +224,51 @@ func getSources(ctx context.Context, fn *FunctionDesc) error {
 	return srch.get(ctx, fn)
 }
 
-func cloneGitRepo(ctx context.Context, fn *FunctionDesc) error {
+func cloneRepo(rd *RepoDesc) {
+	ctx, done := mkContext("::gitclone")
+	defer done(ctx)
+
+	nst := swy.DBRepoStateRdy
+
+	commit, err := rd.Clone(ctx)
+	if err != nil {
+		/* FIXME -- keep logs and show them user */
+		nst = swy.DBRepoStateStl
+	}
+
+	dbUpdateId(ctx, rd.ObjID, bson.M{ "state": nst, "commit": commit }, &RepoDesc{})
+}
+
+func (rd *RepoDesc)Clone(ctx context.Context) (string, error) {
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 
-	if !SwyModeDevel {
-		return fmt.Errorf("Disabled sources type git")
-	}
-
-	clone_to := fnRepoClone(fn)
-	ctxlog(ctx).Debugf("Git clone %s -> %s", fn.Src.Repo, clone_to)
+	clone_to := cloneDir() + "/" + rd.Path()
+	ctxlog(ctx).Debugf("Git clone %s -> %s", rd.URL(), clone_to)
 
 	_, err := os.Stat(clone_to)
 	if err == nil || !os.IsNotExist(err) {
-		ctxlog(ctx).Errorf("repo for %s is already there", fn.SwoId.Str())
-		return fmt.Errorf("can't clone repo")
+		ctxlog(ctx).Errorf("repo for %s is already there", rd.SwoId.Str())
+		return "", fmt.Errorf("can't clone repo")
 	}
 
 	if os.MkdirAll(clone_to, 0777) != nil {
 		ctxlog(ctx).Errorf("can't create %s: %s", clone_to, err.Error())
-		return err
+		return "", err
 	}
 
-	cmd := exec.Command("git", "-C", clone_to, "clone", fn.Src.Repo, ".")
+	cmd := exec.Command("git", "-C", clone_to, "clone", rd.URL(), ".")
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	err = cmd.Run()
 	if err != nil {
 		ctxlog(ctx).Errorf("can't clone %s -> %s: %s (%s:%s)",
-				fn.Src.Repo, clone_to, err.Error(),
+				rd.URL(), clone_to, err.Error(),
 				stdout.String(), stderr.String())
-		return err
+		return "", err
 	}
 
-	return checkoutSources(ctx, fn)
+	return gitCommit(clone_to)
 }
 
 func writeSource(ctx context.Context, fn *FunctionDesc, codeb64 string) error {
@@ -278,6 +322,10 @@ func swageFile(ctx context.Context, fn *FunctionDesc) error {
 	fn.Src.Version = zeroVersion
 
 	return writeSourceRaw(ctx, fn, fnCode)
+}
+
+func getFileFromRepo(ctx context.Context, fn *FunctionDesc) error {
+	return errors.New("Not implemented yet")
 }
 
 func getFileFromReq(ctx context.Context, fn *FunctionDesc) error {

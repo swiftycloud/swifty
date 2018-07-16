@@ -40,7 +40,7 @@ func isLite() bool { return Flavor == "lite" }
 
 const (
 	DefaultProject string			= "default"
-	NoProject string			= ""
+	NoProject string			= "*"
 	PodStartTmo time.Duration		= 120 * time.Second
 	DepScaleupRelax time.Duration		= 16 * time.Second
 	DepScaledownStep time.Duration		= 8 * time.Second

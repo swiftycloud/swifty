@@ -31,6 +31,8 @@ const (
 const (
 	DBRepoStateCln	int = 1
 	DBRepoStateRem	int = 2
+	DBRepoStateStl	int = 3
+	DBRepoStateRdy	int = 4
 )
 
 const (
