@@ -1516,6 +1516,28 @@ func handleRepoFiles(ctx context.Context, w http.ResponseWriter, r *http.Request
 	return nil
 }
 
+func handleRepoPull(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
+	rid := mux.Vars(r)["rid"]
+	if !bson.IsObjectIdHex(rid) {
+		return GateErrM(swy.GateBadRequest, "Bad repo ID value")
+	}
+
+	var rd RepoDesc
+
+	err := dbFind(ctx, ctxObjId(ctx, rid), &rd)
+	if err != nil {
+		return GateErrD(err)
+	}
+
+	cerr := rd.pull(ctx)
+	if cerr != nil {
+		return cerr
+	}
+
+	w.WriteHeader(http.StatusOK)
+	return nil
+}
+
 func handleLanguages(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
 	var ret []string
 
@@ -2009,6 +2031,7 @@ func main() {
 	r.Handle("/v1/repos",			genReqHandler(handleRepos)).Methods("GET", "POST", "OPTIONS")
 	r.Handle("/v1/repos/{rid}",		genReqHandler(handleRepo)).Methods("GET", "DELETE", "OPTIONS")
 	r.Handle("/v1/repos/{rid}/files",	genReqHandler(handleRepoFiles)).Methods("GET", "OPTIONS")
+	r.Handle("/v1/repos/{rid}/pull",	genReqHandler(handleRepoPull)).Methods("POST", "OPTIONS")
 
 	r.Handle("/v1/s3/access",		genReqHandler(handleS3Access)).Methods("POST", "OPTIONS")
 

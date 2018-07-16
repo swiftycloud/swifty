@@ -148,6 +148,27 @@ func (rd *RepoDesc)listFiles(ctx context.Context) ([]string, *swyapi.GateErr) {
 	return fileList, nil
 }
 
+func (rd *RepoDesc)pull(ctx context.Context) *swyapi.GateErr {
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+
+	clone_to := cloneDir() + "/" + rd.Path()
+	ctxlog(ctx).Debugf("Git pull %s", clone_to)
+
+	cmd := exec.Command("git", "-C", clone_to, "pull")
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	err := cmd.Run()
+	if err != nil {
+		ctxlog(ctx).Errorf("can't pull %s -> %s: %s (%s:%s)",
+			rd.URL(), clone_to, err.Error(),
+			stdout.String(), stderr.String())
+		return GateErrE(swy.GateGenErr, err)
+	}
+
+	return nil
+}
+
 func gitCommit(dir string) (string, error) {
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
