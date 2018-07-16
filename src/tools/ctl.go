@@ -1131,6 +1131,14 @@ func repo_list(args []string, opts [16]string) {
 	}
 }
 
+func repo_list_files(args []string, opts [16]string) {
+	var fl []string
+	make_faas_req1("GET", "repos/" + args[0] + "/files", http.StatusOK, nil, &fl)
+	for _, f := range fl {
+		fmt.Printf("%s\n", f)
+	}
+}
+
 func repo_info(args []string, opts [16]string) {
 	var ri swyapi.RepoInfo
 	make_faas_req1("GET", "repos/" + args[0], http.StatusOK, nil, &ri)
@@ -1339,6 +1347,7 @@ const (
 	CMD_RI string		= "ri"
 	CMD_RA string		= "ra"
 	CMD_RD string		= "rd"
+	CMD_RLS string		= "rls"
 
 	CMD_UL string		= "ul"
 	CMD_UI string		= "ui"
@@ -1394,6 +1403,7 @@ var cmdOrder = []string {
 	CMD_RI,
 	CMD_RA,
 	CMD_RD,
+	CMD_RLS,
 
 	CMD_UL,
 	CMD_UI,
@@ -1455,6 +1465,7 @@ var cmdMap = map[string]*cmdDesc {
 	CMD_RI:		&cmdDesc{ call: repo_info,	  opts: flag.NewFlagSet(CMD_RI, flag.ExitOnError) },
 	CMD_RA:		&cmdDesc{ call: repo_add,	  opts: flag.NewFlagSet(CMD_RA, flag.ExitOnError) },
 	CMD_RD:		&cmdDesc{ call: repo_del,	  opts: flag.NewFlagSet(CMD_RD, flag.ExitOnError) },
+	CMD_RLS:	&cmdDesc{ call: repo_list_files,  opts: flag.NewFlagSet(CMD_RLS, flag.ExitOnError) },
 
 	CMD_UL:		&cmdDesc{ call: user_list,	  opts: flag.NewFlagSet(CMD_UL, flag.ExitOnError), adm: true },
 	CMD_UI:		&cmdDesc{ call: user_info,	  opts: flag.NewFlagSet(CMD_UI, flag.ExitOnError), adm: true },
@@ -1570,6 +1581,7 @@ func main() {
 	bindCmdUsage(CMD_RI,	[]string{"ID"}, "Show info about repo", false)
 	bindCmdUsage(CMD_RA,	[]string{"URL"}, "Attach repo", false)
 	bindCmdUsage(CMD_RD,	[]string{"ID"}, "Detach repo", false)
+	bindCmdUsage(CMD_RLS,	[]string{"ID"}, "List files in repo", false)
 
 	bindCmdUsage(CMD_UL,	[]string{}, "List users", false)
 	cmdMap[CMD_UA].opts.StringVar(&opts[0], "name", "", "User name")

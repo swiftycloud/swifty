@@ -12,6 +12,7 @@ import (
 	"time"
 	"io/ioutil"
 	"encoding/base64"
+	"path/filepath"
 	"strconv"
 	"errors"
 	"../common"
@@ -125,6 +126,30 @@ func (rd *RepoDesc)Detach(ctx context.Context, conf *YAMLConf) *swyapi.GateErr {
 	}
 
 	return nil
+}
+
+func (rd *RepoDesc)listFiles(ctx context.Context) ([]string, *swyapi.GateErr) {
+	searchDir := cloneDir() + "/" + rd.Path()
+	fileList := []string{}
+	err := filepath.Walk(searchDir, func(path string, f os.FileInfo, err error) error {
+		if f.IsDir() {
+			if f.Name() == ".git" {
+				return filepath.SkipDir
+			}
+
+			return nil
+		}
+
+		path, _ = filepath.Rel(searchDir, path)
+		fileList = append(fileList, path)
+		return nil
+	})
+
+	if err != nil {
+		return nil, GateErrE(swy.GateFsError, err)
+	}
+
+	return fileList, nil
 }
 
 func gitCommit(dir string) (string, error) {
