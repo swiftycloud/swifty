@@ -233,14 +233,12 @@ type AuthAdd struct {
 
 type RepoAdd struct {
 	URL		string			`json:"url"`
-	Project		string			`json:"project,omitempty"`
 	UserData	string			`json:"userdata,omitempty"`
 }
 
 type RepoInfo struct {
 	ID		string			`json:"id"`
 	URL		string			`json:"url"`
-	Project		string			`json:"project"`
 	State		string			`json:"state"`
 	UserData	string			`json:"userdata,omitempty"`
 }

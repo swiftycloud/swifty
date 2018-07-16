@@ -40,6 +40,7 @@ func isLite() bool { return Flavor == "lite" }
 
 const (
 	DefaultProject string			= "default"
+	NoProject string			= ""
 	PodStartTmo time.Duration		= 120 * time.Second
 	DepScaleupRelax time.Duration		= 16 * time.Second
 	DepScaledownStep time.Duration		= 8 * time.Second
@@ -1402,18 +1403,11 @@ func handleMwares(ctx context.Context, w http.ResponseWriter, r *http.Request) *
 }
 
 func handleRepos(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
-	q := r.URL.Query()
-
 	switch r.Method {
 	case "GET":
 		var reps []*RepoDesc
 
-		project := q.Get("project")
-		if project == "" {
-			project = DefaultProject
-		}
-
-		err := dbFindAllCommon(ctx, commonReq(project, []string{}), &reps)
+		err := dbFindAllCommon(ctx, commonReq(NoProject, []string{}), &reps)
 		if err != nil {
 			return GateErrD(err)
 		}
@@ -1443,7 +1437,7 @@ func handleRepos(ctx context.Context, w http.ResponseWriter, r *http.Request) *s
 
 		ctxlog(ctx).Debugf("repo/add: %s params %v", gctx(ctx).Tenant, params)
 
-		id := ctxSwoId(ctx, params.Project, params.URL)
+		id := ctxSwoId(ctx, NoProject, params.URL)
 		rp := getRepoDesc(id, &params)
 		rid, cerr := rp.Attach(ctx, &conf)
 		if cerr != nil {

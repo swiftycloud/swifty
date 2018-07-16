@@ -1140,7 +1140,6 @@ func repo_info(args []string, opts [16]string) {
 
 func repo_add(args []string, opts [16]string) {
 	ra := swyapi.RepoAdd {
-		Project:	curCmd.project,
 		URL:		args[0],
 	}
 	var id string
@@ -1564,10 +1563,10 @@ func main() {
 	bindCmdUsage(CMD_DA,	[]string{"NAME", "DESC"}, "Add (start) deployment", true)
 	bindCmdUsage(CMD_DD,	[]string{"NAME"}, "Del (stop) deployment", true)
 
-	bindCmdUsage(CMD_RL,	[]string{},	"List repos", true)
-	bindCmdUsage(CMD_RI,	[]string{"ID"}, "Show info about repo", true)
-	bindCmdUsage(CMD_RA,	[]string{"URL"}, "Attach repo", true)
-	bindCmdUsage(CMD_RD,	[]string{"ID"}, "Detach repo", true)
+	bindCmdUsage(CMD_RL,	[]string{},	"List repos", false)
+	bindCmdUsage(CMD_RI,	[]string{"ID"}, "Show info about repo", false)
+	bindCmdUsage(CMD_RA,	[]string{"URL"}, "Attach repo", false)
+	bindCmdUsage(CMD_RD,	[]string{"ID"}, "Detach repo", false)
 
 	bindCmdUsage(CMD_UL,	[]string{}, "List users", false)
 	cmdMap[CMD_UA].opts.StringVar(&opts[0], "name", "", "User name")

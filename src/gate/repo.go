@@ -66,7 +66,6 @@ func (rd *RepoDesc)toInfo(ctx context.Context, conf *YAMLConf, details bool) (*s
 	r := &swyapi.RepoInfo {
 		ID:		rd.ObjID.Hex(),
 		URL:		rd.SwoId.Name,
-		Project:	rd.SwoId.Project,
 		State:		repStates[rd.State],
 	}
 
