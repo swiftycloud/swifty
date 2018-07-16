@@ -61,8 +61,12 @@ type RepoDesc struct {
 	UserData	string		`bson:"userdata,omitempty"`
 }
 
-func (rd *RepoDesc)Path() string {
+func (rd *RepoDesc)path() string {
 	return rd.SwoId.Tennant + "/" + rd.ObjID.Hex()
+}
+
+func (rd *RepoDesc)clonePath() string {
+	return cloneDir() + "/" + rd.path()
 }
 
 func (rd *RepoDesc)URL() string { return rd.SwoId.Name }
@@ -111,7 +115,7 @@ func (rd *RepoDesc)Detach(ctx context.Context, conf *YAMLConf) *swyapi.GateErr {
 
 	rd.State = swy.DBRepoStateRem
 
-	_, err = swy.DropDir(cloneDir(), rd.Path())
+	_, err = swy.DropDir(cloneDir(), rd.path())
 	if err != nil {
 		return GateErrE(swy.GateFsError, err)
 	}
@@ -125,7 +129,7 @@ func (rd *RepoDesc)Detach(ctx context.Context, conf *YAMLConf) *swyapi.GateErr {
 }
 
 func (rd *RepoDesc)listFiles(ctx context.Context) ([]string, *swyapi.GateErr) {
-	searchDir := cloneDir() + "/" + rd.Path()
+	searchDir := rd.clonePath()
 	fileList := []string{}
 	err := filepath.Walk(searchDir, func(path string, f os.FileInfo, err error) error {
 		if f.IsDir() {
@@ -152,7 +156,7 @@ func (rd *RepoDesc)pull(ctx context.Context) *swyapi.GateErr {
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 
-	clone_to := cloneDir() + "/" + rd.Path()
+	clone_to := rd.clonePath()
 	ctxlog(ctx).Debugf("Git pull %s", clone_to)
 
 	cmd := exec.Command("git", "-C", clone_to, "pull")
@@ -184,37 +188,12 @@ func gitCommit(dir string) (string, error) {
 	return stdout.String(), nil
 }
 
-func gitCommits(dir, since string) ([]string, error) {
-	var stdout bytes.Buffer
-	var stderr bytes.Buffer
-
-	cmd := exec.Command("git", "-C", dir, "log", since + "..", "--pretty=format:%H")
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-	err := cmd.Run()
-	if err != nil {
-		return nil, err
-	}
-
-	ret := strings.Split(stdout.String(), "\n")
-	ret = append(ret, since)
-	return ret, nil
-}
-
 var srcHandlers = map[string] struct {
 	get func (context.Context, *FunctionDesc, *swyapi.FunctionSources) error
 } {
-	"git": {
-		get:	getFileFromRepo,
-	},
-
-	"code": {
-		get:	getFileFromReq,
-	},
-
-	"swage": {
-		get:	swageFile,
-	},
+	"git":		{ get: getFileFromRepo, },
+	"code":		{ get: getFileFromReq, },
+	"swage":	{ get: swageFile, },
 }
 
 func checkVersion(ctx context.Context, fn *FunctionDesc, version string, versions []string) (bool, error) {
@@ -271,7 +250,7 @@ func (rd *RepoDesc)Clone(ctx context.Context) (string, error) {
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 
-	clone_to := cloneDir() + "/" + rd.Path()
+	clone_to := rd.clonePath()
 	ctxlog(ctx).Debugf("Git clone %s -> %s", rd.URL(), clone_to)
 
 	_, err := os.Stat(clone_to)
@@ -361,7 +340,7 @@ func getFileFromRepo(ctx context.Context, fn *FunctionDesc, src *swyapi.Function
 		return err
 	}
 
-	fnCode, err := ioutil.ReadFile(cloneDir() + "/" + rd.Path() + "/" + ids[1])
+	fnCode, err := ioutil.ReadFile(rd.clonePath() + "/" + ids[1])
 	if err != nil {
 		return err
 	}
