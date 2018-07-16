@@ -44,10 +44,6 @@ func cloneDir() string {
 	return conf.Home + "/" + CloneDir
 }
 
-func fnRepoClone(fn *FunctionDesc) string {
-	return cloneDir() + "/" + fnCodeDir(fn)
-}
-
 var repStates = map[int]string {
 	swy.DBRepoStateCln:	"cloning",
 	swy.DBRepoStateStl:	"stalled",
@@ -182,40 +178,6 @@ func gitCommits(dir, since string) ([]string, error) {
 	ret := strings.Split(stdout.String(), "\n")
 	ret = append(ret, since)
 	return ret, nil
-}
-
-func checkoutSources(ctx context.Context, fn *FunctionDesc) error {
-	var err error
-
-	share_to := "?"
-	cloned_to := fnRepoClone(fn)
-
-	fn.Src.Version, err = gitCommit(cloned_to)
-	if err != nil {
-		goto co_err
-	}
-
-	// Bring the necessary deps
-	err = update_deps(ctx, cloned_to)
-	if err != nil {
-		goto co_err
-	}
-
-	// Now put the sources into shared place
-	share_to = fnCodeLatestPath(&conf, fn)
-
-	ctxlog(ctx).Debugf("Checkout %s to %s", fn.Src.Version[:12], share_to)
-	err = copy_git_files(cloned_to, share_to)
-	if err != nil {
-		goto co_err
-	}
-
-	return nil
-
-co_err:
-	ctxlog(ctx).Errorf("can't checkout sources to %s: %s",
-			share_to, err.Error())
-	return err
 }
 
 var srcHandlers = map[string] struct {
@@ -499,24 +461,6 @@ func GCOldSources(ctx context.Context, fn *FunctionDesc, ver string) {
 func updateGitRepo(ctx context.Context, fn *FunctionDesc, src *swyapi.FunctionSources) error {
 	return errors.New("Not implemented")
 }
-//	var stdout bytes.Buffer
-//	var stderr bytes.Buffer
-//
-//	clone_to := fnRepoClone(fn)
-//	ctxlog(ctx).Debugf("Git pull %s", clone_to)
-//
-//	cmd := exec.Command("git", "-C", clone_to, "pull")
-//	cmd.Stdout = &stdout
-//	cmd.Stderr = &stderr
-//	err := cmd.Run()
-//	if err != nil {
-//		ctxlog(ctx).Errorf("can't pull %s -> %s: %s (%s:%s)",
-//				fn.Src.Repo, clone_to, err.Error(),
-//				stdout.String(), stderr.String())
-//		return err
-//	}
-//
-//	return checkoutSources(ctx, fn)
 
 func updateFileFromReq(ctx context.Context, fn *FunctionDesc, src *swyapi.FunctionSources) error {
 	ov, _ := strconv.Atoi(fn.Src.Version)
