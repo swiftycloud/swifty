@@ -56,6 +56,7 @@ type RepoDesc struct {
 	// field to be present...
 	ObjID		bson.ObjectId	`bson:"_id,omitempty"`
 	SwoId				`bson:",inline"`
+	Type		string		`bson:"type"`
 	State		int		`bson:"state"`
 	Commit		string		`bson:"commit,omitempty"`
 	UserData	string		`bson:"userdata,omitempty"`
@@ -74,6 +75,7 @@ func (rd *RepoDesc)URL() string { return rd.SwoId.Name }
 func getRepoDesc(id *SwoId, params *swyapi.RepoAdd) *RepoDesc {
 	return &RepoDesc {
 		SwoId:		*id,
+		Type:		params.Type,
 		UserData:	params.UserData,
 	}
 }
@@ -81,6 +83,7 @@ func getRepoDesc(id *SwoId, params *swyapi.RepoAdd) *RepoDesc {
 func (rd *RepoDesc)toInfo(ctx context.Context, conf *YAMLConf, details bool) (*swyapi.RepoInfo, *swyapi.GateErr) {
 	r := &swyapi.RepoInfo {
 		ID:		rd.ObjID.Hex(),
+		Type:		rd.Type,
 		URL:		rd.URL(),
 		State:		repStates[rd.State],
 		Commit:		rd.Commit,
@@ -96,6 +99,10 @@ func (rd *RepoDesc)toInfo(ctx context.Context, conf *YAMLConf, details bool) (*s
 func (rd *RepoDesc)Attach(ctx context.Context, conf *YAMLConf) (string, *swyapi.GateErr) {
 	rd.ObjID = bson.NewObjectId()
 	rd.State = swy.DBRepoStateCln
+
+	if rd.Type != "github" {
+		return "", GateErrM(swy.GateBadRequest, "Unsupported repo type")
+	}
 
 	err := dbInsert(ctx, rd)
 	if err != nil {

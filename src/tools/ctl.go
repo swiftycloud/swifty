@@ -1148,6 +1148,7 @@ func repo_info(args []string, opts [16]string) {
 func repo_add(args []string, opts [16]string) {
 	ra := swyapi.RepoAdd {
 		URL:		args[0],
+		Type:		"github",
 	}
 	var id string
 	make_faas_req1("POST", "repos", http.StatusOK, &ra, &id)
