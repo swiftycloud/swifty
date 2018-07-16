@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"encoding/base64"
-	"path/filepath"
 	"io/ioutil"
 	"net/http"
 	"strings"
@@ -654,7 +653,11 @@ func function_add(args []string, opts [16]string) {
 	sources := swyapi.FunctionSources{}
 	code := swyapi.FunctionCode{}
 
-	if strings.HasPrefix(opts[1], "sw:") {
+	if strings.HasPrefix(opts[1], "repo:") {
+		fmt.Printf("Will add file from repo %s\n", opts[1][5:])
+		sources.Type = "git"
+		sources.Repo = opts[1][5:]
+	} else if strings.HasPrefix(opts[1], "sw:") {
 		s := strings.Split(opts[1], ":")
 		var sw swyapi.FunctionSwage
 
@@ -674,19 +677,12 @@ func function_add(args []string, opts [16]string) {
 		}
 
 		if st.IsDir() {
-			repo, err := filepath.Abs(opts[1])
-			if err != nil {
-				fatal(fmt.Errorf("Can't get abs path for repo"))
-			}
-
-			fmt.Printf("Will add git repo %s\n", repo)
-			sources.Type = "git"
-			sources.Repo = repo
-		} else {
-			fmt.Printf("Will add file %s\n", opts[1])
-			sources.Type = "code"
-			sources.Code = encodeFile(opts[1])
+			fatal(fmt.Errorf("Can't add dir as source"))
 		}
+
+		fmt.Printf("Will add file %s\n", opts[1])
+		sources.Type = "code"
+		sources.Code = encodeFile(opts[1])
 	}
 
 	if opts[0] == "" {

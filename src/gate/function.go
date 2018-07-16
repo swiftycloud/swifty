@@ -708,14 +708,18 @@ func waitFunctionVersion(ctx context.Context, fn *FunctionDesc, version string, 
 	w := xwait.Prepare(fn.Cookie)
 
 	for {
+		var vers []string
+		var ok bool
+
 		ctxlog(ctx).Debugf("Check %s for %s", fn.SwoId.Str(), version)
-		vers, err := dbBalancerRSListVersions(ctx, fn.Cookie)
+		vers, err = dbBalancerRSListVersions(ctx, fn.Cookie)
 		if err != nil {
 			break
 		}
 
 		ctxlog(ctx).Debugf("Check %s for %s vs %v", fn.SwoId.Str(), version, vers)
-		if checkVersion(ctx, fn, version, vers) {
+		ok, err = checkVersion(ctx, fn, version, vers)
+		if ok || err != nil {
 			break
 		}
 

@@ -167,6 +167,23 @@ func gitCommit(dir string) (string, error) {
 	return stdout.String(), nil
 }
 
+func gitCommits(dir, since string) ([]string, error) {
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+
+	cmd := exec.Command("git", "-C", dir, "log", since + "..", "--pretty=format:%H")
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	err := cmd.Run()
+	if err != nil {
+		return nil, err
+	}
+
+	ret := strings.Split(stdout.String(), "\n")
+	ret = append(ret, since)
+	return ret, nil
+}
+
 func checkoutSources(ctx context.Context, fn *FunctionDesc) error {
 	var err error
 
@@ -204,11 +221,12 @@ co_err:
 var srcHandlers = map[string] struct {
 	get func (context.Context, *FunctionDesc) error
 	update func (context.Context, *FunctionDesc, *swyapi.FunctionSources) error
-	check func (string, []string) bool
+	check func (context.Context, *FunctionDesc, string, []string) (bool, error)
 } {
 	"git": {
 		get:	getFileFromRepo,
 		update:	updateGitRepo,
+		check:	checkFileCommit,
 	},
 
 	"code": {
@@ -222,22 +240,22 @@ var srcHandlers = map[string] struct {
 	},
 }
 
-func checkFileVersion(version string, versions []string) bool {
+func checkFileVersion(ctx context.Context, fn *FunctionDesc, version string, versions []string) (bool, error) {
 	cver, _ := strconv.Atoi(version)
 	for _, v := range versions {
 		/* For files we just generate sequential numbers */
 		hver, _ := strconv.Atoi(v)
 		if cver <= hver {
-			return true
+			return true, nil
 		}
 	}
 
-	return false
+	return false, nil
 }
 
-func checkVersion(ctx context.Context, fn *FunctionDesc, version string, versions []string) bool {
+func checkVersion(ctx context.Context, fn *FunctionDesc, version string, versions []string) (bool, error) {
 	srch, _ := srcHandlers[fn.Src.Type]
-	return srch.check(version, versions)
+	return srch.check(ctx, fn, version, versions)
 }
 
 func getSources(ctx context.Context, fn *FunctionDesc) error {
@@ -350,7 +368,64 @@ func swageFile(ctx context.Context, fn *FunctionDesc) error {
 }
 
 func getFileFromRepo(ctx context.Context, fn *FunctionDesc) error {
-	return errors.New("Not implemented yet")
+	ids := strings.SplitN(fn.Src.Repo, "/", 2)
+	if len(ids) != 2 || !bson.IsObjectIdHex(ids[0]) {
+		return errors.New("Bad repo file ID")
+	}
+
+	var rd RepoDesc
+	err := dbFind(ctx, ctxObjId(ctx, ids[0]), &rd)
+	if err != nil {
+		return err
+	}
+
+	fnCode, err := ioutil.ReadFile(cloneDir() + "/" + rd.Path() + "/" + ids[1])
+	if err != nil {
+		return err
+	}
+
+	fn.Src.Version = rd.Commit
+	return writeSourceRaw(ctx, fn, fnCode)
+}
+
+func checkFileCommit(ctx context.Context, fn *FunctionDesc, version string, versions []string) (bool, error) {
+	for _, v := range versions {
+		if v == version {
+			return true, nil
+		}
+	}
+
+	/*
+	 * Unfortunately, need to go to repo and get real commits from it
+	 * starting from the given version. Then heck whether the running
+	 * versions are on this list
+	 */
+	ids := strings.SplitN(fn.Src.Repo, "/", 2)
+	if len(ids) != 2 || !bson.IsObjectIdHex(ids[0]) {
+		/* XXX -- cannot happen */
+		return false, errors.New("Bad repo ID")
+	}
+
+	var rd RepoDesc
+	err := dbFind(ctx, ctxObjId(ctx, ids[0]), &rd)
+	if err != nil {
+		return false, err
+	}
+
+	cmts, err := gitCommits(cloneDir() + "/" + rd.Path(), version)
+	if err != nil {
+		return false, err
+	}
+
+	for _, v := range versions {
+		for _, c := range cmts {
+			if v == c {
+				return true, nil
+			}
+		}
+	}
+
+	return false, nil
 }
 
 func getFileFromReq(ctx context.Context, fn *FunctionDesc) error {
@@ -422,25 +497,26 @@ func GCOldSources(ctx context.Context, fn *FunctionDesc, ver string) {
 }
 
 func updateGitRepo(ctx context.Context, fn *FunctionDesc, src *swyapi.FunctionSources) error {
-	var stdout bytes.Buffer
-	var stderr bytes.Buffer
-
-	clone_to := fnRepoClone(fn)
-	ctxlog(ctx).Debugf("Git pull %s", clone_to)
-
-	cmd := exec.Command("git", "-C", clone_to, "pull")
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-	err := cmd.Run()
-	if err != nil {
-		ctxlog(ctx).Errorf("can't pull %s -> %s: %s (%s:%s)",
-				fn.Src.Repo, clone_to, err.Error(),
-				stdout.String(), stderr.String())
-		return err
-	}
-
-	return checkoutSources(ctx, fn)
+	return errors.New("Not implemented")
 }
+//	var stdout bytes.Buffer
+//	var stderr bytes.Buffer
+//
+//	clone_to := fnRepoClone(fn)
+//	ctxlog(ctx).Debugf("Git pull %s", clone_to)
+//
+//	cmd := exec.Command("git", "-C", clone_to, "pull")
+//	cmd.Stdout = &stdout
+//	cmd.Stderr = &stderr
+//	err := cmd.Run()
+//	if err != nil {
+//		ctxlog(ctx).Errorf("can't pull %s -> %s: %s (%s:%s)",
+//				fn.Src.Repo, clone_to, err.Error(),
+//				stdout.String(), stderr.String())
+//		return err
+//	}
+//
+//	return checkoutSources(ctx, fn)
 
 func updateFileFromReq(ctx context.Context, fn *FunctionDesc, src *swyapi.FunctionSources) error {
 	ov, _ := strconv.Atoi(fn.Src.Version)
