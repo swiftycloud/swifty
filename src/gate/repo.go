@@ -17,6 +17,7 @@ import (
 	"errors"
 	"../common"
 	"../common/xwait"
+	"../common/http"
 	"../apis/apps"
 )
 
@@ -60,6 +61,11 @@ type RepoDesc struct {
 	State		int		`bson:"state"`
 	Commit		string		`bson:"commit,omitempty"`
 	UserData	string		`bson:"userdata,omitempty"`
+}
+
+type GitHubRepo struct {
+	Name		string		`json:"name"`
+	URL		string		`json:"clone_url"`
 }
 
 func (rd *RepoDesc)path() string {
@@ -271,7 +277,7 @@ func (rd *RepoDesc)Clone(ctx context.Context) (string, error) {
 		return "", err
 	}
 
-	cmd := exec.Command("git", "-C", clone_to, "clone", rd.URL(), ".")
+	cmd := exec.Command("git", "-C", clone_to, "clone", "--depth=1", rd.URL(), ".")
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	err = cmd.Run()
@@ -407,6 +413,68 @@ func GCOldSources(ctx context.Context, fn *FunctionDesc, ver string) {
 
 		w.Done()
 	}()
+}
+
+func listRepos(ctx context.Context) ([]*swyapi.RepoInfo, *swyapi.GateErr) {
+	var reps []*RepoDesc
+	urls := make(map[string]bool)
+
+	err := dbFindAllCommon(ctx, commonReq(NoProject, []string{}), &reps)
+	if err != nil {
+		return nil, GateErrD(err)
+	}
+
+	ret := []*swyapi.RepoInfo{}
+	for _, rp := range reps {
+		ri, cerr := rp.toInfo(ctx, &conf, false)
+		if cerr != nil {
+			return nil, cerr
+		}
+
+		ret = append(ret, ri)
+		urls[ri.URL] = true
+	}
+
+	/* FIXME -- maybe cache repos in a DB? */
+	var acs []*AccDesc
+	err = dbFindAll(ctx, bson.M{"type": "github"}, &acs)
+	if err != nil && !dbNF(err) {
+		return nil, GateErrD(err)
+	}
+
+	for _, ac := range acs {
+		rsp, err := swyhttp.MarshalAndPost(
+			&swyhttp.RestReq{
+				Address: "https://api.github.com/users/" + ac.GH.Name + "/repos",
+				Method: "GET",
+			}, nil)
+		if err != nil {
+			ctxlog(ctx).Errorf("Can't fetch users repos: %s", err.Error())
+			continue
+		}
+
+		var grs []*GitHubRepo
+		err = swyhttp.ReadAndUnmarshalResp(rsp, &grs)
+		if err != nil {
+			ctxlog(ctx).Errorf("Can't unmarshal repos: %s", err.Error())
+			continue
+		}
+
+		for _, gr := range grs {
+			if _, ok := urls[gr.URL]; ok {
+				continue
+			}
+
+			ret = append(ret, &swyapi.RepoInfo {
+				Type:		"github",
+				URL:		gr.URL,
+				State:		"unattached",
+			})
+			urls[gr.URL] = true
+		}
+	}
+
+	return ret, nil
 }
 
 func cleanRepo(ctx context.Context, fn *FunctionDesc) error {

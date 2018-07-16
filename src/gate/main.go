@@ -1497,24 +1497,12 @@ func handleAccount(ctx context.Context, w http.ResponseWriter, r *http.Request) 
 func handleRepos(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
 	switch r.Method {
 	case "GET":
-		var reps []*RepoDesc
-
-		err := dbFindAllCommon(ctx, commonReq(NoProject, []string{}), &reps)
-		if err != nil {
-			return GateErrD(err)
+		ret, cerr := listRepos(ctx)
+		if cerr != nil {
+			return cerr
 		}
 
-		ret := []*swyapi.RepoInfo{}
-		for _, rp := range reps {
-			ri, cerr := rp.toInfo(ctx, &conf, false)
-			if cerr != nil {
-				return cerr
-			}
-
-			ret = append(ret, ri)
-		}
-
-		err = swyhttp.MarshalAndWrite(w, &ret)
+		err := swyhttp.MarshalAndWrite(w, &ret)
 		if err != nil {
 			return GateErrE(swy.GateBadResp, err)
 		}
