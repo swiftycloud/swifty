@@ -62,12 +62,7 @@ type FnCodeDesc struct {
 }
 
 type FnSrcDesc struct {
-	Type		string		`bson:"type"`
-	Repo		string		`bson:"repo,omitempty"`
-	Version		string		`bson:"version"`		// Top commit in the repo
-	Code		string		`bson:"-"`
-
-	swage		*swyapi.FunctionSwage	`bson:"-"` // This doesn't get to the database (should it?)
+	Version		string		`bson:"version"` // Growing number, each deploy update (code push) bumps it
 }
 
 type FnSizeDesc struct {
@@ -199,12 +194,6 @@ func (fn *FunctionDesc)toInfo(ctx context.Context, details bool, periods int) (*
 func getFunctionDesc(id *SwoId, p_add *swyapi.FunctionAdd) *FunctionDesc {
 	fn := &FunctionDesc {
 		SwoId: *id,
-		Src:		FnSrcDesc {
-			Type:		p_add.Sources.Type,
-			Repo:		p_add.Sources.Repo,
-			Code:		p_add.Sources.Code,
-			swage:		p_add.Sources.Swage,
-		},
 		Size:		FnSizeDesc {
 			Replicas:	1,
 			Mem:		p_add.Size.Memory,
@@ -250,7 +239,7 @@ func checkCount(ctx context.Context, id *SwoId) error {
 	return nil
 }
 
-func (fn *FunctionDesc)Add(ctx context.Context, conf *YAMLConf) (string, *swyapi.GateErr) {
+func (fn *FunctionDesc)Add(ctx context.Context, conf *YAMLConf, src *swyapi.FunctionSources) (string, *swyapi.GateErr) {
 	var err, erc error
 	var build bool
 	var bAddr string
@@ -272,7 +261,7 @@ func (fn *FunctionDesc)Add(ctx context.Context, conf *YAMLConf) (string, *swyapi
 
 	gateFunctions.Inc()
 
-	err = getSources(ctx, fn)
+	err = getSources(ctx, fn, src)
 	if err != nil {
 		goto out_clean_func
 	}
@@ -280,8 +269,7 @@ func (fn *FunctionDesc)Add(ctx context.Context, conf *YAMLConf) (string, *swyapi
 	fn.State = swy.DBFuncStateStr
 
 	err = dbUpdateId(ctx, fn.ObjID, bson.M{
-			"src": &fn.Src,
-			"state": fn.State,
+			"src": &fn.Src, "state": fn.State,
 		}, &FunctionDesc{})
 	if err != nil {
 		ctxlog(ctx).Errorf("Can't update added %s: %s", fn.SwoId.Str(), err.Error())

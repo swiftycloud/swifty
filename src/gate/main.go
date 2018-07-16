@@ -1188,7 +1188,7 @@ func handleFunctions(ctx context.Context, w http.ResponseWriter, r *http.Request
 
 		id := ctxSwoId(ctx, params.Project, params.Name)
 		fd := getFunctionDesc(id, &params)
-		fid, cerr := fd.Add(ctx, &conf)
+		fid, cerr := fd.Add(ctx, &conf, &params.Sources)
 		if cerr != nil {
 			return cerr
 

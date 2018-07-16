@@ -181,20 +181,14 @@ func gitCommits(dir, since string) ([]string, error) {
 }
 
 var srcHandlers = map[string] struct {
-	get func (context.Context, *FunctionDesc) error
-	update func (context.Context, *FunctionDesc, *swyapi.FunctionSources) error
-	check func (context.Context, *FunctionDesc, string, []string) (bool, error)
+	get func (context.Context, *FunctionDesc, *swyapi.FunctionSources) error
 } {
 	"git": {
 		get:	getFileFromRepo,
-		update:	updateGitRepo,
-		check:	checkFileCommit,
 	},
 
 	"code": {
 		get:	getFileFromReq,
-		update:	updateFileFromReq,
-		check:	checkFileVersion,
 	},
 
 	"swage": {
@@ -202,7 +196,7 @@ var srcHandlers = map[string] struct {
 	},
 }
 
-func checkFileVersion(ctx context.Context, fn *FunctionDesc, version string, versions []string) (bool, error) {
+func checkVersion(ctx context.Context, fn *FunctionDesc, version string, versions []string) (bool, error) {
 	cver, _ := strconv.Atoi(version)
 	for _, v := range versions {
 		/* For files we just generate sequential numbers */
@@ -215,18 +209,26 @@ func checkFileVersion(ctx context.Context, fn *FunctionDesc, version string, ver
 	return false, nil
 }
 
-func checkVersion(ctx context.Context, fn *FunctionDesc, version string, versions []string) (bool, error) {
-	srch, _ := srcHandlers[fn.Src.Type]
-	return srch.check(ctx, fn, version, versions)
-}
-
-func getSources(ctx context.Context, fn *FunctionDesc) error {
-	srch, ok := srcHandlers[fn.Src.Type]
+func getSources(ctx context.Context, fn *FunctionDesc, src *swyapi.FunctionSources) error {
+	srch, ok := srcHandlers[src.Type]
 	if !ok {
-		return fmt.Errorf("Unknown sources type %s", fn.Src.Type)
+		return fmt.Errorf("Unknown sources type %s", src.Type)
 	}
 
-	return srch.get(ctx, fn)
+	fn.Src.Version = zeroVersion
+	return srch.get(ctx, fn, src)
+}
+
+func updateSources(ctx context.Context, fn *FunctionDesc, src *swyapi.FunctionSources) error {
+	srch, ok := srcHandlers[src.Type]
+	if !ok {
+		return fmt.Errorf("Unknown sources type %s", src.Type)
+	}
+
+	ov, _ := strconv.Atoi(fn.Src.Version)
+	fn.Src.Version = strconv.Itoa(ov + 1)
+
+	return srch.get(ctx, fn, src)
 }
 
 func cloneRepo(rd *RepoDesc) {
@@ -304,12 +306,12 @@ func writeSourceRaw(ctx context.Context, fn *FunctionDesc, data []byte) error {
 	return nil
 }
 
-func swageFile(ctx context.Context, fn *FunctionDesc) error {
-	if fn.Src.swage == nil {
+func swageFile(ctx context.Context, fn *FunctionDesc, src *swyapi.FunctionSources) error {
+	if src.Swage == nil {
 		return errors.New("No swage params")
 	}
 
-	tf := fn.Src.swage.Template
+	tf := src.Swage.Template
 	if strings.Contains(tf, "/") {
 		return errors.New("Bad swage name")
 	}
@@ -319,18 +321,15 @@ func swageFile(ctx context.Context, fn *FunctionDesc) error {
 		return errors.New("Can't read swage")
 	}
 
-	for k, v := range fn.Src.swage.Params {
+	for k, v := range src.Swage.Params {
 		fnCode = bytes.Replace(fnCode, []byte(k), []byte(v), -1)
 	}
-
-	fn.Src.Type = "code"
-	fn.Src.Version = zeroVersion
 
 	return writeSourceRaw(ctx, fn, fnCode)
 }
 
-func getFileFromRepo(ctx context.Context, fn *FunctionDesc) error {
-	ids := strings.SplitN(fn.Src.Repo, "/", 2)
+func getFileFromRepo(ctx context.Context, fn *FunctionDesc, src *swyapi.FunctionSources) error {
+	ids := strings.SplitN(src.Repo, "/", 2)
 	if len(ids) != 2 || !bson.IsObjectIdHex(ids[0]) {
 		return errors.New("Bad repo file ID")
 	}
@@ -346,66 +345,11 @@ func getFileFromRepo(ctx context.Context, fn *FunctionDesc) error {
 		return err
 	}
 
-	fn.Src.Version = rd.Commit
 	return writeSourceRaw(ctx, fn, fnCode)
 }
 
-func checkFileCommit(ctx context.Context, fn *FunctionDesc, version string, versions []string) (bool, error) {
-	for _, v := range versions {
-		if v == version {
-			return true, nil
-		}
-	}
-
-	/*
-	 * Unfortunately, need to go to repo and get real commits from it
-	 * starting from the given version. Then heck whether the running
-	 * versions are on this list
-	 */
-	ids := strings.SplitN(fn.Src.Repo, "/", 2)
-	if len(ids) != 2 || !bson.IsObjectIdHex(ids[0]) {
-		/* XXX -- cannot happen */
-		return false, errors.New("Bad repo ID")
-	}
-
-	var rd RepoDesc
-	err := dbFind(ctx, ctxObjId(ctx, ids[0]), &rd)
-	if err != nil {
-		return false, err
-	}
-
-	cmts, err := gitCommits(cloneDir() + "/" + rd.Path(), version)
-	if err != nil {
-		return false, err
-	}
-
-	for _, v := range versions {
-		for _, c := range cmts {
-			if v == c {
-				return true, nil
-			}
-		}
-	}
-
-	return false, nil
-}
-
-func getFileFromReq(ctx context.Context, fn *FunctionDesc) error {
-	fn.Src.Version = zeroVersion
-	return writeSource(ctx, fn, fn.Src.Code)
-}
-
-func updateSources(ctx context.Context, fn *FunctionDesc, src *swyapi.FunctionSources) error {
-	if fn.Src.Type != src.Type {
-		return errors.New("Bad source type")
-	}
-
-	srch, ok := srcHandlers[fn.Src.Type]
-	if !ok {
-		return fmt.Errorf("Unknown sources type %s", fn.Src.Type)
-	}
-
-	return srch.update(ctx, fn, src)
+func getFileFromReq(ctx context.Context, fn *FunctionDesc, src *swyapi.FunctionSources) error {
+	return writeSource(ctx, fn, src.Code)
 }
 
 func GCOldSources(ctx context.Context, fn *FunctionDesc, ver string) {
@@ -456,17 +400,6 @@ func GCOldSources(ctx context.Context, fn *FunctionDesc, ver string) {
 
 		w.Done()
 	}()
-}
-
-func updateGitRepo(ctx context.Context, fn *FunctionDesc, src *swyapi.FunctionSources) error {
-	return errors.New("Not implemented")
-}
-
-func updateFileFromReq(ctx context.Context, fn *FunctionDesc, src *swyapi.FunctionSources) error {
-	ov, _ := strconv.Atoi(fn.Src.Version)
-	fn.Src.Version = strconv.Itoa(ov + 1)
-
-	return writeSource(ctx, fn, src.Code)
 }
 
 func cleanRepo(ctx context.Context, fn *FunctionDesc) error {

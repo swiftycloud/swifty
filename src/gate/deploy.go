@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"gopkg.in/mgo.v2/bson"
 	"context"
 	"../common"
@@ -17,11 +18,24 @@ var depStates = map[int]string {
 type DeployItemDesc struct {
 	Fn	*FunctionDesc	`bson:"fn"`
 	Mw	*MwareDesc	`bson:"mw"`
+
+	FnSrc	string		`bson:"fnsrc,omitempty"`
+	src	*swyapi.FunctionSources	`bson:"-"`
 }
 
 func (i *DeployItemDesc)start(ctx context.Context) *swyapi.GateErr {
 	if i.Fn != nil {
-		_, cerr := i.Fn.Add(ctx, &conf)
+		if i.src == nil {
+			var src swyapi.FunctionSources
+
+			err := json.Unmarshal([]byte(i.FnSrc), &src)
+			if err != nil {
+				return GateErrE(swy.GateGenErr, err)
+			}
+			i.src = &src
+		}
+
+		_, cerr := i.Fn.Add(ctx, &conf, i.src)
 		return cerr
 	}
 
@@ -145,10 +159,15 @@ func (dep *DeployDesc)getItems(items []*swyapi.DeployItem) *swyapi.GateErr {
 				return GateErrE(swy.GateBadRequest, er)
 			}
 
+			srcd, er := json.Marshal(&item.Function.Sources)
+			if er != nil {
+				return GateErrE(swy.GateGenErr, er)
+			}
+
 			id.Name = item.Function.Name
 			fd := getFunctionDesc(&id, item.Function)
 			fd.Labels = dep.Labels
-			dep.Items = append(dep.Items, &DeployItemDesc{ Fn: fd })
+			dep.Items = append(dep.Items, &DeployItemDesc{ Fn: fd, FnSrc: string(srcd), src: &item.Function.Sources })
 			continue
 		}
 
