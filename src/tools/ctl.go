@@ -1121,9 +1121,9 @@ func deploy_add(args []string, opts [16]string) {
 func repo_list(args []string, opts [16]string) {
 	var ris []*swyapi.RepoInfo
 	make_faas_req1("GET", "repos", http.StatusOK, nil, &ris)
-	fmt.Printf("%-32s%-12s%s\n", "ID", "STATE", "URL")
+	fmt.Printf("%-32s%-10s%-12s%s\n", "ID", "TYPE", "STATE", "URL")
 	for _, ri := range ris {
-		fmt.Printf("%-32s%-12s%s\n", ri.ID, ri.State, ri.URL)
+		fmt.Printf("%-32s%-10s%-12s%s\n", ri.ID, ri.Type, ri.State, ri.URL)
 	}
 }
 
@@ -1139,6 +1139,7 @@ func repo_info(args []string, opts [16]string) {
 	var ri swyapi.RepoInfo
 	make_faas_req1("GET", "repos/" + args[0], http.StatusOK, nil, &ri)
 	fmt.Printf("State:     %s\n", ri.State)
+	fmt.Printf("Type:      %s\n", ri.Type)
 	fmt.Printf("URL:       %s\n", ri.URL)
 	if ri.Commit != "" {
 		fmt.Printf("Commit:    %s\n", ri.Commit)
