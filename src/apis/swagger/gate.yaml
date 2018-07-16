@@ -1160,6 +1160,7 @@ paths:
           description: Need to authenticate
         '403':
           description: Bad authentication token
+  
   /auths/{aid}:
     parameters:
       - in: header
@@ -1205,7 +1206,253 @@ paths:
           description: Need to authenticate
         '403':
           description: Bad authentication token
-  
+
+  /accounts:
+    parameters:
+      - in: header
+        name: X-Auth-Token
+        type: string
+        required: true
+    get:
+      tags:
+        - accounts
+      summary: List added accounts
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/AccInfo'
+        '400':
+          description: Bad request
+          schema:
+            $ref: '#/definitions/GateError'
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad authentication token
+    post:
+      tags:
+        - accounts
+      parameters:
+        - name: data
+          in: body
+          description: Account description
+          required: true
+          schema:
+            $ref: '#/definitions/AccAdd'
+      summary: Add account indo
+      responses:
+        '200':
+          description: OK
+          schema:
+            type: string
+            description: Account ID
+            example: 'deadbeef'
+        '400':
+          description: Bad request
+          schema:
+            $ref: '#/definitions/GateError'
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad authentication token
+          
+  /accounts/{aid}:
+    parameters:
+      - in: header
+        name: X-Auth-Token
+        type: string
+        required: true
+      - name: aid
+        in: path
+        description: Account ID
+        required: true
+        type: string
+    get:
+      tags:
+        - accounts
+      summary: Show info about account
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/AccInfo'
+        '400':
+          description: Bad request
+          schema:
+            $ref: '#/definitions/GateError'
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad authentication token
+    delete:
+      tags:
+        - accounts
+      summary: Remove account info
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+          schema:
+            $ref: '#/definitions/GateError'
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad authentication token
+          
+  /repos:
+    parameters:
+      - in: header
+        name: X-Auth-Token
+        type: string
+        required: true
+    get:
+      tags:
+        - repos
+      summary: List available repositories
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/RepoInfo'
+        '400':
+          description: Bad request
+          schema:
+            $ref: '#/definitions/GateError'
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad authentication token
+    post:
+      tags:
+        - repos
+      parameters:
+        - name: data
+          in: body
+          description: Attach (save info and clone) repo
+          required: true
+          schema:
+            $ref: '#/definitions/RepoAdd'
+      summary: Add account indo
+      responses:
+        '200':
+          description: OK
+          schema:
+            type: string
+            description: Repo ID
+            example: 'deadbeef'
+        '400':
+          description: Bad request
+          schema:
+            $ref: '#/definitions/GateError'
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad authentication token
+          
+  /repos/{rid}:
+    parameters:
+      - in: header
+        name: X-Auth-Token
+        type: string
+        required: true
+      - name: rid
+        in: path
+        description: Repo ID
+        required: true
+        type: string
+    get:
+      tags:
+        - repos
+      summary: Show info about repo
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/RepoInfo'
+        '400':
+          description: Bad request
+          schema:
+            $ref: '#/definitions/GateError'
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad authentication token
+    delete:
+      tags:
+        - repos
+      summary: Detach repository
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+          schema:
+            $ref: '#/definitions/GateError'
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad authentication token
+          
+  /repos/{rid}/files:
+    parameters:
+      - in: header
+        name: X-Auth-Token
+        type: string
+        required: true
+      - name: rid
+        in: path
+        description: Repo ID
+        required: true
+        type: string
+    get:
+      tags:
+        - repos
+      summary: List files in the repository
+      responses:
+        '200':
+          description: OK
+          schema:
+            type: array
+            items:
+              type: string
+        '400':
+          description: Bad request
+          schema:
+            $ref: '#/definitions/GateError'
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad authentication token
+          
+  /repos/{rid}/pull:
+    parameters:
+      - in: header
+        name: X-Auth-Token
+        type: string
+        required: true
+      - name: rid
+        in: path
+        description: Repo ID
+        required: true
+        type: string
+    post:
+      tags:
+        - repos
+      summary: Force pull (update) of the repository
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+          schema:
+            $ref: '#/definitions/GateError'
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad authentication token
+          
   /info/langs:
     post:
       summary: Show supported languages
@@ -1789,3 +2036,63 @@ definitions:
         type: string
         description: AaaS type.
         example: jwt
+
+  AccAdd:
+    type: object
+    required:
+      - type
+    description: Description of an account
+    properties:
+      type:
+        type: string
+        description: Account type. Can be "github"
+      github_name:
+        type: string
+        description: Name of a github user
+        
+  AccInfo:
+    type: object
+    description: Info about account
+    properties:
+      id:
+        type: string
+      type:
+        type: string
+      github_name:
+        type: string
+        
+  RepoAdd:
+    type: object
+    description: Repo description
+    required:
+      - type
+    properties:
+      type:
+        type: string
+        description: Repository type. Can be "github"
+      url:
+        type: string
+        description: URL to clone the repo from
+      userdata:
+        type: string
+        description: Random text
+        
+  RepoInfo:
+    type: object
+    description: Repo information
+    properties:
+      id:
+        type: string
+        description: Attached repo ID. Unattached don't have this field
+      type:
+        type: string
+      url:
+        type: string
+      state:
+        type: string
+        description: State of the repo. Can be "cloning", "ready", "stalled" or "unattached"
+      commit:
+        type: string
+        description: Top-most commit of the repo
+      userdata:
+        type: string
