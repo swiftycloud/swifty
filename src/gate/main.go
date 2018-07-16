@@ -1402,6 +1402,94 @@ func handleMwares(ctx context.Context, w http.ResponseWriter, r *http.Request) *
 	return nil
 }
 
+func handleAccounts(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
+	switch r.Method {
+	case "GET":
+		var acs []*AccDesc
+
+		err := dbFindAllCommon(ctx, commonReq(NoProject, []string{}), &acs)
+		if err != nil {
+			return GateErrD(err)
+		}
+
+		ret := []*swyapi.AccInfo{}
+		for _, ac := range acs {
+			ai, cerr := ac.toInfo(ctx, &conf, false)
+			if cerr != nil {
+				return cerr
+			}
+
+			ret = append(ret, ai)
+		}
+
+		err = swyhttp.MarshalAndWrite(w, &ret)
+		if err != nil {
+			return GateErrE(swy.GateBadResp, err)
+		}
+
+	case "POST":
+		var params swyapi.AccAdd
+
+		err := swyhttp.ReadAndUnmarshalReq(r, &params)
+		if err != nil {
+			return GateErrE(swy.GateBadRequest, err)
+		}
+
+		ctxlog(ctx).Debugf("account/add: %s params %v", gctx(ctx).Tenant, params)
+
+		id := ctxSwoId(ctx, NoProject, "")
+		ac := getAccDesc(id, &params)
+		aid, cerr := ac.Add(ctx, &conf)
+		if cerr != nil {
+			return cerr
+		}
+
+		err = swyhttp.MarshalAndWrite(w, aid)
+		if err != nil {
+			return GateErrE(swy.GateBadResp, err)
+		}
+	}
+
+	return nil
+}
+
+func handleAccount(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
+	aid := mux.Vars(r)["aid"]
+	if !bson.IsObjectIdHex(aid) {
+		return GateErrM(swy.GateBadRequest, "Bad repo ID value")
+	}
+
+	var ac AccDesc
+
+	err := dbFind(ctx, ctxObjId(ctx, aid), &ac)
+	if err != nil {
+		return GateErrD(err)
+	}
+
+	switch r.Method {
+	case "GET":
+		ai, cerr := ac.toInfo(ctx, &conf, true)
+		if cerr != nil {
+			return cerr
+		}
+
+		err = swyhttp.MarshalAndWrite(w, ai)
+		if err != nil {
+			return GateErrE(swy.GateBadResp, err)
+		}
+
+	case "DELETE":
+		cerr := ac.Del(ctx, &conf)
+		if cerr != nil {
+			return cerr
+		}
+
+		w.WriteHeader(http.StatusOK)
+	}
+
+	return nil
+}
+
 func handleRepos(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
 	switch r.Method {
 	case "GET":
@@ -2032,6 +2120,9 @@ func main() {
 	r.Handle("/v1/repos/{rid}",		genReqHandler(handleRepo)).Methods("GET", "DELETE", "OPTIONS")
 	r.Handle("/v1/repos/{rid}/files",	genReqHandler(handleRepoFiles)).Methods("GET", "OPTIONS")
 	r.Handle("/v1/repos/{rid}/pull",	genReqHandler(handleRepoPull)).Methods("POST", "OPTIONS")
+
+	r.Handle("/v1/accounts",		genReqHandler(handleAccounts)).Methods("GET", "POST", "OPTIONS")
+	r.Handle("/v1/accounts/{aid}",		genReqHandler(handleAccount)).Methods("GET", "DELETE", "OPTIONS")
 
 	r.Handle("/v1/s3/access",		genReqHandler(handleS3Access)).Methods("POST", "OPTIONS")
 

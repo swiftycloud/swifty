@@ -1159,6 +1159,34 @@ func repo_del(args []string, opts [16]string) {
 	make_faas_req1("DELETE", "repos/" + args[0], http.StatusOK, nil, nil)
 }
 
+func acc_list(args []string, opts [16]string) {
+	var ais []*swyapi.AccInfo
+	make_faas_req1("GET", "accounts", http.StatusOK, nil, &ais)
+	fmt.Printf("%-32s%-12s\n", "ID", "TYPE")
+	for _, ai := range ais {
+		fmt.Printf("%-32s%-12s\n", ai.ID, ai.Type)
+	}
+}
+
+func acc_info(args []string, opts [16]string) {
+	var ai swyapi.AccInfo
+	make_faas_req1("GET", "accounts/" + args[0], http.StatusOK, nil, &ai)
+	fmt.Printf("Type:       %s\n", ai.Type)
+}
+
+func acc_add(args []string, opts [16]string) {
+	aa := swyapi.AccAdd {
+		Type:	args[0],
+	}
+	var id string
+	make_faas_req1("POST", "accounts", http.StatusOK, &aa, &id)
+	fmt.Printf("%s account created\n", id)
+}
+
+func acc_del(args []string, opts [16]string) {
+	make_faas_req1("DELETE", "accounts/" + args[0], http.StatusOK, nil, nil)
+}
+
 func s3_access(args []string, opts [16]string) {
 	acc := swyapi.S3Access {
 		Project: curCmd.project,
@@ -1346,6 +1374,11 @@ const (
 	CMD_RD string		= "rd"
 	CMD_RLS string		= "rls"
 
+	CMD_AL string		= "al"
+	CMD_AI string		= "ai"
+	CMD_AA string		= "aa"
+	CMD_AD string		= "ad"
+
 	CMD_UL string		= "ul"
 	CMD_UI string		= "ui"
 	CMD_UA string		= "ua"
@@ -1401,6 +1434,11 @@ var cmdOrder = []string {
 	CMD_RA,
 	CMD_RD,
 	CMD_RLS,
+
+	CMD_AL,
+	CMD_AI,
+	CMD_AD,
+	CMD_AA,
 
 	CMD_UL,
 	CMD_UI,
@@ -1463,6 +1501,11 @@ var cmdMap = map[string]*cmdDesc {
 	CMD_RA:		&cmdDesc{ call: repo_add,	  opts: flag.NewFlagSet(CMD_RA, flag.ExitOnError) },
 	CMD_RD:		&cmdDesc{ call: repo_del,	  opts: flag.NewFlagSet(CMD_RD, flag.ExitOnError) },
 	CMD_RLS:	&cmdDesc{ call: repo_list_files,  opts: flag.NewFlagSet(CMD_RLS, flag.ExitOnError) },
+
+	CMD_AL:		&cmdDesc{ call: acc_list,	  opts: flag.NewFlagSet(CMD_AL, flag.ExitOnError) },
+	CMD_AI:		&cmdDesc{ call: acc_info,	  opts: flag.NewFlagSet(CMD_AI, flag.ExitOnError) },
+	CMD_AA:		&cmdDesc{ call: acc_add,	  opts: flag.NewFlagSet(CMD_AA, flag.ExitOnError) },
+	CMD_AD:		&cmdDesc{ call: acc_del,	  opts: flag.NewFlagSet(CMD_AD, flag.ExitOnError) },
 
 	CMD_UL:		&cmdDesc{ call: user_list,	  opts: flag.NewFlagSet(CMD_UL, flag.ExitOnError), adm: true },
 	CMD_UI:		&cmdDesc{ call: user_info,	  opts: flag.NewFlagSet(CMD_UI, flag.ExitOnError), adm: true },
@@ -1579,6 +1622,11 @@ func main() {
 	bindCmdUsage(CMD_RA,	[]string{"URL"}, "Attach repo", false)
 	bindCmdUsage(CMD_RD,	[]string{"ID"}, "Detach repo", false)
 	bindCmdUsage(CMD_RLS,	[]string{"ID"}, "List files in repo", false)
+
+	bindCmdUsage(CMD_AL,	[]string{},	"List accounts", false)
+	bindCmdUsage(CMD_AI,	[]string{"ID"}, "Show info about account", false)
+	bindCmdUsage(CMD_AA,	[]string{"TYPE"}, "Add account", false)
+	bindCmdUsage(CMD_AD,	[]string{"ID"}, "Delete account", false)
 
 	bindCmdUsage(CMD_UL,	[]string{}, "List users", false)
 	cmdMap[CMD_UA].opts.StringVar(&opts[0], "name", "", "User name")

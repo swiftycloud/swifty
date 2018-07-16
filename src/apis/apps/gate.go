@@ -245,3 +245,12 @@ type RepoInfo struct {
 	Commit		string			`json:"commit"`
 	UserData	string			`json:"userdata,omitempty"`
 }
+
+type AccAdd struct {
+	Type		string			`json:"type"`
+}
+
+type AccInfo struct {
+	ID		string			`json:"id"`
+	Type		string			`json:"type"`
+}

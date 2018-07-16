@@ -28,6 +28,7 @@ const (
 	DBColLimits	= "Limits"
 	DBColEvents	= "Events"
 	DBColRepos	= "Repos"
+	DBColAccounts	= "Accounts"
 )
 
 var dbColMap map[reflect.Type]string
@@ -54,6 +55,10 @@ func init() {
 	dbColMap[reflect.TypeOf(&RepoDesc{})] = DBColRepos
 	dbColMap[reflect.TypeOf([]*RepoDesc{})] = DBColRepos
 	dbColMap[reflect.TypeOf(&[]*RepoDesc{})] = DBColRepos
+	dbColMap[reflect.TypeOf(AccDesc{})] = DBColAccounts
+	dbColMap[reflect.TypeOf(&AccDesc{})] = DBColAccounts
+	dbColMap[reflect.TypeOf([]*AccDesc{})] = DBColAccounts
+	dbColMap[reflect.TypeOf(&[]*AccDesc{})] = DBColAccounts
 }
 
 func dbColl(object interface{}) (string) {
