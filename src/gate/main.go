@@ -875,7 +875,7 @@ func handleFunctionLogs(ctx context.Context, w http.ResponseWriter, r *http.Requ
 		for _, loge := range logs {
 			resp = append(resp, &swyapi.FunctionLogEntry{
 				Event:	loge.Event,
-				Ts:	loge.Time.Format(time.UnixDate),
+				Ts:	loge.Time.Format(time.RFC1123Z),
 				Text:	loge.Text,
 			})
 		}
