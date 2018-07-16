@@ -4,26 +4,58 @@ import (
 	"context"
 	"gopkg.in/mgo.v2/bson"
 	"../apis/apps"
+	"../common"
 )
+
+type GHDesc struct {
+	Name		string		`bson:"name"`
+}
 
 type AccDesc struct {
 	ObjID		bson.ObjectId	`bson:"_id,omitempty"`
 	SwoId				`bson:",inline"`
 	Type		string		`bson:"type"`
+	GH		*GHDesc		`bson:"gh,omitempty"`
 }
 
-func getAccDesc(id *SwoId, params *swyapi.AccAdd) *AccDesc {
-	return &AccDesc {
-		SwoId:	*id,
-		Type:	params.Type,
+var accHandlers = map[string] struct {
+	setup func (*AccDesc, *swyapi.AccAdd)
+	info func (*AccDesc, *swyapi.AccInfo, bool)
+} {
+	"github":	{ setup: setupGithubAcc, info: infoGitHubAcc, },
+}
+
+func setupGithubAcc(ad *AccDesc, params *swyapi.AccAdd) {
+	ad.GH = &GHDesc {
+		Name:	params.GHName,
 	}
 }
 
+func infoGitHubAcc(ad *AccDesc, info *swyapi.AccInfo, detail bool) {
+	info.GHName = ad.GH.Name
+}
+
+func getAccDesc(id *SwoId, params *swyapi.AccAdd) (*AccDesc, *swyapi.GateErr) {
+	h, ok := accHandlers[params.Type]
+	if !ok {
+		return nil, GateErrM(swy.GateBadRequest, "Unknown acc type")
+	}
+
+	ad := &AccDesc { SwoId:	*id, Type: params.Type }
+	h.setup(ad, params)
+	return ad, nil
+}
+
 func (ad *AccDesc)toInfo(ctx context.Context, conf *YAMLConf, details bool) (*swyapi.AccInfo, *swyapi.GateErr) {
-	return &swyapi.AccInfo {
+	ac := &swyapi.AccInfo {
 		ID:	ad.ObjID.Hex(),
 		Type:	ad.Type,
-	}, nil
+	}
+
+	h, _ := accHandlers[ad.Type]
+	h.info(ad, ac, details)
+
+	return ac, nil
 }
 
 func (ad *AccDesc)Add(ctx context.Context, conf *YAMLConf) (string, *swyapi.GateErr) {

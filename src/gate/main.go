@@ -1438,7 +1438,11 @@ func handleAccounts(ctx context.Context, w http.ResponseWriter, r *http.Request)
 		ctxlog(ctx).Debugf("account/add: %s params %v", gctx(ctx).Tenant, params)
 
 		id := ctxSwoId(ctx, NoProject, "")
-		ac := getAccDesc(id, &params)
+		ac, cerr := getAccDesc(id, &params)
+		if cerr != nil {
+			return cerr
+		}
+
 		aid, cerr := ac.Add(ctx, &conf)
 		if cerr != nil {
 			return cerr

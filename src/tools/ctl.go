@@ -1171,13 +1171,21 @@ func acc_list(args []string, opts [16]string) {
 func acc_info(args []string, opts [16]string) {
 	var ai swyapi.AccInfo
 	make_faas_req1("GET", "accounts/" + args[0], http.StatusOK, nil, &ai)
-	fmt.Printf("Type:       %s\n", ai.Type)
+	fmt.Printf("Type:        %s\n", ai.Type)
+	if ai.GHName != "" {
+		fmt.Printf("GitHub name: %s\n", ai.GHName)
+	}
 }
 
 func acc_add(args []string, opts [16]string) {
 	aa := swyapi.AccAdd {
 		Type:	args[0],
 	}
+
+	if opts[0] != "" {
+		aa.GHName = opts[0]
+	}
+
 	var id string
 	make_faas_req1("POST", "accounts", http.StatusOK, &aa, &id)
 	fmt.Printf("%s account created\n", id)
@@ -1625,6 +1633,7 @@ func main() {
 
 	bindCmdUsage(CMD_AL,	[]string{},	"List accounts", false)
 	bindCmdUsage(CMD_AI,	[]string{"ID"}, "Show info about account", false)
+	cmdMap[CMD_AA].opts.StringVar(&opts[0], "name", "", "GitHub name")
 	bindCmdUsage(CMD_AA,	[]string{"TYPE"}, "Add account", false)
 	bindCmdUsage(CMD_AD,	[]string{"ID"}, "Delete account", false)
 

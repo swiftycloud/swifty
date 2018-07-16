@@ -248,9 +248,11 @@ type RepoInfo struct {
 
 type AccAdd struct {
 	Type		string			`json:"type"`
+	GHName		string			`json:"github_name,omitempty"`
 }
 
 type AccInfo struct {
 	ID		string			`json:"id"`
 	Type		string			`json:"type"`
+	GHName		string			`json:"github_name,omitempty"`
 }
