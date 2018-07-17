@@ -1285,6 +1285,28 @@ paths:
           description: Need to authenticate
         '403':
           description: Bad authentication token
+    put:
+      tags:
+        - accounts
+      parameters:
+        - name: data
+          in: body
+          description: Update description
+          required: true
+          schema:
+            $ref: '#/definitions/AccUpdate'
+      summary: Update account date
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+          schema:
+            $ref: '#/definitions/GateError'
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad authentication token
     delete:
       tags:
         - accounts
@@ -2053,6 +2075,20 @@ definitions:
       github_name:
         type: string
         description: Name of a github user
+      github_token:
+        type: string
+        description: Personal access token of the user
+        
+  AccUpdate:
+    type: object
+    description: Updating an account
+    properties:
+      github_name:
+        type: string
+        description: Name of a github user
+      github_token:
+        type: string
+        description: Personal access token of the user
         
   AccInfo:
     type: object
@@ -2063,6 +2099,8 @@ definitions:
       type:
         type: string
       github_name:
+        type: string
+      github_token:
         type: string
         
   RepoAdd:
@@ -2077,6 +2115,9 @@ definitions:
       url:
         type: string
         description: URL to clone the repo from
+      account_id:
+        type: string
+	description: ID of account this repo should be cloned/pulled from
       userdata:
         type: string
         description: Random text
@@ -2098,5 +2139,7 @@ definitions:
       commit:
         type: string
         description: Top-most commit of the repo
+      account_id:
+        type: string
       userdata:
         type: string
