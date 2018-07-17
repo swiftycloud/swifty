@@ -103,6 +103,10 @@ func dbUpdateId(ctx context.Context, id bson.ObjectId, u bson.M, typ interface{}
 	return dbUpdateSet(ctx, bson.M{"_id": id}, u, typ)
 }
 
+func dbUpdateObj(ctx context.Context, id bson.ObjectId, o interface{}) error {
+	return gctx(ctx).S.DB(DBStateDB).C(dbColl(o)).Update(bson.M{"_id": id}, o)
+}
+
 type DBLogRec struct {
 	FnId		string		`bson:"fnid"`
 	Event		string		`bson:"event"`

@@ -61,11 +61,14 @@ type RepoDesc struct {
 	State		int		`bson:"state"`
 	Commit		string		`bson:"commit,omitempty"`
 	UserData	string		`bson:"userdata,omitempty"`
+
+	AccID		bson.ObjectId	`bson:"accid,omitempty"`
 }
 
 type GitHubRepo struct {
 	Name		string		`json:"name"`
 	URL		string		`json:"clone_url"`
+	Private		bool		`json:"private"`
 }
 
 func (rd *RepoDesc)path() string {
@@ -78,12 +81,18 @@ func (rd *RepoDesc)clonePath() string {
 
 func (rd *RepoDesc)URL() string { return rd.SwoId.Name }
 
-func getRepoDesc(id *SwoId, params *swyapi.RepoAdd) *RepoDesc {
-	return &RepoDesc {
+func getRepoDesc(id *SwoId, params *swyapi.RepoAdd, acc *AccDesc) *RepoDesc {
+	rd := &RepoDesc {
 		SwoId:		*id,
 		Type:		params.Type,
 		UserData:	params.UserData,
 	}
+
+	if acc != nil {
+		rd.AccID = acc.ObjID
+	}
+
+	return rd
 }
 
 func (rd *RepoDesc)toInfo(ctx context.Context, conf *YAMLConf, details bool) (*swyapi.RepoInfo, *swyapi.GateErr) {
@@ -93,6 +102,7 @@ func (rd *RepoDesc)toInfo(ctx context.Context, conf *YAMLConf, details bool) (*s
 		URL:		rd.URL(),
 		State:		repStates[rd.State],
 		Commit:		rd.Commit,
+		AccID:		rd.AccID.Hex(),
 	}
 
 	if details {
@@ -264,7 +274,6 @@ func (rd *RepoDesc)Clone(ctx context.Context) (string, error) {
 	var stderr bytes.Buffer
 
 	clone_to := rd.clonePath()
-	ctxlog(ctx).Debugf("Git clone %s -> %s", rd.URL(), clone_to)
 
 	_, err := os.Stat(clone_to)
 	if err == nil || !os.IsNotExist(err) {
@@ -277,7 +286,24 @@ func (rd *RepoDesc)Clone(ctx context.Context) (string, error) {
 		return "", err
 	}
 
-	cmd := exec.Command("git", "-C", clone_to, "clone", "--depth=1", rd.URL(), ".")
+	curl := rd.URL()
+
+	if rd.AccID != "" && strings.HasPrefix(curl, "https://") {
+		var ac AccDesc
+
+		err = dbFind(ctx, bson.M{"_id": rd.AccID}, &ac)
+		if err != nil && !dbNF(err) {
+			return "", err
+		}
+
+		if ac.Type == "github" && ac.GH.Token != "" {
+			curl = "https://" + ac.GH.Name + ":" + ac.GH.Token + "@" + curl[8:]
+		}
+	}
+
+	ctxlog(ctx).Debugf("Git clone %s -> %s", curl, clone_to)
+
+	cmd := exec.Command("git", "-C", clone_to, "clone", "--depth=1", curl, ".")
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	err = cmd.Run()
@@ -415,6 +441,35 @@ func GCOldSources(ctx context.Context, fn *FunctionDesc, ver string) {
 	}()
 }
 
+func listReposGH(ac *AccDesc) ([]*GitHubRepo, error) {
+	var rq *swyhttp.RestReq
+
+	if ac.GH.Token == "" {
+		rq = &swyhttp.RestReq{
+			Address: "https://api.github.com/users/" + ac.GH.Name + "/repos",
+			Method: "GET",
+		}
+	} else {
+		rq = &swyhttp.RestReq{
+			Address: "https://api.github.com/user/repos?access_token=" + ac.GH.Token,
+			Method: "GET",
+		}
+	}
+
+	rsp, err := swyhttp.MarshalAndPost(rq, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var grs []*GitHubRepo
+	err = swyhttp.ReadAndUnmarshalResp(rsp, &grs)
+	if err != nil {
+		return nil, err
+	}
+
+	return grs, nil
+}
+
 func listRepos(ctx context.Context) ([]*swyapi.RepoInfo, *swyapi.GateErr) {
 	var reps []*RepoDesc
 	urls := make(map[string]bool)
@@ -443,20 +498,9 @@ func listRepos(ctx context.Context) ([]*swyapi.RepoInfo, *swyapi.GateErr) {
 	}
 
 	for _, ac := range acs {
-		rsp, err := swyhttp.MarshalAndPost(
-			&swyhttp.RestReq{
-				Address: "https://api.github.com/users/" + ac.GH.Name + "/repos",
-				Method: "GET",
-			}, nil)
+		grs, err := listReposGH(ac)
 		if err != nil {
-			ctxlog(ctx).Errorf("Can't fetch users repos: %s", err.Error())
-			continue
-		}
-
-		var grs []*GitHubRepo
-		err = swyhttp.ReadAndUnmarshalResp(rsp, &grs)
-		if err != nil {
-			ctxlog(ctx).Errorf("Can't unmarshal repos: %s", err.Error())
+			ctxlog(ctx).Errorf("Can't list GH repos: %s", err.Error())
 			continue
 		}
 
@@ -465,11 +509,17 @@ func listRepos(ctx context.Context) ([]*swyapi.RepoInfo, *swyapi.GateErr) {
 				continue
 			}
 
-			ret = append(ret, &swyapi.RepoInfo {
-				Type:		"github",
-				URL:		gr.URL,
-				State:		"unattached",
-			})
+			ri := &swyapi.RepoInfo {
+				Type:	"github",
+				URL:	gr.URL,
+				State:	"unattached",
+			}
+
+			if gr.Private {
+				ri.AccID = ac.ObjID.Hex()
+			}
+
+			ret = append(ret, ri)
 			urls[gr.URL] = true
 		}
 	}

@@ -1121,9 +1121,19 @@ func deploy_add(args []string, opts [16]string) {
 func repo_list(args []string, opts [16]string) {
 	var ris []*swyapi.RepoInfo
 	make_faas_req1("GET", "repos", http.StatusOK, nil, &ris)
-	fmt.Printf("%-32s%-10s%-12s%s\n", "ID", "TYPE", "STATE", "URL")
+	fmt.Printf("%-32s%-8s%-12s%s\n", "ID", "TYPE", "STATE", "URL")
 	for _, ri := range ris {
-		fmt.Printf("%-32s%-10s%-12s%s\n", ri.ID, ri.Type, ri.State, ri.URL)
+		t := ri.Type
+		if ri.AccID != "" {
+			t += "*"
+		}
+
+		url := ri.URL
+		if ri.ID == "" && ri.AccID != "" {
+			url += "(" + ri.AccID + ")"
+		}
+
+		fmt.Printf("%-32s%-8s%-12s%s\n", ri.ID, t, ri.State, url)
 	}
 }
 
@@ -1144,12 +1154,18 @@ func repo_info(args []string, opts [16]string) {
 	if ri.Commit != "" {
 		fmt.Printf("Commit:    %s\n", ri.Commit)
 	}
+	if ri.AccID != "" {
+		fmt.Printf("Account:   %s\n", ri.AccID)
+	}
 }
 
 func repo_add(args []string, opts [16]string) {
 	ra := swyapi.RepoAdd {
 		URL:		args[0],
 		Type:		"github",
+	}
+	if opts[0] != "" {
+		ra.AccID = opts[0]
 	}
 	var id string
 	make_faas_req1("POST", "repos", http.StatusOK, &ra, &id)
@@ -1172,9 +1188,12 @@ func acc_list(args []string, opts [16]string) {
 func acc_info(args []string, opts [16]string) {
 	var ai swyapi.AccInfo
 	make_faas_req1("GET", "accounts/" + args[0], http.StatusOK, nil, &ai)
-	fmt.Printf("Type:        %s\n", ai.Type)
+	fmt.Printf("Type:          %s\n", ai.Type)
 	if ai.GHName != "" {
-		fmt.Printf("GitHub name: %s\n", ai.GHName)
+		fmt.Printf("GitHub name:   %s\n", ai.GHName)
+	}
+	if ai.GHToken != "" {
+		fmt.Printf("GitHub token:  %s\n", ai.GHToken)
 	}
 }
 
@@ -1186,10 +1205,26 @@ func acc_add(args []string, opts [16]string) {
 	if opts[0] != "" {
 		aa.GHName = opts[0]
 	}
+	if opts[1] != "" {
+		aa.GHToken = opts[1]
+	}
 
 	var id string
 	make_faas_req1("POST", "accounts", http.StatusOK, &aa, &id)
 	fmt.Printf("%s account created\n", id)
+}
+
+func acc_upd(args []string, opts [16]string) {
+	au := swyapi.AccUpdate {}
+
+	if opts[0] != "" {
+		au.GHName = &opts[0]
+	}
+	if opts[1] != "" {
+		au.GHToken = &opts[1]
+	}
+
+	make_faas_req1("PUT", "accounts/" + args[0], http.StatusOK, &au, nil)
 }
 
 func acc_del(args []string, opts [16]string) {
@@ -1387,6 +1422,7 @@ const (
 	CMD_AI string		= "ai"
 	CMD_AA string		= "aa"
 	CMD_AD string		= "ad"
+	CMD_AU string		= "au"
 
 	CMD_UL string		= "ul"
 	CMD_UI string		= "ui"
@@ -1445,9 +1481,10 @@ var cmdOrder = []string {
 	CMD_RLS,
 
 	CMD_AL,
+	CMD_AA,
 	CMD_AI,
 	CMD_AD,
-	CMD_AA,
+	CMD_AU,
 
 	CMD_UL,
 	CMD_UI,
@@ -1515,6 +1552,7 @@ var cmdMap = map[string]*cmdDesc {
 	CMD_AI:		&cmdDesc{ call: acc_info,	  opts: flag.NewFlagSet(CMD_AI, flag.ExitOnError) },
 	CMD_AA:		&cmdDesc{ call: acc_add,	  opts: flag.NewFlagSet(CMD_AA, flag.ExitOnError) },
 	CMD_AD:		&cmdDesc{ call: acc_del,	  opts: flag.NewFlagSet(CMD_AD, flag.ExitOnError) },
+	CMD_AU:		&cmdDesc{ call: acc_upd,	  opts: flag.NewFlagSet(CMD_AU, flag.ExitOnError) },
 
 	CMD_UL:		&cmdDesc{ call: user_list,	  opts: flag.NewFlagSet(CMD_UL, flag.ExitOnError), adm: true },
 	CMD_UI:		&cmdDesc{ call: user_info,	  opts: flag.NewFlagSet(CMD_UI, flag.ExitOnError), adm: true },
@@ -1628,6 +1666,7 @@ func main() {
 
 	bindCmdUsage(CMD_RL,	[]string{},	"List repos", false)
 	bindCmdUsage(CMD_RI,	[]string{"ID"}, "Show info about repo", false)
+	cmdMap[CMD_RA].opts.StringVar(&opts[0], "acc", "", "Acc ID from which to pull")
 	bindCmdUsage(CMD_RA,	[]string{"URL"}, "Attach repo", false)
 	bindCmdUsage(CMD_RD,	[]string{"ID"}, "Detach repo", false)
 	bindCmdUsage(CMD_RLS,	[]string{"ID"}, "List files in repo", false)
@@ -1635,8 +1674,12 @@ func main() {
 	bindCmdUsage(CMD_AL,	[]string{},	"List accounts", false)
 	bindCmdUsage(CMD_AI,	[]string{"ID"}, "Show info about account", false)
 	cmdMap[CMD_AA].opts.StringVar(&opts[0], "name", "", "GitHub name")
+	cmdMap[CMD_AA].opts.StringVar(&opts[1], "token", "", "GitHub token")
 	bindCmdUsage(CMD_AA,	[]string{"TYPE"}, "Add account", false)
 	bindCmdUsage(CMD_AD,	[]string{"ID"}, "Delete account", false)
+	cmdMap[CMD_AU].opts.StringVar(&opts[0], "name", "", "GitHub name")
+	cmdMap[CMD_AU].opts.StringVar(&opts[1], "token", "", "GitHub token")
+	bindCmdUsage(CMD_AU,	[]string{"ID"}, "Add account", false)
 
 	bindCmdUsage(CMD_UL,	[]string{}, "List users", false)
 	cmdMap[CMD_UA].opts.StringVar(&opts[0], "name", "", "User name")

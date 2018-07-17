@@ -1482,6 +1482,21 @@ func handleAccount(ctx context.Context, w http.ResponseWriter, r *http.Request) 
 			return GateErrE(swy.GateBadResp, err)
 		}
 
+	case "PUT":
+		var params swyapi.AccUpdate
+
+		err := swyhttp.ReadAndUnmarshalReq(r, &params)
+		if err != nil {
+			return GateErrE(swy.GateBadRequest, err)
+		}
+
+		cerr := ac.Update(ctx, &params)
+		if cerr != nil {
+			return cerr
+		}
+
+		w.WriteHeader(http.StatusOK)
+
 	case "DELETE":
 		cerr := ac.Del(ctx, &conf)
 		if cerr != nil {
@@ -1509,6 +1524,7 @@ func handleRepos(ctx context.Context, w http.ResponseWriter, r *http.Request) *s
 
 	case "POST":
 		var params swyapi.RepoAdd
+		var acc *AccDesc
 
 		err := swyhttp.ReadAndUnmarshalReq(r, &params)
 		if err != nil {
@@ -1517,8 +1533,27 @@ func handleRepos(ctx context.Context, w http.ResponseWriter, r *http.Request) *s
 
 		ctxlog(ctx).Debugf("repo/add: %s params %v", gctx(ctx).Tenant, params)
 
+		if params.AccID != "" {
+			if !bson.IsObjectIdHex(params.AccID) {
+				return GateErrM(swy.GateBadRequest, "Bad acc ID")
+			}
+
+			var ac AccDesc
+
+			err := dbFind(ctx, ctxObjId(ctx, params.AccID), &ac)
+			if err != nil {
+				return GateErrD(err)
+			}
+
+			if ac.Type != "github" {
+				return GateErrM(swy.GateBadRequest, "Bad account type")
+			}
+
+			acc = &ac
+		}
+
 		id := ctxSwoId(ctx, NoProject, params.URL)
-		rp := getRepoDesc(id, &params)
+		rp := getRepoDesc(id, &params, acc)
 		rid, cerr := rp.Attach(ctx, &conf)
 		if cerr != nil {
 			return cerr
@@ -2114,7 +2149,7 @@ func main() {
 	r.Handle("/v1/repos/{rid}/pull",	genReqHandler(handleRepoPull)).Methods("POST", "OPTIONS")
 
 	r.Handle("/v1/accounts",		genReqHandler(handleAccounts)).Methods("GET", "POST", "OPTIONS")
-	r.Handle("/v1/accounts/{aid}",		genReqHandler(handleAccount)).Methods("GET", "DELETE", "OPTIONS")
+	r.Handle("/v1/accounts/{aid}",		genReqHandler(handleAccount)).Methods("GET", "PUT", "DELETE", "OPTIONS")
 
 	r.Handle("/v1/s3/access",		genReqHandler(handleS3Access)).Methods("POST", "OPTIONS")
 

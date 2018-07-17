@@ -234,6 +234,7 @@ type AuthAdd struct {
 type RepoAdd struct {
 	Type		string			`json:"type"`
 	URL		string			`json:"url"`
+	AccID		string			`json:"account_id,omitempty"`
 	UserData	string			`json:"userdata,omitempty"`
 }
 
@@ -244,15 +245,23 @@ type RepoInfo struct {
 	State		string			`json:"state"`
 	Commit		string			`json:"commit"`
 	UserData	string			`json:"userdata,omitempty"`
+	AccID		string			`json:"account_id,omitempty"`
 }
 
 type AccAdd struct {
 	Type		string			`json:"type"`
 	GHName		string			`json:"github_name,omitempty"`
+	GHToken		string			`json:"github_token,omitempty"`
+}
+
+type AccUpdate struct {
+	GHName		*string			`json:"github_name,omitempty"`
+	GHToken		*string			`json:"github_token,omitempty"`
 }
 
 type AccInfo struct {
 	ID		string			`json:"id"`
 	Type		string			`json:"type"`
 	GHName		string			`json:"github_name,omitempty"`
+	GHToken		string			`json:"github_token,omitempty"`
 }
