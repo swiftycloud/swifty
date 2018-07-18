@@ -132,6 +132,7 @@ type YAMLConf struct {
 	Runtime		YAMLConfRt		`yaml:"runtime"`
 	Wdog		YAMLConfSwd		`yaml:"wdog"`
 	LogsKeepDays	int			`yaml:"logs-keep"`
+	RepoSyncRate	int			`yaml:"repo-sync-rate"`
 }
 
 var conf YAMLConf

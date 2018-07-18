@@ -64,6 +64,7 @@ type RepoDesc struct {
 	Pull		string		`bson:"pulling"`
 
 	Path		string		`bson:"path"`
+	LastPull	*time.Time	`bson:"last_pull,omitempty"`
 
 	AccID		bson.ObjectId	`bson:"accid,omitempty"`
 }
@@ -206,6 +207,10 @@ func (rd *RepoDesc)pull(ctx context.Context) *swyapi.GateErr {
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 
+	if rd.LastPull != nil && time.Now().Before( rd.LastPull.Add(time.Duration(conf.RepoSyncRate) * time.Minute)) {
+		return GateErrM(swy.GateNotAvail, "To frequent sync")
+	}
+
 	clone_to := rd.clonePath()
 	ctxlog(ctx).Debugf("Git pull %s", clone_to)
 
@@ -222,7 +227,8 @@ func (rd *RepoDesc)pull(ctx context.Context) *swyapi.GateErr {
 
 	cmt, err := gitCommit(clone_to)
 	if err == nil {
-		dbUpdateId(ctx, rd.ObjID, bson.M{"commit": cmt}, &RepoDesc{})
+		t := time.Now()
+		dbUpdateId(ctx, rd.ObjID, bson.M{"commit": cmt, "last_pull": &t}, &RepoDesc{})
 	}
 
 	return nil
@@ -290,15 +296,19 @@ func cloneRepo(rd *RepoDesc) {
 	ctx, done := mkContext("::gitclone")
 	defer done(ctx)
 
-	nst := swy.DBRepoStateRdy
-
 	commit, err := rd.Clone(ctx)
 	if err != nil {
 		/* FIXME -- keep logs and show them user */
-		nst = swy.DBRepoStateStl
+		dbUpdateId(ctx, rd.ObjID, bson.M{ "state": swy.DBRepoStateStl }, &RepoDesc{})
+		return
 	}
 
-	dbUpdateId(ctx, rd.ObjID, bson.M{ "state": nst, "commit": commit }, &RepoDesc{})
+	t := time.Now()
+	dbUpdateId(ctx, rd.ObjID, bson.M{
+					"state": swy.DBRepoStateRdy,
+					"commit": commit,
+					"last_pull": &t,
+				}, &RepoDesc{})
 }
 
 func (rd *RepoDesc)Clone(ctx context.Context) (string, error) {
