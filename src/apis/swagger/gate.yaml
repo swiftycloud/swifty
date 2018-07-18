@@ -1216,6 +1216,12 @@ paths:
     get:
       tags:
         - accounts
+      parameters:
+        - in: query
+          name: type
+          type: string
+          required: false
+          description: Accounts type to list
       summary: List added accounts
       responses:
         '200':
@@ -1393,6 +1399,28 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/RepoInfo'
+        '400':
+          description: Bad request
+          schema:
+            $ref: '#/definitions/GateError'
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad authentication token
+    put:
+      tags:
+        - repos
+      summary: Update info about repo
+      parameters:
+        - in: body
+          name: data
+          schema:
+            $ref: '#/definitions/RepoUpdate'
+          required: true
+          description: Variables to update for a repo
+      responses:
+        '200':
+          description: OK
         '400':
           description: Bad request
           schema:
@@ -2083,9 +2111,6 @@ definitions:
     type: object
     description: Updating an account
     properties:
-      github_name:
-        type: string
-        description: Name of a github user
       github_token:
         type: string
         description: Personal access token of the user
@@ -2121,7 +2146,18 @@ definitions:
       userdata:
         type: string
         description: Random text
+      pulling:
+        type: string
+	description: Repo pull policy
+	example: "periodic"
         
+  RepoUpdate:
+    type: object
+    description: Repo update parameters
+    properties:
+      pulling:
+        type: string
+
   RepoInfo:
     type: object
     description: Repo information
@@ -2142,4 +2178,6 @@ definitions:
       account_id:
         type: string
       userdata:
+        type: string
+      pulling:
         type: string
