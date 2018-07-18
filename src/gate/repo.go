@@ -208,6 +208,11 @@ func (rd *RepoDesc)pull(ctx context.Context) *swyapi.GateErr {
 		return GateErrE(swy.GateGenErr, err)
 	}
 
+	cmt, err := gitCommit(clone_to)
+	if err == nil {
+		dbUpdateId(ctx, rd.ObjID, bson.M{"commit": cmt}, &RepoDesc{})
+	}
+
 	return nil
 }
 
