@@ -466,6 +466,13 @@ func swageFile(ctx context.Context, fn *FunctionDesc, src *swyapi.FunctionSource
 	return writeSourceRaw(ctx, fn, fnCode)
 }
 
+func ctxRepoId(ctx context.Context, rid string) bson.M {
+	return  bson.M{
+		"tennant": bson.M { "$in": []string{gctx(ctx).Tenant, "*"}},
+		"_id": bson.ObjectIdHex(rid),
+	}
+}
+
 func getFileFromRepo(ctx context.Context, fn *FunctionDesc, src *swyapi.FunctionSources) error {
 	ids := strings.SplitN(src.Repo, "/", 2)
 	if len(ids) != 2 || !bson.IsObjectIdHex(ids[0]) {
@@ -473,7 +480,7 @@ func getFileFromRepo(ctx context.Context, fn *FunctionDesc, src *swyapi.Function
 	}
 
 	var rd RepoDesc
-	err := dbFind(ctx, ctxObjId(ctx, ids[0]), &rd)
+	err := dbFind(ctx, ctxRepoId(ctx, ids[0]), &rd)
 	if err != nil {
 		return err
 	}

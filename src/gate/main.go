@@ -1585,10 +1585,7 @@ func repoFindForReq(ctx context.Context, r *http.Request, shared bool) (*RepoDes
 
 	var rd RepoDesc
 
-	err := dbFind(ctx, bson.M{
-			"tennant": bson.M { "$in": []string{gctx(ctx).Tenant, "*"}},
-			"_id": bson.ObjectIdHex(rid),
-		}, &rd)
+	err := dbFind(ctx, ctxRepoId(ctx, rid), &rd)
 	if err != nil {
 		return nil, GateErrD(err)
 	}
