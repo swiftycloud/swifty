@@ -1178,7 +1178,11 @@ func repo_del(args []string, opts [16]string) {
 
 func acc_list(args []string, opts [16]string) {
 	var ais []*swyapi.AccInfo
-	make_faas_req1("GET", "accounts", http.StatusOK, nil, &ais)
+	ua := []string{}
+	if opts[0] != "" {
+		ua = append(ua, "type=" + opts[0])
+	}
+	make_faas_req1("GET", url("accounts", ua), http.StatusOK, nil, &ais)
 	fmt.Printf("%-32s%-12s\n", "ID", "TYPE")
 	for _, ai := range ais {
 		fmt.Printf("%-32s%-12s\n", ai.ID, ai.Type)
@@ -1671,6 +1675,7 @@ func main() {
 	bindCmdUsage(CMD_RD,	[]string{"ID"}, "Detach repo", false)
 	bindCmdUsage(CMD_RLS,	[]string{"ID"}, "List files in repo", false)
 
+	cmdMap[CMD_AL].opts.StringVar(&opts[0], "type", "", "Type of account to list")
 	bindCmdUsage(CMD_AL,	[]string{},	"List accounts", false)
 	bindCmdUsage(CMD_AI,	[]string{"ID"}, "Show info about account", false)
 	cmdMap[CMD_AA].opts.StringVar(&opts[0], "name", "", "GitHub name")

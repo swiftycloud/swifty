@@ -1403,11 +1403,18 @@ func handleMwares(ctx context.Context, w http.ResponseWriter, r *http.Request) *
 }
 
 func handleAccounts(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
+	q := r.URL.Query()
+
 	switch r.Method {
 	case "GET":
 		var acs []*AccDesc
 
-		err := dbFindAllCommon(ctx, commonReq(NoProject, []string{}), &acs)
+		rq := commonReq(NoProject, []string{})
+		if atype := q.Get("type"); atype != "" {
+			rq = append(rq, bson.DocElem{"type", atype})
+		}
+
+		err := dbFindAllCommon(ctx, rq, &acs)
 		if err != nil {
 			return GateErrD(err)
 		}
