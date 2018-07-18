@@ -236,6 +236,11 @@ type RepoAdd struct {
 	URL		string			`json:"url"`
 	AccID		string			`json:"account_id,omitempty"`
 	UserData	string			`json:"userdata,omitempty"`
+	Pull		string			`json:"pulling,omitempty"`
+}
+
+type RepoUpdate struct {
+	Pull		*string			`json:"pulling,omitempty"`
 }
 
 type RepoInfo struct {

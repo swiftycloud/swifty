@@ -1168,9 +1168,25 @@ func repo_add(args []string, opts [16]string) {
 	if opts[0] != "" {
 		ra.AccID = opts[0]
 	}
+	if opts[1] != "" {
+		ra.Pull = opts[1]
+	}
+
 	var id string
 	make_faas_req1("POST", "repos", http.StatusOK, &ra, &id)
 	fmt.Printf("%s repo attached\n", id)
+}
+
+func repo_upd(args []string, opts [16]string) {
+	ra := swyapi.RepoUpdate {}
+	if opts[0] != "" {
+		if opts[0] == "-" {
+			opts[0] = ""
+		}
+		ra.Pull = &opts[0]
+	}
+
+	make_faas_req1("PUT", "repos/" + args[0], http.StatusOK, &ra, nil)
 }
 
 func repo_del(args []string, opts [16]string) {
@@ -1417,6 +1433,7 @@ const (
 	CMD_RL string		= "rl"
 	CMD_RI string		= "ri"
 	CMD_RA string		= "ra"
+	CMD_RU string		= "ru"
 	CMD_RD string		= "rd"
 	CMD_RLS string		= "rls"
 
@@ -1479,6 +1496,7 @@ var cmdOrder = []string {
 	CMD_RL,
 	CMD_RI,
 	CMD_RA,
+	CMD_RU,
 	CMD_RD,
 	CMD_RLS,
 
@@ -1547,6 +1565,7 @@ var cmdMap = map[string]*cmdDesc {
 	CMD_RL:		&cmdDesc{ call: repo_list,	  opts: flag.NewFlagSet(CMD_RL, flag.ExitOnError) },
 	CMD_RI:		&cmdDesc{ call: repo_info,	  opts: flag.NewFlagSet(CMD_RI, flag.ExitOnError) },
 	CMD_RA:		&cmdDesc{ call: repo_add,	  opts: flag.NewFlagSet(CMD_RA, flag.ExitOnError) },
+	CMD_RU:		&cmdDesc{ call: repo_upd,	  opts: flag.NewFlagSet(CMD_RU, flag.ExitOnError) },
 	CMD_RD:		&cmdDesc{ call: repo_del,	  opts: flag.NewFlagSet(CMD_RD, flag.ExitOnError) },
 	CMD_RLS:	&cmdDesc{ call: repo_list_files,  opts: flag.NewFlagSet(CMD_RLS, flag.ExitOnError) },
 
@@ -1669,7 +1688,10 @@ func main() {
 	bindCmdUsage(CMD_RL,	[]string{},	"List repos", false)
 	bindCmdUsage(CMD_RI,	[]string{"ID"}, "Show info about repo", false)
 	cmdMap[CMD_RA].opts.StringVar(&opts[0], "acc", "", "Acc ID from which to pull")
+	cmdMap[CMD_RA].opts.StringVar(&opts[1], "pull", "", "Pull policy")
 	bindCmdUsage(CMD_RA,	[]string{"URL"}, "Attach repo", false)
+	cmdMap[CMD_RU].opts.StringVar(&opts[0], "pull", "", "Pull policy")
+	bindCmdUsage(CMD_RU,	[]string{"ID"}, "Update repo", false)
 	bindCmdUsage(CMD_RD,	[]string{"ID"}, "Detach repo", false)
 	bindCmdUsage(CMD_RLS,	[]string{"ID"}, "List files in repo", false)
 

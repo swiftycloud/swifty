@@ -61,6 +61,7 @@ type RepoDesc struct {
 	State		int		`bson:"state"`
 	Commit		string		`bson:"commit,omitempty"`
 	UserData	string		`bson:"userdata,omitempty"`
+	Pull		string		`bson:"pulling"`
 
 	AccID		bson.ObjectId	`bson:"accid,omitempty"`
 }
@@ -86,6 +87,7 @@ func getRepoDesc(id *SwoId, params *swyapi.RepoAdd, acc *AccDesc) *RepoDesc {
 		SwoId:		*id,
 		Type:		params.Type,
 		UserData:	params.UserData,
+		Pull:		params.Pull,
 	}
 
 	if acc != nil {
@@ -107,7 +109,7 @@ func (rd *RepoDesc)toInfo(ctx context.Context, conf *YAMLConf, details bool) (*s
 
 	if details {
 		r.UserData = rd.UserData
-		r.Pull = "manual"
+		r.Pull = rd.Pull
 	}
 
 	return r, nil
@@ -129,6 +131,18 @@ func (rd *RepoDesc)Attach(ctx context.Context, conf *YAMLConf) (string, *swyapi.
 	go cloneRepo(rd)
 
 	return rd.ObjID.Hex(), nil
+}
+
+func (rd *RepoDesc)Update(ctx context.Context, ru *swyapi.RepoUpdate) *swyapi.GateErr {
+	if ru.Pull != nil {
+		rd.Pull = *ru.Pull
+		err := dbUpdateId(ctx, rd.ObjID, bson.M{"pulling": rd.Pull}, &RepoDesc{})
+		if err != nil {
+			return GateErrD(err)
+		}
+	}
+
+	return nil
 }
 
 func (rd *RepoDesc)Detach(ctx context.Context, conf *YAMLConf) *swyapi.GateErr {

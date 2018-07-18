@@ -1600,6 +1600,21 @@ func handleRepo(ctx context.Context, w http.ResponseWriter, r *http.Request) *sw
 			return GateErrE(swy.GateBadResp, err)
 		}
 
+	case "PUT":
+		var ru swyapi.RepoUpdate
+
+		err := swyhttp.ReadAndUnmarshalReq(r, &ru)
+		if err != nil {
+			return GateErrE(swy.GateBadRequest, err)
+		}
+
+		cerr := rd.Update(ctx, &ru)
+		if cerr != nil {
+			return cerr
+		}
+
+		w.WriteHeader(http.StatusOK)
+
 	case "DELETE":
 		cerr := rd.Detach(ctx, &conf)
 		if cerr != nil {
@@ -2151,7 +2166,7 @@ func main() {
 	r.Handle("/v1/middleware/{mid}",	genReqHandler(handleMware)).Methods("GET", "DELETE", "OPTIONS")
 
 	r.Handle("/v1/repos",			genReqHandler(handleRepos)).Methods("GET", "POST", "OPTIONS")
-	r.Handle("/v1/repos/{rid}",		genReqHandler(handleRepo)).Methods("GET", "DELETE", "OPTIONS")
+	r.Handle("/v1/repos/{rid}",		genReqHandler(handleRepo)).Methods("GET", "PUT", "DELETE", "OPTIONS")
 	r.Handle("/v1/repos/{rid}/files",	genReqHandler(handleRepoFiles)).Methods("GET", "OPTIONS")
 	r.Handle("/v1/repos/{rid}/pull",	genReqHandler(handleRepoPull)).Methods("POST", "OPTIONS")
 
