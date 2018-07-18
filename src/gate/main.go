@@ -1575,17 +1575,33 @@ func handleRepos(ctx context.Context, w http.ResponseWriter, r *http.Request) *s
 	return nil
 }
 
-func handleRepo(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
+func repoFindForReq(ctx context.Context, r *http.Request, shared bool) (*RepoDesc, *swyapi.GateErr) {
 	rid := mux.Vars(r)["rid"]
 	if !bson.IsObjectIdHex(rid) {
-		return GateErrM(swy.GateBadRequest, "Bad repo ID value")
+		return nil, GateErrM(swy.GateBadRequest, "Bad repo ID value")
 	}
 
 	var rd RepoDesc
 
-	err := dbFind(ctx, ctxObjId(ctx, rid), &rd)
+	err := dbFind(ctx, bson.M{
+			"tennant": bson.M { "$in": []string{gctx(ctx).Tenant, "*"}},
+			"_id": bson.ObjectIdHex(rid),
+		}, &rd)
 	if err != nil {
-		return GateErrD(err)
+		return nil, GateErrD(err)
+	}
+
+	if !shared && rd.SwoId.Tennant != gctx(ctx).Tenant {
+		return nil, GateErrM(swy.GateNotAvail, "Shared repo")
+	}
+
+	return &rd, nil
+}
+
+func handleRepo(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
+	rd, cerr := repoFindForReq(ctx, r, r.Method == "GET")
+	if cerr != nil {
+		return cerr
 	}
 
 	switch r.Method {
@@ -1595,7 +1611,7 @@ func handleRepo(ctx context.Context, w http.ResponseWriter, r *http.Request) *sw
 			return cerr
 		}
 
-		err = swyhttp.MarshalAndWrite(w, ri)
+		err := swyhttp.MarshalAndWrite(w, ri)
 		if err != nil {
 			return GateErrE(swy.GateBadResp, err)
 		}
@@ -1628,16 +1644,9 @@ func handleRepo(ctx context.Context, w http.ResponseWriter, r *http.Request) *sw
 }
 
 func handleRepoFiles(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
-	rid := mux.Vars(r)["rid"]
-	if !bson.IsObjectIdHex(rid) {
-		return GateErrM(swy.GateBadRequest, "Bad repo ID value")
-	}
-
-	var rd RepoDesc
-
-	err := dbFind(ctx, ctxObjId(ctx, rid), &rd)
-	if err != nil {
-		return GateErrD(err)
+	rd, cerr := repoFindForReq(ctx, r, true)
+	if cerr != nil {
+		return cerr
 	}
 
 	files, cerr := rd.listFiles(ctx)
@@ -1645,7 +1654,7 @@ func handleRepoFiles(ctx context.Context, w http.ResponseWriter, r *http.Request
 		return cerr
 	}
 
-	err = swyhttp.MarshalAndWrite(w, files)
+	err := swyhttp.MarshalAndWrite(w, files)
 	if err != nil {
 		return GateErrE(swy.GateBadResp, err)
 	}
@@ -1654,19 +1663,12 @@ func handleRepoFiles(ctx context.Context, w http.ResponseWriter, r *http.Request
 }
 
 func handleRepoPull(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
-	rid := mux.Vars(r)["rid"]
-	if !bson.IsObjectIdHex(rid) {
-		return GateErrM(swy.GateBadRequest, "Bad repo ID value")
+	rd, cerr := repoFindForReq(ctx, r, false)
+	if cerr != nil {
+		return cerr
 	}
 
-	var rd RepoDesc
-
-	err := dbFind(ctx, ctxObjId(ctx, rid), &rd)
-	if err != nil {
-		return GateErrD(err)
-	}
-
-	cerr := rd.pull(ctx)
+	cerr = rd.pull(ctx)
 	if cerr != nil {
 		return cerr
 	}

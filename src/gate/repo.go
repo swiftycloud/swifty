@@ -63,6 +63,8 @@ type RepoDesc struct {
 	UserData	string		`bson:"userdata,omitempty"`
 	Pull		string		`bson:"pulling"`
 
+	Path		string		`bson:"path"`
+
 	AccID		bson.ObjectId	`bson:"accid,omitempty"`
 }
 
@@ -73,6 +75,10 @@ type GitHubRepo struct {
 }
 
 func (rd *RepoDesc)path() string {
+	if rd.Path != "" {
+		return rd.Path
+	}
+
 	return rd.SwoId.Tennant + "/" + rd.ObjID.Hex()
 }
 
@@ -153,9 +159,11 @@ func (rd *RepoDesc)Detach(ctx context.Context, conf *YAMLConf) *swyapi.GateErr {
 
 	rd.State = swy.DBRepoStateRem
 
-	_, err = swy.DropDir(cloneDir(), rd.path())
-	if err != nil {
-		return GateErrE(swy.GateFsError, err)
+	if rd.Path == "" {
+		_, err = swy.DropDir(cloneDir(), rd.path())
+		if err != nil {
+			return GateErrE(swy.GateFsError, err)
+		}
 	}
 
 	err = dbRemoveId(ctx, &RepoDesc{}, rd.ObjID)
@@ -170,6 +178,10 @@ func (rd *RepoDesc)listFiles(ctx context.Context) ([]string, *swyapi.GateErr) {
 	searchDir := rd.clonePath()
 	fileList := []string{}
 	err := filepath.Walk(searchDir, func(path string, f os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
 		if f.IsDir() {
 			if f.Name() == ".git" {
 				return filepath.SkipDir
@@ -494,7 +506,13 @@ func listRepos(ctx context.Context) ([]*swyapi.RepoInfo, *swyapi.GateErr) {
 	var reps []*RepoDesc
 	urls := make(map[string]bool)
 
-	err := dbFindAllCommon(ctx, commonReq(NoProject, []string{}), &reps)
+	q := bson.D{
+		{"tennant", bson.M {
+			"$in": []string{gctx(ctx).Tenant, "*" },
+		}},
+		{"project", NoProject},
+	}
+	err := dbFindAll(ctx, q, &reps)
 	if err != nil {
 		return nil, GateErrD(err)
 	}
