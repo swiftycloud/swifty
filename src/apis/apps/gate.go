@@ -256,7 +256,6 @@ type AccAdd struct {
 }
 
 type AccUpdate struct {
-	GHName		*string			`json:"github_name,omitempty"`
 	GHToken		*string			`json:"github_token,omitempty"`
 }
 

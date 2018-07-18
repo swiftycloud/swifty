@@ -40,9 +40,6 @@ func infoGitHubAcc(ad *AccDesc, info *swyapi.AccInfo, detail bool) {
 }
 
 func updateGithubAcc(ad *AccDesc, params *swyapi.AccUpdate) {
-	if params.GHName != nil {
-		ad.GH.Name = *params.GHName
-	}
 	if params.GHToken != nil {
 		ad.GH.Token = *params.GHToken
 	}

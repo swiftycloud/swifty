@@ -1223,10 +1223,7 @@ func acc_upd(args []string, opts [16]string) {
 	au := swyapi.AccUpdate {}
 
 	if opts[0] != "" {
-		au.GHName = &opts[0]
-	}
-	if opts[1] != "" {
-		au.GHToken = &opts[1]
+		au.GHToken = &opts[0]
 	}
 
 	make_faas_req1("PUT", "accounts/" + args[0], http.StatusOK, &au, nil)
@@ -1683,8 +1680,7 @@ func main() {
 	cmdMap[CMD_AA].opts.StringVar(&opts[1], "token", "", "GitHub token")
 	bindCmdUsage(CMD_AA,	[]string{"TYPE"}, "Add account", false)
 	bindCmdUsage(CMD_AD,	[]string{"ID"}, "Delete account", false)
-	cmdMap[CMD_AU].opts.StringVar(&opts[0], "name", "", "GitHub name")
-	cmdMap[CMD_AU].opts.StringVar(&opts[1], "token", "", "GitHub token")
+	cmdMap[CMD_AU].opts.StringVar(&opts[0], "token", "", "GitHub token")
 	bindCmdUsage(CMD_AU,	[]string{"ID"}, "Add account", false)
 
 	bindCmdUsage(CMD_UL,	[]string{}, "List users", false)
