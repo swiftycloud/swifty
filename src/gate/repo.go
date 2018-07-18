@@ -234,6 +234,63 @@ func (rd *RepoDesc)pull(ctx context.Context) *swyapi.GateErr {
 	return nil
 }
 
+func pullRepos(ts time.Time) error {
+	ctx, done := mkContext("::reposync")
+	defer done(ctx)
+
+	var rds []*RepoDesc
+
+	err := dbFindAll(ctx, bson.M{
+			"pulling": "periodic",
+			"last_pull": bson.M{"$lt": ts},
+		}, &rds)
+	if err != nil {
+		if !dbNF(err) {
+			ctxlog(ctx).Debugf("Can't get repos to sync: %s", err.Error())
+		}
+
+		return err
+	}
+
+	synced := 0
+
+	for _, rd := range rds {
+		if rd.pull(ctx) == nil {
+			synced++
+		}
+	}
+
+	ctxlog(ctx).Debugf("Synced %d repos (%d not)", synced, len(rds) - synced)
+
+	return nil
+}
+
+func periodicPullRepos(period time.Duration) {
+	for {
+		t := time.Now()
+		nxt := period
+
+		if pullRepos(t.Add(-period)) != nil {
+			nxt = 5 * time.Minute /* Will try in 5 minutes */
+		}
+
+		t = t.Add(nxt)
+		glog.Debugf("Next repo sync at %s", t.String())
+		<-time.After(t.Sub(time.Now()))
+	}
+}
+
+func ReposInit(ctx context.Context, conf *YAMLConf) error {
+	period := time.Duration(conf.RepoSyncPeriod)
+	if period == 0 {
+		period = 30 * time.Minute
+	}
+
+	go periodicPullRepos(period)
+
+	return nil
+}
+
 func gitCommit(dir string) (string, error) {
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer

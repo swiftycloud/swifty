@@ -133,6 +133,7 @@ type YAMLConf struct {
 	Wdog		YAMLConfSwd		`yaml:"wdog"`
 	LogsKeepDays	int			`yaml:"logs-keep"`
 	RepoSyncRate	int			`yaml:"repo-sync-rate"`
+	RepoSyncPeriod	int			`yaml:"repo-sync-period"`
 }
 
 var conf YAMLConf
@@ -2231,6 +2232,11 @@ func main() {
 	err = LogsCleanerInit(ctx, &conf)
 	if err != nil {
 		glog.Fatalf("Can't start logs cleaner: %s", err.Error())
+	}
+
+	err = ReposInit(ctx, &conf)
+	if err != nil {
+		glog.Fatalf("Can't start repo syncer: %s", err.Error())
 	}
 
 	err = PrometheusInit(ctx, &conf)
