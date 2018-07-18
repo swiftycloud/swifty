@@ -107,6 +107,7 @@ func (rd *RepoDesc)toInfo(ctx context.Context, conf *YAMLConf, details bool) (*s
 
 	if details {
 		r.UserData = rd.UserData
+		r.Pull = "manual"
 	}
 
 	return r, nil

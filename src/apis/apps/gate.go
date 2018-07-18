@@ -246,6 +246,7 @@ type RepoInfo struct {
 	Commit		string			`json:"commit"`
 	UserData	string			`json:"userdata,omitempty"`
 	AccID		string			`json:"account_id,omitempty"`
+	Pull		string			`json:"pulling,omitempty"`
 }
 
 type AccAdd struct {

@@ -1151,6 +1151,7 @@ func repo_info(args []string, opts [16]string) {
 	fmt.Printf("State:     %s\n", ri.State)
 	fmt.Printf("Type:      %s\n", ri.Type)
 	fmt.Printf("URL:       %s\n", ri.URL)
+	fmt.Printf("Pull:      %s\n", ri.Pull)
 	if ri.Commit != "" {
 		fmt.Printf("Commit:    %s\n", ri.Commit)
 	}
