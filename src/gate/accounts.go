@@ -70,7 +70,7 @@ func setupGithubAcc(ad *AccDesc, params *swyapi.AccAdd) *swyapi.GateErr {
 
 func infoGitHubAcc(ad *AccDesc, info *swyapi.AccInfo, detail bool) {
 	info.Name = ad.GH.Name
-	info.Token = ad.GH.Token
+	info.Token = ad.GH.Token[:6] + "..."
 }
 
 func updateGithubAcc(ad *AccDesc, params *swyapi.AccUpdate) {
