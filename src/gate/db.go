@@ -343,12 +343,6 @@ func logRemove(ctx context.Context, fn *FunctionDesc) error {
 	return err
 }
 
-func dbBalancerRSListVersions(ctx context.Context, cookie string) ([]string, error) {
-	var fv []string
-	err := dbCol(ctx, DBColBalancerRS).Find(bson.M{"fnid": cookie }).Distinct("fnversion", &fv)
-	return fv, err
-}
-
 func dbBalancerPodAdd(ctx context.Context, pod *k8sPod) error {
 	err := dbCol(ctx, DBColBalancerRS).Insert(bson.M{
 			"uid":		pod.UID,
@@ -414,6 +408,12 @@ type balancerEntry struct {
 	WdogPort	string		`bson:"wdogport"`
 	Host		string		`bson:"host"`
 	Version		string		`bson:"fnversion"`
+}
+
+func dbBalancerListVersions(ctx context.Context, cookie string) ([]string, error) {
+	var fv []string
+	err := dbCol(ctx, DBColBalancerRS).Find(bson.M{"fnid": cookie }).Distinct("fnversion", &fv)
+	return fv, err
 }
 
 func dbBalancerGetConnsByCookie(ctx context.Context, cookie string) ([]podConn, error) {

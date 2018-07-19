@@ -518,7 +518,7 @@ func GCOldSources(ctx context.Context, fn *FunctionDesc, ver string) {
 		defer done(ctx)
 
 		for {
-			vers, err := dbBalancerRSListVersions(ctx, cookie)
+			vers, err := dbBalancerListVersions(ctx, cookie)
 			if err != nil {
 				break /* What to do? */
 			}
