@@ -153,7 +153,7 @@ func (rd *RepoDesc)Update(ctx context.Context, ru *swyapi.RepoUpdate) *swyapi.Ga
 }
 
 func (rd *RepoDesc)Detach(ctx context.Context, conf *YAMLConf) *swyapi.GateErr {
-	err := dbRepoDeactivate(ctx, rd)
+	err := dbUpdatePart(ctx, rd, bson.M{"state": swy.DBRepoStateRem})
 	if err != nil {
 		return GateErrD(err)
 	}

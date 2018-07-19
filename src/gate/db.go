@@ -464,12 +464,6 @@ func dbProjectListAll(ctx context.Context, ten string) (fn []string, mw []string
 	return
 }
 
-func dbRepoDeactivate(ctx context.Context, rd *RepoDesc) error {
-	return dbCol(ctx, DBColRepos).Update(
-		bson.M{"_id": rd.ObjID},
-		bson.M{"$set": bson.M{"state": swy.DBRepoStateRem, }})
-}
-
 func LogsCleanerInit(ctx context.Context, conf *YAMLConf) error {
 	if conf.LogsKeepDays > 0 {
 		ctxlog(ctx).Debugf("Start logs cleaner (%d days old)", conf.LogsKeepDays)
