@@ -127,7 +127,9 @@ func handleS3Event(ctx context.Context, user string, data []byte) {
 		return
 	}
 
-	evs, err := dbListEvents(ctx, bson.M{"source":"s3", "s3.ns": evt.Namespace, "s3.bucket": evt.Bucket})
+	var evs []*FnEventDesc
+
+	err = dbFindAll(ctx, bson.M{"source":"s3", "s3.ns": evt.Namespace, "s3.bucket": evt.Bucket}, &evs)
 	if err != nil {
 		/* FIXME -- this should be notified? Or what? */
 		ctxlog(ctx).Errorf("mq: Can't list triggers for s3 event")

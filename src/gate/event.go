@@ -92,18 +92,20 @@ func eventsInit(ctx context.Context, conf *YAMLConf) error {
 	cronRunner = cron.New()
 	cronRunner.Start()
 
-	evs, err := dbListEvents(ctx, bson.M{"source":"cron"})
+	var evs []*FnEventDesc
+
+	err := dbFindAll(ctx, bson.M{"source":"cron"}, &evs)
 	if err != nil {
 		return err
 	}
 
 	for _, ed := range evs {
-		err = cronEventStart(ctx, &ed)
+		err = cronEventStart(ctx, ed)
 		if err != nil {
 			return err
 		}
 
-		err = dbUpdateEvent(ctx, &ed)
+		err = dbUpdateAll(ctx, ed)
 		if err != nil {
 			return err
 		}
@@ -187,7 +189,7 @@ func eventsAdd(ctx context.Context, fn *FunctionDesc, evt *swyapi.FunctionEvent)
 		return "", GateErrM(swy.GateGenErr, "Can't setup event")
 	}
 
-	err = dbUpdateEvent(ctx, ed)
+	err = dbUpdateAll(ctx, ed)
 	if err != nil {
 		eventStop(ctx, ed)
 		dbRemove(ctx, ed)
@@ -227,7 +229,9 @@ func eventsDelete(ctx context.Context, fn *FunctionDesc, ed *FnEventDesc) *swyap
 }
 
 func clearAllEvents(ctx context.Context, fn *FunctionDesc) error {
-	evs, err := dbListFnEvents(ctx, fn.Cookie)
+	var evs []*FnEventDesc
+
+	err := dbFindAll(ctx, bson.M{"fnid": fn.Cookie}, &evs)
 	if err != nil {
 		return err
 	}

@@ -470,34 +470,6 @@ func dbDeployStateUpdate(ctx context.Context, dep *DeployDesc, state int) error 
 			bson.M{"$set": bson.M{"state": state}})
 }
 
-func dbListFnEvents(ctx context.Context, fnid string) ([]*FnEventDesc, error) {
-	var ret []*FnEventDesc
-	err := dbCol(ctx, DBColEvents).Find(bson.M{"fnid": fnid}).All(&ret)
-	return ret, err
-}
-
-func dbListEvents(ctx context.Context, q bson.M) ([]FnEventDesc, error) {
-	var ret []FnEventDesc
-	err := dbCol(ctx, DBColEvents).Find(q).All(&ret)
-	return ret, err
-}
-
-func dbFindEvent(ctx context.Context, id string) (*FnEventDesc, error) {
-	var ed FnEventDesc
-	err := dbCol(ctx, DBColEvents).Find(bson.M{"_id": bson.ObjectIdHex(id)}).One(&ed)
-	return &ed, err
-}
-
-func dbFuncEventByName(ctx context.Context, fn *FunctionDesc, name string) (*FnEventDesc, error) {
-	var ed FnEventDesc
-	err := dbCol(ctx, DBColEvents).Find(bson.M{"fnid": fn.Cookie, "name": name}).One(&ed)
-	return &ed, err
-}
-
-func dbUpdateEvent(ctx context.Context, ed *FnEventDesc) error {
-	return dbCol(ctx, DBColEvents).Update(bson.M{"_id": ed.ObjID}, ed)
-}
-
 func dbRepoDeactivate(ctx context.Context, rd *RepoDesc) error {
 	return dbCol(ctx, DBColRepos).Update(
 		bson.M{"_id": rd.ObjID},

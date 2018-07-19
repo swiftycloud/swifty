@@ -371,19 +371,19 @@ func handleFunctionTriggers(ctx context.Context, w http.ResponseWriter, r *http.
 		var hasUrl = false
 
 		if ename == "" {
-			evd, err = dbListFnEvents(ctx, fn.Cookie)
+			err = dbFindAll(ctx, bson.M{"fnid": fn.Cookie}, &evd)
 			if err != nil {
 				return GateErrD(err)
 			}
 		} else {
-			var ev *FnEventDesc
+			var ev FnEventDesc
 
-			ev, err = dbFuncEventByName(ctx, fn, ename)
+			err = dbFind(ctx, bson.M{"fnid": fn.Cookie, "name": ename}, &ev)
 			if err != nil {
 				return GateErrD(err)
 			}
 
-			evd = append(evd, ev)
+			evd = append(evd, &ev)
 		}
 
 		evs := []*swyapi.FunctionEvent{}
@@ -672,7 +672,9 @@ func handleFunctionTrigger(ctx context.Context, w http.ResponseWriter, r *http.R
 		return GateErrM(swy.GateBadRequest, "Bad event ID")
 	}
 
-	ed, err := dbFindEvent(ctx, eid)
+	var ed FnEventDesc
+
+	err := dbFind(ctx, bson.M{"_id": eid}, &ed)
 	if err != nil {
 		return GateErrD(err)
 	}
@@ -688,7 +690,7 @@ func handleFunctionTrigger(ctx context.Context, w http.ResponseWriter, r *http.R
 		}
 
 	case "DELETE":
-		erc := eventsDelete(ctx, fn, ed)
+		erc := eventsDelete(ctx, fn, &ed)
 		if erc != nil {
 			return erc
 		}
