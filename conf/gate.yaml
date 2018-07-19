@@ -39,6 +39,7 @@ runtime:
                 def: 128
         max-replicas: 32
 wdog:
+        img-prefix: "swifty"
         volume: "/home/swifty-volume"
         port: 8687
 logs-keep: 1

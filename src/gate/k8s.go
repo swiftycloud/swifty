@@ -314,7 +314,7 @@ func swk8sRun(ctx context.Context, conf *YAMLConf, fn *FunctionDesc) error {
 			Containers:	[]v1.Container{
 				{
 					Name:		"wdog",
-					Image:		"swifty/" + fn.Code.Lang,
+					Image:		fn.Code.image(),
 					Env:		envs,
 					VolumeMounts:	[]v1.VolumeMount{
 						{

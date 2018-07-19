@@ -61,6 +61,14 @@ type FnCodeDesc struct {
 	Env		[]string	`bson:"env"`
 }
 
+func (c *FnCodeDesc)image() string {
+	p := conf.Wdog.ImgPref
+	if p == "" {
+		p = "swifty"
+	}
+	return p + "/" + c.Lang
+}
+
 type FnSrcDesc struct {
 	Version		string		`bson:"version"` // Growing number, each deploy update (code push) bumps it
 }

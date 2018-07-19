@@ -56,6 +56,7 @@ var glog *zap.SugaredLogger
 type YAMLConfSwd struct {
 	Volume		string			`yaml:"volume"`
 	Port		int			`yaml:"port"`
+	ImgPref		string			`yaml:"img-prefix"`
 }
 
 type YAMLConfDaemon struct {
