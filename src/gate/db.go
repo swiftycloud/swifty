@@ -171,8 +171,7 @@ func dbMwareCount(ctx context.Context) (map[string]int, error) {
 		Count	int	`bson:"count"`
 	}
 
-	c := gctx(ctx).S.DB(DBStateDB).C(DBColMware)
-	err := c.Pipe([]bson.M{
+	err := dbCol(ctx, DBColMware).Pipe([]bson.M{
 			bson.M{"$group": bson.M{
 				"_id":"$mwaretype",
 				"count":bson.M{"$sum": 1},
@@ -191,21 +190,19 @@ func dbMwareCount(ctx context.Context) (map[string]int, error) {
 }
 
 func dbFuncCount(ctx context.Context) (int, error) {
-	return gctx(ctx).S.DB(DBStateDB).C(DBColFunc).Count()
+	return dbCol(ctx, DBColFunc).Count()
 }
 
 func dbFuncCountProj(ctx context.Context, id *SwoId) (int, error) {
-	return gctx(ctx).S.DB(DBStateDB).C(DBColFunc).Find(bson.M{"tenant": id.Tennant, "project": id.Project}).Count()
+	return dbCol(ctx, DBColFunc).Find(bson.M{"tenant": id.Tennant, "project": id.Project}).Count()
 }
 
 func dbFuncUpdate(ctx context.Context, q, ch bson.M) (error) {
-	c := gctx(ctx).S.DB(DBStateDB).C(DBColFunc)
-	return c.Update(q, ch)
+	return dbCol(ctx, DBColFunc).Update(q, ch)
 }
 
 func dbTenStatsGet(ctx context.Context, tenant string, st *TenStats) error {
-	c := gctx(ctx).S.DB(DBStateDB).C(DBColTenStats)
-	err := c.Find(bson.M{"tenant": tenant}).One(st)
+	err := dbCol(ctx, DBColTenStats).Find(bson.M{"tenant": tenant}).One(st)
 	if err == mgo.ErrNotFound {
 		err = nil
 	}
@@ -214,8 +211,7 @@ func dbTenStatsGet(ctx context.Context, tenant string, st *TenStats) error {
 
 func dbTenStatsGetArch(ctx context.Context, tenant string, nr int) ([]TenStats, error) {
 	var ret []TenStats
-	c := gctx(ctx).S.DB(DBStateDB).C(DBColTenStatsA)
-	err := c.Find(bson.M{"tenant": tenant}).Sort("-till").Limit(nr).All(&ret)
+	err := dbCol(ctx, DBColTenStatsA).Find(bson.M{"tenant": tenant}).Sort("-till").Limit(nr).All(&ret)
 	if err == mgo.ErrNotFound {
 		err = nil
 	}
@@ -232,8 +228,7 @@ func dbTenStatsGetLatestArch(ctx context.Context, tenant string) (*TenStats, err
 }
 
 func dbTenStatsUpdate(ctx context.Context, tenant string, delta *TenStatValues) error {
-	c := gctx(ctx).S.DB(DBStateDB).C(DBColTenStats)
-	_, err := c.Upsert(bson.M{"tenant": tenant}, bson.M{
+	_, err := dbCol(ctx, DBColTenStats).Upsert(bson.M{"tenant": tenant}, bson.M{
 			"$set": bson.M{"tenant": tenant},
 			"$inc": bson.M{
 				"called":	delta.Called,
@@ -246,8 +241,7 @@ func dbTenStatsUpdate(ctx context.Context, tenant string, delta *TenStatValues) 
 }
 
 func dbFnStatsGet(ctx context.Context, cookie string, st *FnStats) error {
-	c := gctx(ctx).S.DB(DBStateDB).C(DBColFnStats)
-	err := c.Find(bson.M{"cookie": cookie}).One(st)
+	err := dbCol(ctx, DBColFnStats).Find(bson.M{"cookie": cookie}).One(st)
 	if err == mgo.ErrNotFound {
 		err = nil
 	}
@@ -256,8 +250,7 @@ func dbFnStatsGet(ctx context.Context, cookie string, st *FnStats) error {
 
 func dbFnStatsGetArch(ctx context.Context, id string, nr int) ([]FnStats, error) {
 	var ret []FnStats
-	c := gctx(ctx).S.DB(DBStateDB).C(DBColFnStatsA)
-	err := c.Find(bson.M{"cookie": id}).Sort("-till").Limit(nr).All(&ret)
+	err := dbCol(ctx, DBColFnStatsA).Find(bson.M{"cookie": id}).Sort("-till").Limit(nr).All(&ret)
 	if err == mgo.ErrNotFound {
 		err = nil
 	}
@@ -265,8 +258,7 @@ func dbFnStatsGetArch(ctx context.Context, id string, nr int) ([]FnStats, error)
 }
 
 func dbFnStatsUpdate(ctx context.Context, cookie string, delta *FnStatValues, lastCall time.Time) error {
-	c := gctx(ctx).S.DB(DBStateDB).C(DBColFnStats)
-	_, err := c.Upsert(bson.M{"cookie": cookie}, bson.M{
+	_, err := dbCol(ctx, DBColFnStats).Upsert(bson.M{"cookie": cookie}, bson.M{
 			"$set": bson.M{"cookie": cookie},
 			"$inc": bson.M{
 				"called":	delta.Called,
@@ -288,15 +280,13 @@ func dbFnStatsDrop(ctx context.Context, cookie string, st *FnStats) error {
 		st.Dropped = &n
 		st.Till = &n
 
-		c := gctx(ctx).S.DB(DBStateDB).C(DBColFnStatsA)
-		err := c.Insert(st)
+		err := dbCol(ctx, DBColFnStatsA).Insert(st)
 		if err != nil {
 			return err
 		}
 	}
 
-	c := gctx(ctx).S.DB(DBStateDB).C(DBColFnStats)
-	err := c.Remove(bson.M{"cookie": cookie})
+	err := dbCol(ctx, DBColFnStats).Remove(bson.M{"cookie": cookie})
 	if err == mgo.ErrNotFound {
 		err = nil
 	}
@@ -304,7 +294,7 @@ func dbFnStatsDrop(ctx context.Context, cookie string, st *FnStats) error {
 }
 
 func logSaveResult(ctx context.Context, fnCookie, event, stdout, stderr string) {
-	c := gctx(ctx).S.DB(DBStateDB).C(DBColLogs)
+	c := dbCol(ctx, DBColLogs)
 	tm := time.Now()
 
 	if stdout != "" {
@@ -327,8 +317,7 @@ func logSaveResult(ctx context.Context, fnCookie, event, stdout, stderr string) 
 }
 
 func logSaveEvent(ctx context.Context, fnid, text string) {
-	c := gctx(ctx).S.DB(DBStateDB).C(DBColLogs)
-	c.Insert(DBLogRec{
+	dbCol(ctx, DBColLogs).Insert(DBLogRec{
 		FnId:		fnid,
 		Event:		"event",
 		Time:		time.Now(),
@@ -338,18 +327,16 @@ func logSaveEvent(ctx context.Context, fnid, text string) {
 
 func logGetFor(ctx context.Context, id *SwoId, since *time.Time) ([]DBLogRec, error) {
 	var logs []DBLogRec
-	c := gctx(ctx).S.DB(DBStateDB).C(DBColLogs)
 	q := bson.M{"fnid": id.Cookie()}
 	if since != nil {
 		q["ts"] = bson.M{"$gt": since}
 	}
-	err := c.Find(q).Sort("ts").All(&logs)
+	err := dbCol(ctx, DBColLogs).Find(q).Sort("ts").All(&logs)
 	return logs, err
 }
 
 func logRemove(ctx context.Context, fn *FunctionDesc) error {
-	c := gctx(ctx).S.DB(DBStateDB).C(DBColLogs)
-	_, err := c.RemoveAll(bson.M{"fnid": fn.Cookie})
+	_, err := dbCol(ctx, DBColLogs).RemoveAll(bson.M{"fnid": fn.Cookie})
 	if err == mgo.ErrNotFound {
 		err = nil
 	}
@@ -358,14 +345,12 @@ func logRemove(ctx context.Context, fn *FunctionDesc) error {
 
 func dbBalancerRSListVersions(ctx context.Context, cookie string) ([]string, error) {
 	var fv []string
-	c := gctx(ctx).S.DB(DBStateDB).C(DBColBalancerRS)
-	err := c.Find(bson.M{"fnid": cookie }).Distinct("fnversion", &fv)
+	err := dbCol(ctx, DBColBalancerRS).Find(bson.M{"fnid": cookie }).Distinct("fnversion", &fv)
 	return fv, err
 }
 
 func dbBalancerPodAdd(ctx context.Context, pod *k8sPod) error {
-	c := gctx(ctx).S.DB(DBStateDB).C(DBColBalancerRS)
-	err := c.Insert(bson.M{
+	err := dbCol(ctx, DBColBalancerRS).Insert(bson.M{
 			"uid":		pod.UID,
 			"wdogaddr":	pod.WdogAddr,
 			"wdogport":	pod.WdogPort,
@@ -379,8 +364,7 @@ func dbBalancerPodAdd(ctx context.Context, pod *k8sPod) error {
 }
 
 func dbBalancerPodUpd(ctx context.Context, fnId string, pod *k8sPod) error {
-	c := gctx(ctx).S.DB(DBStateDB).C(DBColBalancerRS)
-	err := c.Update(bson.M{"uid": pod.UID}, bson.M{"$set": bson.M {
+	err := dbCol(ctx, DBColBalancerRS).Update(bson.M{"uid": pod.UID}, bson.M{"$set": bson.M {
 			"fnid":		fnId,
 			"fnversion":	pod.Version,
 		}})
@@ -392,8 +376,7 @@ func dbBalancerPodUpd(ctx context.Context, fnId string, pod *k8sPod) error {
 }
 
 func dbBalancerPodDel(ctx context.Context, pod *k8sPod) (error) {
-	c := gctx(ctx).S.DB(DBStateDB).C(DBColBalancerRS)
-	err := c.Remove(bson.M{ "uid":	pod.UID, })
+	err := dbCol(ctx, DBColBalancerRS).Remove(bson.M{ "uid": pod.UID, })
 	if err != nil {
 		if err == mgo.ErrNotFound {
 			return nil
@@ -406,8 +389,7 @@ func dbBalancerPodDel(ctx context.Context, pod *k8sPod) (error) {
 }
 
 func dbBalancerPodDelStuck(ctx context.Context) (error) {
-	c := gctx(ctx).S.DB(DBStateDB).C(DBColBalancerRS)
-	_, err := c.RemoveAll(bson.M{ "fnid": bson.M{"$exists": false}})
+	_, err := dbCol(ctx, DBColBalancerRS).RemoveAll(bson.M{ "fnid": bson.M{"$exists": false}})
 	if err == mgo.ErrNotFound {
 		err = nil
 	}
@@ -416,8 +398,7 @@ func dbBalancerPodDelStuck(ctx context.Context) (error) {
 }
 
 func dbBalancerPodDelAll(ctx context.Context, fnid string) (error) {
-	c := gctx(ctx).S.DB(DBStateDB).C(DBColBalancerRS)
-	_, err := c.RemoveAll(bson.M{ "fnid": fnid })
+	_, err := dbCol(ctx, DBColBalancerRS).RemoveAll(bson.M{ "fnid": fnid })
 	if err == mgo.ErrNotFound {
 		err = nil
 	}
@@ -438,8 +419,7 @@ type balancerEntry struct {
 func dbBalancerGetConnsByCookie(ctx context.Context, cookie string) ([]podConn, error) {
 	var v []balancerEntry
 
-	c := gctx(ctx).S.DB(DBStateDB).C(DBColBalancerRS)
-	err := c.Find(bson.M{
+	err := dbCol(ctx, DBColBalancerRS).Find(bson.M{
 			"fnid": cookie,
 		}).All(&v)
 	if err != nil {
@@ -460,8 +440,7 @@ func dbBalancerGetConnsByCookie(ctx context.Context, cookie string) ([]podConn, 
 func dbBalancerGetConnExact(ctx context.Context, fnid, version string) (*podConn, error) {
 	var v balancerEntry
 
-	c := gctx(ctx).S.DB(DBStateDB).C(DBColBalancerRS)
-	err := c.Find(bson.M{
+	err := dbCol(ctx, DBColBalancerRS).Find(bson.M{
 			"fnid":		fnid,
 			"fnversion":	version,
 		}).One(&v)
@@ -476,54 +455,51 @@ func dbBalancerGetConnExact(ctx context.Context, fnid, version string) (*podConn
 }
 
 func dbProjectListAll(ctx context.Context, ten string) (fn []string, mw []string, err error) {
-	c := gctx(ctx).S.DB(DBStateDB).C(DBColFunc)
-	err = c.Find(bson.M{"tennant": ten}).Distinct("project", &fn)
+	err = dbCol(ctx, DBColFunc).Find(bson.M{"tennant": ten}).Distinct("project", &fn)
 	if err != nil {
 		return
 	}
 
-	c = gctx(ctx).S.DB(DBStateDB).C(DBColMware)
-	err = c.Find(bson.M{"tennant": ten}).Distinct("project", &mw)
+	err = dbCol(ctx, DBColMware).Find(bson.M{"tennant": ten}).Distinct("project", &mw)
 	return
 }
 
 func dbDeployStateUpdate(ctx context.Context, dep *DeployDesc, state int) error {
 	dep.State = state
-	return gctx(ctx).S.DB(DBStateDB).C(DBColDeploy).Update(bson.M{"cookie": dep.Cookie},
+	return dbCol(ctx, DBColDeploy).Update(bson.M{"cookie": dep.Cookie},
 			bson.M{"$set": bson.M{"state": state}})
 }
 
 func dbListFnEvents(ctx context.Context, fnid string) ([]*FnEventDesc, error) {
 	var ret []*FnEventDesc
-	err := gctx(ctx).S.DB(DBStateDB).C(DBColEvents).Find(bson.M{"fnid": fnid}).All(&ret)
+	err := dbCol(ctx, DBColEvents).Find(bson.M{"fnid": fnid}).All(&ret)
 	return ret, err
 }
 
 func dbListEvents(ctx context.Context, q bson.M) ([]FnEventDesc, error) {
 	var ret []FnEventDesc
-	err := gctx(ctx).S.DB(DBStateDB).C(DBColEvents).Find(q).All(&ret)
+	err := dbCol(ctx, DBColEvents).Find(q).All(&ret)
 	return ret, err
 }
 
 func dbFindEvent(ctx context.Context, id string) (*FnEventDesc, error) {
 	var ed FnEventDesc
-	err := gctx(ctx).S.DB(DBStateDB).C(DBColEvents).Find(bson.M{"_id": bson.ObjectIdHex(id)}).One(&ed)
+	err := dbCol(ctx, DBColEvents).Find(bson.M{"_id": bson.ObjectIdHex(id)}).One(&ed)
 	return &ed, err
 }
 
 func dbFuncEventByName(ctx context.Context, fn *FunctionDesc, name string) (*FnEventDesc, error) {
 	var ed FnEventDesc
-	err := gctx(ctx).S.DB(DBStateDB).C(DBColEvents).Find(bson.M{"fnid": fn.Cookie, "name": name}).One(&ed)
+	err := dbCol(ctx, DBColEvents).Find(bson.M{"fnid": fn.Cookie, "name": name}).One(&ed)
 	return &ed, err
 }
 
 func dbUpdateEvent(ctx context.Context, ed *FnEventDesc) error {
-	return gctx(ctx).S.DB(DBStateDB).C(DBColEvents).Update(bson.M{"_id": ed.ObjID}, ed)
+	return dbCol(ctx, DBColEvents).Update(bson.M{"_id": ed.ObjID}, ed)
 }
 
 func dbRepoDeactivate(ctx context.Context, rd *RepoDesc) error {
-	c := gctx(ctx).S.DB(DBStateDB).C(DBColRepos)
-	return c.Update(
+	return dbCol(ctx, DBColRepos).Update(
 		bson.M{"_id": rd.ObjID},
 		bson.M{"$set": bson.M{"state": swy.DBRepoStateRem, }})
 }
@@ -536,9 +512,8 @@ func LogsCleanerInit(ctx context.Context, conf *YAMLConf) error {
 				time.Sleep(LogsCleanPeriod)
 
 				ctx, done := mkContext("::logsgc")
-				c := gctx(ctx).S.DB(DBStateDB).C(DBColLogs)
 				dur := time.Now().AddDate(0, 0, -conf.LogsKeepDays)
-				c.RemoveAll(bson.M{"ts": bson.M{"$lt": dur }})
+				dbCol(ctx, DBColLogs).RemoveAll(bson.M{"ts": bson.M{"$lt": dur }})
 				ctxlog(ctx).Debugf("Cleaned logs < %s", dur.String())
 				done(ctx)
 			}
