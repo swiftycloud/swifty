@@ -256,17 +256,17 @@ type RepoInfo struct {
 
 type AccAdd struct {
 	Type		string			`json:"type"`
-	GHName		string			`json:"github_name,omitempty"`
-	GHToken		string			`json:"github_token,omitempty"`
+	Name		string			`json:"name,omitempty"`
+	Token		string			`json:"token,omitempty"`
 }
 
 type AccUpdate struct {
-	GHToken		*string			`json:"github_token,omitempty"`
+	Token		*string			`json:"token,omitempty"`
 }
 
 type AccInfo struct {
 	ID		string			`json:"id"`
 	Type		string			`json:"type"`
-	GHName		string			`json:"github_name,omitempty"`
-	GHToken		string			`json:"github_token,omitempty"`
+	Name		string			`json:"name,omitempty"`
+	Token		string			`json:"token,omitempty"`
 }

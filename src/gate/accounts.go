@@ -29,19 +29,19 @@ var accHandlers = map[string] struct {
 
 func setupGithubAcc(ad *AccDesc, params *swyapi.AccAdd) {
 	ad.GH = &GHDesc {
-		Name:	params.GHName,
-		Token:	params.GHToken,
+		Name:	params.Name,
+		Token:	params.Token,
 	}
 }
 
 func infoGitHubAcc(ad *AccDesc, info *swyapi.AccInfo, detail bool) {
-	info.GHName = ad.GH.Name
-	info.GHToken = ad.GH.Token
+	info.Name = ad.GH.Name
+	info.Token = ad.GH.Token
 }
 
 func updateGithubAcc(ad *AccDesc, params *swyapi.AccUpdate) {
-	if params.GHToken != nil {
-		ad.GH.Token = *params.GHToken
+	if params.Token != nil {
+		ad.GH.Token = *params.Token
 	}
 }
 

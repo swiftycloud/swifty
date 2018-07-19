@@ -1214,11 +1214,11 @@ func acc_info(args []string, opts [16]string) {
 	var ai swyapi.AccInfo
 	make_faas_req1("GET", "accounts/" + args[0], http.StatusOK, nil, &ai)
 	fmt.Printf("Type:          %s\n", ai.Type)
-	if ai.GHName != "" {
-		fmt.Printf("GitHub name:   %s\n", ai.GHName)
+	if ai.Name != "" {
+		fmt.Printf("GitHub name:   %s\n", ai.Name)
 	}
-	if ai.GHToken != "" {
-		fmt.Printf("GitHub token:  %s\n", ai.GHToken)
+	if ai.Token != "" {
+		fmt.Printf("GitHub token:  %s\n", ai.Token)
 	}
 }
 
@@ -1228,10 +1228,10 @@ func acc_add(args []string, opts [16]string) {
 	}
 
 	if opts[0] != "" {
-		aa.GHName = opts[0]
+		aa.Name = opts[0]
 	}
 	if opts[1] != "" {
-		aa.GHToken = opts[1]
+		aa.Token = opts[1]
 	}
 
 	var id string
@@ -1243,7 +1243,7 @@ func acc_upd(args []string, opts [16]string) {
 	au := swyapi.AccUpdate {}
 
 	if opts[0] != "" {
-		au.GHToken = &opts[0]
+		au.Token = &opts[0]
 	}
 
 	make_faas_req1("PUT", "accounts/" + args[0], http.StatusOK, &au, nil)

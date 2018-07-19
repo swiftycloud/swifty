@@ -2100,10 +2100,10 @@ definitions:
       type:
         type: string
         description: Account type. Can be "github"
-      github_name:
+      name:
         type: string
-        description: Name of a github user
-      github_token:
+        description: Name of the user
+      token:
         type: string
         description: Personal access token of the user
         
@@ -2111,7 +2111,7 @@ definitions:
     type: object
     description: Updating an account
     properties:
-      github_token:
+      token:
         type: string
         description: Personal access token of the user
         
@@ -2123,9 +2123,9 @@ definitions:
         type: string
       type:
         type: string
-      github_name:
+      name:
         type: string
-      github_token:
+      token:
         type: string
         
   RepoAdd:
