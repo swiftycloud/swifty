@@ -115,11 +115,11 @@ func deployStartItems(dep *DeployDesc) {
 		}
 
 		deployStopItems(ctx, dep, i)
-		dbDeployStateUpdate(ctx, dep, swy.DBDepStateStl)
+		dbUpdatePart(ctx, dep, bson.M{"state": swy.DBDepStateStl})
 		return
 	}
 
-	dbDeployStateUpdate(ctx, dep, swy.DBDepStateRdy)
+	dbUpdatePart(ctx, dep, bson.M{"state": swy.DBDepStateRdy})
 	return
 }
 

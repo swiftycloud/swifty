@@ -464,12 +464,6 @@ func dbProjectListAll(ctx context.Context, ten string) (fn []string, mw []string
 	return
 }
 
-func dbDeployStateUpdate(ctx context.Context, dep *DeployDesc, state int) error {
-	dep.State = state
-	return dbCol(ctx, DBColDeploy).Update(bson.M{"cookie": dep.Cookie},
-			bson.M{"$set": bson.M{"state": state}})
-}
-
 func dbRepoDeactivate(ctx context.Context, rd *RepoDesc) error {
 	return dbCol(ctx, DBColRepos).Update(
 		bson.M{"_id": rd.ObjID},
