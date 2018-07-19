@@ -23,7 +23,7 @@ const (
 	DBColFnStatsA	= "FnStatsArch"
 	DBColTenStats	= "TenantStats"
 	DBColTenStatsA	= "TenantStatsArch"
-	DBColBalancerRS = "BalancerRS"
+	DBColBal	= "BalancerRS"
 	DBColDeploy	= "Deploy"
 	DBColLimits	= "Limits"
 	DBColEvents	= "Events"
@@ -344,7 +344,7 @@ func logRemove(ctx context.Context, fn *FunctionDesc) error {
 }
 
 func dbBalancerPodAdd(ctx context.Context, pod *k8sPod) error {
-	err := dbCol(ctx, DBColBalancerRS).Insert(bson.M{
+	err := dbCol(ctx, DBColBal).Insert(bson.M{
 			"uid":		pod.UID,
 			"wdogaddr":	pod.WdogAddr,
 			"wdogport":	pod.WdogPort,
@@ -358,7 +358,7 @@ func dbBalancerPodAdd(ctx context.Context, pod *k8sPod) error {
 }
 
 func dbBalancerPodUpd(ctx context.Context, fnId string, pod *k8sPod) error {
-	err := dbCol(ctx, DBColBalancerRS).Update(bson.M{"uid": pod.UID}, bson.M{"$set": bson.M {
+	err := dbCol(ctx, DBColBal).Update(bson.M{"uid": pod.UID}, bson.M{"$set": bson.M {
 			"fnid":		fnId,
 			"fnversion":	pod.Version,
 		}})
@@ -370,7 +370,7 @@ func dbBalancerPodUpd(ctx context.Context, fnId string, pod *k8sPod) error {
 }
 
 func dbBalancerPodDel(ctx context.Context, pod *k8sPod) (error) {
-	err := dbCol(ctx, DBColBalancerRS).Remove(bson.M{ "uid": pod.UID, })
+	err := dbCol(ctx, DBColBal).Remove(bson.M{ "uid": pod.UID, })
 	if err != nil {
 		if err == mgo.ErrNotFound {
 			return nil
@@ -383,7 +383,7 @@ func dbBalancerPodDel(ctx context.Context, pod *k8sPod) (error) {
 }
 
 func dbBalancerPodDelStuck(ctx context.Context) (error) {
-	_, err := dbCol(ctx, DBColBalancerRS).RemoveAll(bson.M{ "fnid": bson.M{"$exists": false}})
+	_, err := dbCol(ctx, DBColBal).RemoveAll(bson.M{ "fnid": bson.M{"$exists": false}})
 	if err == mgo.ErrNotFound {
 		err = nil
 	}
@@ -392,7 +392,7 @@ func dbBalancerPodDelStuck(ctx context.Context) (error) {
 }
 
 func dbBalancerPodDelAll(ctx context.Context, fnid string) (error) {
-	_, err := dbCol(ctx, DBColBalancerRS).RemoveAll(bson.M{ "fnid": fnid })
+	_, err := dbCol(ctx, DBColBal).RemoveAll(bson.M{ "fnid": fnid })
 	if err == mgo.ErrNotFound {
 		err = nil
 	}
@@ -410,18 +410,24 @@ type balancerEntry struct {
 	Version		string		`bson:"fnversion"`
 }
 
+func (be *balancerEntry)conn() *podConn {
+	return &podConn {
+		Addr: be.WdogAddr,
+		Port: be.WdogPort,
+		Host: be.Host,
+	}
+}
+
 func dbBalancerListVersions(ctx context.Context, cookie string) ([]string, error) {
 	var fv []string
-	err := dbCol(ctx, DBColBalancerRS).Find(bson.M{"fnid": cookie }).Distinct("fnversion", &fv)
+	err := dbCol(ctx, DBColBal).Find(bson.M{"fnid": cookie }).Distinct("fnversion", &fv)
 	return fv, err
 }
 
-func dbBalancerGetConnsByCookie(ctx context.Context, cookie string) ([]podConn, error) {
-	var v []balancerEntry
+func dbBalancerGetConnsByCookie(ctx context.Context, cookie string) ([]*podConn, error) {
+	var v []*balancerEntry
 
-	err := dbCol(ctx, DBColBalancerRS).Find(bson.M{
-			"fnid": cookie,
-		}).All(&v)
+	err := dbCol(ctx, DBColBal).Find(bson.M{ "fnid": cookie }).All(&v)
 	if err != nil {
 		if err == mgo.ErrNotFound {
 			return nil, nil
@@ -429,9 +435,9 @@ func dbBalancerGetConnsByCookie(ctx context.Context, cookie string) ([]podConn, 
 		return nil, err
 	}
 
-	var ret []podConn
+	var ret []*podConn
 	for _, b := range(v) {
-		ret = append(ret, podConn{Addr: b.WdogAddr, Port: b.WdogPort, Host: b.Host})
+		ret = append(ret, b.conn())
 	}
 
 	return ret, nil
@@ -440,7 +446,7 @@ func dbBalancerGetConnsByCookie(ctx context.Context, cookie string) ([]podConn, 
 func dbBalancerGetConnExact(ctx context.Context, fnid, version string) (*podConn, error) {
 	var v balancerEntry
 
-	err := dbCol(ctx, DBColBalancerRS).Find(bson.M{
+	err := dbCol(ctx, DBColBal).Find(bson.M{
 			"fnid":		fnid,
 			"fnversion":	version,
 		}).One(&v)
@@ -451,7 +457,7 @@ func dbBalancerGetConnExact(ctx context.Context, fnid, version string) (*podConn
 		return nil, err
 	}
 
-	return &podConn{Addr: v.WdogAddr, Port: v.WdogPort}, nil
+	return v.conn(), nil
 }
 
 func dbProjectListAll(ctx context.Context, ten string) (fn []string, mw []string, err error) {
@@ -524,7 +530,7 @@ func dbConnect(conf *YAMLConf) error {
 	}
 
 	index.Key = []string{"uid"}
-	err = dbs.DB(DBStateDB).C(DBColBalancerRS).EnsureIndex(index)
+	err = dbs.DB(DBStateDB).C(DBColBal).EnsureIndex(index)
 	if err != nil {
 		return fmt.Errorf("No uid index for balancerrs: %s", err.Error())
 	}

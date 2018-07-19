@@ -13,13 +13,13 @@ import (
 
 type BalancerDat struct {
 	rover		[2]uint32
-	pods		[]podConn
+	pods		[]*podConn
 	goal		uint32
 	wakeup		*sync.Cond
 }
 
 func (bd *BalancerDat)Flush() {
-	bd.pods = []podConn{}
+	bd.pods = []*podConn{}
 }
 
 func BalancerPodDel(ctx context.Context, pod *k8sPod) error {
@@ -109,7 +109,7 @@ func balancerGetConnExact(ctx context.Context, cookie, version string) (*podConn
 }
 
 func balancerGetConnAny(ctx context.Context, cookie string, fdm *FnMemData) (*podConn, error) {
-	var aps []podConn
+	var aps []*podConn
 	var err error
 
 	aps = fdm.bd.pods
@@ -136,7 +136,7 @@ func balancerGetConnAny(ctx context.Context, cookie string, fdm *FnMemData) (*po
 	sc := atomic.AddUint32(&fdm.bd.rover[0], 1)
 	balancerFnDepGrow(ctx, fdm, sc - fdm.bd.rover[1])
 
-	return &aps[sc % uint32(len(aps))], nil
+	return aps[sc % uint32(len(aps))], nil
 }
 
 func balancerPutConn(fdm *FnMemData) {
