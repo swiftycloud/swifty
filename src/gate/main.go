@@ -1565,7 +1565,7 @@ func handleRepos(ctx context.Context, w http.ResponseWriter, r *http.Request) *s
 				return GateErrD(err)
 			}
 
-			if ac.Type != "github" {
+			if ac.Type != params.Type {
 				return GateErrM(swy.GateBadRequest, "Bad account type")
 			}
 
@@ -1573,8 +1573,8 @@ func handleRepos(ctx context.Context, w http.ResponseWriter, r *http.Request) *s
 		}
 
 		id := ctxSwoId(ctx, NoProject, params.URL)
-		rp := getRepoDesc(id, &params, acc)
-		rid, cerr := rp.Attach(ctx, &conf)
+		rp := getRepoDesc(id, &params)
+		rid, cerr := rp.Attach(ctx, &conf, acc)
 		if cerr != nil {
 			return cerr
 		}

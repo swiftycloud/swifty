@@ -89,16 +89,12 @@ func (rd *RepoDesc)clonePath() string {
 
 func (rd *RepoDesc)URL() string { return rd.SwoId.Name }
 
-func getRepoDesc(id *SwoId, params *swyapi.RepoAdd, acc *AccDesc) *RepoDesc {
+func getRepoDesc(id *SwoId, params *swyapi.RepoAdd) *RepoDesc {
 	rd := &RepoDesc {
 		SwoId:		*id,
 		Type:		params.Type,
 		UserData:	params.UserData,
 		Pull:		params.Pull,
-	}
-
-	if acc != nil {
-		rd.AccID = acc.ObjID
 	}
 
 	return rd
@@ -122,9 +118,12 @@ func (rd *RepoDesc)toInfo(ctx context.Context, conf *YAMLConf, details bool) (*s
 	return r, nil
 }
 
-func (rd *RepoDesc)Attach(ctx context.Context, conf *YAMLConf) (string, *swyapi.GateErr) {
+func (rd *RepoDesc)Attach(ctx context.Context, conf *YAMLConf, ac *AccDesc) (string, *swyapi.GateErr) {
 	rd.ObjID = bson.NewObjectId()
 	rd.State = swy.DBRepoStateCln
+	if ac != nil {
+		rd.AccID = ac.ObjID
+	}
 
 	if rd.Type != "github" {
 		return "", GateErrM(swy.GateBadRequest, "Unsupported repo type")
@@ -135,7 +134,7 @@ func (rd *RepoDesc)Attach(ctx context.Context, conf *YAMLConf) (string, *swyapi.
 		return "", GateErrD(err)
 	}
 
-	go cloneRepo(rd)
+	go cloneRepo(rd, ac)
 
 	return rd.ObjID.Hex(), nil
 }
@@ -349,11 +348,11 @@ func updateSources(ctx context.Context, fn *FunctionDesc, src *swyapi.FunctionSo
 	return srch.get(ctx, fn, src)
 }
 
-func cloneRepo(rd *RepoDesc) {
+func cloneRepo(rd *RepoDesc, ac *AccDesc) {
 	ctx, done := mkContext("::gitclone")
 	defer done(ctx)
 
-	commit, err := rd.Clone(ctx)
+	commit, err := rd.Clone(ctx, ac)
 	if err != nil {
 		/* FIXME -- keep logs and show them user */
 		dbUpdatePart(ctx, rd, bson.M{ "state": swy.DBRepoStateStl })
@@ -368,7 +367,7 @@ func cloneRepo(rd *RepoDesc) {
 				})
 }
 
-func (rd *RepoDesc)Clone(ctx context.Context) (string, error) {
+func (rd *RepoDesc)Clone(ctx context.Context, ac *AccDesc) (string, error) {
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 
@@ -387,15 +386,12 @@ func (rd *RepoDesc)Clone(ctx context.Context) (string, error) {
 
 	curl := rd.URL()
 
-	if rd.AccID != "" && strings.HasPrefix(curl, "https://") {
-		var ac AccDesc
-
-		err = dbFind(ctx, bson.M{"_id": rd.AccID}, &ac)
-		if err != nil && !dbNF(err) {
-			return "", err
+	if ac != nil {
+		if ac.Type != "github" {
+			return "", errors.New("Corrupted acc type")
 		}
 
-		if ac.Type == "github" && ac.GH.Token != "" {
+		if ac.GH.Token != "" && strings.HasPrefix(curl, "https://") {
 			curl = "https://" + ac.GH.Name + ":" + ac.GH.Token + "@" + curl[8:]
 		}
 	}
