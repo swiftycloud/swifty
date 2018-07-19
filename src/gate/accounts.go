@@ -5,6 +5,7 @@ import (
 	"gopkg.in/mgo.v2/bson"
 	"../apis/apps"
 	"../common"
+	"../common/http"
 )
 
 type GHDesc struct {
@@ -20,18 +21,51 @@ type AccDesc struct {
 }
 
 var accHandlers = map[string] struct {
-	setup func (*AccDesc, *swyapi.AccAdd)
+	setup func (*AccDesc, *swyapi.AccAdd) *swyapi.GateErr
 	info func (*AccDesc, *swyapi.AccInfo, bool)
 	update func (*AccDesc, *swyapi.AccUpdate)
 } {
 	"github":	{ setup: setupGithubAcc, info: infoGitHubAcc, update: updateGithubAcc },
 }
 
-func setupGithubAcc(ad *AccDesc, params *swyapi.AccAdd) {
+func githubResolveName(token string) (string, error) {
+	rsp, err := swyhttp.MarshalAndPost(&swyhttp.RestReq{
+			Method: "GET",
+			Address: "https://api.github.com/user?access_token=" + token,
+		}, nil)
+	if err != nil {
+		return "", err
+	}
+
+	var u GitHubUser
+	err = swyhttp.ReadAndUnmarshalResp(rsp, &u)
+	if err != nil {
+		return "", err
+	}
+
+	return u.Login, nil
+}
+
+func setupGithubAcc(ad *AccDesc, params *swyapi.AccAdd) *swyapi.GateErr {
 	ad.GH = &GHDesc {
 		Name:	params.Name,
 		Token:	params.Token,
 	}
+
+	if ad.GH.Name == "" {
+		if ad.GH.Token == "" {
+			return GateErrM(swy.GateBadRequest, "Need either name or token")
+		}
+
+		name, err := githubResolveName(ad.GH.Token)
+		if err != nil {
+			return GateErrE(swy.GateGenErr, err)
+		}
+
+		ad.GH.Name = name
+	}
+
+	return nil
 }
 
 func infoGitHubAcc(ad *AccDesc, info *swyapi.AccInfo, detail bool) {
@@ -52,7 +86,11 @@ func getAccDesc(id *SwoId, params *swyapi.AccAdd) (*AccDesc, *swyapi.GateErr) {
 	}
 
 	ad := &AccDesc { SwoId:	*id, Type: params.Type }
-	h.setup(ad, params)
+	cerr := h.setup(ad, params)
+	if cerr != nil {
+		return nil, cerr
+	}
+
 	return ad, nil
 }
 

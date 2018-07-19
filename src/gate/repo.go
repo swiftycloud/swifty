@@ -75,6 +75,11 @@ type GitHubRepo struct {
 	Private		bool		`json:"private"`
 }
 
+type GitHubUser struct {
+	Login		string		`json:"login"`
+}
+
+
 func (rd *RepoDesc)path() string {
 	if rd.Path != "" {
 		return rd.Path
