@@ -113,12 +113,12 @@ func (fn *FunctionDesc)isOneShot() bool {
 }
 
 func (fn *FunctionDesc)ToState(ctx context.Context, st, from int) error {
-	q := bson.M{"_id": fn.ObjID}
+	q := bson.M{}
 	if from != -1 {
 		q["state"] = from
 	}
 
-	err := dbUpdateSet(ctx, q, bson.M{"state": st}, &FunctionDesc{})
+	err := dbUpdatePart2(ctx, fn, q, bson.M{"state": st})
 	if err == nil {
 		fn.State = st
 	}
@@ -276,9 +276,9 @@ func (fn *FunctionDesc)Add(ctx context.Context, conf *YAMLConf, src *swyapi.Func
 
 	fn.State = swy.DBFuncStateStr
 
-	err = dbUpdateId(ctx, fn.ObjID, bson.M{
+	err = dbUpdatePart(ctx, fn, bson.M{
 			"src": &fn.Src, "state": fn.State,
-		}, &FunctionDesc{})
+		})
 	if err != nil {
 		ctxlog(ctx).Errorf("Can't update added %s: %s", fn.SwoId.Str(), err.Error())
 		err = errors.New("DB error")
@@ -322,7 +322,7 @@ out_clean_repo:
 		goto stalled
 	}
 out_clean_func:
-	erc = dbRemoveId(ctx, &FunctionDesc{}, fn.ObjID)
+	erc = dbRemove(ctx, fn)
 	if erc != nil {
 		goto stalled
 	}
@@ -358,7 +358,7 @@ func swyFixSize(sz *swyapi.FunctionSize, conf *YAMLConf) error {
 }
 
 func (fn *FunctionDesc)setUserData(ctx context.Context, ud string) error {
-	err := dbUpdateId(ctx, fn.ObjID, bson.M{"userdata": ud}, &FunctionDesc{})
+	err := dbUpdatePart(ctx, fn, bson.M{"userdata": ud})
 	if err == nil {
 		fn.UserData = ud
 	}
@@ -376,7 +376,7 @@ func (fn *FunctionDesc)setAuthCtx(ctx context.Context, ac string) error {
 		}
 	}
 
-	err = dbUpdateId(ctx, fn.ObjID, bson.M{"authctx": ac}, &FunctionDesc{})
+	err = dbUpdatePart(ctx, fn, bson.M{"authctx": ac})
 	if err == nil {
 		fn.AuthCtx = ac
 		fdm := memdGetCond(fn.Cookie)
@@ -418,7 +418,7 @@ func (fn *FunctionDesc)setSize(ctx context.Context, sz *swyapi.FunctionSize) err
 		rlfix = true
 	}
 
-	err := dbUpdateId(ctx, fn.ObjID, update, &FunctionDesc{})
+	err := dbUpdatePart(ctx, fn, update)
 	if err != nil {
 		return err
 	}
@@ -586,7 +586,7 @@ func (fn *FunctionDesc)updateSources(ctx context.Context, src *swyapi.FunctionSo
 		update["state"] = fn.State
 	}
 
-	err = dbUpdateId(ctx, fn.ObjID, update, &FunctionDesc{})
+	err = dbUpdatePart(ctx, fn, update)
 	if err != nil {
 		ctxlog(ctx).Errorf("Can't update pulled %s: %s", fn.Name, err.Error())
 		return GateErrD(err)
@@ -684,7 +684,7 @@ func (fn *FunctionDesc)Remove(ctx context.Context, conf *YAMLConf) *swyapi.GateE
 	memdGone(fn)
 
 	ctxlog(ctx).Debugf("`- and ...")
-	err = dbRemoveId(ctx, &FunctionDesc{}, fn.ObjID)
+	err = dbRemove(ctx, fn)
 	if err != nil {
 		goto later
 	}

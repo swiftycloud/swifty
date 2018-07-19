@@ -236,12 +236,20 @@ out:
 	http.Error(w, err.Error(), resp)
 }
 
-func commonReq(project string, labels []string) bson.D {
-	q := bson.D{{"project", project}}
+func listReq(ctx context.Context, project string, labels []string) bson.D {
+	q := bson.D{{"tennant", gctx(ctx).Tenant}, {"project", project}}
 	for _, l := range labels {
 		q = append(q, bson.DocElem{"labels", l})
 	}
 	return q
+}
+
+func (id *SwoId)dbReq() bson.M {
+	return bson.M{"cookie": id.Cookie()}
+}
+
+func cookieReq(ctx context.Context, project, name string) bson.M {
+	return ctxSwoId(ctx, project, name).dbReq()
 }
 
 func handleProjectDel(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
@@ -258,7 +266,7 @@ func handleProjectDel(ctx context.Context, w http.ResponseWriter, r *http.Reques
 
 	id = ctxSwoId(ctx, par.Project, "")
 
-	err = dbFindAllCommon(ctx, commonReq(par.Project, []string{}), &fns)
+	err = dbFindAll(ctx, listReq(ctx, par.Project, []string{}), &fns)
 	if err != nil {
 		return GateErrD(err)
 	}
@@ -271,7 +279,7 @@ func handleProjectDel(ctx context.Context, w http.ResponseWriter, r *http.Reques
 		}
 	}
 
-	err = dbFindAllCommon(ctx, commonReq(par.Project, []string{}), &mws)
+	err = dbFindAll(ctx, listReq(ctx, par.Project, []string{}), &mws)
 	if err != nil {
 		return GateErrD(err)
 	}
@@ -1124,7 +1132,7 @@ func handleFunctions(ctx context.Context, w http.ResponseWriter, r *http.Request
 
 		fname := q.Get("name")
 		if fname == "" {
-			err = dbFindAllCommon(ctx, commonReq(project, q["label"]), &fns)
+			err = dbFindAll(ctx, listReq(ctx, project, q["label"]), &fns)
 			if err != nil {
 				return GateErrD(err)
 			}
@@ -1132,7 +1140,7 @@ func handleFunctions(ctx context.Context, w http.ResponseWriter, r *http.Request
 		} else {
 			var fn FunctionDesc
 
-			err = dbFind(ctx, ctxSwoId(ctx, project, fname).dbReq(), &fn)
+			err = dbFind(ctx, cookieReq(ctx, project, fname), &fn)
 			if err != nil {
 				return GateErrD(err)
 			}
@@ -1346,18 +1354,18 @@ func handleMwares(ctx context.Context, w http.ResponseWriter, r *http.Request) *
 
 		mname := q.Get("name")
 		if mname == "" {
-			q := commonReq(project, q["label"])
+			q := listReq(ctx, project, q["label"])
 			if mwtype != "" {
 				q = append(q, bson.DocElem{"mwaretype", mwtype})
 			}
-			err = dbFindAllCommon(ctx, q, &mws)
+			err = dbFindAll(ctx, q, &mws)
 			if err != nil {
 				return GateErrD(err)
 			}
 		} else {
 			var mw MwareDesc
 
-			err = dbFind(ctx, ctxSwoId(ctx, project, mname).dbReq(), &mw)
+			err = dbFind(ctx, cookieReq(ctx, project, mname), &mw)
 			if err != nil {
 				return GateErrD(err)
 			}
@@ -1412,12 +1420,12 @@ func handleAccounts(ctx context.Context, w http.ResponseWriter, r *http.Request)
 	case "GET":
 		var acs []*AccDesc
 
-		rq := commonReq(NoProject, []string{})
+		rq := listReq(ctx, NoProject, []string{})
 		if atype := q.Get("type"); atype != "" {
 			rq = append(rq, bson.DocElem{"type", atype})
 		}
 
-		err := dbFindAllCommon(ctx, rq, &acs)
+		err := dbFindAll(ctx, rq, &acs)
 		if err != nil {
 			return GateErrD(err)
 		}
@@ -1751,14 +1759,14 @@ func handleDeployments(ctx context.Context, w http.ResponseWriter, r *http.Reque
 
 		dname := q.Get("name")
 		if dname == "" {
-			err = dbFindAllCommon(ctx, commonReq(project, q["label"]), &deps)
+			err = dbFindAll(ctx, listReq(ctx, project, q["label"]), &deps)
 			if err != nil {
 				return GateErrD(err)
 			}
 		} else {
 			var dep DeployDesc
 
-			err = dbFind(ctx, ctxSwoId(ctx, project, dname).dbReq(), &dep)
+			err = dbFind(ctx, cookieReq(ctx, project, dname), &dep)
 			if err != nil {
 				return GateErrD(err)
 			}
@@ -1860,7 +1868,7 @@ func handleAuths(ctx context.Context, w http.ResponseWriter, r *http.Request) *s
 	case "GET":
 		var deps []*DeployDesc
 
-		err := dbFindAllCommon(ctx, commonReq(project, []string{"auth"}), &deps)
+		err := dbFindAll(ctx, listReq(ctx, project, []string{"auth"}), &deps)
 		if err != nil {
 			return GateErrD(err)
 		}

@@ -37,12 +37,12 @@ var mwStates = map[int]string {
 }
 
 func (mw *MwareDesc)ToState(ctx context.Context, st, from int) error {
-	q := bson.M{"_id": mw.ObjID}
+	q := bson.M{}
 	if from != -1 {
 		q["state"] = from
 	}
 
-	err := dbUpdateSet(ctx, q, bson.M{"state": st}, &MwareDesc{})
+	err := dbUpdatePart2(ctx, mw, q, bson.M{"state": st})
 	if err == nil {
 		mw.State = st
 	}
@@ -167,7 +167,7 @@ func (item *MwareDesc)Remove(ctx context.Context, conf *YAMLConfMw) *swyapi.Gate
 		goto stalled
 	}
 
-	err = dbRemoveId(ctx, &MwareDesc{}, item.ObjID)
+	err = dbRemove(ctx, item)
 	if err != nil {
 		ctxlog(ctx).Errorf("Can't remove mware %s: %s", item.SwoId.Str(), err.Error())
 		goto stalled
@@ -280,11 +280,11 @@ func (mwd *MwareDesc)Setup(ctx context.Context, conf *YAMLConfMw) (string, *swya
 	}
 
 	mwd.State = swy.DBMwareStateRdy
-	err = dbUpdateId(ctx, mwd.ObjID, bson.M {
+	err = dbUpdatePart(ctx, mwd, bson.M {
 				"client":	mwd.Client,
 				"secret":	mwd.Secret,
 				"namespace":	mwd.Namespace,
-				"state":	mwd.State }, &MwareDesc{})
+				"state":	mwd.State })
 	if err != nil {
 		ctxlog(ctx).Errorf("Can't update added %s: %s", mwd.SwoId.Str(), err.Error())
 		err = errors.New("DB error")
@@ -304,7 +304,7 @@ outh:
 		goto stalled
 	}
 outdb:
-	erc = dbRemoveId(ctx, &MwareDesc{}, mwd.ObjID)
+	erc = dbRemove(ctx, mwd)
 	if erc != nil {
 		goto stalled
 	}

@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
-	"gopkg.in/mgo.v2/bson"
 )
 
 type SwoId struct {
@@ -23,10 +22,6 @@ func makeSwoId(tennant, project, name string) *SwoId {
 
 func ctxSwoId(ctx context.Context, project, name string) *SwoId {
 	return makeSwoId(gctx(ctx).Tenant, project, name)
-}
-
-func (id *SwoId)dbReq() bson.M {
-	return bson.M{"cookie": id.Cookie()}
 }
 
 func (id *SwoId) Str() string {

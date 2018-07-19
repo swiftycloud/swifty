@@ -143,7 +143,7 @@ func (rd *RepoDesc)Attach(ctx context.Context, conf *YAMLConf) (string, *swyapi.
 func (rd *RepoDesc)Update(ctx context.Context, ru *swyapi.RepoUpdate) *swyapi.GateErr {
 	if ru.Pull != nil {
 		rd.Pull = *ru.Pull
-		err := dbUpdateId(ctx, rd.ObjID, bson.M{"pulling": rd.Pull}, &RepoDesc{})
+		err := dbUpdatePart(ctx, rd, bson.M{"pulling": rd.Pull})
 		if err != nil {
 			return GateErrD(err)
 		}
@@ -167,7 +167,7 @@ func (rd *RepoDesc)Detach(ctx context.Context, conf *YAMLConf) *swyapi.GateErr {
 		}
 	}
 
-	err = dbRemoveId(ctx, &RepoDesc{}, rd.ObjID)
+	err = dbRemove(ctx, rd)
 	if err != nil {
 		return GateErrD(err)
 	}
@@ -228,7 +228,7 @@ func (rd *RepoDesc)pull(ctx context.Context) *swyapi.GateErr {
 	cmt, err := gitCommit(clone_to)
 	if err == nil {
 		t := time.Now()
-		dbUpdateId(ctx, rd.ObjID, bson.M{"commit": cmt, "last_pull": &t}, &RepoDesc{})
+		dbUpdatePart(ctx, rd, bson.M{"commit": cmt, "last_pull": &t})
 	}
 
 	return nil
@@ -356,16 +356,16 @@ func cloneRepo(rd *RepoDesc) {
 	commit, err := rd.Clone(ctx)
 	if err != nil {
 		/* FIXME -- keep logs and show them user */
-		dbUpdateId(ctx, rd.ObjID, bson.M{ "state": swy.DBRepoStateStl }, &RepoDesc{})
+		dbUpdatePart(ctx, rd, bson.M{ "state": swy.DBRepoStateStl })
 		return
 	}
 
 	t := time.Now()
-	dbUpdateId(ctx, rd.ObjID, bson.M{
+	dbUpdatePart(ctx, rd, bson.M{
 					"state": swy.DBRepoStateRdy,
 					"commit": commit,
 					"last_pull": &t,
-				}, &RepoDesc{})
+				})
 }
 
 func (rd *RepoDesc)Clone(ctx context.Context) (string, error) {

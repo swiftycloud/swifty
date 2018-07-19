@@ -82,7 +82,7 @@ func (ad *AccDesc)Add(ctx context.Context, conf *YAMLConf) (string, *swyapi.Gate
 func (ad *AccDesc)Update(ctx context.Context, params *swyapi.AccUpdate) *swyapi.GateErr {
 	h, _ := accHandlers[ad.Type]
 	h.update(ad, params)
-	err := dbUpdateObj(ctx, ad.ObjID, ad)
+	err := dbUpdateAll(ctx, ad)
 	if err != nil {
 		return GateErrD(err)
 	}
@@ -90,7 +90,7 @@ func (ad *AccDesc)Update(ctx context.Context, params *swyapi.AccUpdate) *swyapi.
 }
 
 func (ad *AccDesc)Del(ctx context.Context, conf *YAMLConf) *swyapi.GateErr {
-	err := dbRemoveId(ctx, &AccDesc{}, ad.ObjID)
+	err := dbRemove(ctx, ad)
 	if err != nil {
 		return GateErrD(err)
 	}

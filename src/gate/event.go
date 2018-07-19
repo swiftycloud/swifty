@@ -183,14 +183,14 @@ func eventsAdd(ctx context.Context, fn *FunctionDesc, evt *swyapi.FunctionEvent)
 		err = urlEventStart(ctx, ed)
 	}
 	if err != nil {
-		dbRemoveId(ctx, &FnEventDesc{}, ed.ObjID)
+		dbRemove(ctx, ed)
 		return "", GateErrM(swy.GateGenErr, "Can't setup event")
 	}
 
 	err = dbUpdateEvent(ctx, ed)
 	if err != nil {
 		eventStop(ctx, ed)
-		dbRemoveId(ctx, &FnEventDesc{}, ed.ObjID)
+		dbRemove(ctx, ed)
 		return "", GateErrD(err)
 	}
 
@@ -218,7 +218,7 @@ func eventsDelete(ctx context.Context, fn *FunctionDesc, ed *FnEventDesc) *swyap
 		return GateErrM(swy.GateGenErr, "Can't stop event")
 	}
 
-	err = dbRemoveId(ctx, &FnEventDesc{}, ed.ObjID)
+	err = dbRemove(ctx, ed)
 	if err != nil {
 		return GateErrD(err)
 	}
@@ -238,7 +238,7 @@ func clearAllEvents(ctx context.Context, fn *FunctionDesc) error {
 			return err
 		}
 
-		err = dbRemoveId(ctx, &FnEventDesc{}, e.ObjID)
+		err = dbRemove(ctx, e)
 		if err != nil {
 			return err
 		}

@@ -61,50 +61,78 @@ func init() {
 	dbColMap[reflect.TypeOf(&[]*AccDesc{})] = DBColAccounts
 }
 
-func dbColl(object interface{}) (string) {
+func dbCol(ctx context.Context, col string) *mgo.Collection {
+	return gctx(ctx).S.DB(DBStateDB).C(col)
+}
+
+func dbColSlow(ctx context.Context, object interface{}) *mgo.Collection {
 	typ := reflect.TypeOf(object)
 	if name, ok := dbColMap[typ]; ok {
-		return name
+		return dbCol(ctx, name)
 	}
 	glog.Fatalf("Unmapped object %s", typ.String())
-	return ""
+	return nil
 }
 
-func dbRemove(ctx context.Context, o interface{}, q bson.M) error {
-	return gctx(ctx).S.DB(DBStateDB).C(dbColl(o)).Remove(q)
+func objcni(o interface{}) (string, bson.ObjectId) {
+	switch o := o.(type) {
+	case *AccDesc:
+		return DBColAccounts, o.ObjID
+	case *RepoDesc:
+		return DBColRepos, o.ObjID
+	case *MwareDesc:
+		return DBColMware, o.ObjID
+	case *DeployDesc:
+		return DBColDeploy, o.ObjID
+	case *FunctionDesc:
+		return DBColFunc, o.ObjID
+	case *FnEventDesc:
+		return DBColEvents, o.ObjID
+	default:
+		glog.Fatalf("Unmapped object %s", reflect.TypeOf(o).String())
+		return "", ""
+	}
 }
 
-func dbRemoveId(ctx context.Context, o interface{}, id bson.ObjectId) error {
-	return dbRemove(ctx, o, bson.M{"_id": id})
+func objq(ctx context.Context, o interface{}) (*mgo.Collection, bson.M) {
+	col, id := objcni(o)
+	return dbCol(ctx, col), bson.M{"_id": id}
+}
+
+func dbRemove(ctx context.Context, o interface{}) error {
+	col, q := objq(ctx, o)
+	return col.Remove(q)
 }
 
 func dbInsert(ctx context.Context, o interface{}) error {
-	return gctx(ctx).S.DB(DBStateDB).C(dbColl(o)).Insert(o)
+	col, _ := objq(ctx, o)
+	return col.Insert(o)
 }
 
 func dbFindAll(ctx context.Context, q interface{}, o interface{}) error {
-	return gctx(ctx).S.DB(DBStateDB).C(dbColl(o)).Find(q).All(o)
-}
-
-func dbFindAllCommon(ctx context.Context, q bson.D, o interface{}) error {
-	q = append(q, bson.DocElem{"tennant", gctx(ctx).Tenant})
-	return dbFindAll(ctx, q, o)
+	return dbColSlow(ctx, o).Find(q).All(o)
 }
 
 func dbFind(ctx context.Context, q bson.M, o interface{}) error {
-	return gctx(ctx).S.DB(DBStateDB).C(dbColl(o)).Find(q).One(o)
+	return dbColSlow(ctx, o).Find(q).One(o)
 }
 
-func dbUpdateSet(ctx context.Context, q bson.M, u bson.M, typ interface{}) error {
-	return gctx(ctx).S.DB(DBStateDB).C(dbColl(typ)).Update(q, bson.M{"$set": u })
+func dbUpdatePart2(ctx context.Context, o interface{}, q2 bson.M, u bson.M) error {
+	col, q := objq(ctx, o)
+	for k, v := range q2 {
+		q[k] = v
+	}
+	return col.Update(q, bson.M{"$set": u})
 }
 
-func dbUpdateId(ctx context.Context, id bson.ObjectId, u bson.M, typ interface{}) error {
-	return dbUpdateSet(ctx, bson.M{"_id": id}, u, typ)
+func dbUpdatePart(ctx context.Context, o interface{}, u bson.M) error {
+	col, q := objq(ctx, o)
+	return col.Update(q, bson.M{"$set": u})
 }
 
-func dbUpdateObj(ctx context.Context, id bson.ObjectId, o interface{}) error {
-	return gctx(ctx).S.DB(DBStateDB).C(dbColl(o)).Update(bson.M{"_id": id}, o)
+func dbUpdateAll(ctx context.Context, o interface{}) error {
+	col, q := objq(ctx, o)
+	return col.Update(q, o)
 }
 
 type DBLogRec struct {
