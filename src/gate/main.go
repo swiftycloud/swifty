@@ -2123,7 +2123,12 @@ func main() {
 	}
 
 	if _, err := os.Stat(config_path); err == nil {
-		swy.ReadYamlConfig(config_path, &conf)
+		err := swy.ReadYamlConfig(config_path, &conf)
+		if err != nil {
+			fmt.Errorf("Bad config: %s", err.Error())
+			return
+		}
+
 		setupLogger(&conf)
 		setupMwareAddr(&conf)
 	} else {
