@@ -27,18 +27,34 @@ type LoginInfo struct {
 	AdmHost		string		`yaml:"admhost,omitempty"`
 	AdmPort		string		`yaml:"admport,omitempty"`
 	Relay		string		`yaml:"relay,omitempty"`
+	Proxy		string		`yaml:"proxy,omitempty"`
 }
 
-func (li *LoginInfo)HostPort() string {
+func (li *LoginInfo)Endpoint() string {
+	var ep string
+
 	if !curCmd.adm {
-		return li.Host + ":" + li.Port
+		ep = li.Host + ":" + li.Port
+		if li.Proxy == "sp" {
+			ep += "/gate"
+		}
+	} else {
+		if li.AdmPort == "" {
+			fatal(fmt.Errorf("Admd not set for this command"))
+		}
+
+		ah := li.AdmHost
+		if ah == "" {
+			ah = li.Host
+		}
+
+		ep = ah + ":" + li.AdmPort
+		if li.Proxy == "sp" {
+			ep += "/admd"
+		}
 	}
 
-	if li.AdmHost == "" {
-		fatal(fmt.Errorf("Admd not set for this command"))
-	}
-
-	return li.AdmHost + ":" + li.AdmPort
+	return ep
 }
 
 type YAMLConf struct {
@@ -63,7 +79,7 @@ func gateProto() string {
 }
 
 func make_faas_req3(method, url string, in interface{}, succ_code int, tmo uint) (*http.Response, error) {
-	address := gateProto() + "://" + conf.Login.HostPort() + "/v1/" + url
+	address := gateProto() + "://" + conf.Login.Endpoint() + "/v1/" + url
 
 	h := make(map[string]string)
 	if conf.Login.Token != "" {
@@ -1373,6 +1389,10 @@ func make_login(creds string, opts [16]string) {
 		conf.Login.AdmPort = c[1]
 	}
 
+	if opts[3] != "" {
+		conf.Login.Proxy = opts[3]
+	}
+
 	refresh_token(home)
 }
 
@@ -1619,6 +1639,7 @@ func main() {
 	cmdMap[CMD_LOGIN].opts.StringVar(&opts[0], "tls", "no", "TLS mode")
 	cmdMap[CMD_LOGIN].opts.StringVar(&opts[1], "cert", "", "x509 cert file")
 	cmdMap[CMD_LOGIN].opts.StringVar(&opts[2], "admd", "", "Admd address:port")
+	cmdMap[CMD_LOGIN].opts.StringVar(&opts[3], "proxy", "", "Proxy mode")
 	bindCmdUsage(CMD_LOGIN,	[]string{"USER:PASS@HOST:PORT"}, "Login into the system", false)
 
 	bindCmdUsage(CMD_ME, []string{"ACTION"}, "Manage login", false)
