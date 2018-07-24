@@ -2020,14 +2020,6 @@ definitions:
       expires:
         type: integer
         description: Lifetime in seconds
-  DeployItem:
-    type: object
-    description: Item to deploy (function or middleware)
-    properties:
-      function:
-        $ref: '#/definitions/FunctionAdd'
-      mware:
-        $ref: '#/definitions/MwareAdd'
   DeployStart:
     type: object
     description: Description of deployment
@@ -2039,10 +2031,14 @@ definitions:
         type: string
       name:
         type: string
-      items:
+      functions:
         type: array
         items:
-          $ref: '#/definitions/DeployItem'
+          $ref: '#/definitions/FunctionAdd'
+      mwares:
+        type: array
+        items:
+          $ref: '#/definitions/MwareAdd'
   DeployItemInfo:
     type: object
     description: Info about a deploy item

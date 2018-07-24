@@ -150,36 +150,31 @@ func getDeployDesc(id *SwoId) *DeployDesc {
 	return dd
 }
 
-func (dep *DeployDesc)getItems(items []*swyapi.DeployItem) *swyapi.GateErr {
+func (dep *DeployDesc)getItems(ds *swyapi.DeployStart) *swyapi.GateErr {
 	id := dep.SwoId
-	for _, item := range items {
-		if item.Function != nil && item.Mware == nil {
-			er := swyFixSize(&item.Function.Size, &conf)
-			if er != nil {
-				return GateErrE(swy.GateBadRequest, er)
-			}
 
-			srcd, er := json.Marshal(&item.Function.Sources)
-			if er != nil {
-				return GateErrE(swy.GateGenErr, er)
-			}
-
-			id.Name = item.Function.Name
-			fd := getFunctionDesc(&id, item.Function)
-			fd.Labels = dep.Labels
-			dep.Items = append(dep.Items, &DeployItemDesc{ Fn: fd, FnSrc: string(srcd), src: &item.Function.Sources })
-			continue
+	for _, fn := range ds.Functions {
+		er := swyFixSize(&fn.Size, &conf)
+		if er != nil {
+			return GateErrE(swy.GateBadRequest, er)
 		}
 
-		if item.Mware != nil && item.Function == nil {
-			id.Name = item.Mware.Name
-			md := getMwareDesc(&id, item.Mware)
-			md.Labels = dep.Labels
-			dep.Items = append(dep.Items, &DeployItemDesc{ Mw: md })
-			continue
+		srcd, er := json.Marshal(&fn.Sources)
+		if er != nil {
+			return GateErrE(swy.GateGenErr, er)
 		}
 
-		return GateErrM(swy.GateBadRequest, "Bad item")
+		id.Name = fn.Name
+		fd := getFunctionDesc(&id, fn)
+		fd.Labels = dep.Labels
+		dep.Items = append(dep.Items, &DeployItemDesc{ Fn: fd, FnSrc: string(srcd), src: &fn.Sources })
+	}
+
+	for _, mw := range ds.Mwares {
+		id.Name = mw.Name
+		md := getMwareDesc(&id, mw)
+		md.Labels = dep.Labels
+		dep.Items = append(dep.Items, &DeployItemDesc{ Mw: md })
 	}
 
 	return nil

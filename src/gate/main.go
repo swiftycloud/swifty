@@ -1809,7 +1809,7 @@ func handleDeployments(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		}
 
 		dd := getDeployDesc(ctxSwoId(ctx, ds.Project, ds.Name))
-		cerr := dd.getItems(ds.Items)
+		cerr := dd.getItems(&ds)
 		if cerr != nil {
 			return cerr
 		}
@@ -1909,22 +1909,32 @@ func handleAuths(ctx context.Context, w http.ResponseWriter, r *http.Request) *s
 
 		dd := getDeployDesc(ctxSwoId(ctx, project, aa.Name))
 		dd.Labels = []string{ "auth" }
-		dd.getItems([]*swyapi.DeployItem {
-			{ Mware: &swyapi.MwareAdd{ Name: aa.Name + "_jwt", Type: "authjwt" } },
-			{ Mware: &swyapi.MwareAdd{ Name: aa.Name + "_mgo", Type: "mongo" } },
-			{ Function: &swyapi.FunctionAdd {
-				Name: aa.Name + "_um",
-				Code: swyapi.FunctionCode {
-					Lang: "golang",
-					Env: []string{ "SWIFTY_AUTH_NAME=" + aa.Name },
+		dd.getItems(&swyapi.DeployStart {
+			Functions: []*swyapi.FunctionAdd {
+				&swyapi.FunctionAdd {
+					Name: aa.Name + "_um",
+					Code: swyapi.FunctionCode {
+						Lang: "golang",
+						Env: []string{ "SWIFTY_AUTH_NAME=" + aa.Name },
+					},
+					Sources: swyapi.FunctionSources {
+						Type: "swage",
+						Swage: &swyapi.FunctionSwage { Template: "umjwt0", },
+					},
+					Mware: []string { aa.Name + "_jwt", aa.Name + "_mgo" },
+					Url: true,
 				},
-				Sources: swyapi.FunctionSources {
-					Type: "swage",
-					Swage: &swyapi.FunctionSwage { Template: "umjwt0", },
+			},
+			Mwares: []*swyapi.MwareAdd {
+				&swyapi.MwareAdd {
+					Name: aa.Name + "_jwt",
+					Type: "authjwt",
 				},
-				Mware: []string { aa.Name + "_jwt", aa.Name + "_mgo" },
-				Url: true,
-			}},
+				&swyapi.MwareAdd {
+					Name: aa.Name + "_mgo",
+					Type: "mongo",
+				},
+			},
 		})
 
 		did, cerr := deployStart(ctx, dd)

@@ -195,15 +195,11 @@ type FunctionLogEntry struct {
 	Text		string			`json:"text"`
 }
 
-type DeployItem struct {
-	Function	*FunctionAdd		`json:"function,omitempty"`
-	Mware		*MwareAdd		`json:"mware,omitempty"`
-}
-
 type DeployStart struct {
 	Name		string			`json:"name"`
 	Project		string			`json:"project,omitempty"`
-	Items		[]*DeployItem		`json:"items"`
+	Functions	[]*FunctionAdd		`json:"functions"`
+	Mwares		[]*MwareAdd		`json:"mwares"`
 }
 
 type DeployItemInfo struct {
