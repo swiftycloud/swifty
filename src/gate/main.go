@@ -1818,12 +1818,13 @@ func handleDeployments(ctx context.Context, w http.ResponseWriter, r *http.Reque
 			return cerr
 		}
 
-		did, cerr := dd.Start(ctx)
+		cerr = dd.Start(ctx)
 		if cerr != nil {
 			return cerr
 		}
 
-		err = swyhttp.MarshalAndWrite(w, &did)
+		di, _ := dd.toInfo(ctx, false)
+		err = swyhttp.MarshalAndWrite(w, &di)
 		if err != nil {
 			return GateErrE(swy.GateBadResp, err)
 		}
@@ -1941,12 +1942,13 @@ func handleAuths(ctx context.Context, w http.ResponseWriter, r *http.Request) *s
 			},
 		})
 
-		did, cerr := dd.Start(ctx)
+		cerr := dd.Start(ctx)
 		if cerr != nil {
 			return cerr
 		}
 
-		err = swyhttp.MarshalAndWrite(w, &did)
+		di, _ := dd.toInfo(ctx, false)
+		err = swyhttp.MarshalAndWrite(w, &di)
 		if err != nil {
 			return GateErrE(swy.GateBadResp, err)
 		}

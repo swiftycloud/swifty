@@ -1065,13 +1065,13 @@ func auth_cfg(args []string, opts [16]string) {
 		}
 
 	case "on":
-		var did string
+		var di swyapi.DeployInfo
 		name := opts[0]
 		if name == "" {
 			name = "simple_auth"
 		}
-		make_faas_req1("POST", "auths", http.StatusOK, &swyapi.AuthAdd { Name: name }, &did)
-		fmt.Printf("Created %s auth\n", did)
+		make_faas_req1("POST", "auths", http.StatusOK, &swyapi.AuthAdd { Name: name }, &di)
+		fmt.Printf("Created %s auth\n", di.Id)
 
 	case "off":
 		var auths []*swyapi.AuthInfo
@@ -1133,7 +1133,9 @@ func deploy_add(args []string, opts [16]string) {
 	dd.Name = args[0]
 	dd.Project = curCmd.project
 
-	make_faas_req1("POST", "deployments", http.StatusOK, &dd, nil)
+	var di swyapi.DeployInfo
+	make_faas_req1("POST", "deployments", http.StatusOK, &dd, &di)
+	fmt.Printf("%s deployment started\n", di.Id)
 }
 
 func repo_list(args []string, opts [16]string) {

@@ -178,16 +178,16 @@ func (dep *DeployDesc)getItems(ds *swyapi.DeployStart) *swyapi.GateErr {
 	return nil
 }
 
-func (dep *DeployDesc)Start(ctx context.Context) (string, *swyapi.GateErr) {
+func (dep *DeployDesc)Start(ctx context.Context) *swyapi.GateErr {
 	dep.ObjID = bson.NewObjectId()
 	err := dbInsert(ctx, dep)
 	if err != nil {
-		return "", GateErrD(err)
+		return GateErrD(err)
 	}
 
 	go deployStartItems(dep)
 
-	return dep.ObjID.Hex(), nil
+	return nil
 }
 
 func (dep *DeployDesc)toInfo(ctx context.Context, details bool) (*swyapi.DeployInfo, *swyapi.GateErr) {
