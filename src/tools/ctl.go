@@ -744,9 +744,9 @@ func function_add(args []string, opts [16]string) {
 	}
 
 	if !curCmd.req {
-		var fid string
-		make_faas_req1("POST", "functions", http.StatusOK, req, &fid)
-		fmt.Printf("Function %s created\n", fid)
+		var fi swyapi.FunctionInfo
+		make_faas_req1("POST", "functions", http.StatusOK, req, &fi)
+		fmt.Printf("Function %s created\n", fi.Id)
 	} else {
 		d, err := json.Marshal(req)
 		if err == nil {
@@ -1124,14 +1124,16 @@ func deploy_add(args []string, opts [16]string) {
 		fatal(fmt.Errorf("Can't read desc flie: %s", err.Error()))
 	}
 
-	var items []*swyapi.DeployItem
-	err = json.Unmarshal(cont, &items)
+	var dd swyapi.DeployStart
+	err = json.Unmarshal(cont, &dd)
 	if err != nil {
 		fatal(fmt.Errorf("Can't parse items: %s", err.Error()))
 	}
 
-	make_faas_req1("POST", "deployments", http.StatusOK,
-		swyapi.DeployStart{ Name: args[0], Project: curCmd.project, Items: items}, nil)
+	dd.Name = args[0]
+	dd.Project = curCmd.project
+
+	make_faas_req1("POST", "deployments", http.StatusOK, &dd, nil)
 }
 
 func repo_list(args []string, opts [16]string) {

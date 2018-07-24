@@ -180,9 +180,7 @@ paths:
         '200':
           description: OK
           schema:
-            type: string
-            description: Function ID
-            example: 'deadbeef'
+            $ref: '#/definitions/FunctionInfo'
         '400':
           description: Bad request
           schema:

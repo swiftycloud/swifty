@@ -35,8 +35,7 @@ func (i *DeployItemDesc)start(ctx context.Context) *swyapi.GateErr {
 			i.src = &src
 		}
 
-		_, cerr := i.Fn.Add(ctx, &conf, i.src)
-		return cerr
+		return i.Fn.Add(ctx, i.src)
 	}
 
 	if i.Mw != nil {

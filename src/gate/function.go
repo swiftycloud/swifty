@@ -165,6 +165,7 @@ func (fn *FunctionDesc)toInfo(ctx context.Context, details bool, periods int) (*
 		Project:	fn.SwoId.Project,
 		Labels:		fn.Labels,
 		State:          fnStates[fn.State],
+		Version:	fn.Src.Version,
 	}
 
 	if details {
@@ -185,7 +186,6 @@ func (fn *FunctionDesc)toInfo(ctx context.Context, details bool, periods int) (*
 			return nil, GateErrD(err)
 		}
 
-		fi.Version = fn.Src.Version
 		fi.AuthCtx = fn.AuthCtx
 		fi.UserData = fn.UserData
 		fi.Code = swyapi.FunctionCode{
@@ -251,7 +251,7 @@ func checkCount(ctx context.Context, id *SwoId) error {
 	return nil
 }
 
-func (fn *FunctionDesc)Add(ctx context.Context, conf *YAMLConf, src *swyapi.FunctionSources) (string, *swyapi.GateErr) {
+func (fn *FunctionDesc)Add(ctx context.Context, src *swyapi.FunctionSources) *swyapi.GateErr {
 	var err, erc error
 	var build bool
 	var bAddr string
@@ -263,7 +263,7 @@ func (fn *FunctionDesc)Add(ctx context.Context, conf *YAMLConf, src *swyapi.Func
 	err = dbInsert(ctx, fn)
 	if err != nil {
 		ctxlog(ctx).Errorf("Can't add function %s: %s", fn.SwoId.Str(), err.Error())
-		return "", GateErrD(err)
+		return GateErrD(err)
 	}
 
 	err = checkCount(ctx, &fn.SwoId)
@@ -295,12 +295,12 @@ func (fn *FunctionDesc)Add(ctx context.Context, conf *YAMLConf, src *swyapi.Func
 			ctx, done := mkContext("::build")
 			defer done(ctx)
 
-			err = buildFunction(ctx, conf, bAddr, fn)
+			err = buildFunction(ctx, &conf, bAddr, fn)
 			if err != nil {
 				goto bstalled
 			}
 
-			err = swk8sRun(ctx, conf, fn)
+			err = swk8sRun(ctx, &conf, fn)
 			if err != nil {
 				goto bstalled
 			}
@@ -311,14 +311,14 @@ func (fn *FunctionDesc)Add(ctx context.Context, conf *YAMLConf, src *swyapi.Func
 			fn.ToState(ctx, swy.DBFuncStateStl, -1)
 		}()
 	} else {
-		err = swk8sRun(ctx, conf, fn)
+		err = swk8sRun(ctx, &conf, fn)
 		if err != nil {
 			goto out_clean_repo
 		}
 	}
 
 	logSaveEvent(ctx, fn.Cookie, "registered")
-	return fn.ObjID.Hex(), nil
+	return nil
 
 out_clean_repo:
 	erc = cleanRepo(ctx, fn)
@@ -333,7 +333,7 @@ out_clean_func:
 
 	gateFunctions.Dec()
 out:
-	return "", GateErrE(swy.GateGenErr, err)
+	return GateErrE(swy.GateGenErr, err)
 
 stalled:
 	fn.ToState(ctx, swy.DBFuncStateStl, -1)
