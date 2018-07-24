@@ -6,11 +6,21 @@ import (
 	"../apis/apps"
 	"../common"
 	"../common/http"
+	"../common/crypto"
 )
 
 type GHDesc struct {
 	Name		string		`bson:"name,omitempty"`
-	Token		string		`bson:"token,omitempty"`
+	CypToken	string		`bson:"token,omitempty"`
+}
+
+func (gd *GHDesc)Token() (string, error) {
+	var err error
+	t := gd.CypToken
+	if t != "" {
+		t, err = swycrypt.DecryptString(gateSecPas, t)
+	}
+	return t, err
 }
 
 type AccDesc struct {
@@ -23,7 +33,7 @@ type AccDesc struct {
 var accHandlers = map[string] struct {
 	setup func (*AccDesc, *swyapi.AccAdd) *swyapi.GateErr
 	info func (*AccDesc, *swyapi.AccInfo, bool)
-	update func (*AccDesc, *swyapi.AccUpdate)
+	update func (*AccDesc, *swyapi.AccUpdate) *swyapi.GateErr
 } {
 	"github":	{ setup: setupGithubAcc, info: infoGitHubAcc, update: updateGithubAcc },
 }
@@ -47,36 +57,62 @@ func githubResolveName(token string) (string, error) {
 }
 
 func setupGithubAcc(ad *AccDesc, params *swyapi.AccAdd) *swyapi.GateErr {
-	ad.GH = &GHDesc {
-		Name:	params.Name,
-		Token:	params.Token,
-	}
+	var err error
 
-	if ad.GH.Name == "" {
-		if ad.GH.Token == "" {
+	/* If there's no name -- resolve it */
+	if params.Name == "" {
+		if params.Token == "" {
 			return GateErrM(swy.GateBadRequest, "Need either name or token")
 		}
 
-		name, err := githubResolveName(ad.GH.Token)
+		params.Name, err = githubResolveName(params.Token)
 		if err != nil {
 			return GateErrE(swy.GateGenErr, err)
 		}
+	}
 
-		ad.GH.Name = name
+	/* All secrets must be encrypted */
+	if params.Token != "" {
+		params.Token, err = swycrypt.EncryptString(gateSecPas, params.Token)
+		if err != nil {
+			return GateErrE(swy.GateGenErr, err)
+		}
+	}
+
+	ad.GH = &GHDesc {
+		Name:		params.Name,
+		CypToken:	params.Token,
 	}
 
 	return nil
 }
 
 func infoGitHubAcc(ad *AccDesc, info *swyapi.AccInfo, detail bool) {
+	t, err := ad.GH.Token()
+	if err == nil {
+		t = t[:6] + "..."
+	} else {
+		t = "<broken>"
+	}
+
 	info.Name = ad.GH.Name
-	info.Token = ad.GH.Token[:6] + "..."
+	info.Token = t
 }
 
-func updateGithubAcc(ad *AccDesc, params *swyapi.AccUpdate) {
+func updateGithubAcc(ad *AccDesc, params *swyapi.AccUpdate) *swyapi.GateErr {
 	if params.Token != nil {
-		ad.GH.Token = *params.Token
+		ad.GH.CypToken = *params.Token
+		if ad.GH.CypToken != "" {
+			var err error
+
+			ad.GH.CypToken, err = swycrypt.EncryptString(gateSecPas, ad.GH.CypToken)
+			if err != nil {
+				return GateErrE(swy.GateGenErr, err)
+			}
+		}
 	}
+
+	return nil
 }
 
 func getAccDesc(id *SwoId, params *swyapi.AccAdd) (*AccDesc, *swyapi.GateErr) {
@@ -119,7 +155,11 @@ func (ad *AccDesc)Add(ctx context.Context) *swyapi.GateErr {
 
 func (ad *AccDesc)Update(ctx context.Context, params *swyapi.AccUpdate) *swyapi.GateErr {
 	h, _ := accHandlers[ad.Type]
-	h.update(ad, params)
+	cerr := h.update(ad, params)
+	if cerr != nil {
+		return cerr
+	}
+
 	err := dbUpdateAll(ctx, ad)
 	if err != nil {
 		return GateErrD(err)

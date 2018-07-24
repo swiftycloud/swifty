@@ -396,8 +396,13 @@ func (rd *RepoDesc)Clone(ctx context.Context, ac *AccDesc) (string, error) {
 			return "", errors.New("Corrupted acc type")
 		}
 
-		if ac.GH.Token != "" && strings.HasPrefix(curl, "https://") {
-			curl = "https://" + ac.GH.Name + ":" + ac.GH.Token + "@" + curl[8:]
+		t, err := ac.GH.Token()
+		if err != nil {
+			return "", err
+		}
+
+		if t != "" && strings.HasPrefix(curl, "https://") {
+			curl = "https://" + ac.GH.Name + ":" + t + "@" + curl[8:]
 		}
 	}
 
@@ -551,14 +556,19 @@ func GCOldSources(ctx context.Context, fn *FunctionDesc, ver string) {
 func listReposGH(ac *AccDesc) ([]*GitHubRepo, error) {
 	var rq *swyhttp.RestReq
 
-	if ac.GH.Token == "" {
+	t, err := ac.GH.Token()
+	if err != nil {
+		return nil, err
+	}
+
+	if t == "" {
 		rq = &swyhttp.RestReq{
 			Address: "https://api.github.com/users/" + ac.GH.Name + "/repos",
 			Method: "GET",
 		}
 	} else {
 		rq = &swyhttp.RestReq{
-			Address: "https://api.github.com/user/repos?access_token=" + ac.GH.Token,
+			Address: "https://api.github.com/user/repos?access_token=" + t,
 			Method: "GET",
 		}
 	}
