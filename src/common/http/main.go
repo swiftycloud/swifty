@@ -152,16 +152,23 @@ type YAMLConfHTTPS struct {
 	Key		string			`yaml:"key"`
 }
 
+func isLocal(addr string) bool {
+	/* XXX -- not 100% nice */
+	return strings.HasPrefix(addr, "localhost:") ||
+		strings.HasPrefix(addr, "127.0.0.1:") ||
+		strings.HasPrefix(addr, "::1:")
+}
+
 func ListenAndServe(srv *http.Server, https *YAMLConfHTTPS, devel bool, log func(string)) error {
-	if https == nil {
-		if devel {
-			log("Going plain http")
-			return srv.ListenAndServe()
-		} else {
-			return errors.New("Can't go non-https in production mode")
-		}
-	} else {
+	if https != nil {
 		log("Going https")
 		return srv.ListenAndServeTLS(https.Cert, https.Key)
 	}
+
+	if devel || isLocal(srv.Addr) {
+		log("Going plain http")
+		return srv.ListenAndServe()
+	}
+
+	return errors.New("Can't go non-https in production mode")
 }
