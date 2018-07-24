@@ -238,6 +238,8 @@ paths:
       responses:
         '200':
           description: OK
+          schema:
+            $ref: '#/definitions/FunctionInfo'
         '400':
           description: Bad request
           schema:

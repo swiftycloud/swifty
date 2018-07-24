@@ -1284,6 +1284,12 @@ func handleFunction(ctx context.Context, w http.ResponseWriter, r *http.Request)
 			}
 		}
 
+		fi, _ := fd.toInfo(ctx, false, 0)
+		err = swyhttp.MarshalAndWrite(w, fi)
+		if err != nil {
+			return GateErrE(swy.GateBadResp, err)
+		}
+
 	case "DELETE":
 		cerr := fn.Remove(ctx, &conf)
 		if cerr != nil {
