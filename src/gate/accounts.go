@@ -94,7 +94,7 @@ func getAccDesc(id *SwoId, params *swyapi.AccAdd) (*AccDesc, *swyapi.GateErr) {
 	return ad, nil
 }
 
-func (ad *AccDesc)toInfo(ctx context.Context, conf *YAMLConf, details bool) (*swyapi.AccInfo, *swyapi.GateErr) {
+func (ad *AccDesc)toInfo(ctx context.Context, details bool) (*swyapi.AccInfo, *swyapi.GateErr) {
 	ac := &swyapi.AccInfo {
 		ID:	ad.ObjID.Hex(),
 		Type:	ad.Type,
@@ -106,15 +106,15 @@ func (ad *AccDesc)toInfo(ctx context.Context, conf *YAMLConf, details bool) (*sw
 	return ac, nil
 }
 
-func (ad *AccDesc)Add(ctx context.Context, conf *YAMLConf) (string, *swyapi.GateErr) {
+func (ad *AccDesc)Add(ctx context.Context) *swyapi.GateErr {
 	ad.ObjID = bson.NewObjectId()
 
 	err := dbInsert(ctx, ad)
 	if err != nil {
-		return "", GateErrD(err)
+		return GateErrD(err)
 	}
 
-	return ad.ObjID.Hex(), nil
+	return nil
 }
 
 func (ad *AccDesc)Update(ctx context.Context, params *swyapi.AccUpdate) *swyapi.GateErr {

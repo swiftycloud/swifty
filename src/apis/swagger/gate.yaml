@@ -1247,9 +1247,7 @@ paths:
         '200':
           description: OK
           schema:
-            type: string
-            description: Account ID
-            example: 'deadbeef'
+            $ref: '#/definitions/AccInfo'
         '400':
           description: Bad request
           schema:

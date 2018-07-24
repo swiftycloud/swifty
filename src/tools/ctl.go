@@ -1259,9 +1259,9 @@ func acc_add(args []string, opts [16]string) {
 		aa.Token = opts[1]
 	}
 
-	var id string
-	make_faas_req1("POST", "accounts", http.StatusOK, &aa, &id)
-	fmt.Printf("%s account created\n", id)
+	var ai swyapi.AccInfo
+	make_faas_req1("POST", "accounts", http.StatusOK, &aa, &ai)
+	fmt.Printf("%s account created\n", ai.ID)
 }
 
 func acc_upd(args []string, opts [16]string) {

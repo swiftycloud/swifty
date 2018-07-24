@@ -1438,7 +1438,7 @@ func handleAccounts(ctx context.Context, w http.ResponseWriter, r *http.Request)
 
 		ret := []*swyapi.AccInfo{}
 		for _, ac := range acs {
-			ai, cerr := ac.toInfo(ctx, &conf, false)
+			ai, cerr := ac.toInfo(ctx, false)
 			if cerr != nil {
 				return cerr
 			}
@@ -1467,12 +1467,13 @@ func handleAccounts(ctx context.Context, w http.ResponseWriter, r *http.Request)
 			return cerr
 		}
 
-		aid, cerr := ac.Add(ctx, &conf)
+		cerr = ac.Add(ctx)
 		if cerr != nil {
 			return cerr
 		}
 
-		err = swyhttp.MarshalAndWrite(w, aid)
+		ai, _ := ac.toInfo(ctx, false)
+		err = swyhttp.MarshalAndWrite(w, &ai)
 		if err != nil {
 			return GateErrE(swy.GateBadResp, err)
 		}
@@ -1496,7 +1497,7 @@ func handleAccount(ctx context.Context, w http.ResponseWriter, r *http.Request) 
 
 	switch r.Method {
 	case "GET":
-		ai, cerr := ac.toInfo(ctx, &conf, true)
+		ai, cerr := ac.toInfo(ctx, true)
 		if cerr != nil {
 			return cerr
 		}
