@@ -6,6 +6,7 @@ keystone:
         domain: "swifty"
 daemon:
         address: "swy0-web:8686"
+        callgate: "swy0-web:8686"
         loglevel: "debug"
         prometheus: "swy0:9012"
         https:
