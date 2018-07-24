@@ -210,11 +210,6 @@ func getFunctionDesc(id *SwoId, p_add *swyapi.FunctionAdd) (*FunctionDesc, *swya
 		return nil, GateErrE(swy.GateBadRequest, err)
 	}
 
-	err = validateFuncName(p_add)
-	if err != nil {
-		return nil, GateErrM(swy.GateBadRequest, "Bad project/function name")
-	}
-
 	if !RtLangEnabled(p_add.Code.Lang) {
 		return nil, GateErrM(swy.GateBadRequest, "Unsupported language")
 	}
@@ -247,10 +242,6 @@ func getFunctionDesc(id *SwoId, p_add *swyapi.FunctionAdd) (*FunctionDesc, *swya
 
 	fn.Cookie = fn.SwoId.Cookie()
 	return fn, nil
-}
-
-func validateFuncName(params *swyapi.FunctionAdd) error {
-	return swy.CheckName(params.Name, 50)
 }
 
 func checkCount(ctx context.Context, id *SwoId) error {

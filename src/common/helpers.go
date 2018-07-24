@@ -7,8 +7,6 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
-	"errors"
-	"regexp"
 	"bytes"
 	"time"
 	"net"
@@ -38,27 +36,6 @@ func Retry(callback func(interface{}) error, data interface{}, attempts int, sle
 
 func Retry10(callback func(interface{}) error, data interface{}) error {
 	return Retry(callback, data, 100, 100 * time.Millisecond)
-}
-
-func NameSymsAllowed(name string) bool {
-	re := regexp.MustCompile("[^(a-z)(A-Z)(0-9)_]")
-	return !re.MatchString(name)
-}
-
-func CheckName(name string, limit int) error {
-	if name == "" {
-		return errors.New("Empty name")
-	}
-
-	if NameSymsAllowed(name) == false {
-		return fmt.Errorf("Bad symbols in %s", name)
-	}
-
-	if len(name) > limit {
-		return fmt.Errorf("Too long name %s (max %d)", name, limit)
-	}
-
-	return nil
 }
 
 func GenRandId(length int) (string, error) {
