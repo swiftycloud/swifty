@@ -1339,6 +1339,17 @@ paths:
       tags:
         - repos
       summary: List available repositories
+      parameters:
+        - in: query
+          name: aid
+          type: string
+          required: false
+          description: Account ID to show repos from
+        - in: query
+          name: attached
+          type: string
+          required: false
+          description: Value "true" or "false" to show only (un)attached repos
       responses:
         '200':
           description: OK

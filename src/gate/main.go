@@ -1533,7 +1533,15 @@ func handleAccount(ctx context.Context, w http.ResponseWriter, r *http.Request) 
 func handleRepos(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
 	switch r.Method {
 	case "GET":
-		ret, cerr := listRepos(ctx)
+		q := r.URL.Query()
+		aid := q.Get("aid")
+		if aid != "" && !bson.IsObjectIdHex(aid) {
+			return GateErrM(swy.GateBadRequest, "Bad account ID value")
+		}
+
+		att := q.Get("attached")
+
+		ret, cerr := listRepos(ctx, aid, att)
 		if cerr != nil {
 			return cerr
 		}

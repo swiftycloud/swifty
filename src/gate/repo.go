@@ -577,63 +577,77 @@ func listReposGH(ac *AccDesc) ([]*GitHubRepo, error) {
 	return grs, nil
 }
 
-func listRepos(ctx context.Context) ([]*swyapi.RepoInfo, *swyapi.GateErr) {
-	var reps []*RepoDesc
+func listRepos(ctx context.Context, accid, att string) ([]*swyapi.RepoInfo, *swyapi.GateErr) {
+	ret := []*swyapi.RepoInfo{}
 	urls := make(map[string]bool)
 
-	q := bson.D{
-		{"tennant", bson.M {
-			"$in": []string{gctx(ctx).Tenant, "*" },
-		}},
-		{"project", NoProject},
-	}
-	err := dbFindAll(ctx, q, &reps)
-	if err != nil {
-		return nil, GateErrD(err)
-	}
+	if att == "" || att == "true" {
+		var reps []*RepoDesc
 
-	ret := []*swyapi.RepoInfo{}
-	for _, rp := range reps {
-		ri, cerr := rp.toInfo(ctx, &conf, false)
-		if cerr != nil {
-			return nil, cerr
+		q := bson.D{
+			{"tennant", bson.M {
+				"$in": []string{gctx(ctx).Tenant, "*" },
+			}},
+			{"project", NoProject},
 		}
-
-		ret = append(ret, ri)
-		urls[ri.URL] = true
-	}
-
-	/* FIXME -- maybe cache repos in a DB? */
-	var acs []*AccDesc
-	err = dbFindAll(ctx, bson.M{"type": "github"}, &acs)
-	if err != nil && !dbNF(err) {
-		return nil, GateErrD(err)
-	}
-
-	for _, ac := range acs {
-		grs, err := listReposGH(ac)
+		err := dbFindAll(ctx, q, &reps)
 		if err != nil {
-			ctxlog(ctx).Errorf("Can't list GH repos: %s", err.Error())
-			continue
+			return nil, GateErrD(err)
 		}
 
-		for _, gr := range grs {
-			if _, ok := urls[gr.URL]; ok {
+		for _, rp := range reps {
+			if accid != "" && accid != rp.AccID.Hex() {
 				continue
 			}
 
-			ri := &swyapi.RepoInfo {
-				Type:	"github",
-				URL:	gr.URL,
-				State:	"unattached",
-			}
-
-			if gr.Private {
-				ri.AccID = ac.ObjID.Hex()
+			ri, cerr := rp.toInfo(ctx, &conf, false)
+			if cerr != nil {
+				return nil, cerr
 			}
 
 			ret = append(ret, ri)
-			urls[gr.URL] = true
+			urls[ri.URL] = true
+		}
+	}
+
+	if att == "" || att == "false" {
+		/* FIXME -- maybe cache repos in a DB? */
+		var acs []*AccDesc
+
+		q := bson.M{"type": "github"}
+		if accid != "" {
+			q["_id"] = bson.ObjectIdHex(accid)
+		}
+		err := dbFindAll(ctx, q, &acs)
+		if err != nil && !dbNF(err) {
+			return nil, GateErrD(err)
+		}
+
+		for _, ac := range acs {
+			grs, err := listReposGH(ac)
+			if err != nil {
+				ctxlog(ctx).Errorf("Can't list GH repos: %s", err.Error())
+				continue
+			}
+
+			for _, gr := range grs {
+				if _, ok := urls[gr.URL]; ok {
+					continue
+				}
+
+				ri := &swyapi.RepoInfo {
+					Type:	"github",
+					URL:	gr.URL,
+					State:	"unattached",
+				}
+
+				if gr.Private {
+					ri.AccID = ac.ObjID.Hex()
+				}
+
+				ret = append(ret, ri)
+				urls[gr.URL] = true
+			}
 		}
 	}
 

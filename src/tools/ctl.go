@@ -1136,7 +1136,14 @@ func deploy_add(args []string, opts [16]string) {
 
 func repo_list(args []string, opts [16]string) {
 	var ris []*swyapi.RepoInfo
-	make_faas_req1("GET", "repos", http.StatusOK, nil, &ris)
+	ua := []string{}
+	if opts[0] != "" {
+		ua = append(ua, "aid=" + opts[0])
+	}
+	if opts[1] != "" {
+		ua = append(ua, "attached=" + opts[1])
+	}
+	make_faas_req1("GET", url("repos", ua), http.StatusOK, nil, &ris)
 	fmt.Printf("%-32s%-8s%-12s%s\n", "ID", "TYPE", "STATE", "URL")
 	for _, ri := range ris {
 		t := ri.Type
@@ -1713,6 +1720,8 @@ func main() {
 	bindCmdUsage(CMD_DA,	[]string{"NAME", "DESC"}, "Add (start) deployment", true)
 	bindCmdUsage(CMD_DD,	[]string{"NAME"}, "Del (stop) deployment", true)
 
+	cmdMap[CMD_RL].opts.StringVar(&opts[0], "acc", "", "Account ID")
+	cmdMap[CMD_RL].opts.StringVar(&opts[1], "at", "", "Attach status")
 	bindCmdUsage(CMD_RL,	[]string{},	"List repos", false)
 	bindCmdUsage(CMD_RI,	[]string{"ID"}, "Show info about repo", false)
 	cmdMap[CMD_RA].opts.StringVar(&opts[0], "acc", "", "Acc ID from which to pull")
