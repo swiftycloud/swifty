@@ -5,6 +5,7 @@ import (
 
 	"github.com/gorilla/mux"
 
+	"strings"
 	"net/http"
 	"flag"
 	"time"
@@ -311,6 +312,11 @@ func handleAddUser(w http.ResponseWriter, r *http.Request) {
 	code = http.StatusForbidden
 	if !swyks.KeystoneRoleHas(td, swyks.SwyAdminRole) && !swyks.KeystoneRoleHas(td, swyks.SwyUIRole) {
 		err = errors.New("Only admin or UI may add users")
+		goto out
+	}
+
+	if strings.HasPrefix(params.Id, ".") {
+		err = errors.New("Bad ID for a user")
 		goto out
 	}
 
