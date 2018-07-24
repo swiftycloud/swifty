@@ -1791,8 +1791,8 @@ definitions:
         example: 'cHJpbnQoIkhlbGxvIHdvcmxkIikK'
       repo:
         type: string
-	description: Path to file in a repo for type == git
-	example: '<repoId>/path/to/file.go'
+        description: Path to file in a repo for type == git
+        example: '<repoId>/path/to/file.go'
   FunctionCode:
     type: object
     description: Code description
@@ -2142,14 +2142,14 @@ definitions:
         description: URL to clone the repo from
       account_id:
         type: string
-	description: ID of account this repo should be cloned/pulled from
+        description: ID of account this repo should be cloned/pulled from
       userdata:
         type: string
         description: Random text
       pulling:
         type: string
-	description: Repo pull policy
-	example: "periodic"
+        description: Repo pull policy
+        example: "periodic"
         
   RepoUpdate:
     type: object
