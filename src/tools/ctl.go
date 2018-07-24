@@ -1201,9 +1201,9 @@ func repo_add(args []string, opts [16]string) {
 		ra.Pull = opts[1]
 	}
 
-	var id string
-	make_faas_req1("POST", "repos", http.StatusOK, &ra, &id)
-	fmt.Printf("%s repo attached\n", id)
+	var ri swyapi.RepoInfo
+	make_faas_req1("POST", "repos", http.StatusOK, &ra, &ri)
+	fmt.Printf("%s repo attached\n", ri.ID)
 }
 
 func repo_upd(args []string, opts [16]string) {

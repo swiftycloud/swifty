@@ -1586,12 +1586,13 @@ func handleRepos(ctx context.Context, w http.ResponseWriter, r *http.Request) *s
 
 		id := ctxSwoId(ctx, NoProject, params.URL)
 		rp := getRepoDesc(id, &params)
-		rid, cerr := rp.Attach(ctx, &conf, acc)
+		cerr := rp.Attach(ctx, acc)
 		if cerr != nil {
 			return cerr
 		}
 
-		err = swyhttp.MarshalAndWrite(w, rid)
+		ri, _ := rp.toInfo(ctx, false)
+		err = swyhttp.MarshalAndWrite(w, &ri)
 		if err != nil {
 			return GateErrE(swy.GateBadResp, err)
 		}
@@ -1628,7 +1629,7 @@ func handleRepo(ctx context.Context, w http.ResponseWriter, r *http.Request) *sw
 
 	switch r.Method {
 	case "GET":
-		ri, cerr := rd.toInfo(ctx, &conf, true)
+		ri, cerr := rd.toInfo(ctx, true)
 		if cerr != nil {
 			return cerr
 		}

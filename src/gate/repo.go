@@ -105,7 +105,7 @@ func getRepoDesc(id *SwoId, params *swyapi.RepoAdd) *RepoDesc {
 	return rd
 }
 
-func (rd *RepoDesc)toInfo(ctx context.Context, conf *YAMLConf, details bool) (*swyapi.RepoInfo, *swyapi.GateErr) {
+func (rd *RepoDesc)toInfo(ctx context.Context, details bool) (*swyapi.RepoInfo, *swyapi.GateErr) {
 	r := &swyapi.RepoInfo {
 		ID:		rd.ObjID.Hex(),
 		Type:		rd.Type,
@@ -123,7 +123,7 @@ func (rd *RepoDesc)toInfo(ctx context.Context, conf *YAMLConf, details bool) (*s
 	return r, nil
 }
 
-func (rd *RepoDesc)Attach(ctx context.Context, conf *YAMLConf, ac *AccDesc) (string, *swyapi.GateErr) {
+func (rd *RepoDesc)Attach(ctx context.Context, ac *AccDesc) *swyapi.GateErr {
 	rd.ObjID = bson.NewObjectId()
 	rd.State = swy.DBRepoStateCln
 	if ac != nil {
@@ -131,17 +131,17 @@ func (rd *RepoDesc)Attach(ctx context.Context, conf *YAMLConf, ac *AccDesc) (str
 	}
 
 	if rd.Type != "github" {
-		return "", GateErrM(swy.GateBadRequest, "Unsupported repo type")
+		return GateErrM(swy.GateBadRequest, "Unsupported repo type")
 	}
 
 	err := dbInsert(ctx, rd)
 	if err != nil {
-		return "", GateErrD(err)
+		return GateErrD(err)
 	}
 
 	go cloneRepo(rd, ac)
 
-	return rd.ObjID.Hex(), nil
+	return nil
 }
 
 func (rd *RepoDesc)Update(ctx context.Context, ru *swyapi.RepoUpdate) *swyapi.GateErr {
@@ -600,7 +600,7 @@ func listRepos(ctx context.Context, accid, att string) ([]*swyapi.RepoInfo, *swy
 				continue
 			}
 
-			ri, cerr := rp.toInfo(ctx, &conf, false)
+			ri, cerr := rp.toInfo(ctx, false)
 			if cerr != nil {
 				return nil, cerr
 			}

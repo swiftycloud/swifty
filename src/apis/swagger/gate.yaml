@@ -1374,9 +1374,7 @@ paths:
         '200':
           description: OK
           schema:
-            type: string
-            description: Repo ID
-            example: 'deadbeef'
+            $ref: '#/definitions/RepoInfo'
         '400':
           description: Bad request
           schema:
