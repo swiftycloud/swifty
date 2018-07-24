@@ -189,7 +189,7 @@ func (item *MwareDesc)toFnInfo(ctx context.Context) *swyapi.MwareInfo {
 	}
 }
 
-func (item *MwareDesc)toInfo(ctx context.Context, conf *YAMLConfMw, details bool) (*swyapi.MwareInfo, *swyapi.GateErr) {
+func (item *MwareDesc)toInfo(ctx context.Context, details bool) (*swyapi.MwareInfo, *swyapi.GateErr) {
 	resp := &swyapi.MwareInfo{
 		ID:		item.ObjID.Hex(),
 		Name:		item.SwoId.Name,
@@ -207,7 +207,7 @@ func (item *MwareDesc)toInfo(ctx context.Context, conf *YAMLConfMw, details bool
 		}
 
 		if handler.Info != nil {
-			err := handler.Info(ctx, conf, item, resp)
+			err := handler.Info(ctx, &conf.Mware, item, resp)
 			if err != nil {
 				return nil, GateErrE(swy.GateGenErr, err)
 			}
@@ -229,7 +229,7 @@ func getMwareDesc(id *SwoId, params *swyapi.MwareAdd) *MwareDesc {
 	return ret
 }
 
-func (mwd *MwareDesc)Setup(ctx context.Context, conf *YAMLConfMw) (string, *swyapi.GateErr) {
+func (mwd *MwareDesc)Setup(ctx context.Context) *swyapi.GateErr {
 	var handler *MwareOps
 	var ok bool
 	var err, erc error
@@ -240,7 +240,7 @@ func (mwd *MwareDesc)Setup(ctx context.Context, conf *YAMLConfMw) (string, *swya
 	err = dbInsert(ctx, mwd)
 	if err != nil {
 		ctxlog(ctx).Errorf("Can't add mware %s: %s", mwd.SwoId.Str(), err.Error())
-		return "", GateErrD(err)
+		return GateErrD(err)
 	}
 
 	gateMwares.WithLabelValues(mwd.MwareType).Inc()
@@ -261,13 +261,13 @@ func (mwd *MwareDesc)Setup(ctx context.Context, conf *YAMLConfMw) (string, *swya
 		goto outdb
 	}
 
-	err = handler.Init(ctx, conf, mwd)
+	err = handler.Init(ctx, &conf.Mware, mwd)
 	if err != nil {
 		err = fmt.Errorf("mware init error: %s", err.Error())
 		goto outdb
 	}
 
-	err = swk8sMwSecretAdd(ctx, mwd.Cookie, handler.GetEnv(conf, mwd))
+	err = swk8sMwSecretAdd(ctx, mwd.Cookie, handler.GetEnv(&conf.Mware, mwd))
 	if err != nil {
 		goto outh
 	}
@@ -291,7 +291,7 @@ func (mwd *MwareDesc)Setup(ctx context.Context, conf *YAMLConfMw) (string, *swya
 		goto outs
 	}
 
-	return mwd.ObjID.Hex(), nil
+	return nil
 
 outs:
 	erc = swk8sMwSecretRemove(ctx, mwd.Cookie)
@@ -299,7 +299,7 @@ outs:
 		goto stalled
 	}
 outh:
-	erc = handler.Fini(ctx, conf, mwd)
+	erc = handler.Fini(ctx, &conf.Mware, mwd)
 	if erc != nil {
 		goto stalled
 	}
@@ -311,7 +311,7 @@ outdb:
 	gateMwares.WithLabelValues(mwd.MwareType).Dec()
 out:
 	ctxlog(ctx).Errorf("mwareSetup: %s", err.Error())
-	return "", GateErrE(swy.GateGenErr, err)
+	return GateErrE(swy.GateGenErr, err)
 
 stalled:
 	mwd.ToState(ctx, swy.DBMwareStateStl, -1)

@@ -909,9 +909,7 @@ paths:
         '200':
           description: OK
           schema:
-            type: string
-            description: Mware ID
-            example: 'deadbeef'
+            $ref: '#/definitions/MwareInfo'
         '400':
           description: Bad request
           schema:

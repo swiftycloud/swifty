@@ -39,8 +39,7 @@ func (i *DeployItemDesc)start(ctx context.Context) *swyapi.GateErr {
 	}
 
 	if i.Mw != nil {
-		_, cerr := i.Mw.Setup(ctx, &conf.Mware)
-		return cerr
+		return i.Mw.Setup(ctx)
 	}
 
 	return GateErrM(swy.GateGenErr, "Bad deploy item")

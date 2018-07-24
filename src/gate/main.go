@@ -1379,7 +1379,7 @@ func handleMwares(ctx context.Context, w http.ResponseWriter, r *http.Request) *
 
 		ret := []*swyapi.MwareInfo{}
 		for _, mw := range mws {
-			mi, cerr := mw.toInfo(ctx, &conf.Mware, details)
+			mi, cerr := mw.toInfo(ctx, details)
 			if cerr != nil {
 				return cerr
 			}
@@ -1404,12 +1404,13 @@ func handleMwares(ctx context.Context, w http.ResponseWriter, r *http.Request) *
 
 		id := ctxSwoId(ctx, params.Project, params.Name)
 		mw := getMwareDesc(id, &params)
-		mid, cerr := mw.Setup(ctx, &conf.Mware)
+		cerr := mw.Setup(ctx)
 		if cerr != nil {
 			return cerr
 		}
 
-		err = swyhttp.MarshalAndWrite(w, mid)
+		mi, _ := mw.toInfo(ctx, false)
+		err = swyhttp.MarshalAndWrite(w, &mi)
 		if err != nil {
 			return GateErrE(swy.GateBadResp, err)
 		}
@@ -1985,7 +1986,7 @@ func handleMware(ctx context.Context, w http.ResponseWriter, r *http.Request) *s
 
 	switch r.Method {
 	case "GET":
-		mi, cerr := mw.toInfo(ctx, &conf.Mware, true)
+		mi, cerr := mw.toInfo(ctx, true)
 		if cerr != nil {
 			return cerr
 		}

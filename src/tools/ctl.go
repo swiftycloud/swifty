@@ -1039,9 +1039,9 @@ func mware_add(args []string, opts [16]string) {
 	}
 
 	if !curCmd.req {
-		var id string
-		make_faas_req1("POST", "middleware", http.StatusOK, &req, &id)
-		fmt.Printf("Mware %s created\n", id)
+		var mi swyapi.MwareInfo
+		make_faas_req1("POST", "middleware", http.StatusOK, &req, &mi)
+		fmt.Printf("Mware %s created\n", mi.ID)
 	} else {
 		d, err := json.Marshal(req)
 		if err == nil {
