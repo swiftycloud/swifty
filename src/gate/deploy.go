@@ -152,18 +152,17 @@ func (dep *DeployDesc)getItems(ds *swyapi.DeployStart) *swyapi.GateErr {
 	id := dep.SwoId
 
 	for _, fn := range ds.Functions {
-		er := swyFixSize(&fn.Size, &conf)
-		if er != nil {
-			return GateErrE(swy.GateBadRequest, er)
-		}
-
 		srcd, er := json.Marshal(&fn.Sources)
 		if er != nil {
 			return GateErrE(swy.GateGenErr, er)
 		}
 
 		id.Name = fn.Name
-		fd := getFunctionDesc(&id, fn)
+		fd, cerr := getFunctionDesc(&id, fn)
+		if cerr != nil {
+			return cerr
+		}
+
 		fd.Labels = dep.Labels
 		dep.Items = append(dep.Items, &DeployItemDesc{ Fn: fd, FnSrc: string(srcd), src: &fn.Sources })
 	}

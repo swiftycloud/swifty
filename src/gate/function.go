@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/base64"
 	"errors"
+	"strings"
 	"fmt"
 	"io/ioutil"
 	"time"
@@ -203,7 +204,27 @@ func (fn *FunctionDesc)toInfo(ctx context.Context, details bool, periods int) (*
 	return fi, nil
 }
 
-func getFunctionDesc(id *SwoId, p_add *swyapi.FunctionAdd) *FunctionDesc {
+func getFunctionDesc(id *SwoId, p_add *swyapi.FunctionAdd) (*FunctionDesc, *swyapi.GateErr) {
+	err := fnFixSize(&p_add.Size)
+	if err != nil {
+		return nil, GateErrE(swy.GateBadRequest, err)
+	}
+
+	err = validateFuncName(p_add)
+	if err != nil {
+		return nil, GateErrM(swy.GateBadRequest, "Bad project/function name")
+	}
+
+	if !RtLangEnabled(p_add.Code.Lang) {
+		return nil, GateErrM(swy.GateBadRequest, "Unsupported language")
+	}
+
+	for _, env := range(p_add.Code.Env) {
+		if strings.HasPrefix(env, "SWD_") {
+			return nil, GateErrM(swy.GateBadRequest, "Environment var cannot start with SWD_")
+		}
+	}
+
 	fn := &FunctionDesc {
 		SwoId: *id,
 		Size:		FnSizeDesc {
@@ -225,7 +246,7 @@ func getFunctionDesc(id *SwoId, p_add *swyapi.FunctionAdd) *FunctionDesc {
 	}
 
 	fn.Cookie = fn.SwoId.Cookie()
-	return fn
+	return fn, nil
 }
 
 func validateFuncName(params *swyapi.FunctionAdd) error {
@@ -340,7 +361,7 @@ stalled:
 	goto out
 }
 
-func swyFixSize(sz *swyapi.FunctionSize, conf *YAMLConf) error {
+func fnFixSize(sz *swyapi.FunctionSize) error {
 	if sz.Timeout == 0 {
 		sz.Timeout = conf.Runtime.Timeout.Def * 1000
 	} else if sz.Timeout > conf.Runtime.Timeout.Max * 1000 {
@@ -398,6 +419,11 @@ func (fn *FunctionDesc)setSize(ctx context.Context, sz *swyapi.FunctionSize) err
 	mfix := false
 	rlfix := false
 
+	err := fnFixSize(sz)
+	if err != nil {
+		return err
+	}
+
 	if fn.Size.Tmo != sz.Timeout {
 		ctxlog(ctx).Debugf("Will update tmo for %s", fn.SwoId.Str())
 		fn.Size.Tmo = sz.Timeout
@@ -422,7 +448,7 @@ func (fn *FunctionDesc)setSize(ctx context.Context, sz *swyapi.FunctionSize) err
 		rlfix = true
 	}
 
-	err := dbUpdatePart(ctx, fn, update)
+	err = dbUpdatePart(ctx, fn, update)
 	if err != nil {
 		return err
 	}

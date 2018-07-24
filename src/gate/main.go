@@ -491,11 +491,6 @@ func handleFunctionSize(ctx context.Context, w http.ResponseWriter, r *http.Requ
 			return GateErrE(swy.GateBadRequest, err)
 		}
 
-		err = swyFixSize(&sz, &conf)
-		if err != nil {
-			return GateErrE(swy.GateBadRequest, err)
-		}
-
 		err = fn.setSize(ctx, &sz)
 		if err != nil {
 			return GateErrE(swy.GateGenErr, err)
@@ -1179,11 +1174,6 @@ func handleFunctions(ctx context.Context, w http.ResponseWriter, r *http.Request
 			return GateErrE(swy.GateBadRequest, err)
 		}
 
-		err = swyFixSize(&params.Size, &conf)
-		if err != nil {
-			return GateErrE(swy.GateBadRequest, err)
-		}
-
 		if params.Name == "" {
 			return GateErrM(swy.GateBadRequest, "No function name")
 		}
@@ -1191,24 +1181,13 @@ func handleFunctions(ctx context.Context, w http.ResponseWriter, r *http.Request
 			return GateErrM(swy.GateBadRequest, "No language specified")
 		}
 
-		err = validateFuncName(&params)
-		if err != nil {
-			return GateErrM(swy.GateBadRequest, "Bad project/function name")
-		}
-
-		if !RtLangEnabled(params.Code.Lang) {
-			return GateErrM(swy.GateBadRequest, "Unsupported language")
-		}
-
-		for _, env := range(params.Code.Env) {
-			if strings.HasPrefix(env, "SWD_") {
-				return GateErrM(swy.GateBadRequest, "Environment var cannot start with SWD_")
-			}
-		}
-
 		id := ctxSwoId(ctx, params.Project, params.Name)
-		fd := getFunctionDesc(id, &params)
-		cerr := fd.Add(ctx, &params.Sources)
+		fd, cerr := getFunctionDesc(id, &params)
+		if cerr != nil {
+			return cerr
+		}
+
+		cerr = fd.Add(ctx, &params.Sources)
 		if cerr != nil {
 			return cerr
 
@@ -1284,7 +1263,7 @@ func handleFunction(ctx context.Context, w http.ResponseWriter, r *http.Request)
 			}
 		}
 
-		fi, _ := fd.toInfo(ctx, false, 0)
+		fi, _ := fn.toInfo(ctx, false, 0)
 		err = swyhttp.MarshalAndWrite(w, fi)
 		if err != nil {
 			return GateErrE(swy.GateBadResp, err)
