@@ -900,9 +900,9 @@ func event_add(args []string, opts [16]string) {
 			Ops: opts[1],
 		}
 	}
-	var res string
-	make_faas_req1("POST", "functions/" + args[0] + "/triggers", http.StatusOK, &e, &res)
-	fmt.Printf("Event %s created\n", res)
+	var ei swyapi.FunctionEvent
+	make_faas_req1("POST", "functions/" + args[0] + "/triggers", http.StatusOK, &e, &ei)
+	fmt.Printf("Event %s created\n", ei.Id)
 }
 
 func event_info(args []string, opts [16]string) {

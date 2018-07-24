@@ -114,7 +114,7 @@ func eventsInit(ctx context.Context, conf *YAMLConf) error {
 	return nil
 }
 
-func (e *FnEventDesc)toAPI(fn *FunctionDesc) *swyapi.FunctionEvent {
+func (e *FnEventDesc)toInfo(fn *FunctionDesc) *swyapi.FunctionEvent {
 	ae := swyapi.FunctionEvent{
 		Id:	e.ObjID.Hex(),
 		Name:	e.Name,
@@ -143,15 +143,11 @@ func (e *FnEventDesc)toAPI(fn *FunctionDesc) *swyapi.FunctionEvent {
 	return &ae
 }
 
-func eventsAdd(ctx context.Context, fn *FunctionDesc, evt *swyapi.FunctionEvent) (string, *swyapi.GateErr) {
+func getEventDesc(evt *swyapi.FunctionEvent) (*FnEventDesc, *swyapi.GateErr) {
 	ed := &FnEventDesc{
-		ObjID: bson.NewObjectId(),
 		Name: evt.Name,
-		FnId: fn.Cookie,
 		Source: evt.Source,
 	}
-
-	var err error
 
 	switch evt.Source {
 	case "cron":
@@ -168,15 +164,24 @@ func eventsAdd(ctx context.Context, fn *FunctionDesc, evt *swyapi.FunctionEvent)
 	case "url":
 		/* Nothing (yet) */ ;
 	default:
-		return "", GateErrM(swy.GateBadRequest, "Unsupported event type")
+		return nil, GateErrM(swy.GateBadRequest, "Unsupported event type")
 	}
+
+	return ed, nil
+}
+
+func (ed *FnEventDesc)Add(ctx context.Context, fn *FunctionDesc) *swyapi.GateErr {
+	var err error
+
+	ed.ObjID = bson.NewObjectId()
+	ed.FnId = fn.Cookie
 
 	err = dbInsert(ctx, ed)
 	if err != nil {
-		return "", GateErrD(err)
+		return GateErrD(err)
 	}
 
-	switch evt.Source {
+	switch ed.Source {
 	case "cron":
 		err = cronEventStart(ctx, ed)
 	case "s3":
@@ -186,17 +191,17 @@ func eventsAdd(ctx context.Context, fn *FunctionDesc, evt *swyapi.FunctionEvent)
 	}
 	if err != nil {
 		dbRemove(ctx, ed)
-		return "", GateErrM(swy.GateGenErr, "Can't setup event")
+		return GateErrM(swy.GateGenErr, "Can't setup event")
 	}
 
 	err = dbUpdateAll(ctx, ed)
 	if err != nil {
 		eventStop(ctx, ed)
 		dbRemove(ctx, ed)
-		return "", GateErrD(err)
+		return GateErrD(err)
 	}
 
-	return ed.ObjID.Hex(), nil
+	return nil
 }
 
 func eventStop(ctx context.Context, ed *FnEventDesc) error {

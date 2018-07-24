@@ -394,7 +394,7 @@ func handleFunctionTriggers(ctx context.Context, w http.ResponseWriter, r *http.
 				hasUrl = true
 			}
 
-			evs = append(evs, e.toAPI(fn))
+			evs = append(evs, e.toInfo(fn))
 		}
 
 		if fn.URL && !hasUrl {
@@ -414,12 +414,17 @@ func handleFunctionTriggers(ctx context.Context, w http.ResponseWriter, r *http.
 			return GateErrE(swy.GateBadRequest, err)
 		}
 
-		eid, erc := eventsAdd(ctx, fn, &evt)
-		if erc != nil {
-			return erc
+		ed, cerr := getEventDesc(&evt)
+		if cerr != nil {
+			return cerr
 		}
 
-		err = swyhttp.MarshalAndWrite(w, eid)
+		cerr = ed.Add(ctx, fn)
+		if cerr != nil {
+			return cerr
+		}
+
+		err = swyhttp.MarshalAndWrite(w, ed.toInfo(fn))
 		if err != nil {
 			return GateErrE(swy.GateBadResp, err)
 		}
@@ -686,7 +691,7 @@ func handleFunctionTrigger(ctx context.Context, w http.ResponseWriter, r *http.R
 
 	switch r.Method {
 	case "GET":
-		err := swyhttp.MarshalAndWrite(w, ed.toAPI(fn))
+		err := swyhttp.MarshalAndWrite(w, ed.toInfo(fn))
 		if err != nil {
 			return GateErrE(swy.GateBadResp, err)
 		}

@@ -782,9 +782,7 @@ paths:
         '200':
           description: OK
           schema:
-            type: string
-            description: ID of a newly created event trigger
-            example: 'deadbeef'
+            $ref: '#/definitions/FunctionEvent'
         '400':
           description: Bad request
           schema:
