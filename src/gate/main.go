@@ -1814,7 +1814,7 @@ func handleDeployments(ctx context.Context, w http.ResponseWriter, r *http.Reque
 			return cerr
 		}
 
-		did, cerr := deployStart(ctx, dd)
+		did, cerr := dd.Start(ctx)
 		if cerr != nil {
 			return cerr
 		}
@@ -1937,7 +1937,7 @@ func handleAuths(ctx context.Context, w http.ResponseWriter, r *http.Request) *s
 			},
 		})
 
-		did, cerr := deployStart(ctx, dd)
+		did, cerr := dd.Start(ctx)
 		if cerr != nil {
 			return cerr
 		}

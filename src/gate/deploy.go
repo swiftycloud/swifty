@@ -180,7 +180,7 @@ func (dep *DeployDesc)getItems(ds *swyapi.DeployStart) *swyapi.GateErr {
 	return nil
 }
 
-func deployStart(ctx context.Context, dep *DeployDesc) (string, *swyapi.GateErr) {
+func (dep *DeployDesc)Start(ctx context.Context) (string, *swyapi.GateErr) {
 	dep.ObjID = bson.NewObjectId()
 	err := dbInsert(ctx, dep)
 	if err != nil {
