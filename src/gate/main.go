@@ -57,6 +57,7 @@ type YAMLConfSwd struct {
 	Volume		string			`yaml:"volume"`
 	Port		int			`yaml:"port"`
 	ImgPref		string			`yaml:"img-prefix"`
+	Namespace	string			`yaml:"k8s-namespace"`
 }
 
 type YAMLConfDaemon struct {

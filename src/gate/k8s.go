@@ -35,7 +35,7 @@ func swk8sPodDelete(podname string) error {
 	var grace int64 = 0
 	var err error
 
-	podiface := swk8sClientSet.Pods(v1.NamespaceDefault)
+	podiface := swk8sClientSet.Pods(conf.Wdog.Namespace)
 	err = podiface.Delete(podname,
 				&v1.DeleteOptions{
 					GracePeriodSeconds: &grace,
@@ -62,7 +62,7 @@ func swk8sRemove(ctx context.Context, conf *YAMLConf, fn *FunctionDesc) error {
 		return err
 	}
 
-	deploy := swk8sClientSet.Extensions().Deployments(v1.NamespaceDefault)
+	deploy := swk8sClientSet.Extensions().Deployments(conf.Wdog.Namespace)
 	this, err := deploy.Get(depname)
 	if err != nil {
 		if k8serr.IsNotFound(err) {
@@ -168,7 +168,7 @@ func swk8sGenEnvVar(ctx context.Context, fn *FunctionDesc, wd_port int) []v1.Env
 			continue
 		}
 
-		secret, err := swk8sClientSet.Secrets(v1.NamespaceDefault).Get("mw-" + mwc)
+		secret, err := swk8sClientSet.Secrets(conf.Wdog.Namespace).Get("mw-" + mwc)
 		if err != nil {
 			ctxlog(ctx).Errorf("No mware secret for %s", mwc)
 			continue
@@ -216,7 +216,7 @@ func swk8sGenLabels(fn *FunctionDesc, depname string) map[string]string {
 func swk8sUpdate(ctx context.Context, conf *YAMLConf, fn *FunctionDesc) error {
 	depname := fn.DepName()
 
-	deploy := swk8sClientSet.Extensions().Deployments(v1.NamespaceDefault)
+	deploy := swk8sClientSet.Extensions().Deployments(conf.Wdog.Namespace)
 	this, err := deploy.Get(depname)
 	if err != nil {
 		ctxlog(ctx).Errorf("Can't get deployment for %s", fn.SwoId.Str())
@@ -361,7 +361,7 @@ func swk8sRun(ctx context.Context, conf *YAMLConf, fn *FunctionDesc) error {
 		},
 	}
 
-	deploy := swk8sClientSet.Extensions().Deployments(v1.NamespaceDefault)
+	deploy := swk8sClientSet.Extensions().Deployments(conf.Wdog.Namespace)
 	_, err = deploy.Create(&deployspec)
 	if err != nil {
 		BalancerDelete(ctx, fn.Cookie)
@@ -600,7 +600,7 @@ func swk8sMwSecretGen(envs [][2]string) map[string][]byte {
 }
 
 func swk8sMwSecretAdd(ctx context.Context, id string, envs [][2]string) error {
-	secrets := swk8sClientSet.Secrets(v1.NamespaceDefault)
+	secrets := swk8sClientSet.Secrets(conf.Wdog.Namespace)
 	_, err := secrets.Create(&v1.Secret{
 			ObjectMeta:	v1.ObjectMeta {
 				Name:	"mw-" + id,
@@ -623,7 +623,7 @@ func swk8sMwSecretRemove(ctx context.Context, id string) error {
 	var grace int64 = 0
 	var err error
 
-	secrets := swk8sClientSet.Secrets(v1.NamespaceDefault)
+	secrets := swk8sClientSet.Secrets(conf.Wdog.Namespace)
 	err = secrets.Delete("mw-" + id,
 		&v1.DeleteOptions{
 			GracePeriodSeconds: &grace,
@@ -640,7 +640,7 @@ func swk8sMwSecretRemove(ctx context.Context, id string) error {
 }
 
 func swk8sDepScale(depname string, replicas int32, up bool) int32 {
-	deps := swk8sClientSet.Extensions().Deployments(v1.NamespaceDefault)
+	deps := swk8sClientSet.Extensions().Deployments(conf.Wdog.Namespace)
 	dep, err := deps.Get(depname)
 	if err != nil {
 		return replicas /* Huh? */
@@ -676,7 +676,7 @@ func swk8sDepScaleDown(depname string, replicas uint32) uint32 {
 func swk8sGetBuildPods() (map[string]string, error) {
 	rv := make(map[string]string)
 
-	podiface := swk8sClientSet.Pods(v1.NamespaceDefault)
+	podiface := swk8sClientSet.Pods(conf.Wdog.Namespace)
 	pods, err := podiface.List(v1.ListOptions{ LabelSelector: "swybuild" })
 	if err != nil {
 		glog.Errorf("Error listing PODs: %s", err.Error())
@@ -705,8 +705,8 @@ func refreshDepsAndPods(ctx context.Context) error {
 		return fmt.Errorf("Can't drop stuck PODs: %s", err.Error)
 	}
 
-	depiface := swk8sClientSet.Extensions().Deployments(v1.NamespaceDefault)
-	podiface := swk8sClientSet.Pods(v1.NamespaceDefault)
+	depiface := swk8sClientSet.Extensions().Deployments(conf.Wdog.Namespace)
+	podiface := swk8sClientSet.Pods(conf.Wdog.Namespace)
 
 	for _, fn := range(fns) {
 		if fn.State != swy.DBFuncStateRdy && fn.State != swy.DBFuncStateStr {
@@ -775,6 +775,11 @@ func swk8sInit(ctx context.Context, conf *YAMLConf, config_path string) error {
 	kubeconfig := flag.String("kubeconfig", config_path, "path to the kubeconfig file")
 	flag.Parse()
 
+	if conf.Wdog.Namespace == "" {
+		glog.Debugf("Will work on %s k8s namespace", v1.NamespaceDefault)
+		conf.Wdog.Namespace = v1.NamespaceDefault
+	}
+
 	config, err := clientcmd.BuildConfigFromFlags("", *kubeconfig)
 	if err != nil {
 		glog.Errorf("BuildConfigFromFlags: %s", err.Error())
@@ -788,7 +793,7 @@ func swk8sInit(ctx context.Context, conf *YAMLConf, config_path string) error {
 	}
 
 	watchlist := cache.NewListWatchFromClient(swk8sClientSet.Core().RESTClient(),
-							"pods", v1.NamespaceDefault,
+							"pods", conf.Wdog.Namespace,
 							fields.Everything())
 	_, controller := cache.NewInformer(watchlist, &v1.Pod{},
 						time.Second * 0,
