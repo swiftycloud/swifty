@@ -221,15 +221,15 @@ const (
 
 type S3Policy struct {
 	Effect		string		`bson:"effect,omitempty"`
-	Action		[]ActionBitsMgo	`bson:"action,omitempty"`
+	Action		ActionBitsMgo	`bson:"action,omitempty"`
 	Resource	[]string	`bson:"resource,omitempty"`
 }
 
 func (policy *S3Policy) infoLong() string {
 	if policy != nil {
-		if len(policy.Action) > 0 && len(policy.Resource) > 0 {
+		if len(policy.Resource) > 0 {
 			return fmt.Sprintf("% x/%s",
-				policy.Action[0].toSwy(),
+				policy.Action.toSwy(),
 				policy.Resource[0])
 		}
 	}
@@ -240,7 +240,7 @@ func getRootPolicy() *S3Policy {
 	// If changing modify isRoot as well
 	return &S3Policy {
 		Effect: Policy_Allow,
-		Action: []ActionBitsMgo{ S3PolicyAction_AllSet.toMgo() },
+		Action: S3PolicyAction_AllSet.toMgo(),
 		Resource: []string{ Resourse_Any },
 	}
 }
@@ -248,25 +248,19 @@ func getRootPolicy() *S3Policy {
 func getBucketPolicy(bname string) *S3Policy {
 	return &S3Policy {
 		Effect: Policy_Allow,
-		Action: []ActionBitsMgo{ S3PolicyAction_PerBucket.toMgo() },
+		Action: S3PolicyAction_PerBucket.toMgo(),
 		Resource: []string{ bname },
 	}
 }
 
 func (policy *S3Policy) isCanned() bool {
-	if policy != nil {
-		if policy.Effect == Policy_Allow {
-			return len(policy.Action) > 0 &&
-				len(policy.Resource) > 0
-		}
-	}
-	return false
+	return policy != nil && policy.Effect == Policy_Allow && len(policy.Resource) > 0
 }
 
 func (policy *S3Policy) isRoot() bool {
 	if policy.isCanned() {
 		// Root key, can do everything
-		if policy.Action[0] == S3PolicyAction_AllSet.toMgo() {
+		if policy.Action == S3PolicyAction_AllSet.toMgo() {
 			if policy.Resource[0] == Resourse_Any {
 				return true
 			}
@@ -280,13 +274,24 @@ func (policy *S3Policy) isEqual(dst *S3Policy) bool {
 }
 
 func (policy *S3Policy) mayAccess(resource string) bool {
-	if !policy.isRoot() {
-		for _, x := range policy.Resource {
-			if x == resource {
-				return true
-			}
-		}
-		return false
+	if policy.isRoot() {
+		return true
 	}
-	return true
+
+	for _, x := range policy.Resource {
+		if x == resource {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (policy *S3Policy) allowed(action int) bool {
+	bits := policy.Action.toSwy()
+	if action < 64 {
+		return bits[0] & (1 << uint(action)) != 0
+	} else {
+		return bits[1] & (1 << uint((action - 64))) != 0
+	}
 }

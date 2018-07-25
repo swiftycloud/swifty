@@ -553,7 +553,6 @@ func handleAccessObject(bname, oname string, iam *S3Iam, w http.ResponseWriter, 
 func handleObject(ctx context.Context, iam *S3Iam, w http.ResponseWriter, r *http.Request) *S3Error {
 	var bname string = mux.Vars(r)["BucketName"]
 	var oname string = mux.Vars(r)["ObjName"]
-	var policy = &iam.Policy
 	var bucket *S3Bucket
 	var err error
 
@@ -563,7 +562,7 @@ func handleObject(ctx context.Context, iam *S3Iam, w http.ResponseWriter, r *htt
 		return &S3Error{ ErrorCode: S3ErrSwyInvalidObjectName }
 	}
 
-	if !policy.mayAccess(bname) {
+	if !iam.Policy.mayAccess(bname) {
 		goto e_access
 	}
 
