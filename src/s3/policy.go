@@ -274,7 +274,7 @@ func (policy *S3Policy) isEqual(dst *S3Policy) bool {
 }
 
 func (policy *S3Policy) mayAccess(resource string) bool {
-	if policy.isRoot() {
+	if len(policy.Resource) > 0 && policy.Resource[0] == Resourse_Any {
 		return true
 	}
 
