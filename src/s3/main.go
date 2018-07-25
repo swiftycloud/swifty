@@ -617,12 +617,40 @@ e_access:
 	return &S3Error{ ErrorCode: S3ErrAccessDenied }
 }
 
+func s3AuthorizeGetKey(ctx context.Context, r *http.Request) (*S3AccessKey, error) {
+	akey, err := s3AuthorizeUser(ctx, r)
+	if akey != nil || err != nil {
+		return akey, err
+	}
+
+	akey, err = s3AuthorizeAdmin(ctx, r)
+	if akey != nil || err != nil {
+		return akey, err
+	}
+
+	return nil, errors.New("Not authorized")
+}
+
+func s3Authorize(ctx context.Context, r *http.Request) (*S3Iam, error) {
+	key, err := s3AuthorizeGetKey(ctx, r)
+	if err != nil {
+		return nil, err
+	}
+
+	if key.Expired() {
+		return nil, errors.New("Key is expired")
+	}
+
+	iam, err := key.s3IamFind(ctx)
+	if err == nil {
+		log.Debugf("Authorized user, key %s", key.AccessKeyID)
+	}
+
+	return iam, err
+}
+
 func handleS3API(cb func(ctx context.Context, iam *S3Iam, w http.ResponseWriter, r *http.Request) *S3Error) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		var akey *S3AccessKey
-		var iam *S3Iam
-		var err error
-
 		defer r.Body.Close()
 
 		ctx, done := mkContext("s3 req")
@@ -632,25 +660,13 @@ func handleS3API(cb func(ctx context.Context, iam *S3Iam, w http.ResponseWriter,
 
 		if swyhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
 
-		// Admin is allowed to process without signing a request
-		if s3VerifyAdmin(r) == nil {
-			access_key := r.Header.Get(swys3api.SwyS3_AccessKey)
-			akey, err = LookupAccessKey(ctx, access_key)
-		} else {
-			akey, err = s3VerifyAuthorization(ctx, r)
-		}
-
-		if err == nil {
-			if !akey.Expired() {
-				iam, err = akey.s3IamFind(ctx)
-			} else {
-				err = fmt.Errorf("The access key is expired")
-			}
-		}
-
-		if akey == nil || iam == nil || err != nil {
+		iam, err := s3Authorize(ctx, r)
+		if err != nil {
 			HTTPRespError(w, S3ErrAccessDenied, err.Error())
-		} else if e := cb(ctx, iam, w, r); e != nil {
+			return
+		}
+
+		if e := cb(ctx, iam, w, r); e != nil {
 			HTTPRespS3Error(w, e)
 		}
 	})

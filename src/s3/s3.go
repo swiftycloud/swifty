@@ -3,6 +3,8 @@ package main
 import (
 	"net/http"
 	"fmt"
+	"context"
+	"errors"
 
 	"../apis/apps/s3"
 )
@@ -30,6 +32,24 @@ func s3VerifyAdmin(r *http.Request) error {
 	}
 
 	return nil
+}
+
+func s3AuthorizeAdmin(ctx context.Context, r *http.Request) (*S3AccessKey, error) {
+	access_token := r.Header.Get(swys3api.SwyS3_AdminToken)
+	if access_token == "" {
+		return nil, nil
+	}
+
+	if access_token != s3Secrets[conf.Daemon.Token] {
+		return nil, errors.New("Bad admin authorization creds")
+	}
+
+	access_key := r.Header.Get(swys3api.SwyS3_AccessKey)
+	if access_key == "" {
+		return nil, errors.New("Access key missing")
+	}
+
+	return LookupAccessKey(ctx, access_key)
 }
 
 func s3CheckAccess(iam *S3Iam, bname, oname string) error {

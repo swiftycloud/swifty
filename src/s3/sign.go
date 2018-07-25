@@ -282,13 +282,13 @@ func s3VerifyAuthorizationHeaders(ctx context.Context, r *http.Request, authHead
 	return nil, fmt.Errorf("Signature mismatch")
 }
 
-func s3VerifyAuthorization(ctx context.Context, r *http.Request) (*S3AccessKey, error) {
+func s3AuthorizeUser(ctx context.Context, r *http.Request) (*S3AccessKey, error) {
 	var authHeader string
 
 	authHeader = getHeader(r, "Authorization")
-	if authHeader != "" {
-		return s3VerifyAuthorizationHeaders(ctx, r, authHeader)
+	if authHeader == "" {
+		return nil, nil
 	}
 
-	return nil, fmt.Errorf("Unsupported authorization type")
+	return s3VerifyAuthorizationHeaders(ctx, r, authHeader)
 }
