@@ -122,7 +122,7 @@ func genNewAccessKey(ctx context.Context, namespace, bname string, lifetime uint
 
 	akey = &S3AccessKey {
 		ObjID:			bson.NewObjectId(),
-		State:			S3StateNone,
+		State:			S3StateActive,
 
 		AccountObjID:		account.ObjID,
 		IamObjID:		iam.ObjID,
@@ -148,15 +148,9 @@ func genNewAccessKey(ctx context.Context, namespace, bname string, lifetime uint
 		goto out_2
 	}
 
-	if err = dbS3SetState(ctx, akey, S3StateActive, nil); err != nil {
-		goto out_3
-	}
-
 	log.Debugf("s3: Inserted %s", infoLong(akey))
 	return akey, nil
 
-out_3:
-	dbS3Remove(ctx, akey)
 out_2:
 	s3IamDelete(ctx, iam)
 out_1:
