@@ -168,24 +168,17 @@ func s3IamDelete(ctx context.Context, iam *S3Iam) (error) {
 	return nil
 }
 
-func s3LookupIam(ctx context.Context, query bson.M) ([]S3Iam, error) {
-	var res []S3Iam
+func s3LookupIam(ctx context.Context, id bson.ObjectId) (*S3Iam, error) {
+	var res S3Iam
 
-	err := dbS3FindAll(ctx, query, &res)
+	err := dbS3FindOne(ctx, bson.M{"_id": id, "state": S3StateActive }, &res)
 	if err != nil {
 		return nil, err
 	}
 
-	return res, nil
+	return &res, nil
 }
 
 func (akey *S3AccessKey) s3IamFind(ctx context.Context) (*S3Iam, error) {
-	query := bson.M{"_id": akey.IamObjID, "state": S3StateActive }
-	iams, err := s3LookupIam(ctx, query)
-	if err != nil {
-		return nil, err
-	} else if len(iams) > 0 {
-		return &iams[0], nil
-	}
-	return nil, mgo.ErrNotFound
+	return s3LookupIam(ctx, akey.IamObjID)
 }
