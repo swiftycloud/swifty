@@ -164,7 +164,7 @@ func logRequest(r *http.Request) {
 	log.Debug(strings.Join(request, "\n"))
 }
 
-func handleBucketCloudWatch(ctx context.Context, iam *S3Iam, akey *S3AccessKey, w http.ResponseWriter, r *http.Request) *S3Error {
+func handleBucketCloudWatch(ctx context.Context, iam *S3Iam, w http.ResponseWriter, r *http.Request) *S3Error {
 	var bname, v string
 
 	content_type := r.Header.Get("Content-Type")
@@ -299,7 +299,7 @@ func handleAccessBucket(bname string, iam *S3Iam, w http.ResponseWriter, r *http
 	return nil
 }
 
-func handleBucket(ctx context.Context, iam *S3Iam, akey *S3AccessKey, w http.ResponseWriter, r *http.Request) *S3Error {
+func handleBucket(ctx context.Context, iam *S3Iam, w http.ResponseWriter, r *http.Request) *S3Error {
 	var bname string = mux.Vars(r)["BucketName"]
 	var policy = &iam.Policy
 
@@ -308,7 +308,7 @@ func handleBucket(ctx context.Context, iam *S3Iam, akey *S3AccessKey, w http.Res
 			//
 			// A special case where we
 			// hande some subset of cloudwatch
-			return handleBucketCloudWatch(ctx, iam, akey, w, r)
+			return handleBucketCloudWatch(ctx, iam, w, r)
 		} else if r.Method != http.MethodGet {
 			return &S3Error{ ErrorCode: S3ErrInvalidBucketName }
 		}
@@ -550,7 +550,7 @@ func handleAccessObject(bname, oname string, iam *S3Iam, w http.ResponseWriter, 
 	return nil
 }
 
-func handleObject(ctx context.Context, iam *S3Iam, akey *S3AccessKey, w http.ResponseWriter, r *http.Request) *S3Error {
+func handleObject(ctx context.Context, iam *S3Iam, w http.ResponseWriter, r *http.Request) *S3Error {
 	var bname string = mux.Vars(r)["BucketName"]
 	var oname string = mux.Vars(r)["ObjName"]
 	var policy = &iam.Policy
@@ -617,7 +617,7 @@ e_access:
 	return &S3Error{ ErrorCode: S3ErrAccessDenied }
 }
 
-func handleS3API(cb func(ctx context.Context, iam *S3Iam, akey *S3AccessKey, w http.ResponseWriter, r *http.Request) *S3Error) http.Handler {
+func handleS3API(cb func(ctx context.Context, iam *S3Iam, w http.ResponseWriter, r *http.Request) *S3Error) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var akey *S3AccessKey
 		var iam *S3Iam
@@ -650,7 +650,7 @@ func handleS3API(cb func(ctx context.Context, iam *S3Iam, akey *S3AccessKey, w h
 
 		if akey == nil || iam == nil || err != nil {
 			HTTPRespError(w, S3ErrAccessDenied, err.Error())
-		} else if e := cb(ctx, iam, akey, w, r); e != nil {
+		} else if e := cb(ctx, iam, w, r); e != nil {
 			HTTPRespS3Error(w, e)
 		}
 	})
