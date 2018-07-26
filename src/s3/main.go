@@ -488,7 +488,7 @@ func handleGetObject(ctx context.Context, oname string, iam *S3Iam, bucket *S3Bu
 		return &S3Error{ ErrorCode: S3ErrMethodNotAllowed }
 	}
 
-	body, err := s3ReadObject(ctx, bucket, oname, 0, 1)
+	body, err := bucket.ReadObject(ctx, oname, 0, 1)
 	if err != nil {
 		return &S3Error{ ErrorCode: S3ErrInvalidRequest, Message: err.Error() }
 	}
@@ -530,12 +530,12 @@ func handleCopyObject(ctx context.Context, copy_source, oname string, iam *S3Iam
 		return &S3Error{ ErrorCode: S3ErrInvalidBucketName }
 	}
 
-	body, err := s3ReadObject(ctx, bucket_source, oname_source, 0, 1)
+	body, err := bucket_source.ReadObject(ctx, oname_source, 0, 1)
 	if err != nil {
 		return &S3Error{ ErrorCode: S3ErrInvalidRequest, Message: err.Error() }
 	}
 
-	object, err = s3AddObject(ctx, iam, bucket, oname, canned_acl, body)
+	object, err = bucket.AddObject(ctx, iam, oname, canned_acl, body)
 	if err != nil {
 		return &S3Error{ ErrorCode: S3ErrInvalidRequest, Message: err.Error() }
 	}
@@ -572,7 +572,7 @@ func handlePutObject(ctx context.Context, oname string, iam *S3Iam, bucket *S3Bu
 		return &S3Error{ ErrorCode: S3ErrIncompleteBody }
 	}
 
-	_, err = s3AddObject(ctx, iam, bucket, oname, canned_acl, body)
+	_, err = bucket.AddObject(ctx, iam, oname, canned_acl, body)
 	if err != nil {
 		return &S3Error{ ErrorCode: S3ErrInvalidRequest, Message: err.Error() }
 	}

@@ -102,7 +102,7 @@ func s3RepairObject(ctx context.Context) error {
 	return nil
 }
 
-func (bucket *S3Bucket)FindObject(ctx context.Context, oname string) (*S3Object, error) {
+func (bucket *S3Bucket)FindCurObject(ctx context.Context, oname string) (*S3Object, error) {
 	var res S3Object
 
 	query := bson.M{ "ocookie": bucket.OCookie(oname, 1), "state": S3StateActive }
@@ -114,7 +114,7 @@ func (bucket *S3Bucket)FindObject(ctx context.Context, oname string) (*S3Object,
 	return &res,nil
 }
 
-func s3ConvertObject(ctx context.Context, iam *S3Iam, bucket *S3Bucket, upload *S3Upload) (*S3Object, error) {
+func (bucket *S3Bucket)ToObject(ctx context.Context, iam *S3Iam, upload *S3Upload) (*S3Object, error) {
 	var err error
 
 	size, etag, err := s3ObjectPartsResum(ctx, upload)
@@ -166,7 +166,7 @@ out_remove:
 	dbS3Remove(ctx, object)
 	return nil, err
 }
-func s3AddObject(ctx context.Context, iam *S3Iam, bucket *S3Bucket, oname string,
+func (bucket *S3Bucket)AddObject(ctx context.Context, iam *S3Iam, oname string,
 		acl string, data []byte) (*S3Object, error) {
 	var objp *S3ObjectPart
 	var err error
@@ -237,7 +237,7 @@ func s3DeleteObject(ctx context.Context, iam *S3Iam, bucket *S3Bucket, oname str
 	var objp []*S3ObjectPart
 	var err error
 
-	object, err = bucket.FindObject(ctx, oname)
+	object, err = bucket.FindCurObject(ctx, oname)
 	if err != nil {
 		if err == mgo.ErrNotFound {
 			return nil
@@ -285,7 +285,7 @@ func s3DeleteObject(ctx context.Context, iam *S3Iam, bucket *S3Bucket, oname str
 	return nil
 }
 
-func s3ReadObjectData(ctx context.Context, bucket *S3Bucket, object *S3Object) ([]byte, error) {
+func (object *S3Object)ReadData(ctx context.Context, bucket *S3Bucket) ([]byte, error) {
 	var objp []*S3ObjectPart
 	var res []byte
 	var err error
@@ -310,11 +310,11 @@ func s3ReadObjectData(ctx context.Context, bucket *S3Bucket, object *S3Object) (
 	return res, err
 }
 
-func s3ReadObject(ctx context.Context, bucket *S3Bucket, oname string, part, version int) ([]byte, error) {
+func (bucket *S3Bucket)ReadObject(ctx context.Context, oname string, part, version int) ([]byte, error) {
 	var object *S3Object
 	var err error
 
-	object, err = bucket.FindObject(ctx, oname)
+	object, err = bucket.FindCurObject(ctx, oname)
 	if err != nil {
 		if err == mgo.ErrNotFound {
 			return nil, err
@@ -324,5 +324,5 @@ func s3ReadObject(ctx context.Context, bucket *S3Bucket, oname string, part, ver
 		return nil, err
 	}
 
-	return s3ReadObjectData(ctx, bucket, object)
+	return object.ReadData(ctx, bucket)
 }

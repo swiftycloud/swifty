@@ -292,7 +292,7 @@ func s3UploadFini(ctx context.Context, iam *S3Iam, bucket *S3Bucket, uid string,
 		return nil, err
 	}
 
-	object, err = s3ConvertObject(ctx, iam, bucket, &upload)
+	object, err = bucket.ToObject(ctx, iam, &upload)
 	if err != nil {
 		log.Errorf("s3: Can't insert object on %s: %s",
 			infoLong(&upload), err.Error())
