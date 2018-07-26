@@ -676,12 +676,9 @@ func handleFunctionTrigger(ctx context.Context, w http.ResponseWriter, r *http.R
 
 	var ed FnEventDesc
 
-	err := dbFind(ctx, bson.M{"_id": eid}, &ed)
+	err := dbFind(ctx, bson.M{"_id": bson.ObjectIdHex(eid), "fnid": fn.Cookie}, &ed)
 	if err != nil {
 		return GateErrD(err)
-	}
-	if ed.FnId != fn.Cookie {
-		return GateErrC(swy.GateNotFound)
 	}
 
 	switch r.Method {
