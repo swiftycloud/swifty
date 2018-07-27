@@ -340,18 +340,32 @@ func handleProjectList(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	return nil
 }
 
-func objFindForReq(ctx context.Context, r *http.Request, n string, out interface{}) *swyapi.GateErr {
-	id := mux.Vars(r)[n]
+func objFindId(ctx context.Context, id string, out interface{}, q bson.M) *swyapi.GateErr {
 	if !bson.IsObjectIdHex(id) {
 		return GateErrM(swy.GateBadRequest, "Bad ID value")
 	}
 
-	err := dbFind(ctx, ctxObjId(ctx, id), out)
+	if q == nil {
+		q = bson.M{}
+	}
+
+	q["tennant"] = gctx(ctx).Tenant
+	q["_id"] = bson.ObjectIdHex(id)
+
+	err := dbFind(ctx, q, out)
 	if err != nil {
 		return GateErrD(err)
 	}
 
 	return nil
+}
+
+func objFindForReq2(ctx context.Context, r *http.Request, n string, out interface{}, q bson.M) *swyapi.GateErr {
+	return objFindId(ctx, mux.Vars(r)[n], out, q)
+}
+
+func objFindForReq(ctx context.Context, r *http.Request, n string, out interface{}) *swyapi.GateErr {
+	return objFindForReq2(ctx, r, n, out, nil)
 }
 
 func handleFunctionTriggers(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
@@ -547,17 +561,11 @@ func handleFunctionMwares(ctx context.Context, w http.ResponseWriter, r *http.Re
 			return GateErrE(swy.GateBadRequest, err)
 		}
 
-		if !bson.IsObjectIdHex(mid) {
-			return GateErrM(swy.GateBadRequest, "Bad MW ID value")
-		}
-
 		var mw MwareDesc
 
-		oid := ctxObjId(ctx, mid)
-		oid["project"] = fn.SwoId.Project
-		err = dbFind(ctx, oid, &mw)
-		if err != nil {
-			return GateErrD(err)
+		cerr := objFindId(ctx, mid, &mw, bson.M{"project": fn.SwoId.Project})
+		if cerr != nil {
+			return cerr
 		}
 
 		err = fn.addMware(ctx, &mw)
@@ -579,23 +587,16 @@ func handleFunctionMware(ctx context.Context, w http.ResponseWriter, r *http.Req
 		return cerr
 	}
 
-	mid := mux.Vars(r)["mid"]
-	if !bson.IsObjectIdHex(mid) {
-		return GateErrM(swy.GateBadRequest, "Bad MW ID value")
-	}
-
 	var mw MwareDesc
 
-	oid := ctxObjId(ctx, mid)
-	oid["project"] = fn.SwoId.Project
-	err := dbFind(ctx, oid, &mw)
-	if err != nil {
-		return GateErrD(err)
+	cerr = objFindForReq2(ctx, r, "mid", &mw, bson.M{"project": fn.SwoId.Project})
+	if cerr != nil {
+		return cerr
 	}
 
 	switch r.Method {
 	case "DELETE":
-		err = fn.delMware(ctx, &mw)
+		err := fn.delMware(ctx, &mw)
 		if err != nil {
 			return GateErrE(swy.GateGenErr, err)
 		}
@@ -1577,15 +1578,11 @@ func handleRepos(ctx context.Context, w http.ResponseWriter, r *http.Request) *s
 		ctxlog(ctx).Debugf("repo/add: %s params %v", gctx(ctx).Tenant, params)
 
 		if params.AccID != "" {
-			if !bson.IsObjectIdHex(params.AccID) {
-				return GateErrM(swy.GateBadRequest, "Bad acc ID")
-			}
-
 			var ac AccDesc
 
-			err := dbFind(ctx, ctxObjId(ctx, params.AccID), &ac)
-			if err != nil {
-				return GateErrD(err)
+			cerr := objFindId(ctx, params.AccID, &ac, nil)
+			if cerr != nil {
+				return cerr
 			}
 
 			if ac.Type != params.Type {
@@ -1963,19 +1960,11 @@ func handleAuths(ctx context.Context, w http.ResponseWriter, r *http.Request) *s
 }
 
 func handleAuth(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
-	did := mux.Vars(r)["aid"]
-	if !bson.IsObjectIdHex(did) {
-		return GateErrM(swy.GateBadRequest, "Bad auth deploy ID value")
-	}
-
 	var ad DeployDesc
 
-	oid := ctxObjId(ctx, did)
-	oid["labels"] = "auth"
-
-	err := dbFind(ctx, oid, &ad)
-	if err != nil {
-		return GateErrD(err)
+	cerr := objFindForReq2(ctx, r, "aid", &ad, bson.M{"labels": "auth"})
+	if cerr != nil {
+		return cerr
 	}
 
 	return handleOneDeployment(ctx, w, r, &ad)

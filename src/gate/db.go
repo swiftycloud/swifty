@@ -156,13 +156,6 @@ func maybe(err error) error {
 	}
 }
 
-func ctxObjId(ctx context.Context, id string) bson.M {
-	return bson.M {
-		"tennant": gctx(ctx).Tenant,
-		"_id": bson.ObjectIdHex(id),
-	}
-}
-
 func dbTenantGetLimits(ctx context.Context, tenant string) (*swyapi.UserLimits, error) {
 	c := gctx(ctx).S.DB(DBTenantDB).C(DBColLimits)
 	var v swyapi.UserLimits
