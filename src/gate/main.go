@@ -1293,7 +1293,7 @@ func handleFunction(ctx context.Context, w http.ResponseWriter, r *http.Request)
 		}
 
 	case "DELETE":
-		cerr := fn.Remove(ctx, &conf)
+		cerr := fn.Remove(ctx)
 		if cerr != nil {
 			return cerr
 		}
@@ -2002,7 +2002,7 @@ func handleMware(ctx context.Context, w http.ResponseWriter, r *http.Request) *s
 		}
 
 	case "DELETE":
-		cerr := mw.Remove(ctx, &conf.Mware)
+		cerr := mw.Remove(ctx)
 		if cerr != nil {
 			return cerr
 		}

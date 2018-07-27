@@ -140,10 +140,10 @@ func mwareRemoveId(ctx context.Context, conf *YAMLConfMw, id *SwoId) *swyapi.Gat
 		return GateErrD(err)
 	}
 
-	return item.Remove(ctx, conf)
+	return item.Remove(ctx)
 }
 
-func (item *MwareDesc)Remove(ctx context.Context, conf *YAMLConfMw) *swyapi.GateErr {
+func (item *MwareDesc)Remove(ctx context.Context) *swyapi.GateErr {
 	handler, ok := mwareHandlers[item.MwareType]
 	if !ok {
 		return GateErrC(swy.GateGenErr) /* Shouldn't happen */
@@ -155,7 +155,7 @@ func (item *MwareDesc)Remove(ctx context.Context, conf *YAMLConfMw) *swyapi.Gate
 		return GateErrM(swy.GateGenErr, "Cannot terminate mware")
 	}
 
-	err = handler.Fini(ctx, conf, item)
+	err = handler.Fini(ctx, &conf.Mware, item)
 	if err != nil {
 		ctxlog(ctx).Errorf("Failed cleanup for mware %s: %s", item.SwoId.Str(), err.Error())
 		goto stalled

@@ -638,10 +638,10 @@ func removeFunctionId(ctx context.Context, conf *YAMLConf, id *SwoId) *swyapi.Ga
 		return GateErrD(err)
 	}
 
-	return fn.Remove(ctx, conf)
+	return fn.Remove(ctx)
 }
 
-func (fn *FunctionDesc)Remove(ctx context.Context, conf *YAMLConf) *swyapi.GateErr {
+func (fn *FunctionDesc)Remove(ctx context.Context) *swyapi.GateErr {
 	var err error
 	var dea bool
 
@@ -669,7 +669,7 @@ func (fn *FunctionDesc)Remove(ctx context.Context, conf *YAMLConf) *swyapi.GateE
 
 	if !fn.isOneShot() && !dea {
 		ctxlog(ctx).Debugf("`- delete deploy")
-		err = swk8sRemove(ctx, conf, fn)
+		err = swk8sRemove(ctx, &conf, fn)
 		if err != nil {
 			ctxlog(ctx).Errorf("remove deploy error: %s", err.Error())
 			goto later
