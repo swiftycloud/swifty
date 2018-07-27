@@ -177,7 +177,7 @@ func (fn *FunctionDesc)toInfo(ctx context.Context, details bool, periods int) (*
 			fi.URL = fn.getURL()
 		}
 
-		fi.Stats, cerr = getFunctionStats(ctx, fn, periods)
+		fi.Stats, cerr = fn.getStats(ctx, periods)
 		if err != nil {
 			return nil, cerr
 		}

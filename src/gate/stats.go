@@ -111,7 +111,7 @@ type TenStats struct {
 	onDisk		*TenStatValues	`bson:"-"`
 }
 
-func getFunctionStats(ctx context.Context, fn *FunctionDesc, periods int) ([]swyapi.FunctionStats, *swyapi.GateErr) {
+func (fn *FunctionDesc)getStats(ctx context.Context, periods int) ([]swyapi.FunctionStats, *swyapi.GateErr) {
 	var stats []swyapi.FunctionStats
 
 	prev, err := statsGet(ctx, fn)

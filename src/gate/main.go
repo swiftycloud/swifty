@@ -856,7 +856,7 @@ func handleFunctionStats(ctx context.Context, w http.ResponseWriter, r *http.Req
 			return GateErrC(swy.GateBadRequest)
 		}
 
-		stats, cerr := getFunctionStats(ctx, &fn, periods)
+		stats, cerr := fn.getStats(ctx, periods)
 		if cerr != nil {
 			return cerr
 		}
