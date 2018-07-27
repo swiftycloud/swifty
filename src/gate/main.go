@@ -340,24 +340,24 @@ func handleProjectList(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	return nil
 }
 
-func fnFindForReq(ctx context.Context, r *http.Request) (*FunctionDesc, *swyapi.GateErr) {
-	fnid := mux.Vars(r)["fid"]
-	if !bson.IsObjectIdHex(fnid) {
-		return nil, GateErrM(swy.GateBadRequest, "Bad FN ID")
+func objFindForReq(ctx context.Context, r *http.Request, n string, out interface{}) *swyapi.GateErr {
+	id := mux.Vars(r)[n]
+	if !bson.IsObjectIdHex(id) {
+		return GateErrM(swy.GateBadRequest, "Bad ID value")
 	}
 
-	var fn FunctionDesc
-
-	err := dbFind(ctx, ctxObjId(ctx, fnid), &fn)
+	err := dbFind(ctx, ctxObjId(ctx, id), out)
 	if err != nil {
-		return nil, GateErrD(err)
+		return GateErrD(err)
 	}
 
-	return &fn, nil
+	return nil
 }
 
 func handleFunctionTriggers(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
-	fn, cerr := fnFindForReq(ctx, r)
+	var fn FunctionDesc
+
+	cerr := objFindForReq(ctx, r, "fid", &fn)
 	if cerr != nil {
 		return cerr
 	}
@@ -394,7 +394,7 @@ func handleFunctionTriggers(ctx context.Context, w http.ResponseWriter, r *http.
 				hasUrl = true
 			}
 
-			evs = append(evs, e.toInfo(fn))
+			evs = append(evs, e.toInfo(&fn))
 		}
 
 		if fn.URL && !hasUrl {
@@ -419,12 +419,12 @@ func handleFunctionTriggers(ctx context.Context, w http.ResponseWriter, r *http.
 			return cerr
 		}
 
-		cerr = ed.Add(ctx, fn)
+		cerr = ed.Add(ctx, &fn)
 		if cerr != nil {
 			return cerr
 		}
 
-		err = swyhttp.MarshalAndWrite(w, ed.toInfo(fn))
+		err = swyhttp.MarshalAndWrite(w, ed.toInfo(&fn))
 		if err != nil {
 			return GateErrE(swy.GateBadResp, err)
 		}
@@ -434,7 +434,9 @@ func handleFunctionTriggers(ctx context.Context, w http.ResponseWriter, r *http.
 }
 
 func handleFunctionAuthCtx(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
-	fn, cerr := fnFindForReq(ctx, r)
+	var fn FunctionDesc
+
+	cerr := objFindForReq(ctx, r, "fid", &fn)
 	if cerr != nil {
 		return cerr
 	}
@@ -466,7 +468,9 @@ func handleFunctionAuthCtx(ctx context.Context, w http.ResponseWriter, r *http.R
 }
 
 func handleFunctionSize(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
-	fn, cerr := fnFindForReq(ctx, r)
+	var fn FunctionDesc
+
+	cerr := objFindForReq(ctx, r, "fid", &fn)
 	if cerr != nil {
 		return cerr
 	}
@@ -503,7 +507,9 @@ func handleFunctionSize(ctx context.Context, w http.ResponseWriter, r *http.Requ
 }
 
 func handleFunctionMwares(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
-	fn, cerr := fnFindForReq(ctx, r)
+	var fn FunctionDesc
+
+	cerr := objFindForReq(ctx, r, "fid", &fn)
 	if cerr != nil {
 		return cerr
 	}
@@ -566,7 +572,9 @@ func handleFunctionMwares(ctx context.Context, w http.ResponseWriter, r *http.Re
 }
 
 func handleFunctionMware(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
-	fn, cerr := fnFindForReq(ctx, r)
+	var fn FunctionDesc
+
+	cerr := objFindForReq(ctx, r, "fid", &fn)
 	if cerr != nil {
 		return cerr
 	}
@@ -600,7 +608,9 @@ func handleFunctionMware(ctx context.Context, w http.ResponseWriter, r *http.Req
 
 
 func handleFunctionS3Bs(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
-	fn, cerr := fnFindForReq(ctx, r)
+	var fn FunctionDesc
+
+	cerr := objFindForReq(ctx, r, "fid", &fn)
 	if cerr != nil {
 		return cerr
 	}
@@ -630,7 +640,9 @@ func handleFunctionS3Bs(ctx context.Context, w http.ResponseWriter, r *http.Requ
 }
 
 func handleFunctionS3B(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
-	fn, cerr := fnFindForReq(ctx, r)
+	var fn FunctionDesc
+
+	cerr := objFindForReq(ctx, r, "fid", &fn)
 	if cerr != nil {
 		return cerr
 	}
@@ -651,7 +663,9 @@ func handleFunctionS3B(ctx context.Context, w http.ResponseWriter, r *http.Reque
 }
 
 func handleFunctionTrigger(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
-	fn, cerr := fnFindForReq(ctx, r)
+	var fn FunctionDesc
+
+	cerr := objFindForReq(ctx, r, "fid", &fn)
 	if cerr != nil {
 		return cerr
 	}
@@ -683,13 +697,13 @@ func handleFunctionTrigger(ctx context.Context, w http.ResponseWriter, r *http.R
 
 	switch r.Method {
 	case "GET":
-		err := swyhttp.MarshalAndWrite(w, ed.toInfo(fn))
+		err := swyhttp.MarshalAndWrite(w, ed.toInfo(&fn))
 		if err != nil {
 			return GateErrE(swy.GateBadResp, err)
 		}
 
 	case "DELETE":
-		erc := eventsDelete(ctx, fn, &ed)
+		erc := eventsDelete(ctx, &fn, &ed)
 		if erc != nil {
 			return erc
 		}
@@ -701,7 +715,9 @@ func handleFunctionTrigger(ctx context.Context, w http.ResponseWriter, r *http.R
 }
 
 func handleFunctionWait(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
-	fn, cerr := fnFindForReq(ctx, r)
+	var fn FunctionDesc
+
+	cerr := objFindForReq(ctx, r, "fid", &fn)
 	if cerr != nil {
 		return cerr
 	}
@@ -717,7 +733,7 @@ func handleFunctionWait(ctx context.Context, w http.ResponseWriter, r *http.Requ
 
 	if wo.Version != "" {
 		ctxlog(ctx).Debugf("function/wait %s -> version >= %s, tmo %d", fn.SwoId.Str(), wo.Version, int(timeout))
-		err, tmo = waitFunctionVersion(ctx, fn, wo.Version, timeout)
+		err, tmo = waitFunctionVersion(ctx, &fn, wo.Version, timeout)
 		if err != nil {
 			return GateErrE(swy.GateGenErr, err)
 		}
@@ -733,7 +749,9 @@ func handleFunctionWait(ctx context.Context, w http.ResponseWriter, r *http.Requ
 }
 
 func handleFunctionSources(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
-	fn, cerr := fnFindForReq(ctx, r)
+	var fn FunctionDesc
+
+	cerr := objFindForReq(ctx, r, "fid", &fn)
 	if cerr != nil {
 		return cerr
 	}
@@ -824,7 +842,9 @@ func handleTenantStats(ctx context.Context, w http.ResponseWriter, r *http.Reque
 }
 
 func handleFunctionStats(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
-	fn, cerr := fnFindForReq(ctx, r)
+	var fn FunctionDesc
+
+	cerr := objFindForReq(ctx, r, "fid", &fn)
 	if cerr != nil {
 		return cerr
 	}
@@ -836,7 +856,7 @@ func handleFunctionStats(ctx context.Context, w http.ResponseWriter, r *http.Req
 			return GateErrC(swy.GateBadRequest)
 		}
 
-		stats, cerr := getFunctionStats(ctx, fn, periods)
+		stats, cerr := getFunctionStats(ctx, &fn, periods)
 		if cerr != nil {
 			return cerr
 		}
@@ -866,7 +886,9 @@ func getSince(r *http.Request) (*time.Time, *swyapi.GateErr) {
 }
 
 func handleFunctionLogs(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
-	fn, cerr := fnFindForReq(ctx, r)
+	var fn FunctionDesc
+
+	cerr := objFindForReq(ctx, r, "fid", &fn)
 	if cerr != nil {
 		return cerr
 	}
@@ -1201,7 +1223,9 @@ func handleFunctions(ctx context.Context, w http.ResponseWriter, r *http.Request
 }
 
 func handleFunctionMdat(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
-	fn, cerr := fnFindForReq(ctx, r)
+	var fn FunctionDesc
+
+	cerr := objFindForReq(ctx, r, "fid", &fn)
 	if cerr != nil {
 		return cerr
 	}
@@ -1216,7 +1240,9 @@ func handleFunctionMdat(ctx context.Context, w http.ResponseWriter, r *http.Requ
 }
 
 func handleFunction(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
-	fn, cerr := fnFindForReq(ctx, r)
+	var fn FunctionDesc
+
+	cerr := objFindForReq(ctx, r, "fid", &fn)
 	if cerr != nil {
 		return cerr
 	}
@@ -1279,7 +1305,9 @@ func handleFunction(ctx context.Context, w http.ResponseWriter, r *http.Request)
 }
 
 func handleFunctionRun(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
-	fn, cerr := fnFindForReq(ctx, r)
+	var fn FunctionDesc
+
+	cerr := objFindForReq(ctx, r, "fid", &fn)
 	if cerr != nil {
 		return cerr
 	}
@@ -1470,16 +1498,11 @@ func handleAccounts(ctx context.Context, w http.ResponseWriter, r *http.Request)
 }
 
 func handleAccount(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
-	aid := mux.Vars(r)["aid"]
-	if !bson.IsObjectIdHex(aid) {
-		return GateErrM(swy.GateBadRequest, "Bad repo ID value")
-	}
-
 	var ac AccDesc
 
-	err := dbFind(ctx, ctxObjId(ctx, aid), &ac)
-	if err != nil {
-		return GateErrD(err)
+	cerr := objFindForReq(ctx, r, "aid", &ac)
+	if cerr != nil {
+		return cerr
 	}
 
 	switch r.Method {
@@ -1489,7 +1512,7 @@ func handleAccount(ctx context.Context, w http.ResponseWriter, r *http.Request) 
 			return cerr
 		}
 
-		err = swyhttp.MarshalAndWrite(w, ai)
+		err := swyhttp.MarshalAndWrite(w, ai)
 		if err != nil {
 			return GateErrE(swy.GateBadResp, err)
 		}
@@ -1821,16 +1844,11 @@ func handleDeployments(ctx context.Context, w http.ResponseWriter, r *http.Reque
 }
 
 func handleDeployment(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
-	did := mux.Vars(r)["did"]
-	if !bson.IsObjectIdHex(did) {
-		return GateErrM(swy.GateBadRequest, "Bad deploy ID value")
-	}
-
 	var dd DeployDesc
 
-	err := dbFind(ctx, ctxObjId(ctx, did), &dd)
-	if err != nil {
-		return GateErrD(err)
+	cerr := objFindForReq(ctx, r, "did", &dd)
+	if cerr != nil {
+		return cerr
 	}
 
 	return handleOneDeployment(ctx, w, r, &dd)
@@ -1964,15 +1982,11 @@ func handleAuth(ctx context.Context, w http.ResponseWriter, r *http.Request) *sw
 }
 
 func handleMware(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
-	mid := mux.Vars(r)["mid"]
-	if !bson.IsObjectIdHex(mid) {
-		return GateErrM(swy.GateBadRequest, "Bad mware ID value")
-	}
-
 	var mw MwareDesc
-	err := dbFind(ctx, ctxObjId(ctx, mid), &mw)
-	if err != nil {
-		return GateErrD(err)
+
+	cerr := objFindForReq(ctx, r, "mid", &mw)
+	if cerr != nil {
+		return cerr
 	}
 
 	switch r.Method {
@@ -1982,7 +1996,7 @@ func handleMware(ctx context.Context, w http.ResponseWriter, r *http.Request) *s
 			return cerr
 		}
 
-		err = swyhttp.MarshalAndWrite(w, mi)
+		err := swyhttp.MarshalAndWrite(w, mi)
 		if err != nil {
 			return GateErrE(swy.GateBadResp, err)
 		}
