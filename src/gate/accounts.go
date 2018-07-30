@@ -90,7 +90,11 @@ func setupGithubAcc(ad *AccDesc, params *swyapi.AccAdd) *swyapi.GateErr {
 func infoGitHubAcc(ad *AccDesc, info *swyapi.AccInfo, detail bool) {
 	t, err := ad.GH.Token()
 	if err == nil {
-		t = t[:6] + "..."
+		if len(t) > 6 {
+			t = t[:6] + "..."
+		} else {
+			t = ""
+		}
 	} else {
 		t = "<broken>"
 	}
