@@ -721,7 +721,12 @@ func refreshDepsAndPods(ctx context.Context) error {
 
 		dep, err := depiface.Get(fn.DepName())
 		if err != nil {
-			if k8serr.IsNotFound(err) && fn.State == swy.DBFuncStateStr {
+			if !k8serr.IsNotFound(err) {
+				glog.Errorf("Can't get dep %s: %s", fn.DepName(), err.Error())
+				return errors.New("Error getting dep")
+			}
+
+			if fn.State == swy.DBFuncStateStr {
 				/* That's OK, the deployment just didn't have time to
 				 * to get created. Just create one and ... go agead,
 				 * no replicas to check, no PODs to revitalize.
@@ -736,8 +741,15 @@ func refreshDepsAndPods(ctx context.Context) error {
 				continue
 			}
 
-			glog.Errorf("Can't get dep %s: %s", fn.DepName(), err.Error())
-			return errors.New("Error getting dep")
+			if fn.State == swy.DBFuncStateRdy {
+				/* Function is running, but the deploy is not there
+				 * Mark FN as stalled and let client handle it
+				 */
+
+				 fn.ToState(ctx, swy.DBFuncStateStl, -1)
+				 continue
+			}
+
 		}
 
 		glog.Debugf("Chk replicas for %s", fn.SwoId.Str())
