@@ -18,6 +18,7 @@ source $HOME/.bashrc
 yum install librados2-devel
 yum install glibc-headers
 yum groupinstall "Development Libraries"
+yum install glibc-static
 ```
 
 ### clone swifty project
