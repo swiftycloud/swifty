@@ -2235,5 +2235,5 @@ definitions:
       pulling:
         type: string
       desc:
-        type: bool
+        type: boolean
         description: Whether or not this repo has a description
