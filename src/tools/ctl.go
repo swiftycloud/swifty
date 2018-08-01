@@ -1199,6 +1199,10 @@ func repo_info(args []string, opts [16]string) {
 	if ri.AccID != "" {
 		fmt.Printf("Account:   %s\n", ri.AccID)
 	}
+
+	if ri.Desc {
+		fmt.Printf("With description\n")
+	}
 }
 
 func repo_add(args []string, opts [16]string) {

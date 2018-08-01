@@ -22,6 +22,10 @@ import (
 	"../apis/apps"
 )
 
+const (
+	RepoDescFile	= ".swifty.yml"
+)
+
 func fnCodeDir(fn *FunctionDesc) string {
 	return fn.Tennant + "/" + fn.Project + "/" + fn.Name
 }
@@ -119,6 +123,13 @@ func (rd *RepoDesc)toInfo(ctx context.Context, details bool) (*swyapi.RepoInfo, 
 	if details {
 		r.UserData = rd.UserData
 		r.Pull = rd.Pull
+
+		dfile := rd.clonePath() + "/" + RepoDescFile
+		if _, err := os.Stat(dfile); err == nil {
+			r.Desc = true
+		} else {
+			r.Desc = false
+		}
 	}
 
 	return r, nil
@@ -181,7 +192,7 @@ func (rd *RepoDesc)Detach(ctx context.Context, conf *YAMLConf) *swyapi.GateErr {
 }
 
 func (rd *RepoDesc)getDesc(ctx context.Context) (*swyapi.RepoDesc, *swyapi.GateErr) {
-	dfile := rd.clonePath() + "/.swifty.yml"
+	dfile := rd.clonePath() + "/" + RepoDescFile
 	if _, err := os.Stat(dfile); os.IsNotExist(err) {
 		return nil, GateErrM(swy.GateNotAvail, "No description for repo")
 	}

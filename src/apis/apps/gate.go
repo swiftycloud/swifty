@@ -248,6 +248,7 @@ type RepoInfo struct {
 	UserData	string			`json:"userdata,omitempty"`
 	AccID		string			`json:"account_id,omitempty"`
 	Pull		string			`json:"pulling,omitempty"`
+	Desc		bool			`json:"desc"`
 }
 
 type RepoEntry struct {

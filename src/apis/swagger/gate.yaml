@@ -2234,3 +2234,6 @@ definitions:
         type: string
       pulling:
         type: string
+      desc:
+        type: bool
+        description: Whether or not this repo has a description
