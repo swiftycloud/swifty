@@ -1176,6 +1176,16 @@ func repo_pull(args []string, opts [16]string) {
 	make_faas_req1("POST", "repos/" + args[0] + "/pull", http.StatusOK, nil, nil)
 }
 
+func repo_desc(args []string, opts [16]string) {
+	var d swyapi.RepoDesc
+	make_faas_req1("GET", "repos/" + args[0] + "/desc", http.StatusOK, nil, &d)
+	fmt.Printf("%s\n", d.Description)
+	for _, e := range d.Entries {
+		fmt.Printf("%s: %s\n", e.Name, e.Description)
+		fmt.Printf("    %s (%s)\n", e.Path, e.Lang)
+	}
+}
+
 func repo_info(args []string, opts [16]string) {
 	var ri swyapi.RepoInfo
 	make_faas_req1("GET", "repos/" + args[0], http.StatusOK, nil, &ri)
@@ -1472,6 +1482,7 @@ const (
 	CMD_RD string		= "rd"
 	CMD_RLS string		= "rls"
 	CMD_RP string		= "rp"
+	CMD_RDESC string	= "rdesc"
 
 	CMD_AL string		= "al"
 	CMD_AI string		= "ai"
@@ -1536,6 +1547,7 @@ var cmdOrder = []string {
 	CMD_RD,
 	CMD_RLS,
 	CMD_RP,
+	CMD_RDESC,
 
 	CMD_AL,
 	CMD_AA,
@@ -1606,6 +1618,7 @@ var cmdMap = map[string]*cmdDesc {
 	CMD_RD:		&cmdDesc{ call: repo_del,	  opts: flag.NewFlagSet(CMD_RD, flag.ExitOnError) },
 	CMD_RLS:	&cmdDesc{ call: repo_list_files,  opts: flag.NewFlagSet(CMD_RLS, flag.ExitOnError) },
 	CMD_RP:		&cmdDesc{ call: repo_pull,	  opts: flag.NewFlagSet(CMD_RP, flag.ExitOnError) },
+	CMD_RDESC:	&cmdDesc{ call: repo_desc,	  opts: flag.NewFlagSet(CMD_RDESC, flag.ExitOnError) },
 
 	CMD_AL:		&cmdDesc{ call: acc_list,	  opts: flag.NewFlagSet(CMD_AL, flag.ExitOnError) },
 	CMD_AI:		&cmdDesc{ call: acc_info,	  opts: flag.NewFlagSet(CMD_AI, flag.ExitOnError) },
@@ -1736,6 +1749,7 @@ func main() {
 	bindCmdUsage(CMD_RD,	[]string{"ID"}, "Detach repo", false)
 	bindCmdUsage(CMD_RLS,	[]string{"ID"}, "List files in repo", false)
 	bindCmdUsage(CMD_RP,	[]string{"ID"}, "Pull repo", false)
+	bindCmdUsage(CMD_RDESC,	[]string{"ID"}, "Show repo desc", false)
 
 	cmdMap[CMD_AL].opts.StringVar(&opts[0], "type", "", "Type of account to list")
 	bindCmdUsage(CMD_AL,	[]string{},	"List accounts", false)

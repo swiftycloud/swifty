@@ -1,6 +1,7 @@
 package main
 
 import (
+	"gopkg.in/yaml.v2"
 	"gopkg.in/mgo.v2/bson"
 	"fmt"
 	"bytes"
@@ -177,6 +178,27 @@ func (rd *RepoDesc)Detach(ctx context.Context, conf *YAMLConf) *swyapi.GateErr {
 	}
 
 	return nil
+}
+
+func (rd *RepoDesc)getDesc(ctx context.Context) (*swyapi.RepoDesc, *swyapi.GateErr) {
+	dfile := rd.clonePath() + "/.swifty.yml"
+	if _, err := os.Stat(dfile); os.IsNotExist(err) {
+		return nil, GateErrM(swy.GateNotAvail, "No description for repo")
+	}
+
+	var out swyapi.RepoDesc
+
+	desc, err := ioutil.ReadFile(dfile)
+	if err != nil {
+		return nil, GateErrE(swy.GateFsError, err)
+	}
+
+	err = yaml.Unmarshal(desc, &out)
+	if err != nil {
+		return nil, GateErrE(swy.GateGenErr, err)
+	}
+
+	return &out, nil
 }
 
 func (rd *RepoDesc)listFiles(ctx context.Context) ([]string, *swyapi.GateErr) {

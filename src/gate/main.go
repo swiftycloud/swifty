@@ -1693,6 +1693,25 @@ func handleRepoFiles(ctx context.Context, w http.ResponseWriter, r *http.Request
 	return nil
 }
 
+func handleRepoDesc(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
+	rd, cerr := repoFindForReq(ctx, r, true)
+	if cerr != nil {
+		return cerr
+	}
+
+	d, cerr := rd.getDesc(ctx)
+	if cerr != nil {
+		return cerr
+	}
+
+	err := swyhttp.MarshalAndWrite(w, d)
+	if err != nil {
+		return GateErrE(swy.GateBadResp, err)
+	}
+
+	return nil
+}
+
 func handleRepoPull(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
 	rd, cerr := repoFindForReq(ctx, r, false)
 	if cerr != nil {
@@ -2202,6 +2221,7 @@ func main() {
 	r.Handle("/v1/repos/{rid}",		genReqHandler(handleRepo)).Methods("GET", "PUT", "DELETE", "OPTIONS")
 	r.Handle("/v1/repos/{rid}/files",	genReqHandler(handleRepoFiles)).Methods("GET", "OPTIONS")
 	r.Handle("/v1/repos/{rid}/pull",	genReqHandler(handleRepoPull)).Methods("POST", "OPTIONS")
+	r.Handle("/v1/repos/{rid}/desc",	genReqHandler(handleRepoDesc)).Methods("GET", "OPTIONS")
 
 	r.Handle("/v1/accounts",		genReqHandler(handleAccounts)).Methods("GET", "POST", "OPTIONS")
 	r.Handle("/v1/accounts/{aid}",		genReqHandler(handleAccount)).Methods("GET", "PUT", "DELETE", "OPTIONS")

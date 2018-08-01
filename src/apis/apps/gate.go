@@ -250,6 +250,18 @@ type RepoInfo struct {
 	Pull		string			`json:"pulling,omitempty"`
 }
 
+type RepoEntry struct {
+	Name		string			`json:"name" yaml:"name"`
+	Path		string			`json:"path" yaml:"path"`
+	Description	string			`json:"desc" yaml:"desc"`
+	Lang		string			`json:"lang,omitempty" yaml:"lang,omitempty"`
+}
+
+type RepoDesc struct {
+	Description	string			`json:"desc" yaml:"desc"`
+	Entries		[]*RepoEntry		`json:"files" yaml:"files"`
+}
+
 type AccAdd struct {
 	Type		string			`json:"type"`
 	Name		string			`json:"name,omitempty"`

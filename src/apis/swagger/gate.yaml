@@ -1474,6 +1474,35 @@ paths:
           description: Need to authenticate
         '403':
           description: Bad authentication token
+
+  /repos/{rid}/desc:
+    parameters:
+      - in: header
+        name: X-Auth-Token
+        type: string
+        required: true
+      - name: rid
+        in: path
+        description: Repo ID
+        required: true
+        type: string
+    get:
+      tags:
+        - repos
+      summary: Get repository description
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/RepoDesc'
+        '400':
+          description: Bad request
+          schema:
+            $ref: '#/definitions/GateError'
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad authentication token
           
   /repos/{rid}/pull:
     parameters:
@@ -2152,6 +2181,35 @@ definitions:
     properties:
       pulling:
         type: string
+
+  RepoDesc:
+    type: object
+    description: Repo contents description
+    properties:
+      desc:
+        type: string
+        description: Description of the repo
+      files:
+        type: array
+        items:
+          $ref: '#/definitions/RepoEntry'
+
+  RepoEntry:
+    type: object
+    description: Repo dentry description
+    properties:
+      name:
+        type: string
+        description: Name of the entry
+      desc:
+        type: string
+        description: Description of the entry
+      path:
+        type: string
+        description: Path to file
+      lang:
+        type: string
+        description: Suggested language
 
   RepoInfo:
     type: object
