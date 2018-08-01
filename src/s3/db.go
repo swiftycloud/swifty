@@ -76,9 +76,6 @@ func dbConnect(conf *YAMLConf) error {
 	index.Key = []string{"bcookie"}
 	s.DB(DBName).C(DBColS3Buckets).EnsureIndex(index)
 
-	index.Key = []string{"ocookie"}
-	s.DB(DBName).C(DBColS3Objects).EnsureIndex(index)
-
 	index.Key = []string{"uid"}
 	s.DB(DBName).C(DBColS3Uploads).EnsureIndex(index)
 
@@ -87,6 +84,10 @@ func dbConnect(conf *YAMLConf) error {
 
 	index.Key = []string{"access-key-id"}
 	s.DB(DBName).C(DBColS3AccessKeys).EnsureIndex(index)
+
+	index.Unique = false
+	index.Key = []string{"ocookie"}
+	s.DB(DBName).C(DBColS3Objects).EnsureIndex(index)
 
 	dbColMap = make(map[reflect.Type]string)
 	dbColMap[reflect.TypeOf(S3Iam{})] = DBColS3Iams
@@ -344,6 +345,10 @@ func dbS3FindAllFields(ctx context.Context, query bson.M, sel bson.M, o interfac
 
 func dbS3FindAllSorted(ctx context.Context, query bson.M, sort string, o interface{}) (error) {
 	return Dbs(ctx).DB(DBName).C(dbColl(o)).Find(query).Sort(sort).All(o)
+}
+
+func dbS3FindOneTop(ctx context.Context, query bson.M, sort string, o interface{}) (error) {
+	return Dbs(ctx).DB(DBName).C(dbColl(o)).Find(query).Sort(sort).Limit(1).One(o)
 }
 
 func dbS3FindAll(ctx context.Context, query bson.M, o interface{}) (error) {

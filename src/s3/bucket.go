@@ -81,6 +81,7 @@ type S3Bucket struct {
 	Ref				int64		`bson:"ref"`
 	CntObjects			int64		`bson:"cnt-objects"`
 	CntBytes			int64		`bson:"cnt-bytes"`
+	Rover				int64		`bson:"rover"`
 	Name				string		`bson:"name"`
 	CannedAcl			string		`bson:"canned-acl"`
 	BasicNotify			*S3BucketNotify	`bson:"notify,omitempty"`
@@ -116,7 +117,7 @@ func (bucket *S3Bucket)dbCmtObj(ctx context.Context, size, ref int64) (error) {
 }
 
 func (bucket *S3Bucket)dbAddObj(ctx context.Context, size, ref int64) (error) {
-	m := bson.M{ "cnt-objects": 1, "cnt-bytes": size, "ref": ref }
+	m := bson.M{ "cnt-objects": 1, "cnt-bytes": size, "ref": ref, "rover": int64(1) }
 	err := dbS3Update(ctx, bson.M{ "state": S3StateActive },
 		bson.M{ "$inc": m }, true, bucket)
 	if err != nil {
@@ -444,6 +445,7 @@ func s3ListBucket(ctx context.Context, iam *S3Iam, bname string, params *S3ListO
 	var pipe *mgo.Pipe
 	var iter *mgo.Iter
 	var err error
+	var pkey string
 
 	if params.Validate() == false {
 		return nil, &S3Error{ ErrorCode: S3ErrInvalidArgument }
@@ -476,9 +478,15 @@ func s3ListBucket(ctx context.Context, iam *S3Iam, bname string, params *S3ListO
 
 	prefixes_map = make(map[string]bool)
 
-	pipe = dbS3Pipe(ctx, &object, []bson.M{{"$match": query}, {"$sort": bson.M{"key": 1}}})
+	pipe = dbS3Pipe(ctx, &object, []bson.M{{"$match": query}, {"$sort": bson.M{"key": 1, "rover": -1}}})
 	iter = pipe.Iter()
 	for iter.Next(&object) {
+		if object.Key == pkey {
+			continue
+		}
+
+		pkey = object.Key
+
 		if start_after {
 			if object.Key != params.StartAfter { continue }
 			start_after = false

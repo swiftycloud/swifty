@@ -44,6 +44,7 @@ type S3Object struct {
 
 	BucketObjID			bson.ObjectId	`bson:"bucket-id,omitempty"`
 	Version				int		`bson:"version"`
+	Rover				int64		`bson:"rover"`
 	Size				int64		`bson:"size"`
 	ETag				string		`bson:"etag"`
 
@@ -106,12 +107,27 @@ func (bucket *S3Bucket)FindCurObject(ctx context.Context, oname string) (*S3Obje
 	var res S3Object
 
 	query := bson.M{ "ocookie": bucket.OCookie(oname, 1), "state": S3StateActive }
-	err := dbS3FindOne(ctx, query, &res)
+	err := dbS3FindOneTop(ctx, query, "-rover", &res)
 	if err != nil {
 		return nil, err
 	}
 
 	return &res,nil
+}
+
+func (o *S3Object)Activate(ctx context.Context, b *S3Bucket, etag string) error {
+	err := dbS3SetOnState(ctx, o, S3StateActive, nil,
+			bson.M{ "state": S3StateActive, "etag": etag, "rover": b.Rover })
+	if err == nil {
+		err = b.dbCmtObj(ctx, o.Size, -1)
+	}
+
+	if err == nil {
+		ioSize.Observe(float64(o.Size) / KiB)
+		go gcOldVersions(b, o.Key, b.Rover)
+	}
+
+	return err
 }
 
 func (bucket *S3Bucket)ToObject(ctx context.Context, iam *S3Iam, upload *S3Upload) (*S3Object, error) {
@@ -128,7 +144,7 @@ func (bucket *S3Bucket)ToObject(ctx context.Context, iam *S3Iam, upload *S3Uploa
 		 */
 		ObjID:		upload.ObjID,
 		IamObjID:	iam.ObjID,
-		State:		S3StateActive,
+		State:		S3StateNone,
 
 		S3ObjectPorps: S3ObjectPorps {
 			Key:		upload.Key,
@@ -138,7 +154,6 @@ func (bucket *S3Bucket)ToObject(ctx context.Context, iam *S3Iam, upload *S3Uploa
 
 		Version:	1,
 		Size:		size,
-		ETag:		etag,
 		BucketObjID:	bucket.ObjID,
 		OCookie:	bucket.OCookie(upload.Key, 1),
 	}
@@ -148,12 +163,15 @@ func (bucket *S3Bucket)ToObject(ctx context.Context, iam *S3Iam, upload *S3Uploa
 	}
 	log.Debugf("s3: Converted %s", infoLong(object))
 
-	err = bucket.dbAddObj(ctx, object.Size, 0)
+	err = bucket.dbAddObj(ctx, object.Size, 1)
 	if err != nil {
 		goto out_remove
 	}
 
-	ioSize.Observe(float64(object.Size) / KiB)
+	err = object.Activate(ctx, bucket, etag)
+	if err != nil {
+		goto out_remove
+	}
 
 	if bucket.BasicNotify != nil && bucket.BasicNotify.Put > 0 {
 		s3Notify(ctx, iam, bucket, object, "put")
@@ -203,18 +221,10 @@ func (bucket *S3Bucket)AddObject(ctx context.Context, iam *S3Iam, oname string,
 		goto out_acc
 	}
 
-	err = dbS3SetOnState(ctx, object, S3StateActive, nil,
-		bson.M{ "state": S3StateActive, "etag": objp.ETag })
+	err = object.Activate(ctx, bucket, objp.ETag)
 	if err != nil {
 		goto out
 	}
-
-	bucket.dbCmtObj(ctx, object.Size, -1)
-	if err != nil {
-		goto out
-	}
-
-	ioSize.Observe(float64(object.Size) / KiB)
 
 	if bucket.BasicNotify != nil && bucket.BasicNotify.Put > 0 {
 		s3Notify(ctx, iam, bucket, object, "put")
@@ -234,7 +244,6 @@ out_remove:
 
 func s3DeleteObject(ctx context.Context, iam *S3Iam, bucket *S3Bucket, oname string) error {
 	var object *S3Object
-	var objp []*S3ObjectPart
 	var err error
 
 	object, err = bucket.FindCurObject(ctx, oname)
@@ -247,11 +256,27 @@ func s3DeleteObject(ctx context.Context, iam *S3Iam, bucket *S3Bucket, oname str
 		return err
 	}
 
-	err = dbS3SetState(ctx, object, S3StateInactive, nil)
+	err = bucket.DropObject(ctx, object)
 	if err != nil {
 		if err == mgo.ErrNotFound {
-			return nil
+			err = nil
 		}
+		return err
+	}
+
+	if bucket.BasicNotify != nil && bucket.BasicNotify.Delete > 0 {
+		s3Notify(ctx, iam, bucket, object, "delete")
+	}
+
+	log.Debugf("s3: Deleted %s", infoLong(object))
+	return nil
+}
+
+func (bucket *S3Bucket)DropObject(ctx context.Context, object *S3Object) error {
+	var objp []*S3ObjectPart
+
+	err := dbS3SetState(ctx, object, S3StateInactive, nil)
+	if err != nil {
 		return err
 	}
 
@@ -277,11 +302,6 @@ func s3DeleteObject(ctx context.Context, iam *S3Iam, bucket *S3Bucket, oname str
 		return err
 	}
 
-	if bucket.BasicNotify != nil && bucket.BasicNotify.Delete > 0 {
-		s3Notify(ctx, iam, bucket, object, "delete")
-	}
-
-	log.Debugf("s3: Deleted %s", infoLong(object))
 	return nil
 }
 

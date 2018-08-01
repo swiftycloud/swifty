@@ -290,7 +290,6 @@ func s3ObjectPartDelOne(ctx context.Context, bucket *S3Bucket, ocookie string, o
 		return err
 	}
 
-	log.Debugf("s3: Deleted %s", infoLong(objp))
 	return nil
 }
 
