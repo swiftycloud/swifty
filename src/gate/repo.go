@@ -241,12 +241,22 @@ func (rd *RepoDesc)listFiles(ctx context.Context) ([]string, *swyapi.GateErr) {
 }
 
 func (rd *RepoDesc)pull(ctx context.Context) *swyapi.GateErr {
-	var stdout bytes.Buffer
-	var stderr bytes.Buffer
-
 	if rd.LastPull != nil && time.Now().Before( rd.LastPull.Add(time.Duration(conf.RepoSyncRate) * time.Minute)) {
 		return GateErrM(swy.GateNotAvail, "To frequent sync")
 	}
+
+	go func() {
+		pctx, done := mkContext("::repo-pull")
+		rd.pullSync(pctx)
+		done(pctx)
+	}()
+
+	return nil
+}
+
+func (rd *RepoDesc)pullSync(ctx context.Context) *swyapi.GateErr {
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
 
 	clone_to := rd.clonePath()
 	ctxlog(ctx).Debugf("Git pull %s", clone_to)
@@ -292,7 +302,7 @@ func pullRepos(ts time.Time) error {
 	synced := 0
 
 	for _, rd := range rds {
-		if rd.pull(ctx) == nil {
+		if rd.pullSync(ctx) == nil {
 			synced++
 		}
 	}
