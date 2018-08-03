@@ -74,6 +74,10 @@ func setupGithubAcc(ad *AccDesc, params *swyapi.AccAdd) *swyapi.GateErr {
 
 	/* All secrets must be encrypted */
 	if params.Token != "" {
+		if len(params.Token) < 10 {
+			return GateErrM(swy.GateBadRequest, "Invalid token value")
+		}
+
 		params.Token, err = swycrypt.EncryptString(gateSecPas, params.Token)
 		if err != nil {
 			return GateErrE(swy.GateGenErr, err)
@@ -108,6 +112,10 @@ func infoGitHubAcc(ad *AccDesc, info *swyapi.AccInfo, detail bool) {
 
 func updateGithubAcc(ad *AccDesc, params *swyapi.AccUpdate) *swyapi.GateErr {
 	if params.Token != nil {
+		if len(*params.Token) < 10 {
+			return GateErrM(swy.GateBadRequest, "Invalid token value")
+		}
+
 		ad.GH.CypToken = *params.Token
 		if ad.GH.CypToken != "" {
 			var err error
