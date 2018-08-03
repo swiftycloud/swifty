@@ -26,6 +26,7 @@ func (gd *GHDesc)Token() (string, error) {
 type AccDesc struct {
 	ObjID		bson.ObjectId	`bson:"_id,omitempty"`
 	SwoId				`bson:",inline"`
+	Cookie		string		`bson:"cookie"`
 	Type		string		`bson:"type"`
 	GH		*GHDesc		`bson:"gh,omitempty"`
 }
@@ -83,6 +84,8 @@ func setupGithubAcc(ad *AccDesc, params *swyapi.AccAdd) *swyapi.GateErr {
 		Name:		params.Name,
 		CypToken:	params.Token,
 	}
+
+	ad.Cookie = cookifyS(ad.Type, ad.GH.Name)
 
 	return nil
 }

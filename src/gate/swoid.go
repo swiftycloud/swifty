@@ -41,6 +41,14 @@ func cookify(val string) string {
 	return hex.EncodeToString(h.Sum(nil))
 }
 
+func cookifyS(vals ...string) string {
+	h := sha256.New()
+	for _, v := range vals {
+		h.Write([]byte(v + "::"))
+	}
+	return hex.EncodeToString(h.Sum(nil))
+}
+
 func (id *SwoId) Cookie() string {
 	return cookify(id.Tennant + "/" + id.Project + "/" + id.Name)
 }
