@@ -191,14 +191,14 @@ func swk8sGenEnvVar(ctx context.Context, fn *FunctionDesc, wd_port int) []v1.Env
 	}
 
 	for _, s3b := range(fn.S3Buckets) {
-		envs, err := mwareGenerateSecret(ctx, &fn.SwoId, "s3", s3b)
+		envs, err := GenBucketKeysS3(ctx, &conf.Mware, &fn.SwoId, s3b)
 		if err != nil {
 			ctxlog(ctx).Errorf("No s3 bucket secret for %s", s3b)
 			continue
 		}
 
-		for _, env := range(envs) {
-			s = append(s, v1.EnvVar{ Name:env[0], Value:env[1] })
+		for en, ev := range(envs) {
+			s = append(s, v1.EnvVar{ Name:en, Value:ev })
 		}
 	}
 
@@ -589,24 +589,14 @@ func init() {
 	go podEventLoop()
 }
 
-func swk8sMwSecretGen(envs [][2]string) map[string][]byte {
-	secret := make(map[string][]byte)
-
-	for _, v := range envs {
-		secret[v[0]] = []byte(v[1])
-	}
-
-	return secret
-}
-
-func swk8sMwSecretAdd(ctx context.Context, id string, envs [][2]string) error {
+func swk8sMwSecretAdd(ctx context.Context, id string, envs map[string][]byte) error {
 	secrets := swk8sClientSet.Secrets(conf.Wdog.Namespace)
 	_, err := secrets.Create(&v1.Secret{
 			ObjectMeta:	v1.ObjectMeta {
 				Name:	"mw-" + id,
 				Labels:	map[string]string{},
 			},
-			Data:		swk8sMwSecretGen(envs),
+			Data:		envs,
 			Type:		v1.SecretTypeOpaque,
 		})
 

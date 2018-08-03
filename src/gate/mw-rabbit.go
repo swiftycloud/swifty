@@ -126,8 +126,10 @@ func EventRabbitMQ(ctx context.Context, conf *YAMLConfMw, source *FnEventDesc, m
 	return errors.New("Not supported")
 }
 
-func GetEnvRabbitMQ(conf *YAMLConfMw, mwd *MwareDesc) ([][2]string) {
-	return append(mwGenUserPassEnvs(mwd, conf.Rabbit.c.Addr()), mkEnv(mwd, "VHOST", mwd.Namespace))
+func GetEnvRabbitMQ(conf *YAMLConfMw, mwd *MwareDesc) map[string][]byte {
+	e := mwd.stdEnvs(conf.Rabbit.c.Addr())
+	e[mwd.envName("VHOST")] = []byte(mwd.Namespace)
+	return e
 }
 
 var MwareRabbitMQ = MwareOps {

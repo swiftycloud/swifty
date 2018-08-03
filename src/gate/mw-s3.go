@@ -202,15 +202,7 @@ func s3Endpoint(conf *YAMLConfS3, public bool) string {
 	return conf.API
 }
 
-func makeS3Envs(conf *YAMLConfS3, bucket, key, skey string) [][2]string {
-	var ret [][2]string
-	ret = append(ret, mkEnvId(bucket, "s3", "ADDR", s3Endpoint(conf, false)))
-	ret = append(ret, mkEnvId(bucket, "s3", "KEY", key))
-	ret = append(ret, mkEnvId(bucket, "s3", "SECRET", skey))
-	return ret
-}
-
-func GenBucketKeysS3(ctx context.Context, conf *YAMLConfMw, fid *SwoId, bucket string) ([][2]string, error) {
+func GenBucketKeysS3(ctx context.Context, conf *YAMLConfMw, fid *SwoId, bucket string) (map[string]string, error) {
 	var key, skey string
 	var err error
 
@@ -220,7 +212,11 @@ func GenBucketKeysS3(ctx context.Context, conf *YAMLConfMw, fid *SwoId, bucket s
 		return nil, fmt.Errorf("Key generation error")
 	}
 
-	return makeS3Envs(&conf.S3, bucket, key, skey), nil
+	return map[string]string {
+		mkEnvName("s3", bucket, "ADDR"):	s3Endpoint(&conf.S3, false),
+		mkEnvName("s3", bucket, "KEY"):		key,
+		mkEnvName("s3", bucket, "SECRET"):	skey,
+	}, nil
 }
 
 func mwareGetS3Creds(ctx context.Context, conf *YAMLConf, acc *swyapi.S3Access) (*swyapi.S3Creds, *swyapi.GateErr) {
@@ -256,6 +252,5 @@ func mwareGetS3Creds(ctx context.Context, conf *YAMLConf, acc *swyapi.S3Access) 
 var MwareS3 = MwareOps {
 	Init:		InitS3,
 	Fini:		FiniS3,
-	GenSec:		GenBucketKeysS3,
 	LiteOK:		true,
 }

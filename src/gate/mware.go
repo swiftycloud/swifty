@@ -54,26 +54,25 @@ type MwareOps struct {
 	Init	func(ctx context.Context, conf *YAMLConfMw, mwd *MwareDesc) (error)
 	Fini	func(ctx context.Context, conf *YAMLConfMw, mwd *MwareDesc) (error)
 	Event	func(ctx context.Context, conf *YAMLConfMw, source *FnEventDesc, mwd *MwareDesc, on bool) (error)
-	GenSec	func(ctx context.Context, conf *YAMLConfMw, fid *SwoId, id string)([][2]string, error)
-	GetEnv	func(conf *YAMLConfMw, mwd *MwareDesc) ([][2]string)
+	GetEnv	func(conf *YAMLConfMw, mwd *MwareDesc) (map[string][]byte)
 	Info	func(ctx context.Context, conf *YAMLConfMw, mwd *MwareDesc, ifo *swyapi.MwareInfo) (error)
 	Devel	bool
 	LiteOK	bool
 }
 
-func mkEnvId(name, mwType, envName, value string) [2]string {
-	return [2]string{"MWARE_" + strings.ToUpper(mwType) + strings.ToUpper(name) + "_" + envName, value}
+func mkEnvName(typ, name, env string) string {
+	return "MWARE_" + strings.ToUpper(typ) + strings.ToUpper(name) + "_" + env
 }
 
-func mkEnv(mwd *MwareDesc, envName, value string) [2]string {
-	return mkEnvId(mwd.Name, mwd.MwareType, envName, value)
+func (mw *MwareDesc)envName(envName string) string {
+	return mkEnvName(mw.MwareType, mw.Name, envName)
 }
 
-func mwGenUserPassEnvs(mwd *MwareDesc, mwaddr string) ([][2]string) {
-	return [][2]string{
-		mkEnv(mwd, "ADDR", mwaddr),
-		mkEnv(mwd, "USER", mwd.Client),
-		mkEnv(mwd, "PASS", mwd.Secret),
+func (mwd *MwareDesc)stdEnvs(mwaddr string) map[string][]byte {
+	return map[string][]byte {
+		mwd.envName("ADDR"): []byte(mwaddr),
+		mwd.envName("USER"): []byte(mwd.Client),
+		mwd.envName("PASS"): []byte(mwd.Secret),
 	}
 }
 
@@ -117,19 +116,6 @@ var mwareHandlers = map[string]*MwareOps {
 	"mongo":	&MwareMongo,
 	"s3":		&MwareS3,
 	"authjwt":	&MwareAuthJWT,
-}
-
-func mwareGenerateSecret(ctx context.Context, fid *SwoId, typ, id string) ([][2]string, error) {
-	handler, ok := mwareHandlers[typ]
-	if !ok {
-		return nil, fmt.Errorf("No handler for %s mware", typ)
-	}
-
-	if handler.GenSec == nil {
-		return nil, fmt.Errorf("No secrets generator for %s", typ)
-	}
-
-	return handler.GenSec(ctx, &conf.Mware, fid, id)
 }
 
 func mwareRemoveId(ctx context.Context, conf *YAMLConfMw, id *SwoId) *swyapi.GateErr {

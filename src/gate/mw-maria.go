@@ -116,8 +116,10 @@ func FiniMariaDB(ctx context.Context, conf *YAMLConfMw, mwd *MwareDesc) error {
 	return nil
 }
 
-func GetEnvMariaDB(conf *YAMLConfMw, mwd *MwareDesc) ([][2]string) {
-	return append(mwGenUserPassEnvs(mwd, conf.Maria.c.Addr()), mkEnv(mwd, "DBNAME", mwd.Namespace))
+func GetEnvMariaDB(conf *YAMLConfMw, mwd *MwareDesc) map[string][]byte {
+	e := mwd.stdEnvs(conf.Maria.c.Addr())
+	e[mwd.envName("DBNAME")] = []byte(mwd.Namespace)
+	return e
 }
 
 func InfoMariaDB(ctx context.Context, conf *YAMLConfMw, mwd *MwareDesc, ifo *swyapi.MwareInfo) error {

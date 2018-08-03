@@ -124,8 +124,8 @@ func FiniAuthJWT(ctx context.Context, conf *YAMLConfMw, mwd *MwareDesc) error {
 	return nil
 }
 
-func GetEnvAuthJWT(conf *YAMLConfMw, mwd *MwareDesc) ([][2]string) {
-	return [][2]string{ mkEnv(mwd, "SIGNKEY", mwd.Secret) }
+func GetEnvAuthJWT(conf *YAMLConfMw, mwd *MwareDesc) map[string][]byte {
+	return map[string][]byte{mwd.envName("SIGNKEY"): []byte(mwd.Secret)}
 }
 
 var MwareAuthJWT = MwareOps {

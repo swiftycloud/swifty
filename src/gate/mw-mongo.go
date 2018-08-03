@@ -59,8 +59,10 @@ func FiniMongo(ctx context.Context, conf *YAMLConfMw, mwd *MwareDesc) error {
 	return nil
 }
 
-func GetEnvMongo(conf *YAMLConfMw, mwd *MwareDesc) ([][2]string) {
-	return append(mwGenUserPassEnvs(mwd, conf.Mongo.c.Addr()), mkEnv(mwd, "DBNAME", mwd.Namespace))
+func GetEnvMongo(conf *YAMLConfMw, mwd *MwareDesc) map[string][]byte {
+	e := mwd.stdEnvs(conf.Mongo.c.Addr())
+	e[mwd.envName("DBNAME")] = []byte(mwd.Namespace)
+	return e
 }
 
 type MgoStat struct {
