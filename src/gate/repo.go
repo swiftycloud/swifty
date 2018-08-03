@@ -667,7 +667,7 @@ func listRepos(ctx context.Context, accid, att string) ([]*swyapi.RepoInfo, *swy
 		/* FIXME -- maybe cache repos in a DB? */
 		var acs []*AccDesc
 
-		q := bson.M{"type": "github"}
+		q := bson.M{"type": "github", "tennant":  gctx(ctx).Tenant}
 		if accid != "" {
 			q["_id"] = bson.ObjectIdHex(accid)
 		}
