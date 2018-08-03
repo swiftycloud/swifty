@@ -2,7 +2,8 @@ FROM python:3
 
 WORKDIR /home
 
-RUN pip install pymysql pymongo boto3
+RUN pip install --upgrade pip
+RUN pip install pymysql pymongo boto3 pillow requests piexif
 COPY swy-wdog /usr/bin/
 COPY swy-runner /usr/bin/
 COPY swifty.py /swifty/
