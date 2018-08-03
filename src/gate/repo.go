@@ -151,7 +151,7 @@ func (rd *RepoDesc)Attach(ctx context.Context, ac *AccDesc) *swyapi.GateErr {
 		return GateErrD(err)
 	}
 
-	go cloneRepo(rd, ac)
+	go rd.clone(ac)
 
 	return nil
 }
@@ -396,7 +396,7 @@ func updateSources(ctx context.Context, fn *FunctionDesc, src *swyapi.FunctionSo
 	return srch.get(ctx, fn, src)
 }
 
-func cloneRepo(rd *RepoDesc, ac *AccDesc) {
+func (rd *RepoDesc)clone(ac *AccDesc) {
 	ctx, done := mkContext("::gitclone")
 	defer done(ctx)
 
