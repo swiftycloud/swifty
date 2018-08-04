@@ -1821,6 +1821,10 @@ definitions:
         type: string
         description: Path to file in a repo for type == git
         example: '<repoId>/path/to/file.go'
+      sync:
+        type: boolean
+        description: When set and type is "git" the function will be auto-updates once the repo file changes
+
   FunctionCode:
     type: object
     description: Code description

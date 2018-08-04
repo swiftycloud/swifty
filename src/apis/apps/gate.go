@@ -85,6 +85,7 @@ type FunctionSources struct {
 	Repo		string			`json:"repo,omitempty"`
 	Code		string			`json:"code,omitempty"`
 	Swage		*FunctionSwage		`json:"swage,omitempty"`
+	Sync		bool			`json:"sync"`
 }
 
 type FunctionSize struct {
