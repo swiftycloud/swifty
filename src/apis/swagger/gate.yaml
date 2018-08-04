@@ -1465,7 +1465,7 @@ paths:
           schema:
             type: array
             items:
-              type: string
+              $ref: '#/definitions/RepoFile'
         '400':
           description: Bad request
           schema:
@@ -2193,6 +2193,28 @@ definitions:
         type: array
         items:
           $ref: '#/definitions/RepoEntry'
+
+  RepoFile:
+    type: object
+    description: Repo file/directory description
+    required:
+      - type
+        label
+        path
+    properties:
+      label:
+        type: string
+        description: Name of the entry
+      path:
+        type: string
+        description: Path of the entry
+      type:
+        type: string
+        description: Entry type, "dir" or "file"
+      children:
+        type: array
+        items:
+          $ref: '#/definitions/RepoFile'
 
   RepoEntry:
     type: object

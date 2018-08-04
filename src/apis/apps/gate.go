@@ -263,6 +263,13 @@ type RepoDesc struct {
 	Entries		[]*RepoEntry		`json:"files" yaml:"files"`
 }
 
+type RepoFile struct {
+	Label		string		`json:"label"`
+	Path		string		`json:"path"`
+	Type		string		`json:"type"`
+	Children	[]*RepoFile	`json:"children,omitempty"`
+}
+
 type AccAdd struct {
 	Type		string			`json:"type"`
 	Name		string			`json:"name,omitempty"`

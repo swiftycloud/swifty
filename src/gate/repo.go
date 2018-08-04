@@ -13,7 +13,6 @@ import (
 	"time"
 	"io/ioutil"
 	"encoding/base64"
-	"path/filepath"
 	"strconv"
 	"errors"
 	"../common"
@@ -212,32 +211,46 @@ func (rd *RepoDesc)getDesc(ctx context.Context) (*swyapi.RepoDesc, *swyapi.GateE
 	return &out, nil
 }
 
-func (rd *RepoDesc)listFiles(ctx context.Context) ([]string, *swyapi.GateErr) {
-	searchDir := rd.clonePath()
-	fileList := []string{}
-	err := filepath.Walk(searchDir, func(path string, f os.FileInfo, err error) error {
+func (rd *RepoDesc)listFiles(ctx context.Context) ([]*swyapi.RepoFile, *swyapi.GateErr) {
+	rp := rd.clonePath()
+	root := swyapi.RepoFile { Path: "" }
+	dirs := []*swyapi.RepoFile{&root}
+
+	for len(dirs) > 0 {
+		dir := dirs[0]
+		dirs = dirs[1:]
+
+		ents, err := ioutil.ReadDir(rp + "/" + dir.Path)
 		if err != nil {
-			return err
+			return nil, GateErrE(swy.GateFsError, err)
 		}
 
-		if f.IsDir() {
-			if f.Name() == ".git" {
-				return filepath.SkipDir
+		for _, ent := range ents {
+			e := &swyapi.RepoFile{
+				Label:	ent.Name(),
+			}
+			if dir.Path == "" {
+				e.Path = ent.Name()
+			} else {
+				e.Path = dir.Path + "/" + ent.Name()
 			}
 
-			return nil
+			if ent.IsDir() {
+				if e.Label == ".git" {
+					continue
+				}
+
+				e.Type = "dir"
+				dirs = append(dirs, e)
+			} else {
+				e.Type = "file"
+			}
+
+			dir.Children = append(dir.Children, e)
 		}
-
-		path, _ = filepath.Rel(searchDir, path)
-		fileList = append(fileList, path)
-		return nil
-	})
-
-	if err != nil {
-		return nil, GateErrE(swy.GateFsError, err)
 	}
 
-	return fileList, nil
+	return root.Children, nil
 }
 
 func (rd *RepoDesc)pull(ctx context.Context) *swyapi.GateErr {

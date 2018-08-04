@@ -1164,12 +1164,19 @@ func repo_list(args []string, opts [16]string) {
 	}
 }
 
-func repo_list_files(args []string, opts [16]string) {
-	var fl []string
-	make_faas_req1("GET", "repos/" + args[0] + "/files", http.StatusOK, nil, &fl)
+func show_files(pref string, fl []*swyapi.RepoFile) {
 	for _, f := range fl {
-		fmt.Printf("%s\n", f)
+		fmt.Printf("%s%s\n", pref, f.Path)
+		if f.Type == "dir" {
+			show_files(pref + "  ", f.Children)
+		}
 	}
+}
+
+func repo_list_files(args []string, opts [16]string) {
+	var fl []*swyapi.RepoFile
+	make_faas_req1("GET", "repos/" + args[0] + "/files", http.StatusOK, nil, &fl)
+	show_files("", fl)
 }
 
 func repo_pull(args []string, opts [16]string) {
