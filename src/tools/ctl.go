@@ -1179,6 +1179,16 @@ func repo_list_files(args []string, opts [16]string) {
 	show_files("", fl)
 }
 
+func repo_cat_file(args []string, opts [16]string) {
+	p := strings.SplitN(args[0], "/", 2)
+	resp := make_faas_req2("GET", "repos/" + p[0] + "/files/" + p[1], nil, http.StatusOK, 0)
+	dat, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		fatal(fmt.Errorf("Can't read file: %s", err.Error()))
+	}
+	fmt.Printf(string(dat))
+}
+
 func repo_pull(args []string, opts [16]string) {
 	make_faas_req1("POST", "repos/" + args[0] + "/pull", http.StatusOK, nil, nil)
 }
@@ -1492,6 +1502,7 @@ const (
 	CMD_RU string		= "ru"
 	CMD_RD string		= "rd"
 	CMD_RLS string		= "rls"
+	CMD_RCAT string		= "rcat"
 	CMD_RP string		= "rp"
 	CMD_RDESC string	= "rdesc"
 
@@ -1557,6 +1568,7 @@ var cmdOrder = []string {
 	CMD_RU,
 	CMD_RD,
 	CMD_RLS,
+	CMD_RCAT,
 	CMD_RP,
 	CMD_RDESC,
 
@@ -1628,6 +1640,7 @@ var cmdMap = map[string]*cmdDesc {
 	CMD_RU:		&cmdDesc{ call: repo_upd,	  opts: flag.NewFlagSet(CMD_RU, flag.ExitOnError) },
 	CMD_RD:		&cmdDesc{ call: repo_del,	  opts: flag.NewFlagSet(CMD_RD, flag.ExitOnError) },
 	CMD_RLS:	&cmdDesc{ call: repo_list_files,  opts: flag.NewFlagSet(CMD_RLS, flag.ExitOnError) },
+	CMD_RCAT:	&cmdDesc{ call: repo_cat_file,	  opts: flag.NewFlagSet(CMD_RCAT, flag.ExitOnError) },
 	CMD_RP:		&cmdDesc{ call: repo_pull,	  opts: flag.NewFlagSet(CMD_RP, flag.ExitOnError) },
 	CMD_RDESC:	&cmdDesc{ call: repo_desc,	  opts: flag.NewFlagSet(CMD_RDESC, flag.ExitOnError) },
 
@@ -1759,6 +1772,7 @@ func main() {
 	bindCmdUsage(CMD_RU,	[]string{"ID"}, "Update repo", false)
 	bindCmdUsage(CMD_RD,	[]string{"ID"}, "Detach repo", false)
 	bindCmdUsage(CMD_RLS,	[]string{"ID"}, "List files in repo", false)
+	bindCmdUsage(CMD_RCAT,	[]string{"ID/NAME"}, "Show contents of a file", false)
 	bindCmdUsage(CMD_RP,	[]string{"ID"}, "Pull repo", false)
 	bindCmdUsage(CMD_RDESC,	[]string{"ID"}, "Show repo desc", false)
 

@@ -1680,14 +1680,29 @@ func handleRepoFiles(ctx context.Context, w http.ResponseWriter, r *http.Request
 		return cerr
 	}
 
-	files, cerr := rd.listFiles(ctx)
-	if cerr != nil {
-		return cerr
-	}
+	p := strings.SplitN(r.URL.Path, "/", 6)
+	if len(p) < 5 {
+		/* This is panic, actually */
+		return GateErrM(swy.GateBadRequest, "Bad repo req")
+	} else if len(p) == 5 {
+		files, cerr := rd.listFiles(ctx)
+		if cerr != nil {
+			return cerr
+		}
 
-	err := swyhttp.MarshalAndWrite(w, files)
-	if err != nil {
-		return GateErrE(swy.GateBadResp, err)
+		err := swyhttp.MarshalAndWrite(w, files)
+		if err != nil {
+			return GateErrE(swy.GateBadResp, err)
+		}
+	} else {
+		cont, cerr := rd.readFile(ctx, p[5])
+		if cerr != nil {
+			return cerr
+		}
+
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.WriteHeader(http.StatusOK)
+		w.Write(cont)
 	}
 
 	return nil
@@ -2219,7 +2234,7 @@ func main() {
 
 	r.Handle("/v1/repos",			genReqHandler(handleRepos)).Methods("GET", "POST", "OPTIONS")
 	r.Handle("/v1/repos/{rid}",		genReqHandler(handleRepo)).Methods("GET", "PUT", "DELETE", "OPTIONS")
-	r.Handle("/v1/repos/{rid}/files",	genReqHandler(handleRepoFiles)).Methods("GET", "OPTIONS")
+	r.PathPrefix("/v1/repos/{rid}/files").Methods("GET", "OPTIONS").Handler(genReqHandler(handleRepoFiles))
 	r.Handle("/v1/repos/{rid}/pull",	genReqHandler(handleRepoPull)).Methods("POST", "OPTIONS")
 	r.Handle("/v1/repos/{rid}/desc",	genReqHandler(handleRepoDesc)).Methods("GET", "OPTIONS")
 

@@ -1475,6 +1475,40 @@ paths:
         '403':
           description: Bad authentication token
 
+  /repos/{rid}/files/{fname}:
+    parameters:
+      - in: header
+        name: X-Auth-Token
+        type: string
+        required: true
+      - name: rid
+        in: path
+        description: Repo ID
+        required: true
+        type: string
+      - name: fname
+        in: path
+        description: Path to file
+        required: true
+        type: string
+    get:
+      tags:
+        - repos
+      summary: Read file from repo
+      responses:
+        '200':
+          description: OK
+          schema:
+            type: string
+        '400':
+          description: Bad request
+          schema:
+            $ref: '#/definitions/GateError'
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad authentication token
+
   /repos/{rid}/desc:
     parameters:
       - in: header

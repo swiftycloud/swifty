@@ -211,6 +211,20 @@ func (rd *RepoDesc)getDesc(ctx context.Context) (*swyapi.RepoDesc, *swyapi.GateE
 	return &out, nil
 }
 
+func (rd *RepoDesc)readFile(ctx context.Context, fname string) ([]byte, *swyapi.GateErr) {
+	dfile := rd.clonePath() + "/" + fname
+	if _, err := os.Stat(dfile); os.IsNotExist(err) {
+		return nil, GateErrM(swy.GateNotAvail, "No such file in repo")
+	}
+
+	cont, err := ioutil.ReadFile(dfile)
+	if err != nil {
+		return nil, GateErrM(swy.GateFsError, "Error reading file")
+	}
+
+	return cont, nil
+}
+
 func (rd *RepoDesc)listFiles(ctx context.Context) ([]*swyapi.RepoFile, *swyapi.GateErr) {
 	rp := rd.clonePath()
 	root := swyapi.RepoFile { Path: "" }
