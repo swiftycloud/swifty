@@ -2075,12 +2075,12 @@ definitions:
       expires:
         type: integer
         description: Lifetime in seconds
+
   DeployStart:
     type: object
     description: Description of deployment
     required:
       - name
-      - items
     properties:
       project:
         type: string
@@ -2237,8 +2237,8 @@ definitions:
     description: Repo file/directory description
     required:
       - type
-        label
-        path
+      - label
+      - path
     properties:
       label:
         type: string
