@@ -227,7 +227,7 @@ func (rd *RepoDesc)readFile(ctx context.Context, fname string) ([]byte, *swyapi.
 
 func (rd *RepoDesc)listFiles(ctx context.Context) ([]*swyapi.RepoFile, *swyapi.GateErr) {
 	rp := rd.clonePath()
-	root := swyapi.RepoFile { Path: "" }
+	root := swyapi.RepoFile { Path: "", Children: &[]*swyapi.RepoFile{} }
 	dirs := []*swyapi.RepoFile{&root}
 
 	for len(dirs) > 0 {
@@ -255,16 +255,19 @@ func (rd *RepoDesc)listFiles(ctx context.Context) ([]*swyapi.RepoFile, *swyapi.G
 				}
 
 				e.Type = "dir"
+				e.Children = &[]*swyapi.RepoFile{}
 				dirs = append(dirs, e)
 			} else {
 				e.Type = "file"
 			}
 
-			dir.Children = append(dir.Children, e)
+			l := *dir.Children
+			l = append(l, e)
+			dir.Children = &l
 		}
 	}
 
-	return root.Children, nil
+	return *root.Children, nil
 }
 
 func (rd *RepoDesc)pull(ctx context.Context) *swyapi.GateErr {

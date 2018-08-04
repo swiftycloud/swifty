@@ -268,7 +268,7 @@ type RepoFile struct {
 	Label		string		`json:"label"`
 	Path		string		`json:"path"`
 	Type		string		`json:"type"`
-	Children	[]*RepoFile	`json:"children,omitempty"`
+	Children	*[]*RepoFile	`json:"children,omitempty"`
 }
 
 type AccAdd struct {
