@@ -106,12 +106,14 @@ func getEnvGenAcc(ad *AccDesc) map[string]string {
 	}
 }
 
-var accHandlers = map[string] struct {
+type acHandler struct {
 	setup func (*AccDesc, *swyapi.AccAdd) *swyapi.GateErr
 	info func (*AccDesc, *swyapi.AccInfo, bool)
 	update func (*AccDesc, *swyapi.AccUpdate) *swyapi.GateErr
 	getEnv func (*AccDesc) map[string]string
-} {
+}
+
+var accHandlers = map[string]acHandler {
 	"github":	{
 		setup:	setupGithubAcc,
 		info:	infoGenAcc,
@@ -125,6 +127,20 @@ var accHandlers = map[string] struct {
 		update:	updateGenAcc,
 		getEnv: getEnvGenAcc,
 	},
+}
+
+func (ad *AccDesc)handler() *acHandler {
+	ah, ok := accHandlers[ad.Type]
+	if !ok {
+		ah = acHandler{
+			setup:	setupGenAcc,
+			info:	infoGenAcc,
+			update:	updateGenAcc,
+			getEnv: getEnvGenAcc,
+		}
+	}
+
+	return &ah
 }
 
 func githubResolveName(token string) (string, error) {
@@ -164,13 +180,8 @@ func setupGithubAcc(ad *AccDesc, params *swyapi.AccAdd) *swyapi.GateErr {
 }
 
 func getAccDesc(id *SwoId, params *swyapi.AccAdd) (*AccDesc, *swyapi.GateErr) {
-	h, ok := accHandlers[params.Type]
-	if !ok {
-		return nil, GateErrM(swy.GateBadRequest, "Unknown acc type")
-	}
-
 	ad := &AccDesc { SwoId:	*id, Type: params.Type }
-	cerr := h.setup(ad, params)
+	cerr := ad.handler().setup(ad, params)
 	if cerr != nil {
 		return nil, cerr
 	}
@@ -184,15 +195,13 @@ func (ad *AccDesc)toInfo(ctx context.Context, details bool) (*swyapi.AccInfo, *s
 		Type:	ad.Type,
 	}
 
-	h, _ := accHandlers[ad.Type]
-	h.info(ad, ac, details)
+	ad.handler().info(ad, ac, details)
 
 	return ac, nil
 }
 
 func (ad *AccDesc)getEnv() map[string]string {
-	h, _ := accHandlers[ad.Type]
-	return h.getEnv(ad)
+	return ad.handler().getEnv(ad)
 }
 
 func (ad *AccDesc)Add(ctx context.Context) *swyapi.GateErr {
@@ -207,8 +216,7 @@ func (ad *AccDesc)Add(ctx context.Context) *swyapi.GateErr {
 }
 
 func (ad *AccDesc)Update(ctx context.Context, params *swyapi.AccUpdate) *swyapi.GateErr {
-	h, _ := accHandlers[ad.Type]
-	cerr := h.update(ad, params)
+	cerr := ad.handler().update(ad, params)
 	if cerr != nil {
 		return cerr
 	}
