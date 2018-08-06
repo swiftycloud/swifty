@@ -647,6 +647,91 @@ paths:
         '403':
           description: Bad authentication token
 
+  /functions/{fid}/accounts:
+    parameters:
+      - in: header
+        name: X-Auth-Token
+        type: string
+        required: true
+      - in: path
+        name: fid
+        type: string
+        required: true
+        description: Function ID
+    get:
+      tags:
+        - function
+      summary: Get accounts, to which the function has access to
+      responses:
+        '200':
+          description: OK
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/AccInfo'
+        '400':
+          description: Bad request
+          schema:
+            $ref: '#/definitions/GateError'
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad authentication token
+    post:
+      tags:
+        - function
+      summary: Attach account to function
+      parameters:
+        - in: body
+          name: mwid
+          required: true
+          schema:
+            type: string
+          description: Account ID
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+          schema:
+            $ref: '#/definitions/GateError'
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad authentication token
+
+  /functions/{fid}/middleware/{aid}:
+    parameters:
+      - in: header
+        name: X-Auth-Token
+        type: string
+        required: true
+      - in: path
+        name: fid
+        type: string
+        required: true
+        description: Function ID
+      - in: path
+        name: aid
+        type: string
+        required: true
+        description: Account ID
+    delete:
+      tags:
+        - function
+      summary: Detach account from function
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+          schema:
+            $ref: '#/definitions/GateError'
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad authentication token
+
   /functions/{fid}/s3buckets:
     parameters:
       - in: header
