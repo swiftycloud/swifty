@@ -563,6 +563,15 @@ func function_info(args []string, opts [16]string) {
 			fmt.Printf("\t%20s\n", bkt)
 		}
 	}
+
+	var acs []*swyapi.AccInfo
+	make_faas_req1("GET", "functions/" + args[0] + "/accounts", http.StatusOK, nil, &acs)
+	if len(acs) != 0 {
+		fmt.Printf("Accounts:\n")
+		for _, ac := range acs {
+			fmt.Printf("\t%s:%s\n", ac.ID, ac.Type)
+		}
+	}
 }
 
 func function_minfo(args []string, opts [16]string) {
@@ -809,6 +818,16 @@ func function_update(args []string, opts [16]string) {
 			make_faas_req1("POST", "functions/" + fid + "/s3buckets", http.StatusOK, opts[8][1:], nil)
 		} else if opts[8][0] == '-' {
 			make_faas_req1("DELETE", "functions/" + fid + "/s3buckets/" + opts[8][1:], http.StatusOK, nil, nil)
+		} else {
+			fatal(fmt.Errorf("+/- bucket name"))
+		}
+	}
+
+	if opts[9] != "" {
+		if opts[9][0] == '+' {
+			make_faas_req1("POST", "functions/" + fid + "/accounts", http.StatusOK, opts[9][1:], nil)
+		} else if opts[9][0] == '-' {
+			make_faas_req1("DELETE", "functions/" + fid + "/accounts/" + opts[9][1:], http.StatusOK, nil, nil)
 		} else {
 			fatal(fmt.Errorf("+/- bucket name"))
 		}
@@ -1168,7 +1187,7 @@ func show_files(pref string, fl []*swyapi.RepoFile) {
 	for _, f := range fl {
 		fmt.Printf("%s%s\n", pref, f.Path)
 		if f.Type == "dir" {
-			show_files(pref + "  ", f.Children)
+			show_files(pref + "  ", *f.Children)
 		}
 	}
 }
@@ -1720,6 +1739,7 @@ func main() {
 	cmdMap[CMD_FU].opts.StringVar(&opts[6], "arg", "", "Args")
 	cmdMap[CMD_FU].opts.StringVar(&opts[7], "auth", "", "Auth context (- for off)")
 	cmdMap[CMD_FU].opts.StringVar(&opts[8], "s3b", "", "Bucket to use, +/- to add/remove")
+	cmdMap[CMD_FU].opts.StringVar(&opts[9], "acc", "", "Accounts to use, +/- to add/remove")
 	bindCmdUsage(CMD_FU,	[]string{"NAME"}, "Update a function", true)
 	bindCmdUsage(CMD_FD,	[]string{"NAME"}, "Delete a function", true)
 	cmdMap[CMD_FLOG].opts.StringVar(&opts[0], "last", "", "Last N 'duration' period")

@@ -190,6 +190,21 @@ func swk8sGenEnvVar(ctx context.Context, fn *FunctionDesc, wd_port int) []v1.Env
 		}
 	}
 
+	for _, aid := range fn.Accounts {
+		var ac AccDesc
+
+		err := dbFind(ctx, bson.M{"_id": bson.ObjectIdHex(aid)}, &ac)
+		if err != nil {
+			ctxlog(ctx).Errorf("No account for %s", aid)
+			continue
+		}
+
+		envs := ac.getEnv()
+		for en, ev := range(envs) {
+			s = append(s, v1.EnvVar{ Name:en, Value:ev })
+		}
+	}
+
 	for _, s3b := range(fn.S3Buckets) {
 		envs, err := GenBucketKeysS3(ctx, &conf.Mware, &fn.SwoId, s3b)
 		if err != nil {

@@ -97,6 +97,7 @@ type FunctionDesc struct {
 	State		int		`bson:"state"`		// Function state
 	Mware		[]string	`bson:"mware"`
 	S3Buckets	[]string	`bson:"s3buckets"`
+	Accounts	[]string	`bson:"accounts"`
 	Code		FnCodeDesc	`bson:"code"`
 	Src		FnSrcDesc	`bson:"src"`
 	Size		FnSizeDesc	`bson:"size"`
@@ -516,6 +517,48 @@ func (fn *FunctionDesc)delMware(ctx context.Context, mw *MwareDesc) error {
 	}
 
 	fn.Mware = append(fn.Mware[:found], fn.Mware[found+1:]...)
+	if fn.State == swy.DBFuncStateRdy {
+		swk8sUpdate(ctx, &conf, fn)
+	}
+	return nil
+}
+
+func (fn *FunctionDesc)addAccount(ctx context.Context, ad *AccDesc) *swyapi.GateErr {
+	aid := ad.ObjID.Hex()
+	err := dbFuncUpdate(ctx, bson.M{"_id": fn.ObjID, "accounts": bson.M{"$ne": aid}},
+				bson.M{"$push": bson.M{"accounts":aid}})
+	if err != nil {
+		if dbNF(err) {
+			return GateErrM(swy.GateBadRequest, "Account already attached")
+		} else {
+			return GateErrD(err)
+		}
+	}
+
+	fn.Accounts = append(fn.Accounts, aid)
+	if fn.State == swy.DBFuncStateRdy {
+		swk8sUpdate(ctx, &conf, fn)
+	}
+	return nil
+}
+
+func (fn *FunctionDesc)delAccountId(ctx context.Context, aid string) *swyapi.GateErr {
+	err := dbFuncUpdate(ctx, bson.M{"_id": fn.ObjID, "accounts": aid},
+				bson.M{"$pull": bson.M{"accounts": aid}})
+	if err != nil {
+		if dbNF(err) {
+			return GateErrM(swy.GateBadRequest, "Account not attached")
+		} else {
+			return GateErrD(err)
+		}
+	}
+
+	for i, _ := range fn.Accounts {
+		if fn.Accounts[i] == aid {
+			fn.Accounts = append(fn.Accounts[:i], fn.Accounts[i+1:]...)
+			break
+		}
+	}
 	if fn.State == swy.DBFuncStateRdy {
 		swk8sUpdate(ctx, &conf, fn)
 	}

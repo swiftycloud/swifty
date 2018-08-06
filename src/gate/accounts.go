@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"strings"
 	"gopkg.in/mgo.v2/bson"
 	"../apis/apps"
 	"../common"
@@ -31,12 +32,22 @@ type AccDesc struct {
 	GH		*GHDesc		`bson:"gh,omitempty"`
 }
 
+func mkAccEnvName(typ, name, env string) string {
+	return "ACC_" + strings.ToUpper(typ) + strings.ToUpper(name) + "_" + env
+}
+
 var accHandlers = map[string] struct {
 	setup func (*AccDesc, *swyapi.AccAdd) *swyapi.GateErr
 	info func (*AccDesc, *swyapi.AccInfo, bool)
 	update func (*AccDesc, *swyapi.AccUpdate) *swyapi.GateErr
+	getEnv func (*AccDesc) map[string]string
 } {
-	"github":	{ setup: setupGithubAcc, info: infoGitHubAcc, update: updateGithubAcc },
+	"github":	{
+		setup:	setupGithubAcc,
+		info:	infoGitHubAcc,
+		update:	updateGithubAcc,
+		getEnv: getEnvGitHubAcc,
+	},
 }
 
 func githubResolveName(token string) (string, error) {
@@ -130,6 +141,13 @@ func updateGithubAcc(ad *AccDesc, params *swyapi.AccUpdate) *swyapi.GateErr {
 	return nil
 }
 
+func getEnvGitHubAcc(ad *AccDesc) map[string]string {
+	tok, _ := ad.GH.Token()
+	return map[string]string {
+		mkAccEnvName(ad.Type, ad.GH.Name, "TOKEN"): tok,
+	}
+}
+
 func getAccDesc(id *SwoId, params *swyapi.AccAdd) (*AccDesc, *swyapi.GateErr) {
 	h, ok := accHandlers[params.Type]
 	if !ok {
@@ -155,6 +173,11 @@ func (ad *AccDesc)toInfo(ctx context.Context, details bool) (*swyapi.AccInfo, *s
 	h.info(ad, ac, details)
 
 	return ac, nil
+}
+
+func (ad *AccDesc)getEnv() map[string]string {
+	h, _ := accHandlers[ad.Type]
+	return h.getEnv(ad)
 }
 
 func (ad *AccDesc)Add(ctx context.Context) *swyapi.GateErr {

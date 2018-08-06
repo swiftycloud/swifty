@@ -607,6 +607,88 @@ func handleFunctionMware(ctx context.Context, w http.ResponseWriter, r *http.Req
 	return nil
 }
 
+func handleFunctionAccounts(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
+	var fn FunctionDesc
+
+	cerr := objFindForReq(ctx, r, "fid", &fn)
+	if cerr != nil {
+		return cerr
+	}
+
+	switch r.Method {
+	case "GET":
+		ret := []*swyapi.AccInfo{}
+		for _, aid := range fn.Accounts {
+			var ac AccDesc
+			var ai *swyapi.AccInfo
+
+			cerr = objFindId(ctx, aid, &ac, nil)
+			if cerr == nil {
+				ai, cerr = ac.toInfo(ctx, false)
+				if cerr != nil {
+					return cerr
+				}
+			} else {
+				ai = &swyapi.AccInfo { ID: aid }
+			}
+
+			ret = append(ret, ai)
+		}
+
+		err := swyhttp.MarshalAndWrite(w, &ret)
+		if err != nil {
+			return GateErrE(swy.GateBadResp, err)
+		}
+
+	case "POST":
+		var aid string
+
+		err := swyhttp.ReadAndUnmarshalReq(r, &aid)
+		if err != nil {
+			return GateErrE(swy.GateBadRequest, err)
+		}
+
+		var acc AccDesc
+
+		cerr := objFindId(ctx, aid, &acc, nil)
+		if cerr != nil {
+			return cerr
+		}
+
+		cerr = fn.addAccount(ctx, &acc)
+		if cerr != nil {
+			return cerr
+		}
+
+		w.WriteHeader(http.StatusOK)
+	}
+
+	return nil
+}
+
+func handleFunctionAccount(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
+	var fn FunctionDesc
+
+	cerr := objFindForReq(ctx, r, "fid", &fn)
+	if cerr != nil {
+		return cerr
+	}
+
+	aid := mux.Vars(r)["aid"]
+
+	switch r.Method {
+	case "DELETE":
+		cerr = fn.delAccountId(ctx, aid)
+		if cerr != nil {
+			return cerr
+		}
+
+		w.WriteHeader(http.StatusOK)
+	}
+
+	return nil
+}
+
 
 func handleFunctionS3Bs(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
 	var fn FunctionDesc
@@ -2224,6 +2306,8 @@ func main() {
 	r.Handle("/v1/functions/{fid}/sources",	genReqHandler(handleFunctionSources)).Methods("GET", "PUT", "OPTIONS")
 	r.Handle("/v1/functions/{fid}/middleware", genReqHandler(handleFunctionMwares)).Methods("GET", "POST", "OPTIONS")
 	r.Handle("/v1/functions/{fid}/middleware/{mid}", genReqHandler(handleFunctionMware)).Methods("DELETE", "OPTIONS")
+	r.Handle("/v1/functions/{fid}/accounts", genReqHandler(handleFunctionAccounts)).Methods("GET", "POST", "OPTIONS")
+	r.Handle("/v1/functions/{fid}/accounts/{aid}", genReqHandler(handleFunctionAccount)).Methods("DELETE", "OPTIONS")
 	r.Handle("/v1/functions/{fid}/s3buckets",  genReqHandler(handleFunctionS3Bs)).Methods("GET", "POST", "OPTIONS")
 	r.Handle("/v1/functions/{fid}/s3buckets/{bname}",  genReqHandler(handleFunctionS3B)).Methods("DELETE", "OPTIONS")
 	r.Handle("/v1/functions/{fid}/wait",	genReqHandler(handleFunctionWait)).Methods("POST", "OPTIONS")
