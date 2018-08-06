@@ -81,7 +81,7 @@ func setupGenAcc(ad *AccDesc, params *swyapi.AccAdd) *swyapi.GateErr {
 		return GateErrE(swy.GateGenErr, err)
 	}
 
-	ad.Cookie = cookifyS(ad.Type, ad.Gen.Name)
+	ad.Cookie = cookifyS(ad.SwoId.Tennant, ad.Type, ad.Gen.Name)
 
 	return nil
 }
