@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"context"
 	"strings"
 	"gopkg.in/mgo.v2/bson"
@@ -10,18 +11,37 @@ import (
 	"../common/crypto"
 )
 
+type CypToken string
+
 type GHDesc struct {
 	Name		string		`bson:"name,omitempty"`
-	CypToken	string		`bson:"token,omitempty"`
+	Tok		CypToken	`bson:"token,omitempty"`
 }
 
-func (gd *GHDesc)Token() (string, error) {
+func (ct CypToken)value() (string, error) {
 	var err error
-	t := gd.CypToken
+	t := string(ct)
 	if t != "" {
 		t, err = swycrypt.DecryptString(gateSecPas, t)
 	}
 	return t, err
+}
+
+func mkCypToken(v string) (CypToken, error) {
+	if v != "" {
+		if len(v) < 10 {
+			return "", errors.New("Invalid token value")
+		}
+
+		var err error
+
+		v, err = swycrypt.EncryptString(gateSecPas, v)
+		if err != nil {
+			return "", err
+		}
+	}
+
+	return CypToken(v), nil
 }
 
 type AccDesc struct {
@@ -83,21 +103,11 @@ func setupGithubAcc(ad *AccDesc, params *swyapi.AccAdd) *swyapi.GateErr {
 		}
 	}
 
-	/* All secrets must be encrypted */
-	if params.Token != "" {
-		if len(params.Token) < 10 {
-			return GateErrM(swy.GateBadRequest, "Invalid token value")
-		}
+	ad.GH = &GHDesc { Name: params.Name }
 
-		params.Token, err = swycrypt.EncryptString(gateSecPas, params.Token)
-		if err != nil {
-			return GateErrE(swy.GateGenErr, err)
-		}
-	}
-
-	ad.GH = &GHDesc {
-		Name:		params.Name,
-		CypToken:	params.Token,
+	ad.GH.Tok, err = mkCypToken(params.Token)
+	if err != nil {
+		return GateErrE(swy.GateGenErr, err)
 	}
 
 	ad.Cookie = cookifyS(ad.Type, ad.GH.Name)
@@ -106,7 +116,7 @@ func setupGithubAcc(ad *AccDesc, params *swyapi.AccAdd) *swyapi.GateErr {
 }
 
 func infoGitHubAcc(ad *AccDesc, info *swyapi.AccInfo, detail bool) {
-	t, err := ad.GH.Token()
+	t, err := ad.GH.Tok.value()
 	if err == nil {
 		if len(t) > 6 {
 			t = t[:6] + "..."
@@ -123,18 +133,11 @@ func infoGitHubAcc(ad *AccDesc, info *swyapi.AccInfo, detail bool) {
 
 func updateGithubAcc(ad *AccDesc, params *swyapi.AccUpdate) *swyapi.GateErr {
 	if params.Token != nil {
-		if len(*params.Token) < 10 {
-			return GateErrM(swy.GateBadRequest, "Invalid token value")
-		}
+		var err error
 
-		ad.GH.CypToken = *params.Token
-		if ad.GH.CypToken != "" {
-			var err error
-
-			ad.GH.CypToken, err = swycrypt.EncryptString(gateSecPas, ad.GH.CypToken)
-			if err != nil {
-				return GateErrE(swy.GateGenErr, err)
-			}
+		ad.GH.Tok, err = mkCypToken(*params.Token)
+		if err != nil {
+			return GateErrE(swy.GateGenErr, err)
 		}
 	}
 
@@ -142,7 +145,7 @@ func updateGithubAcc(ad *AccDesc, params *swyapi.AccUpdate) *swyapi.GateErr {
 }
 
 func getEnvGitHubAcc(ad *AccDesc) map[string]string {
-	tok, _ := ad.GH.Token()
+	tok, _ := ad.GH.Tok.value()
 	return map[string]string {
 		mkAccEnvName(ad.Type, ad.GH.Name, "TOKEN"): tok,
 	}

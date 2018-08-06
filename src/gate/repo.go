@@ -469,7 +469,7 @@ func (rd *RepoDesc)Clone(ctx context.Context, ac *AccDesc) (string, error) {
 			return "", errors.New("Corrupted acc type")
 		}
 
-		t, err := ac.GH.Token()
+		t, err := ac.GH.Tok.value()
 		if err != nil {
 			return "", err
 		}
@@ -629,7 +629,7 @@ func GCOldSources(ctx context.Context, fn *FunctionDesc, ver string) {
 func listReposGH(ac *AccDesc) ([]*GitHubRepo, error) {
 	var rq *swyhttp.RestReq
 
-	t, err := ac.GH.Token()
+	t, err := ac.GH.Tok.value()
 	if err != nil {
 		return nil, err
 	}
