@@ -700,7 +700,7 @@ paths:
         '403':
           description: Bad authentication token
 
-  /functions/{fid}/middleware/{aid}:
+  /functions/{fid}/accounts/{aid}:
     parameters:
       - in: header
         name: X-Auth-Token
