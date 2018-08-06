@@ -13,12 +13,7 @@ import (
 
 type CypToken string
 
-type GHDesc struct {
-	Name		string		`bson:"name,omitempty"`
-	Tok		CypToken	`bson:"token,omitempty"`
-}
-
-type TGDesc struct {
+type GenDesc struct {
 	Name		string		`bson:"name,omitempty"`
 	Tok		CypToken	`bson:"token,omitempty"`
 }
@@ -54,16 +49,15 @@ type AccDesc struct {
 	SwoId				`bson:",inline"`
 	Cookie		string		`bson:"cookie"`
 	Type		string		`bson:"type"`
-	GH		*GHDesc		`bson:"gh,omitempty"`
-	TG		*TGDesc		`bson:"tg,omitempty"`
+	Gen		*GenDesc	`bson:"gh,omitempty"`
 }
 
 func mkAccEnvName(typ, name, env string) string {
 	return "ACC_" + strings.ToUpper(typ) + strings.ToUpper(name) + "_" + env
 }
 
-func mkGenInfo(ai *swyapi.AccInfo, name string, token CypToken) {
-	t, err := token.value()
+func infoGenAcc(ad *AccDesc, info *swyapi.AccInfo, detail bool) {
+	t, err := ad.Gen.Tok.value()
 	if err == nil {
 		if len(t) > 6 {
 			t = t[:6] + "..."
@@ -74,8 +68,42 @@ func mkGenInfo(ai *swyapi.AccInfo, name string, token CypToken) {
 		t = "<broken>"
 	}
 
-	ai.Name = name
-	ai.Token = t
+	info.Name = ad.Gen.Name
+	info.Token = t
+}
+
+func setupGenAcc(ad *AccDesc, params *swyapi.AccAdd) *swyapi.GateErr {
+	var err error
+
+	ad.Gen = &GenDesc { Name: params.Name }
+	ad.Gen.Tok, err = mkCypToken(params.Token)
+	if err != nil {
+		return GateErrE(swy.GateGenErr, err)
+	}
+
+	ad.Cookie = cookifyS(ad.Type, ad.Gen.Name)
+
+	return nil
+}
+
+func updateGenAcc(ad *AccDesc, params *swyapi.AccUpdate) *swyapi.GateErr {
+	if params.Token != nil {
+		var err error
+
+		ad.Gen.Tok, err = mkCypToken(*params.Token)
+		if err != nil {
+			return GateErrE(swy.GateGenErr, err)
+		}
+	}
+
+	return nil
+}
+
+func getEnvGenAcc(ad *AccDesc) map[string]string {
+	tok, _ := ad.Gen.Tok.value()
+	return map[string]string {
+		mkAccEnvName(ad.Type, ad.Gen.Name, "TOKEN"): tok,
+	}
 }
 
 var accHandlers = map[string] struct {
@@ -86,16 +114,16 @@ var accHandlers = map[string] struct {
 } {
 	"github":	{
 		setup:	setupGithubAcc,
-		info:	infoGitHubAcc,
-		update:	updateGithubAcc,
-		getEnv: getEnvGitHubAcc,
+		info:	infoGenAcc,
+		update:	updateGenAcc,
+		getEnv: getEnvGenAcc,
 	},
 
 	"telegram":	{
-		setup:	setupTgAcc,
-		info:	infoTgAcc,
-		update:	updateTgAcc,
-		getEnv: getEnvTgAcc,
+		setup:	setupGenAcc,
+		info:	infoGenAcc,
+		update:	updateGenAcc,
+		getEnv: getEnvGenAcc,
 	},
 }
 
@@ -132,78 +160,7 @@ func setupGithubAcc(ad *AccDesc, params *swyapi.AccAdd) *swyapi.GateErr {
 		}
 	}
 
-	ad.GH = &GHDesc { Name: params.Name }
-
-	ad.GH.Tok, err = mkCypToken(params.Token)
-	if err != nil {
-		return GateErrE(swy.GateGenErr, err)
-	}
-
-	ad.Cookie = cookifyS(ad.Type, ad.GH.Name)
-
-	return nil
-}
-
-func infoGitHubAcc(ad *AccDesc, info *swyapi.AccInfo, detail bool) {
-	mkGenInfo(info, ad.GH.Name, ad.GH.Tok)
-}
-
-func updateGithubAcc(ad *AccDesc, params *swyapi.AccUpdate) *swyapi.GateErr {
-	if params.Token != nil {
-		var err error
-
-		ad.GH.Tok, err = mkCypToken(*params.Token)
-		if err != nil {
-			return GateErrE(swy.GateGenErr, err)
-		}
-	}
-
-	return nil
-}
-
-func getEnvGitHubAcc(ad *AccDesc) map[string]string {
-	tok, _ := ad.GH.Tok.value()
-	return map[string]string {
-		mkAccEnvName(ad.Type, ad.GH.Name, "TOKEN"): tok,
-	}
-}
-
-func setupTgAcc(ad *AccDesc, params *swyapi.AccAdd) *swyapi.GateErr {
-	var err error
-
-	ad.TG = &TGDesc { Name: params.Name }
-	ad.TG.Tok, err = mkCypToken(params.Token)
-	if err != nil {
-		return GateErrE(swy.GateGenErr, err)
-	}
-
-	ad.Cookie = cookifyS(ad.Type, ad.TG.Name)
-
-	return nil
-}
-
-func infoTgAcc(ad *AccDesc, info *swyapi.AccInfo, detail bool) {
-	mkGenInfo(info, ad.TG.Name, ad.TG.Tok)
-}
-
-func updateTgAcc(ad *AccDesc, params *swyapi.AccUpdate) *swyapi.GateErr {
-	if params.Token != nil {
-		var err error
-
-		ad.TG.Tok, err = mkCypToken(*params.Token)
-		if err != nil {
-			return GateErrE(swy.GateGenErr, err)
-		}
-	}
-
-	return nil
-}
-
-func getEnvTgAcc(ad *AccDesc) map[string]string {
-	tok, _ := ad.TG.Tok.value()
-	return map[string]string {
-		mkAccEnvName(ad.Type, ad.TG.Name, "TOKEN"): tok,
-	}
+	return setupGenAcc(ad, params)
 }
 
 func getAccDesc(id *SwoId, params *swyapi.AccAdd) (*AccDesc, *swyapi.GateErr) {
