@@ -2249,6 +2249,9 @@ definitions:
       type:
         type: string
         description: Entry type, "dir" or "file"
+      lang:
+        type: string
+        description: Suggested (by filename extention) language
       children:
         type: array
         items:

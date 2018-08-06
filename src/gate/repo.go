@@ -259,6 +259,8 @@ func (rd *RepoDesc)listFiles(ctx context.Context) ([]*swyapi.RepoFile, *swyapi.G
 				dirs = append(dirs, e)
 			} else {
 				e.Type = "file"
+				lng := RtLangDetect(e.Label)
+				e.Lang = &lng
 			}
 
 			l := *dir.Children

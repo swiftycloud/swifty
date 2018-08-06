@@ -1185,6 +1185,9 @@ func repo_list(args []string, opts [16]string) {
 
 func show_files(pref string, fl []*swyapi.RepoFile) {
 	for _, f := range fl {
+		if f.Type == "file" && f.Lang != nil {
+			f.Path += " (" + *f.Lang + ")"
+		}
 		fmt.Printf("%s%s\n", pref, f.Path)
 		if f.Type == "dir" {
 			show_files(pref + "  ", *f.Children)

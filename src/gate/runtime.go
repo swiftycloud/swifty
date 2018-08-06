@@ -1,5 +1,9 @@
 package main
 
+import (
+	"path/filepath"
+)
+
 type rt_info struct {
 	CodePath	string
 	Ext		string
@@ -41,6 +45,19 @@ var rt_handlers = map[string]*rt_info {
 	"swift":	&swift_info,
 	"nodejs":	&nodejs_info,
 	"ruby":		&ruby_info,
+}
+var extmap map[string]string
+
+func init() {
+	extmap = make(map[string]string)
+	for l, d := range rt_handlers {
+		extmap["." + d.Ext] = l
+	}
+}
+
+func RtLangDetect(fname string) string {
+	e := filepath.Ext(fname)
+	return extmap[e]
 }
 
 func RtLangEnabled(lang string) bool {

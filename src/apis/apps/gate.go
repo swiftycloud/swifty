@@ -268,6 +268,7 @@ type RepoFile struct {
 	Label		string		`json:"label"`
 	Path		string		`json:"path"`
 	Type		string		`json:"type"`
+	Lang		*string		`json:"lang,omitempty"`
 	Children	*[]*RepoFile	`json:"children,omitempty"`
 }
 
