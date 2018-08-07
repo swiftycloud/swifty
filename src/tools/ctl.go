@@ -1183,22 +1183,42 @@ func repo_list(args []string, opts [16]string) {
 	}
 }
 
-func show_files(pref string, fl []*swyapi.RepoFile) {
+func show_files(pref string, fl []*swyapi.RepoFile, pty string) {
 	for _, f := range fl {
+		l := ""
 		if f.Type == "file" && f.Lang != nil {
-			f.Path += " (" + *f.Lang + ")"
+			l = " (" + *f.Lang + ")"
 		}
-		fmt.Printf("%s%s\n", pref, f.Path)
+		if pty == "tree" {
+			fmt.Printf("%s%s\n", pref, f.Label + l)
+		} else if f.Type == "file" {
+			fmt.Printf("%s\n", f.Path + l)
+		}
 		if f.Type == "dir" {
-			show_files(pref + "  ", *f.Children)
+			show_files(pref + "  ", *f.Children, pty)
 		}
 	}
 }
 
+func repo_desc(args []string, opts [16]string) {
+	var d swyapi.RepoDesc
+	make_faas_req1("GET", "repos/" + args[0] + "/desc", http.StatusOK, nil, &d)
+	fmt.Printf("%s\n", d.Description)
+	for _, e := range d.Entries {
+		fmt.Printf("%s: %s\n", e.Name, e.Description)
+		fmt.Printf("    %s (%s)\n", e.Path, e.Lang)
+	}
+}
+
 func repo_list_files(args []string, opts [16]string) {
+	if opts[0] == "desc" {
+		repo_desc(args, opts)
+		return
+	}
+
 	var fl []*swyapi.RepoFile
 	make_faas_req1("GET", "repos/" + args[0] + "/files", http.StatusOK, nil, &fl)
-	show_files("", fl)
+	show_files("", fl, opts[0])
 }
 
 func repo_cat_file(args []string, opts [16]string) {
@@ -1213,16 +1233,6 @@ func repo_cat_file(args []string, opts [16]string) {
 
 func repo_pull(args []string, opts [16]string) {
 	make_faas_req1("POST", "repos/" + args[0] + "/pull", http.StatusOK, nil, nil)
-}
-
-func repo_desc(args []string, opts [16]string) {
-	var d swyapi.RepoDesc
-	make_faas_req1("GET", "repos/" + args[0] + "/desc", http.StatusOK, nil, &d)
-	fmt.Printf("%s\n", d.Description)
-	for _, e := range d.Entries {
-		fmt.Printf("%s: %s\n", e.Name, e.Description)
-		fmt.Printf("    %s (%s)\n", e.Path, e.Lang)
-	}
 }
 
 func repo_info(args []string, opts [16]string) {
@@ -1526,7 +1536,6 @@ const (
 	CMD_RLS string		= "rls"
 	CMD_RCAT string		= "rcat"
 	CMD_RP string		= "rp"
-	CMD_RDESC string	= "rdesc"
 
 	CMD_AL string		= "al"
 	CMD_AI string		= "ai"
@@ -1592,7 +1601,6 @@ var cmdOrder = []string {
 	CMD_RLS,
 	CMD_RCAT,
 	CMD_RP,
-	CMD_RDESC,
 
 	CMD_AL,
 	CMD_AA,
@@ -1664,7 +1672,6 @@ var cmdMap = map[string]*cmdDesc {
 	CMD_RLS:	&cmdDesc{ call: repo_list_files,  opts: flag.NewFlagSet(CMD_RLS, flag.ExitOnError) },
 	CMD_RCAT:	&cmdDesc{ call: repo_cat_file,	  opts: flag.NewFlagSet(CMD_RCAT, flag.ExitOnError) },
 	CMD_RP:		&cmdDesc{ call: repo_pull,	  opts: flag.NewFlagSet(CMD_RP, flag.ExitOnError) },
-	CMD_RDESC:	&cmdDesc{ call: repo_desc,	  opts: flag.NewFlagSet(CMD_RDESC, flag.ExitOnError) },
 
 	CMD_AL:		&cmdDesc{ call: acc_list,	  opts: flag.NewFlagSet(CMD_AL, flag.ExitOnError) },
 	CMD_AI:		&cmdDesc{ call: acc_info,	  opts: flag.NewFlagSet(CMD_AI, flag.ExitOnError) },
@@ -1794,10 +1801,10 @@ func main() {
 	cmdMap[CMD_RU].opts.StringVar(&opts[0], "pull", "", "Pull policy")
 	bindCmdUsage(CMD_RU,	[]string{"ID"}, "Update repo", false)
 	bindCmdUsage(CMD_RD,	[]string{"ID"}, "Detach repo", false)
+	cmdMap[CMD_RLS].opts.StringVar(&opts[0], "pretty", "", "Prettiness of the output")
 	bindCmdUsage(CMD_RLS,	[]string{"ID"}, "List files in repo", false)
 	bindCmdUsage(CMD_RCAT,	[]string{"ID/NAME"}, "Show contents of a file", false)
 	bindCmdUsage(CMD_RP,	[]string{"ID"}, "Pull repo", false)
-	bindCmdUsage(CMD_RDESC,	[]string{"ID"}, "Show repo desc", false)
 
 	cmdMap[CMD_AL].opts.StringVar(&opts[0], "type", "", "Type of account to list")
 	bindCmdUsage(CMD_AL,	[]string{},	"List accounts", false)
