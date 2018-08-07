@@ -98,6 +98,14 @@ type S3Website struct {
 	ErrDoc				string		`bson:"error-doc,omitempty"`
 }
 
+func (ws *S3Website)index() string {
+	s := ws.IdxDoc
+	if s == "" {
+		s = "index.html"
+	}
+	return s
+}
+
 func s3WebsiteLookup(ctx context.Context, b *S3Bucket) (*S3Website, error) {
 	var res S3Website
 

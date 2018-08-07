@@ -931,15 +931,18 @@ func handleWebReq(w http.ResponseWriter, r *http.Request) {
 		Policy:		*getWebPolicy(aux[2]),
 	}
 
-	if strings.HasSuffix(aux[3], "/") {
-		if ws.IdxDoc != "" {
-			aux[3] += ws.IdxDoc
-		} else {
-			aux[3] += "index.html"
+	var oname string
+
+	if len(aux) < 4 {
+		oname = ws.index()
+	} else {
+		oname = aux[3]
+		if strings.HasSuffix(oname, "/") {
+			oname += ws.index()
 		}
 	}
 
-	serr := handleObject(ctx, iam, w, r, aux[2], aux[3])
+	serr := handleObject(ctx, iam, w, r, aux[2], oname)
 	if serr != nil {
 		if serr.ErrorCode == S3ErrNoSuchKey {
 			/* FIXME -- report back the ErrDoc here */
