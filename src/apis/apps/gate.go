@@ -175,17 +175,6 @@ type FunctionUpdate struct {
 	State		string			`json:"state,omitempty"`
 }
 
-type FunctionRun struct {
-	Args		map[string]string	`json:"args,omitempty"`
-}
-
-type FunctionRunResult struct {
-	Code		int			`json:"code"`
-	Return		string			`json:"return"`
-	Stdout		string			`json:"stdout"`
-	Stderr		string			`json:"stderr"`
-}
-
 type ProjectItem struct {
 	Project		string			`json:"project"`
 }

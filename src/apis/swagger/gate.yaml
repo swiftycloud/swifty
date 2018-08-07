@@ -2060,6 +2060,24 @@ definitions:
         example:
           - foo: bar
             baz: fuz
+      content:
+        type: string
+        description: Type of the body (either "text/plain" or "application/json")
+      body:
+        type: string
+        description: Request body
+      claims:
+        type: object
+        description: A string:any dict with JWT claims as expected by FN
+      method:
+        type: string
+        description: HTTP method this FN would see
+      path:
+        type: string
+        description: Part of the URL the FN would see
+      event:
+        type: string
+        description: An event that the FN would see. When callev via URL trigger, this would be "call"
   FunctionRunResult:
     required:
       - code

@@ -1395,7 +1395,7 @@ func handleFunctionRun(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		return cerr
 	}
 
-	var params swyapi.FunctionRun
+	var params swyapi.SwdFunctionRun
 	var res *swyapi.SwdFunctionRunResult
 
 	err := swyhttp.ReadAndUnmarshalReq(r, &params)
@@ -1426,12 +1426,7 @@ func handleFunctionRun(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		}
 	}
 
-	err = swyhttp.MarshalAndWrite(w, swyapi.FunctionRunResult{
-		Code:		res.Code,
-		Return:		res.Return,
-		Stdout:		res.Stdout,
-		Stderr:		res.Stderr,
-	})
+	err = swyhttp.MarshalAndWrite(w, res)
 	if err != nil {
 		return GateErrE(swy.GateBadResp, err)
 	}

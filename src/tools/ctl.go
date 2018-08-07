@@ -783,11 +783,11 @@ func make_args_string(args map[string]string) string {
 }
 
 func run_function(args []string, opts [16]string) {
-	var rres swyapi.FunctionRunResult
+	var rres swyapi.SwdFunctionRunResult
 
 	args[0] = resolve_fn(args[0])
 	argmap := split_args_string(args[1])
-	make_faas_req1("POST", "functions/" + args[0] + "/run", http.StatusOK, &swyapi.FunctionRun{ Args: argmap, }, &rres)
+	make_faas_req1("POST", "functions/" + args[0] + "/run", http.StatusOK, &swyapi.SwdFunctionRun{ Args: argmap, }, &rres)
 
 	fmt.Printf("returned: %s\n", rres.Return)
 	fmt.Printf("%s", rres.Stdout)

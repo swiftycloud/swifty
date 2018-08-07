@@ -1,5 +1,27 @@
 package swyapi
 
+/*
+ * This type is not seen by wdog itself, instead, it's described
+ * by each wdog runner by smth like "Request"
+ */
+type SwdFunctionRun struct {
+	Event		string			`json:"event"`
+	Args		map[string]string	`json:"args,omitempty"`
+	ContentType	string			`json:"content,omitempty"`
+	Body		string			`json:"body,omitempty"`
+	Claims		map[string]interface{}	`json:"claims,omitempty"` // JWT
+	Method		string			`json:"method,omitempty"`
+	Path		*string			`json:"path,omitempty"`
+}
+
+type SwdFunctionRunResult struct {
+	Return		string		`json:"return"`
+	Code		int		`json:"code"`
+	Stdout		string		`json:"stdout"`
+	Stderr		string		`json:"stderr"`
+	Time		uint		`json:"time"` /* usec */
+}
+
 type UserLogin struct {
 	UserName	string			`json:"username"`
 	Password	string			`json:"password"`
