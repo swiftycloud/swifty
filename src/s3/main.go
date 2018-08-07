@@ -340,8 +340,28 @@ func handleGetWebsite(ctx context.Context, bname string, iam *S3Iam, w http.Resp
 		return &S3Error{ ErrorCode: S3ErrMethodNotAllowed }
 	}
 
-	log.Debugf("Get website for %s", bname)
-	return &S3Error{ ErrorCode: S3ErrInvalidRequest, Message: "Websites not supported"}
+	b, err := iam.FindBucket(ctx, bname)
+	if err != nil {
+		return &S3Error{ ErrorCode: S3ErrNoSuchBucket }
+	}
+
+	ws, err := s3WebsiteLookup(ctx, b)
+	if err != nil {
+		return &S3Error{ ErrorCode: S3ErrInvalidAction }
+	}
+
+	resp := swys3api.S3WebsiteConfig {
+		IndexDoc: swys3api.S3WebIndex {
+			Suff: ws.IdxDoc,
+		},
+		ErrDoc: swys3api.S3WebErrDoc {
+			Key: ws.ErrDoc,
+		},
+	}
+
+	w.Header().Set("X-Swifty-Website", iam.AccountObjID.Hex())
+	HTTPRespXML(w, resp)
+	return nil
 }
 
 func handlePutWebsite(ctx context.Context, bname string, iam *S3Iam, w http.ResponseWriter, r *http.Request) *S3Error {
@@ -364,8 +384,17 @@ func handlePutWebsite(ctx context.Context, bname string, iam *S3Iam, w http.Resp
 		return &S3Error{ ErrorCode: S3ErrMissingRequestBodyError }
 	}
 
-	log.Debugf("Put website for %s %v", bname, cfg)
-	return &S3Error{ ErrorCode: S3ErrInvalidRequest, Message: "Websites not supported"}
+	b, err := iam.FindBucket(ctx, bname)
+	if err != nil {
+		return &S3Error{ ErrorCode: S3ErrNoSuchBucket }
+	}
+
+	_, err = s3WebsiteInsert(ctx, b, &cfg)
+	if err != nil {
+		return &S3Error{ ErrorCode: S3ErrInternalError }
+	}
+
+	return nil
 }
 
 func handleDelWebsite(ctx context.Context, bname string, iam *S3Iam, w http.ResponseWriter, r *http.Request) *S3Error {
@@ -376,8 +405,18 @@ func handleDelWebsite(ctx context.Context, bname string, iam *S3Iam, w http.Resp
 		return &S3Error{ ErrorCode: S3ErrMethodNotAllowed }
 	}
 
-	log.Debugf("Del website for %s", bname)
-	return &S3Error{ ErrorCode: S3ErrInvalidRequest, Message: "Websites not supported"}
+	b, err := iam.FindBucket(ctx, bname)
+	if err != nil {
+		return &S3Error{ ErrorCode: S3ErrNoSuchBucket }
+	}
+
+	ws, err := s3WebsiteLookup(ctx, b)
+	if err != nil {
+		return &S3Error{ ErrorCode: S3ErrInvalidAction }
+	}
+
+	dbS3Remove(ctx, ws)
+	return nil
 }
 
 func handleBucket(ctx context.Context, iam *S3Iam, w http.ResponseWriter, r *http.Request) *S3Error {

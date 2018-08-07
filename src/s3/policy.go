@@ -213,6 +213,10 @@ var S3PolicyActions_PerBucket = ActionBits{
 			 (1 << (S3P_DeleteBucketPolicy - 64))		|
 			 (1 << (S3P_ObjectOwnerOverrideToBucketOwner - 64))),
 }
+var S3PolicyActions_Web = ActionBits{
+		(1 << S3P_GetObject),
+		0,
+}
 
 // Most permissive mode
 const (
@@ -249,6 +253,14 @@ func getBucketPolicy(bname string) *S3Policy {
 	return &S3Policy {
 		Effect: Policy_Allow,
 		Action: S3PolicyActions_PerBucket.toMgo(),
+		Resource: []string{ bname },
+	}
+}
+
+func getWebPolicy(bname string) *S3Policy {
+	return &S3Policy {
+		Effect: Policy_Allow,
+		Action: S3PolicyActions_Web.toMgo(),
 		Resource: []string{ bname },
 	}
 }

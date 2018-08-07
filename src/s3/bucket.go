@@ -90,6 +90,45 @@ type S3Bucket struct {
 	MaxBytes			int64		`bson:"max-bytes"`
 }
 
+type S3Website struct {
+	ObjID				bson.ObjectId	`bson:"_id,omitempty"`
+	State				uint32		`bson:"state"`
+	BCookie				string		`bson:"bcookie,omitempty"`
+	IdxDoc				string		`bson:"index-doc,omitempty"`
+	ErrDoc				string		`bson:"error-doc,omitempty"`
+}
+
+func s3WebsiteLookup(ctx context.Context, b *S3Bucket) (*S3Website, error) {
+	var res S3Website
+
+	query := bson.M{ "bcookie": b.BCookie, "state": S3StateActive }
+	err := dbS3FindOne(ctx, query, &res)
+	return &res, err
+}
+
+func s3WebsiteInsert(ctx context.Context, b *S3Bucket, cfg *swys3api.S3WebsiteConfig) (*S3Website, error) {
+	var ws S3Website
+	var err error
+
+	insert := bson.M{
+		"_id":			bson.NewObjectId(),
+		"bcookie":		b.BCookie,
+		"state":		S3StateActive,
+		"index-doc":		cfg.IndexDoc.Suff,
+		"error-doc":		cfg.ErrDoc.Key,
+	}
+
+	query := bson.M{ "bcookie": b.BCookie, "state": S3StateActive }
+	update := bson.M{ "$setOnInsert": insert }
+
+	log.Debugf("s3: Upserting website for %s", b.Name)
+	if err = dbS3Upsert(ctx, query, update, &ws); err != nil {
+		return nil, err
+	}
+
+	return &ws, nil
+}
+
 func s3DirtifyBucket(ctx context.Context, id bson.ObjectId) error {
 	query := bson.M{ "_id": id, "ref": bson.M{ "$eq":  0 } }
 	update := bson.M{ "$set": bson.M{ "ref": 1 } }
