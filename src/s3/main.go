@@ -3,6 +3,7 @@ package main
 import (
 	"go.uber.org/zap"
 	"gopkg.in/mgo.v2"
+	"gopkg.in/mgo.v2/bson"
 	"github.com/gorilla/mux"
 
 	"io/ioutil"
@@ -38,6 +39,7 @@ type YAMLConfCeph struct {
 type YAMLConfDaemon struct {
 	Addr		string			`yaml:"address"`
 	AdminPort	string			`yaml:"admport"`
+	WebPort		string			`yaml:"webport"`
 	Token		string			`yaml:"token"`
 	LogLevel	string			`yaml:"loglevel"`
 	Prometheus	string			`yaml:"prometheus"`
@@ -489,7 +491,11 @@ func handleUploadFini(ctx context.Context, uploadId string, iam *S3Iam, bucket *
 
 	resp, err := s3UploadFini(ctx, iam, bucket, uploadId, &complete)
 	if err != nil {
-		return &S3Error{ ErrorCode: S3ErrInvalidRequest, Message: err.Error() }
+		if err == mgo.ErrNotFound {
+			return &S3Error{ ErrorCode: S3ErrNoSuchKey }
+		} else {
+			return &S3Error{ ErrorCode: S3ErrInvalidRequest, Message: err.Error() }
+		}
 	}
 
 	HTTPRespXML(w, resp)
@@ -705,9 +711,13 @@ func handleAccessObject(bname, oname string, iam *S3Iam, w http.ResponseWriter, 
 	return nil
 }
 
-func handleObject(ctx context.Context, iam *S3Iam, w http.ResponseWriter, r *http.Request) *S3Error {
+func handleObjectReq(ctx context.Context, iam *S3Iam, w http.ResponseWriter, r *http.Request) *S3Error {
 	var bname string = mux.Vars(r)["BucketName"]
 	var oname string = mux.Vars(r)["ObjName"]
+	return handleObject(ctx, iam, w, r, bname, oname)
+}
+
+func handleObject(ctx context.Context, iam *S3Iam, w http.ResponseWriter, r *http.Request, bname, oname string) *S3Error {
 	var bucket *S3Bucket
 	var err error
 
@@ -886,6 +896,60 @@ out:
 	http.Error(w, err.Error(), http.StatusBadRequest)
 }
 
+func handleWebReq(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
+	ctx, done := mkContext("s3 req")
+	defer done(ctx)
+
+	aux := strings.SplitN(r.URL.Path, "/", 4)
+	if len(aux) < 3  || !bson.IsObjectIdHex(aux[1]) {
+		http.Error(w, "", http.StatusNotFound)
+		return
+	}
+
+	var account S3Account
+	query := bson.M{ "_id": bson.ObjectIdHex(aux[1]), "state": S3StateActive }
+	err := dbS3FindOne(ctx, query, &account)
+	if err != nil {
+		http.Error(w, "", http.StatusNotFound)
+		return
+	}
+
+	var ws S3Website
+	query = bson.M{ "bcookie": account.BCookie(aux[2]), "state": S3StateActive }
+	err = dbS3FindOne(ctx, query, &ws)
+	if err != nil {
+		http.Error(w, "", http.StatusNotFound)
+		return
+	}
+
+	iam := &S3Iam {
+		State:		S3StateActive,
+		AccountObjID:	account.ObjID, /* FIXME -- cache account object here
+						* to speed-up the s3AccountLookup()
+						*/
+		Policy:		*getWebPolicy(aux[2]),
+	}
+
+	if strings.HasSuffix(aux[3], "/") {
+		if ws.IdxDoc != "" {
+			aux[3] += ws.IdxDoc
+		} else {
+			aux[3] += "index.html"
+		}
+	}
+
+	serr := handleObject(ctx, iam, w, r, aux[2], aux[3])
+	if serr != nil {
+		if serr.ErrorCode == S3ErrNoSuchKey {
+			/* FIXME -- report back the ErrDoc here */
+			http.Error(w, "", http.StatusNotFound)
+		} else {
+			http.Error(w, serr.Message, http.StatusInternalServerError)
+		}
+	}
+}
+
 func handleAdminOp(w http.ResponseWriter, r *http.Request) {
 	var op string = mux.Vars(r)["op"]
 	var err error
@@ -1008,14 +1072,20 @@ func main() {
 
 	// Service operations
 	rgatesrv := mux.NewRouter()
-
 	match_bucket := fmt.Sprintf("/{BucketName:%s*}",
 		S3BucketName_Letter)
 	match_object := fmt.Sprintf("/{BucketName:%s+}/{ObjName:%s+}",
 		S3BucketName_Letter, S3ObjectName_Letter)
 
 	rgatesrv.Handle(match_bucket,	handleS3API(handleBucket))
-	rgatesrv.Handle(match_object,	handleS3API(handleObject))
+	rgatesrv.Handle(match_object,	handleS3API(handleObjectReq))
+
+	// Web server operations
+	rwebsrv := mux.NewRouter()
+	rwebsrv.PathPrefix("/").Methods("GET", "HEAD").HandlerFunc(handleWebReq)
+	if conf.Daemon.WebPort == "" {
+		conf.Daemon.WebPort = "8080"
+	}
 
 	// Admin operations
 	radminsrv := mux.NewRouter()
@@ -1070,6 +1140,18 @@ func main() {
 		err = adminsrv.ListenAndServe()
 		if err != nil {
 			log.Errorf("ListenAndServe: adminsrv %s", err.Error())
+		}
+	}()
+
+	go func() {
+		websrv := &http.Server{
+			Handler:	rwebsrv,
+			Addr:		swy.MakeAdminURL(conf.Daemon.Addr, conf.Daemon.WebPort),
+		}
+
+		err = websrv.ListenAndServe()
+		if err != nil {
+			log.Errorf("ListenAndServe: websrv %s", err.Error())
 		}
 	}()
 

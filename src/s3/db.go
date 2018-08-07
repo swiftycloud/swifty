@@ -76,6 +76,7 @@ func dbConnect(conf *YAMLConf) error {
 
 	index.Key = []string{"bcookie"}
 	s.DB(DBName).C(DBColS3Buckets).EnsureIndex(index)
+	s.DB(DBName).C(DBColS3Websites).EnsureIndex(index)
 
 	index.Key = []string{"uid"}
 	s.DB(DBName).C(DBColS3Uploads).EnsureIndex(index)
