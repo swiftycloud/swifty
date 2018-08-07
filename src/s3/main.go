@@ -100,6 +100,7 @@ func setupLogger(conf *YAMLConf) {
 type s3Context struct {
 	context.Context
 	S	*mgo.Session
+	errCode	int
 }
 
 func Dbs(ctx context.Context) *mgo.Session {
@@ -110,6 +111,7 @@ func mkContext(id string) (context.Context, func(context.Context)) {
 	ctx := &s3Context{
 		context.Background(),
 		session.Copy(),
+		0,
 	}
 
 	return ctx, func(c context.Context) {
@@ -592,10 +594,19 @@ func handleGetObject(ctx context.Context, oname string, iam *S3Iam, bucket *S3Bu
 
 	body, err := bucket.ReadObject(ctx, oname, 0, 1)
 	if err != nil {
-		return &S3Error{ ErrorCode: S3ErrInvalidRequest, Message: err.Error() }
+		if err == mgo.ErrNotFound {
+			return &S3Error{ ErrorCode: S3ErrNoSuchKey }
+		} else {
+			return &S3Error{ ErrorCode: S3ErrInvalidRequest, Message: err.Error() }
+		}
 	}
 
-	w.WriteHeader(http.StatusOK)
+	if c := ctx.(*s3Context).errCode; c == 0 {
+		w.WriteHeader(http.StatusOK)
+	} else {
+		w.WriteHeader(c)
+	}
+
 	w.Write(body)
 	return nil
 }
@@ -944,12 +955,21 @@ func handleWebReq(w http.ResponseWriter, r *http.Request) {
 
 	serr := handleObject(ctx, iam, w, r, aux[2], oname)
 	if serr != nil {
-		if serr.ErrorCode == S3ErrNoSuchKey {
-			/* FIXME -- report back the ErrDoc here */
-			http.Error(w, "", http.StatusNotFound)
-		} else {
+		if serr.ErrorCode != S3ErrNoSuchKey {
 			http.Error(w, serr.Message, http.StatusInternalServerError)
+			return
 		}
+
+		if ws.ErrDoc != "" {
+			/* Try to report back the 4xx.html page */
+			ctx.(*s3Context).errCode = http.StatusNotFound
+			serr = handleObject(ctx, iam, w, r, aux[2], ws.ErrDoc)
+			if serr == nil {
+				return
+			}
+		}
+
+		http.Error(w, "", http.StatusNotFound)
 	}
 }
 
