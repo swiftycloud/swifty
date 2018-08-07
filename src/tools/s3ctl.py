@@ -85,6 +85,14 @@ for cmd in ['bucket-del']:
     spp.add_argument('--name', dest = 'name',
                      help = 'Bucket name', required = True)
 
+
+for cmd in ['bucket-web']:
+    spp = sp.add_parser(cmd, help = 'Manage bucket website')
+    spp.add_argument('--name', dest = 'name',
+                     help = 'Bucket name', required = True)
+    spp.add_argument('--action', dest = 'action',
+                     help = 'Action to perform', required = True)
+
 for cmd in ['bucket-stat']:
     spp = sp.add_parser(cmd, help = 'Shw bucket statistics')
     spp.add_argument('--name', dest = 'name',
@@ -371,6 +379,31 @@ if args.cmd == 'bucket-add':
         print("\tdone")
     except:
         print("ERROR: Can't create bucket")
+
+if args.cmd == 'bucket-web':
+    if args.action == 'get':
+        try:
+            resp = s3.get_bucket_website(Bucket = args.name)
+            print(resp)
+        except:
+            print("ERROR: Can't get website")
+    elif args.action == 'put':
+        try:
+            s3.put_bucket_website(Bucket = args.name, WebsiteConfiguration = {
+                        'ErrorDocument': { 'Key': 'my404.html' },
+                    })
+            print("\tdone")
+        except:
+            print("ERROR: Can't put website")
+    elif args.action == 'del':
+        try:
+            s3.delete_bucket_website(Bucket = args.name)
+            print("\tdone")
+        except:
+            print("ERROR: Can't del website")
+    else:
+        print("Unknown action (get/put/del)")
+
 
 if args.cmd == 'bucket-del':
     print("Deleting bucket %s" % (args.name))

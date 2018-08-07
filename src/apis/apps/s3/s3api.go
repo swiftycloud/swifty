@@ -112,6 +112,19 @@ type S3Datapoints struct {
 	Points			[]S3Datapoint			`xml:"member,omitempy"`
 }
 
+type S3WebErrDoc struct {
+	Key			string				`xml:"Key"`
+}
+
+type S3WebIndex struct {
+	Suff			string				`xml:"Suffix"`
+}
+
+type S3WebsiteConfig struct {
+	ErrDoc			S3WebErrDoc			`xml:"ErrorDocument"`
+	IndexDoc		S3WebIndex			`xml:"IndexDocument"`
+}
+
 type S3GetMetricStatisticsResult struct {
 	Label			string				`xml:"Label,omitempy"`
 	Datapoints		S3Datapoints			`xml:"Datapoints,omitempy"`

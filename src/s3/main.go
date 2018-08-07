@@ -332,6 +332,54 @@ func handleAccessBucket(bname string, iam *S3Iam, w http.ResponseWriter, r *http
 	return nil
 }
 
+func handleGetWebsite(ctx context.Context, bname string, iam *S3Iam, w http.ResponseWriter, r *http.Request) *S3Error {
+	if !iam.Policy.mayAccess(bname) {
+		return &S3Error{ ErrorCode: S3ErrAccessDenied }
+	}
+	if !iam.Policy.allowed(S3P_GetBucketWebsite) {
+		return &S3Error{ ErrorCode: S3ErrMethodNotAllowed }
+	}
+
+	log.Debugf("Get website for %s", bname)
+	return &S3Error{ ErrorCode: S3ErrInvalidRequest, Message: "Websites not supported"}
+}
+
+func handlePutWebsite(ctx context.Context, bname string, iam *S3Iam, w http.ResponseWriter, r *http.Request) *S3Error {
+	if !iam.Policy.mayAccess(bname) {
+		return &S3Error{ ErrorCode: S3ErrAccessDenied }
+	}
+	if !iam.Policy.allowed(S3P_PutBucketWebsite) {
+		return &S3Error{ ErrorCode: S3ErrMethodNotAllowed }
+	}
+
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		return &S3Error{ ErrorCode: S3ErrIncompleteBody }
+	}
+
+	var cfg swys3api.S3WebsiteConfig
+
+	err = xml.Unmarshal(body, &cfg)
+	if err != nil {
+		return &S3Error{ ErrorCode: S3ErrMissingRequestBodyError }
+	}
+
+	log.Debugf("Put website for %s %v", bname, cfg)
+	return &S3Error{ ErrorCode: S3ErrInvalidRequest, Message: "Websites not supported"}
+}
+
+func handleDelWebsite(ctx context.Context, bname string, iam *S3Iam, w http.ResponseWriter, r *http.Request) *S3Error {
+	if !iam.Policy.mayAccess(bname) {
+		return &S3Error{ ErrorCode: S3ErrAccessDenied }
+	}
+	if !iam.Policy.allowed(S3P_DeleteBucketWebsite) {
+		return &S3Error{ ErrorCode: S3ErrMethodNotAllowed }
+	}
+
+	log.Debugf("Del website for %s", bname)
+	return &S3Error{ ErrorCode: S3ErrInvalidRequest, Message: "Websites not supported"}
+}
+
 func handleBucket(ctx context.Context, iam *S3Iam, w http.ResponseWriter, r *http.Request) *S3Error {
 	var bname string = mux.Vars(r)["BucketName"]
 
@@ -356,12 +404,21 @@ func handleBucket(ctx context.Context, iam *S3Iam, w http.ResponseWriter, r *htt
 			apiCalls.WithLabelValues("u", "ls").Inc()
 			return handleListUploads(ctx, bname, iam, w, r)
 		}
+		if _, ok := getURLParam(r, "website"); ok {
+			return handleGetWebsite(ctx, bname, iam, w, r)
+		}
 		apiCalls.WithLabelValues("o", "ls").Inc()
 		return handleListObjects(ctx, bname, iam, w, r)
 	case http.MethodPut:
+		if _, ok := getURLParam(r, "website"); ok {
+			return handlePutWebsite(ctx, bname, iam, w, r)
+		}
 		apiCalls.WithLabelValues("b", "put").Inc()
 		return handlePutBucket(ctx, bname, iam, w, r)
 	case http.MethodDelete:
+		if _, ok := getURLParam(r, "website"); ok {
+			return handleDelWebsite(ctx, bname, iam, w, r)
+		}
 		apiCalls.WithLabelValues("b", "del").Inc()
 		return handleDeleteBucket(ctx, bname, iam, w, r)
 	case http.MethodHead:
