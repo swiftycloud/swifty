@@ -9,6 +9,7 @@ type S3CtlKeyGen struct {
 type S3CtlKeyGenResult struct {
 	AccessKeyID		string		`json:"access-key-id"`
 	AccessKeySecret		string		`json:"access-key-secret"`
+	AccID			string		`json:"accid"`
 }
 
 type S3CtlKeyDel struct {

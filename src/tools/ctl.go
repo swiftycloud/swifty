@@ -1369,6 +1369,7 @@ func s3_access(args []string, opts [16]string) {
 	fmt.Printf("Key:     %s\n", creds.Key)
 	fmt.Printf("Secret:  %s\n", creds.Secret)
 	fmt.Printf("Expires: in %d seconds\n", creds.Expires)
+	fmt.Printf("AccID:   %s\n", creds.AccID)
 }
 
 func req_list(url string) {

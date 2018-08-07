@@ -871,6 +871,7 @@ func handleKeygen(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	err = swyhttp.MarshalAndWrite(w, &swys3api.S3CtlKeyGenResult{
 			AccessKeyID:	akey.AccessKeyID,
 			AccessKeySecret:s3DecryptAccessKeySecret(akey),
+			AccID:		akey.AccountObjID.Hex(),
 		})
 	if err != nil {
 		goto out

@@ -12,7 +12,7 @@ import (
 	"../apis/apps/s3"
 )
 
-func s3KeyGen(conf *YAMLConfS3, namespace, bucket string, lifetime uint32) (string, string, error) {
+func s3KeyGen(conf *YAMLConfS3, namespace, bucket string, lifetime uint32) (*swys3api.S3CtlKeyGenResult, error) {
 	addr := conf.c.Addr()
 
 	resp, err := swyhttp.MarshalAndPost(
@@ -27,22 +27,22 @@ func s3KeyGen(conf *YAMLConfS3, namespace, bucket string, lifetime uint32) (stri
 			Lifetime: lifetime,
 		})
 	if err != nil {
-		return "", "", fmt.Errorf("Error requesting NS from S3: %s", err.Error())
+		return nil, fmt.Errorf("Error requesting NS from S3: %s", err.Error())
 	}
 
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		return "", "", fmt.Errorf("Bad responce from S3 gate: %s", string(resp.Status))
+		return nil, fmt.Errorf("Bad responce from S3 gate: %s", string(resp.Status))
 	}
 
 	var out swys3api.S3CtlKeyGenResult
 
 	err = swyhttp.ReadAndUnmarshalResp(resp, &out)
 	if err != nil {
-		return "", "", fmt.Errorf("Error reading responce from S3: %s", err.Error())
+		return nil, fmt.Errorf("Error reading responce from S3: %s", err.Error())
 	}
 
-	return out.AccessKeyID, out.AccessKeySecret, nil
+	return &out, nil
 }
 
 func s3KeyDel(conf *YAMLConfS3, key string) error {
@@ -203,10 +203,7 @@ func s3Endpoint(conf *YAMLConfS3, public bool) string {
 }
 
 func GenBucketKeysS3(ctx context.Context, conf *YAMLConfMw, fid *SwoId, bucket string) (map[string]string, error) {
-	var key, skey string
-	var err error
-
-	key, skey, err = s3KeyGen(&conf.S3, fid.Namespace(), bucket, 0)
+	k, err := s3KeyGen(&conf.S3, fid.Namespace(), bucket, 0)
 	if err != nil {
 		ctxlog(ctx).Errorf("Error generating key for %s/%s: %s", fid.Str(), bucket, err.Error())
 		return nil, fmt.Errorf("Key generation error")
@@ -214,8 +211,8 @@ func GenBucketKeysS3(ctx context.Context, conf *YAMLConfMw, fid *SwoId, bucket s
 
 	return map[string]string {
 		mkEnvName("s3", bucket, "ADDR"):	s3Endpoint(&conf.S3, false),
-		mkEnvName("s3", bucket, "KEY"):		key,
-		mkEnvName("s3", bucket, "SECRET"):	skey,
+		mkEnvName("s3", bucket, "KEY"):		k.AccessKeyID,
+		mkEnvName("s3", bucket, "SECRET"):	k.AccessKeySecret,
 	}, nil
 }
 
@@ -238,13 +235,16 @@ func mwareGetS3Creds(ctx context.Context, conf *YAMLConf, acc *swyapi.S3Access) 
 		return nil, GateErrM(swy.GateBadRequest, "Perpetual keys not allowed")
 	}
 
-	var err error
 	id := ctxSwoId(ctx, acc.Project, "")
-	creds.Key, creds.Secret, err = s3KeyGen(&conf.Mware.S3, id.Namespace(), acc.Bucket, creds.Expires)
+	k, err := s3KeyGen(&conf.Mware.S3, id.Namespace(), acc.Bucket, creds.Expires)
 	if err != nil {
 		ctxlog(ctx).Errorf("Can't get S3 keys for %s.%s", id.Str(), acc.Bucket, err.Error())
 		return nil, GateErrM(swy.GateGenErr, "Error getting S3 keys")
 	}
+
+	creds.Key = k.AccessKeyID
+	creds.Secret = k.AccessKeySecret
+	creds.AccID = k.AccID
 
 	return creds, nil
 }

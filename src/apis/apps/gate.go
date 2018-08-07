@@ -154,6 +154,7 @@ type S3Creds struct {
 	Key		string			`json:"key"`
 	Secret		string			`json:"secret"`
 	Expires		uint32			`json:"expires"` /* in seconds */
+	AccID		string			`json:"accid"`
 }
 
 type FunctionAdd struct {
