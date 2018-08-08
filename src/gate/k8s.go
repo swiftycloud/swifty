@@ -1,18 +1,17 @@
 package main
 
 import (
-	"k8s.io/client-go/pkg/api/resource"
+	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/pkg/api/unversioned"
-	"k8s.io/client-go/pkg/api/v1"
-	"k8s.io/client-go/pkg/util/intstr"
-	//metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	v1beta1 "k8s.io/client-go/pkg/apis/extensions/v1beta1"
+	"k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/api/extensions/v1beta1"
 	"k8s.io/client-go/tools/clientcmd"
-	k8serr "k8s.io/client-go/pkg/api/errors"
+	k8serr "k8s.io/apimachinery/pkg/api/errors"
 
 	"k8s.io/client-go/tools/cache"
-	"k8s.io/client-go/pkg/fields"
+	"k8s.io/apimachinery/pkg/fields"
 
 	"gopkg.in/mgo.v2/bson"
 
@@ -35,9 +34,9 @@ func swk8sPodDelete(podname string) error {
 	var grace int64 = 0
 	var err error
 
-	podiface := swk8sClientSet.Pods(conf.Wdog.Namespace)
+	podiface := swk8sClientSet.CoreV1().Pods(conf.Wdog.Namespace)
 	err = podiface.Delete(podname,
-				&v1.DeleteOptions{
+				&metav1.DeleteOptions{
 					GracePeriodSeconds: &grace,
 					OrphanDependents: &orphan,
 				})
@@ -63,7 +62,7 @@ func swk8sRemove(ctx context.Context, conf *YAMLConf, fn *FunctionDesc) error {
 	}
 
 	deploy := swk8sClientSet.Extensions().Deployments(conf.Wdog.Namespace)
-	this, err := deploy.Get(depname)
+	this, err := deploy.Get(depname, metav1.GetOptions{})
 	if err != nil {
 		if k8serr.IsNotFound(err) {
 			ctxlog(ctx).Debugf("Deployment %s/%s doesn't exist", fn.SwoId.Str(), depname)
@@ -82,8 +81,8 @@ func swk8sRemove(ctx context.Context, conf *YAMLConf, fn *FunctionDesc) error {
 	}
 
 	err = deploy.Delete(depname,
-				&v1.DeleteOptions{
-					TypeMeta: unversioned.TypeMeta{
+				&metav1.DeleteOptions{
+					TypeMeta: metav1.TypeMeta{
 						Kind:       "Deployment",
 						APIVersion: "extensions/v1beta1",
 					},
@@ -168,7 +167,7 @@ func swk8sGenEnvVar(ctx context.Context, fn *FunctionDesc, wd_port int) []v1.Env
 			continue
 		}
 
-		secret, err := swk8sClientSet.Secrets(conf.Wdog.Namespace).Get("mw-" + mwc)
+		secret, err := swk8sClientSet.CoreV1().Secrets(conf.Wdog.Namespace).Get("mw-" + mwc, metav1.GetOptions{})
 		if err != nil {
 			ctxlog(ctx).Errorf("No mware secret for %s", mwc)
 			continue
@@ -232,7 +231,7 @@ func swk8sUpdate(ctx context.Context, conf *YAMLConf, fn *FunctionDesc) error {
 	depname := fn.DepName()
 
 	deploy := swk8sClientSet.Extensions().Deployments(conf.Wdog.Namespace)
-	this, err := deploy.Get(depname)
+	this, err := deploy.Get(depname, metav1.GetOptions{})
 	if err != nil {
 		ctxlog(ctx).Errorf("Can't get deployment for %s", fn.SwoId.Str())
 		return err
@@ -302,7 +301,7 @@ func swk8sRun(ctx context.Context, conf *YAMLConf, fn *FunctionDesc) error {
 	envs := swk8sGenEnvVar(ctx, fn, conf.Wdog.Port)
 
 	podspec := v1.PodTemplateSpec{
-		ObjectMeta:	v1.ObjectMeta {
+		ObjectMeta:	metav1.ObjectMeta {
 			Name:	depname,
 			Labels:	swk8sGenLabels(fn, depname),
 		},
@@ -363,11 +362,11 @@ func swk8sRun(ctx context.Context, conf *YAMLConf, fn *FunctionDesc) error {
 	}
 
 	deployspec := v1beta1.Deployment{
-		TypeMeta: unversioned.TypeMeta{
+		TypeMeta: metav1.TypeMeta{
 			Kind:       "Deployment",
 			APIVersion: "extensions/v1beta1",
 		},
-		ObjectMeta:	v1.ObjectMeta {
+		ObjectMeta:	metav1.ObjectMeta {
 			Name:	depname,
 		},
 		Spec: v1beta1.DeploymentSpec{
@@ -605,9 +604,9 @@ func init() {
 }
 
 func swk8sMwSecretAdd(ctx context.Context, id string, envs map[string][]byte) error {
-	secrets := swk8sClientSet.Secrets(conf.Wdog.Namespace)
+	secrets := swk8sClientSet.CoreV1().Secrets(conf.Wdog.Namespace)
 	_, err := secrets.Create(&v1.Secret{
-			ObjectMeta:	v1.ObjectMeta {
+			ObjectMeta:	metav1.ObjectMeta {
 				Name:	"mw-" + id,
 				Labels:	map[string]string{},
 			},
@@ -628,9 +627,9 @@ func swk8sMwSecretRemove(ctx context.Context, id string) error {
 	var grace int64 = 0
 	var err error
 
-	secrets := swk8sClientSet.Secrets(conf.Wdog.Namespace)
+	secrets := swk8sClientSet.CoreV1().Secrets(conf.Wdog.Namespace)
 	err = secrets.Delete("mw-" + id,
-		&v1.DeleteOptions{
+		&metav1.DeleteOptions{
 			GracePeriodSeconds: &grace,
 			OrphanDependents: &orphan,
 		})
@@ -646,7 +645,7 @@ func swk8sMwSecretRemove(ctx context.Context, id string) error {
 
 func swk8sDepScale(depname string, replicas int32, up bool) int32 {
 	deps := swk8sClientSet.Extensions().Deployments(conf.Wdog.Namespace)
-	dep, err := deps.Get(depname)
+	dep, err := deps.Get(depname, metav1.GetOptions{})
 	if err != nil {
 		return replicas /* Huh? */
 	}
@@ -681,8 +680,8 @@ func swk8sDepScaleDown(depname string, replicas uint32) uint32 {
 func swk8sGetBuildPods() (map[string]string, error) {
 	rv := make(map[string]string)
 
-	podiface := swk8sClientSet.Pods(conf.Wdog.Namespace)
-	pods, err := podiface.List(v1.ListOptions{ LabelSelector: "swybuild" })
+	podiface := swk8sClientSet.CoreV1().Pods(conf.Wdog.Namespace)
+	pods, err := podiface.List(metav1.ListOptions{ LabelSelector: "swybuild" })
 	if err != nil {
 		glog.Errorf("Error listing PODs: %s", err.Error())
 		return nil, errors.New("Error listing PODs")
@@ -711,7 +710,7 @@ func refreshDepsAndPods(ctx context.Context) error {
 	}
 
 	depiface := swk8sClientSet.Extensions().Deployments(conf.Wdog.Namespace)
-	podiface := swk8sClientSet.Pods(conf.Wdog.Namespace)
+	podiface := swk8sClientSet.CoreV1().Pods(conf.Wdog.Namespace)
 
 	for _, fn := range(fns) {
 		if fn.State != swy.DBFuncStateRdy && fn.State != swy.DBFuncStateStr {
@@ -724,7 +723,7 @@ func refreshDepsAndPods(ctx context.Context) error {
 			return err
 		}
 
-		dep, err := depiface.Get(fn.DepName())
+		dep, err := depiface.Get(fn.DepName(), metav1.GetOptions{})
 		if err != nil {
 			if !k8serr.IsNotFound(err) {
 				glog.Errorf("Can't get dep %s: %s", fn.DepName(), err.Error())
@@ -767,7 +766,7 @@ func refreshDepsAndPods(ctx context.Context) error {
 			}
 		}
 
-		pods, err := podiface.List(v1.ListOptions{ LabelSelector: "swyrun=" + fn.Cookie[:32] })
+		pods, err := podiface.List(metav1.ListOptions{ LabelSelector: "swyrun=" + fn.Cookie[:32] })
 		if err != nil {
 			glog.Errorf("Error listing PODs: %s", err.Error())
 			return errors.New("Error listing PODs")
