@@ -167,6 +167,8 @@ func fndatGetOrInit(ctx context.Context, cookie string, fn *FunctionDesc, forRem
 			}
 			return nil, err
 		}
+
+		fn = &fnd
 	}
 
 	nret := &FnMemData{}
