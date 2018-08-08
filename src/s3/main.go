@@ -945,7 +945,7 @@ func handleWebReq(w http.ResponseWriter, r *http.Request) {
 
 	var oname string
 
-	if len(aux) < 4 {
+	if len(aux) < 4 || aux[3] == "" {
 		oname = ws.index()
 	} else {
 		oname = aux[3]
