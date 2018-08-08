@@ -325,6 +325,13 @@ func swk8sRun(ctx context.Context, conf *YAMLConf, fn *FunctionDesc) error {
 				},
 			},
 			HostNetwork:	false,
+//			HostAliases:	[]v1.HostAlias {
+//				FIXME -- resolve and add s3 API endpoint here
+//				v1.HostAlias {
+//					IP: "1.2.3.4",
+//					Hostnames: []string{ conf.Mware.S3.API },
+//				},
+//			},
 			Containers:	[]v1.Container{
 				{
 					Name:		"wdog",
