@@ -43,7 +43,6 @@ while True:
     data = readmsg(q)
 
     if swycode != None:
-        print(data)
         req = type('request', (object,), json.loads(data))
         try:
             res, resb = swycode.Main(req)
