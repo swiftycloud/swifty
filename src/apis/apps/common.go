@@ -6,7 +6,7 @@ package swyapi
  */
 type SwdFunctionRun struct {
 	Event		string			`json:"event"`
-	Args		map[string]string	`json:"args,omitempty"`
+	Args		map[string]string	`json:"args"`
 	ContentType	string			`json:"content,omitempty"`
 	Body		string			`json:"body,omitempty"`
 	Claims		map[string]interface{}	`json:"claims,omitempty"` // JWT
