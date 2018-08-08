@@ -440,6 +440,10 @@ func (fn *FunctionDesc)setSize(ctx context.Context, sz *swyapi.FunctionSize) err
 		rlfix = true
 	}
 
+	if len(update) == 0 {
+		return nil
+	}
+
 	err = dbUpdatePart(ctx, fn, update)
 	if err != nil {
 		return err
