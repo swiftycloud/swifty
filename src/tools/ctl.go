@@ -517,7 +517,11 @@ func function_info(args []string, opts [16]string) {
 	fmt.Printf("Version:     %s%s\n", ver, rv)
 	fmt.Printf("State:       %s\n", ifo.State)
 	if ifo.URL != "" {
-		fmt.Printf("URL:         %s://%s\n", gateProto(), ifo.URL)
+		pfx := ""
+		if !(strings.HasPrefix(ifo.URL, "http://") || strings.HasPrefix(ifo.URL, "https://")) {
+			pfx = gateProto() + "://"
+		}
+		fmt.Printf("URL:         %s%s\n", pfx, ifo.URL)
 	}
 	fmt.Printf("Timeout:     %dms\n", ifo.Size.Timeout)
 	if ifo.Size.Rate != 0 {
