@@ -1,0 +1,245 @@
+Detailed tour over swyctl common operations.
+
+== 0. Intro ==
+
+The typical synopsis for swyctl operations is
+    # swyctl <op> <args> [-<options>]
+
+where options a things like '-<op> <val>'. In 99.9% os the cases an op
+looks like 'OA' where O denotes the object to work on and A -- the action 
+to perform.
+
+Objects are (f)unctions, (m)wares, (d)eployments, (r)epos, (a)ccounts and
+(e)vents.
+Actions are (l)ist, (a)dd, (d)elete, (u)pdate (modify), show (i)nformation
+and other often described by more than one letter.
+
+When run w/o arguments swyctl prints full (rather long) help text on the
+screen showing all ops, args and options.
+
+== 1. Login and look around ==
+
+Login as user
+    # swyctl login user:pass@gate:port
+
+Login over https
+    # swyctl login user:pass@gate:port -tls yes
+
+Login with simultaneous admd configuration (userful for swifty.admin only)
+    # swyctl login user:pass@gate:port -admd admd:port
+
+Login through the nginx as proxy
+    # swyctl login user:pass@gate:port -proxy sp
+
+Seeing who I am
+    # swyctl me
+    user@gate:8686 (http)
+
+When logged-in as admin, one can perform all actions described below for
+any other user, this is done by either saving this other user name
+    # swyctl me for another-user
+
+... or by specifying the user in each command with the -for option
+    # swyctl <op> <arg> [-<opts>] -for another-user
+
+The above info plus some runtime data is stored in the ~/.swifty.conf file.
+
+== 2. Playing with functions ==
+
+Add a function
+    # swyctl fa <name> -src <path-to-file>
+
+List functions
+    # swyctl fl
+    ID                              NAME                STATE     
+    5b3e3bcffd65c307ee564f6b        foo                 ready       
+    5b57535dfd65c37ce175da12        bar                 starting    
+
+Show info about function by name
+    # swyctl fi foo
+    Lang:        python
+    Version:     1 (1)
+    State:       ready
+    ...
+
+... or by ID itself
+    # swyctl fi :<id>
+
+Important fields are Version and State. States can be ready, starting
+or stalled. The 3rd one means that there's some problem with making the
+fn up-n-running. Check fn logs and/or fix the source code (see below).
+Version is the sequence number, typically is bumped on sources update.
+The number in braces is (actually are, there can be more than one) the
+currently running version. If it's less than the non-braced number,
+then the function is in the process of update.
+
+The ':<ID>' notation applies to all operations on functions below.
+
+Remove function
+    # swyctl fd foo
+
+Update function sources
+    # swyctl fu foo -src <path-to-file>
+
+The path can lead to the same file, gate doesn't check for the sources
+to actually differ from what's currently running.
+
+Add URL trigger for function (e stands for event)
+    # swyctl ea foo <trigger-name> URL
+
+See triggers and information about them
+    # swyctl el foo
+    5b6a643efd65c36eb9828da0                 <name>   url
+    # swyctl ei foo <name>
+    Name:          <name>
+    Source:        url
+    URL:           gate:8686/call/b4ee91f0a97615906a44420d311a2d8317867678022b42f824b6a36a9f09715f
+
+The same url can be seen in function info as well
+    # swyctl fi foo
+    ...
+    URL:         gate:8686/call/b4...5f
+    ...
+
+Checking how the function works
+... with query
+    # curl gate:8686/call/b4...5f?<arguments>
+... with body
+    # curl -H 'Content-Type: text/plain' -d <body> gate:8686/call/b4...5f
+    # curl -H 'Content-Type: application/json' -d @<file-with-body> gate:8686/call/b4...5f
+... with exact method
+    # curl -X <method> gate:8686/call/b4...5f
+
+
+== 3. Playing with middleware (e.g. mongo db) ==
+
+Add mware
+    # swyctl ma <name> <type>
+
+Listing mwares
+    # swyctl ml
+    ID                              NAME                TYPE      
+    5b50a1d6fd65c37b42265d64        x                   mongo     
+    5b50a1d9fd65c37b42265d65        y                   maria     
+
+See info about mware
+    # swyctl mi x
+    Name:         x
+    Type:         mongo
+    Disk usage:   0 bytes
+
+the :<ID> notation applies to mwares as well
+    # swyctl mi :5b50a1d6fd65c37b42265d64
+
+Attach mware to function is done by updating the function
+    # swyctl fu foo -mw +x
+Detach mware from function
+    # swyctl fu foo -mw -x
+List of attached mware is shown in function info
+    # swyctl fi foo
+    ...
+    Mware:
+    		       x mongo     (id:5b50a1d6fd65c37b42265d64)
+
+
+== 4. Playing with accounts (github) ==
+
+Add account by name
+    # swyctl aa github -name <name>
+... or by personal access token (name will be auto-resolved)
+    # swyctl aa github -token <value>
+
+List accounts
+    # swyctl al
+    ID                              TYPE        
+    5b684455fd65c3123a244380        github      
+
+Show info about account. Only by ID, as there's no name for an account
+    # swyctl ai 5b684455fd65c3123a244380
+    Type:          github
+    GitHub name:   <name>
+    GitHub token:  2a79fc...
+
+Remove account
+    # swyctl ad 5b684455fd65c3123a244380
+
+
+== 5. Playing with repos (github only for now) ==
+
+Add a repo by providing its URL
+    # swyctl ra https://github.com/xemul/repo.git
+
+Add a repo which is private to account, so cloning is possible with PAT only
+    # swyctl ra https://github.com/xemul/privrepo.git -acc 5b684455fd65c3123a244380
+
+List all repos accessible by current user
+    # swyctl rl
+    ID                              TYPE    STATE       URL
+    5b4ca23afd65c34a68c47e90        github  ready       https://github.com/xemul/repo.git
+    5b4d687efd65c30b73407196        github* ready       https://github.com/xemul/priv-repo.git
+                                    github  unattached  https://github.com/xemul/random-repo.git
+
+Seeing ID and state 'ready' means the repo is cloned and functions can be
+created for it. Asterisk near github type means the repo has an associated
+account. Otherwise (no ID and status 'unattached') the repo is just found
+on user account and can be attached with ra action.
+
+List attached repos
+    # swyctl rl -at true
+    ID                              TYPE    STATE       URL
+    5b4ca23afd65c34a68c47e90        github  ready       https://github.com/xemul/repo.git
+    5b4d687efd65c30b73407196        github* ready       https://github.com/xemul/priv-repo.git
+
+List unattached repos
+    # swyctl rl -at false
+    ID                              TYPE    STATE       URL
+                                    github  unattached  https://github.com/xemul/random-repo.git
+
+Show contents of the repo
+    # swyctl rl <ID>
+    .gitignore ()
+    .swifty.yml ()
+    README.md ()
+    functions/fn.py (python)
+    functions/fn.go (golang)
+
+Show contents of the repo in nicer form
+    # swyctl rl <ID> -pretty tree
+    .gitignore ()
+    .swifty.yml ()
+    README.md ()
+    functions
+      fn.py (python)
+      fn.go (golang)
+
+Show descrptive info about repo contentx for those, having .swifty.yml file
+    # swyctl rl <ID> -pretty desc
+    Some demo functions
+    Hello world: Golang hello-world example
+        functions/fn.go (golang)
+    Hello world: Python hello-world example
+        functions/fn.py (python)
+
+
+== 6. Authorization as a service ==
+
+Turn authorization on
+    # swyctl auth on
+... and off
+    # swyctl auth off
+
+See the auth status. Note, that AaaS is deployment, so
+    # swyctl dl
+    ID                              NAME                
+    5b5b080efd65c3714310b76f        simple_auth          (3 items) auth
+    # swyctl di simple_auth
+    State:        ready
+    Items:
+            simple_auth_um: function, ready
+            simple_auth_jwt: mware, ready
+            simple_auth_mgo: mware, ready
+
+Also note, that the above components are accessible via fi/mi actions too.
+
+Make function be authorized
+    # swyctl fu foo -auth simple_auth_jwt

@@ -1,0 +1,64 @@
+Very quick tour over swyctl
+
+Login    # swyctl login user:pass@gate:port  [ -tls yes ] [ -admd admd:port ] [ -proxy sp ]
+                                                |            |                   |
+                            this is for https --+            |                   |
+            this is for admin logings to make reqs to admd --+                   |
+      this is for cases when gate/admd hide behind nginx that spoofs REST URLs --+
+
+See who I am        # swyctl me
+
+Do any action from below list on behalf of other user:
+                    # swyctl ... -for other-user
+
+List functions                # swyctl fl
+Add function                  # swyctl fa %fname -src path/to/file.ext
+Show fn info                  # swyctl fi %fname
+Remove function               # swyctl fd %fname
+Update fn src                 # swyctl fu %fname -src path/to/file.ext
+Tune timeout                  # swyctl fu %fname -tmo miliseconds
+See fn logs                   # swyctl flog %fname
+See actual fn code            # swyctl fcod %fname
+
+List fn triggers              # swyctl el %fname
+Add trigger                   # swyctl ea %fname %ename type     // types: url ...
+Show trigger                  # swyctl ei %fname %ename          // URL to call sits here
+Remove trigger                # swyctl ed %fname %ename
+
+List mwares                   # swyctl ml
+... of specific type          #       ... -type type             // types: mongo, maria, ...
+Add mware                     # swyctl ma %mname type
+Show mw info                  # swyctl mi %mname
+Remove mware                  # swyctl md %mname
+Attach/detach mw              # swyctl fu %fname -mw +%mwname
+                              #              ... -mw -%mwname
+
+Turn AaaS on                  # swyctl auth on
+... or off                    # swyctl auth off
+See how it goes               # swyctl dl
+                              # swyctl di %dname
+Turn auth on/off for fn       # swyctl fu %fname -auth %jwtmname // not the dname!
+                              #              ... -auth -
+
+List accounts                 # swyctl al
+Add account                   # swyctl aa github -name name
+... by PAT only               #              ... -token token
+Show account info             # swyctl ai %aid                   // ! ID from al output, not name
+Remove account                # swyctl ad %aid
+Add account to fn             # swyctl fu fname -acc +%aid
+... or revoke one             #             ... -acc -%aid
+
+List repos                    # swyctl rl
+... only attached             #       ... -at true
+... for some acc              #       ... -acc %aid
+Attach repo                   # swyctl ra https://github.com/x/y.git
+... private one (w/ acc PAT)  #                                  ... -acc %aid
+Show repo info                # swyctl ri %rid
+Show repo contents            # swyctl rls %rid
+... like a tree               #            ... -pretty tree
+... desc (if any)             #            ... -pretty desc
+Show file contents            # swyctl rcat %rid path/to/file.ext
+
+Get creds for s3              # swyctl s3acc bucket [ -life seconds ]
+Attach/detach bkt to fn       # swyctl fu fname -s3b +bucket
+                              #             ... -s3b -bucket
