@@ -2180,7 +2180,7 @@ definitions:
         description: Lifetime in seconds
       accid:
         type: string
-	description: Identifier of a user, used in various s3 operations, e.g. webserver access
+        description: Identifier of a user, used in various s3 operations, e.g. webserver access
 
   DeployStart:
     type: object
