@@ -363,7 +363,6 @@ func handleGetWebsite(ctx context.Context, bname string, iam *S3Iam, w http.Resp
 		},
 	}
 
-	w.Header().Set("X-Swifty-Website", iam.AccountObjID.Hex())
 	HTTPRespXML(w, resp)
 	return nil
 }
@@ -908,13 +907,22 @@ out:
 	http.Error(w, err.Error(), http.StatusBadRequest)
 }
 
+var webRoot string
+
 func handleWebReq(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	ctx, done := mkContext("s3 req")
 	defer done(ctx)
 
-	aux := strings.SplitN(r.URL.Path, "/", 4)
-	if len(aux) < 3  || !bson.IsObjectIdHex(aux[1]) {
+	host := strings.SplitN(r.Host, ":", 2)[0]
+	if !strings.HasSuffix(host, webRoot) {
+		http.Error(w, "", 502)
+		return
+	}
+
+	subdom := strings.TrimSuffix(host, webRoot)
+	aux := strings.SplitN(subdom, ".", 3)
+	if len(aux) != 3  || !bson.IsObjectIdHex(aux[1]) {
 		http.Error(w, "", http.StatusNotFound)
 		return
 	}
@@ -928,7 +936,7 @@ func handleWebReq(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var ws S3Website
-	query = bson.M{ "bcookie": account.BCookie(aux[2]), "state": S3StateActive }
+	query = bson.M{ "bcookie": account.BCookie(aux[0]), "state": S3StateActive }
 	err = dbS3FindOne(ctx, query, &ws)
 	if err != nil {
 		http.Error(w, "", http.StatusNotFound)
@@ -940,21 +948,19 @@ func handleWebReq(w http.ResponseWriter, r *http.Request) {
 		AccountObjID:	account.ObjID, /* FIXME -- cache account object here
 						* to speed-up the s3AccountLookup()
 						*/
-		Policy:		*getWebPolicy(aux[2]),
+		Policy:		*getWebPolicy(aux[0]),
 	}
 
-	var oname string
-
-	if len(aux) < 4 || aux[3] == "" {
+	oname := r.URL.Path[1:]
+	if oname == "" {
 		oname = ws.index()
 	} else {
-		oname = aux[3]
 		if strings.HasSuffix(oname, "/") {
 			oname += ws.index()
 		}
 	}
 
-	serr := handleObject(ctx, iam, w, r, aux[2], oname)
+	serr := handleObject(ctx, iam, w, r, aux[0], oname)
 	if serr != nil {
 		if serr.ErrorCode != S3ErrNoSuchKey {
 			http.Error(w, serr.Message, http.StatusInternalServerError)
@@ -964,7 +970,7 @@ func handleWebReq(w http.ResponseWriter, r *http.Request) {
 		if ws.ErrDoc != "" {
 			/* Try to report back the 4xx.html page */
 			ctx.(*s3Context).errCode = http.StatusNotFound
-			serr = handleObject(ctx, iam, w, r, aux[2], ws.ErrDoc)
+			serr = handleObject(ctx, iam, w, r, aux[0], ws.ErrDoc)
 			if serr == nil {
 				return
 			}
@@ -1106,7 +1112,7 @@ func main() {
 
 	// Web server operations
 	rwebsrv := mux.NewRouter()
-	rwebsrv.PathPrefix("/").Methods("GET", "HEAD").HandlerFunc(handleWebReq)
+	rwebsrv.Methods("GET", "HEAD").HandlerFunc(handleWebReq)
 	if conf.Daemon.WebPort == "" {
 		conf.Daemon.WebPort = "8080"
 	}
@@ -1168,9 +1174,10 @@ func main() {
 	}()
 
 	go func() {
+		webRoot = strings.SplitN(conf.Daemon.Addr, ":", 2)[0]
 		websrv := &http.Server{
 			Handler:	rwebsrv,
-			Addr:		swy.MakeAdminURL(conf.Daemon.Addr, conf.Daemon.WebPort),
+			Addr:		webRoot + ":" + conf.Daemon.WebPort,
 		}
 
 		err = websrv.ListenAndServe()
