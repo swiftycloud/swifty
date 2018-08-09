@@ -81,7 +81,7 @@ src/$(1)/version.go: .FORCE
 
 swy-$(1): .FORCE src/$(1)/version.go
 	$$(call msg-gen,$$@)
-	$$(Q) $$(MAKE) -C src/$(1)/
+	$$(Q) cd src/$(1)/ && go build
 	$$(Q) $$(MV) src/$(1)/$(1) $$@
 all-y += swy-$(1)
 endef
@@ -256,6 +256,9 @@ endif
 
 DB-SWIFTY	:= swifty
 DB-S3		:= swifty-s3
+
+deps:
+	sh deps.sh
 
 mgo-swifty-creds :=
 ifneq ($(mgo-swifty-user),)
