@@ -152,3 +152,24 @@ type S3Object struct {
 	S3ObjectProps					`bson:",inline"`
 }
 
+type S3ObjectPart struct {
+	ObjID				bson.ObjectId	`bson:"_id,omitempty"`
+	IamObjID			bson.ObjectId	`bson:"iam-id,omitempty"`
+
+	MTime				int64		`bson:"mtime,omitempty"`
+	State				uint32		`bson:"state"`
+
+	RefID				bson.ObjectId	`bson:"ref-id,omitempty"`
+	BCookie				string		`bson:"bcookie,omitempty"`
+	OCookie				string		`bson:"ocookie,omitempty"`
+	CreationTime			string		`bson:"creation-time,omitempty"`
+	Size				int64		`bson:"size"`
+	Part				uint		`bson:"part"`
+	ETag				string		`bson:"etag"`
+	Chunks				[]bson.ObjectId	`bson:"chunks"`
+}
+
+type S3DataChunk struct {
+	ObjID		bson.ObjectId	`bson:"_id,omitempty"`
+	Bytes		[]byte		`bson:"bytes"`
+}

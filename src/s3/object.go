@@ -155,7 +155,7 @@ out_remove:
 }
 func AddObject(ctx context.Context, iam *s3mgo.S3Iam, bucket *s3mgo.S3Bucket, oname string,
 		acl string, data []byte) (*s3mgo.S3Object, error) {
-	var objp *S3ObjectPart
+	var objp *s3mgo.S3ObjectPart
 	var err error
 
 	object := &s3mgo.S3Object {
@@ -242,7 +242,7 @@ func s3DeleteObject(ctx context.Context, iam *s3mgo.S3Iam, bucket *s3mgo.S3Bucke
 }
 
 func DropObject(ctx context.Context, bucket *s3mgo.S3Bucket, object *s3mgo.S3Object) error {
-	var objp []*S3ObjectPart
+	var objp []*s3mgo.S3ObjectPart
 
 	err := dbS3SetState(ctx, object, S3StateInactive, nil)
 	if err != nil {
@@ -275,7 +275,7 @@ func DropObject(ctx context.Context, bucket *s3mgo.S3Bucket, object *s3mgo.S3Obj
 }
 
 func ReadData(ctx context.Context, bucket *s3mgo.S3Bucket, object *s3mgo.S3Object) ([]byte, error) {
-	var objp []*S3ObjectPart
+	var objp []*s3mgo.S3ObjectPart
 	var res []byte
 	var err error
 

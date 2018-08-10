@@ -45,7 +45,7 @@ func s3RepairUploadsInactive(ctx context.Context) error {
 
 		update := bson.M{ "$set": bson.M{ "state": S3StateInactive } }
 		query := bson.M{ "ref-id": upload.ObjID }
-		if err = dbS3Update(ctx, query, update, false, &S3ObjectPart{}); err != nil {
+		if err = dbS3Update(ctx, query, update, false, &s3mgo.S3ObjectPart{}); err != nil {
 			if err != mgo.ErrNotFound {
 				log.Errorf("s3: Can't deactivate parts on upload %s: %s",
 					infoLong(&upload), err.Error())
@@ -66,7 +66,7 @@ func s3RepairUploadsInactive(ctx context.Context) error {
 }
 
 func s3RepairPartsInactive(ctx context.Context) error {
-	var objp []*S3ObjectPart
+	var objp []*s3mgo.S3ObjectPart
 	var err error
 
 	log.Debugf("s3: Processing inactive datas")
@@ -177,7 +177,7 @@ func VerifyUploadUID(bucket *s3mgo.S3Bucket, oname, uid string) error {
 }
 
 func s3UploadRemoveLocked(ctx context.Context, bucket *s3mgo.S3Bucket, upload *S3Upload, data bool) (error) {
-	var objp []*S3ObjectPart
+	var objp []*s3mgo.S3ObjectPart
 	var err error
 
 	err = dbS3SetState(ctx, upload, S3StateInactive, nil)
@@ -240,7 +240,7 @@ func s3UploadInit(ctx context.Context, iam *s3mgo.S3Iam, bucket *s3mgo.S3Bucket,
 
 func s3UploadPart(ctx context.Context, iam *s3mgo.S3Iam, bucket *s3mgo.S3Bucket, oname,
 			uid string, partno int, data []byte) (string, error) {
-	var objp *S3ObjectPart
+	var objp *s3mgo.S3ObjectPart
 	var upload S3Upload
 	var err error
 
@@ -358,7 +358,7 @@ func s3Uploads(ctx context.Context, iam *s3mgo.S3Iam, bname string) (*swys3api.S
 
 func s3UploadList(ctx context.Context, bucket *s3mgo.S3Bucket, oname, uid string) (*swys3api.S3MpuPartList, error) {
 	var res swys3api.S3MpuPartList
-	var objp []*S3ObjectPart
+	var objp []*s3mgo.S3ObjectPart
 	var upload S3Upload
 	var err error
 

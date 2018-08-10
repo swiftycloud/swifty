@@ -119,18 +119,18 @@ func dbConnect(conf *YAMLConf) error {
 	dbColMap[reflect.TypeOf(&S3Upload{})] = DBColS3Uploads
 	dbColMap[reflect.TypeOf([]S3Upload{})] = DBColS3Uploads
 	dbColMap[reflect.TypeOf(&[]S3Upload{})] = DBColS3Uploads
-	dbColMap[reflect.TypeOf(S3ObjectPart{})] = DBColS3ObjectData
-	dbColMap[reflect.TypeOf(&S3ObjectPart{})] = DBColS3ObjectData
-	dbColMap[reflect.TypeOf([]S3ObjectPart{})] = DBColS3ObjectData
-	dbColMap[reflect.TypeOf(&[]S3ObjectPart{})] = DBColS3ObjectData
-	dbColMap[reflect.TypeOf([]*S3ObjectPart{})] = DBColS3ObjectData
-	dbColMap[reflect.TypeOf(&[]*S3ObjectPart{})] = DBColS3ObjectData
-	dbColMap[reflect.TypeOf(S3DataChunk{})] = DBColS3DataChunks
-	dbColMap[reflect.TypeOf(&S3DataChunk{})] = DBColS3DataChunks
-	dbColMap[reflect.TypeOf([]S3DataChunk{})] = DBColS3DataChunks
-	dbColMap[reflect.TypeOf(&[]S3DataChunk{})] = DBColS3DataChunks
-	dbColMap[reflect.TypeOf([]*S3DataChunk{})] = DBColS3DataChunks
-	dbColMap[reflect.TypeOf(&[]*S3DataChunk{})] = DBColS3DataChunks
+	dbColMap[reflect.TypeOf(s3mgo.S3ObjectPart{})] = DBColS3ObjectData
+	dbColMap[reflect.TypeOf(&s3mgo.S3ObjectPart{})] = DBColS3ObjectData
+	dbColMap[reflect.TypeOf([]s3mgo.S3ObjectPart{})] = DBColS3ObjectData
+	dbColMap[reflect.TypeOf(&[]s3mgo.S3ObjectPart{})] = DBColS3ObjectData
+	dbColMap[reflect.TypeOf([]*s3mgo.S3ObjectPart{})] = DBColS3ObjectData
+	dbColMap[reflect.TypeOf(&[]*s3mgo.S3ObjectPart{})] = DBColS3ObjectData
+	dbColMap[reflect.TypeOf(s3mgo.S3DataChunk{})] = DBColS3DataChunks
+	dbColMap[reflect.TypeOf(&s3mgo.S3DataChunk{})] = DBColS3DataChunks
+	dbColMap[reflect.TypeOf([]s3mgo.S3DataChunk{})] = DBColS3DataChunks
+	dbColMap[reflect.TypeOf(&[]s3mgo.S3DataChunk{})] = DBColS3DataChunks
+	dbColMap[reflect.TypeOf([]*s3mgo.S3DataChunk{})] = DBColS3DataChunks
+	dbColMap[reflect.TypeOf(&[]*s3mgo.S3DataChunk{})] = DBColS3DataChunks
 	dbColMap[reflect.TypeOf(&S3Website{})] = DBColS3Websites
 
 	return nil
@@ -197,8 +197,8 @@ func infoLong(o interface{}) (string) {
 			bucket.ObjID, bucket.BCookie,
 			bucket.NamespaceID, bucket.State,
 			bucket.Name)
-	case reflect.TypeOf(&S3ObjectPart{}):
-		objd := o.(*S3ObjectPart)
+	case reflect.TypeOf(&s3mgo.S3ObjectPart{}):
+		objd := o.(*s3mgo.S3ObjectPart)
 		return fmt.Sprintf("{ S3ObjectPart: %s/%s/%s/%s/%d/%d }",
 			objd.ObjID, objd.RefID,
 			objd.BCookie, objd.OCookie,
