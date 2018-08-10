@@ -5,7 +5,6 @@ import (
 	"flag"
 	"time"
 	"strings"
-	"errors"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 	"../s3/mgo"
@@ -44,10 +43,11 @@ func dbConnect(user, pass, host string) error {
 	return nil
 }
 
-var accounts map[bson.ObjectId]*s3mgo.S3Account
+var accounts map[string]*s3mgo.S3Account
+var accnsid map[string]*s3mgo.S3Account
 
 func checkAccounts() error {
-	var acs []s3mgo.S3Account
+	var acs []*s3mgo.S3Account
 
 	err := session.DB(DBName).C(DBColS3Iams).Find(bson.M{"namespace":bson.M{"$exists":1}}).All(&acs)
 	if err != nil {
@@ -55,20 +55,22 @@ func checkAccounts() error {
 		return err
 	}
 
-	accounts = make(map[bson.ObjectId]*s3mgo.S3Account)
+	accounts = make(map[string]*s3mgo.S3Account)
+	accnsid = make(map[string]*s3mgo.S3Account)
 	fmt.Printf("Accounts:\n")
 	for _, ac := range acs {
-		accounts[ac.ObjID] = &ac
+		accounts[ac.ObjID.Hex()] = ac
+		accnsid[ac.NamespaceID()] = ac
 		fmt.Printf("\t%s: ns=%s acid=%s\n", ac.ObjID.Hex(), ac.Namespace, ac.ObjID.Hex())
 	}
 
 	return nil
 }
 
-var iams map[bson.ObjectId]*s3mgo.S3Iam
+var iams map[string]*s3mgo.S3Iam
 
 func checkIams() error {
-	var is []s3mgo.S3Iam
+	var is []*s3mgo.S3Iam
 
 	err := session.DB(DBName).C(DBColS3Iams).Find(bson.M{"namespace":bson.M{"$exists":0}}).All(&is)
 	if err != nil {
@@ -76,17 +78,17 @@ func checkIams() error {
 		return err
 	}
 
-	iams = make(map[bson.ObjectId]*s3mgo.S3Iam)
+	iams = make(map[string]*s3mgo.S3Iam)
 	fmt.Printf("IAMs:\n")
 	for _, iam := range is {
-		_, ok := accounts[iam.AccountObjID]
+		_, ok := accounts[iam.AccountObjID.Hex()]
 		if !ok {
 			fmt.Printf("\tDangling IAM %s\n", iam.ObjID.Hex())
-			return errors.New("")
+			continue
 		}
 
-		iams[iam.ObjID] = &iam
-		fmt.Printf("\t%s: ac..=%s %-32s %x\n", iam.ObjID.Hex(),
+		iams[iam.ObjID.Hex()] = iam
+		fmt.Printf("\t%s: ac=..%s %-32s %x\n", iam.ObjID.Hex(),
 				iam.AccountObjID.Hex()[12:],
 				strings.Join(iam.Policy.Resource, ", "),
 				iam.Policy.Action.ToSwy())
@@ -97,7 +99,7 @@ func checkIams() error {
 }
 
 func checkKeys() error {
-	var keys []s3mgo.S3AccessKey
+	var keys []*s3mgo.S3AccessKey
 
 	err := session.DB(DBName).C(DBColS3AccessKeys).Find(bson.M{}).All(&keys)
 	if err != nil {
@@ -107,16 +109,16 @@ func checkKeys() error {
 
 	fmt.Printf("Keys:\n")
 	for _, key := range keys {
-		_, ok := accounts[key.AccountObjID]
+		_, ok := accounts[key.AccountObjID.Hex()]
 		if !ok {
 			fmt.Printf("\tDangling Key %s (no account)\n", key.ObjID.Hex())
-			return errors.New("")
+			continue
 		}
 
-		_, ok = iams[key.IamObjID]
+		_, ok = iams[key.IamObjID.Hex()]
 		if !ok {
 			fmt.Printf("\tDangling Key %s (no iam)\n", key.ObjID.Hex())
-			return errors.New("")
+			continue
 		}
 
 		var exp = ""
@@ -128,6 +130,88 @@ func checkKeys() error {
 		fmt.Printf("\t%s: ac=..%s iam=..%s %s%s\n", key.ObjID.Hex(),
 				key.AccountObjID.Hex()[12:], key.IamObjID.Hex()[12:],
 				key.AccessKeyID, exp)
+	}
+
+	return nil
+}
+
+var buckets map[string]*s3mgo.S3Bucket
+
+func checkBuckets() error {
+	var bks []*s3mgo.S3Bucket
+
+	err := session.DB(DBName).C(DBColS3Buckets).Find(bson.M{}).All(&bks)
+	if err != nil {
+		fmt.Printf("Can't lookup buckets: %s", err.Error())
+		return err
+	}
+
+	buckets = make(map[string]*s3mgo.S3Bucket)
+	fmt.Printf("Buckets:\n")
+	for _, b := range(bks) {
+		ac, ok := accnsid[b.NamespaceID]
+		if !ok {
+			fmt.Printf("\tDangling bucket %s (not in act ns)\n", b.ObjID.Hex())
+			continue
+		}
+
+		bcookie := ac.BCookie(b.Name)
+		if b.BCookie != bcookie {
+			fmt.Printf("\tCorrupted Bucket %s (name %s cookie %s want %s)\n", b.ObjID.Hex(), b.Name, b.BCookie, bcookie)
+			continue
+		}
+
+		st := ""
+		_, ok = iams[b.IamObjID.Hex()]
+		if !ok {
+			/* FIXME -- iams can go away with keys expired */
+			st += " noiam!"
+		}
+
+		buckets[b.ObjID.Hex()] = b
+		fmt.Printf("\t%s: ac=..%s name=%-24s c=%s.. %s\n", b.ObjID.Hex(),
+				ac.ObjID.Hex()[12:], b.Name, b.BCookie[:8], st)
+	}
+
+	return nil
+}
+
+func checkObjects() error {
+	var objs []s3mgo.S3Object
+
+	err := session.DB(DBName).C(DBColS3Objects).Find(bson.M{}).All(&objs)
+	if err != nil {
+		fmt.Printf("Can't lookup objects: %s", err.Error())
+		return err
+	}
+
+	fmt.Printf("Objects:\n")
+	for _, o := range(objs) {
+		b, ok := buckets[o.BucketObjID.Hex()]
+		if !ok {
+			fmt.Printf("\t!!! Dangling object %s (no bucket)\n", o.ObjID.Hex())
+			continue
+		}
+
+		ocookie := b.OCookie(o.Key, o.Version)
+		if o.OCookie != ocookie {
+			fmt.Printf("\t!!! Corrupted Object %s (key %s.%d cookie %s want %s)\n", o.ObjID.Hex(),
+					o.Key, o.Version, o.OCookie[:6], ocookie[:6])
+			continue
+		}
+
+		st := ""
+		_, ok = iams[b.IamObjID.Hex()]
+		if !ok {
+			/* FIXME -- iams can go away with keys expired */
+			st += " noiam!"
+		}
+		if o.Version != 1 {
+			st += " ver"
+		}
+
+		fmt.Printf("\t%s: bk=..%s key=%-32s c=%s.. %s\n", o.ObjID.Hex(),
+				b.ObjID.Hex()[12:], b.Name + "::" + o.Key, o.OCookie[:8], st)
 	}
 
 	return nil
@@ -159,6 +243,16 @@ func main() {
 	}
 
 	err = checkKeys()
+	if err != nil {
+		return
+	}
+
+	err = checkBuckets()
+	if err != nil {
+		return
+	}
+
+	err = checkObjects()
 	if err != nil {
 		return
 	}
