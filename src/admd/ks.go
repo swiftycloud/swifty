@@ -196,6 +196,7 @@ func toUserInfo(ui *swyks.KeystoneUser) (*swyapi.UserInfo, error) {
 	}
 
 	return &swyapi.UserInfo {
+		ID:	 ui.Id,
 		UId:	 ui.Name,
 		Name:	 kud.Name,
 		Created: kud.CreatedS(),

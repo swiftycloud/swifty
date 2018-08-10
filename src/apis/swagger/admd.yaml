@@ -202,6 +202,9 @@ definitions:
         description: Gate address:port to talk to
   UserInfo:
     properties:
+      id:
+        type: string
+        example: 192a30bc93e2184dac03294f89840324
       uid:
         type: string
         example: john@doe.com

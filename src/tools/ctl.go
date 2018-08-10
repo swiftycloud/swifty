@@ -200,17 +200,17 @@ func user_list(args []string, opts [16]string) {
 	make_faas_req("users", swyapi.ListUsers{}, &uss)
 
 	for _, u := range uss {
-		fmt.Printf("%s (%s)\n", u.Id, u.Name)
+		fmt.Printf("%s: %s (%s)\n", u.ID, u.UId, u.Name)
 	}
 }
 
 func user_add(args []string, opts [16]string) {
-	make_faas_req2("POST", "adduser", swyapi.AddUser{Id: args[0], Pass: opts[1], Name: opts[0]},
+	make_faas_req2("POST", "adduser", swyapi.AddUser{UId: args[0], Pass: opts[1], Name: opts[0]},
 		http.StatusCreated, 0)
 }
 
 func user_del(args []string, opts [16]string) {
-	make_faas_req2("POST", "deluser", swyapi.UserInfo{Id: args[0]},
+	make_faas_req2("POST", "deluser", swyapi.UserInfo{UId: args[0]},
 		http.StatusNoContent, 0)
 }
 
@@ -221,7 +221,8 @@ func user_pass(args []string, opts [16]string) {
 
 func user_info(args []string, opts [16]string) {
 	var ui swyapi.UserInfo
-	make_faas_req("userinfo", swyapi.UserInfo{Id: args[0]}, &ui)
+	make_faas_req("userinfo", swyapi.UserInfo{UId: args[0]}, &ui)
+	fmt.Printf("ID:     %s\n", ui.ID)
 	fmt.Printf("Name:   %s\n", ui.Name)
 	fmt.Printf("Roles:  %s\n", strings.Join(ui.Roles, ", "))
 }
@@ -283,7 +284,7 @@ func user_limits(args []string, opts [16]string) {
 		l.Id = args[0]
 		make_faas_req("limits/set", &l, nil)
 	} else {
-		make_faas_req("limits/get", swyapi.UserInfo{Id: args[0]}, &l)
+		make_faas_req("limits/get", swyapi.UserInfo{UId: args[0]}, &l)
 		if l.PlanId != "" {
 			fmt.Printf("Plan ID: %s\n", l.PlanId)
 		}

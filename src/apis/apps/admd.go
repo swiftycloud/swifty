@@ -4,6 +4,7 @@ type ListUsers struct {
 }
 
 type UserInfo struct {
+	ID	string		`json:"id"`
 	UId	string		`json:"uid"`
 	Name	string		`json:"name,omitempty"`
 	Created	string		`json:"created,omitempty"`

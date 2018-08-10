@@ -170,16 +170,22 @@ func handleListUsers(w http.ResponseWriter, r *http.Request) {
 		goto out
 	}
 
-	/* Listing users is only possible for admin */
-	code = http.StatusForbidden
-	if !swyks.KeystoneRoleHas(td, swyks.SwyAdminRole) {
-		err = errors.New("Not admin cannot list users")
-		goto out
-	}
-
-	code = http.StatusBadRequest
-	result, err = listUsers(conf.kc)
-	if err != nil {
+	code = http.StatusInternalServerError
+	if swyks.KeystoneRoleHas(td, swyks.SwyAdminRole) {
+		result, err = listUsers(conf.kc)
+		if err != nil {
+			goto out
+		}
+	} else if swyks.KeystoneRoleHas(td, swyks.SwyUserRole) {
+		var ui *swyapi.UserInfo
+		ui, err = getUserInfo(conf.kc, td.Project.Name)
+		if err != nil {
+			goto out
+		}
+		result = append(result, ui)
+	} else {
+		code = http.StatusForbidden
+		err = errors.New("Not swifty role")
 		goto out
 	}
 
