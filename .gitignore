@@ -16,6 +16,7 @@ swy-pgrest
 swy-mquotad
 swy-s3
 swyctl
+swys3fsck
 swysg
 docs/build
 vendor/
