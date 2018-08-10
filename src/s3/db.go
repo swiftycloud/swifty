@@ -107,10 +107,10 @@ func dbConnect(conf *YAMLConf) error {
 	dbColMap[reflect.TypeOf(&[]s3mgo.S3AccessKey{})] = DBColS3AccessKeys
 	dbColMap[reflect.TypeOf([]*s3mgo.S3AccessKey{})] = DBColS3AccessKeys
 	dbColMap[reflect.TypeOf(&[]*s3mgo.S3AccessKey{})] = DBColS3AccessKeys
-	dbColMap[reflect.TypeOf(S3Bucket{})] = DBColS3Buckets
-	dbColMap[reflect.TypeOf(&S3Bucket{})] = DBColS3Buckets
-	dbColMap[reflect.TypeOf([]S3Bucket{})] = DBColS3Buckets
-	dbColMap[reflect.TypeOf(&[]S3Bucket{})] = DBColS3Buckets
+	dbColMap[reflect.TypeOf(s3mgo.S3Bucket{})] = DBColS3Buckets
+	dbColMap[reflect.TypeOf(&s3mgo.S3Bucket{})] = DBColS3Buckets
+	dbColMap[reflect.TypeOf([]s3mgo.S3Bucket{})] = DBColS3Buckets
+	dbColMap[reflect.TypeOf(&[]s3mgo.S3Bucket{})] = DBColS3Buckets
 	dbColMap[reflect.TypeOf(S3Object{})] = DBColS3Objects
 	dbColMap[reflect.TypeOf(&S3Object{})] = DBColS3Objects
 	dbColMap[reflect.TypeOf([]S3Object{})] = DBColS3Objects
@@ -191,8 +191,8 @@ func infoLong(o interface{}) (string) {
 		return fmt.Sprintf("{ S3Iam: %s/%s/%d/%s }",
 			iam.ObjID, iam.AccountObjID, iam.State,
 			iam.Policy.InfoLong())
-	case reflect.TypeOf(&S3Bucket{}):
-		bucket := o.(*S3Bucket)
+	case reflect.TypeOf(&s3mgo.S3Bucket{}):
+		bucket := o.(*s3mgo.S3Bucket)
 		return fmt.Sprintf("{ S3Bucket: %s/%s/%s/%d/%s }",
 			bucket.ObjID, bucket.BCookie,
 			bucket.NamespaceID, bucket.State,

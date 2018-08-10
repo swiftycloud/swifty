@@ -26,8 +26,8 @@ type S3ObjectPorps struct {
 	Key				string		`bson:"key"`
 
 	// Todo
-	Meta				[]S3Tag		`bson:"meta,omitempty"`
-	TagSet				[]S3Tag		`bson:"tags,omitempty"`
+	Meta				[]s3mgo.S3Tag	`bson:"meta,omitempty"`
+	TagSet				[]s3mgo.S3Tag	`bson:"tags,omitempty"`
 	Policy				string		`bson:"policy,omitempty"`
 
 	// Not supported props
@@ -104,7 +104,7 @@ func s3RepairObject(ctx context.Context) error {
 	return nil
 }
 
-func (bucket *S3Bucket)FindCurObject(ctx context.Context, oname string) (*S3Object, error) {
+func FindCurObject(ctx context.Context, bucket *s3mgo.S3Bucket, oname string) (*S3Object, error) {
 	var res S3Object
 
 	query := bson.M{ "ocookie": bucket.OCookie(oname, 1), "state": S3StateActive }
@@ -116,11 +116,11 @@ func (bucket *S3Bucket)FindCurObject(ctx context.Context, oname string) (*S3Obje
 	return &res,nil
 }
 
-func (o *S3Object)Activate(ctx context.Context, b *S3Bucket, etag string) error {
+func (o *S3Object)Activate(ctx context.Context, b *s3mgo.S3Bucket, etag string) error {
 	err := dbS3SetOnState(ctx, o, S3StateActive, nil,
 			bson.M{ "state": S3StateActive, "etag": etag, "rover": b.Rover })
 	if err == nil {
-		err = b.dbCmtObj(ctx, o.Size, -1)
+		err = CmtObj(ctx, b, o.Size, -1)
 	}
 
 	if err == nil {
@@ -131,7 +131,7 @@ func (o *S3Object)Activate(ctx context.Context, b *S3Bucket, etag string) error 
 	return err
 }
 
-func (bucket *S3Bucket)ToObject(ctx context.Context, iam *s3mgo.S3Iam, upload *S3Upload) (*S3Object, error) {
+func UploadToObject(ctx context.Context, iam *s3mgo.S3Iam, bucket *s3mgo.S3Bucket, upload *S3Upload) (*S3Object, error) {
 	var err error
 
 	size, etag, err := s3ObjectPartsResum(ctx, upload)
@@ -164,7 +164,7 @@ func (bucket *S3Bucket)ToObject(ctx context.Context, iam *s3mgo.S3Iam, upload *S
 	}
 	log.Debugf("s3: Converted %s", infoLong(object))
 
-	err = bucket.dbAddObj(ctx, object.Size, 1)
+	err = AddObj(ctx, bucket, object.Size, 1)
 	if err != nil {
 		goto out_remove
 	}
@@ -185,7 +185,7 @@ out_remove:
 	dbS3Remove(ctx, object)
 	return nil, err
 }
-func (bucket *S3Bucket)AddObject(ctx context.Context, iam *s3mgo.S3Iam, oname string,
+func AddObject(ctx context.Context, iam *s3mgo.S3Iam, bucket *s3mgo.S3Bucket, oname string,
 		acl string, data []byte) (*S3Object, error) {
 	var objp *S3ObjectPart
 	var err error
@@ -212,7 +212,7 @@ func (bucket *S3Bucket)AddObject(ctx context.Context, iam *s3mgo.S3Iam, oname st
 	}
 	log.Debugf("s3: Inserted %s", infoLong(object))
 
-	err = bucket.dbAddObj(ctx, object.Size, 1)
+	err = AddObj(ctx, bucket, object.Size, 1)
 	if err != nil {
 		goto out_remove
 	}
@@ -237,17 +237,17 @@ func (bucket *S3Bucket)AddObject(ctx context.Context, iam *s3mgo.S3Iam, oname st
 out:
 	s3ObjectPartDelOne(ctx, bucket, object.OCookie, objp)
 out_acc:
-	bucket.dbDelObj(ctx, object.Size, -1)
+	DelObj(ctx, bucket, object.Size, -1)
 out_remove:
 	dbS3Remove(ctx, object)
 	return nil, err
 }
 
-func s3DeleteObject(ctx context.Context, iam *s3mgo.S3Iam, bucket *S3Bucket, oname string) error {
+func s3DeleteObject(ctx context.Context, iam *s3mgo.S3Iam, bucket *s3mgo.S3Bucket, oname string) error {
 	var object *S3Object
 	var err error
 
-	object, err = bucket.FindCurObject(ctx, oname)
+	object, err = FindCurObject(ctx, bucket, oname)
 	if err != nil {
 		if err == mgo.ErrNotFound {
 			return nil
@@ -257,7 +257,7 @@ func s3DeleteObject(ctx context.Context, iam *s3mgo.S3Iam, bucket *S3Bucket, ona
 		return err
 	}
 
-	err = bucket.DropObject(ctx, object)
+	err = DropObject(ctx, bucket, object)
 	if err != nil {
 		if err == mgo.ErrNotFound {
 			err = nil
@@ -273,7 +273,7 @@ func s3DeleteObject(ctx context.Context, iam *s3mgo.S3Iam, bucket *S3Bucket, ona
 	return nil
 }
 
-func (bucket *S3Bucket)DropObject(ctx context.Context, object *S3Object) error {
+func DropObject(ctx context.Context, bucket *s3mgo.S3Bucket, object *S3Object) error {
 	var objp []*S3ObjectPart
 
 	err := dbS3SetState(ctx, object, S3StateInactive, nil)
@@ -293,7 +293,7 @@ func (bucket *S3Bucket)DropObject(ctx context.Context, object *S3Object) error {
 		return err
 	}
 
-	err = bucket.dbDelObj(ctx, object.Size, 0)
+	err = DelObj(ctx, bucket, object.Size, 0)
 	if err != nil {
 		return err
 	}
@@ -306,7 +306,7 @@ func (bucket *S3Bucket)DropObject(ctx context.Context, object *S3Object) error {
 	return nil
 }
 
-func (object *S3Object)ReadData(ctx context.Context, bucket *S3Bucket) ([]byte, error) {
+func (object *S3Object)ReadData(ctx context.Context, bucket *s3mgo.S3Bucket) ([]byte, error) {
 	var objp []*S3ObjectPart
 	var res []byte
 	var err error
@@ -331,11 +331,11 @@ func (object *S3Object)ReadData(ctx context.Context, bucket *S3Bucket) ([]byte, 
 	return res, err
 }
 
-func (bucket *S3Bucket)ReadObject(ctx context.Context, oname string, part, version int) ([]byte, error) {
+func ReadObject(ctx context.Context, bucket *s3mgo.S3Bucket, oname string, part, version int) ([]byte, error) {
 	var object *S3Object
 	var err error
 
-	object, err = bucket.FindCurObject(ctx, oname)
+	object, err = FindCurObject(ctx, bucket, oname)
 	if err != nil {
 		if err == mgo.ErrNotFound {
 			return nil, err

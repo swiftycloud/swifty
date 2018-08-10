@@ -474,7 +474,7 @@ func handleBucket(ctx context.Context, iam *s3mgo.S3Iam, w http.ResponseWriter, 
 	return nil
 }
 
-func handleUploadFini(ctx context.Context, uploadId string, iam *s3mgo.S3Iam, bucket *S3Bucket, w http.ResponseWriter, r *http.Request) *S3Error {
+func handleUploadFini(ctx context.Context, uploadId string, iam *s3mgo.S3Iam, bucket *s3mgo.S3Bucket, w http.ResponseWriter, r *http.Request) *S3Error {
 	var complete swys3api.S3MpuFiniParts
 
 	if !iam.Policy.Allowed(S3P_PutObject) {
@@ -504,7 +504,7 @@ func handleUploadFini(ctx context.Context, uploadId string, iam *s3mgo.S3Iam, bu
 	return nil
 }
 
-func handleUploadInit(ctx context.Context, oname string, iam *s3mgo.S3Iam, bucket *S3Bucket, w http.ResponseWriter, r *http.Request) *S3Error {
+func handleUploadInit(ctx context.Context, oname string, iam *s3mgo.S3Iam, bucket *s3mgo.S3Bucket, w http.ResponseWriter, r *http.Request) *S3Error {
 	if !iam.Policy.Allowed(S3P_PutObject) {
 		return &S3Error{ ErrorCode: S3ErrMethodNotAllowed }
 	}
@@ -530,7 +530,7 @@ func handleUploadInit(ctx context.Context, oname string, iam *s3mgo.S3Iam, bucke
 	return nil
 }
 
-func handleUploadListParts(ctx context.Context, uploadId, oname string, iam *s3mgo.S3Iam, bucket *S3Bucket, w http.ResponseWriter, r *http.Request) *S3Error {
+func handleUploadListParts(ctx context.Context, uploadId, oname string, iam *s3mgo.S3Iam, bucket *s3mgo.S3Bucket, w http.ResponseWriter, r *http.Request) *S3Error {
 	if !iam.Policy.Allowed(S3P_ListMultipartUploadParts) {
 		return &S3Error{ ErrorCode: S3ErrMethodNotAllowed }
 	}
@@ -544,7 +544,7 @@ func handleUploadListParts(ctx context.Context, uploadId, oname string, iam *s3m
 	return nil
 }
 
-func handleUploadPart(ctx context.Context, uploadId, oname string, iam *s3mgo.S3Iam, bucket *S3Bucket, w http.ResponseWriter, r *http.Request) *S3Error {
+func handleUploadPart(ctx context.Context, uploadId, oname string, iam *s3mgo.S3Iam, bucket *s3mgo.S3Bucket, w http.ResponseWriter, r *http.Request) *S3Error {
 	if !iam.Policy.Allowed(S3P_PutObject) {
 		return &S3Error{ ErrorCode: S3ErrMethodNotAllowed }
 	}
@@ -573,7 +573,7 @@ func handleUploadPart(ctx context.Context, uploadId, oname string, iam *s3mgo.S3
 	return nil
 }
 
-func handleUploadAbort(ctx context.Context, uploadId, oname string, iam *s3mgo.S3Iam, bucket *S3Bucket, w http.ResponseWriter, r *http.Request) *S3Error {
+func handleUploadAbort(ctx context.Context, uploadId, oname string, iam *s3mgo.S3Iam, bucket *s3mgo.S3Bucket, w http.ResponseWriter, r *http.Request) *S3Error {
 	if !iam.Policy.Allowed(S3P_AbortMultipartUpload) {
 		return &S3Error{ ErrorCode: S3ErrMethodNotAllowed }
 	}
@@ -587,12 +587,12 @@ func handleUploadAbort(ctx context.Context, uploadId, oname string, iam *s3mgo.S
 	return nil
 }
 
-func handleGetObject(ctx context.Context, oname string, iam *s3mgo.S3Iam, bucket *S3Bucket, w http.ResponseWriter, r *http.Request) *S3Error {
+func handleGetObject(ctx context.Context, oname string, iam *s3mgo.S3Iam, bucket *s3mgo.S3Bucket, w http.ResponseWriter, r *http.Request) *S3Error {
 	if !iam.Policy.Allowed(S3P_GetObject) {
 		return &S3Error{ ErrorCode: S3ErrMethodNotAllowed }
 	}
 
-	body, err := bucket.ReadObject(ctx, oname, 0, 1)
+	body, err := ReadObject(ctx, bucket, oname, 0, 1)
 	if err != nil {
 		if err == mgo.ErrNotFound {
 			return &S3Error{ ErrorCode: S3ErrNoSuchKey }
@@ -611,9 +611,9 @@ func handleGetObject(ctx context.Context, oname string, iam *s3mgo.S3Iam, bucket
 	return nil
 }
 
-func handleCopyObject(ctx context.Context, copy_source, oname string, iam *s3mgo.S3Iam, bucket *S3Bucket, w http.ResponseWriter, r *http.Request) *S3Error {
+func handleCopyObject(ctx context.Context, copy_source, oname string, iam *s3mgo.S3Iam, bucket *s3mgo.S3Bucket, w http.ResponseWriter, r *http.Request) *S3Error {
 	var bname_source, oname_source string
-	var bucket_source *S3Bucket
+	var bucket_source *s3mgo.S3Bucket
 	var object *S3Object
 	var err error
 
@@ -643,12 +643,12 @@ func handleCopyObject(ctx context.Context, copy_source, oname string, iam *s3mgo
 		return &S3Error{ ErrorCode: S3ErrInvalidBucketName }
 	}
 
-	body, err := bucket_source.ReadObject(ctx, oname_source, 0, 1)
+	body, err := ReadObject(ctx, bucket_source, oname_source, 0, 1)
 	if err != nil {
 		return &S3Error{ ErrorCode: S3ErrInvalidRequest, Message: err.Error() }
 	}
 
-	object, err = bucket.AddObject(ctx, iam, oname, canned_acl, body)
+	object, err = AddObject(ctx, iam, bucket, oname, canned_acl, body)
 	if err != nil {
 		return &S3Error{ ErrorCode: S3ErrInvalidRequest, Message: err.Error() }
 	}
@@ -660,7 +660,7 @@ func handleCopyObject(ctx context.Context, copy_source, oname string, iam *s3mgo
 	return nil
 }
 
-func handlePutObject(ctx context.Context, oname string, iam *s3mgo.S3Iam, bucket *S3Bucket, w http.ResponseWriter, r *http.Request) *S3Error {
+func handlePutObject(ctx context.Context, oname string, iam *s3mgo.S3Iam, bucket *s3mgo.S3Bucket, w http.ResponseWriter, r *http.Request) *S3Error {
 	if !iam.Policy.Allowed(S3P_PutObject) {
 		return &S3Error{ ErrorCode: S3ErrMethodNotAllowed }
 	}
@@ -685,7 +685,7 @@ func handlePutObject(ctx context.Context, oname string, iam *s3mgo.S3Iam, bucket
 		return &S3Error{ ErrorCode: S3ErrIncompleteBody }
 	}
 
-	_, err = bucket.AddObject(ctx, iam, oname, canned_acl, body)
+	_, err = AddObject(ctx, iam, bucket, oname, canned_acl, body)
 	if err != nil {
 		return &S3Error{ ErrorCode: S3ErrInvalidRequest, Message: err.Error() }
 	}
@@ -694,7 +694,7 @@ func handlePutObject(ctx context.Context, oname string, iam *s3mgo.S3Iam, bucket
 	return nil
 }
 
-func handleDeleteObject(ctx context.Context, oname string, iam *s3mgo.S3Iam, bucket *S3Bucket, w http.ResponseWriter, r *http.Request) *S3Error {
+func handleDeleteObject(ctx context.Context, oname string, iam *s3mgo.S3Iam, bucket *s3mgo.S3Bucket, w http.ResponseWriter, r *http.Request) *S3Error {
 	if !iam.Policy.Allowed(S3P_DeleteObject) {
 		return &S3Error{ ErrorCode: S3ErrMethodNotAllowed }
 	}
@@ -729,7 +729,7 @@ func handleObjectReq(ctx context.Context, iam *s3mgo.S3Iam, w http.ResponseWrite
 }
 
 func handleObject(ctx context.Context, iam *s3mgo.S3Iam, w http.ResponseWriter, r *http.Request, bname, oname string) *S3Error {
-	var bucket *S3Bucket
+	var bucket *s3mgo.S3Bucket
 	var err error
 
 	if bname == "" {

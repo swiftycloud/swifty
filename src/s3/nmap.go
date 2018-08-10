@@ -47,20 +47,6 @@ import (
 // - S3UploadPart (FIXME)
 // - S3Upload (FIXME)
 
-// UploadID for DB lookup
-func (bucket *S3Bucket)UploadUID(oname string) string {
-	return swy.Sha256sum([]byte(bucket.BCookie + oname))
-}
-
-// Object key in backend and index in DB for lookup
-func (bucket *S3Bucket)OCookie(oname string, version int) string {
-	if version != 1 {
-		log.Errorf("@verioning is not yet supported")
-		version = 1
-	}
-	return swy.Sha256sum([]byte(bucket.BCookie + oname + strconv.Itoa(version)))
-}
-
 // Object part key in backend and index in DB for lookup
 func (upload *S3Upload)UCookie(oname string, part int) string {
 	return swy.Sha256sum([]byte(upload.UploadID + oname + strconv.Itoa(part)))

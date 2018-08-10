@@ -134,7 +134,7 @@ func s3RepairObjectData(ctx context.Context) error {
 
 	for _, objp := range objps {
 		var object S3Object
-		var bucket S3Bucket
+		var bucket s3mgo.S3Bucket
 
 		log.Debugf("s3: Detected stale object data %s", infoLong(&objp))
 
@@ -262,7 +262,7 @@ out:
 	return nil, err
 }
 
-func s3ObjectPartDel(ctx context.Context, bucket *S3Bucket, ocookie string, objp []*S3ObjectPart) (error) {
+func s3ObjectPartDel(ctx context.Context, bucket *s3mgo.S3Bucket, ocookie string, objp []*S3ObjectPart) (error) {
 	for _, od := range objp {
 		err := s3ObjectPartDelOne(ctx, bucket, ocookie, od)
 		if err != nil {
@@ -273,7 +273,7 @@ func s3ObjectPartDel(ctx context.Context, bucket *S3Bucket, ocookie string, objp
 	return nil
 }
 
-func s3ObjectPartDelOne(ctx context.Context, bucket *S3Bucket, ocookie string, objp *S3ObjectPart) (error) {
+func s3ObjectPartDelOne(ctx context.Context, bucket *s3mgo.S3Bucket, ocookie string, objp *S3ObjectPart) (error) {
 	var err error
 
 	err = dbS3SetState(ctx, objp, S3StateInactive, nil)
@@ -294,7 +294,7 @@ func s3ObjectPartDelOne(ctx context.Context, bucket *S3Bucket, ocookie string, o
 	return nil
 }
 
-func s3ObjectPartRead(ctx context.Context, bucket *S3Bucket, ocookie string, objp []*S3ObjectPart) ([]byte, error) {
+func s3ObjectPartRead(ctx context.Context, bucket *s3mgo.S3Bucket, ocookie string, objp []*S3ObjectPart) ([]byte, error) {
 	var res []byte
 
 	for _, od := range objp {

@@ -12,8 +12,8 @@ import (
 	"../apis/apps/s3"
 )
 
-func notifyFindBucket(ctx context.Context, params *swys3api.S3Subscribe) (*S3Bucket, error) {
-	var bucket S3Bucket
+func notifyFindBucket(ctx context.Context, params *swys3api.S3Subscribe) (*s3mgo.S3Bucket, error) {
+	var bucket s3mgo.S3Bucket
 
 	cookie := s3mgo.BCookie(params.Namespace, params.Bucket)
 	err := dbS3FindOne(ctx, bson.M{ "bcookie": cookie, "state": S3StateActive }, &bucket)
@@ -61,7 +61,7 @@ func s3Unsubscribe(ctx context.Context, params *swys3api.S3Subscribe) error {
 
 var nChan *amqp.Channel
 
-func s3Notify(ctx context.Context, iam *s3mgo.S3Iam, bucket *S3Bucket, object *S3Object, op string) {
+func s3Notify(ctx context.Context, iam *s3mgo.S3Iam, bucket *s3mgo.S3Bucket, object *S3Object, op string) {
 	account, err := s3AccountLookup(ctx, iam)
 	if err != nil { return }
 

@@ -137,8 +137,8 @@ out_1:
 	return nil, err
 }
 
-func FindBuckets(ctx context.Context, iam *s3mgo.S3Iam) ([]S3Bucket, error) {
-	var res []S3Bucket
+func FindBuckets(ctx context.Context, iam *s3mgo.S3Iam) ([]s3mgo.S3Bucket, error) {
+	var res []s3mgo.S3Bucket
 	var err error
 
 	account, err := s3AccountLookup(ctx, iam)

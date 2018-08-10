@@ -4,6 +4,7 @@ import (
 	"time"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
+	"./mgo"
 )
 
 const gcDefaultPeriod = uint32(10)
@@ -23,7 +24,7 @@ func gcInit(period uint32) error {
 	return nil
 }
 
-func gcOldVersions(b *S3Bucket, key string, rover int64) {
+func gcOldVersions(b *s3mgo.S3Bucket, key string, rover int64) {
 	ctx, done := mkContext("GC old obj")
 	defer done(ctx)
 
@@ -34,7 +35,7 @@ func gcOldVersions(b *S3Bucket, key string, rover int64) {
 	iter := pipe.Iter()
 
 	for iter.Next(&object) {
-		err := b.DropObject(ctx, &object)
+		err := DropObject(ctx, b, &object)
 		if err != nil && err != mgo.ErrNotFound {
 			log.Errorf("Can't GC object %s:%s, rover %d: %s", b.BCookie, key, object.Rover, err.Error())
 		}

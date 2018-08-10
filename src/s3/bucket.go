@@ -32,65 +32,6 @@ type S3ListObjectsRP struct {
 	ContTokenDecoded	string
 }
 
-type S3BucketNotify struct {
-	Queue				string		`bson:"queue"`
-	Put				uint32		`bson:"put"`
-	Delete				uint32		`bson:"delete"`
-}
-
-type S3Tag struct {
-	Key				string		`bson:"key"`
-	Value				string		`bson:"value,omitempty"`
-}
-
-type S3BucketEncrypt struct {
-	Algo				string		`bson:"algo"`
-	MasterKeyID			string		`bson:"algo,omitempty"`
-}
-
-type S3Bucket struct {
-	ObjID				bson.ObjectId	`bson:"_id,omitempty"`
-	IamObjID			bson.ObjectId	`bson:"iam-id,omitempty"`
-	BCookie				string		`bson:"bcookie,omitempty"`
-
-	MTime				int64		`bson:"mtime,omitempty"`
-	State				uint32		`bson:"state"`
-
-	NamespaceID			string		`bson:"nsid,omitempty"`
-	CreationTime			string		`bson:"creation-time,omitempty"`
-
-	// Todo
-	Versioning			bool		`bson:"versioning,omitempty"`
-	TagSet				[]S3Tag		`bson:"tags,omitempty"`
-	Encrypt				S3BucketEncrypt	`bson:"encrypt,omitempty"`
-	Location			string		`bson:"location,omitempty"`
-	Policy				string		`bson:"policy,omitempty"`
-	Logging				bool		`bson:"logging,omitempty"`
-	Lifecycle			string		`bson:"lifecycle,omitempty"`
-	RequestPayment			string		`bson:"request-payment,omitempty"`
-
-	// Not supported props
-	// analytics
-	// cors
-	// metrics
-	// replication
-	// website
-	// accelerate
-	// inventory
-	// notification
-
-	Ref				int64		`bson:"ref"`
-	CntObjects			int64		`bson:"cnt-objects"`
-	CntBytes			int64		`bson:"cnt-bytes"`
-	Rover				int64		`bson:"rover"`
-	Name				string		`bson:"name"`
-	CannedAcl			string		`bson:"canned-acl"`
-	BasicNotify			*S3BucketNotify	`bson:"notify,omitempty"`
-
-	MaxObjects			int64		`bson:"max-objects"`
-	MaxBytes			int64		`bson:"max-bytes"`
-}
-
 type S3Website struct {
 	ObjID				bson.ObjectId	`bson:"_id,omitempty"`
 	State				uint32		`bson:"state"`
@@ -107,7 +48,7 @@ func (ws *S3Website)index() string {
 	return s
 }
 
-func s3WebsiteLookup(ctx context.Context, b *S3Bucket) (*S3Website, error) {
+func s3WebsiteLookup(ctx context.Context, b *s3mgo.S3Bucket) (*S3Website, error) {
 	var res S3Website
 
 	query := bson.M{ "bcookie": b.BCookie, "state": S3StateActive }
@@ -115,7 +56,7 @@ func s3WebsiteLookup(ctx context.Context, b *S3Bucket) (*S3Website, error) {
 	return &res, err
 }
 
-func s3WebsiteInsert(ctx context.Context, b *S3Bucket, cfg *swys3api.S3WebsiteConfig) (*S3Website, error) {
+func s3WebsiteInsert(ctx context.Context, b *s3mgo.S3Bucket, cfg *swys3api.S3WebsiteConfig) (*S3Website, error) {
 	var ws S3Website
 	var err error
 
@@ -142,15 +83,15 @@ func s3DirtifyBucket(ctx context.Context, id bson.ObjectId) error {
 	query := bson.M{ "_id": id, "ref": bson.M{ "$eq":  0 } }
 	update := bson.M{ "$set": bson.M{ "ref": 1 } }
 
-	return dbS3Update(ctx, query, update, false, &S3Bucket{})
+	return dbS3Update(ctx, query, update, false, &s3mgo.S3Bucket{})
 }
 
-func (bucket *S3Bucket)dbRemove(ctx context.Context) (error) {
+func RemoveFromDB(ctx context.Context, bucket *s3mgo.S3Bucket) (error) {
 	query := bson.M{ "cnt-objects": 0 }
 	return dbS3RemoveOnState(ctx, bucket, S3StateInactive, query)
 }
 
-func (bucket *S3Bucket)dbCmtObj(ctx context.Context, size, ref int64) (error) {
+func CmtObj(ctx context.Context, bucket *s3mgo.S3Bucket, size, ref int64) (error) {
 	m := bson.M{ "ref": ref }
 	err := dbS3Update(ctx, bson.M{ "state": S3StateActive },
 		bson.M{ "$inc": m }, true, bucket)
@@ -164,7 +105,7 @@ func (bucket *S3Bucket)dbCmtObj(ctx context.Context, size, ref int64) (error) {
 	return err
 }
 
-func (bucket *S3Bucket)dbAddObj(ctx context.Context, size, ref int64) (error) {
+func AddObj(ctx context.Context, bucket *s3mgo.S3Bucket, size, ref int64) (error) {
 	m := bson.M{ "cnt-objects": 1, "cnt-bytes": size, "ref": ref, "rover": int64(1) }
 	err := dbS3Update(ctx, bson.M{ "state": S3StateActive },
 		bson.M{ "$inc": m }, true, bucket)
@@ -178,7 +119,7 @@ func (bucket *S3Bucket)dbAddObj(ctx context.Context, size, ref int64) (error) {
 	return err
 }
 
-func (bucket *S3Bucket)dbDelObj(ctx context.Context, size, ref int64) (error) {
+func DelObj(ctx context.Context, bucket *s3mgo.S3Bucket, size, ref int64) (error) {
 	m := bson.M{ "cnt-objects": -1, "cnt-bytes": -size, "ref": ref  }
 	err := dbS3Update(ctx, bson.M{ "state": S3StateActive },
 		bson.M{ "$inc": m }, true, bucket)
@@ -192,8 +133,8 @@ func (bucket *S3Bucket)dbDelObj(ctx context.Context, size, ref int64) (error) {
 	return err
 }
 
-func FindBucket(ctx context.Context, iam *s3mgo.S3Iam, bname string) (*S3Bucket, error) {
-	var res S3Bucket
+func FindBucket(ctx context.Context, iam *s3mgo.S3Iam, bname string) (*s3mgo.S3Bucket, error) {
+	var res s3mgo.S3Bucket
 	var err error
 
 	account, err := s3AccountLookup(ctx, iam)
@@ -212,7 +153,7 @@ func FindBucket(ctx context.Context, iam *s3mgo.S3Iam, bname string) (*S3Bucket,
 	return &res, nil
 }
 
-func s3RepairBucketReference(ctx context.Context, bucket *S3Bucket) error {
+func s3RepairBucketReference(ctx context.Context, bucket *s3mgo.S3Bucket) error {
 	var cnt_objects int64 = 0
 	var cnt_bytes int64 = 0
 	var objects []S3Object
@@ -247,7 +188,7 @@ func s3RepairBucketReference(ctx context.Context, bucket *S3Bucket) error {
 }
 
 func s3RepairBucketReferenced(ctx context.Context) error {
-	var buckets []S3Bucket
+	var buckets []s3mgo.S3Bucket
 	var err error
 
 	log.Debugf("s3: Processing referenced buckets")
@@ -273,7 +214,7 @@ func s3RepairBucketReferenced(ctx context.Context) error {
 }
 
 func s3RepairBucketInactive(ctx context.Context) error {
-	var buckets []S3Bucket
+	var buckets []s3mgo.S3Bucket
 	var err error
 
 	log.Debugf("s3: Processing inactive buckets")
@@ -335,7 +276,7 @@ func s3InsertBucket(ctx context.Context, iam *s3mgo.S3Iam, bname, canned_acl str
 		return &S3Error{ ErrorCode: S3ErrInternalError }
 	}
 
-	bucket := &S3Bucket{
+	bucket := &s3mgo.S3Bucket{
 		ObjID:		bson.NewObjectId(),
 		IamObjID:	iam.ObjID,
 		State:		S3StateNone,
@@ -368,12 +309,12 @@ func s3InsertBucket(ctx context.Context, iam *s3mgo.S3Iam, bname, canned_acl str
 out:
 	radosDeletePool(bucket.BCookie)
 out_nopool:
-	bucket.dbRemove(ctx)
+	RemoveFromDB(ctx, bucket)
 	return &S3Error{ ErrorCode: S3ErrInternalError }
 }
 
 func s3DeleteBucket(ctx context.Context, iam *s3mgo.S3Iam, bname, acl string) (*S3Error) {
-	var bucket *S3Bucket
+	var bucket *s3mgo.S3Bucket
 	var err error
 
 	bucket, err = FindBucket(ctx, iam, bname)
@@ -400,7 +341,7 @@ func s3DeleteBucket(ctx context.Context, iam *s3mgo.S3Iam, bname, acl string) (*
 		return &S3Error{ ErrorCode: S3ErrInternalError }
 	}
 
-	err = bucket.dbRemove(ctx)
+	err = RemoveFromDB(ctx, bucket)
 	if err != nil {
 		return &S3Error{ ErrorCode: S3ErrInternalError }
 	}
@@ -409,7 +350,7 @@ func s3DeleteBucket(ctx context.Context, iam *s3mgo.S3Iam, bname, acl string) (*
 	return nil
 }
 
-func (bucket *S3Bucket)dbFindAll(ctx context.Context, query bson.M) ([]S3Object, error) {
+func FindAllObjects(ctx context.Context, bucket *s3mgo.S3Bucket, query bson.M) ([]S3Object, error) {
 	if query == nil { query = make(bson.M) }
 	var res []S3Object
 
@@ -488,7 +429,7 @@ func s3ListBucket(ctx context.Context, iam *s3mgo.S3Iam, bname string, params *S
 	var start_after, cont_after bool
 	var prefixes_map map[string]bool
 	var list swys3api.S3Bucket
-	var bucket *S3Bucket
+	var bucket *s3mgo.S3Bucket
 	var object S3Object
 	var pipe *mgo.Pipe
 	var iter *mgo.Iter
@@ -602,7 +543,7 @@ func s3ListBucket(ctx context.Context, iam *s3mgo.S3Iam, bname string, params *S
 
 func s3ListBuckets(ctx context.Context, iam *s3mgo.S3Iam) (*swys3api.S3BucketList, *S3Error) {
 	var list swys3api.S3BucketList
-	var buckets []S3Bucket
+	var buckets []s3mgo.S3Bucket
 	var err error
 
 	buckets, err = FindBuckets(ctx, iam)

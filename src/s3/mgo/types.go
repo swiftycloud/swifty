@@ -60,3 +60,62 @@ type S3AccessKey struct {
 	AccessKeyID			string		`bson:"access-key-id"`
 	AccessKeySecret			string		`bson:"access-key-secret"`
 }
+
+type S3BucketNotify struct {
+	Queue				string		`bson:"queue"`
+	Put				uint32		`bson:"put"`
+	Delete				uint32		`bson:"delete"`
+}
+
+type S3Tag struct {
+	Key				string		`bson:"key"`
+	Value				string		`bson:"value,omitempty"`
+}
+
+type S3BucketEncrypt struct {
+	Algo				string		`bson:"algo"`
+	MasterKeyID			string		`bson:"algo,omitempty"`
+}
+
+type S3Bucket struct {
+	ObjID				bson.ObjectId	`bson:"_id,omitempty"`
+	IamObjID			bson.ObjectId	`bson:"iam-id,omitempty"`
+	BCookie				string		`bson:"bcookie,omitempty"`
+
+	MTime				int64		`bson:"mtime,omitempty"`
+	State				uint32		`bson:"state"`
+
+	NamespaceID			string		`bson:"nsid,omitempty"`
+	CreationTime			string		`bson:"creation-time,omitempty"`
+
+	// Todo
+	Versioning			bool		`bson:"versioning,omitempty"`
+	TagSet				[]S3Tag		`bson:"tags,omitempty"`
+	Encrypt				S3BucketEncrypt	`bson:"encrypt,omitempty"`
+	Location			string		`bson:"location,omitempty"`
+	Policy				string		`bson:"policy,omitempty"`
+	Logging				bool		`bson:"logging,omitempty"`
+	Lifecycle			string		`bson:"lifecycle,omitempty"`
+	RequestPayment			string		`bson:"request-payment,omitempty"`
+
+	// Not supported props
+	// analytics
+	// cors
+	// metrics
+	// replication
+	// website
+	// accelerate
+	// inventory
+	// notification
+
+	Ref				int64		`bson:"ref"`
+	CntObjects			int64		`bson:"cnt-objects"`
+	CntBytes			int64		`bson:"cnt-bytes"`
+	Rover				int64		`bson:"rover"`
+	Name				string		`bson:"name"`
+	CannedAcl			string		`bson:"canned-acl"`
+	BasicNotify			*S3BucketNotify	`bson:"notify,omitempty"`
+
+	MaxObjects			int64		`bson:"max-objects"`
+	MaxBytes			int64		`bson:"max-bytes"`
+}
