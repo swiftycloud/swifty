@@ -57,7 +57,7 @@ func checkAccounts() error {
 
 	accounts = make(map[string]*s3mgo.S3Account)
 	accnsid = make(map[string]*s3mgo.S3Account)
-	fmt.Printf("Accounts:\n")
+	fmt.Printf("   Accounts:\n")
 	for _, ac := range acs {
 		accounts[ac.ObjID.Hex()] = ac
 		accnsid[ac.NamespaceID()] = ac
@@ -79,7 +79,7 @@ func checkIams() error {
 	}
 
 	iams = make(map[string]*s3mgo.S3Iam)
-	fmt.Printf("IAMs:\n")
+	fmt.Printf("   IAMs:\n")
 	for _, iam := range is {
 		_, ok := accounts[iam.AccountObjID.Hex()]
 		if !ok {
@@ -107,7 +107,7 @@ func checkKeys() error {
 		return err
 	}
 
-	fmt.Printf("Keys:\n")
+	fmt.Printf("   Keys:\n")
 	for _, key := range keys {
 		_, ok := accounts[key.AccountObjID.Hex()]
 		if !ok {
@@ -147,7 +147,7 @@ func checkBuckets() error {
 	}
 
 	buckets = make(map[string]*s3mgo.S3Bucket)
-	fmt.Printf("Buckets:\n")
+	fmt.Printf("   Buckets:\n")
 	for _, b := range(bks) {
 		ac, ok := accnsid[b.NamespaceID]
 		if !ok {
@@ -169,8 +169,8 @@ func checkBuckets() error {
 		}
 
 		buckets[b.ObjID.Hex()] = b
-		fmt.Printf("\t%s: ac=..%s name=%-24s c=%s.. %s\n", b.ObjID.Hex(),
-				ac.ObjID.Hex()[12:], b.Name, b.BCookie[:8], st)
+		fmt.Printf("\t%s: ac=..%s name=%-24s c=%s.. o=%d/%d%s\n", b.ObjID.Hex(),
+				ac.ObjID.Hex()[12:], b.Name, b.BCookie[:8], b.CntBytes, b.CntObjects, st)
 	}
 
 	return nil
@@ -188,17 +188,17 @@ func checkObjects() error {
 	}
 
 	objects = make(map[string]*s3mgo.S3Object)
-	fmt.Printf("Objects:\n")
+	fmt.Printf("   Objects:\n")
 	for _, o := range(objs) {
 		b, ok := buckets[o.BucketObjID.Hex()]
 		if !ok {
-			fmt.Printf("\t!!! Dangling object %s (no bucket)\n", o.ObjID.Hex())
+			fmt.Printf("!!!\t Dangling object %s (no bucket)\n", o.ObjID.Hex())
 			continue
 		}
 
 		ocookie := b.OCookie(o.Key, o.Version)
 		if o.OCookie != ocookie {
-			fmt.Printf("\t!!! Corrupted Object %s (key %s.%d cookie %s want %s)\n", o.ObjID.Hex(),
+			fmt.Printf("!!!\t Corrupted Object %s (key %s.%d cookie %s want %s)\n", o.ObjID.Hex(),
 					o.Key, o.Version, o.OCookie[:6], ocookie[:6])
 			continue
 		}
@@ -213,9 +213,20 @@ func checkObjects() error {
 			st += " ver"
 		}
 
+		b.CntObjects--
+		b.CntBytes -= o.Size
 		objects[o.ObjID.Hex()] = o
-		fmt.Printf("\t%s: bk=..%s key=%-32s c=%s.. %s\n", o.ObjID.Hex(),
-				b.ObjID.Hex()[12:], b.Name + "::" + o.Key, o.OCookie[:8], st)
+		fmt.Printf("\t%s: bk=..%s key=%-32s c=%s.. s=%d%s\n", o.ObjID.Hex(),
+				b.ObjID.Hex()[12:], b.Name + "::" + o.Key, o.OCookie[:8], o.Size, st)
+	}
+
+	for _, b := range(buckets) {
+		if b.CntObjects != 0 {
+			fmt.Printf("!!!\tBucket %s nobj mismatch, %d left\n", b.ObjID.Hex(), b.CntObjects)
+		}
+		if b.CntBytes != 0 {
+			fmt.Printf("!!!\tBucket %s size mismatch, %d left\n", b.ObjID.Hex(), b.CntBytes)
+		}
 	}
 
 	return nil
@@ -233,23 +244,23 @@ func checkParts() error {
 	}
 
 	pchunks = make(map[string]*s3mgo.S3ObjectPart)
-	fmt.Printf("Parts:\n")
+	fmt.Printf("   Parts:\n")
 	for _, p := range(pts) {
 		o, ok := objects[p.RefID.Hex()]
 		if !ok {
-			fmt.Printf("\t!!! Dangling Part %s (no object)\n", p.ObjID.Hex())
+			fmt.Printf("!!!\t Dangling Part %s (no object)\n", p.ObjID.Hex())
 			continue
 		}
 
 		if o.OCookie != p.OCookie {
-			fmt.Printf("\t!!! Corrupted Part %s (ocookie %s want %s)\n", p.ObjID.Hex(),
+			fmt.Printf("!!!\t Corrupted Part %s (ocookie %s want %s)\n", p.ObjID.Hex(),
 					o.OCookie[:6], p.OCookie[:6])
 			continue
 		}
 
 		b := buckets[o.BucketObjID.Hex()]
 		if b.BCookie != p.BCookie {
-			fmt.Printf("\t!!! Corrupted Part %s (bcookie %s want %s)\n", p.ObjID.Hex(),
+			fmt.Printf("!!!\t Corrupted Part %s (bcookie %s want %s)\n", p.ObjID.Hex(),
 					o.OCookie[:6], p.BCookie[:6])
 			continue
 		}
@@ -266,8 +277,15 @@ func checkParts() error {
 			pchunks[ci.Hex()] = p
 		}
 
-		fmt.Printf("\t%s: %-32s #%d%s\n", p.ObjID.Hex(),
-				b.Name + "::" + o.Key, p.Part, st)
+		o.Size -= p.Size
+		fmt.Printf("\t%s: #%d %-32s %s\n", p.ObjID.Hex(), p.Part,
+				b.Name + "::" + o.Key, st)
+	}
+
+	for _, o := range(objects) {
+		if o.Size != 0 {
+			fmt.Printf("!!!\tObject %s size mismatch, %d left\n", o.ObjID.Hex(), o.Size)
+		}
 	}
 
 	return nil
@@ -276,13 +294,13 @@ func checkParts() error {
 func checkChunks() error {
 	var cks []*s3mgo.S3DataChunk
 
-	err := session.DB(DBName).C(DBColS3DataChunks).Find(bson.M{}).All(&cks)
+	err := session.DB(DBName).C(DBColS3DataChunks).Find(bson.M{}).Select(bson.M{"data":0}).All(&cks)
 	if err != nil {
 		fmt.Printf("Can't lookup objects: %s", err.Error())
 		return err
 	}
 
-	fmt.Printf("Chunks:\n")
+	fmt.Printf("   Chunks:\n")
 	for _, c := range(cks) {
 		_, ok := pchunks[c.ObjID.Hex()]
 		if !ok {
