@@ -176,8 +176,10 @@ func checkBuckets() error {
 	return nil
 }
 
+var objects map[string]*s3mgo.S3Object
+
 func checkObjects() error {
-	var objs []s3mgo.S3Object
+	var objs []*s3mgo.S3Object
 
 	err := session.DB(DBName).C(DBColS3Objects).Find(bson.M{}).All(&objs)
 	if err != nil {
@@ -185,6 +187,7 @@ func checkObjects() error {
 		return err
 	}
 
+	objects = make(map[string]*s3mgo.S3Object)
 	fmt.Printf("Objects:\n")
 	for _, o := range(objs) {
 		b, ok := buckets[o.BucketObjID.Hex()]
@@ -210,8 +213,81 @@ func checkObjects() error {
 			st += " ver"
 		}
 
+		objects[o.ObjID.Hex()] = o
 		fmt.Printf("\t%s: bk=..%s key=%-32s c=%s.. %s\n", o.ObjID.Hex(),
 				b.ObjID.Hex()[12:], b.Name + "::" + o.Key, o.OCookie[:8], st)
+	}
+
+	return nil
+}
+
+var pchunks map[string]*s3mgo.S3ObjectPart
+
+func checkParts() error {
+	var pts []*s3mgo.S3ObjectPart
+
+	err := session.DB(DBName).C(DBColS3ObjectData).Find(bson.M{}).All(&pts)
+	if err != nil {
+		fmt.Printf("Can't lookup objects: %s", err.Error())
+		return err
+	}
+
+	pchunks = make(map[string]*s3mgo.S3ObjectPart)
+	fmt.Printf("Parts:\n")
+	for _, p := range(pts) {
+		o, ok := objects[p.RefID.Hex()]
+		if !ok {
+			fmt.Printf("\t!!! Dangling Part %s (no object)\n", p.ObjID.Hex())
+			continue
+		}
+
+		if o.OCookie != p.OCookie {
+			fmt.Printf("\t!!! Corrupted Part %s (ocookie %s want %s)\n", p.ObjID.Hex(),
+					o.OCookie[:6], p.OCookie[:6])
+			continue
+		}
+
+		b := buckets[o.BucketObjID.Hex()]
+		if b.BCookie != p.BCookie {
+			fmt.Printf("\t!!! Corrupted Part %s (bcookie %s want %s)\n", p.ObjID.Hex(),
+					o.OCookie[:6], p.BCookie[:6])
+			continue
+		}
+
+
+		st := ""
+		_, ok = iams[p.IamObjID.Hex()]
+		if !ok {
+			/* FIXME -- iams can go away with keys expired */
+			st += " noiam!"
+		}
+
+		for _, ci := range(p.Chunks) {
+			pchunks[ci.Hex()] = p
+		}
+
+		fmt.Printf("\t%s: %-32s #%d%s\n", p.ObjID.Hex(),
+				b.Name + "::" + o.Key, p.Part, st)
+	}
+
+	return nil
+}
+
+func checkChunks() error {
+	var cks []*s3mgo.S3DataChunk
+
+	err := session.DB(DBName).C(DBColS3DataChunks).Find(bson.M{}).All(&cks)
+	if err != nil {
+		fmt.Printf("Can't lookup objects: %s", err.Error())
+		return err
+	}
+
+	fmt.Printf("Chunks:\n")
+	for _, c := range(cks) {
+		_, ok := pchunks[c.ObjID.Hex()]
+		if !ok {
+			fmt.Printf("\tDangling chunk %s\n", c.ObjID.Hex())
+		}
 	}
 
 	return nil
@@ -253,6 +329,16 @@ func main() {
 	}
 
 	err = checkObjects()
+	if err != nil {
+		return
+	}
+
+	err = checkParts()
+	if err != nil {
+		return
+	}
+
+	err = checkChunks()
 	if err != nil {
 		return
 	}
