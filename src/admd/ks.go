@@ -11,9 +11,9 @@ import (
 )
 
 type UserDesc struct {
-	Name	string		`json:"name"`
-	Email	string		`json:"email"`
-	Created	*time.Time	`json:"created,omitempty"`
+	RealName	string		`json:"name"`
+	Email		string		`json:"email"`
+	Created		*time.Time	`json:"created,omitempty"`
 }
 
 func (kud *UserDesc)CreatedS() string {
@@ -118,7 +118,7 @@ func ksAddUserAndProject(c *swy.XCreds, user *swyapi.AddUser) (string, error) {
 
 	now := time.Now()
 	udesc, err := json.Marshal(&UserDesc{
-		Name:		user.Name,
+		RealName:	user.Name,
 		Email:		user.UId,
 		Created:	&now,
 	})
@@ -177,34 +177,27 @@ func ksAddUserAndProject(c *swy.XCreds, user *swyapi.AddUser) (string, error) {
 	return uresp.User.Id, nil
 }
 
-func toUserDesc(ui *swyks.KeystoneUser) (*UserDesc, error) {
+func toUserInfo(ui *swyks.KeystoneUser) (*swyapi.UserInfo, error) {
 	var kud UserDesc
-	var err error
+
 	if ui.Description != "" {
-		err = json.Unmarshal([]byte(ui.Description), &kud)
+		err := json.Unmarshal([]byte(ui.Description), &kud)
 		if err != nil {
 			log.Errorf("Unmarshal [%s] error: %s", ui.Description, err.Error())
+			return nil, err
 		}
-	}
-	return &kud, err
-}
-
-func toUserInfo(ui *swyks.KeystoneUser) (*swyapi.UserInfo, error) {
-	kud, err := toUserDesc(ui)
-	if err != nil {
-		return nil, err
 	}
 
 	return &swyapi.UserInfo {
 		ID:	 ui.Id,
 		UId:	 ui.Name,
-		Name:	 kud.Name,
+		Name:	 kud.RealName,
 		Created: kud.CreatedS(),
 	}, nil
 }
 
-func getUserInfo(c *swy.XCreds, user, id string) (*swyapi.UserInfo, error) {
-	kui, err := ksGetUserInfo(c, user, id)
+func getUserInfo(c *swy.XCreds, id string) (*swyapi.UserInfo, error) {
+	kui, err := ksGetUserInfo(c, id)
 	if err != nil {
 		return nil, err
 	}
@@ -249,15 +242,7 @@ func ksGetUserRoles(c *swy.XCreds, ui *swyks.KeystoneUser) ([]*swyks.KeystoneRol
 	return ret, nil
 }
 
-func ksGetUserInfo(c *swy.XCreds, user, id string) (*swyks.KeystoneUser, error) {
-	if user != "" {
-		return ksGetUserInfoByName(c, user)
-	} else {
-		return ksGetUserInfoById(c, id)
-	}
-}
-
-func ksGetUserInfoById(c *swy.XCreds, id string) (*swyks.KeystoneUser, error) {
+func ksGetUserInfo(c *swy.XCreds, id string) (*swyks.KeystoneUser, error) {
 	var uresp swyks.KeystoneUserResp
 
 	err := ksClient.MakeReq(
@@ -271,25 +256,6 @@ func ksGetUserInfoById(c *swy.XCreds, id string) (*swyks.KeystoneUser, error) {
 	}
 
 	return &uresp.User, nil
-}
-
-func ksGetUserInfoByName(c *swy.XCreds, user string) (*swyks.KeystoneUser, error) {
-	var uresp swyks.KeystoneUsersResp
-
-	err := ksClient.MakeReq(
-		&swyks.KeystoneReq {
-			Type:	"GET",
-			URL:	"users?name=" + user,
-			Succ:	http.StatusOK, },
-		nil, &uresp)
-	if err != nil {
-		return nil, err
-	}
-	if len(uresp.Users) != 1 {
-		return nil, fmt.Errorf("No such user: %s", user)
-	}
-
-	return &uresp.Users[0], nil
 }
 
 func ksGetProjectInfo(c *swy.XCreds, project string) (*swyks.KeystoneProject, error) {
