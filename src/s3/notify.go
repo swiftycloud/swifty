@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"strings"
 	"fmt"
+	"./mgo"
 	"../common"
 	"../apis/apps/s3"
 )
@@ -14,7 +15,7 @@ import (
 func notifyFindBucket(ctx context.Context, params *swys3api.S3Subscribe) (*S3Bucket, error) {
 	var bucket S3Bucket
 
-	cookie := BCookie(params.Namespace, params.Bucket)
+	cookie := s3mgo.BCookie(params.Namespace, params.Bucket)
 	err := dbS3FindOne(ctx, bson.M{ "bcookie": cookie, "state": S3StateActive }, &bucket)
 	if err != nil {
 		return nil, err

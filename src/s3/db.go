@@ -9,6 +9,7 @@ import (
 	"time"
 	"fmt"
 	"../common"
+	"./mgo"
 )
 
 var dbColMap map[reflect.Type]string
@@ -96,10 +97,10 @@ func dbConnect(conf *YAMLConf) error {
 	dbColMap[reflect.TypeOf(&S3Iam{})] = DBColS3Iams
 	dbColMap[reflect.TypeOf([]S3Iam{})] = DBColS3Iams
 	dbColMap[reflect.TypeOf(&[]S3Iam{})] = DBColS3Iams
-	dbColMap[reflect.TypeOf(S3Account{})] = DBColS3Iams
-	dbColMap[reflect.TypeOf(&S3Account{})] = DBColS3Iams
-	dbColMap[reflect.TypeOf([]S3Account{})] = DBColS3Iams
-	dbColMap[reflect.TypeOf(&[]S3Account{})] = DBColS3Iams
+	dbColMap[reflect.TypeOf(s3mgo.S3Account{})] = DBColS3Iams
+	dbColMap[reflect.TypeOf(&s3mgo.S3Account{})] = DBColS3Iams
+	dbColMap[reflect.TypeOf([]s3mgo.S3Account{})] = DBColS3Iams
+	dbColMap[reflect.TypeOf(&[]s3mgo.S3Account{})] = DBColS3Iams
 	dbColMap[reflect.TypeOf(S3AccessKey{})] = DBColS3AccessKeys
 	dbColMap[reflect.TypeOf(&S3AccessKey{})] = DBColS3AccessKeys
 	dbColMap[reflect.TypeOf([]S3AccessKey{})] = DBColS3AccessKeys
@@ -180,8 +181,8 @@ func infoLong(o interface{}) (string) {
 		return fmt.Sprintf("{ S3AccessKey: %s/%s/%s/%d }",
 			akey.ObjID, akey.IamObjID,
 			akey.AccessKeyID, akey.State)
-	case reflect.TypeOf(&S3Account{}):
-		account := o.(*S3Account)
+	case reflect.TypeOf(&s3mgo.S3Account{}):
+		account := o.(*s3mgo.S3Account)
 		return fmt.Sprintf("{ S3Account: %s/%s/%d/%s/%s }",
 			account.ObjID, account.Namespace,
 			account.State, account.User, account.Email)

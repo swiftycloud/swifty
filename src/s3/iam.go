@@ -7,20 +7,8 @@ import (
 	"time"
 	"fmt"
 	"../common"
+	"./mgo"
 )
-
-type S3Account struct {
-	ObjID				bson.ObjectId	`bson:"_id,omitempty"`
-	MTime				int64		`bson:"mtime,omitempty"`
-	State				uint32		`bson:"state"`
-
-	AwsID				string		`bson:"aws-id,omitempty"`
-	Namespace			string		`bson:"namespace,omitempty"`
-
-	CreationTime			string		`bson:"creation-time,omitempty"`
-	User				string		`bson:"user,omitempty"`
-	Email				string		`bson:"email,omitempty"`
-}
 
 type S3Iam struct {
 	ObjID				bson.ObjectId	`bson:"_id,omitempty"`
@@ -35,8 +23,8 @@ type S3Iam struct {
 	User				string		`bson:"user,omitempty"`
 }
 
-func s3AccountInsert(ctx context.Context, namespace, user string) (*S3Account, error) {
-	var account S3Account
+func s3AccountInsert(ctx context.Context, namespace, user string) (*s3mgo.S3Account, error) {
+	var account s3mgo.S3Account
 	var err error
 
 	if namespace == "" {
@@ -54,7 +42,7 @@ func s3AccountInsert(ctx context.Context, namespace, user string) (*S3Account, e
 		"namespace":		namespace,
 
 		"creation-time":	time.Now().Format(time.RFC3339),
-		"user":			AccountUser(namespace, user),
+		"user":			s3mgo.AccountUser(namespace, user),
 		"email":		user + "@mail",
 	}
 	query := bson.M{ "namespace": namespace, "state": S3StateActive }
@@ -69,8 +57,8 @@ func s3AccountInsert(ctx context.Context, namespace, user string) (*S3Account, e
 	return &account, nil
 }
 
-func (iam *S3Iam) s3AccountLookup(ctx context.Context) (*S3Account, error) {
-	var account S3Account
+func (iam *S3Iam) s3AccountLookup(ctx context.Context) (*s3mgo.S3Account, error) {
+	var account s3mgo.S3Account
 	var err error
 
 	query := bson.M{ "_id": iam.AccountObjID, "state": S3StateActive }
@@ -87,7 +75,7 @@ func (iam *S3Iam) s3AccountLookup(ctx context.Context) (*S3Account, error) {
 }
 
 func s3FindFullAccessIam(ctx context.Context, namespace string) (*S3Iam, error) {
-	var account S3Account
+	var account s3mgo.S3Account
 	var iams []S3Iam
 	var query bson.M
 	var err error
@@ -115,7 +103,7 @@ func s3FindFullAccessIam(ctx context.Context, namespace string) (*S3Iam, error) 
 	return nil, err
 }
 
-func s3AccountDelete(ctx context.Context, account *S3Account) (error) {
+func s3AccountDelete(ctx context.Context, account *s3mgo.S3Account) (error) {
 	err := dbS3SetState(ctx, account, S3StateInactive, nil)
 	if err != nil {
 		if err == mgo.ErrNotFound {
@@ -131,7 +119,7 @@ func s3AccountDelete(ctx context.Context, account *S3Account) (error) {
 	return nil
 }
 
-func s3IamNew(ctx context.Context, account *S3Account, policy *S3Policy) (*S3Iam, error) {
+func s3IamNew(ctx context.Context, account *s3mgo.S3Account, policy *S3Policy) (*S3Iam, error) {
 	var iam *S3Iam
 	var err error
 

@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"os"
 
+	"./mgo"
 	"../common"
 	"../common/http"
 	"../common/secrets"
@@ -927,7 +928,7 @@ func handleWebReq(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var account S3Account
+	var account s3mgo.S3Account
 	query := bson.M{ "_id": bson.ObjectIdHex(aux[1]), "state": S3StateActive }
 	err := dbS3FindOne(ctx, query, &account)
 	if err != nil {

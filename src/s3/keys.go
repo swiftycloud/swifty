@@ -10,6 +10,7 @@ import (
 	"fmt"
 
 	"../common/crypto"
+	"./mgo"
 )
 
 type S3AccessKey struct {
@@ -58,7 +59,7 @@ func (akey *S3AccessKey) Expired() bool {
 // for security reason.
 //
 
-func getEndlessKey(ctx context.Context, account *S3Account, policy *S3Policy) (*S3AccessKey, error) {
+func getEndlessKey(ctx context.Context, account *s3mgo.S3Account, policy *S3Policy) (*S3AccessKey, error) {
 	var res []*S3AccessKey
 
 	query := bson.M{"account-id": account.ObjID, "state": S3StateActive,
