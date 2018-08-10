@@ -114,8 +114,14 @@ paths:
           description: Need to authenticate
         '403':
           description: Bad auth token
-  /setpass:
-    post:
+  /users/{uid}/pass:
+    parameters:
+      - in: path
+        name: uid
+        type: string
+        required: true
+        description: User ID (id, not uid)
+    put:
       summary: Set user password (admin or self)
       parameters:
         - in: header
@@ -124,7 +130,7 @@ paths:
           required: true
         - in: body
           name: data
-          description: User description (username may be empty for self)
+          description: User description (username is ignored)
           schema:
             $ref: '#/definitions/UserLogin'
       responses:

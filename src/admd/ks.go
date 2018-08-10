@@ -311,17 +311,12 @@ func ksGetProjectInfo(c *swy.XCreds, project string) (*swyks.KeystoneProject, er
 	return &presp.Projects[0], nil
 }
 
-func ksChangeUserPass(c *swy.XCreds, up *swyapi.UserLogin) error {
-	uinf, err := ksGetUserInfo(c, up.UserName, "")
-	if err != nil {
-		return err
-	}
-
-	log.Debugf("Change pass for %s/%s", up.UserName, uinf.Id)
-	err = ksClient.MakeReq(
+func ksChangeUserPass(c *swy.XCreds, uid string, up *swyapi.UserLogin) error {
+	log.Debugf("Change pass for %s", uid)
+	err := ksClient.MakeReq(
 		&swyks.KeystoneReq {
 			Type:	"PATCH",
-			URL:	"users/" + uinf.Id,
+			URL:	"users/" + uid,
 			Succ:	http.StatusOK, },
 		&swyks.KeystonePassword {
 			User: swyks.KeystoneUser {

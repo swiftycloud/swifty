@@ -494,6 +494,8 @@ func handleSetPassword(w http.ResponseWriter, r *http.Request) {
 
 	if swyhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
 
+	uid := mux.Vars(r)["uid"]
+
 	td, code, err := handleAdminReq(r, &params)
 	if err != nil {
 		goto out
@@ -506,13 +508,19 @@ func handleSetPassword(w http.ResponseWriter, r *http.Request) {
 	}
 
 	code = http.StatusForbidden
-	params.UserName, err = checkAdminOrOwner(td.Project.Name, params.UserName, td)
-	if err != nil {
-		goto out
+	if uid == td.User.Id {
+		if !swyks.KeystoneRoleHas(td, swyks.SwyAdminRole) &&
+				!swyks.KeystoneRoleHas(td, swyks.SwyUserRole) {
+			goto out
+		}
+	} else {
+		if !swyks.KeystoneRoleHas(td, swyks.SwyAdminRole) {
+			goto out
+		}
 	}
 
-	log.Debugf("Change pass to %s", params.UserName)
-	err = ksChangeUserPass(conf.kc, &params)
+	log.Debugf("Change pass to %s", uid)
+	err = ksChangeUserPass(conf.kc, uid, &params)
 	if err != nil {
 		goto out
 	}
@@ -590,7 +598,7 @@ func main() {
 	r.HandleFunc("/v1/login", handleUserLogin).Methods("POST", "OPTIONS")
 	r.HandleFunc("/v1/users", handleUsers).Methods("POST", "GET", "OPTIONS")
 	r.HandleFunc("/v1/users/{uid}", handleUser).Methods("GET", "DELETE", "OPTIONS")
-	r.HandleFunc("/v1/setpass", handleSetPassword).Methods("POST", "OPTIONS")
+	r.HandleFunc("/v1/users/{uid}/pass", handleSetPassword).Methods("PUT", "OPTIONS")
 	r.HandleFunc("/v1/limits/set", handleSetLimits).Methods("POST", "OPTIONS")
 	r.HandleFunc("/v1/limits/get", handleGetLimits).Methods("POST", "OPTIONS")
 

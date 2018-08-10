@@ -215,8 +215,8 @@ func user_del(args []string, opts [16]string) {
 }
 
 func user_pass(args []string, opts [16]string) {
-	make_faas_req2("POST", "setpass", swyapi.UserLogin{UserName: args[0], Password: opts[0]},
-		http.StatusCreated, 0)
+	make_faas_req1("PUT", "users/" + args[0] + "/pass", http.StatusCreated,
+			&swyapi.UserLogin{Password: opts[0]}, nil)
 }
 
 func user_info(args []string, opts [16]string) {
