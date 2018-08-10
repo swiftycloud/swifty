@@ -77,6 +77,7 @@ type KeystoneRoleAssignments struct {
 }
 
 type KeystoneTokenData struct {
+	User		KeystoneUser		`json:"user"`
 	Project		KeystoneProject		`json:"project"`
 	Roles		[]KeystoneRole		`json:"roles"`
 	Expires		string			`json:"expires_at"`
@@ -100,6 +101,10 @@ type KeystoneProjectsResp struct {
 
 type KeystoneUsersResp struct {
 	Users		[]KeystoneUser		`json:"users"`
+}
+
+type KeystoneUserResp struct {
+	User		KeystoneUser		`json:"user"`
 }
 
 func KeystoneRoleHas(td *KeystoneTokenData, wrole string) bool {

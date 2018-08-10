@@ -125,25 +125,37 @@ func checkAdminOrOwner(user, target string, td *swyks.KeystoneTokenData) (string
 	}
 }
 
-func handleUserInfo(w http.ResponseWriter, r *http.Request) {
-	var ui swyapi.UserInfo
+func handleUser(w http.ResponseWriter, r *http.Request) {
+	if swyhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
+	uid := mux.Vars(r)["uid"]
+	switch r.Method {
+	case "GET":
+		handleUserInfo(w, r, uid)
+	}
+}
+
+func handleUserInfo(w http.ResponseWriter, r *http.Request, uid string) {
 	var rui *swyapi.UserInfo
 
-	if swyhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
-
-	td, code, err := handleAdminReq(r, &ui)
+	td, code, err := handleAdminReq(r, nil)
 	if err != nil {
 		goto out
 	}
 
 	code = http.StatusForbidden
-	ui.UId, err = checkAdminOrOwner(td.Project.Name, ui.UId, td)
-	if err != nil {
-		goto out
+	if uid == td.User.Id {
+		if !swyks.KeystoneRoleHas(td, swyks.SwyAdminRole) &&
+				!swyks.KeystoneRoleHas(td, swyks.SwyUserRole) {
+			goto out
+		}
+	} else {
+		if !swyks.KeystoneRoleHas(td, swyks.SwyAdminRole) {
+			goto out
+		}
 	}
 
 	code = http.StatusBadRequest
-	rui, err = getUserInfo(conf.kc, ui.UId)
+	rui, err = getUserInfo(conf.kc, "", uid)
 	if err != nil {
 		log.Errorf("GetUserDesc: %s", err.Error())
 		goto out
@@ -188,7 +200,7 @@ func handleListUsers(w http.ResponseWriter, r *http.Request) {
 		}
 	} else if swyks.KeystoneRoleHas(td, swyks.SwyUserRole) {
 		var ui *swyapi.UserInfo
-		ui, err = getUserInfo(conf.kc, td.Project.Name)
+		ui, err = getUserInfo(conf.kc, td.Project.Name, "")
 		if err != nil {
 			goto out
 		}
@@ -572,7 +584,7 @@ func main() {
 	r := mux.NewRouter()
 	r.HandleFunc("/v1/login", handleUserLogin).Methods("POST", "OPTIONS")
 	r.HandleFunc("/v1/users", handleUsers).Methods("POST", "GET", "OPTIONS")
-	r.HandleFunc("/v1/userinfo", handleUserInfo).Methods("POST", "OPTIONS")
+	r.HandleFunc("/v1/users/{uid}", handleUser).Methods("GET", "OPTIONS")
 	r.HandleFunc("/v1/deluser", handleDelUser).Methods("POST", "OPTIONS")
 	r.HandleFunc("/v1/setpass", handleSetPassword).Methods("POST", "OPTIONS")
 	r.HandleFunc("/v1/limits/set", handleSetLimits).Methods("POST", "OPTIONS")

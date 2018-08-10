@@ -203,8 +203,8 @@ func toUserInfo(ui *swyks.KeystoneUser) (*swyapi.UserInfo, error) {
 	}, nil
 }
 
-func getUserInfo(c *swy.XCreds, user string) (*swyapi.UserInfo, error) {
-	kui, err := ksGetUserInfo(c, user)
+func getUserInfo(c *swy.XCreds, user, id string) (*swyapi.UserInfo, error) {
+	kui, err := ksGetUserInfo(c, user, id)
 	if err != nil {
 		return nil, err
 	}
@@ -249,7 +249,31 @@ func ksGetUserRoles(c *swy.XCreds, ui *swyks.KeystoneUser) ([]*swyks.KeystoneRol
 	return ret, nil
 }
 
-func ksGetUserInfo(c *swy.XCreds, user string) (*swyks.KeystoneUser, error) {
+func ksGetUserInfo(c *swy.XCreds, user, id string) (*swyks.KeystoneUser, error) {
+	if user != "" {
+		return ksGetUserInfoByName(c, user)
+	} else {
+		return ksGetUserInfoById(c, id)
+	}
+}
+
+func ksGetUserInfoById(c *swy.XCreds, id string) (*swyks.KeystoneUser, error) {
+	var uresp swyks.KeystoneUserResp
+
+	err := ksClient.MakeReq(
+		&swyks.KeystoneReq {
+			Type:	"GET",
+			URL:	"users/" + id,
+			Succ:	http.StatusOK, },
+		nil, &uresp)
+	if err != nil {
+		return nil, err
+	}
+
+	return &uresp.User, nil
+}
+
+func ksGetUserInfoByName(c *swy.XCreds, user string) (*swyks.KeystoneUser, error) {
 	var uresp swyks.KeystoneUsersResp
 
 	err := ksClient.MakeReq(
@@ -288,7 +312,7 @@ func ksGetProjectInfo(c *swy.XCreds, project string) (*swyks.KeystoneProject, er
 }
 
 func ksChangeUserPass(c *swy.XCreds, up *swyapi.UserLogin) error {
-	uinf, err := ksGetUserInfo(c, up.UserName)
+	uinf, err := ksGetUserInfo(c, up.UserName, "")
 	if err != nil {
 		return err
 	}
@@ -314,7 +338,7 @@ func ksChangeUserPass(c *swy.XCreds, up *swyapi.UserLogin) error {
 func ksDelUserAndProject(c *swy.XCreds, ui *swyapi.UserInfo) error {
 	var err error
 
-	uinf, err := ksGetUserInfo(c, ui.UId)
+	uinf, err := ksGetUserInfo(c, ui.UId, "")
 	if err != nil {
 		return err
 	}

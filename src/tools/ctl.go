@@ -222,7 +222,7 @@ func user_pass(args []string, opts [16]string) {
 
 func user_info(args []string, opts [16]string) {
 	var ui swyapi.UserInfo
-	make_faas_req("userinfo", swyapi.UserInfo{UId: args[0]}, &ui)
+	make_faas_req1("GET", "users/" + args[0], http.StatusOK, nil, &ui)
 	fmt.Printf("ID:     %s\n", ui.ID)
 	fmt.Printf("Name:   %s\n", ui.Name)
 	fmt.Printf("Roles:  %s\n", strings.Join(ui.Roles, ", "))
