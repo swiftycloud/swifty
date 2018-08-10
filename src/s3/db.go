@@ -111,10 +111,10 @@ func dbConnect(conf *YAMLConf) error {
 	dbColMap[reflect.TypeOf(&s3mgo.S3Bucket{})] = DBColS3Buckets
 	dbColMap[reflect.TypeOf([]s3mgo.S3Bucket{})] = DBColS3Buckets
 	dbColMap[reflect.TypeOf(&[]s3mgo.S3Bucket{})] = DBColS3Buckets
-	dbColMap[reflect.TypeOf(S3Object{})] = DBColS3Objects
-	dbColMap[reflect.TypeOf(&S3Object{})] = DBColS3Objects
-	dbColMap[reflect.TypeOf([]S3Object{})] = DBColS3Objects
-	dbColMap[reflect.TypeOf(&[]S3Object{})] = DBColS3Objects
+	dbColMap[reflect.TypeOf(s3mgo.S3Object{})] = DBColS3Objects
+	dbColMap[reflect.TypeOf(&s3mgo.S3Object{})] = DBColS3Objects
+	dbColMap[reflect.TypeOf([]s3mgo.S3Object{})] = DBColS3Objects
+	dbColMap[reflect.TypeOf(&[]s3mgo.S3Object{})] = DBColS3Objects
 	dbColMap[reflect.TypeOf(S3Upload{})] = DBColS3Uploads
 	dbColMap[reflect.TypeOf(&S3Upload{})] = DBColS3Uploads
 	dbColMap[reflect.TypeOf([]S3Upload{})] = DBColS3Uploads
@@ -203,8 +203,8 @@ func infoLong(o interface{}) (string) {
 			objd.ObjID, objd.RefID,
 			objd.BCookie, objd.OCookie,
 			objd.State, objd.Size)
-	case reflect.TypeOf(&S3Object{}):
-		object := o.(*S3Object)
+	case reflect.TypeOf(&s3mgo.S3Object{}):
+		object := o.(*s3mgo.S3Object)
 		return fmt.Sprintf("{ S3Object: %s/%s/%s/%d/%s }",
 			object.ObjID, object.BucketObjID,
 			object.OCookie, object.State,

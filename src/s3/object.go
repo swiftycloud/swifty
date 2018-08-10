@@ -20,40 +20,8 @@ var ObjectAcls = []string {
 	swys3api.S3ObjectAclBucketOwnerFullControl,
 }
 
-type S3ObjectPorps struct {
-	CreationTime			string		`bson:"creation-time,omitempty"`
-	Acl				string		`bson:"acl,omitempty"`
-	Key				string		`bson:"key"`
-
-	// Todo
-	Meta				[]s3mgo.S3Tag	`bson:"meta,omitempty"`
-	TagSet				[]s3mgo.S3Tag	`bson:"tags,omitempty"`
-	Policy				string		`bson:"policy,omitempty"`
-
-	// Not supported props
-	// torrent
-	// objects archiving
-}
-
-type S3Object struct {
-	ObjID				bson.ObjectId	`bson:"_id,omitempty"`
-	IamObjID			bson.ObjectId	`bson:"iam-id,omitempty"`
-	OCookie				string		`bson:"ocookie"`
-
-	MTime				int64		`bson:"mtime,omitempty"`
-	State				uint32		`bson:"state"`
-
-	BucketObjID			bson.ObjectId	`bson:"bucket-id,omitempty"`
-	Version				int		`bson:"version"`
-	Rover				int64		`bson:"rover"`
-	Size				int64		`bson:"size"`
-	ETag				string		`bson:"etag"`
-
-	S3ObjectPorps					`bson:",inline"`
-}
-
 func s3RepairObjectInactive(ctx context.Context) error {
-	var objects []S3Object
+	var objects []s3mgo.S3Object
 	var err error
 
 	log.Debugf("s3: Processing inactive objects")
@@ -104,8 +72,8 @@ func s3RepairObject(ctx context.Context) error {
 	return nil
 }
 
-func FindCurObject(ctx context.Context, bucket *s3mgo.S3Bucket, oname string) (*S3Object, error) {
-	var res S3Object
+func FindCurObject(ctx context.Context, bucket *s3mgo.S3Bucket, oname string) (*s3mgo.S3Object, error) {
+	var res s3mgo.S3Object
 
 	query := bson.M{ "ocookie": bucket.OCookie(oname, 1), "state": S3StateActive }
 	err := dbS3FindOneTop(ctx, query, "-rover", &res)
@@ -116,7 +84,7 @@ func FindCurObject(ctx context.Context, bucket *s3mgo.S3Bucket, oname string) (*
 	return &res,nil
 }
 
-func (o *S3Object)Activate(ctx context.Context, b *s3mgo.S3Bucket, etag string) error {
+func Activate(ctx context.Context, b *s3mgo.S3Bucket, o *s3mgo.S3Object, etag string) error {
 	err := dbS3SetOnState(ctx, o, S3StateActive, nil,
 			bson.M{ "state": S3StateActive, "etag": etag, "rover": b.Rover })
 	if err == nil {
@@ -131,7 +99,7 @@ func (o *S3Object)Activate(ctx context.Context, b *s3mgo.S3Bucket, etag string) 
 	return err
 }
 
-func UploadToObject(ctx context.Context, iam *s3mgo.S3Iam, bucket *s3mgo.S3Bucket, upload *S3Upload) (*S3Object, error) {
+func UploadToObject(ctx context.Context, iam *s3mgo.S3Iam, bucket *s3mgo.S3Bucket, upload *S3Upload) (*s3mgo.S3Object, error) {
 	var err error
 
 	size, etag, err := s3ObjectPartsResum(ctx, upload)
@@ -139,7 +107,7 @@ func UploadToObject(ctx context.Context, iam *s3mgo.S3Iam, bucket *s3mgo.S3Bucke
 		return nil, err
 	}
 
-	object := &S3Object {
+	object := &s3mgo.S3Object {
 		/* We just inherit the objid form another collection
 		 * not to update all the data objects
 		 */
@@ -147,7 +115,7 @@ func UploadToObject(ctx context.Context, iam *s3mgo.S3Iam, bucket *s3mgo.S3Bucke
 		IamObjID:	iam.ObjID,
 		State:		S3StateNone,
 
-		S3ObjectPorps: S3ObjectPorps {
+		S3ObjectProps: s3mgo.S3ObjectProps {
 			Key:		upload.Key,
 			Acl:		upload.Acl,
 			CreationTime:	time.Now().Format(time.RFC3339),
@@ -169,7 +137,7 @@ func UploadToObject(ctx context.Context, iam *s3mgo.S3Iam, bucket *s3mgo.S3Bucke
 		goto out_remove
 	}
 
-	err = object.Activate(ctx, bucket, etag)
+	err = Activate(ctx, bucket, object, etag)
 	if err != nil {
 		goto out_remove
 	}
@@ -186,16 +154,16 @@ out_remove:
 	return nil, err
 }
 func AddObject(ctx context.Context, iam *s3mgo.S3Iam, bucket *s3mgo.S3Bucket, oname string,
-		acl string, data []byte) (*S3Object, error) {
+		acl string, data []byte) (*s3mgo.S3Object, error) {
 	var objp *S3ObjectPart
 	var err error
 
-	object := &S3Object {
+	object := &s3mgo.S3Object {
 		ObjID:		bson.NewObjectId(),
 		IamObjID:	iam.ObjID,
 		State:		S3StateNone,
 
-		S3ObjectPorps: S3ObjectPorps {
+		S3ObjectProps: s3mgo.S3ObjectProps {
 			Key:		oname,
 			Acl:		acl,
 			CreationTime:	time.Now().Format(time.RFC3339),
@@ -222,7 +190,7 @@ func AddObject(ctx context.Context, iam *s3mgo.S3Iam, bucket *s3mgo.S3Bucket, on
 		goto out_acc
 	}
 
-	err = object.Activate(ctx, bucket, objp.ETag)
+	err = Activate(ctx, bucket, object, objp.ETag)
 	if err != nil {
 		goto out
 	}
@@ -244,7 +212,7 @@ out_remove:
 }
 
 func s3DeleteObject(ctx context.Context, iam *s3mgo.S3Iam, bucket *s3mgo.S3Bucket, oname string) error {
-	var object *S3Object
+	var object *s3mgo.S3Object
 	var err error
 
 	object, err = FindCurObject(ctx, bucket, oname)
@@ -273,7 +241,7 @@ func s3DeleteObject(ctx context.Context, iam *s3mgo.S3Iam, bucket *s3mgo.S3Bucke
 	return nil
 }
 
-func DropObject(ctx context.Context, bucket *s3mgo.S3Bucket, object *S3Object) error {
+func DropObject(ctx context.Context, bucket *s3mgo.S3Bucket, object *s3mgo.S3Object) error {
 	var objp []*S3ObjectPart
 
 	err := dbS3SetState(ctx, object, S3StateInactive, nil)
@@ -306,7 +274,7 @@ func DropObject(ctx context.Context, bucket *s3mgo.S3Bucket, object *S3Object) e
 	return nil
 }
 
-func (object *S3Object)ReadData(ctx context.Context, bucket *s3mgo.S3Bucket) ([]byte, error) {
+func ReadData(ctx context.Context, bucket *s3mgo.S3Bucket, object *s3mgo.S3Object) ([]byte, error) {
 	var objp []*S3ObjectPart
 	var res []byte
 	var err error
@@ -332,7 +300,7 @@ func (object *S3Object)ReadData(ctx context.Context, bucket *s3mgo.S3Bucket) ([]
 }
 
 func ReadObject(ctx context.Context, bucket *s3mgo.S3Bucket, oname string, part, version int) ([]byte, error) {
-	var object *S3Object
+	var object *s3mgo.S3Object
 	var err error
 
 	object, err = FindCurObject(ctx, bucket, oname)
@@ -345,5 +313,5 @@ func ReadObject(ctx context.Context, bucket *s3mgo.S3Bucket, oname string, part,
 		return nil, err
 	}
 
-	return object.ReadData(ctx, bucket)
+	return ReadData(ctx, bucket, object)
 }

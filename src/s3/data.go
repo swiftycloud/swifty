@@ -133,7 +133,7 @@ func s3RepairObjectData(ctx context.Context) error {
 	}
 
 	for _, objp := range objps {
-		var object S3Object
+		var object s3mgo.S3Object
 		var bucket s3mgo.S3Bucket
 
 		log.Debugf("s3: Detected stale object data %s", infoLong(&objp))

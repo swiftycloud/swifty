@@ -23,7 +23,7 @@ type S3Upload struct {
 	Ref				int64		`bson:"ref"`
 	Lock				uint32		`bson:"lock"`
 
-	S3ObjectPorps					`bson:",inline"`
+	s3mgo.S3ObjectProps					`bson:",inline"`
 }
 
 func s3RepairUploadsInactive(ctx context.Context) error {
@@ -220,7 +220,7 @@ func s3UploadInit(ctx context.Context, iam *s3mgo.S3Iam, bucket *s3mgo.S3Bucket,
 		IamObjID:	iam.ObjID,
 		State:		S3StateActive,
 
-		S3ObjectPorps: S3ObjectPorps {
+		S3ObjectProps: s3mgo.S3ObjectProps {
 			Key:		oname,
 			Acl:		acl,
 			CreationTime:	time.Now().Format(time.RFC3339),
@@ -278,7 +278,7 @@ func s3UploadPart(ctx context.Context, iam *s3mgo.S3Iam, bucket *s3mgo.S3Bucket,
 func s3UploadFini(ctx context.Context, iam *s3mgo.S3Iam, bucket *s3mgo.S3Bucket, uid string,
 			compete *swys3api.S3MpuFiniParts) (*swys3api.S3MpuFini, error) {
 	var res swys3api.S3MpuFini
-	var object *S3Object
+	var object *s3mgo.S3Object
 	var upload S3Upload
 	var err error
 

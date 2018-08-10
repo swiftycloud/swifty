@@ -614,7 +614,7 @@ func handleGetObject(ctx context.Context, oname string, iam *s3mgo.S3Iam, bucket
 func handleCopyObject(ctx context.Context, copy_source, oname string, iam *s3mgo.S3Iam, bucket *s3mgo.S3Bucket, w http.ResponseWriter, r *http.Request) *S3Error {
 	var bname_source, oname_source string
 	var bucket_source *s3mgo.S3Bucket
-	var object *S3Object
+	var object *s3mgo.S3Object
 	var err error
 
 	canned_acl := r.Header.Get("x-amz-acl")

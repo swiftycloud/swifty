@@ -28,7 +28,7 @@ func gcOldVersions(b *s3mgo.S3Bucket, key string, rover int64) {
 	ctx, done := mkContext("GC old obj")
 	defer done(ctx)
 
-	var object S3Object
+	var object s3mgo.S3Object
 
 	query := bson.M{ "bucket-id": b.ObjID, "state": S3StateActive, "key": key, "rover": bson.M {"$lt": rover}}
 	pipe := dbS3Pipe(ctx, &object, []bson.M{{"$match": query}, {"$sort": bson.M{"key": 1, "rover": -1}}})

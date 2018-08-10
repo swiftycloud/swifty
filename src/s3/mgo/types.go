@@ -119,3 +119,36 @@ type S3Bucket struct {
 	MaxObjects			int64		`bson:"max-objects"`
 	MaxBytes			int64		`bson:"max-bytes"`
 }
+
+type S3ObjectProps struct {
+	CreationTime			string		`bson:"creation-time,omitempty"`
+	Acl				string		`bson:"acl,omitempty"`
+	Key				string		`bson:"key"`
+
+	// Todo
+	Meta				[]S3Tag		`bson:"meta,omitempty"`
+	TagSet				[]S3Tag		`bson:"tags,omitempty"`
+	Policy				string		`bson:"policy,omitempty"`
+
+	// Not supported props
+	// torrent
+	// objects archiving
+}
+
+type S3Object struct {
+	ObjID				bson.ObjectId	`bson:"_id,omitempty"`
+	IamObjID			bson.ObjectId	`bson:"iam-id,omitempty"`
+	OCookie				string		`bson:"ocookie"`
+
+	MTime				int64		`bson:"mtime,omitempty"`
+	State				uint32		`bson:"state"`
+
+	BucketObjID			bson.ObjectId	`bson:"bucket-id,omitempty"`
+	Version				int		`bson:"version"`
+	Rover				int64		`bson:"rover"`
+	Size				int64		`bson:"size"`
+	ETag				string		`bson:"etag"`
+
+	S3ObjectProps					`bson:",inline"`
+}
+

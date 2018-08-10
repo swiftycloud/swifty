@@ -156,7 +156,7 @@ func FindBucket(ctx context.Context, iam *s3mgo.S3Iam, bname string) (*s3mgo.S3B
 func s3RepairBucketReference(ctx context.Context, bucket *s3mgo.S3Bucket) error {
 	var cnt_objects int64 = 0
 	var cnt_bytes int64 = 0
-	var objects []S3Object
+	var objects []s3mgo.S3Object
 
 	query := bson.M{ "bucket-id": bucket.ObjID, "state": S3StateActive }
 	err := dbS3FindAll(ctx, query, &objects)
@@ -350,9 +350,9 @@ func s3DeleteBucket(ctx context.Context, iam *s3mgo.S3Iam, bname, acl string) (*
 	return nil
 }
 
-func FindAllObjects(ctx context.Context, bucket *s3mgo.S3Bucket, query bson.M) ([]S3Object, error) {
+func FindAllObjects(ctx context.Context, bucket *s3mgo.S3Bucket, query bson.M) ([]s3mgo.S3Object, error) {
 	if query == nil { query = make(bson.M) }
-	var res []S3Object
+	var res []s3mgo.S3Object
 
 	query["bucket-id"] = bucket.ObjID
 	query["state"] = S3StateActive
@@ -430,7 +430,7 @@ func s3ListBucket(ctx context.Context, iam *s3mgo.S3Iam, bname string, params *S
 	var prefixes_map map[string]bool
 	var list swys3api.S3Bucket
 	var bucket *s3mgo.S3Bucket
-	var object S3Object
+	var object s3mgo.S3Object
 	var pipe *mgo.Pipe
 	var iter *mgo.Iter
 	var err error
