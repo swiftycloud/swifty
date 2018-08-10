@@ -44,6 +44,7 @@ var CORS_Headers = []string {
 	"Content-Length",
 	"X-Subject-Token",
 	"X-Auth-Token",
+	"X-Relay-Tennant",
 }
 
 var CORS_Methods = []string {
