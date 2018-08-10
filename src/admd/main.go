@@ -90,9 +90,11 @@ out:
 }
 
 func handleAdminReq(r *http.Request, params interface{}) (*swyks.KeystoneTokenData, int, error) {
-	err := swyhttp.ReadAndUnmarshalReq(r, params)
-	if err != nil {
-		return nil, http.StatusBadRequest, err
+	if params != nil {
+		err := swyhttp.ReadAndUnmarshalReq(r, params)
+		if err != nil {
+			return nil, http.StatusBadRequest, err
+		}
 	}
 	token := r.Header.Get("X-Auth-Token")
 	if token == "" {
@@ -158,14 +160,22 @@ out:
 	http.Error(w, err.Error(), code)
 }
 
+func handleUsers(w http.ResponseWriter, r *http.Request) {
+	if swyhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
+
+	switch r.Method {
+	case "GET":
+		handleListUsers(w, r)
+	case "POST":
+		handleAddUser(w, r)
+	}
+}
+
 func handleListUsers(w http.ResponseWriter, r *http.Request) {
-	var params swyapi.ListUsers
 	var result []*swyapi.UserInfo
 	var code = http.StatusBadRequest
 
-	if swyhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
-
-	td, code, err := handleAdminReq(r, &params)
+	td, code, err := handleAdminReq(r, nil)
 	if err != nil {
 		goto out
 	}
@@ -299,11 +309,10 @@ out:
 func handleAddUser(w http.ResponseWriter, r *http.Request) {
 	var params swyapi.AddUser
 	var code = http.StatusBadRequest
+	var kid string
 
 	ses := session.Copy()
 	defer ses.Close()
-
-	if swyhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
 
 	td, code, err := handleAdminReq(r, &params)
 	if err != nil {
@@ -340,13 +349,21 @@ func handleAddUser(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	err = ksAddUserAndProject(conf.kc, &params)
+	kid, err = ksAddUserAndProject(conf.kc, &params)
 	if err != nil {
 		dbDelUserLimits(ses, &conf, params.UId)
 		goto out
 	}
 
-	w.WriteHeader(http.StatusCreated)
+	err = swyhttp.MarshalAndWrite2(w, &swyapi.UserInfo{
+			ID:		kid,
+			UId:		params.UId,
+			Name:		params.Name,
+			Roles:		[]string{swyks.SwyUserRole},
+		}, http.StatusCreated)
+	if err != nil {
+		goto out
+	}
 
 	return
 
@@ -554,9 +571,8 @@ func main() {
 
 	r := mux.NewRouter()
 	r.HandleFunc("/v1/login", handleUserLogin).Methods("POST", "OPTIONS")
-	r.HandleFunc("/v1/users", handleListUsers).Methods("POST", "OPTIONS")
+	r.HandleFunc("/v1/users", handleUsers).Methods("POST", "GET", "OPTIONS")
 	r.HandleFunc("/v1/userinfo", handleUserInfo).Methods("POST", "OPTIONS")
-	r.HandleFunc("/v1/adduser", handleAddUser).Methods("POST", "OPTIONS")
 	r.HandleFunc("/v1/deluser", handleDelUser).Methods("POST", "OPTIONS")
 	r.HandleFunc("/v1/setpass", handleSetPassword).Methods("POST", "OPTIONS")
 	r.HandleFunc("/v1/limits/set", handleSetLimits).Methods("POST", "OPTIONS")

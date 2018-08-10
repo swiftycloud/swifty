@@ -1,8 +1,5 @@
 package swyapi
 
-type ListUsers struct {
-}
-
 type UserInfo struct {
 	ID	string		`json:"id"`
 	UId	string		`json:"uid"`

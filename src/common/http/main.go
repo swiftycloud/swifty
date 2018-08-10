@@ -78,13 +78,17 @@ func ReadAndUnmarshalResp(r *http.Response, data interface{}) error {
 }
 
 func MarshalAndWrite(w http.ResponseWriter, data interface{}) error {
+	return MarshalAndWrite2(w, data, http.StatusOK)
+}
+
+func MarshalAndWrite2(w http.ResponseWriter, data interface{}, status int) error {
 	jdata, err := json.Marshal(data)
 	if err != nil {
 		return fmt.Errorf("\tMarshal error: %s", err.Error())
 	}
 
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.WriteHeader(http.StatusOK)
+	w.WriteHeader(status)
 	w.Write(jdata)
 
 	return nil

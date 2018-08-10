@@ -197,7 +197,7 @@ func make_faas_req(url string, in interface{}, out interface{}) {
 
 func user_list(args []string, opts [16]string) {
 	var uss []swyapi.UserInfo
-	make_faas_req("users", swyapi.ListUsers{}, &uss)
+	make_faas_req1("GET", "users", http.StatusOK, nil, &uss)
 
 	for _, u := range uss {
 		fmt.Printf("%s: %s (%s)\n", u.ID, u.UId, u.Name)
@@ -205,8 +205,9 @@ func user_list(args []string, opts [16]string) {
 }
 
 func user_add(args []string, opts [16]string) {
-	make_faas_req2("POST", "adduser", swyapi.AddUser{UId: args[0], Pass: opts[1], Name: opts[0]},
-		http.StatusCreated, 0)
+	var ui swyapi.UserInfo
+	make_faas_req1("POST", "users", http.StatusCreated, &swyapi.AddUser{UId: args[0], Pass: opts[1], Name: opts[0]}, &ui)
+	fmt.Printf("%s user created\n", ui.ID)
 }
 
 func user_del(args []string, opts [16]string) {

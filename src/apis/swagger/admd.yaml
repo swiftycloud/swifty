@@ -35,8 +35,8 @@ paths:
         '401':
           description: Bad username/pass
   /users:
-    post:
-      summary: List users (admin)
+    get:
+      summary: List users
       parameters:
         - in: header
           name: X-Auth-Token
@@ -51,6 +51,28 @@ paths:
                 type: array
                 items:
                   $ref: '#/definitions/UserInfo'
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad auth token
+    post:
+      summary: Add new user (admin or UI)
+      parameters:
+        - in: header
+          name: X-Auth-Token
+          type: string
+          required: true
+        - in: body
+          name: data
+          description: User description
+          required: true
+          schema:
+            $ref: '#/definitions/UserAdd'
+      responses:
+        '201':
+          description: OK
+          schema:
+            $ref: '#/definitions/UserInfo'
         '401':
           description: Need to authenticate
         '403':
@@ -74,27 +96,6 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/UserInfo'
-        '401':
-          description: Need to authenticate
-        '403':
-          description: Bad auth token
-  /adduser:
-    post:
-      summary: Add new user (admin or UI)
-      parameters:
-        - in: header
-          name: X-Auth-Token
-          type: string
-          required: true
-        - in: body
-          name: data
-          description: User description
-          required: true
-          schema:
-            $ref: '#/definitions/UserAdd'
-      responses:
-        '201':
-          description: OK
         '401':
           description: Need to authenticate
         '403':
