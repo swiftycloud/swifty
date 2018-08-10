@@ -13,6 +13,7 @@ import (
 	"sort"
 	"bytes"
 	"fmt"
+	"./mgo"
 )
 
 const (
@@ -242,8 +243,8 @@ func (actx *AuthContext) BuildSignature() {
 	actx.BuiltSignature = hex.EncodeToString(signature)
 }
 
-func s3VerifyAuthorizationHeaders(ctx context.Context, r *http.Request, authHeader string) (*S3AccessKey, error) {
-	var akey *S3AccessKey
+func s3VerifyAuthorizationHeaders(ctx context.Context, r *http.Request, authHeader string) (*s3mgo.S3AccessKey, error) {
+	var akey *s3mgo.S3AccessKey
 	var actx AuthContext
 	var err error
 
@@ -282,7 +283,7 @@ func s3VerifyAuthorizationHeaders(ctx context.Context, r *http.Request, authHead
 	return nil, fmt.Errorf("Signature mismatch")
 }
 
-func s3AuthorizeUser(ctx context.Context, r *http.Request) (*S3AccessKey, error) {
+func s3AuthorizeUser(ctx context.Context, r *http.Request) (*s3mgo.S3AccessKey, error) {
 	var authHeader string
 
 	authHeader = getHeader(r, "Authorization")

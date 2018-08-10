@@ -155,6 +155,6 @@ func s3LookupIam(ctx context.Context, id bson.ObjectId) (*s3mgo.S3Iam, error) {
 	return &res, nil
 }
 
-func (akey *S3AccessKey) s3IamFind(ctx context.Context) (*s3mgo.S3Iam, error) {
+func s3IamFind(ctx context.Context, akey *s3mgo.S3AccessKey) (*s3mgo.S3Iam, error) {
 	return s3LookupIam(ctx, akey.IamObjID)
 }

@@ -11,8 +11,6 @@ import (
 	"time"
 )
 
-const S3TimeStampMax = int64(0x7fffffffffffffff)
-
 func current_timestamp() int64 {
 	return time.Now().Unix()
 }

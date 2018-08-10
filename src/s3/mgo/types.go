@@ -43,3 +43,20 @@ type S3Policy struct {
 	Action		ActionBitsMgo	`bson:"action,omitempty"`
 	Resource	[]string	`bson:"resource,omitempty"`
 }
+
+const S3TimeStampMax = int64(0x7fffffffffffffff)
+
+type S3AccessKey struct {
+	ObjID				bson.ObjectId	`bson:"_id,omitempty"`
+	MTime				int64		`bson:"mtime,omitempty"`
+	State				uint32		`bson:"state"`
+
+	AccountObjID			bson.ObjectId	`bson:"account-id,omitempty"`
+	IamObjID			bson.ObjectId	`bson:"iam-id,omitempty"`
+
+	CreationTimestamp		int64		`bson:"creation-timestamp,omitempty"`
+	ExpirationTimestamp		int64		`bson:"expiration-timestamp,omitempty"`
+
+	AccessKeyID			string		`bson:"access-key-id"`
+	AccessKeySecret			string		`bson:"access-key-secret"`
+}

@@ -35,7 +35,7 @@ func s3VerifyAdmin(r *http.Request) error {
 	return nil
 }
 
-func s3AuthorizeAdmin(ctx context.Context, r *http.Request) (*S3AccessKey, error) {
+func s3AuthorizeAdmin(ctx context.Context, r *http.Request) (*s3mgo.S3AccessKey, error) {
 	access_token := r.Header.Get(swys3api.SwyS3_AdminToken)
 	if access_token == "" {
 		return nil, nil

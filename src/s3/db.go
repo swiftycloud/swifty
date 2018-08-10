@@ -101,12 +101,12 @@ func dbConnect(conf *YAMLConf) error {
 	dbColMap[reflect.TypeOf(&s3mgo.S3Account{})] = DBColS3Iams
 	dbColMap[reflect.TypeOf([]s3mgo.S3Account{})] = DBColS3Iams
 	dbColMap[reflect.TypeOf(&[]s3mgo.S3Account{})] = DBColS3Iams
-	dbColMap[reflect.TypeOf(S3AccessKey{})] = DBColS3AccessKeys
-	dbColMap[reflect.TypeOf(&S3AccessKey{})] = DBColS3AccessKeys
-	dbColMap[reflect.TypeOf([]S3AccessKey{})] = DBColS3AccessKeys
-	dbColMap[reflect.TypeOf(&[]S3AccessKey{})] = DBColS3AccessKeys
-	dbColMap[reflect.TypeOf([]*S3AccessKey{})] = DBColS3AccessKeys
-	dbColMap[reflect.TypeOf(&[]*S3AccessKey{})] = DBColS3AccessKeys
+	dbColMap[reflect.TypeOf(s3mgo.S3AccessKey{})] = DBColS3AccessKeys
+	dbColMap[reflect.TypeOf(&s3mgo.S3AccessKey{})] = DBColS3AccessKeys
+	dbColMap[reflect.TypeOf([]s3mgo.S3AccessKey{})] = DBColS3AccessKeys
+	dbColMap[reflect.TypeOf(&[]s3mgo.S3AccessKey{})] = DBColS3AccessKeys
+	dbColMap[reflect.TypeOf([]*s3mgo.S3AccessKey{})] = DBColS3AccessKeys
+	dbColMap[reflect.TypeOf(&[]*s3mgo.S3AccessKey{})] = DBColS3AccessKeys
 	dbColMap[reflect.TypeOf(S3Bucket{})] = DBColS3Buckets
 	dbColMap[reflect.TypeOf(&S3Bucket{})] = DBColS3Buckets
 	dbColMap[reflect.TypeOf([]S3Bucket{})] = DBColS3Buckets
@@ -176,8 +176,8 @@ func dbColl(object interface{}) (string) {
 
 func infoLong(o interface{}) (string) {
 	switch (reflect.TypeOf(o)) {
-	case reflect.TypeOf(&S3AccessKey{}):
-		akey := o.(*S3AccessKey)
+	case reflect.TypeOf(&s3mgo.S3AccessKey{}):
+		akey := o.(*s3mgo.S3AccessKey)
 		return fmt.Sprintf("{ S3AccessKey: %s/%s/%s/%d }",
 			akey.ObjID, akey.IamObjID,
 			akey.AccessKeyID, akey.State)

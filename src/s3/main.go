@@ -792,7 +792,7 @@ e_access:
 	return &S3Error{ ErrorCode: S3ErrAccessDenied }
 }
 
-func s3AuthorizeGetKey(ctx context.Context, r *http.Request) (*S3AccessKey, error) {
+func s3AuthorizeGetKey(ctx context.Context, r *http.Request) (*s3mgo.S3AccessKey, error) {
 	akey, err := s3AuthorizeUser(ctx, r)
 	if akey != nil || err != nil {
 		return akey, err
@@ -816,7 +816,7 @@ func s3Authorize(ctx context.Context, r *http.Request) (*s3mgo.S3Iam, error) {
 		return nil, errors.New("Key is expired")
 	}
 
-	iam, err := key.s3IamFind(ctx)
+	iam, err := s3IamFind(ctx, key)
 	if err == nil {
 		log.Debugf("Authorized user, key %s", key.AccessKeyID)
 	}
@@ -848,7 +848,7 @@ func handleS3API(cb func(ctx context.Context, iam *s3mgo.S3Iam, w http.ResponseW
 }
 
 func handleKeygen(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-	var akey *S3AccessKey
+	var akey *s3mgo.S3AccessKey
 	var kg swys3api.S3CtlKeyGen
 	var err error
 

@@ -3,6 +3,7 @@ package s3mgo
 import (
 	"encoding/binary"
 	"fmt"
+	"time"
 	"reflect"
 )
 
@@ -60,4 +61,15 @@ func (policy *S3Policy) Allowed(action int) bool {
 	} else {
 		return bits[1] & (1 << uint((action - 64))) != 0
 	}
+}
+
+func now() int64 {
+	return time.Now().Unix()
+}
+
+func (akey *S3AccessKey) Expired() bool {
+	if akey.ExpirationTimestamp < S3TimeStampMax {
+		return now() > akey.ExpirationTimestamp
+	}
+	return false
 }
