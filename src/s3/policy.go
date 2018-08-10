@@ -1,9 +1,7 @@
 package main
 
 import (
-	"encoding/binary"
-	"reflect"
-	"fmt"
+	"./mgo"
 )
 
 // Effect element
@@ -182,29 +180,8 @@ var S3PolicyAction_Map = map[string]uint32 {
 	"s3:*":					S3P_All,
 }
 
-type ActionBits		[2]uint64
-type ActionBitsMgo	[16]byte
-
-func (v ActionBits) toMgo() ActionBitsMgo {
-	var b ActionBitsMgo
-
-	binary.LittleEndian.PutUint64(b[0:], v[0])
-	binary.LittleEndian.PutUint64(b[8:], v[1])
-
-	return b
-}
-
-func (v ActionBitsMgo) toSwy() ActionBits {
-	var b ActionBits
-
-	b[0] = binary.LittleEndian.Uint64(v[0:])
-	b[1] = binary.LittleEndian.Uint64(v[8:])
-
-	return b
-}
-
-var S3PolicyActions_AllSet = ActionBits{ 0xffffffffffffffff, 0xffffffffffffffff }
-var S3PolicyActions_PerBucket = ActionBits{
+var S3PolicyActions_AllSet = s3mgo.ActionBits{ 0xffffffffffffffff, 0xffffffffffffffff }
+var S3PolicyActions_PerBucket = s3mgo.ActionBits{
 		0xffffffffffffffff ^
 			((1 << (S3P_ListAllMyBuckets - 0))),
 		0xffffffffffffffff ^
@@ -213,97 +190,48 @@ var S3PolicyActions_PerBucket = ActionBits{
 			 (1 << (S3P_DeleteBucketPolicy - 64))		|
 			 (1 << (S3P_ObjectOwnerOverrideToBucketOwner - 64))),
 }
-var S3PolicyActions_Web = ActionBits{
+var S3PolicyActions_Web = s3mgo.ActionBits{
 		(1 << S3P_GetObject),
 		0,
 }
 
-// Most permissive mode
-const (
-	Resourse_Any				= "*"
-)
-
-type S3Policy struct {
-	Effect		string		`bson:"effect,omitempty"`
-	Action		ActionBitsMgo	`bson:"action,omitempty"`
-	Resource	[]string	`bson:"resource,omitempty"`
-}
-
-func (policy *S3Policy) infoLong() string {
-	if policy != nil {
-		if len(policy.Resource) > 0 {
-			return fmt.Sprintf("% x/%s",
-				policy.Action.toSwy(),
-				policy.Resource[0])
-		}
-	}
-	return "nil"
-}
-
-func getRootPolicy() *S3Policy {
+func getRootPolicy() *s3mgo.S3Policy {
 	// If changing modify isRoot as well
-	return &S3Policy {
+	return &s3mgo.S3Policy {
 		Effect: Policy_Allow,
-		Action: S3PolicyActions_AllSet.toMgo(),
-		Resource: []string{ Resourse_Any },
+		Action: S3PolicyActions_AllSet.ToMgo(),
+		Resource: []string{ s3mgo.Resourse_Any },
 	}
 }
 
-func getBucketPolicy(bname string) *S3Policy {
-	return &S3Policy {
+func getBucketPolicy(bname string) *s3mgo.S3Policy {
+	return &s3mgo.S3Policy {
 		Effect: Policy_Allow,
-		Action: S3PolicyActions_PerBucket.toMgo(),
+		Action: S3PolicyActions_PerBucket.ToMgo(),
 		Resource: []string{ bname },
 	}
 }
 
-func getWebPolicy(bname string) *S3Policy {
-	return &S3Policy {
+func getWebPolicy(bname string) *s3mgo.S3Policy {
+	return &s3mgo.S3Policy {
 		Effect: Policy_Allow,
-		Action: S3PolicyActions_Web.toMgo(),
+		Action: S3PolicyActions_Web.ToMgo(),
 		Resource: []string{ bname },
 	}
 }
 
-func (policy *S3Policy) isCanned() bool {
+func isCanned(policy *s3mgo.S3Policy) bool {
 	return policy != nil && policy.Effect == Policy_Allow && len(policy.Resource) > 0
 }
 
-func (policy *S3Policy) isRoot() bool {
-	if policy.isCanned() {
+func isRoot(policy *s3mgo.S3Policy) bool {
+	if isCanned(policy) {
 		// Root key, can do everything
-		if policy.Action == S3PolicyActions_AllSet.toMgo() {
-			if policy.Resource[0] == Resourse_Any {
+		if policy.Action == S3PolicyActions_AllSet.ToMgo() {
+			if policy.Resource[0] == s3mgo.Resourse_Any {
 				return true
 			}
 		}
 	}
 	return false
-}
-
-func (policy *S3Policy) isEqual(dst *S3Policy) bool {
-	return reflect.DeepEqual(policy, dst)
-}
-
-func (policy *S3Policy) mayAccess(resource string) bool {
-	if len(policy.Resource) > 0 && policy.Resource[0] == Resourse_Any {
-		return true
-	}
-
-	for _, x := range policy.Resource {
-		if x == resource {
-			return true
-		}
-	}
-
-	return false
-}
-
-func (policy *S3Policy) allowed(action int) bool {
-	bits := policy.Action.toSwy()
-	if action < 64 {
-		return bits[0] & (1 << uint(action)) != 0
-	} else {
-		return bits[1] & (1 << uint((action - 64))) != 0
-	}
 }

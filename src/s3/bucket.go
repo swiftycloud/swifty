@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"../apis/apps/s3"
+	"./mgo"
 )
 
 var BucketCannedAcls = []string {
@@ -191,11 +192,11 @@ func (bucket *S3Bucket)dbDelObj(ctx context.Context, size, ref int64) (error) {
 	return err
 }
 
-func (iam *S3Iam)FindBucket(ctx context.Context, bname string) (*S3Bucket, error) {
+func FindBucket(ctx context.Context, iam *s3mgo.S3Iam, bname string) (*S3Bucket, error) {
 	var res S3Bucket
 	var err error
 
-	account, err := iam.s3AccountLookup(ctx)
+	account, err := s3AccountLookup(ctx, iam)
 	if err != nil { return nil, err }
 
 	query := bson.M{ "bcookie": account.BCookie(bname), "state": S3StateActive }
@@ -323,10 +324,10 @@ func s3RepairBucket(ctx context.Context) error {
 	return nil
 }
 
-func s3InsertBucket(ctx context.Context, iam *S3Iam, bname, canned_acl string) (*S3Error) {
+func s3InsertBucket(ctx context.Context, iam *s3mgo.S3Iam, bname, canned_acl string) (*S3Error) {
 	var err error
 
-	account, err := iam.s3AccountLookup(ctx)
+	account, err := s3AccountLookup(ctx, iam)
 	if err != nil {
 		if err == mgo.ErrNotFound {
 			return &S3Error{ ErrorCode: S3ErrNoSuchBucket }
@@ -371,11 +372,11 @@ out_nopool:
 	return &S3Error{ ErrorCode: S3ErrInternalError }
 }
 
-func s3DeleteBucket(ctx context.Context, iam *S3Iam, bname, acl string) (*S3Error) {
+func s3DeleteBucket(ctx context.Context, iam *s3mgo.S3Iam, bname, acl string) (*S3Error) {
 	var bucket *S3Bucket
 	var err error
 
-	bucket, err = iam.FindBucket(ctx, bname)
+	bucket, err = FindBucket(ctx, iam, bname)
 	if err != nil {
 		if err == mgo.ErrNotFound {
 			return &S3Error{ ErrorCode: S3ErrNoSuchBucket }
@@ -423,11 +424,11 @@ func (bucket *S3Bucket)dbFindAll(ctx context.Context, query bson.M) ([]S3Object,
 	return res, nil
 }
 
-func s3GetBucketMetricOutput(ctx context.Context, iam *S3Iam, bname, metric_name string) (*swys3api.S3GetMetricStatisticsOutput, *S3Error) {
+func s3GetBucketMetricOutput(ctx context.Context, iam *s3mgo.S3Iam, bname, metric_name string) (*swys3api.S3GetMetricStatisticsOutput, *S3Error) {
 	var res swys3api.S3GetMetricStatisticsOutput
 	var point swys3api.S3Datapoint
 
-	bucket, err := iam.FindBucket(ctx, bname)
+	bucket, err := FindBucket(ctx, iam, bname)
 	if err != nil {
 		if err == mgo.ErrNotFound {
 			return nil, &S3Error{ ErrorCode: S3ErrNoSuchBucket }
@@ -483,7 +484,7 @@ func (params *S3ListObjectsRP) Validate() (bool) {
 	return true
 }
 
-func s3ListBucket(ctx context.Context, iam *S3Iam, bname string, params *S3ListObjectsRP) (*swys3api.S3Bucket, *S3Error) {
+func s3ListBucket(ctx context.Context, iam *s3mgo.S3Iam, bname string, params *S3ListObjectsRP) (*swys3api.S3Bucket, *S3Error) {
 	var start_after, cont_after bool
 	var prefixes_map map[string]bool
 	var list swys3api.S3Bucket
@@ -498,7 +499,7 @@ func s3ListBucket(ctx context.Context, iam *S3Iam, bname string, params *S3ListO
 		return nil, &S3Error{ ErrorCode: S3ErrInvalidArgument }
 	}
 
-	bucket, err = iam.FindBucket(ctx, bname)
+	bucket, err = FindBucket(ctx, iam, bname)
 	if err != nil {
 		if err == mgo.ErrNotFound {
 			return nil, &S3Error{ ErrorCode: S3ErrNoSuchBucket }
@@ -599,12 +600,12 @@ func s3ListBucket(ctx context.Context, iam *S3Iam, bname string, params *S3ListO
 	return &list, nil
 }
 
-func s3ListBuckets(ctx context.Context, iam *S3Iam) (*swys3api.S3BucketList, *S3Error) {
+func s3ListBuckets(ctx context.Context, iam *s3mgo.S3Iam) (*swys3api.S3BucketList, *S3Error) {
 	var list swys3api.S3BucketList
 	var buckets []S3Bucket
 	var err error
 
-	buckets, err = iam.FindBuckets(ctx)
+	buckets, err = FindBuckets(ctx, iam)
 	if err != nil {
 		if err == mgo.ErrNotFound {
 			return nil, &S3Error{ ErrorCode: S3ErrNoSuchBucket }

@@ -59,7 +59,7 @@ func (akey *S3AccessKey) Expired() bool {
 // for security reason.
 //
 
-func getEndlessKey(ctx context.Context, account *s3mgo.S3Account, policy *S3Policy) (*S3AccessKey, error) {
+func getEndlessKey(ctx context.Context, account *s3mgo.S3Account, policy *s3mgo.S3Policy) (*S3AccessKey, error) {
 	var res []*S3AccessKey
 
 	query := bson.M{"account-id": account.ObjID, "state": S3StateActive,
@@ -70,7 +70,7 @@ func getEndlessKey(ctx context.Context, account *s3mgo.S3Account, policy *S3Poli
 	}
 
 	for _, key := range res {
-		var iam S3Iam
+		var iam s3mgo.S3Iam
 
 		err = dbS3FindOne(ctx, bson.M{"_id": key.IamObjID, "state": S3StateActive}, &iam)
 		if err != nil {
@@ -78,7 +78,7 @@ func getEndlessKey(ctx context.Context, account *s3mgo.S3Account, policy *S3Poli
 			continue
 		}
 
-		if policy.isEqual(&iam.Policy) {
+		if policy.Equal(&iam.Policy) {
 			return key, nil
 		}
 	}
@@ -89,8 +89,8 @@ func getEndlessKey(ctx context.Context, account *s3mgo.S3Account, policy *S3Poli
 func genNewAccessKey(ctx context.Context, namespace, bname string, lifetime uint32) (*S3AccessKey, error) {
 	var timestamp_now, expired_when int64
 	var akey *S3AccessKey
-	var policy *S3Policy
-	var iam *S3Iam
+	var policy *s3mgo.S3Policy
+	var iam *s3mgo.S3Iam
 	var err error
 
 	account, err := s3AccountInsert(ctx, namespace, "user")
@@ -159,11 +159,11 @@ out_1:
 	return nil, err
 }
 
-func (iam *S3Iam) FindBuckets(ctx context.Context) ([]S3Bucket, error) {
+func FindBuckets(ctx context.Context, iam *s3mgo.S3Iam) ([]S3Bucket, error) {
 	var res []S3Bucket
 	var err error
 
-	account, err := iam.s3AccountLookup(ctx)
+	account, err := s3AccountLookup(ctx, iam)
 	if err != nil { return nil, err }
 
 	err = dbS3FindAll(ctx, bson.M{"nsid": account.NamespaceID()}, &res)

@@ -7,6 +7,7 @@ import (
 	"context"
 	"time"
 	"fmt"
+	"./mgo"
 )
 
 type S3ObjectPart struct {
@@ -221,7 +222,7 @@ func s3ObjectPartFindFull(ctx context.Context, refID bson.ObjectId) ([]*S3Object
 	return res, nil
 }
 
-func s3ObjectPartAdd(ctx context.Context, iam *S3Iam, refid bson.ObjectId, bucket_bid, object_bid string, part int, data []byte) (*S3ObjectPart, error) {
+func s3ObjectPartAdd(ctx context.Context, iam *s3mgo.S3Iam, refid bson.ObjectId, bucket_bid, object_bid string, part int, data []byte) (*S3ObjectPart, error) {
 	var objp *S3ObjectPart
 	var err error
 

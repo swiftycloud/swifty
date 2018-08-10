@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"../apis/apps/s3"
+	"./mgo"
 )
 
 var ObjectAcls = []string {
@@ -130,7 +131,7 @@ func (o *S3Object)Activate(ctx context.Context, b *S3Bucket, etag string) error 
 	return err
 }
 
-func (bucket *S3Bucket)ToObject(ctx context.Context, iam *S3Iam, upload *S3Upload) (*S3Object, error) {
+func (bucket *S3Bucket)ToObject(ctx context.Context, iam *s3mgo.S3Iam, upload *S3Upload) (*S3Object, error) {
 	var err error
 
 	size, etag, err := s3ObjectPartsResum(ctx, upload)
@@ -184,7 +185,7 @@ out_remove:
 	dbS3Remove(ctx, object)
 	return nil, err
 }
-func (bucket *S3Bucket)AddObject(ctx context.Context, iam *S3Iam, oname string,
+func (bucket *S3Bucket)AddObject(ctx context.Context, iam *s3mgo.S3Iam, oname string,
 		acl string, data []byte) (*S3Object, error) {
 	var objp *S3ObjectPart
 	var err error
@@ -242,7 +243,7 @@ out_remove:
 	return nil, err
 }
 
-func s3DeleteObject(ctx context.Context, iam *S3Iam, bucket *S3Bucket, oname string) error {
+func s3DeleteObject(ctx context.Context, iam *s3mgo.S3Iam, bucket *S3Bucket, oname string) error {
 	var object *S3Object
 	var err error
 

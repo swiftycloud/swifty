@@ -8,6 +8,7 @@ import (
 	"time"
 	"fmt"
 
+	"./mgo"
 	"../apis/apps/s3"
 )
 
@@ -211,7 +212,7 @@ func s3UploadRemoveLocked(ctx context.Context, bucket *S3Bucket, upload *S3Uploa
 	return nil
 }
 
-func s3UploadInit(ctx context.Context, iam *S3Iam, bucket *S3Bucket, oname, acl string) (*S3Upload, error) {
+func s3UploadInit(ctx context.Context, iam *s3mgo.S3Iam, bucket *S3Bucket, oname, acl string) (*S3Upload, error) {
 	var err error
 
 	upload := &S3Upload{
@@ -237,7 +238,7 @@ func s3UploadInit(ctx context.Context, iam *S3Iam, bucket *S3Bucket, oname, acl 
 	return upload, err
 }
 
-func s3UploadPart(ctx context.Context, iam *S3Iam, bucket *S3Bucket, oname,
+func s3UploadPart(ctx context.Context, iam *s3mgo.S3Iam, bucket *S3Bucket, oname,
 			uid string, partno int, data []byte) (string, error) {
 	var objp *S3ObjectPart
 	var upload S3Upload
@@ -274,7 +275,7 @@ func s3UploadPart(ctx context.Context, iam *S3Iam, bucket *S3Bucket, oname,
 	return objp.ETag, nil
 }
 
-func s3UploadFini(ctx context.Context, iam *S3Iam, bucket *S3Bucket, uid string,
+func s3UploadFini(ctx context.Context, iam *s3mgo.S3Iam, bucket *S3Bucket, uid string,
 			compete *swys3api.S3MpuFiniParts) (*swys3api.S3MpuFini, error) {
 	var res swys3api.S3MpuFini
 	var object *S3Object
@@ -313,13 +314,13 @@ func s3UploadFini(ctx context.Context, iam *S3Iam, bucket *S3Bucket, uid string,
 	return &res, nil
 }
 
-func s3Uploads(ctx context.Context, iam *S3Iam, bname string) (*swys3api.S3MpuList,  *S3Error) {
+func s3Uploads(ctx context.Context, iam *s3mgo.S3Iam, bname string) (*swys3api.S3MpuList,  *S3Error) {
 	var res swys3api.S3MpuList
 	var bucket *S3Bucket
 	var uploads []S3Upload
 	var err error
 
-	bucket, err = iam.FindBucket(ctx, bname)
+	bucket, err = FindBucket(ctx, iam, bname)
 	if err != nil {
 		if err == mgo.ErrNotFound {
 			return nil, &S3Error{ ErrorCode: S3ErrNoSuchBucket }

@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 
+	"./mgo"
 	"../apis/apps/s3"
 )
 
@@ -52,7 +53,7 @@ func s3AuthorizeAdmin(ctx context.Context, r *http.Request) (*S3AccessKey, error
 	return LookupAccessKey(ctx, access_key)
 }
 
-func s3CheckAccess(iam *S3Iam, bname, oname string) error {
+func s3CheckAccess(iam *s3mgo.S3Iam, bname, oname string) error {
 	// FIXME Implement lookup and ACL, for now just allow
 	return nil
 }

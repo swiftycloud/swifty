@@ -93,10 +93,10 @@ func dbConnect(conf *YAMLConf) error {
 	s.DB(DBName).C(DBColS3Objects).EnsureIndex(index)
 
 	dbColMap = make(map[reflect.Type]string)
-	dbColMap[reflect.TypeOf(S3Iam{})] = DBColS3Iams
-	dbColMap[reflect.TypeOf(&S3Iam{})] = DBColS3Iams
-	dbColMap[reflect.TypeOf([]S3Iam{})] = DBColS3Iams
-	dbColMap[reflect.TypeOf(&[]S3Iam{})] = DBColS3Iams
+	dbColMap[reflect.TypeOf(s3mgo.S3Iam{})] = DBColS3Iams
+	dbColMap[reflect.TypeOf(&s3mgo.S3Iam{})] = DBColS3Iams
+	dbColMap[reflect.TypeOf([]s3mgo.S3Iam{})] = DBColS3Iams
+	dbColMap[reflect.TypeOf(&[]s3mgo.S3Iam{})] = DBColS3Iams
 	dbColMap[reflect.TypeOf(s3mgo.S3Account{})] = DBColS3Iams
 	dbColMap[reflect.TypeOf(&s3mgo.S3Account{})] = DBColS3Iams
 	dbColMap[reflect.TypeOf([]s3mgo.S3Account{})] = DBColS3Iams
@@ -186,11 +186,11 @@ func infoLong(o interface{}) (string) {
 		return fmt.Sprintf("{ S3Account: %s/%s/%d/%s/%s }",
 			account.ObjID, account.Namespace,
 			account.State, account.User, account.Email)
-	case reflect.TypeOf(&S3Iam{}):
-		iam := o.(*S3Iam)
+	case reflect.TypeOf(&s3mgo.S3Iam{}):
+		iam := o.(*s3mgo.S3Iam)
 		return fmt.Sprintf("{ S3Iam: %s/%s/%d/%s }",
 			iam.ObjID, iam.AccountObjID, iam.State,
-			iam.Policy.infoLong())
+			iam.Policy.InfoLong())
 	case reflect.TypeOf(&S3Bucket{}):
 		bucket := o.(*S3Bucket)
 		return fmt.Sprintf("{ S3Bucket: %s/%s/%s/%d/%s }",
