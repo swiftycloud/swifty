@@ -6,6 +6,7 @@ import (
 	"context"
 	"time"
 	"fmt"
+	"../common"
 )
 
 type S3Account struct {
@@ -49,7 +50,7 @@ func s3AccountInsert(ctx context.Context, namespace, user string) (*S3Account, e
 		"mtime":		timestamp,
 		"state":		S3StateActive,
 
-		"aws-id":		sha256sum([]byte(id.String())),
+		"aws-id":		swy.Sha256sum([]byte(id.String())),
 		"namespace":		namespace,
 
 		"creation-time":	time.Now().Format(time.RFC3339),
@@ -139,7 +140,7 @@ func s3IamNew(ctx context.Context, account *S3Account, policy *S3Policy) (*S3Iam
 		ObjID:		id,
 		MTime:		current_timestamp(),
 		State:		S3StateActive,
-		AwsID:		sha256sum([]byte(id.String())),
+		AwsID:		swy.Sha256sum([]byte(id.String())),
 		AccountObjID:	account.ObjID,
 		Policy:		*policy,
 		CreationTime:	time.Now().Format(time.RFC3339),

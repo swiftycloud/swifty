@@ -1,6 +1,8 @@
 package swy
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"gopkg.in/yaml.v2"
 	"crypto/rand"
 	"io/ioutil"
@@ -13,6 +15,12 @@ import (
 	"fmt"
 	"os"
 )
+
+func Sha256sum(s []byte) string {
+	h := sha256.New()
+	h.Write([]byte(s))
+	return hex.EncodeToString(h.Sum(nil))
+}
 
 func MakeAdminURL(clienturl, admport string) string {
 	return strings.Split(clienturl, ":")[0] + ":" + admport

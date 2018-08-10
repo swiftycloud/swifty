@@ -2,6 +2,7 @@ package main
 
 import (
 	"strconv"
+	"../common"
 )
 
 //
@@ -57,12 +58,12 @@ func (account *S3Account) IamUser(user string) string {
 
 // Bucket grouping by namespace in DB for lookup
 func (account *S3Account) NamespaceID() string {
-	return sha256sum([]byte(account.Namespace))
+	return swy.Sha256sum([]byte(account.Namespace))
 }
 
 // Bucket pool name and index in DB for lookup
 func BCookie(namespace, bucket string) string {
-	return sha256sum([]byte(namespace + bucket))
+	return swy.Sha256sum([]byte(namespace + bucket))
 }
 
 func (account *S3Account)BCookie(bname string) string {
@@ -71,7 +72,7 @@ func (account *S3Account)BCookie(bname string) string {
 
 // UploadID for DB lookup
 func (bucket *S3Bucket)UploadUID(oname string) string {
-	return sha256sum([]byte(bucket.BCookie + oname))
+	return swy.Sha256sum([]byte(bucket.BCookie + oname))
 }
 
 // Object key in backend and index in DB for lookup
@@ -80,10 +81,10 @@ func (bucket *S3Bucket)OCookie(oname string, version int) string {
 		log.Errorf("@verioning is not yet supported")
 		version = 1
 	}
-	return sha256sum([]byte(bucket.BCookie + oname + strconv.Itoa(version)))
+	return swy.Sha256sum([]byte(bucket.BCookie + oname + strconv.Itoa(version)))
 }
 
 // Object part key in backend and index in DB for lookup
 func (upload *S3Upload)UCookie(oname string, part int) string {
-	return sha256sum([]byte(upload.UploadID + oname + strconv.Itoa(part)))
+	return swy.Sha256sum([]byte(upload.UploadID + oname + strconv.Itoa(part)))
 }
