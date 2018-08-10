@@ -124,7 +124,7 @@ func checkAdminOrOwner(user, target string, td *swyks.KeystoneTokenData) (string
 
 func handleUserInfo(w http.ResponseWriter, r *http.Request) {
 	var ui swyapi.UserInfo
-	var kud *ksUserDesc
+	var rui *swyapi.UserInfo
 
 	if swyhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
 
@@ -140,18 +140,13 @@ func handleUserInfo(w http.ResponseWriter, r *http.Request) {
 	}
 
 	code = http.StatusBadRequest
-	kud, err = ksGetUserDesc(conf.kc, ui.Id)
+	rui, err = getUserInfo(conf.kc, ui.Id)
 	if err != nil {
 		log.Errorf("GetUserDesc: %s", err.Error())
 		goto out
 	}
 
-	log.Debugf("USER: %s/%s/%s", ui.Id, kud.Name, kud.Email)
-	err = swyhttp.MarshalAndWrite(w, swyapi.UserInfo{
-				Id: ui.Id,
-				Name: kud.Name,
-				Created: kud.CreatedS(),
-			})
+	err = swyhttp.MarshalAndWrite(w, rui)
 	if err != nil {
 		goto out
 	}
@@ -164,7 +159,7 @@ out:
 
 func handleListUsers(w http.ResponseWriter, r *http.Request) {
 	var params swyapi.ListUsers
-	var result *[]swyapi.UserInfo
+	var result []*swyapi.UserInfo
 	var code = http.StatusBadRequest
 
 	if swyhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
@@ -182,12 +177,12 @@ func handleListUsers(w http.ResponseWriter, r *http.Request) {
 	}
 
 	code = http.StatusBadRequest
-	result, err = ksListUsers(conf.kc)
+	result, err = listUsers(conf.kc)
 	if err != nil {
 		goto out
 	}
 
-	err = swyhttp.MarshalAndWrite(w, &result)
+	err = swyhttp.MarshalAndWrite(w, result)
 	if err != nil {
 		goto out
 	}

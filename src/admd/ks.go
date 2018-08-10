@@ -10,13 +10,13 @@ import (
 	"time"
 )
 
-type ksUserDesc struct {
+type UserDesc struct {
 	Name	string		`json:"name"`
 	Email	string		`json:"email"`
 	Created	*time.Time	`json:"created,omitempty"`
 }
 
-func (kud *ksUserDesc)CreatedS() string {
+func (kud *UserDesc)CreatedS() string {
 	if kud.Created != nil {
 		return kud.Created.Format(time.RFC1123Z)
 	} else {
@@ -72,9 +72,9 @@ func keystoneGetOwnerRoleId(c *swy.XCreds) (string, error) {
 	return "", fmt.Errorf("Can't find swifty.owner role")
 }
 
-func ksListUsers(c *swy.XCreds) (*[]swyapi.UserInfo, error) {
+func listUsers(c *swy.XCreds) ([]*swyapi.UserInfo, error) {
 	var users swyks.KeystoneUsersResp
-	var res []swyapi.UserInfo
+	var res []*swyapi.UserInfo
 
 	err := ksClient.MakeReq(&swyks.KeystoneReq {
 			Type:	"GET",
@@ -89,17 +89,22 @@ func ksListUsers(c *swy.XCreds) (*[]swyapi.UserInfo, error) {
 			continue
 		}
 
-		res = append(res, swyapi.UserInfo{Id: usr.Name, Name: usr.Description})
+		ui, err := toUserInfo(&usr)
+		if err != nil {
+			return nil, err
+		}
+
+		res = append(res, ui)
 	}
 
-	return &res, nil
+	return res, nil
 }
 
 func ksAddUserAndProject(c *swy.XCreds, user *swyapi.AddUser) error {
 	var presp swyks.KeystoneProjectAdd
 
 	now := time.Now()
-	udesc, err := json.Marshal(&ksUserDesc{
+	udesc, err := json.Marshal(&UserDesc{
 		Name:		user.Name,
 		Email:		user.Id,
 		Created:	&now,
@@ -159,21 +164,46 @@ func ksAddUserAndProject(c *swy.XCreds, user *swyapi.AddUser) error {
 	return nil
 }
 
-func ksGetUserDesc(c *swy.XCreds, user string) (*ksUserDesc, error) {
+func toUserDesc(ui *swyks.KeystoneUser) (*UserDesc, error) {
+	var kud UserDesc
+	var err error
+	if ui.Description != "" {
+		err = json.Unmarshal([]byte(ui.Description), &kud)
+		if err != nil {
+			log.Errorf("Unmarshal [%s] error: %s", ui.Description, err.Error())
+		}
+	}
+	return &kud, err
+}
+
+func toUserInfo(ui *swyks.KeystoneUser) (*swyapi.UserInfo, error) {
+	kud, err := toUserDesc(ui)
+	if err != nil {
+		return nil, err
+	}
+
+	return &swyapi.UserInfo {
+		Id:	 ui.Name,
+		Name:	 kud.Name,
+		Created: kud.CreatedS(),
+	}, nil
+}
+
+func getUserInfo(c *swy.XCreds, user string) (*swyapi.UserInfo, error) {
 	kui, err := ksGetUserInfo(c, user)
 	if err != nil {
 		return nil, err
 	}
 
-	var kud ksUserDesc
+	var ui *swyapi.UserInfo
 	if kui.Description != "" {
-		err = json.Unmarshal([]byte(kui.Description), &kud)
+		ui, err = toUserInfo(kui)
 		if err != nil {
 			return nil, fmt.Errorf("Can't unmarshal user desc: %s", err.Error())
 		}
 	}
 
-	return &kud, nil
+	return ui, nil
 }
 
 func ksGetUserInfo(c *swy.XCreds, user string) (*swyks.KeystoneUser, error) {
