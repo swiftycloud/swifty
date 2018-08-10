@@ -127,10 +127,13 @@ func checkAdminOrOwner(user, target string, td *swyks.KeystoneTokenData) (string
 
 func handleUser(w http.ResponseWriter, r *http.Request) {
 	if swyhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
+
 	uid := mux.Vars(r)["uid"]
 	switch r.Method {
 	case "GET":
 		handleUserInfo(w, r, uid)
+	case "DELETE":
+		handleDelUser(w, r, uid)
 	}
 }
 
@@ -269,13 +272,10 @@ func tryRemoveAllProjects(uid string, authToken string) error {
 	return err
 }
 
-func handleDelUser(w http.ResponseWriter, r *http.Request) {
-	var params swyapi.UserInfo
-	var code = http.StatusBadRequest
+func handleDelUser(w http.ResponseWriter, r *http.Request, uid string) {
+	var rui *swyapi.UserInfo
 
-	if swyhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
-
-	td, code, err := handleAdminReq(r, &params)
+	td, code, err := handleAdminReq(r, nil)
 	if err != nil {
 		goto out
 	}
@@ -283,13 +283,12 @@ func handleDelUser(w http.ResponseWriter, r *http.Request) {
 	/* User can be deleted by admin or self only. Admin
 	 * cannot delete self */
 	code = http.StatusForbidden
-	if params.UId == "" || params.UId == td.Project.Name {
-		if !swyks.KeystoneRoleHas(td, swyks.SwyUserRole) {
+	if uid == td.User.Id {
+		if !swyks.KeystoneRoleHas(td, swyks.SwyUserRole) ||
+				swyks.KeystoneRoleHas(td, swyks.SwyAdminRole) {
 			err = errors.New("Not authorized")
 			goto out
 		}
-
-		params.UId = td.Project.Name
 	} else {
 		if !swyks.KeystoneRoleHas(td, swyks.SwyAdminRole) {
 			err = errors.New("Not an admin")
@@ -297,15 +296,21 @@ func handleDelUser(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	code = http.StatusServiceUnavailable
-	err = tryRemoveAllProjects(params.UId, r.Header.Get("X-Auth-Token"))
+	code = http.StatusInternalServerError
+	rui, err = getUserInfo(conf.kc, "", uid)
 	if err != nil {
 		goto out
 	}
 
-	log.Debugf("Del user %v", params)
+	code = http.StatusServiceUnavailable
+	err = tryRemoveAllProjects(rui.UId, r.Header.Get("X-Auth-Token"))
+	if err != nil {
+		goto out
+	}
+
+	log.Debugf("Del user %s", rui.UId)
 	code = http.StatusBadRequest
-	err = ksDelUserAndProject(conf.kc, &params)
+	err = ksDelUserAndProject(conf.kc, uid, rui.UId)
 	if err != nil {
 		goto out
 	}
@@ -584,8 +589,7 @@ func main() {
 	r := mux.NewRouter()
 	r.HandleFunc("/v1/login", handleUserLogin).Methods("POST", "OPTIONS")
 	r.HandleFunc("/v1/users", handleUsers).Methods("POST", "GET", "OPTIONS")
-	r.HandleFunc("/v1/users/{uid}", handleUser).Methods("GET", "OPTIONS")
-	r.HandleFunc("/v1/deluser", handleDelUser).Methods("POST", "OPTIONS")
+	r.HandleFunc("/v1/users/{uid}", handleUser).Methods("GET", "DELETE", "OPTIONS")
 	r.HandleFunc("/v1/setpass", handleSetPassword).Methods("POST", "OPTIONS")
 	r.HandleFunc("/v1/limits/set", handleSetLimits).Methods("POST", "OPTIONS")
 	r.HandleFunc("/v1/limits/get", handleGetLimits).Methods("POST", "OPTIONS")

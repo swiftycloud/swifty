@@ -335,24 +335,19 @@ func ksChangeUserPass(c *swy.XCreds, up *swyapi.UserLogin) error {
 	return nil
 }
 
-func ksDelUserAndProject(c *swy.XCreds, ui *swyapi.UserInfo) error {
+func ksDelUserAndProject(c *swy.XCreds, kuid, kproj string) error {
 	var err error
-
-	uinf, err := ksGetUserInfo(c, ui.UId, "")
-	if err != nil {
-		return err
-	}
 
 	err = ksClient.MakeReq(
 		&swyks.KeystoneReq {
 			Type:	"DELETE",
-			URL:	"users/" + uinf.Id,
+			URL:	"users/" + kuid,
 			Succ:	http.StatusNoContent, }, nil, nil)
 	if err != nil {
 		return err
 	}
 
-	pinf, err := ksGetProjectInfo(c, ui.UId)
+	pinf, err := ksGetProjectInfo(c, kproj)
 	if err != nil {
 		return err
 	}

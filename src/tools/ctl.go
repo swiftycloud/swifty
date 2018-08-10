@@ -211,8 +211,7 @@ func user_add(args []string, opts [16]string) {
 }
 
 func user_del(args []string, opts [16]string) {
-	make_faas_req2("POST", "deluser", swyapi.UserInfo{UId: args[0]},
-		http.StatusNoContent, 0)
+	make_faas_req1("DELETE", "users/" + args[0], http.StatusNoContent, nil, nil)
 }
 
 func user_pass(args []string, opts [16]string) {

@@ -100,19 +100,13 @@ paths:
           description: Need to authenticate
         '403':
           description: Bad auth token
-  /deluser:
-    post:
+    delete:
       summary: Del existing user (admin or self)
       parameters:
         - in: header
           name: X-Auth-Token
           type: string
           required: true
-        - in: body
-          name: data
-          description: User description (id may be empty for self)
-          schema:
-            $ref: '#/definitions/UserInfo'
       responses:
         '204':
           description: OK
