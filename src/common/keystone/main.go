@@ -68,6 +68,14 @@ type KeystoneRole struct {
 	Name		string			`json:"name"`
 }
 
+type KeystoneRoleAssignment struct {
+	Role		KeystoneRole		`json:"role"`
+}
+
+type KeystoneRoleAssignments struct {
+	Ass		[]*KeystoneRoleAssignment `json:"role_assignments"`
+}
+
 type KeystoneTokenData struct {
 	Project		KeystoneProject		`json:"project"`
 	Roles		[]KeystoneRole		`json:"roles"`

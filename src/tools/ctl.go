@@ -222,7 +222,8 @@ func user_pass(args []string, opts [16]string) {
 func user_info(args []string, opts [16]string) {
 	var ui swyapi.UserInfo
 	make_faas_req("userinfo", swyapi.UserInfo{Id: args[0]}, &ui)
-	fmt.Printf("Name: %s\n", ui.Name)
+	fmt.Printf("Name:   %s\n", ui.Name)
+	fmt.Printf("Roles:  %s\n", strings.Join(ui.Roles, ", "))
 }
 
 func user_limits(args []string, opts [16]string) {

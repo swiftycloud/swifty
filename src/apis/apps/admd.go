@@ -7,6 +7,7 @@ type UserInfo struct {
 	Id	string		`json:"id"`
 	Name	string		`json:"name,omitempty"`
 	Created	string		`json:"created,omitempty"`
+	Roles	[]string	`json:"roles,omitempty"`
 }
 
 type AddUser struct {

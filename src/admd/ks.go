@@ -27,6 +27,7 @@ func (kud *UserDesc)CreatedS() string {
 var ksClient *swyks.KsClient
 var ksSwyDomainId string
 var ksSwyOwnerRole string
+var ksSwyAdminRole string
 
 func keystoneGetDomainId(c *swy.XCreds) (string, error) {
 	var doms swyks.KeystoneDomainsResp
@@ -50,7 +51,7 @@ func keystoneGetDomainId(c *swy.XCreds) (string, error) {
 	return "", fmt.Errorf("Can't find domain %s", c.Domn)
 }
 
-func keystoneGetOwnerRoleId(c *swy.XCreds) (string, error) {
+func keystoneGetRolesId(c *swy.XCreds) (string, string, error) {
 	var roles swyks.KeystoneRolesResp
 
 	err := ksClient.MakeReq(&swyks.KeystoneReq {
@@ -58,18 +59,30 @@ func keystoneGetOwnerRoleId(c *swy.XCreds) (string, error) {
 			URL:	"roles",
 			Succ:	http.StatusOK, }, nil, &roles)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
-	log.Debugf("Looking for role %s", "swifty.owner")
+	var or, ar string
+
+	log.Debugf("Looking for roles %s, %s", swyks.SwyUserRole, swyks.SwyAdminRole)
 	for _, role := range roles.Roles {
 		if role.Name == swyks.SwyUserRole {
-			log.Debugf("Found role: %s", role.Id)
-			return role.Id, nil
+			log.Debugf("Found user role: %s", role.Id)
+			or = role.Id
+			continue
+		}
+		if role.Name == swyks.SwyAdminRole {
+			log.Debugf("Found admin role: %s", role.Id)
+			ar = role.Id
+			continue
 		}
 	}
 
-	return "", fmt.Errorf("Can't find swifty.owner role")
+	if or == "" || ar == "" {
+		return "", "", fmt.Errorf("Can't find swifty.owner/.admin role")
+	}
+
+	return or, ar, nil
 }
 
 func listUsers(c *swy.XCreds) ([]*swyapi.UserInfo, error) {
@@ -195,15 +208,44 @@ func getUserInfo(c *swy.XCreds, user string) (*swyapi.UserInfo, error) {
 		return nil, err
 	}
 
+	krs, err := ksGetUserRoles(c, kui)
+	if err != nil {
+		return nil, err
+	}
+
 	var ui *swyapi.UserInfo
-	if kui.Description != "" {
-		ui, err = toUserInfo(kui)
-		if err != nil {
-			return nil, fmt.Errorf("Can't unmarshal user desc: %s", err.Error())
-		}
+
+	ui, err = toUserInfo(kui)
+	if err != nil {
+		return nil, fmt.Errorf("Can't unmarshal user desc: %s", err.Error())
+	}
+
+	for _, role := range(krs) {
+		ui.Roles = append(ui.Roles, role.Name)
 	}
 
 	return ui, nil
+}
+
+func ksGetUserRoles(c *swy.XCreds, ui *swyks.KeystoneUser) ([]*swyks.KeystoneRole, error) {
+	var rass swyks.KeystoneRoleAssignments
+
+	err := ksClient.MakeReq(
+		&swyks.KeystoneReq {
+			Type:	"GET",
+			URL:	"role_assignments?include_names&user.id=" + ui.Id,
+			Succ:	http.StatusOK, },
+		nil, &rass)
+	if err != nil {
+		return nil, err
+	}
+
+	var ret []*swyks.KeystoneRole
+	for _, ra := range(rass.Ass) {
+		ret = append(ret, &ra.Role)
+	}
+
+	return ret, nil
 }
 
 func ksGetUserInfo(c *swy.XCreds, user string) (*swyks.KeystoneUser, error) {
@@ -312,13 +354,13 @@ func ksInit(c *swy.XCreds) error {
 		return err
 	}
 
-	log.Debugf("Logged in as admin")
+	log.Debugf("Logged in as admin [%s]", ksClient.Token)
 	ksSwyDomainId, err = keystoneGetDomainId(c)
 	if err != nil {
 		return fmt.Errorf("Can't get domain: %s", err.Error())
 	}
 
-	ksSwyOwnerRole, err = keystoneGetOwnerRoleId(c)
+	ksSwyOwnerRole, ksSwyAdminRole, err = keystoneGetRolesId(c)
 	if err != nil {
 		return fmt.Errorf("Can't get role: %s", err.Error())
 	}
