@@ -135,13 +135,13 @@ func handleUserInfo(w http.ResponseWriter, r *http.Request) {
 	}
 
 	code = http.StatusForbidden
-	ui.Id, err = checkAdminOrOwner(td.Project.Name, ui.Id, td)
+	ui.UId, err = checkAdminOrOwner(td.Project.Name, ui.UId, td)
 	if err != nil {
 		goto out
 	}
 
 	code = http.StatusBadRequest
-	rui, err = getUserInfo(conf.kc, ui.Id)
+	rui, err = getUserInfo(conf.kc, ui.UId)
 	if err != nil {
 		log.Errorf("GetUserDesc: %s", err.Error())
 		goto out
@@ -255,13 +255,13 @@ func handleDelUser(w http.ResponseWriter, r *http.Request) {
 	/* User can be deleted by admin or self only. Admin
 	 * cannot delete self */
 	code = http.StatusForbidden
-	if params.Id == "" || params.Id == td.Project.Name {
+	if params.UId == "" || params.UId == td.Project.Name {
 		if !swyks.KeystoneRoleHas(td, swyks.SwyUserRole) {
 			err = errors.New("Not authorized")
 			goto out
 		}
 
-		params.Id = td.Project.Name
+		params.UId = td.Project.Name
 	} else {
 		if !swyks.KeystoneRoleHas(td, swyks.SwyAdminRole) {
 			err = errors.New("Not an admin")
@@ -270,7 +270,7 @@ func handleDelUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	code = http.StatusServiceUnavailable
-	err = tryRemoveAllProjects(params.Id, r.Header.Get("X-Auth-Token"))
+	err = tryRemoveAllProjects(params.UId, r.Header.Get("X-Auth-Token"))
 	if err != nil {
 		goto out
 	}
@@ -311,7 +311,7 @@ func handleAddUser(w http.ResponseWriter, r *http.Request) {
 		goto out
 	}
 
-	if strings.HasPrefix(params.Id, ".") {
+	if strings.HasPrefix(params.UId, ".") {
 		err = errors.New("Bad ID for a user")
 		goto out
 	}
@@ -327,7 +327,7 @@ func handleAddUser(w http.ResponseWriter, r *http.Request) {
 			goto out
 		}
 
-		plim.Id = params.Id
+		plim.Id = params.UId
 		err = dbSetUserLimits(ses, &conf, plim)
 		if err != nil {
 			goto out
@@ -336,7 +336,7 @@ func handleAddUser(w http.ResponseWriter, r *http.Request) {
 
 	err = ksAddUserAndProject(conf.kc, &params)
 	if err != nil {
-		dbDelUserLimits(ses, &conf, params.Id)
+		dbDelUserLimits(ses, &conf, params.UId)
 		goto out
 	}
 
@@ -427,12 +427,12 @@ func handleGetLimits(w http.ResponseWriter, r *http.Request) {
 	}
 
 	code = http.StatusForbidden
-	params.Id, err = checkAdminOrOwner(td.Project.Name, params.Id, td)
+	params.UId, err = checkAdminOrOwner(td.Project.Name, params.UId, td)
 	if err != nil {
 		goto out
 	}
 
-	ulim, err = dbGetUserLimits(ses, &conf, params.Id)
+	ulim, err = dbGetUserLimits(ses, &conf, params.UId)
 	if err != nil {
 		goto out
 	}

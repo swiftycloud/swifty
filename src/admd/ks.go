@@ -119,7 +119,7 @@ func ksAddUserAndProject(c *swy.XCreds, user *swyapi.AddUser) error {
 	now := time.Now()
 	udesc, err := json.Marshal(&UserDesc{
 		Name:		user.Name,
-		Email:		user.Id,
+		Email:		user.UId,
 		Created:	&now,
 	})
 	if err != nil {
@@ -133,7 +133,7 @@ func ksAddUserAndProject(c *swy.XCreds, user *swyapi.AddUser) error {
 			Succ:	http.StatusCreated, },
 		&swyks.KeystoneProjectAdd {
 			Project: swyks.KeystoneProject {
-				Name: user.Id,
+				Name: user.UId,
 				DomainId: ksSwyDomainId,
 			},
 		}, &presp)
@@ -153,7 +153,7 @@ func ksAddUserAndProject(c *swy.XCreds, user *swyapi.AddUser) error {
 			Succ:	http.StatusCreated, },
 		&swyks.KeystonePassword {
 			User: swyks.KeystoneUser {
-				Name: user.Id,
+				Name: user.UId,
 				Password: user.Pass,
 				DefProject: presp.Project.Id,
 				DomainId: ksSwyDomainId,
@@ -196,7 +196,7 @@ func toUserInfo(ui *swyks.KeystoneUser) (*swyapi.UserInfo, error) {
 	}
 
 	return &swyapi.UserInfo {
-		Id:	 ui.Name,
+		UId:	 ui.Name,
 		Name:	 kud.Name,
 		Created: kud.CreatedS(),
 	}, nil
@@ -313,7 +313,7 @@ func ksChangeUserPass(c *swy.XCreds, up *swyapi.UserLogin) error {
 func ksDelUserAndProject(c *swy.XCreds, ui *swyapi.UserInfo) error {
 	var err error
 
-	uinf, err := ksGetUserInfo(c, ui.Id)
+	uinf, err := ksGetUserInfo(c, ui.UId)
 	if err != nil {
 		return err
 	}
@@ -327,7 +327,7 @@ func ksDelUserAndProject(c *swy.XCreds, ui *swyapi.UserInfo) error {
 		return err
 	}
 
-	pinf, err := ksGetProjectInfo(c, ui.Id)
+	pinf, err := ksGetProjectInfo(c, ui.UId)
 	if err != nil {
 		return err
 	}

@@ -202,7 +202,7 @@ definitions:
         description: Gate address:port to talk to
   UserInfo:
     properties:
-      id:
+      uid:
         type: string
         example: john@doe.com
       name:
@@ -211,12 +211,16 @@ definitions:
       created:
         type: string
         description: Time of user creation (RFC1123Z format)
+      roles:
+        type: array
+        items:
+          type: string
   UserAdd:
     required:
-      - id
+      - uid
       - pass
     properties:
-      id:
+      uid:
         type: string
         example: john@doe.com
       pass:
