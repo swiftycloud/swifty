@@ -50,6 +50,8 @@ var CORS_Headers = []string {
 var CORS_Methods = []string {
 	http.MethodPost,
 	http.MethodGet,
+	http.MethodDelete,
+	http.MethodPut,
 }
 
 func handleUserLogin(w http.ResponseWriter, r *http.Request) {
