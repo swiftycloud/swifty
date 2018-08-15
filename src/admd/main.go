@@ -148,7 +148,9 @@ func handleUserInfo(w http.ResponseWriter, r *http.Request, uid string) {
 	}
 
 	code = http.StatusForbidden
-	if uid == td.User.Id {
+	if uid == "me" {
+		uid = td.User.Id
+	} else if uid == td.User.Id {
 		if !swyks.KeystoneRoleHas(td, swyks.SwyAdminRole) &&
 				!swyks.KeystoneRoleHas(td, swyks.SwyUserRole) {
 			goto out
@@ -510,7 +512,9 @@ func handleSetPassword(w http.ResponseWriter, r *http.Request) {
 	}
 
 	code = http.StatusForbidden
-	if uid == td.User.Id {
+	if uid == "me" {
+		uid = td.User.Id
+	} else if uid == td.User.Id {
 		if !swyks.KeystoneRoleHas(td, swyks.SwyAdminRole) &&
 				!swyks.KeystoneRoleHas(td, swyks.SwyUserRole) {
 			goto out
