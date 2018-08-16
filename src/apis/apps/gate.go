@@ -278,3 +278,7 @@ type AccInfo struct {
 	Name		string			`json:"name,omitempty"`
 	Token		string			`json:"token,omitempty"`
 }
+
+type LangInfo struct {
+	Version		string			`json:"version"`
+}

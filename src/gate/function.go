@@ -63,11 +63,7 @@ type FnCodeDesc struct {
 }
 
 func (c *FnCodeDesc)image() string {
-	p := conf.Wdog.ImgPref
-	if p == "" {
-		p = "swifty"
-	}
-	return p + "/" + c.Lang
+	return RtLangImage(c.Lang)
 }
 
 type FnSrcDesc struct {

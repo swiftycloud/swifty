@@ -1385,7 +1385,14 @@ func req_list(url string) {
 }
 
 func languages(args []string, opts [16]string) {
-	req_list("info/langs")
+	var ls []string
+	make_faas_req("info/langs", nil, &ls)
+	for _, l := range(ls) {
+		var li swyapi.LangInfo
+		fmt.Printf("%s\n", l)
+		make_faas_req1("GET", "info/langs/" + l, http.StatusOK, nil , &li)
+		fmt.Printf("\tversion: %s\n", li.Version)
+	}
 }
 
 func mware_types(args []string, opts [16]string) {

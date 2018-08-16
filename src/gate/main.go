@@ -1838,6 +1838,21 @@ func handleLanguages(ctx context.Context, w http.ResponseWriter, r *http.Request
 	return nil
 }
 
+func handleLanguage(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
+	lang := mux.Vars(r)["lang"]
+	lh, ok := rt_handlers[lang]
+	if !ok || (lh.Devel && !SwyModeDevel) {
+		return GateErrM(swy.GateGenErr, "Language not supported")
+	}
+
+	err := swyhttp.MarshalAndWrite(w, RtLangInfo(lh))
+	if err != nil {
+		return GateErrE(swy.GateBadResp, err)
+	}
+
+	return nil
+}
+
 func handleMwareTypes(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
 	var ret []string
 
@@ -2329,9 +2344,12 @@ func main() {
 	r.Handle("/v1/deployments/{did}",	genReqHandler(handleDeployment)).Methods("GET", "DELETE", "OPTIONS")
 
 	r.Handle("/v1/info/langs",		genReqHandler(handleLanguages)).Methods("POST", "OPTIONS")
+	r.Handle("/v1/info/langs/{lang}",	genReqHandler(handleLanguage)).Methods("GET", "OPTIONS")
 	r.Handle("/v1/info/mwares",		genReqHandler(handleMwareTypes)).Methods("POST", "OPTIONS")
 
 	r.PathPrefix("/call/{fnid}").Methods("GET", "PUT", "POST", "DELETE", "PATCH", "HEAD", "OPTIONS").HandlerFunc(handleFunctionCall)
+
+	RtInit()
 
 	err = dbConnect(&conf)
 	if err != nil {
