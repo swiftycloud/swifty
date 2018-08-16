@@ -1675,6 +1675,33 @@ paths:
           description: Need to authenticate
         '403':
           description: Bad authentication token
+  /info/langs/{lang}:
+    get:
+      summary: Show info about language runtime environment
+      parameters:
+        - in: header
+          name: X-Auth-Token
+          type: string
+          required: true
+        - name: lang
+          in: path
+          description: Language
+          required: true
+          type: string
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/LangInfo'
+        '400':
+          description: Bad request
+          schema:
+            $ref: '#/definitions/GateError'
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad authentication token
+
   /info/mwares:
     post:
       summary: Show supported mware types
@@ -2406,3 +2433,11 @@ definitions:
       desc:
         type: boolean
         description: Whether or not this repo has a description
+
+  LangInfo:
+    type: object
+    description: Info about language runtime
+    properties:
+      version:
+        type: string
+        description: Whatever the $binary --version command returns
