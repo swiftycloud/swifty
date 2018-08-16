@@ -102,6 +102,16 @@ func make_faas_req3(method, url string, in interface{}, succ_code int, tmo uint)
 		}
 	}
 
+	if curCmd.verb {
+		fmt.Printf("[%s] %s\n", method, address)
+		if in != nil {
+			x, err := json.Marshal(in)
+			if err == nil {
+				fmt.Printf("`- body: %s\n", string(x))
+			}
+		}
+	}
+
 	return swyhttp.MarshalAndPost(
 			&swyhttp.RestReq{
 				Method:		method,
@@ -759,16 +769,9 @@ func function_add(args []string, opts [16]string) {
 		req.AuthCtx = opts[8]
 	}
 
-	if !curCmd.req {
-		var fi swyapi.FunctionInfo
-		make_faas_req1("POST", "functions", http.StatusOK, req, &fi)
-		fmt.Printf("Function %s created\n", fi.Id)
-	} else {
-		d, err := json.Marshal(req)
-		if err == nil {
-			fmt.Printf("%s\n", string(d))
-		}
-	}
+	var fi swyapi.FunctionInfo
+	make_faas_req1("POST", "functions", http.StatusOK, req, &fi)
+	fmt.Printf("Function %s created\n", fi.Id)
 }
 
 /* Splits a=v,a=v,... string into map */
@@ -1064,16 +1067,9 @@ func mware_add(args []string, opts [16]string) {
 		UserData: opts[0],
 	}
 
-	if !curCmd.req {
-		var mi swyapi.MwareInfo
-		make_faas_req1("POST", "middleware", http.StatusOK, &req, &mi)
-		fmt.Printf("Mware %s created\n", mi.ID)
-	} else {
-		d, err := json.Marshal(req)
-		if err == nil {
-			fmt.Printf("%s\n", string(d))
-		}
-	}
+	var mi swyapi.MwareInfo
+	make_faas_req1("POST", "middleware", http.StatusOK, &req, &mi)
+	fmt.Printf("Mware %s created\n", mi.ID)
 }
 
 func mware_del(args []string, opts [16]string) {
@@ -1636,7 +1632,7 @@ type cmdDesc struct {
 	pargs	[]string
 	project	string
 	relay	string
-	req	bool
+	verb	bool
 	adm	bool
 	call	func([]string, [16]string)
 }
@@ -1708,7 +1704,7 @@ func bindCmdUsage(cmd string, args []string, help string, wp bool) {
 	if wp {
 		cd.opts.StringVar(&cd.project, "proj", "", "Project to work on")
 	}
-	cd.opts.BoolVar(&cd.req, "req", false, "Only show the request to be sent")
+	cd.opts.BoolVar(&cd.verb, "V", false, "Show the request to be sent")
 	cd.opts.StringVar(&cd.relay, "for", "", "Act as another user (admin-only")
 
 	cd.pargs = args
