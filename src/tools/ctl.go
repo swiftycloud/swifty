@@ -27,15 +27,15 @@ type LoginInfo struct {
 	AdmHost		string		`yaml:"admhost,omitempty"`
 	AdmPort		string		`yaml:"admport,omitempty"`
 	Relay		string		`yaml:"relay,omitempty"`
-	Proxy		string		`yaml:"proxy,omitempty"`
 }
 
-func (li *LoginInfo)Endpoint() string {
+func (c *YAMLConf)Endpoint() string {
 	var ep string
+	li := &c.Login
 
 	if !curCmd.adm {
 		ep = li.Host + ":" + li.Port
-		if li.Proxy == "sp" {
+		if !c.Direct {
 			ep += "/gate"
 		}
 	} else {
@@ -49,7 +49,7 @@ func (li *LoginInfo)Endpoint() string {
 		}
 
 		ep = ah + ":" + li.AdmPort
-		if li.Proxy == "sp" {
+		if !c.Direct {
 			ep += "/admd"
 		}
 	}
@@ -60,6 +60,7 @@ func (li *LoginInfo)Endpoint() string {
 type YAMLConf struct {
 	Login		LoginInfo	`yaml:"login"`
 	TLS		bool		`yaml:"tls"`
+	Direct		bool		`yaml:"direct"`
 	Certs		string		`yaml:"x509crtfile"`
 }
 
@@ -79,7 +80,7 @@ func gateProto() string {
 }
 
 func make_faas_req3(method, url string, in interface{}, succ_code int, tmo uint) (*http.Response, error) {
-	address := gateProto() + "://" + conf.Login.Endpoint() + "/v1/" + url
+	address := gateProto() + "://" + conf.Endpoint() + "/v1/" + url
 
 	h := make(map[string]string)
 	if conf.Login.Token != "" {
@@ -1457,7 +1458,9 @@ func make_login(creds string, opts [16]string) {
 	conf.Login.Host = c.Host
 	conf.Login.Port = c.Port
 
-	if opts[0] == "yes" {
+	if opts[0] == "no" {
+		conf.TLS = false
+	} else {
 		conf.TLS = true
 		if opts[1] != "" {
 			conf.Certs = opts[1]
@@ -1470,8 +1473,10 @@ func make_login(creds string, opts [16]string) {
 		conf.Login.AdmPort = c[1]
 	}
 
-	if opts[3] != "" {
-		conf.Login.Proxy = opts[3]
+	if opts[3] == "no" {
+		conf.Direct = true
+	} else {
+		conf.Direct = false
 	}
 
 	refresh_token(home)

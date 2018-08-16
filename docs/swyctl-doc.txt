@@ -22,14 +22,14 @@ screen showing all ops, args and options.
 Login as user
     # swyctl login user:pass@gate:port
 
-Login over https
-    # swyctl login user:pass@gate:port -tls yes
+Login over http, not https
+    # swyctl login user:pass@gate:port -tls no
 
 Login with simultaneous admd configuration (userful for swifty.admin only)
     # swyctl login user:pass@gate:port -admd admd:port
 
-Login through the nginx as proxy
-    # swyctl login user:pass@gate:port -proxy sp
+Login directly to gate/admd, bypassing nginx proxy
+    # swyctl login user:pass@gate:port -proxy no
 
 Seeing who I am
     # swyctl me
