@@ -1,10 +1,10 @@
 Very quick tour over swyctl
 
-Login    # swyctl login user:pass@gate:port  [ -tls yes ] [ -admd admd:port ] [ -proxy sp ]
+Login    # swyctl login user:pass@gate:port  [ -tls no ] [ -admd admd:port ] [ -proxy no ]
                                                 |            |                   |
-                            this is for https --+            |                   |
+                             this is for http --+            |                   |
             this is for admin logings to make reqs to admd --+                   |
-      this is for cases when gate/admd hide behind nginx that spoofs REST URLs --+
+    this is for cases when gate/admd is NOT behind nginx that spoofs REST URLs --+
 
 See who I am        # swyctl me
 

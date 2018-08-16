@@ -27,15 +27,15 @@ type LoginInfo struct {
 	AdmHost		string		`yaml:"admhost,omitempty"`
 	AdmPort		string		`yaml:"admport,omitempty"`
 	Relay		string		`yaml:"relay,omitempty"`
-	Proxy		string		`yaml:"proxy,omitempty"`
 }
 
-func (li *LoginInfo)Endpoint() string {
+func (c *YAMLConf)Endpoint() string {
 	var ep string
+	li := &c.Login
 
 	if !curCmd.adm {
 		ep = li.Host + ":" + li.Port
-		if li.Proxy == "sp" {
+		if !c.Direct {
 			ep += "/gate"
 		}
 	} else {
@@ -49,7 +49,7 @@ func (li *LoginInfo)Endpoint() string {
 		}
 
 		ep = ah + ":" + li.AdmPort
-		if li.Proxy == "sp" {
+		if !c.Direct {
 			ep += "/admd"
 		}
 	}
@@ -60,6 +60,7 @@ func (li *LoginInfo)Endpoint() string {
 type YAMLConf struct {
 	Login		LoginInfo	`yaml:"login"`
 	TLS		bool		`yaml:"tls"`
+	Direct		bool		`yaml:"direct"`
 	Certs		string		`yaml:"x509crtfile"`
 }
 
@@ -79,7 +80,7 @@ func gateProto() string {
 }
 
 func make_faas_req3(method, url string, in interface{}, succ_code int, tmo uint) (*http.Response, error) {
-	address := gateProto() + "://" + conf.Login.Endpoint() + "/v1/" + url
+	address := gateProto() + "://" + conf.Endpoint() + "/v1/" + url
 
 	h := make(map[string]string)
 	if conf.Login.Token != "" {
@@ -98,6 +99,16 @@ func make_faas_req3(method, url string, in interface{}, succ_code int, tmo uint)
 		crt, err = ioutil.ReadFile(conf.Certs)
 		if err != nil {
 			return nil, fmt.Errorf("Error reading cert file: %s", err.Error())
+		}
+	}
+
+	if curCmd.verb {
+		fmt.Printf("[%s] %s\n", method, address)
+		if in != nil {
+			x, err := json.Marshal(in)
+			if err == nil {
+				fmt.Printf("`- body: %s\n", string(x))
+			}
 		}
 	}
 
@@ -758,16 +769,9 @@ func function_add(args []string, opts [16]string) {
 		req.AuthCtx = opts[8]
 	}
 
-	if !curCmd.req {
-		var fi swyapi.FunctionInfo
-		make_faas_req1("POST", "functions", http.StatusOK, req, &fi)
-		fmt.Printf("Function %s created\n", fi.Id)
-	} else {
-		d, err := json.Marshal(req)
-		if err == nil {
-			fmt.Printf("%s\n", string(d))
-		}
-	}
+	var fi swyapi.FunctionInfo
+	make_faas_req1("POST", "functions", http.StatusOK, req, &fi)
+	fmt.Printf("Function %s created\n", fi.Id)
 }
 
 /* Splits a=v,a=v,... string into map */
@@ -1063,16 +1067,9 @@ func mware_add(args []string, opts [16]string) {
 		UserData: opts[0],
 	}
 
-	if !curCmd.req {
-		var mi swyapi.MwareInfo
-		make_faas_req1("POST", "middleware", http.StatusOK, &req, &mi)
-		fmt.Printf("Mware %s created\n", mi.ID)
-	} else {
-		d, err := json.Marshal(req)
-		if err == nil {
-			fmt.Printf("%s\n", string(d))
-		}
-	}
+	var mi swyapi.MwareInfo
+	make_faas_req1("POST", "middleware", http.StatusOK, &req, &mi)
+	fmt.Printf("Mware %s created\n", mi.ID)
 }
 
 func mware_del(args []string, opts [16]string) {
@@ -1457,7 +1454,9 @@ func make_login(creds string, opts [16]string) {
 	conf.Login.Host = c.Host
 	conf.Login.Port = c.Port
 
-	if opts[0] == "yes" {
+	if opts[0] == "no" {
+		conf.TLS = false
+	} else {
 		conf.TLS = true
 		if opts[1] != "" {
 			conf.Certs = opts[1]
@@ -1470,8 +1469,10 @@ func make_login(creds string, opts [16]string) {
 		conf.Login.AdmPort = c[1]
 	}
 
-	if opts[3] != "" {
-		conf.Login.Proxy = opts[3]
+	if opts[3] == "no" {
+		conf.Direct = true
+	} else {
+		conf.Direct = false
 	}
 
 	refresh_token(home)
@@ -1631,7 +1632,7 @@ type cmdDesc struct {
 	pargs	[]string
 	project	string
 	relay	string
-	req	bool
+	verb	bool
 	adm	bool
 	call	func([]string, [16]string)
 }
@@ -1703,7 +1704,7 @@ func bindCmdUsage(cmd string, args []string, help string, wp bool) {
 	if wp {
 		cd.opts.StringVar(&cd.project, "proj", "", "Project to work on")
 	}
-	cd.opts.BoolVar(&cd.req, "req", false, "Only show the request to be sent")
+	cd.opts.BoolVar(&cd.verb, "V", false, "Show the request to be sent")
 	cd.opts.StringVar(&cd.relay, "for", "", "Act as another user (admin-only")
 
 	cd.pargs = args
