@@ -11,6 +11,7 @@ import (
 	"encoding/xml"
 	"net/http"
 	"net/url"
+	"path/filepath"
 	"context"
 	"strings"
 	"strconv"
@@ -57,6 +58,7 @@ type YAMLConf struct {
 	Ceph		YAMLConfCeph		`yaml:"ceph"`
 	SecKey		string			`yaml:"secretskey"`
 	Notify		YAMLConfNotify		`yaml:"notify"`
+	Mimes		string			`yaml:"mime-types"`
 }
 
 var conf YAMLConf
@@ -102,6 +104,7 @@ type s3Context struct {
 	context.Context
 	S	*mgo.Session
 	errCode	int
+	mime	string
 }
 
 func Dbs(ctx context.Context) *mgo.Session {
@@ -112,7 +115,7 @@ func mkContext(id string) (context.Context, func(context.Context)) {
 	ctx := &s3Context{
 		context.Background(),
 		session.Copy(),
-		0,
+		0, "",
 	}
 
 	return ctx, func(c context.Context) {
@@ -601,6 +604,10 @@ func handleGetObject(ctx context.Context, oname string, iam *s3mgo.S3Iam, bucket
 		}
 	}
 
+	if m := ctx.(*s3Context).mime; m != "" {
+		w.Header().Set("Content-Type", m)
+	}
+
 	if c := ctx.(*s3Context).errCode; c == 0 {
 		w.WriteHeader(http.StatusOK)
 	} else {
@@ -908,6 +915,36 @@ out:
 	http.Error(w, err.Error(), http.StatusBadRequest)
 }
 
+var mimes map[string]string
+
+func webReadMimes(path string) error {
+	if path == "" {
+		log.Debugf("No mime-types file given")
+		return nil
+	}
+
+	types, err := ioutil.ReadFile(path)
+	if err != nil {
+		return err
+	}
+
+	mimes = make(map[string]string)
+	for _, ln := range(strings.Split(string(types), "\n")) {
+		if ln == "" {
+			break
+		}
+		mtyp := strings.Fields(ln)
+		if len(mtyp) < 2 {
+			return errors.New("Parse error: " + ln)
+		}
+		for _, ext := range(mtyp[1:]) {
+			mimes[ext] = mtyp[0]
+		}
+	}
+
+	return nil
+}
+
 var webRoot string
 
 func handleWebReq(w http.ResponseWriter, r *http.Request) {
@@ -958,6 +995,16 @@ func handleWebReq(w http.ResponseWriter, r *http.Request) {
 	} else {
 		if strings.HasSuffix(oname, "/") {
 			oname += ws.index()
+		}
+	}
+
+	ext := filepath.Ext(oname)
+	if ext != "" {
+		log.Debugf("Ext: %s", ext)
+		mime, ok := mimes[ext[1:]]
+		if ok {
+			log.Debugf("Mime: %s", mime)
+			ctx.(*s3Context).mime = mime
 		}
 	}
 
@@ -1098,6 +1145,12 @@ func main() {
 	s3SecKey, err = hex.DecodeString(s3Secrets[conf.SecKey])
 	if err != nil || len(s3SecKey) < 16 {
 		log.Error("Secret key should be decodable and be 16 bytes long at least")
+		return
+	}
+
+	err = webReadMimes(conf.Mimes)
+	if err != nil {
+		log.Error("Cannot read mime-types: %s", err.Error())
 		return
 	}
 
