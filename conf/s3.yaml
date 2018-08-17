@@ -14,3 +14,4 @@ notify:
 secretskey: "S3SECRETSKEY"
 ceph:
         config-path: conf/ceph.conf
+mime-types: "/etc/swifty/conf/mime.types"
