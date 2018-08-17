@@ -281,4 +281,5 @@ type AccInfo struct {
 
 type LangInfo struct {
 	Version		string			`json:"version"`
+	Packages	[]string		`json:"packages"`
 }
