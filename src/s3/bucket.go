@@ -9,7 +9,7 @@ import (
 	"sort"
 	"time"
 
-	"../apis/apps/s3"
+	"../apis/s3"
 	"./mgo"
 )
 

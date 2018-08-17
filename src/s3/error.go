@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"fmt"
 
-	"../apis/apps/s3"
+	"../apis/s3"
 )
 
 // Internal type

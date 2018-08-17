@@ -7,7 +7,7 @@ import (
 	"errors"
 
 	"./mgo"
-	"../apis/apps/s3"
+	"../apis/s3"
 )
 
 

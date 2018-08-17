@@ -9,7 +9,7 @@ import (
 	"fmt"
 
 	"./mgo"
-	"../apis/apps/s3"
+	"../apis/s3"
 )
 
 type S3Upload struct {

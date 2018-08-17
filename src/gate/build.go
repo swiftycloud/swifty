@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"context"
 	"strconv"
-	"../apis/apps"
+	"../apis"
 	"../common/http"
 )
 

@@ -8,7 +8,7 @@ import (
 	"fmt"
 
 	"../common"
-	"../apis/apps"
+	"../apis"
 )
 
 type BalancerDat struct {

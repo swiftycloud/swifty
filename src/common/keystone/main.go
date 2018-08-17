@@ -5,7 +5,7 @@ import (
 	"time"
 	"net/http"
 	"../http"
-	"../../apis/apps"
+	"../../apis"
 )
 
 const (

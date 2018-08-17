@@ -7,7 +7,7 @@ import (
 	"gopkg.in/robfig/cron.v2"
 	"gopkg.in/mgo.v2/bson"
 	"../common"
-	"../apis/apps"
+	"../apis"
 )
 
 type FnEventCron struct {

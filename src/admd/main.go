@@ -13,7 +13,7 @@ import (
 	"fmt"
 	"errors"
 
-	"../apis/apps"
+	"../apis"
 	"../common"
 	"../common/http"
 	"../common/keystone"

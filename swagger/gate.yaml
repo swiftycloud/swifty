@@ -2441,3 +2441,8 @@ definitions:
       version:
         type: string
         description: Whatever the $binary --version command returns
+      packages:
+        type: array
+        items:
+          type: string
+          description: Name (and version) of a package in tool-specific format

@@ -10,7 +10,7 @@ import (
 	"context"
 	"gopkg.in/mgo.v2/bson"
 
-	"../apis/apps"
+	"../apis"
 	"../common"
 	"../common/xratelimit"
 	"../common/xwait"

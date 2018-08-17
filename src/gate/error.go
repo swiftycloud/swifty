@@ -1,7 +1,7 @@
 package main
 
 import (
-	"../apis/apps"
+	"../apis"
 	"../common"
 	"gopkg.in/mgo.v2"
 )

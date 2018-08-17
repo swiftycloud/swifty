@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"fmt"
 	"encoding/json"
-	"../apis/apps"
+	"../apis"
 	"../common"
 	"../common/keystone"
 	"time"

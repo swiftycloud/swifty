@@ -15,7 +15,7 @@ import (
 
 	"../common"
 	"../common/http"
-	"../apis/apps"
+	"../apis"
 )
 
 type LoginInfo struct {
@@ -1392,6 +1392,10 @@ func languages(args []string, opts [16]string) {
 		fmt.Printf("%s\n", l)
 		make_faas_req1("GET", "info/langs/" + l, http.StatusOK, nil , &li)
 		fmt.Printf("\tversion: %s\n", li.Version)
+		fmt.Printf("\tpackages:\n")
+		for _, p := range(li.Packages) {
+			fmt.Printf("\t\t%s\n", p)
+		}
 	}
 }
 

@@ -5,7 +5,7 @@ import (
 	"gopkg.in/mgo.v2/bson"
 	"context"
 	"../common"
-	"../apis/apps"
+	"../apis"
 )
 
 var depStates = map[int]string {
