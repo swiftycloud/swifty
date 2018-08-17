@@ -13,7 +13,7 @@ import (
 	"errors"
 	"./mgo"
 	"../common/http"
-	"../apis/apps/s3"
+	"../apis/s3"
 )
 
 func handleGetWebsite(ctx context.Context, bname string, iam *s3mgo.S3Iam, w http.ResponseWriter, r *http.Request) *S3Error {

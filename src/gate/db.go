@@ -10,7 +10,7 @@ import (
 	"gopkg.in/mgo.v2/bson"
 
 	"../common"
-	"../apis/apps"
+	"../apis"
 )
 
 const (

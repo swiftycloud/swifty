@@ -7,7 +7,7 @@ import (
 	"context"
 	"errors"
 
-	"../apis/apps"
+	"../apis"
 	"../common"
 	"../common/crypto"
 )

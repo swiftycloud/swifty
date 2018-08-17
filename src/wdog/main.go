@@ -22,7 +22,7 @@ import (
 	"../common"
 	"../common/http"
 	"../common/xqueue"
-	"../apis/apps"
+	"../apis"
 )
 
 type Runner struct {

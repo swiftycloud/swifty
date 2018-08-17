@@ -4,7 +4,7 @@ import (
 	"strings"
 	"context"
 	"../common/http"
-	"../apis/apps"
+	"../apis"
 )
 
 func InitPostgres(ctx context.Context, conf *YAMLConfMw, mwd *MwareDesc) (error) {

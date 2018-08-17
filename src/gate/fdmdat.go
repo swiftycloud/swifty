@@ -5,7 +5,7 @@ import (
 	"time"
 	"context"
 	"../common/xratelimit"
-	"../apis/apps"
+	"../apis"
 	"gopkg.in/mgo.v2/bson"
 )
 

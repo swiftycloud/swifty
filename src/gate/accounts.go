@@ -5,7 +5,7 @@ import (
 	"context"
 	"strings"
 	"gopkg.in/mgo.v2/bson"
-	"../apis/apps"
+	"../apis"
 	"../common"
 	"../common/http"
 	"../common/crypto"

@@ -6,7 +6,7 @@ import (
 	"context"
 	"time"
 
-	"../apis/apps/s3"
+	"../apis/s3"
 	"./mgo"
 )
 

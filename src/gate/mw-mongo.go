@@ -5,7 +5,7 @@ import (
 	"context"
 	"errors"
 	"time"
-	"../apis/apps"
+	"../apis"
 )
 
 func mgoDial(conf *YAMLConfMw) (*mgo.Session, error) {

@@ -23,7 +23,7 @@ import (
 	"../common"
 	"../common/http"
 	"../common/secrets"
-	"../apis/apps/s3"
+	"../apis/s3"
 )
 
 var s3Secrets map[string]string

@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"./mgo"
 	"../common"
-	"../apis/apps/s3"
+	"../apis/s3"
 )
 
 func notifyFindBucket(ctx context.Context, params *swys3api.S3Subscribe) (*s3mgo.S3Bucket, error) {

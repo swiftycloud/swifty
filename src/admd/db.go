@@ -5,7 +5,7 @@ import (
 	"gopkg.in/mgo.v2/bson"
 	"time"
 	"../common"
-	"../apis/apps"
+	"../apis"
 )
 
 const (

@@ -3,7 +3,7 @@ package main
 import (
 	"path/filepath"
 	"os/exec"
-	"../apis/apps"
+	"../apis"
 )
 
 type rt_info struct {

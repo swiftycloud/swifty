@@ -18,7 +18,7 @@ import (
 	"../common"
 	"../common/xwait"
 	"../common/http"
-	"../apis/apps"
+	"../apis"
 )
 
 const (

@@ -7,7 +7,7 @@ import (
 	"gopkg.in/mgo.v2/bson"
 	"github.com/michaelklishin/rabbit-hole"
 	"fmt"
-	"../apis/apps"
+	"../apis"
 )
 
 func rabbitConn(conf *YAMLConfMw) (*rabbithole.Client, error) {

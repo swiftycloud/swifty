@@ -3,7 +3,7 @@ package main
 import (
 	"time"
 	"context"
-	"../apis/apps"
+	"../apis"
 	"../common"
 	"../common/http"
 )

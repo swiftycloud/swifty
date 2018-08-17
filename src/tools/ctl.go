@@ -15,7 +15,7 @@ import (
 
 	"../common"
 	"../common/http"
-	"../apis/apps"
+	"../apis"
 )
 
 type LoginInfo struct {

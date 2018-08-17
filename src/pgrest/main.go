@@ -10,7 +10,7 @@ import (
 	"flag"
 	"syscall"
 	"os"
-	"../apis/apps"
+	"../apis"
 	"../common"
 	"../common/http"
 	"../common/secrets"

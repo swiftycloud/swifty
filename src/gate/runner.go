@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"../apis/apps"
+	"../apis"
 	"../common"
 	"../common/http"
 )

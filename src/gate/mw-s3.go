@@ -8,8 +8,8 @@ import (
 	"gopkg.in/mgo.v2/bson"
 	"../common"
 	"../common/http"
-	"../apis/apps"
-	"../apis/apps/s3"
+	"../apis"
+	"../apis/s3"
 )
 
 func s3KeyGen(conf *YAMLConfS3, namespace, bucket string, lifetime uint32) (*swys3api.S3CtlKeyGenResult, error) {
