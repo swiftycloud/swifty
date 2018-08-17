@@ -360,13 +360,7 @@ func periodicPullRepos(period time.Duration) {
 }
 
 func ReposInit(ctx context.Context, conf *YAMLConf) error {
-	period := time.Duration(conf.RepoSyncPeriod)
-	if period == 0 {
-		period = 30 * time.Minute
-	}
-
-	go periodicPullRepos(period)
-
+	go periodicPullRepos(time.Duration(conf.RepoSyncPeriod) * time.Minute)
 	return nil
 }
 
