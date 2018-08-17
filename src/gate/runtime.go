@@ -81,11 +81,7 @@ func RtInit() {
 }
 
 func RtLangImage(lng string) string {
-	p := conf.Wdog.ImgPref
-	if p == "" {
-		p = "swifty"
-	}
-	return p + "/" + lng
+	return conf.Wdog.ImgPref + "/" + lng
 }
 
 func RtLangDetect(fname string) string {
