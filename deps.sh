@@ -19,6 +19,10 @@ set -e
 # it to 6.0.0, then fetch the Godep-s of it, then fiv protobuf version
 # to be 1.1.1, then install k8s, then proceed with the rest.
 
+yum install -y golang patch librados2-devel glibc-headers glibc-static
+yum groupinstall -y "Development Libraries" 
+go get github.com/tools/godep
+cp ${GOPATH}/bin/godep /usr/bin
 go get -d k8s.io/client-go/...
 cd ${GOPATH}/src/k8s.io/client-go
 git checkout -b swy6.0.0 v6.0.0
