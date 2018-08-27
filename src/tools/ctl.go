@@ -211,7 +211,11 @@ func user_list(args []string, opts [16]string) {
 	make_faas_req1("GET", "users", http.StatusOK, nil, &uss)
 
 	for _, u := range uss {
-		fmt.Printf("%s: %s (%s)\n", u.ID, u.UId, u.Name)
+		en := ""
+		if !u.Enabled {
+			en = " [X]"
+		}
+		fmt.Printf("%s: %s (%s)%s\n", u.ID, u.UId, u.Name, en)
 	}
 }
 
@@ -236,6 +240,9 @@ func user_info(args []string, opts [16]string) {
 	fmt.Printf("ID:     %s\n", ui.ID)
 	fmt.Printf("Name:   %s\n", ui.Name)
 	fmt.Printf("Roles:  %s\n", strings.Join(ui.Roles, ", "))
+	if !ui.Enabled {
+		fmt.Printf("!!! disabled\n")
+	}
 }
 
 func tplan_list(args []string, opts[16]string) {

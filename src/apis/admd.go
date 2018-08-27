@@ -4,6 +4,7 @@ type UserInfo struct {
 	ID	string		`json:"id"`
 	UId	string		`json:"uid"`
 	Name	string		`json:"name,omitempty"`
+	Enabled	bool		`json:"enabled,omitempty"`
 	Created	string		`json:"created,omitempty"`
 	Roles	[]string	`json:"roles,omitempty"`
 }
