@@ -91,7 +91,7 @@ out:
 	http.Error(w, err.Error(), resp)
 }
 
-func handleAdminReq(r *http.Request, params interface{}) (*swyks.KeystoneTokenData, int, error) {
+func handleAdmdReq(r *http.Request, params interface{}) (*swyks.KeystoneTokenData, int, error) {
 	if params != nil {
 		err := swyhttp.ReadAndUnmarshalReq(r, params)
 		if err != nil {
@@ -142,7 +142,7 @@ func handleUser(w http.ResponseWriter, r *http.Request) {
 func handleUserInfo(w http.ResponseWriter, r *http.Request, uid string) {
 	var rui *swyapi.UserInfo
 
-	td, code, err := handleAdminReq(r, nil)
+	td, code, err := handleAdmdReq(r, nil)
 	if err != nil {
 		goto out
 	}
@@ -194,7 +194,7 @@ func handleListUsers(w http.ResponseWriter, r *http.Request) {
 	var result []*swyapi.UserInfo
 	var code = http.StatusBadRequest
 
-	td, code, err := handleAdminReq(r, nil)
+	td, code, err := handleAdmdReq(r, nil)
 	if err != nil {
 		goto out
 	}
@@ -279,7 +279,7 @@ func tryRemoveAllProjects(uid string, authToken string) error {
 func handleDelUser(w http.ResponseWriter, r *http.Request, uid string) {
 	var rui *swyapi.UserInfo
 
-	td, code, err := handleAdminReq(r, nil)
+	td, code, err := handleAdmdReq(r, nil)
 	if err != nil {
 		goto out
 	}
@@ -335,7 +335,7 @@ func handleAddUser(w http.ResponseWriter, r *http.Request) {
 	ses := session.Copy()
 	defer ses.Close()
 
-	td, code, err := handleAdminReq(r, &params)
+	td, code, err := handleAdmdReq(r, &params)
 	if err != nil {
 		goto out
 	}
@@ -400,7 +400,7 @@ func handleSetLimits(w http.ResponseWriter, r *http.Request) {
 
 	var params swyapi.UserLimits
 
-	td, code, err := handleAdminReq(r, &params)
+	td, code, err := handleAdmdReq(r, &params)
 	if err != nil {
 		goto out
 	}
@@ -465,7 +465,7 @@ func handleGetLimits(w http.ResponseWriter, r *http.Request) {
 	var params swyapi.UserInfo
 	var ulim *swyapi.UserLimits
 
-	td, code, err := handleAdminReq(r, &params)
+	td, code, err := handleAdmdReq(r, &params)
 	if err != nil {
 		goto out
 	}
@@ -500,7 +500,7 @@ func handleSetPassword(w http.ResponseWriter, r *http.Request) {
 
 	uid := mux.Vars(r)["uid"]
 
-	td, code, err := handleAdminReq(r, &params)
+	td, code, err := handleAdmdReq(r, &params)
 	if err != nil {
 		goto out
 	}
