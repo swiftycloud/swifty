@@ -359,8 +359,25 @@ func periodicPullRepos(period time.Duration) {
 	}
 }
 
+var demoRep RepoDesc
+
 func ReposInit(ctx context.Context, conf *YAMLConf) error {
 	go periodicPullRepos(time.Duration(conf.RepoSyncPeriod) * time.Minute)
+
+	ctxlog(ctx).Debugf("Resolve %s repo", conf.DemoRepo.URL)
+	q := bson.M{
+		"type": "github",
+		"name": conf.DemoRepo.URL,
+		"tennant": "*",
+		"project": NoProject,
+		"state": swy.DBRepoStateRdy,
+	}
+	err := dbFind(ctx, q, &demoRep)
+	if err != nil && ! dbNF(err) {
+		return err
+	}
+
+	ctxlog(ctx).Debugf("Resolved remo repo: %s", demoRep.ObjID.Hex())
 	return nil
 }
 
@@ -384,7 +401,6 @@ var srcHandlers = map[string] struct {
 } {
 	"git":		{ get: getFileFromRepo, },
 	"code":		{ get: getFileFromReq, },
-	"swage":	{ get: swageFile, },
 }
 
 func checkVersion(ctx context.Context, fn *FunctionDesc, version string, versions []string) (bool, error) {
@@ -517,28 +533,6 @@ func writeSourceRaw(ctx context.Context, fn *FunctionDesc, data []byte) error {
 	}
 
 	return nil
-}
-
-func swageFile(ctx context.Context, fn *FunctionDesc, src *swyapi.FunctionSources) error {
-	if src.Swage == nil {
-		return errors.New("No swage params")
-	}
-
-	tf := src.Swage.Template
-	if strings.Contains(tf, "/") {
-		return errors.New("Bad swage name")
-	}
-
-	fnCode, err := ioutil.ReadFile(conf.Home + "/" + SwageDir + "/" + fn.Code.Lang + "/" + tf + ".sw")
-	if err != nil {
-		return errors.New("Can't read swage")
-	}
-
-	for k, v := range src.Swage.Params {
-		fnCode = bytes.Replace(fnCode, []byte(k), []byte(v), -1)
-	}
-
-	return writeSourceRaw(ctx, fn, fnCode)
 }
 
 func ctxRepoId(ctx context.Context, rid string) bson.M {

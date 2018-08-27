@@ -166,7 +166,6 @@ swifty/ruby: swy-wdog-go swy-runner src/wdog/runner.js kubectl/docker/wdog/ruby/
 swifty/gate: swy-gate kubectl/docker/gate/Dockerfile test/functions/golang/simple-user-mgmt.go
 	$(call msg-gen,$@)
 	$(Q) $(CP) swy-gate kubectl/docker/gate/swy-gate
-	$(Q) $(CP) test/functions/golang/simple-user-mgmt.go kubectl/docker/gate/umjwt0.sw
 	$(Q) $(MAKE) -C kubectl/docker/gate all
 .PHONY: swifty/gate
 

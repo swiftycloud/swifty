@@ -45,3 +45,7 @@ wdog:
         port: 8687
         k8s-namespace: "default"
 logs-keep: 1
+demo-repo:
+        url: "https://github.com/swiftycloud/swifty.demo"
+        functions:
+                user-mgmt: "functions/golang/simple-user-mgmt.go"

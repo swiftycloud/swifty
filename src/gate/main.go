@@ -46,7 +46,6 @@ const (
 	DepScaledownStep time.Duration		= 8 * time.Second
 	TenantLimitsUpdPeriod time.Duration	= 120 * time.Second
 	URLEventID				= "000URL"
-	SwageDir				= "swage"
 	CloneDir				= "clone"
 	LogsCleanPeriod				= 30 * 60 * time.Second
 )
@@ -207,6 +206,24 @@ func (cr *YAMLConfRt)Validate() error {
 	return nil
 }
 
+type YAMLConfDemoRepo struct {
+	URL		string			`yaml:"url"`
+	Functions	map[string]string	`yaml:"functions"`
+}
+
+func (dr *YAMLConfDemoRepo)Validate() error {
+	if dr.URL == "" {
+		return errors.New("'demo-repo.url' not set")
+	}
+	if len(dr.Functions) == 0 {
+		return errors.New("'demo-repo.functions' map not set")
+	}
+	if _, ok := dr.Functions["user-mgmt"]; !ok {
+		fmt.Printf("'demo-repo.functions.user-mgmt' not set, auth-as-a-service will not work")
+	}
+	return nil
+}
+
 type YAMLConf struct {
 	Home		string			`yaml:"home"`
 	DB		string			`yaml:"db"`
@@ -218,6 +235,7 @@ type YAMLConf struct {
 	LogsKeepDays	int			`yaml:"logs-keep"`
 	RepoSyncRate	int			`yaml:"repo-sync-rate"`
 	RepoSyncPeriod	int			`yaml:"repo-sync-period"`
+	DemoRepo	YAMLConfDemoRepo	`yaml:"demo-repo"`
 }
 
 func (c *YAMLConf)Validate() error {
@@ -238,6 +256,10 @@ func (c *YAMLConf)Validate() error {
 		return err
 	}
 	err = c.Wdog.Validate()
+	if err != nil {
+		return err
+	}
+	err = c.DemoRepo.Validate()
 	if err != nil {
 		return err
 	}
@@ -2158,6 +2180,11 @@ func handleAuths(ctx context.Context, w http.ResponseWriter, r *http.Request) *s
 			return GateErrM(swy.GateBadRequest, "No such auth type")
 		}
 
+		fname := conf.DemoRepo.Functions["user-mgmt"]
+		if demoRep.ObjID == "" || fname == "" {
+			return GateErrM(swy.GateGenErr, "AaaS configuration error")
+		}
+
 		dd := getDeployDesc(ctxSwoId(ctx, project, aa.Name))
 		dd.Labels = []string{ "auth" }
 		dd.getItems(&swyapi.DeployStart {
@@ -2169,8 +2196,8 @@ func handleAuths(ctx context.Context, w http.ResponseWriter, r *http.Request) *s
 						Env: []string{ "SWIFTY_AUTH_NAME=" + aa.Name },
 					},
 					Sources: swyapi.FunctionSources {
-						Type: "swage",
-						Swage: &swyapi.FunctionSwage { Template: "umjwt0", },
+						Type: "git",
+						Repo: demoRep.ObjID.Hex() + "/" + fname,
 					},
 					Mware: []string { aa.Name + "_jwt", aa.Name + "_mgo" },
 					Url: true,
