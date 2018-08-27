@@ -35,13 +35,13 @@ paths:
         '401':
           description: Bad username/pass
   /users:
+    parameters:
+      - in: header
+        name: X-Auth-Token
+        type: string
+        required: true
     get:
       summary: List users
-      parameters:
-        - in: header
-          name: X-Auth-Token
-          type: string
-          required: true
       responses:
         '200':
           description: OK
@@ -58,10 +58,6 @@ paths:
     post:
       summary: Add new user (admin or UI)
       parameters:
-        - in: header
-          name: X-Auth-Token
-          type: string
-          required: true
         - in: body
           name: data
           description: User description
@@ -77,20 +73,19 @@ paths:
           description: Need to authenticate
         '403':
           description: Bad auth token
-  /users/{uid}:
+  '/users/{uid}':
     parameters:
       - in: path
         name: uid
         type: string
         required: true
-        description: User ID (id, not uid)
+        description: 'User ID (id, not uid)'
+      - in: header
+        name: X-Auth-Token
+        type: string
+        required: true
     get:
       summary: Show user info by ID (admin or self)
-      parameters:
-        - in: header
-          name: X-Auth-Token
-          type: string
-          required: true
       responses:
         '200':
           description: OK
@@ -102,11 +97,6 @@ paths:
           description: Bad auth token
     delete:
       summary: Del existing user (admin or self)
-      parameters:
-        - in: header
-          name: X-Auth-Token
-          type: string
-          required: true
       responses:
         '204':
           description: OK
@@ -114,13 +104,13 @@ paths:
           description: Need to authenticate
         '403':
           description: Bad auth token
-  /users/{uid}/pass:
+  '/users/{uid}/pass':
     parameters:
       - in: path
         name: uid
         type: string
         required: true
-        description: User ID (id, not uid)
+        description: 'User ID (id, not uid)'
     put:
       summary: Set user password (admin or self)
       parameters:
@@ -140,20 +130,20 @@ paths:
           description: Need to authenticate
         '403':
           description: Bad auth token
-  /users/{uid}/limits:
+  '/users/{uid}/limits':
     parameters:
       - in: path
         name: uid
         type: string
         required: true
-        description: User ID (id, not uid)
+        description: 'User ID (id, not uid)'
+      - in: header
+        name: X-Auth-Token
+        type: string
+        required: true
     put:
       summary: Set user plan parameters
       parameters:
-        - in: header
-          name: X-Auth-Token
-          type: string
-          required: true
         - in: body
           name: data
           description: User ID and parameters
@@ -168,11 +158,6 @@ paths:
           description: Bad auth token (needs admin role)
     get:
       summary: Get user plan parameters
-      parameters:
-        - in: header
-          name: X-Auth-Token
-          type: string
-          required: true
       responses:
         '201':
           description: OK
@@ -183,13 +168,13 @@ paths:
         '403':
           description: Bad auth token (needs admin role)
   /plans:
+    parameters:
+      - in: header
+        name: X-Auth-Token
+        type: string
+        required: true
     get:
       summary: List tarif plans
-      parameters:
-        - in: header
-          name: X-Auth-Token
-          type: string
-          required: true
       responses:
         '200':
           description: OK
@@ -206,10 +191,6 @@ paths:
     post:
       summary: Add new plan (admin only)
       parameters:
-        - in: header
-          name: X-Auth-Token
-          type: string
-          required: true
         - in: body
           name: data
           description: User description
@@ -225,20 +206,19 @@ paths:
           description: Need to authenticate
         '403':
           description: Bad auth token
-  /plans/{pid}:
+  '/plans/{pid}':
     parameters:
       - in: path
         name: pid
         type: string
         required: true
         description: Plan ID
+      - in: header
+        name: X-Auth-Token
+        type: string
+        required: true
     get:
       summary: Show info about plan
-      parameters:
-        - in: header
-          name: X-Auth-Token
-          type: string
-          required: true
       responses:
         '200':
           description: OK
@@ -250,11 +230,6 @@ paths:
           description: Bad auth token
     delete:
       summary: Del existing plan (admin only)
-      parameters:
-        - in: header
-          name: X-Auth-Token
-          type: string
-          required: true
       responses:
         '204':
           description: OK
@@ -280,7 +255,7 @@ definitions:
         description: UnixDate time of Token expiration
       endpoint:
         type: string
-        description: Gate address:port to talk to
+        description: 'Gate address:port to talk to'
   UserInfo:
     properties:
       id:
@@ -315,7 +290,9 @@ definitions:
         example: John Doe
       planid:
         type: string
-        description: ID of a tariff plan. If set, user limits will be set creation-time into tariff values.
+        description: >-
+          ID of a tariff plan. If set, user limits will be set creation-time
+          into tariff values.
   UserLimits:
     properties:
       planid:
