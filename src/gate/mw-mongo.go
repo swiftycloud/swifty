@@ -45,16 +45,20 @@ func InitMongo(ctx context.Context, conf *YAMLConfMw, mwd *MwareDesc) (error) {
 }
 
 func FiniMongo(ctx context.Context, conf *YAMLConfMw, mwd *MwareDesc) error {
+	ctxlog(ctx).Debugf("Drop DB 1")
 	sess, err := mgoDial(conf)
 	if err != nil {
 		return err
 	}
 	defer sess.Close()
 
+	ctxlog(ctx).Debugf("Drop DB 2")
 	err = sess.DB(mwd.Namespace).DropDatabase()
 	if err != nil {
 		ctxlog(ctx).Errorf("can't drop database %s: %s", mwd.Namespace, err.Error())
 	}
+
+	ctxlog(ctx).Debugf("Drop DB 3")
 
 	return nil
 }

@@ -758,19 +758,6 @@ func function_add(args []string, opts [16]string) {
 		fmt.Printf("Will add file from repo %s\n", opts[1][5:])
 		sources.Type = "git"
 		sources.Repo = opts[1][5:]
-	} else if strings.HasPrefix(opts[1], "sw:") {
-		s := strings.Split(opts[1], ":")
-		var sw swyapi.FunctionSwage
-
-		sw.Template = s[1]
-		sw.Params = make(map[string]string)
-		for _, p := range s[2:] {
-			ps := strings.SplitN(p, "=", 2)
-			sw.Params[ps[0]] = ps[1]
-		}
-
-		sources.Type = "swage"
-		sources.Swage = &sw
 	} else {
 		st, err := os.Stat(opts[1])
 		if err != nil {
