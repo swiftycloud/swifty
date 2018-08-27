@@ -91,13 +91,7 @@ out:
 	http.Error(w, err.Error(), resp)
 }
 
-func handleAdmdReq(r *http.Request, params interface{}) (*swyks.KeystoneTokenData, int, error) {
-	if params != nil {
-		err := swyhttp.ReadAndUnmarshalReq(r, params)
-		if err != nil {
-			return nil, http.StatusBadRequest, err
-		}
-	}
+func handleAdmdReq(r *http.Request) (*swyks.KeystoneTokenData, int, error) {
 	token := r.Header.Get("X-Auth-Token")
 	if token == "" {
 		return nil, http.StatusUnauthorized, fmt.Errorf("Auth token not provided")
@@ -142,7 +136,7 @@ func handleUser(w http.ResponseWriter, r *http.Request) {
 func handleUserInfo(w http.ResponseWriter, r *http.Request, uid string) {
 	var rui *swyapi.UserInfo
 
-	td, code, err := handleAdmdReq(r, nil)
+	td, code, err := handleAdmdReq(r)
 	if err != nil {
 		goto out
 	}
@@ -194,7 +188,7 @@ func handleListUsers(w http.ResponseWriter, r *http.Request) {
 	var result []*swyapi.UserInfo
 	var code = http.StatusBadRequest
 
-	td, code, err := handleAdmdReq(r, nil)
+	td, code, err := handleAdmdReq(r)
 	if err != nil {
 		goto out
 	}
@@ -279,7 +273,7 @@ func tryRemoveAllProjects(uid string, authToken string) error {
 func handleDelUser(w http.ResponseWriter, r *http.Request, uid string) {
 	var rui *swyapi.UserInfo
 
-	td, code, err := handleAdmdReq(r, nil)
+	td, code, err := handleAdmdReq(r)
 	if err != nil {
 		goto out
 	}
@@ -335,7 +329,13 @@ func handleAddUser(w http.ResponseWriter, r *http.Request) {
 	ses := session.Copy()
 	defer ses.Close()
 
-	td, code, err := handleAdmdReq(r, &params)
+	td, code, err := handleAdmdReq(r)
+	if err != nil {
+		goto out
+	}
+
+	code = http.StatusBadRequest
+	err = swyhttp.ReadAndUnmarshalReq(r, &params)
 	if err != nil {
 		goto out
 	}
@@ -400,7 +400,13 @@ func handleSetLimits(w http.ResponseWriter, r *http.Request) {
 
 	var params swyapi.UserLimits
 
-	td, code, err := handleAdmdReq(r, &params)
+	td, code, err := handleAdmdReq(r)
+	if err != nil {
+		goto out
+	}
+
+	code = http.StatusBadRequest
+	err = swyhttp.ReadAndUnmarshalReq(r, &params)
 	if err != nil {
 		goto out
 	}
@@ -465,7 +471,13 @@ func handleGetLimits(w http.ResponseWriter, r *http.Request) {
 	var params swyapi.UserInfo
 	var ulim *swyapi.UserLimits
 
-	td, code, err := handleAdmdReq(r, &params)
+	td, code, err := handleAdmdReq(r)
+	if err != nil {
+		goto out
+	}
+
+	code = http.StatusBadRequest
+	err = swyhttp.ReadAndUnmarshalReq(r, &params)
 	if err != nil {
 		goto out
 	}
@@ -500,7 +512,13 @@ func handleSetPassword(w http.ResponseWriter, r *http.Request) {
 
 	uid := mux.Vars(r)["uid"]
 
-	td, code, err := handleAdmdReq(r, &params)
+	td, code, err := handleAdmdReq(r)
+	if err != nil {
+		goto out
+	}
+
+	code = http.StatusBadRequest
+	err = swyhttp.ReadAndUnmarshalReq(r, &params)
 	if err != nil {
 		goto out
 	}
