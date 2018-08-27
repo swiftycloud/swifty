@@ -95,6 +95,24 @@ paths:
           description: Need to authenticate
         '403':
           description: Bad auth token
+    put:
+      summary: Change user options
+      parameters:
+        - in: body
+          name: data
+          description: User update description
+          required: true
+          schema:
+            $ref: '#/definitions/ModUser'
+      responses:
+        '201':
+          description: OK
+          schema:
+            $ref: '#/definitions/UserInfo'
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad auth token
     delete:
       summary: Del existing user (admin or self)
       responses:
@@ -274,6 +292,14 @@ definitions:
         type: array
         items:
           type: string
+      enabled:
+        type: boolean
+  ModUser:
+    properties:
+      enabled:
+        type: boolean
+
+
   UserAdd:
     required:
       - uid
