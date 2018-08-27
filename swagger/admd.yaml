@@ -140,6 +140,86 @@ paths:
           description: Need to authenticate
         '403':
           description: Bad auth token
+  /plans:
+    get:
+      summary: List tarif plans
+      parameters:
+        - in: header
+          name: X-Auth-Token
+          type: string
+          required: true
+      responses:
+        '200':
+          description: OK
+          schema:
+            properties:
+              users:
+                type: array
+                items:
+                  $ref: '#/definitions/PlanLimits'
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad auth token
+    post:
+      summary: Add new plan (admin only)
+      parameters:
+        - in: header
+          name: X-Auth-Token
+          type: string
+          required: true
+        - in: body
+          name: data
+          description: User description
+          required: true
+          schema:
+            $ref: '#/definitions/PlanLimits'
+      responses:
+        '201':
+          description: OK
+          schema:
+            $ref: '#/definitions/PlanLimits'
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad auth token
+  /plans/{pid}:
+    parameters:
+      - in: path
+        name: pid
+        type: string
+        required: true
+        description: Plan ID
+    get:
+      summary: Show info about plan
+      parameters:
+        - in: header
+          name: X-Auth-Token
+          type: string
+          required: true
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/PlanLimits'
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad auth token
+    delete:
+      summary: Del existing plan (admin only)
+      parameters:
+        - in: header
+          name: X-Auth-Token
+          type: string
+          required: true
+      responses:
+        '204':
+          description: OK
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad auth token
   /limits/set:
     post:
       summary: Set tariff plan parameters
@@ -243,7 +323,17 @@ definitions:
         description: User ID (empty for /get call)
       planid:
         type: string
-        description: Tariff plan name
+        description: Tariff plan ID
+      function:
+        $ref: '#/definitions/FunctionLimits'
+  PlanLimits:
+    properties:
+      id:
+        type: string
+        description: ID
+      name:
+        type: string
+        description: Tariff plan description
       function:
         $ref: '#/definitions/FunctionLimits'
   FunctionLimits:
@@ -264,6 +354,3 @@ definitions:
       bytesout:
         type: integer
         description: maximum bytes-out (outgoing network traffic) value per billing period
-      planid:
-        type: string
-        description: Description of the tarif plan used. During set the uninitialized above fields are copied from the tariff plan's defaults. If tariff plan doesn't exist, this value is just saved for the user.

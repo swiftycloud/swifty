@@ -3,6 +3,7 @@ package main
 import (
 	"go.uber.org/zap"
 
+	"gopkg.in/mgo.v2/bson"
 	"github.com/gorilla/mux"
 
 	"strings"
@@ -139,6 +140,30 @@ func handleUser(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func handlePlan(w http.ResponseWriter, r *http.Request) {
+	if swyhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
+
+	td, code, err := handleAdmdReq(r)
+	if err != nil {
+		http.Error(w, err.Error(), code)
+		return
+	}
+
+	pid := mux.Vars(r)["pid"]
+	if !bson.IsObjectIdHex(pid) {
+		http.Error(w, "Bad plan ID value", http.StatusBadRequest)
+		return
+	}
+
+	p_id := bson.ObjectIdHex(pid)
+	switch r.Method {
+	case "GET":
+		handlePlanInfo(w, r, p_id, td)
+	case "DELETE":
+		handleDelPlan(w, r, p_id, td)
+	}
+}
+
 func handleUserInfo(w http.ResponseWriter, r *http.Request, uid string, td *swyks.KeystoneTokenData) {
 	var rui *swyapi.UserInfo
 	var err error
@@ -175,6 +200,30 @@ out:
 	http.Error(w, err.Error(), code)
 }
 
+func handlePlanInfo(w http.ResponseWriter, r *http.Request, pid bson.ObjectId, td *swyks.KeystoneTokenData) {
+	var pl *PlanLimits
+	var err error
+
+	ses := session.Copy()
+	defer ses.Close()
+
+	code := http.StatusInternalServerError
+	pl, err = dbGetPlanLimits(ses, pid)
+	if err != nil {
+		goto out
+	}
+
+	err = swyhttp.MarshalAndWrite(w, pl.toInfo())
+	if err != nil {
+		goto out
+	}
+
+	return
+
+out:
+	http.Error(w, err.Error(), code)
+}
+
 func handleUsers(w http.ResponseWriter, r *http.Request) {
 	if swyhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
 
@@ -189,6 +238,23 @@ func handleUsers(w http.ResponseWriter, r *http.Request) {
 		handleListUsers(w, r, td)
 	case "POST":
 		handleAddUser(w, r, td)
+	}
+}
+
+func handlePlans(w http.ResponseWriter, r *http.Request) {
+	if swyhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
+
+	td, code, err := handleAdmdReq(r)
+	if err != nil {
+		http.Error(w, err.Error(), code)
+		return
+	}
+
+	switch r.Method {
+	case "GET":
+		handleListPlans(w, r, td)
+	case "POST":
+		handleAddPlan(w, r, td)
 	}
 }
 
@@ -213,6 +279,41 @@ func handleListUsers(w http.ResponseWriter, r *http.Request, td *swyks.KeystoneT
 		code = http.StatusForbidden
 		err = errors.New("Not swifty role")
 		goto out
+	}
+
+	err = swyhttp.MarshalAndWrite(w, result)
+	if err != nil {
+		goto out
+	}
+
+	return
+
+out:
+	http.Error(w, err.Error(), code)
+}
+
+func (pl *PlanLimits)toInfo() *swyapi.PlanLimits {
+	return&swyapi.PlanLimits{
+		Id:	pl.ObjID.Hex(),
+		Name:	pl.Name,
+		Fn:	pl.Fn,
+	}
+}
+
+func handleListPlans(w http.ResponseWriter, r *http.Request, td *swyks.KeystoneTokenData) {
+	var result []*swyapi.PlanLimits
+
+	code := http.StatusInternalServerError
+	ses := session.Copy()
+	defer ses.Close()
+
+	pls, err := dbListPlanLimits(ses)
+	if err != nil {
+		goto out
+	}
+
+	for _, pl := range(pls) {
+		result = append(result, pl.toInfo())
 	}
 
 	err = swyhttp.MarshalAndWrite(w, result)
@@ -320,6 +421,34 @@ out:
 	http.Error(w, err.Error(), code)
 }
 
+func handleDelPlan(w http.ResponseWriter, r *http.Request, pid bson.ObjectId, td *swyks.KeystoneTokenData) {
+	var err error
+
+	ses := session.Copy()
+	defer ses.Close()
+
+	/* User can be deleted by admin or self only. Admin
+	 * cannot delete self */
+	code := http.StatusForbidden
+	if !swyks.KeystoneRoleHas(td, swyks.SwyAdminRole) {
+		err = errors.New("Not an admin")
+		goto out
+	}
+
+	err = dbDelPlanLimits(ses, pid)
+	code = http.StatusInternalServerError
+	if err != nil {
+		goto out
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+
+	return
+
+out:
+	http.Error(w, err.Error(), code)
+}
+
 func handleAddUser(w http.ResponseWriter, r *http.Request, td *swyks.KeystoneTokenData) {
 	var params swyapi.AddUser
 	var kid string
@@ -350,15 +479,22 @@ func handleAddUser(w http.ResponseWriter, r *http.Request, td *swyks.KeystoneTok
 	code = http.StatusBadRequest
 
 	if params.PlanId != "" {
-		var plim *swyapi.UserLimits
+		if !bson.IsObjectIdHex(params.PlanId) {
+			err = errors.New("Bad plan ID value")
+			goto out
+		}
 
-		plim, err = dbGetPlanLimits(ses, &conf, params.PlanId)
+		var plim *PlanLimits
+		plim, err = dbGetPlanLimits(ses, bson.ObjectIdHex(params.PlanId))
 		if err != nil {
 			goto out
 		}
 
-		plim.UId = params.UId
-		err = dbSetUserLimits(ses, &conf, plim)
+		err = dbSetUserLimits(ses, &conf, &swyapi.UserLimits {
+			UId:	params.UId,
+			PlanId:	params.PlanId,
+			Fn:	plim.Fn,
+		})
 		if err != nil {
 			goto out
 		}
@@ -376,6 +512,61 @@ func handleAddUser(w http.ResponseWriter, r *http.Request, td *swyks.KeystoneTok
 			Name:		params.Name,
 			Roles:		[]string{swyks.SwyUserRole},
 		}, http.StatusCreated)
+	if err != nil {
+		goto out
+	}
+
+	return
+
+out:
+	http.Error(w, err.Error(), code)
+}
+
+type PlanLimits struct {
+	ObjID	bson.ObjectId		`bson:"_id,omitempty"`
+	Name	string			`bson:"name"`
+	Fn	*swyapi.FunctionLimits	`bson:"function,omitempty"`
+}
+
+func handleAddPlan(w http.ResponseWriter, r *http.Request, td *swyks.KeystoneTokenData) {
+	var params swyapi.PlanLimits
+	var pl *PlanLimits
+	var err error
+
+	ses := session.Copy()
+	defer ses.Close()
+
+	/* User can be added by admin or UI */
+	code := http.StatusForbidden
+	if !swyks.KeystoneRoleHas(td, swyks.SwyAdminRole) {
+		err = errors.New("Only admin may add plans")
+		goto out
+	}
+
+	code = http.StatusBadRequest
+	err = swyhttp.ReadAndUnmarshalReq(r, &params)
+	if err != nil {
+		goto out
+	}
+
+	if params.Name == "" {
+		err = errors.New("Bad name for a plan")
+		goto out
+	}
+
+	pl = &PlanLimits {
+		ObjID:	bson.NewObjectId(),
+		Name:	params.Name,
+		Fn:	params.Fn,
+	}
+	code = http.StatusInternalServerError
+	err = dbAddPlanLimits(ses, pl)
+	if err != nil {
+		goto out
+	}
+
+	params.Id = pl.ObjID.Hex()
+	err = swyhttp.MarshalAndWrite2(w, &params, http.StatusCreated)
 	if err != nil {
 		goto out
 	}
@@ -412,9 +603,13 @@ func handleSetLimits(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if params.PlanId != "" {
-		var plim *swyapi.UserLimits
+		if !bson.IsObjectIdHex(params.PlanId) {
+			err = errors.New("Bad plan ID value")
+			goto out
+		}
 
-		plim, err = dbGetPlanLimits(ses, &conf, params.PlanId)
+		var plim *PlanLimits
+		plim, err = dbGetPlanLimits(ses, bson.ObjectIdHex(params.PlanId))
 		if err != nil {
 			goto out
 		}
@@ -619,6 +814,8 @@ func main() {
 	r.HandleFunc("/v1/users/{uid}/pass", handleSetPassword).Methods("PUT", "OPTIONS")
 	r.HandleFunc("/v1/limits/set", handleSetLimits).Methods("POST", "OPTIONS")
 	r.HandleFunc("/v1/limits/get", handleGetLimits).Methods("POST", "OPTIONS")
+	r.HandleFunc("/v1/plans", handlePlans).Methods("POST", "GET", "OPTIONS")
+	r.HandleFunc("/v1/plans/{pid}", handlePlan).Methods("GET", "DELETE", "OPTIONS")
 
 	err = swyhttp.ListenAndServe(
 		&http.Server{

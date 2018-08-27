@@ -14,3 +14,9 @@ type AddUser struct {
 	Name	string		`json:"name"`
 	PlanId	string		`json:"planid"`
 }
+
+type PlanLimits struct {
+	Id	string			`json:"id,omitempty"`
+	Name	string			`json:"name"`
+	Fn	*FunctionLimits		`json:"function,omitempty"`
+}

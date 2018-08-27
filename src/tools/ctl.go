@@ -238,60 +238,48 @@ func user_info(args []string, opts [16]string) {
 	fmt.Printf("Roles:  %s\n", strings.Join(ui.Roles, ", "))
 }
 
+func tplan_list(args []string, opts[16]string) {
+	var plans []*swyapi.PlanLimits
+	make_faas_req1("GET", "plans", http.StatusOK, nil, &plans)
+	for _, p := range(plans) {
+		fmt.Printf("%s/%s:\n", p.Id, p.Name)
+		show_fn_limits(p.Fn)
+	}
+}
+
+func tplan_add(args []string, opts[16]string) {
+	var l swyapi.PlanLimits
+
+	l.Name = args[0]
+	l.Fn = parse_limits(opts[0:])
+	if l.Fn == nil {
+		fatal(fmt.Errorf("No limits"))
+	}
+	make_faas_req1("POST", "plans", http.StatusCreated, &l, &l)
+	fmt.Printf("%s plan created\n", l.Id)
+}
+
+func tplan_info(args []string, opts[16]string) {
+	var p swyapi.PlanLimits
+	make_faas_req1("GET", "plans/" + args[0], http.StatusOK, nil, &p)
+	fmt.Printf("%s/%s:\n", p.Id, p.Name)
+	show_fn_limits(p.Fn)
+}
+
+func tplan_del(args []string, opts[16]string) {
+	make_faas_req1("DELETE", "plans/" + args[0], http.StatusNoContent, nil, nil)
+}
+
 func user_limits(args []string, opts [16]string) {
 	var l swyapi.UserLimits
-	chg := false
 
 	if opts[0] != "" {
 		l.PlanId = opts[0]
-		chg = true
 	}
 
-	if opts[1] != "" {
-		if l.Fn == nil {
-			l.Fn = &swyapi.FunctionLimits{}
-		}
-		l.Fn.Rate, l.Fn.Burst = parse_rate(opts[1])
-		chg = true
-	}
+	l.Fn = parse_limits(opts[1:])
 
-	if opts[2] != "" {
-		if l.Fn == nil {
-			l.Fn = &swyapi.FunctionLimits{}
-		}
-		v, err := strconv.ParseUint(opts[2], 10, 32)
-		if err != nil {
-			fatal(fmt.Errorf("Bad max-fn value %s: %s", opts[2], err.Error()))
-		}
-		l.Fn.MaxInProj = uint(v)
-		chg = true
-	}
-
-	if opts[3] != "" {
-		if l.Fn == nil {
-			l.Fn = &swyapi.FunctionLimits{}
-		}
-		v, err := strconv.ParseFloat(opts[3], 64)
-		if err != nil {
-			fatal(fmt.Errorf("Bad GBS value %s: %s", opts[3], err.Error()))
-		}
-		l.Fn.GBS = v
-		chg = true
-	}
-
-	if opts[4] != "" {
-		if l.Fn == nil {
-			l.Fn = &swyapi.FunctionLimits{}
-		}
-		v, err := strconv.ParseUint(opts[4], 10, 64)
-		if err != nil {
-			fatal(fmt.Errorf("Bad bytes-out value %s: %s", opts[4], err.Error()))
-		}
-		l.Fn.BytesOut = v
-		chg = true
-	}
-
-	if chg {
+	if l.Fn != nil {
 		l.UId = args[0]
 		make_faas_req("limits/set", &l, nil)
 	} else {
@@ -299,20 +287,70 @@ func user_limits(args []string, opts [16]string) {
 		if l.PlanId != "" {
 			fmt.Printf("Plan ID: %s\n", l.PlanId)
 		}
-		if l.Fn != nil {
-			fmt.Printf("Functions:\n")
-			if l.Fn.Rate != 0 {
-				fmt.Printf("    Rate:              %d:%d\n", l.Fn.Rate, l.Fn.Burst)
-			}
-			if l.Fn.MaxInProj != 0 {
-				fmt.Printf("    Max in project:    %d\n", l.Fn.MaxInProj)
-			}
-			if l.Fn.GBS != 0 {
-				fmt.Printf("    Max GBS:           %f\n", l.Fn.GBS)
-			}
-			if l.Fn.BytesOut != 0 {
-				fmt.Printf("    Max bytes out:     %d\n", formatBytes(l.Fn.BytesOut))
-			}
+		show_fn_limits(l.Fn)
+	}
+}
+
+func parse_limits(opts []string) *swyapi.FunctionLimits {
+	var ret *swyapi.FunctionLimits
+
+	if opts[1] != "" {
+		if ret == nil {
+			ret = &swyapi.FunctionLimits{}
+		}
+		ret.Rate, ret.Burst = parse_rate(opts[1])
+	}
+
+	if opts[2] != "" {
+		if ret == nil {
+			ret = &swyapi.FunctionLimits{}
+		}
+		v, err := strconv.ParseUint(opts[2], 10, 32)
+		if err != nil {
+			fatal(fmt.Errorf("Bad max-fn value %s: %s", opts[2], err.Error()))
+		}
+		ret.MaxInProj = uint(v)
+	}
+
+	if opts[3] != "" {
+		if ret == nil {
+			ret = &swyapi.FunctionLimits{}
+		}
+		v, err := strconv.ParseFloat(opts[3], 64)
+		if err != nil {
+			fatal(fmt.Errorf("Bad GBS value %s: %s", opts[3], err.Error()))
+		}
+		ret.GBS = v
+	}
+
+	if opts[4] != "" {
+		if ret == nil {
+			ret = &swyapi.FunctionLimits{}
+		}
+		v, err := strconv.ParseUint(opts[4], 10, 64)
+		if err != nil {
+			fatal(fmt.Errorf("Bad bytes-out value %s: %s", opts[4], err.Error()))
+		}
+		ret.BytesOut = v
+	}
+
+	return ret
+}
+
+func show_fn_limits(fl *swyapi.FunctionLimits) {
+	if fl != nil {
+		fmt.Printf("Functions:\n")
+		if fl.Rate != 0 {
+			fmt.Printf("    Rate:              %d:%d\n", fl.Rate, fl.Burst)
+		}
+		if fl.MaxInProj != 0 {
+			fmt.Printf("    Max in project:    %d\n", fl.MaxInProj)
+		}
+		if fl.GBS != 0 {
+			fmt.Printf("    Max GBS:           %f\n", fl.GBS)
+		}
+		if fl.BytesOut != 0 {
+			fmt.Printf("    Max bytes out:     %d\n", formatBytes(fl.BytesOut))
 		}
 	}
 }
@@ -1569,6 +1607,11 @@ const (
 	CMD_UPASS string	= "upass"
 	CMD_ULIM string		= "ulim"
 
+	CMD_TL string		= "tl"
+	CMD_TA string		= "ta"
+	CMD_TI string		= "ti"
+	CMD_TD string		= "td"
+
 	CMD_MTYPES string	= "mt"
 	CMD_LANGS string	= "lng"
 	CMD_LANG string		= "ld"
@@ -1633,6 +1676,12 @@ var cmdOrder = []string {
 	CMD_UD,
 	CMD_UPASS,
 	CMD_ULIM,
+
+	CMD_TL,
+	CMD_TA,
+	CMD_TI,
+	CMD_TD,
+
 	CMD_LANGS,
 	CMD_MTYPES,
 	CMD_LANG,
@@ -1704,6 +1753,11 @@ var cmdMap = map[string]*cmdDesc {
 	CMD_UD:		&cmdDesc{ call: user_del,	  opts: flag.NewFlagSet(CMD_UD, flag.ExitOnError), adm: true },
 	CMD_UPASS:	&cmdDesc{ call: user_pass,	  opts: flag.NewFlagSet(CMD_UPASS, flag.ExitOnError), adm: true },
 	CMD_ULIM:	&cmdDesc{ call: user_limits,	  opts: flag.NewFlagSet(CMD_ULIM, flag.ExitOnError), adm: true },
+
+	CMD_TL:		&cmdDesc{ call: tplan_list,	  opts: flag.NewFlagSet(CMD_TL, flag.ExitOnError), adm: true },
+	CMD_TA:		&cmdDesc{ call: tplan_add,	  opts: flag.NewFlagSet(CMD_TA, flag.ExitOnError), adm: true },
+	CMD_TI:		&cmdDesc{ call: tplan_info,	  opts: flag.NewFlagSet(CMD_TI, flag.ExitOnError), adm: true },
+	CMD_TD:		&cmdDesc{ call: tplan_del,	  opts: flag.NewFlagSet(CMD_TD, flag.ExitOnError), adm: true },
 
 	CMD_LANGS:	&cmdDesc{ call: languages,	  opts: flag.NewFlagSet(CMD_LANGS, flag.ExitOnError) },
 	CMD_MTYPES:	&cmdDesc{ call: mware_types,	  opts: flag.NewFlagSet(CMD_MTYPES, flag.ExitOnError) },
@@ -1849,6 +1903,15 @@ func main() {
 	cmdMap[CMD_ULIM].opts.StringVar(&opts[3], "gbs", "", "Maximum number of GBS to consume")
 	cmdMap[CMD_ULIM].opts.StringVar(&opts[4], "bo", "", "Maximum outgoing network bytes")
 	bindCmdUsage(CMD_ULIM, []string{"UID"}, "Get/Set limits for user", false)
+
+	bindCmdUsage(CMD_TL, []string{}, "List tarif plans", false)
+	cmdMap[CMD_TA].opts.StringVar(&opts[0], "rl", "", "Rate (rate[:burst])")
+	cmdMap[CMD_TA].opts.StringVar(&opts[1], "fnr", "", "Number of functions (in a project)")
+	cmdMap[CMD_TA].opts.StringVar(&opts[2], "gbs", "", "Maximum number of GBS to consume")
+	cmdMap[CMD_TA].opts.StringVar(&opts[3], "bo", "", "Maximum outgoing network bytes")
+	bindCmdUsage(CMD_TA, []string{"NAME"}, "Create tarif plan", false)
+	bindCmdUsage(CMD_TI, []string{"ID"}, "Info about tarif plan", false)
+	bindCmdUsage(CMD_TD, []string{"ID"}, "Info about tarif plan", false)
 
 	bindCmdUsage(CMD_MTYPES, []string{}, "List middleware types", false)
 	bindCmdUsage(CMD_LANGS, []string{}, "List of supported languages", false)

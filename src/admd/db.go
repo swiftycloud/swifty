@@ -27,14 +27,33 @@ func dbGetUserLimits(ses *mgo.Session, conf *YAMLConf, id string) (*swyapi.UserL
 	return &v, err
 }
 
-func dbGetPlanLimits(ses *mgo.Session, conf *YAMLConf, id string) (*swyapi.UserLimits, error) {
+func dbGetPlanLimits(ses *mgo.Session, id bson.ObjectId) (*PlanLimits, error) {
 	c := ses.DB(DBTenantDB).C(DBColPlans)
-	var v swyapi.UserLimits
-	err := c.Find(bson.M{"planid":id}).One(&v)
+	var v PlanLimits
+	q := bson.M{"_id": id}
+	err := c.Find(q).One(&v)
 	if err == mgo.ErrNotFound {
 		err = nil
 	}
+
 	return &v, err
+}
+
+func dbAddPlanLimits(ses *mgo.Session, pl *PlanLimits) error {
+	c := ses.DB(DBTenantDB).C(DBColPlans)
+	return c.Insert(pl)
+}
+
+func dbListPlanLimits(ses *mgo.Session) ([]*PlanLimits, error) {
+	c := ses.DB(DBTenantDB).C(DBColPlans)
+	var v []*PlanLimits
+	err := c.Find(bson.M{}).All(&v)
+	return v, err
+}
+
+func dbDelPlanLimits(ses *mgo.Session, id bson.ObjectId) error {
+	c := ses.DB(DBTenantDB).C(DBColPlans)
+	return c.Remove(bson.M{"_id": id})
 }
 
 func dbSetUserLimits(ses *mgo.Session, conf *YAMLConf, limits *swyapi.UserLimits) error {
