@@ -378,6 +378,9 @@ func handleDelUser(w http.ResponseWriter, r *http.Request, uid string, td *swyks
 	var rui *swyapi.UserInfo
 	var err error
 
+	ses := session.Copy()
+	defer ses.Close()
+
 	/* User can be deleted by admin or self only. Admin
 	 * cannot delete self */
 	code := http.StatusForbidden
@@ -402,6 +405,11 @@ func handleDelUser(w http.ResponseWriter, r *http.Request, uid string, td *swyks
 
 	code = http.StatusServiceUnavailable
 	err = tryRemoveAllProjects(rui.UId, r.Header.Get("X-Auth-Token"))
+	if err != nil {
+		goto out
+	}
+
+	err = dbDelUserLimits(ses, &conf, rui.UId)
 	if err != nil {
 		goto out
 	}

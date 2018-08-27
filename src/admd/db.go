@@ -62,9 +62,13 @@ func dbSetUserLimits(ses *mgo.Session, conf *YAMLConf, limits *swyapi.UserLimits
 	return err
 }
 
-func dbDelUserLimits(ses *mgo.Session, conf *YAMLConf, id string) {
+func dbDelUserLimits(ses *mgo.Session, conf *YAMLConf, id string) error {
 	c := ses.DB(DBTenantDB).C(DBColLimits)
-	c.Remove(bson.M{"uid":id})
+	err := c.Remove(bson.M{"uid":id})
+	if err == mgo.ErrNotFound {
+		err = nil
+	}
+	return err
 }
 
 func dbConnect(conf *YAMLConf) error {
