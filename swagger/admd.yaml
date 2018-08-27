@@ -140,6 +140,48 @@ paths:
           description: Need to authenticate
         '403':
           description: Bad auth token
+  /users/{uid}/limits:
+    parameters:
+      - in: path
+        name: uid
+        type: string
+        required: true
+        description: User ID (id, not uid)
+    put:
+      summary: Set user plan parameters
+      parameters:
+        - in: header
+          name: X-Auth-Token
+          type: string
+          required: true
+        - in: body
+          name: data
+          description: User ID and parameters
+          schema:
+            $ref: '#/definitions/UserLimits'
+      responses:
+        '201':
+          description: OK
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad auth token (needs admin role)
+    get:
+      summary: Get user plan parameters
+      parameters:
+        - in: header
+          name: X-Auth-Token
+          type: string
+          required: true
+      responses:
+        '201':
+          description: OK
+          schema:
+            $ref: '#/definitions/UserLimits'
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad auth token (needs admin role)
   /plans:
     get:
       summary: List tarif plans
@@ -220,48 +262,6 @@ paths:
           description: Need to authenticate
         '403':
           description: Bad auth token
-  /limits/set:
-    post:
-      summary: Set tariff plan parameters
-      parameters:
-        - in: header
-          name: X-Auth-Token
-          type: string
-          required: true
-        - in: body
-          name: data
-          description: User ID and parameters
-          schema:
-            $ref: '#/definitions/UserLimits'
-      responses:
-        '201':
-          description: OK
-        '401':
-          description: Need to authenticate
-        '403':
-          description: Bad auth token (needs admin role)
-  /limits/get:
-    post:
-      summary: Get tariff plan parameters
-      parameters:
-        - in: header
-          name: X-Auth-Token
-          type: string
-          required: true
-        - in: body
-          name: data
-          description: User ID and parameters
-          schema:
-            $ref: '#/definitions/UserInfo'
-      responses:
-        '201':
-          description: OK
-          schema:
-            $ref: '#/definitions/UserLimits'
-        '401':
-          description: Need to authenticate
-        '403':
-          description: Bad auth token (needs admin role)
 definitions:
   UserLogin:
     required:
@@ -318,9 +318,6 @@ definitions:
         description: ID of a tariff plan. If set, user limits will be set creation-time into tariff values.
   UserLimits:
     properties:
-      uid:
-        type: string
-        description: User ID (empty for /get call)
       planid:
         type: string
         description: Tariff plan ID

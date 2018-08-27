@@ -279,15 +279,16 @@ func user_limits(args []string, opts [16]string) {
 
 	l.Fn = parse_limits(opts[1:])
 
-	if l.Fn != nil {
+	if l.Fn != nil || l.PlanId != "" {
 		l.UId = args[0]
-		make_faas_req("limits/set", &l, nil)
+		make_faas_req1("PUT", "users/" + args[0] + "/limits", http.StatusOK, &l, nil)
 	} else {
-		make_faas_req("limits/get", swyapi.UserInfo{UId: args[0]}, &l)
+		make_faas_req1("GET", "users/" + args[0] + "/limits", http.StatusOK, nil, &l)
 		if l.PlanId != "" {
 			fmt.Printf("Plan ID: %s\n", l.PlanId)
 		}
 		show_fn_limits(l.Fn)
+		fmt.Printf(">>> %s\n", l.UId)
 	}
 }
 

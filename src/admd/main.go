@@ -106,22 +106,6 @@ func handleAdmdReq(r *http.Request) (*swyks.KeystoneTokenData, int, error) {
 	return td, 0, nil
 }
 
-func checkAdminOrOwner(user, target string, td *swyks.KeystoneTokenData) (string, error) {
-	if target == "" || target == user {
-		if !swyks.KeystoneRoleHas(td, swyks.SwyUserRole) && !swyks.KeystoneRoleHas(td, swyks.SwyAdminRole) {
-			return "", errors.New("Not logged in")
-		}
-
-		return user, nil
-	} else {
-		if !swyks.KeystoneRoleHas(td, swyks.SwyAdminRole) {
-			return "", errors.New("Not an admin")
-		}
-
-		return target, nil
-	}
-}
-
 func handleUser(w http.ResponseWriter, r *http.Request) {
 	if swyhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
 
@@ -585,28 +569,23 @@ out:
 	http.Error(w, err.Error(), code)
 }
 
-func handleSetLimits(w http.ResponseWriter, r *http.Request) {
-	if swyhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
+func handleSetLimits(w http.ResponseWriter, r *http.Request, uid string, td *swyks.KeystoneTokenData) {
+	var params swyapi.UserLimits
+	var rui *swyapi.UserInfo
+	var err error
 
 	ses := session.Copy()
 	defer ses.Close()
 
-	var params swyapi.UserLimits
-
-	td, code, err := handleAdmdReq(r)
-	if err != nil {
+	code := http.StatusForbidden
+	if !swyks.KeystoneRoleHas(td, swyks.SwyAdminRole) {
+		err = errors.New("Only admin may change user limits")
 		goto out
 	}
 
 	code = http.StatusBadRequest
 	err = swyhttp.ReadAndUnmarshalReq(r, &params)
 	if err != nil {
-		goto out
-	}
-
-	code = http.StatusForbidden
-	if !swyks.KeystoneRoleHas(td, swyks.SwyAdminRole) {
-		err = errors.New("Only admin may change user limits")
 		goto out
 	}
 
@@ -647,6 +626,13 @@ func handleSetLimits(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	code = http.StatusInternalServerError
+	rui, err = getUserInfo(conf.kc, uid, false)
+	if err != nil {
+		goto out
+	}
+
+	params.UId = rui.UId
 	err = dbSetUserLimits(ses, &conf, &params)
 	if err != nil {
 		goto out
@@ -659,33 +645,33 @@ out:
 	http.Error(w, err.Error(), code)
 }
 
-func handleGetLimits(w http.ResponseWriter, r *http.Request) {
-	if swyhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
-
+func handleGetLimits(w http.ResponseWriter, uid string, td *swyks.KeystoneTokenData) {
 	ses := session.Copy()
 	defer ses.Close()
 
-	var params swyapi.UserInfo
 	var ulim *swyapi.UserLimits
+	var rui *swyapi.UserInfo
+	var err error
 
-	td, code, err := handleAdmdReq(r)
+	code := http.StatusForbidden
+	if uid == td.User.Id {
+		if !swyks.KeystoneRoleHas(td, swyks.SwyAdminRole) &&
+				!swyks.KeystoneRoleHas(td, swyks.SwyUserRole) {
+			goto out
+		}
+	} else {
+		if !swyks.KeystoneRoleHas(td, swyks.SwyAdminRole) {
+			goto out
+		}
+	}
+
+	code = http.StatusInternalServerError
+	rui, err = getUserInfo(conf.kc, uid, false)
 	if err != nil {
 		goto out
 	}
 
-	code = http.StatusBadRequest
-	err = swyhttp.ReadAndUnmarshalReq(r, &params)
-	if err != nil {
-		goto out
-	}
-
-	code = http.StatusForbidden
-	params.UId, err = checkAdminOrOwner(td.Project.Name, params.UId, td)
-	if err != nil {
-		goto out
-	}
-
-	ulim, err = dbGetUserLimits(ses, &conf, params.UId)
+	ulim, err = dbGetUserLimits(ses, &conf, rui.UId)
 	if err != nil {
 		goto out
 	}
@@ -747,6 +733,33 @@ func handleSetPassword(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusCreated)
+
+	return
+
+out:
+	http.Error(w, err.Error(), code)
+}
+
+func handleUserLimits(w http.ResponseWriter, r *http.Request) {
+	if swyhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
+
+	uid := mux.Vars(r)["uid"]
+
+	td, code, err := handleAdmdReq(r)
+	if err != nil {
+		goto out
+	}
+
+	if uid == "me" {
+		uid = td.User.Id
+	}
+
+	code = http.StatusForbidden
+	if r.Method == "PUT" {
+		handleSetLimits(w, r, uid, td)
+	} else {
+		handleGetLimits(w, uid, td)
+	}
 
 	return
 
@@ -820,8 +833,7 @@ func main() {
 	r.HandleFunc("/v1/users", handleUsers).Methods("POST", "GET", "OPTIONS")
 	r.HandleFunc("/v1/users/{uid}", handleUser).Methods("GET", "DELETE", "OPTIONS")
 	r.HandleFunc("/v1/users/{uid}/pass", handleSetPassword).Methods("PUT", "OPTIONS")
-	r.HandleFunc("/v1/limits/set", handleSetLimits).Methods("POST", "OPTIONS")
-	r.HandleFunc("/v1/limits/get", handleGetLimits).Methods("POST", "OPTIONS")
+	r.HandleFunc("/v1/users/{uid}/limits", handleUserLimits).Methods("PUT", "GET", "OPTIONS")
 	r.HandleFunc("/v1/plans", handlePlans).Methods("POST", "GET", "OPTIONS")
 	r.HandleFunc("/v1/plans/{pid}", handlePlan).Methods("GET", "DELETE", "OPTIONS")
 
