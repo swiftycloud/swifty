@@ -159,7 +159,7 @@ func maybe(err error) error {
 func dbTenantGetLimits(ctx context.Context, tenant string) (*swyapi.UserLimits, error) {
 	c := gctx(ctx).S.DB(DBTenantDB).C(DBColLimits)
 	var v swyapi.UserLimits
-	err := maybe(c.Find(bson.M{"id":tenant}).One(&v))
+	err := maybe(c.Find(bson.M{"uid":tenant}).One(&v))
 	return &v, err
 }
 

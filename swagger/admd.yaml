@@ -238,7 +238,7 @@ definitions:
         description: ID of a tariff plan. If set, user limits will be set creation-time into tariff values.
   UserLimits:
     properties:
-      id:
+      uid:
         type: string
         description: User ID (empty for /get call)
       planid:

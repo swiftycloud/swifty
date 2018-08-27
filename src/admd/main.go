@@ -357,7 +357,7 @@ func handleAddUser(w http.ResponseWriter, r *http.Request, td *swyks.KeystoneTok
 			goto out
 		}
 
-		plim.Id = params.UId
+		plim.UId = params.UId
 		err = dbSetUserLimits(ses, &conf, plim)
 		if err != nil {
 			goto out

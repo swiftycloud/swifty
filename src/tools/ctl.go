@@ -292,7 +292,7 @@ func user_limits(args []string, opts [16]string) {
 	}
 
 	if chg {
-		l.Id = args[0]
+		l.UId = args[0]
 		make_faas_req("limits/set", &l, nil)
 	} else {
 		make_faas_req("limits/get", swyapi.UserInfo{UId: args[0]}, &l)

@@ -20,7 +20,7 @@ var session *mgo.Session
 func dbGetUserLimits(ses *mgo.Session, conf *YAMLConf, id string) (*swyapi.UserLimits, error) {
 	c := ses.DB(DBTenantDB).C(DBColLimits)
 	var v swyapi.UserLimits
-	err := c.Find(bson.M{"id":id}).One(&v)
+	err := c.Find(bson.M{"uid":id}).One(&v)
 	if err == mgo.ErrNotFound {
 		err = nil
 	}
@@ -39,13 +39,13 @@ func dbGetPlanLimits(ses *mgo.Session, conf *YAMLConf, id string) (*swyapi.UserL
 
 func dbSetUserLimits(ses *mgo.Session, conf *YAMLConf, limits *swyapi.UserLimits) error {
 	c := ses.DB(DBTenantDB).C(DBColLimits)
-	_, err := c.Upsert(bson.M{"id":limits.Id}, limits)
+	_, err := c.Upsert(bson.M{"uid":limits.UId}, limits)
 	return err
 }
 
 func dbDelUserLimits(ses *mgo.Session, conf *YAMLConf, id string) {
 	c := ses.DB(DBTenantDB).C(DBColLimits)
-	c.Remove(bson.M{"id":id})
+	c.Remove(bson.M{"uid":id})
 }
 
 func dbConnect(conf *YAMLConf) error {
