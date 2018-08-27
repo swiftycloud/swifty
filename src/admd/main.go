@@ -3,6 +3,7 @@ package main
 import (
 	"go.uber.org/zap"
 
+	"gopkg.in/mgo.v2/bson"
 	"github.com/gorilla/mux"
 
 	"strings"
@@ -91,13 +92,7 @@ out:
 	http.Error(w, err.Error(), resp)
 }
 
-func handleAdminReq(r *http.Request, params interface{}) (*swyks.KeystoneTokenData, int, error) {
-	if params != nil {
-		err := swyhttp.ReadAndUnmarshalReq(r, params)
-		if err != nil {
-			return nil, http.StatusBadRequest, err
-		}
-	}
+func handleAdmdReq(r *http.Request) (*swyks.KeystoneTokenData, int, error) {
 	token := r.Header.Get("X-Auth-Token")
 	if token == "" {
 		return nil, http.StatusUnauthorized, fmt.Errorf("Auth token not provided")
@@ -111,43 +106,53 @@ func handleAdminReq(r *http.Request, params interface{}) (*swyks.KeystoneTokenDa
 	return td, 0, nil
 }
 
-func checkAdminOrOwner(user, target string, td *swyks.KeystoneTokenData) (string, error) {
-	if target == "" || target == user {
-		if !swyks.KeystoneRoleHas(td, swyks.SwyUserRole) && !swyks.KeystoneRoleHas(td, swyks.SwyAdminRole) {
-			return "", errors.New("Not logged in")
-		}
-
-		return user, nil
-	} else {
-		if !swyks.KeystoneRoleHas(td, swyks.SwyAdminRole) {
-			return "", errors.New("Not an admin")
-		}
-
-		return target, nil
-	}
-}
-
 func handleUser(w http.ResponseWriter, r *http.Request) {
 	if swyhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
+
+	td, code, err := handleAdmdReq(r)
+	if err != nil {
+		http.Error(w, err.Error(), code)
+		return
+	}
 
 	uid := mux.Vars(r)["uid"]
 	switch r.Method {
 	case "GET":
-		handleUserInfo(w, r, uid)
+		handleUserInfo(w, r, uid, td)
 	case "DELETE":
-		handleDelUser(w, r, uid)
+		handleDelUser(w, r, uid, td)
 	}
 }
 
-func handleUserInfo(w http.ResponseWriter, r *http.Request, uid string) {
-	var rui *swyapi.UserInfo
+func handlePlan(w http.ResponseWriter, r *http.Request) {
+	if swyhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
 
-	td, code, err := handleAdminReq(r, nil)
+	td, code, err := handleAdmdReq(r)
 	if err != nil {
-		goto out
+		http.Error(w, err.Error(), code)
+		return
 	}
 
-	code = http.StatusForbidden
+	pid := mux.Vars(r)["pid"]
+	if !bson.IsObjectIdHex(pid) {
+		http.Error(w, "Bad plan ID value", http.StatusBadRequest)
+		return
+	}
+
+	p_id := bson.ObjectIdHex(pid)
+	switch r.Method {
+	case "GET":
+		handlePlanInfo(w, r, p_id, td)
+	case "DELETE":
+		handleDelPlan(w, r, p_id, td)
+	}
+}
+
+func handleUserInfo(w http.ResponseWriter, r *http.Request, uid string, td *swyks.KeystoneTokenData) {
+	var rui *swyapi.UserInfo
+	var err error
+
+	code := http.StatusForbidden
 	if uid == "me" {
 		uid = td.User.Id
 	} else if uid == td.User.Id {
@@ -162,7 +167,7 @@ func handleUserInfo(w http.ResponseWriter, r *http.Request, uid string) {
 	}
 
 	code = http.StatusBadRequest
-	rui, err = getUserInfo(conf.kc, uid)
+	rui, err = getUserInfo(conf.kc, uid, true)
 	if err != nil {
 		log.Errorf("GetUserDesc: %s", err.Error())
 		goto out
@@ -179,27 +184,69 @@ out:
 	http.Error(w, err.Error(), code)
 }
 
-func handleUsers(w http.ResponseWriter, r *http.Request) {
-	if swyhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
+func handlePlanInfo(w http.ResponseWriter, r *http.Request, pid bson.ObjectId, td *swyks.KeystoneTokenData) {
+	var pl *PlanLimits
+	var err error
 
-	switch r.Method {
-	case "GET":
-		handleListUsers(w, r)
-	case "POST":
-		handleAddUser(w, r)
-	}
-}
+	ses := session.Copy()
+	defer ses.Close()
 
-func handleListUsers(w http.ResponseWriter, r *http.Request) {
-	var result []*swyapi.UserInfo
-	var code = http.StatusBadRequest
-
-	td, code, err := handleAdminReq(r, nil)
+	code := http.StatusInternalServerError
+	pl, err = dbGetPlanLimits(ses, pid)
 	if err != nil {
 		goto out
 	}
 
-	code = http.StatusInternalServerError
+	err = swyhttp.MarshalAndWrite(w, pl.toInfo())
+	if err != nil {
+		goto out
+	}
+
+	return
+
+out:
+	http.Error(w, err.Error(), code)
+}
+
+func handleUsers(w http.ResponseWriter, r *http.Request) {
+	if swyhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
+
+	td, code, err := handleAdmdReq(r)
+	if err != nil {
+		http.Error(w, err.Error(), code)
+		return
+	}
+
+	switch r.Method {
+	case "GET":
+		handleListUsers(w, r, td)
+	case "POST":
+		handleAddUser(w, r, td)
+	}
+}
+
+func handlePlans(w http.ResponseWriter, r *http.Request) {
+	if swyhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
+
+	td, code, err := handleAdmdReq(r)
+	if err != nil {
+		http.Error(w, err.Error(), code)
+		return
+	}
+
+	switch r.Method {
+	case "GET":
+		handleListPlans(w, r, td)
+	case "POST":
+		handleAddPlan(w, r, td)
+	}
+}
+
+func handleListUsers(w http.ResponseWriter, r *http.Request, td *swyks.KeystoneTokenData) {
+	var result []*swyapi.UserInfo
+	var err error
+
+	code := http.StatusInternalServerError
 	if swyks.KeystoneRoleHas(td, swyks.SwyAdminRole) {
 		result, err = listUsers(conf.kc)
 		if err != nil {
@@ -207,7 +254,7 @@ func handleListUsers(w http.ResponseWriter, r *http.Request) {
 		}
 	} else if swyks.KeystoneRoleHas(td, swyks.SwyUserRole) {
 		var ui *swyapi.UserInfo
-		ui, err = getUserInfo(conf.kc, td.User.Id)
+		ui, err = getUserInfo(conf.kc, td.User.Id, false)
 		if err != nil {
 			goto out
 		}
@@ -216,6 +263,41 @@ func handleListUsers(w http.ResponseWriter, r *http.Request) {
 		code = http.StatusForbidden
 		err = errors.New("Not swifty role")
 		goto out
+	}
+
+	err = swyhttp.MarshalAndWrite(w, result)
+	if err != nil {
+		goto out
+	}
+
+	return
+
+out:
+	http.Error(w, err.Error(), code)
+}
+
+func (pl *PlanLimits)toInfo() *swyapi.PlanLimits {
+	return&swyapi.PlanLimits{
+		Id:	pl.ObjID.Hex(),
+		Name:	pl.Name,
+		Fn:	pl.Fn,
+	}
+}
+
+func handleListPlans(w http.ResponseWriter, r *http.Request, td *swyks.KeystoneTokenData) {
+	var result []*swyapi.PlanLimits
+
+	code := http.StatusInternalServerError
+	ses := session.Copy()
+	defer ses.Close()
+
+	pls, err := dbListPlanLimits(ses)
+	if err != nil {
+		goto out
+	}
+
+	for _, pl := range(pls) {
+		result = append(result, pl.toInfo())
 	}
 
 	err = swyhttp.MarshalAndWrite(w, result)
@@ -276,17 +358,16 @@ func tryRemoveAllProjects(uid string, authToken string) error {
 	return err
 }
 
-func handleDelUser(w http.ResponseWriter, r *http.Request, uid string) {
+func handleDelUser(w http.ResponseWriter, r *http.Request, uid string, td *swyks.KeystoneTokenData) {
 	var rui *swyapi.UserInfo
+	var err error
 
-	td, code, err := handleAdminReq(r, nil)
-	if err != nil {
-		goto out
-	}
+	ses := session.Copy()
+	defer ses.Close()
 
 	/* User can be deleted by admin or self only. Admin
 	 * cannot delete self */
-	code = http.StatusForbidden
+	code := http.StatusForbidden
 	if uid == td.User.Id {
 		if !swyks.KeystoneRoleHas(td, swyks.SwyUserRole) ||
 				swyks.KeystoneRoleHas(td, swyks.SwyAdminRole) {
@@ -301,13 +382,18 @@ func handleDelUser(w http.ResponseWriter, r *http.Request, uid string) {
 	}
 
 	code = http.StatusInternalServerError
-	rui, err = getUserInfo(conf.kc, uid)
+	rui, err = getUserInfo(conf.kc, uid, false)
 	if err != nil {
 		goto out
 	}
 
 	code = http.StatusServiceUnavailable
 	err = tryRemoveAllProjects(rui.UId, r.Header.Get("X-Auth-Token"))
+	if err != nil {
+		goto out
+	}
+
+	err = dbDelUserLimits(ses, &conf, rui.UId)
 	if err != nil {
 		goto out
 	}
@@ -327,15 +413,44 @@ out:
 	http.Error(w, err.Error(), code)
 }
 
-func handleAddUser(w http.ResponseWriter, r *http.Request) {
-	var params swyapi.AddUser
-	var code = http.StatusBadRequest
-	var kid string
+func handleDelPlan(w http.ResponseWriter, r *http.Request, pid bson.ObjectId, td *swyks.KeystoneTokenData) {
+	var err error
 
 	ses := session.Copy()
 	defer ses.Close()
 
-	td, code, err := handleAdminReq(r, &params)
+	/* User can be deleted by admin or self only. Admin
+	 * cannot delete self */
+	code := http.StatusForbidden
+	if !swyks.KeystoneRoleHas(td, swyks.SwyAdminRole) {
+		err = errors.New("Not an admin")
+		goto out
+	}
+
+	err = dbDelPlanLimits(ses, pid)
+	code = http.StatusInternalServerError
+	if err != nil {
+		goto out
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+
+	return
+
+out:
+	http.Error(w, err.Error(), code)
+}
+
+func handleAddUser(w http.ResponseWriter, r *http.Request, td *swyks.KeystoneTokenData) {
+	var params swyapi.AddUser
+	var kid string
+	var err error
+
+	ses := session.Copy()
+	defer ses.Close()
+
+	code := http.StatusBadRequest
+	err = swyhttp.ReadAndUnmarshalReq(r, &params)
 	if err != nil {
 		goto out
 	}
@@ -356,15 +471,22 @@ func handleAddUser(w http.ResponseWriter, r *http.Request) {
 	code = http.StatusBadRequest
 
 	if params.PlanId != "" {
-		var plim *swyapi.UserLimits
+		if !bson.IsObjectIdHex(params.PlanId) {
+			err = errors.New("Bad plan ID value")
+			goto out
+		}
 
-		plim, err = dbGetPlanLimits(ses, &conf, params.PlanId)
+		var plim *PlanLimits
+		plim, err = dbGetPlanLimits(ses, bson.ObjectIdHex(params.PlanId))
 		if err != nil {
 			goto out
 		}
 
-		plim.Id = params.UId
-		err = dbSetUserLimits(ses, &conf, plim)
+		err = dbSetUserLimits(ses, &conf, &swyapi.UserLimits {
+			UId:	params.UId,
+			PlanId:	params.PlanId,
+			Fn:	plim.Fn,
+		})
 		if err != nil {
 			goto out
 		}
@@ -392,29 +514,89 @@ out:
 	http.Error(w, err.Error(), code)
 }
 
-func handleSetLimits(w http.ResponseWriter, r *http.Request) {
-	if swyhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
+type PlanLimits struct {
+	ObjID	bson.ObjectId		`bson:"_id,omitempty"`
+	Name	string			`bson:"name"`
+	Fn	*swyapi.FunctionLimits	`bson:"function,omitempty"`
+}
+
+func handleAddPlan(w http.ResponseWriter, r *http.Request, td *swyks.KeystoneTokenData) {
+	var params swyapi.PlanLimits
+	var pl *PlanLimits
+	var err error
 
 	ses := session.Copy()
 	defer ses.Close()
 
-	var params swyapi.UserLimits
+	/* User can be added by admin or UI */
+	code := http.StatusForbidden
+	if !swyks.KeystoneRoleHas(td, swyks.SwyAdminRole) {
+		err = errors.New("Only admin may add plans")
+		goto out
+	}
 
-	td, code, err := handleAdminReq(r, &params)
+	code = http.StatusBadRequest
+	err = swyhttp.ReadAndUnmarshalReq(r, &params)
 	if err != nil {
 		goto out
 	}
 
-	code = http.StatusForbidden
+	if params.Name == "" {
+		err = errors.New("Bad name for a plan")
+		goto out
+	}
+
+	pl = &PlanLimits {
+		ObjID:	bson.NewObjectId(),
+		Name:	params.Name,
+		Fn:	params.Fn,
+	}
+	code = http.StatusInternalServerError
+	err = dbAddPlanLimits(ses, pl)
+	if err != nil {
+		goto out
+	}
+
+	params.Id = pl.ObjID.Hex()
+	err = swyhttp.MarshalAndWrite2(w, &params, http.StatusCreated)
+	if err != nil {
+		goto out
+	}
+
+	return
+
+out:
+	http.Error(w, err.Error(), code)
+}
+
+func handleSetLimits(w http.ResponseWriter, r *http.Request, uid string, td *swyks.KeystoneTokenData) {
+	var params swyapi.UserLimits
+	var rui *swyapi.UserInfo
+	var err error
+
+	ses := session.Copy()
+	defer ses.Close()
+
+	code := http.StatusForbidden
 	if !swyks.KeystoneRoleHas(td, swyks.SwyAdminRole) {
 		err = errors.New("Only admin may change user limits")
 		goto out
 	}
 
-	if params.PlanId != "" {
-		var plim *swyapi.UserLimits
+	code = http.StatusBadRequest
+	err = swyhttp.ReadAndUnmarshalReq(r, &params)
+	if err != nil {
+		goto out
+	}
 
-		plim, err = dbGetPlanLimits(ses, &conf, params.PlanId)
+	if params.PlanId != "" {
+		if !bson.IsObjectIdHex(params.PlanId) {
+			err = errors.New("Bad plan ID value")
+			goto out
+		}
+
+		var plim *PlanLimits
+		plim, err = dbGetPlanLimits(ses, bson.ObjectIdHex(params.PlanId))
 		if err != nil {
 			goto out
 		}
@@ -444,6 +626,13 @@ func handleSetLimits(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	code = http.StatusInternalServerError
+	rui, err = getUserInfo(conf.kc, uid, false)
+	if err != nil {
+		goto out
+	}
+
+	params.UId = rui.UId
 	err = dbSetUserLimits(ses, &conf, &params)
 	if err != nil {
 		goto out
@@ -456,27 +645,33 @@ out:
 	http.Error(w, err.Error(), code)
 }
 
-func handleGetLimits(w http.ResponseWriter, r *http.Request) {
-	if swyhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
-
+func handleGetLimits(w http.ResponseWriter, uid string, td *swyks.KeystoneTokenData) {
 	ses := session.Copy()
 	defer ses.Close()
 
-	var params swyapi.UserInfo
 	var ulim *swyapi.UserLimits
+	var rui *swyapi.UserInfo
+	var err error
 
-	td, code, err := handleAdminReq(r, &params)
+	code := http.StatusForbidden
+	if uid == td.User.Id {
+		if !swyks.KeystoneRoleHas(td, swyks.SwyAdminRole) &&
+				!swyks.KeystoneRoleHas(td, swyks.SwyUserRole) {
+			goto out
+		}
+	} else {
+		if !swyks.KeystoneRoleHas(td, swyks.SwyAdminRole) {
+			goto out
+		}
+	}
+
+	code = http.StatusInternalServerError
+	rui, err = getUserInfo(conf.kc, uid, false)
 	if err != nil {
 		goto out
 	}
 
-	code = http.StatusForbidden
-	params.UId, err = checkAdminOrOwner(td.Project.Name, params.UId, td)
-	if err != nil {
-		goto out
-	}
-
-	ulim, err = dbGetUserLimits(ses, &conf, params.UId)
+	ulim, err = dbGetUserLimits(ses, &conf, rui.UId)
 	if err != nil {
 		goto out
 	}
@@ -500,7 +695,13 @@ func handleSetPassword(w http.ResponseWriter, r *http.Request) {
 
 	uid := mux.Vars(r)["uid"]
 
-	td, code, err := handleAdminReq(r, &params)
+	td, code, err := handleAdmdReq(r)
+	if err != nil {
+		goto out
+	}
+
+	code = http.StatusBadRequest
+	err = swyhttp.ReadAndUnmarshalReq(r, &params)
 	if err != nil {
 		goto out
 	}
@@ -532,6 +733,33 @@ func handleSetPassword(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusCreated)
+
+	return
+
+out:
+	http.Error(w, err.Error(), code)
+}
+
+func handleUserLimits(w http.ResponseWriter, r *http.Request) {
+	if swyhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
+
+	uid := mux.Vars(r)["uid"]
+
+	td, code, err := handleAdmdReq(r)
+	if err != nil {
+		goto out
+	}
+
+	if uid == "me" {
+		uid = td.User.Id
+	}
+
+	code = http.StatusForbidden
+	if r.Method == "PUT" {
+		handleSetLimits(w, r, uid, td)
+	} else {
+		handleGetLimits(w, uid, td)
+	}
 
 	return
 
@@ -605,8 +833,9 @@ func main() {
 	r.HandleFunc("/v1/users", handleUsers).Methods("POST", "GET", "OPTIONS")
 	r.HandleFunc("/v1/users/{uid}", handleUser).Methods("GET", "DELETE", "OPTIONS")
 	r.HandleFunc("/v1/users/{uid}/pass", handleSetPassword).Methods("PUT", "OPTIONS")
-	r.HandleFunc("/v1/limits/set", handleSetLimits).Methods("POST", "OPTIONS")
-	r.HandleFunc("/v1/limits/get", handleGetLimits).Methods("POST", "OPTIONS")
+	r.HandleFunc("/v1/users/{uid}/limits", handleUserLimits).Methods("PUT", "GET", "OPTIONS")
+	r.HandleFunc("/v1/plans", handlePlans).Methods("POST", "GET", "OPTIONS")
+	r.HandleFunc("/v1/plans/{pid}", handlePlan).Methods("GET", "DELETE", "OPTIONS")
 
 	err = swyhttp.ListenAndServe(
 		&http.Server{
