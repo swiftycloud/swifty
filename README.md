@@ -1,49 +1,32 @@
-## Istall this tools and libs on gw, mw, slave0, slave1
 
-### install golang
-```
-dnf install golang
-```
-
-### configure working dir
-
-```
-mkdir -p /home/go
-echo 'export GOPATH=/home/go' >> $HOME/.bashrc
-source $HOME/.bashrc
-```
-
-### install libs
-```
-yum install librados2-devel
-yum install glibc-headers
-yum groupinstall "Development Libraries"
-yum install glibc-static
-```
+## Common for all environments
 
 ### clone swifty project
 ```
-cd /home
 git clone git@github.com:bbelky/swifty.git
 ```
 
+### configure GOPATH
+
+```
+cd swifty
+echo 'export GOPATH=$(pwd)/vendor' >> $HOME/.bashrc
+source $HOME/.bashrc
+```
+
+
 ### install deps
 ```
-go get k8s.io/client-go/...
-cd /home/go/src/k8s.io/client-go
-git checkout -fb v2.0.0  v2.0.0
-go get k8s.io/client-go/...
-go get ./...
+make deps
 ```
+
+## For gateway hosts
 
 ### build on gw
 ```
-cd /home/swifty
 make swifty/gate
 make swifty/admd
 ```
-
-## Execute this commands on appropriate hosts
 
 ### run docker containers on gw
 
@@ -55,10 +38,12 @@ docker run -d --net=host --name=swygate -v /etc/swifty:/etc/swifty -v /root/.swy
 docker run -d --net=host --name=swyadmd -v /etc/swifty:/etc/swifty -v /root/.swysecrets:/root/.swysecrets -v /etc/letsencrypt:/etc/letsencrypt swifty/admd
 ```
 
+## For middleware hosts
+
+
 ### build on mw
 
 ```
-cd /home/swifty
 make swifty/s3
 ```
 
@@ -69,10 +54,12 @@ docker stop swys3 && docker rm swys3
 docker run -d --net=host --name=swys3 -v /etc/swifty:/etc/swifty -v /root/.swysecrets:/root/.swysecrets -v /etc/letsencrypt:/etc/letsencrypt swifty/s3
 ```
 
+## For slave hosts
+
+
 ### build on slaves
 
 ```
-cd /home/swifty
 make swifty/golang
 make swifty/swift
 ```
