@@ -119,6 +119,8 @@ func handleUser(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
 		handleUserInfo(w, r, uid, td)
+	case "PUT":
+		handleUserUpdate(w, r, uid, td)
 	case "DELETE":
 		handleDelUser(w, r, uid, td)
 	}
@@ -146,6 +148,57 @@ func handlePlan(w http.ResponseWriter, r *http.Request) {
 	case "DELETE":
 		handleDelPlan(w, r, p_id, td)
 	}
+}
+
+func handleUserUpdate(w http.ResponseWriter, r *http.Request, uid string, td *swyks.KeystoneTokenData) {
+	var params swyapi.ModUser
+	var rui *swyapi.UserInfo
+	var err error
+
+	code := http.StatusForbidden
+	if uid == "me" {
+		uid = td.User.Id
+	} else if uid == td.User.Id {
+		if !swyks.KeystoneRoleHas(td, swyks.SwyAdminRole) &&
+				!swyks.KeystoneRoleHas(td, swyks.SwyUserRole) {
+			goto out
+		}
+	} else {
+		if !swyks.KeystoneRoleHas(td, swyks.SwyAdminRole) {
+			goto out
+		}
+	}
+
+	code = http.StatusBadRequest
+	err = swyhttp.ReadAndUnmarshalReq(r, &params)
+	if err != nil {
+		goto out
+	}
+
+	rui, err = getUserInfo(conf.kc, uid, false)
+	if err != nil {
+		log.Errorf("GetUserDesc: %s", err.Error())
+		goto out
+	}
+
+	if params.Enabled != nil {
+		err = ksSetUserEnabled(conf.kc, uid, *params.Enabled)
+		if err != nil {
+			goto out
+		}
+
+		rui.Enabled = *params.Enabled
+	}
+
+	err = swyhttp.MarshalAndWrite(w, rui)
+	if err != nil {
+		goto out
+	}
+
+	return
+
+out:
+	http.Error(w, err.Error(), code)
 }
 
 func handleUserInfo(w http.ResponseWriter, r *http.Request, uid string, td *swyks.KeystoneTokenData) {
@@ -831,7 +884,7 @@ func main() {
 	r := mux.NewRouter()
 	r.HandleFunc("/v1/login", handleUserLogin).Methods("POST", "OPTIONS")
 	r.HandleFunc("/v1/users", handleUsers).Methods("POST", "GET", "OPTIONS")
-	r.HandleFunc("/v1/users/{uid}", handleUser).Methods("GET", "DELETE", "OPTIONS")
+	r.HandleFunc("/v1/users/{uid}", handleUser).Methods("GET", "PUT", "DELETE", "OPTIONS")
 	r.HandleFunc("/v1/users/{uid}/pass", handleSetPassword).Methods("PUT", "OPTIONS")
 	r.HandleFunc("/v1/users/{uid}/limits", handleUserLimits).Methods("PUT", "GET", "OPTIONS")
 	r.HandleFunc("/v1/plans", handlePlans).Methods("POST", "GET", "OPTIONS")

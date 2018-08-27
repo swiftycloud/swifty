@@ -9,6 +9,10 @@ type UserInfo struct {
 	Roles	[]string	`json:"roles,omitempty"`
 }
 
+type ModUser struct {
+	Enabled	*bool		`json:"enabled,omitempty"`
+}
+
 type AddUser struct {
 	UId	string		`json:"uid"`
 	Pass	string		`json:"pass"`
