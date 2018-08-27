@@ -158,7 +158,7 @@ func handleUserInfo(w http.ResponseWriter, r *http.Request, uid string, td *swyk
 	}
 
 	code = http.StatusBadRequest
-	rui, err = getUserInfo(conf.kc, uid)
+	rui, err = getUserInfo(conf.kc, uid, true)
 	if err != nil {
 		log.Errorf("GetUserDesc: %s", err.Error())
 		goto out
@@ -204,7 +204,7 @@ func handleListUsers(w http.ResponseWriter, r *http.Request, td *swyks.KeystoneT
 		}
 	} else if swyks.KeystoneRoleHas(td, swyks.SwyUserRole) {
 		var ui *swyapi.UserInfo
-		ui, err = getUserInfo(conf.kc, td.User.Id)
+		ui, err = getUserInfo(conf.kc, td.User.Id, false)
 		if err != nil {
 			goto out
 		}
@@ -294,7 +294,7 @@ func handleDelUser(w http.ResponseWriter, r *http.Request, uid string, td *swyks
 	}
 
 	code = http.StatusInternalServerError
-	rui, err = getUserInfo(conf.kc, uid)
+	rui, err = getUserInfo(conf.kc, uid, false)
 	if err != nil {
 		goto out
 	}

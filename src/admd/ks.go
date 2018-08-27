@@ -196,26 +196,26 @@ func toUserInfo(ui *swyks.KeystoneUser) (*swyapi.UserInfo, error) {
 	}, nil
 }
 
-func getUserInfo(c *swy.XCreds, id string) (*swyapi.UserInfo, error) {
+func getUserInfo(c *swy.XCreds, id string, details bool) (*swyapi.UserInfo, error) {
 	kui, err := ksGetUserInfo(c, id)
 	if err != nil {
 		return nil, err
 	}
 
-	krs, err := ksGetUserRoles(c, kui)
-	if err != nil {
-		return nil, err
-	}
-
-	var ui *swyapi.UserInfo
-
-	ui, err = toUserInfo(kui)
+	ui, err := toUserInfo(kui)
 	if err != nil {
 		return nil, fmt.Errorf("Can't unmarshal user desc: %s", err.Error())
 	}
 
-	for _, role := range(krs) {
-		ui.Roles = append(ui.Roles, role.Name)
+	if details {
+		krs, err := ksGetUserRoles(c, kui)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, role := range(krs) {
+			ui.Roles = append(ui.Roles, role.Name)
+		}
 	}
 
 	return ui, nil
