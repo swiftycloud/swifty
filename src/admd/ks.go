@@ -145,6 +145,7 @@ func ksAddUserAndProject(c *swy.XCreds, user *swyapi.AddUser) (string, error) {
 	log.Debugf("Added project %s (id %s)", presp.Project.Name, presp.Project.Id[:8])
 
 	var uresp swyks.KeystonePassword
+	enabled := false
 
 	err = ksClient.MakeReq(
 		&swyks.KeystoneReq {
@@ -158,6 +159,7 @@ func ksAddUserAndProject(c *swy.XCreds, user *swyapi.AddUser) (string, error) {
 				DefProject: presp.Project.Id,
 				DomainId: ksSwyDomainId,
 				Description: string(udesc),
+				Enabled: &enabled,
 			},
 		}, &uresp)
 	if err != nil {
