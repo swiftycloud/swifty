@@ -145,6 +145,7 @@ func ksAddUserAndProject(c *swy.XCreds, user *swyapi.AddUser) (string, error) {
 	log.Debugf("Added project %s (id %s)", presp.Project.Name, presp.Project.Id[:8])
 
 	var uresp swyks.KeystonePassword
+	enabled := false
 
 	err = ksClient.MakeReq(
 		&swyks.KeystoneReq {
@@ -158,6 +159,7 @@ func ksAddUserAndProject(c *swy.XCreds, user *swyapi.AddUser) (string, error) {
 				DefProject: presp.Project.Id,
 				DomainId: ksSwyDomainId,
 				Description: string(udesc),
+				Enabled: &enabled,
 			},
 		}, &uresp)
 	if err != nil {
@@ -188,11 +190,17 @@ func toUserInfo(ui *swyks.KeystoneUser) (*swyapi.UserInfo, error) {
 		}
 	}
 
+	if ui.Enabled == nil {
+		en := true
+		ui.Enabled = &en
+	}
+
 	return &swyapi.UserInfo {
 		ID:	 ui.Id,
 		UId:	 ui.Name,
 		Name:	 kud.RealName,
 		Created: kud.CreatedS(),
+		Enabled: *ui.Enabled,
 	}, nil
 }
 
@@ -291,6 +299,25 @@ func ksChangeUserPass(c *swy.XCreds, uid string, up *swyapi.UserLogin) error {
 		}, nil)
 	if err != nil {
 		return fmt.Errorf("Can't change password: %s", err.Error())
+	}
+
+	return nil
+}
+
+func ksSetUserEnabled(c *swy.XCreds, uid string, enabled bool) error {
+	log.Debugf("Change enabled status for %s", uid)
+	err := ksClient.MakeReq(
+		&swyks.KeystoneReq {
+			Type:	"PATCH",
+			URL:	"users/" + uid,
+			Succ:	http.StatusOK, },
+		&swyks.KeystonePassword {
+			User: swyks.KeystoneUser {
+				Enabled: &enabled,
+			},
+		}, nil)
+	if err != nil {
+		return fmt.Errorf("Can't change enable status: %s", err.Error())
 	}
 
 	return nil

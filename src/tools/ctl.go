@@ -211,7 +211,11 @@ func user_list(args []string, opts [16]string) {
 	make_faas_req1("GET", "users", http.StatusOK, nil, &uss)
 
 	for _, u := range uss {
-		fmt.Printf("%s: %s (%s)\n", u.ID, u.UId, u.Name)
+		en := ""
+		if !u.Enabled {
+			en = " [X]"
+		}
+		fmt.Printf("%s: %s (%s)%s\n", u.ID, u.UId, u.Name, en)
 	}
 }
 
@@ -225,6 +229,19 @@ func user_del(args []string, opts [16]string) {
 	make_faas_req1("DELETE", "users/" + args[0], http.StatusNoContent, nil, nil)
 }
 
+func user_enabled(args []string, opts [16]string) {
+	var enabled bool
+	if args[1] == "0" {
+		enabled = false
+	} else if args[1] == "1" {
+		enabled = true
+	} else {
+		fatal(fmt.Errorf("Bad enable status"))
+	}
+
+	make_faas_req1("PUT", "users/" + args[0], http.StatusOK, &swyapi.ModUser{Enabled: &enabled}, nil)
+}
+
 func user_pass(args []string, opts [16]string) {
 	make_faas_req1("PUT", "users/" + args[0] + "/pass", http.StatusCreated,
 			&swyapi.UserLogin{Password: opts[0]}, nil)
@@ -236,6 +253,9 @@ func user_info(args []string, opts [16]string) {
 	fmt.Printf("ID:     %s\n", ui.ID)
 	fmt.Printf("Name:   %s\n", ui.Name)
 	fmt.Printf("Roles:  %s\n", strings.Join(ui.Roles, ", "))
+	if !ui.Enabled {
+		fmt.Printf("!!! disabled\n")
+	}
 }
 
 func tplan_list(args []string, opts[16]string) {
@@ -1607,6 +1627,7 @@ const (
 	CMD_UD string		= "ud"
 	CMD_UPASS string	= "upass"
 	CMD_ULIM string		= "ulim"
+	CMD_UEN string		= "uen"
 
 	CMD_TL string		= "tl"
 	CMD_TA string		= "ta"
@@ -1677,6 +1698,7 @@ var cmdOrder = []string {
 	CMD_UD,
 	CMD_UPASS,
 	CMD_ULIM,
+	CMD_UEN,
 
 	CMD_TL,
 	CMD_TA,
@@ -1753,6 +1775,7 @@ var cmdMap = map[string]*cmdDesc {
 	CMD_UA:		&cmdDesc{ call: user_add,	  opts: flag.NewFlagSet(CMD_UA, flag.ExitOnError), adm: true },
 	CMD_UD:		&cmdDesc{ call: user_del,	  opts: flag.NewFlagSet(CMD_UD, flag.ExitOnError), adm: true },
 	CMD_UPASS:	&cmdDesc{ call: user_pass,	  opts: flag.NewFlagSet(CMD_UPASS, flag.ExitOnError), adm: true },
+	CMD_UEN:	&cmdDesc{ call: user_enabled,	  opts: flag.NewFlagSet(CMD_UEN, flag.ExitOnError), adm: true },
 	CMD_ULIM:	&cmdDesc{ call: user_limits,	  opts: flag.NewFlagSet(CMD_ULIM, flag.ExitOnError), adm: true },
 
 	CMD_TL:		&cmdDesc{ call: tplan_list,	  opts: flag.NewFlagSet(CMD_TL, flag.ExitOnError), adm: true },
@@ -1897,6 +1920,7 @@ func main() {
 	bindCmdUsage(CMD_UD,	[]string{"UID"}, "Del user", false)
 	cmdMap[CMD_UPASS].opts.StringVar(&opts[0], "pass", "", "New password")
 	bindCmdUsage(CMD_UPASS,	[]string{"UID"}, "Set password", false)
+	bindCmdUsage(CMD_UEN, []string{"UID", "ST"}, "Set enable status for user", false)
 	bindCmdUsage(CMD_UI,	[]string{"UID"}, "Get user info", false)
 	cmdMap[CMD_ULIM].opts.StringVar(&opts[0], "plan", "", "Taroff plan ID")
 	cmdMap[CMD_ULIM].opts.StringVar(&opts[1], "rl", "", "Rate (rate[:burst])")

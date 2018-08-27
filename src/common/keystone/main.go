@@ -28,6 +28,7 @@ type KeystoneUser struct {
 	DomainId	string			`json:"domain_id,omitempty"`
 	DefProject	string			`json:"default_project_id,omitempty"`
 	Description	string			`json:"description,omitempty"`
+	Enabled		*bool			`json:"enabled,omitempty"`
 }
 
 type KeystonePassword struct {
