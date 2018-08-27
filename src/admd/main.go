@@ -124,24 +124,26 @@ func checkAdminOrOwner(user, target string, td *swyks.KeystoneTokenData) (string
 func handleUser(w http.ResponseWriter, r *http.Request) {
 	if swyhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
 
+	td, code, err := handleAdmdReq(r)
+	if err != nil {
+		http.Error(w, err.Error(), code)
+		return
+	}
+
 	uid := mux.Vars(r)["uid"]
 	switch r.Method {
 	case "GET":
-		handleUserInfo(w, r, uid)
+		handleUserInfo(w, r, uid, td)
 	case "DELETE":
-		handleDelUser(w, r, uid)
+		handleDelUser(w, r, uid, td)
 	}
 }
 
-func handleUserInfo(w http.ResponseWriter, r *http.Request, uid string) {
+func handleUserInfo(w http.ResponseWriter, r *http.Request, uid string, td *swyks.KeystoneTokenData) {
 	var rui *swyapi.UserInfo
+	var err error
 
-	td, code, err := handleAdmdReq(r)
-	if err != nil {
-		goto out
-	}
-
-	code = http.StatusForbidden
+	code := http.StatusForbidden
 	if uid == "me" {
 		uid = td.User.Id
 	} else if uid == td.User.Id {
@@ -176,24 +178,25 @@ out:
 func handleUsers(w http.ResponseWriter, r *http.Request) {
 	if swyhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
 
+	td, code, err := handleAdmdReq(r)
+	if err != nil {
+		http.Error(w, err.Error(), code)
+		return
+	}
+
 	switch r.Method {
 	case "GET":
-		handleListUsers(w, r)
+		handleListUsers(w, r, td)
 	case "POST":
-		handleAddUser(w, r)
+		handleAddUser(w, r, td)
 	}
 }
 
-func handleListUsers(w http.ResponseWriter, r *http.Request) {
+func handleListUsers(w http.ResponseWriter, r *http.Request, td *swyks.KeystoneTokenData) {
 	var result []*swyapi.UserInfo
-	var code = http.StatusBadRequest
+	var err error
 
-	td, code, err := handleAdmdReq(r)
-	if err != nil {
-		goto out
-	}
-
-	code = http.StatusInternalServerError
+	code := http.StatusInternalServerError
 	if swyks.KeystoneRoleHas(td, swyks.SwyAdminRole) {
 		result, err = listUsers(conf.kc)
 		if err != nil {
@@ -270,17 +273,13 @@ func tryRemoveAllProjects(uid string, authToken string) error {
 	return err
 }
 
-func handleDelUser(w http.ResponseWriter, r *http.Request, uid string) {
+func handleDelUser(w http.ResponseWriter, r *http.Request, uid string, td *swyks.KeystoneTokenData) {
 	var rui *swyapi.UserInfo
-
-	td, code, err := handleAdmdReq(r)
-	if err != nil {
-		goto out
-	}
+	var err error
 
 	/* User can be deleted by admin or self only. Admin
 	 * cannot delete self */
-	code = http.StatusForbidden
+	code := http.StatusForbidden
 	if uid == td.User.Id {
 		if !swyks.KeystoneRoleHas(td, swyks.SwyUserRole) ||
 				swyks.KeystoneRoleHas(td, swyks.SwyAdminRole) {
@@ -321,20 +320,15 @@ out:
 	http.Error(w, err.Error(), code)
 }
 
-func handleAddUser(w http.ResponseWriter, r *http.Request) {
+func handleAddUser(w http.ResponseWriter, r *http.Request, td *swyks.KeystoneTokenData) {
 	var params swyapi.AddUser
-	var code = http.StatusBadRequest
 	var kid string
+	var err error
 
 	ses := session.Copy()
 	defer ses.Close()
 
-	td, code, err := handleAdmdReq(r)
-	if err != nil {
-		goto out
-	}
-
-	code = http.StatusBadRequest
+	code := http.StatusBadRequest
 	err = swyhttp.ReadAndUnmarshalReq(r, &params)
 	if err != nil {
 		goto out
