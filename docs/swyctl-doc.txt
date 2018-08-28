@@ -145,9 +145,9 @@ List of attached mware is shown in function info
 == 4. Playing with accounts (github) ==
 
 Add account by name
-    # swyctl aa github -name <name>
+    # swyctl aa github <name>
 ... or by personal access token (name will be auto-resolved)
-    # swyctl aa github -token <value>
+    # swyctl aa github - -param token=<value>
 
 List accounts
     # swyctl al
@@ -157,8 +157,8 @@ List accounts
 Show info about account. Only by ID, as there's no name for an account
     # swyctl ai 5b684455fd65c3123a244380
     Type:          github
-    GitHub name:   <name>
-    GitHub token:  2a79fc...
+    Name:          <name>
+    Token:         2a79fc...
 
 Remove account
     # swyctl ad 5b684455fd65c3123a244380

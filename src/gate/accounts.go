@@ -11,14 +11,9 @@ import (
 	"../common/crypto"
 )
 
-type CypToken string
+type Secret string
 
-type GenDesc struct {
-	Name		string		`bson:"name,omitempty"`
-	Tok		CypToken	`bson:"token,omitempty"`
-}
-
-func (ct CypToken)value() (string, error) {
+func (ct Secret)value() (string, error) {
 	var err error
 	t := string(ct)
 	if t != "" {
@@ -27,10 +22,10 @@ func (ct CypToken)value() (string, error) {
 	return t, err
 }
 
-func mkCypToken(v string) (CypToken, error) {
+func mkSecret(v string) (Secret, error) {
 	if v != "" {
 		if len(v) < 10 {
-			return "", errors.New("Invalid token value")
+			return "", errors.New("Invalid secret value")
 		}
 
 		var err error
@@ -41,106 +36,30 @@ func mkCypToken(v string) (CypToken, error) {
 		}
 	}
 
-	return CypToken(v), nil
+	return Secret(v), nil
 }
 
 type AccDesc struct {
-	ObjID		bson.ObjectId	`bson:"_id,omitempty"`
-	SwoId				`bson:",inline"`
-	Cookie		string		`bson:"cookie"`
-	Type		string		`bson:"type"`
-	Gen		*GenDesc	`bson:"gh,omitempty"`
+	ObjID		bson.ObjectId		`bson:"_id,omitempty"`
+	SwoId					`bson:",inline"`
+	Cookie		string			`bson:"cookie"`
+	Type		string			`bson:"type"`
+	Values		map[string]string	`bson:"values"`
+	Secrets		map[string]Secret	`bson:"secrets"`
 }
 
 func mkAccEnvName(typ, name, env string) string {
-	return "ACC_" + strings.ToUpper(typ) + strings.ToUpper(name) + "_" + env
-}
-
-func infoGenAcc(ad *AccDesc, info *swyapi.AccInfo, detail bool) {
-	t, err := ad.Gen.Tok.value()
-	if err == nil {
-		if len(t) > 6 {
-			t = t[:6] + "..."
-		} else {
-			t = ""
-		}
-	} else {
-		t = "<broken>"
-	}
-
-	info.Name = ad.Gen.Name
-	info.Token = t
-}
-
-func setupGenAcc(ad *AccDesc, params *swyapi.AccAdd) *swyapi.GateErr {
-	var err error
-
-	ad.Gen = &GenDesc { Name: params.Name }
-	ad.Gen.Tok, err = mkCypToken(params.Token)
-	if err != nil {
-		return GateErrE(swy.GateGenErr, err)
-	}
-
-	ad.Cookie = cookifyS(ad.SwoId.Tennant, ad.Type, ad.Gen.Name)
-
-	return nil
-}
-
-func updateGenAcc(ad *AccDesc, params *swyapi.AccUpdate) *swyapi.GateErr {
-	if params.Token != nil {
-		var err error
-
-		ad.Gen.Tok, err = mkCypToken(*params.Token)
-		if err != nil {
-			return GateErrE(swy.GateGenErr, err)
-		}
-	}
-
-	return nil
-}
-
-func getEnvGenAcc(ad *AccDesc) map[string]string {
-	tok, _ := ad.Gen.Tok.value()
-	return map[string]string {
-		mkAccEnvName(ad.Type, ad.Gen.Name, "TOKEN"): tok,
-	}
+	return "ACC_" + strings.ToUpper(typ) + strings.ToUpper(name) + "_" + strings.ToUpper(env)
 }
 
 type acHandler struct {
-	setup func (*AccDesc, *swyapi.AccAdd) *swyapi.GateErr
-	info func (*AccDesc, *swyapi.AccInfo, bool)
-	update func (*AccDesc, *swyapi.AccUpdate) *swyapi.GateErr
-	getEnv func (*AccDesc) map[string]string
+	setup func (*AccDesc) *swyapi.GateErr
 }
 
 var accHandlers = map[string]acHandler {
 	"github":	{
 		setup:	setupGithubAcc,
-		info:	infoGenAcc,
-		update:	updateGenAcc,
-		getEnv: getEnvGenAcc,
 	},
-
-	"telegram":	{
-		setup:	setupGenAcc,
-		info:	infoGenAcc,
-		update:	updateGenAcc,
-		getEnv: getEnvGenAcc,
-	},
-}
-
-func (ad *AccDesc)handler() *acHandler {
-	ah, ok := accHandlers[ad.Type]
-	if !ok {
-		ah = acHandler{
-			setup:	setupGenAcc,
-			info:	infoGenAcc,
-			update:	updateGenAcc,
-			getEnv: getEnvGenAcc,
-		}
-	}
-
-	return &ah
 }
 
 func githubResolveName(token string) (string, error) {
@@ -161,51 +80,122 @@ func githubResolveName(token string) (string, error) {
 	return u.Login, nil
 }
 
-func setupGithubAcc(ad *AccDesc, params *swyapi.AccAdd) *swyapi.GateErr {
-	var err error
-
+func setupGithubAcc(ad *AccDesc) *swyapi.GateErr {
 	/* If there's no name -- resolve it */
-	if params.Name == "" {
-		if params.Token == "" {
+	if ad.SwoId.Name == "" {
+		var err error
+
+		tok, ok := ad.Secrets["token"]
+		if !ok || tok == "" {
 			return GateErrM(swy.GateBadRequest, "Need either name or token")
 		}
 
-		params.Name, err = githubResolveName(params.Token)
+		v, err := tok.value()
+		if err != nil {
+			return GateErrE(swy.GateGenErr, err)
+		}
+
+		ad.SwoId.Name, err = githubResolveName(v)
 		if err != nil {
 			return GateErrE(swy.GateGenErr, err)
 		}
 	}
 
-	return setupGenAcc(ad, params)
+	return nil
 }
 
-func getAccDesc(id *SwoId, params *swyapi.AccAdd) (*AccDesc, *swyapi.GateErr) {
-	ad := &AccDesc { SwoId:	*id, Type: params.Type }
-	cerr := ad.handler().setup(ad, params)
+func (ad *AccDesc)fill(values map[string]string) *swyapi.GateErr {
+	var err error
+
+	for k, v := range(values) {
+		switch k {
+		case "id", "name", "type":
+			continue
+		case "token", "secret", "password", "key":
+			ad.Secrets[k], err = mkSecret(v)
+			if err != nil {
+				return GateErrE(swy.GateGenErr, err)
+			}
+		default:
+			ad.Values[k] = v
+		}
+	}
+
+	return nil
+}
+
+func getAccDesc(id *SwoId, params map[string]string) (*AccDesc, *swyapi.GateErr) {
+	ad := &AccDesc {
+		SwoId:		*id,
+		Type:		params["type"],
+		Values:		make(map[string]string),
+		Secrets:	make(map[string]Secret),
+	}
+
+	cerr := ad.fill(params)
 	if cerr != nil {
 		return nil, cerr
+	}
+
+	ah, ok := accHandlers[ad.Type]
+	if ok {
+		cerr := ah.setup(ad)
+		if cerr != nil {
+			return nil, cerr
+		}
 	}
 
 	return ad, nil
 }
 
-func (ad *AccDesc)toInfo(ctx context.Context, details bool) (*swyapi.AccInfo, *swyapi.GateErr) {
-	ac := &swyapi.AccInfo {
-		ID:	ad.ObjID.Hex(),
-		Type:	ad.Type,
+func (ad *AccDesc)toInfo(ctx context.Context, details bool) (map[string]string, *swyapi.GateErr) {
+	ai := map[string]string {
+		"id":		ad.ObjID.Hex(),
+		"type":		ad.Type,
+		"name":		ad.SwoId.Name,
 	}
 
-	ad.handler().info(ad, ac, details)
+	for k, v := range(ad.Values) {
+		ai[k] = v
+	}
 
-	return ac, nil
+	for k, sv := range(ad.Secrets) {
+		v, err := sv.value()
+		if err != nil {
+			v = "<BROKEN>"
+		} else if len(v) > 6 {
+			v = v[:6] + "..."
+		} else {
+			v = "..."
+		}
+		ai[k] = v
+	}
+
+	return ai, nil
 }
 
 func (ad *AccDesc)getEnv() map[string]string {
-	return ad.handler().getEnv(ad)
+	envs := make(map[string]string)
+
+	for k, v := range(ad.Values) {
+		en := mkAccEnvName(ad.Type, ad.SwoId.Name, k)
+		envs[en] = v
+	}
+
+	for k, sv := range(ad.Secrets) {
+		v, err := sv.value()
+		if err == nil  {
+			en := mkAccEnvName(ad.Type, ad.SwoId.Name, k)
+			envs[en] = v
+		}
+	}
+
+	return envs
 }
 
 func (ad *AccDesc)Add(ctx context.Context) *swyapi.GateErr {
 	ad.ObjID = bson.NewObjectId()
+	ad.Cookie = ad.SwoId.Cookie()
 
 	err := dbInsert(ctx, ad)
 	if err != nil {
@@ -215,8 +205,8 @@ func (ad *AccDesc)Add(ctx context.Context) *swyapi.GateErr {
 	return nil
 }
 
-func (ad *AccDesc)Update(ctx context.Context, params *swyapi.AccUpdate) *swyapi.GateErr {
-	cerr := ad.handler().update(ad, params)
+func (ad *AccDesc)Update(ctx context.Context, upd map[string]string) *swyapi.GateErr {
+	cerr := ad.fill(upd)
 	if cerr != nil {
 		return cerr
 	}
