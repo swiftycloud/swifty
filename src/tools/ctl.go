@@ -1473,7 +1473,7 @@ func login() {
 
 func show_login() {
 	fmt.Printf("%s@%s:%s (%s)\n", conf.Login.User, conf.Login.Host, conf.Login.Port, gateProto())
-	if conf.Login.AdmHost != "" {
+	if conf.Login.AdmHost != "" || conf.Login.AdmPort != "" {
 		fmt.Printf("\tadmd: %s:%s\n", conf.Login.AdmHost, conf.Login.AdmPort)
 	}
 	if conf.Login.Relay != "" {
