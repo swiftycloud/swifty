@@ -60,9 +60,11 @@ var nodejs_info = rt_info {
 	PList:		func() []string {
 		o := GetLines("nodejs", "npm", "list")
 		ret := []string{}
-		for _, p := range(o[1:]) {
-			ps := strings.Fields(p)
-			ret = append(ret, ps[len(ps)-1])
+		if len(o) > 0 {
+			for _, p := range(o[1:]) {
+				ps := strings.Fields(p)
+				ret = append(ret, ps[len(ps)-1])
+			}
 		}
 		return ret
 	},
