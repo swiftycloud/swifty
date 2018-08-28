@@ -262,23 +262,6 @@ type RepoFile struct {
 	Children	*[]*RepoFile	`json:"children,omitempty"`
 }
 
-type AccAdd struct {
-	Type		string			`json:"type"`
-	Name		string			`json:"name,omitempty"`
-	Token		string			`json:"token,omitempty"`
-}
-
-type AccUpdate struct {
-	Token		*string			`json:"token,omitempty"`
-}
-
-type AccInfo struct {
-	ID		string			`json:"id"`
-	Type		string			`json:"type"`
-	Name		string			`json:"name,omitempty"`
-	Token		string			`json:"token,omitempty"`
-}
-
 type LangInfo struct {
 	Version		string			`json:"version"`
 	Packages	[]string		`json:"packages"`

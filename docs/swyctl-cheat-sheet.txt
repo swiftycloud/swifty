@@ -41,8 +41,8 @@ Turn auth on/off for fn       # swyctl fu %fname -auth %jwtmname // not the dnam
                               #              ... -auth -
 
 List accounts                 # swyctl al
-Add account                   # swyctl aa github -name name
-... by PAT only               #              ... -token token
+Add account                   # swyctl aa github name
+... by PAT only               #              ... - -token token
 Show account info             # swyctl ai %aid                   // ! ID from al output, not name
 Remove account                # swyctl ad %aid
 Add account to fn             # swyctl fu fname -acc +%aid

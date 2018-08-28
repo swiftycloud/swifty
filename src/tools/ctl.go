@@ -640,12 +640,12 @@ func function_info(args []string, opts [16]string) {
 		}
 	}
 
-	var acs []*swyapi.AccInfo
+	var acs []map[string]string
 	make_faas_req1("GET", "functions/" + args[0] + "/accounts", http.StatusOK, nil, &acs)
 	if len(acs) != 0 {
 		fmt.Printf("Accounts:\n")
 		for _, ac := range acs {
-			fmt.Printf("\t%s:%s\n", ac.ID, ac.Type)
+			fmt.Printf("\t%s:%s\n", ac["id"], ac["type"])
 		}
 	}
 }
@@ -1337,7 +1337,7 @@ func repo_del(args []string, opts [16]string) {
 }
 
 func acc_list(args []string, opts [16]string) {
-	var ais []*swyapi.AccInfo
+	var ais []map[string]string
 	ua := []string{}
 	if opts[0] != "" {
 		ua = append(ua, "type=" + opts[0])
@@ -1345,44 +1345,54 @@ func acc_list(args []string, opts [16]string) {
 	make_faas_req1("GET", url("accounts", ua), http.StatusOK, nil, &ais)
 	fmt.Printf("%-32s%-12s\n", "ID", "TYPE")
 	for _, ai := range ais {
-		fmt.Printf("%-32s%-12s\n", ai.ID, ai.Type)
+		fmt.Printf("%-32s%-12s\n", ai["id"], ai["type"])
 	}
 }
 
 func acc_info(args []string, opts [16]string) {
-	var ai swyapi.AccInfo
+	var ai map[string]string
 	make_faas_req1("GET", "accounts/" + args[0], http.StatusOK, nil, &ai)
-	fmt.Printf("Type:          %s\n", ai.Type)
-	if ai.Name != "" {
-		fmt.Printf("GitHub name:   %s\n", ai.Name)
-	}
-	if ai.Token != "" {
-		fmt.Printf("GitHub token:  %s\n", ai.Token)
+	fmt.Printf("Type:           %s\n", ai["type"])
+	fmt.Printf("Name:           %s\n", ai["name"])
+	for k, v := range(ai) {
+		if k == "id" || k == "name" || k =="type" {
+			continue
+		}
+
+		fmt.Printf("%-16s%s\n", strings.Title(k)+":", v)
 	}
 }
 
 func acc_add(args []string, opts [16]string) {
-	aa := swyapi.AccAdd {
-		Type:	args[0],
+	if args[1] == "-" {
+		args[1] = ""
+	}
+
+	aa := map[string]string {
+		"type": args[0],
+		"name": args[1],
 	}
 
 	if opts[0] != "" {
-		aa.Name = opts[0]
-	}
-	if opts[1] != "" {
-		aa.Token = opts[1]
+		for _, kv := range(strings.Split(opts[0], ":")) {
+			kvs := strings.SplitN(kv, "=", 2)
+			aa[kvs[0]] = kvs[1]
+		}
 	}
 
-	var ai swyapi.AccInfo
+	var ai map[string]string
 	make_faas_req1("POST", "accounts", http.StatusOK, &aa, &ai)
-	fmt.Printf("%s account created\n", ai.ID)
+	fmt.Printf("%s account created\n", ai["id"])
 }
 
 func acc_upd(args []string, opts [16]string) {
-	au := swyapi.AccUpdate {}
+	au := map[string]string{}
 
 	if opts[0] != "" {
-		au.Token = &opts[0]
+		for _, kv := range(strings.Split(opts[1], ":")) {
+			kvs := strings.SplitN(kv, "=", 2)
+			au[kvs[0]] = kvs[1]
+		}
 	}
 
 	make_faas_req1("PUT", "accounts/" + args[0], http.StatusOK, &au, nil)
@@ -1893,11 +1903,10 @@ func main() {
 	cmdMap[CMD_AL].opts.StringVar(&opts[0], "type", "", "Type of account to list")
 	bindCmdUsage(CMD_AL,	[]string{},	"List accounts", false)
 	bindCmdUsage(CMD_AI,	[]string{"ID"}, "Show info about account", false)
-	cmdMap[CMD_AA].opts.StringVar(&opts[0], "name", "", "GitHub name")
-	cmdMap[CMD_AA].opts.StringVar(&opts[1], "token", "", "GitHub token")
-	bindCmdUsage(CMD_AA,	[]string{"TYPE"}, "Add account", false)
+	cmdMap[CMD_AA].opts.StringVar(&opts[0], "param", "", "List of key=value pairs, :-separated")
+	bindCmdUsage(CMD_AA,	[]string{"TYPE", "NAME"}, "Add account", false)
 	bindCmdUsage(CMD_AD,	[]string{"ID"}, "Delete account", false)
-	cmdMap[CMD_AU].opts.StringVar(&opts[0], "token", "", "GitHub token")
+	cmdMap[CMD_AU].opts.StringVar(&opts[0], "param", "", "List of key=value pairs, :-separated")
 	bindCmdUsage(CMD_AU,	[]string{"ID"}, "Add account", false)
 
 	bindCmdUsage(CMD_UL,	[]string{}, "List users", false)

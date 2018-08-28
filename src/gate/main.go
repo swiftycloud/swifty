@@ -757,10 +757,10 @@ func handleFunctionAccounts(ctx context.Context, w http.ResponseWriter, r *http.
 
 	switch r.Method {
 	case "GET":
-		ret := []*swyapi.AccInfo{}
+		ret := []map[string]string{}
 		for _, aid := range fn.Accounts {
 			var ac AccDesc
-			var ai *swyapi.AccInfo
+			var ai map[string]string
 
 			cerr = objFindId(ctx, aid, &ac, nil)
 			if cerr == nil {
@@ -769,7 +769,7 @@ func handleFunctionAccounts(ctx context.Context, w http.ResponseWriter, r *http.
 					return cerr
 				}
 			} else {
-				ai = &swyapi.AccInfo { ID: aid }
+				ai = map[string]string{"id": aid }
 			}
 
 			ret = append(ret, ai)
@@ -1669,7 +1669,7 @@ func handleAccounts(ctx context.Context, w http.ResponseWriter, r *http.Request)
 			return GateErrD(err)
 		}
 
-		ret := []*swyapi.AccInfo{}
+		ret := []map[string]string{}
 		for _, ac := range acs {
 			ai, cerr := ac.toInfo(ctx, false)
 			if cerr != nil {
@@ -1685,17 +1685,21 @@ func handleAccounts(ctx context.Context, w http.ResponseWriter, r *http.Request)
 		}
 
 	case "POST":
-		var params swyapi.AccAdd
+		var params map[string]string
 
 		err := swyhttp.ReadAndUnmarshalReq(r, &params)
 		if err != nil {
 			return GateErrE(swy.GateBadRequest, err)
 		}
 
+		if _, ok := params["type"]; !ok {
+			return GateErrM(swy.GateBadRequest, "No type")
+		}
+
 		ctxlog(ctx).Debugf("account/add: %s params %v", gctx(ctx).Tenant, params)
 
-		id := ctxSwoId(ctx, NoProject, "")
-		ac, cerr := getAccDesc(id, &params)
+		id := ctxSwoId(ctx, NoProject, params["name"])
+		ac, cerr := getAccDesc(id, params)
 		if cerr != nil {
 			return cerr
 		}
@@ -1706,7 +1710,7 @@ func handleAccounts(ctx context.Context, w http.ResponseWriter, r *http.Request)
 		}
 
 		ai, _ := ac.toInfo(ctx, false)
-		err = swyhttp.MarshalAndWrite(w, &ai)
+		err = swyhttp.MarshalAndWrite(w, ai)
 		if err != nil {
 			return GateErrE(swy.GateBadResp, err)
 		}
@@ -1736,14 +1740,14 @@ func handleAccount(ctx context.Context, w http.ResponseWriter, r *http.Request) 
 		}
 
 	case "PUT":
-		var params swyapi.AccUpdate
+		var params map[string]string
 
 		err := swyhttp.ReadAndUnmarshalReq(r, &params)
 		if err != nil {
 			return GateErrE(swy.GateBadRequest, err)
 		}
 
-		cerr := ac.Update(ctx, &params)
+		cerr := ac.Update(ctx, params)
 		if cerr != nil {
 			return cerr
 		}
