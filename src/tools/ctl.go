@@ -511,25 +511,12 @@ func function_list(args []string, opts [16]string) {
 		}
 	}
 
-	if opts[0] == "" {
-		var fns []swyapi.FunctionInfo
-		make_faas_req1("GET", url("functions", ua), http.StatusOK, nil, &fns)
+	var fns []swyapi.FunctionInfo
+	make_faas_req1("GET", url("functions", ua), http.StatusOK, nil, &fns)
 
-		fmt.Printf("%-32s%-20s%-10s\n", "ID", "NAME", "STATE")
-		for _, fn := range fns {
-			fmt.Printf("%-32s%-20s%-12s%s\n", fn.Id, fn.Name, fn.State, strings.Join(fn.Labels, ","))
-		}
-	} else if opts[0] == "json" {
-		ua = append(ua, "details=1")
-		resp := make_faas_req2("GET", url("functions", ua), nil, http.StatusOK, 30)
-		defer resp.Body.Close()
-		body, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			fatal(fmt.Errorf("\tCan't parse responce: %s", err.Error()))
-		}
-		fmt.Printf("%s\n", string(body))
-	} else {
-		fatal(fmt.Errorf("Bad -o value %s", opts[0]))
+	fmt.Printf("%-32s%-20s%-10s\n", "ID", "NAME", "STATE")
+	for _, fn := range fns {
+		fmt.Printf("%-32s%-20s%-12s%s\n", fn.Id, fn.Name, fn.State, strings.Join(fn.Labels, ","))
 	}
 }
 
@@ -1072,21 +1059,10 @@ func mware_list(args []string, opts [16]string) {
 		}
 	}
 
-	if opts[0] == "" {
-		make_faas_req1("GET", url("middleware", ua), http.StatusOK, nil, &mws)
-		fmt.Printf("%-32s%-20s%-10s\n", "ID", "NAME", "TYPE")
-		for _, mw := range mws {
-			fmt.Printf("%-32s%-20s%-10s%s\n", mw.ID, mw.Name, mw.Type, strings.Join(mw.Labels, ","))
-		}
-	} else if opts[0] == "json" {
-		ua = append(ua, "details=1")
-		resp := make_faas_req2("GET", url("middleware", ua), nil, http.StatusOK, 30)
-		defer resp.Body.Close()
-		body, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			fatal(fmt.Errorf("\tCan't parse responce: %s", err.Error()))
-		}
-		fmt.Printf("%s\n", string(body))
+	make_faas_req1("GET", url("middleware", ua), http.StatusOK, nil, &mws)
+	fmt.Printf("%-32s%-20s%-10s\n", "ID", "NAME", "TYPE")
+	for _, mw := range mws {
+		fmt.Printf("%-32s%-20s%-10s%s\n", mw.ID, mw.Name, mw.Type, strings.Join(mw.Labels, ","))
 	}
 }
 
@@ -1819,7 +1795,6 @@ func main() {
 	bindCmdUsage(CMD_STATS,	[]string{}, "Show stats", false)
 	bindCmdUsage(CMD_PS,	[]string{}, "List projects", false)
 
-	cmdMap[CMD_FL].opts.StringVar(&opts[0], "o", "", "Output format (NONE, json)")
 	cmdMap[CMD_FL].opts.StringVar(&opts[1], "label", "", "Labels, comma-separated")
 	bindCmdUsage(CMD_FL,	[]string{}, "List functions", true)
 	bindCmdUsage(CMD_FI,	[]string{"NAME"}, "Function info", true)
@@ -1865,7 +1840,6 @@ func main() {
 	bindCmdUsage(CMD_EI,	[]string{"NAME", "ENAME"}, "Show event info", true)
 	bindCmdUsage(CMD_ED,	[]string{"NAME", "ENAME"}, "Remove event", true)
 
-	cmdMap[CMD_ML].opts.StringVar(&opts[0], "o", "", "Output format (NONE, json)")
 	cmdMap[CMD_ML].opts.StringVar(&opts[1], "type", "", "Filter mware by type")
 	cmdMap[CMD_ML].opts.StringVar(&opts[2], "label", "", "Labels, comma-separated")
 	bindCmdUsage(CMD_ML,	[]string{}, "List middleware", true)
