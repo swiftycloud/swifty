@@ -36,19 +36,18 @@ paths:
           description: Bad username/pass
           
   /stats:
-    post:
+    get:
       summary: Show user statistics
       parameters:
+        - in: query
+          name: periods
+          type: integer
+          required: false
+          description: Number of stats periods to report
         - in: header
           name: X-Auth-Token
           type: string
           required: true
-        - name: date
-          in: body
-          description: Function name
-          required: true
-          schema:
-            $ref: '#/definitions/UserStatsReq'
       responses:
         '200':
           description: OK
@@ -1810,13 +1809,6 @@ definitions:
         type: string
         description: The data provided during /add call
 
-  UserStatsReq:
-    type: object
-    description: Request for user statistics
-    properties:
-      periods:
-        type: integer
-        description: Numer of periods back to request (default 0), the top-most stat will be "till now"
   FunctionStatsResp:
     type: object
     description: Responce with FN stats

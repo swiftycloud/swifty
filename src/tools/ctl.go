@@ -382,18 +382,14 @@ func dateOnly(tm string) string {
 }
 
 func show_stats(args []string, opts [16]string) {
-	var rq swyapi.TenantStatsReq
 	var st swyapi.TenantStatsResp
-	var err error
 
+	ua := []string{}
 	if opts[0] != "" {
-		rq.Periods, err = strconv.Atoi(opts[0])
-		if err != nil {
-			fatal(fmt.Errorf("Bad period value %s: %s", opts[0],  err.Error()))
-		}
+		ua = append(ua, "periods=" + opts[0])
 	}
 
-	make_faas_req1("POST", "stats", http.StatusOK, rq, &st)
+	make_faas_req1("GET", url("stats", ua), http.StatusOK, nil, &st)
 
 	for _, s := range(st.Stats) {
 		fmt.Printf("---\n%s ... %s\n", dateOnly(s.From), dateOnly(s.Till))
