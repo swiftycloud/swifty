@@ -1914,7 +1914,7 @@ func main() {
 		}
 	}
 
-	if len(os.Args) < 2 {
+	if len(os.Args) < 2 || os.Args[1] == "-h" {
 		flag.Usage()
 		os.Exit(1)
 	}
@@ -1922,6 +1922,11 @@ func main() {
 	cd, ok := cmdMap[os.Args[1]]
 	if !ok {
 		flag.Usage()
+		os.Exit(1)
+	}
+
+	if os.Args[2] == "-h" {
+		cd.opts.Usage()
 		os.Exit(1)
 	}
 
