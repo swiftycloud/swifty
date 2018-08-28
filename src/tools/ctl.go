@@ -202,10 +202,6 @@ func make_faas_req1(method, url string, succ int, in interface{}, out interface{
 	}
 }
 
-func make_faas_req(url string, in interface{}, out interface{}) {
-	make_faas_req1("POST", url, http.StatusOK, in, out)
-}
-
 func user_list(args []string, opts [16]string) {
 	var uss []swyapi.UserInfo
 	make_faas_req1("GET", "users", http.StatusOK, nil, &uss)
@@ -397,7 +393,7 @@ func show_stats(args []string, opts [16]string) {
 		}
 	}
 
-	make_faas_req("stats", rq, &st)
+	make_faas_req1("POST", "stats", http.StatusOK, rq, &st)
 
 	for _, s := range(st.Stats) {
 		fmt.Printf("---\n%s ... %s\n", dateOnly(s.From), dateOnly(s.Till))
@@ -409,7 +405,7 @@ func show_stats(args []string, opts [16]string) {
 
 func list_projects(args []string, opts [16]string) {
 	var ps []swyapi.ProjectItem
-	make_faas_req("project/list", swyapi.ProjectList{}, &ps)
+	make_faas_req1("POST", "project/list", http.StatusOK, swyapi.ProjectList{}, &ps)
 
 	for _, p := range ps {
 		fmt.Printf("%s\n", p.Project)
@@ -1409,7 +1405,7 @@ func s3_access(args []string, opts [16]string) {
 
 func languages(args []string, opts [16]string) {
 	var ls []string
-	make_faas_req("info/langs", nil, &ls)
+	make_faas_req1("GET", "info/langs", http.StatusOK, nil, &ls)
 	for _, l := range(ls) {
 		var li swyapi.LangInfo
 		fmt.Printf("%s\n", l)
@@ -1425,7 +1421,7 @@ func languages(args []string, opts [16]string) {
 func mware_types(args []string, opts [16]string) {
 	var r []string
 
-	make_faas_req("info/mwares", nil, &r)
+	make_faas_req1("GET", "info/mwares", http.StatusOK, nil, &r)
 	for _, v := range r {
 		fmt.Printf("%s\n", v)
 	}
