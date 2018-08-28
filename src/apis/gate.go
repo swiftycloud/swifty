@@ -12,10 +12,6 @@ type ProjectDel struct {
 	Project		string			`json:"project"`
 }
 
-type TenantStatsReq struct {
-	Periods		int			`json:"periods"`
-}
-
 type FunctionStats struct {
 	Called		uint64			`json:"called"`
 	Timeouts	uint64			`json:"timeouts"`

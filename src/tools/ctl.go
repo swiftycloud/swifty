@@ -199,11 +199,13 @@ func make_faas_req1(method, url string, succ int, in interface{}, out interface{
 		if err != nil {
 			fatal(err)
 		}
-	}
-}
 
-func make_faas_req(url string, in interface{}, out interface{}) {
-	make_faas_req1("POST", url, http.StatusOK, in, out)
+		if curCmd.verb {
+			dat, _ := json.MarshalIndent(out, "|", "    ")
+			fmt.Printf(" `-[%d]->\n|%s\n", resp.StatusCode, string(dat))
+			fmt.Printf("---------------8<------------------------------------------\n")
+		}
+	}
 }
 
 func user_list(args []string, opts [16]string) {
@@ -386,18 +388,14 @@ func dateOnly(tm string) string {
 }
 
 func show_stats(args []string, opts [16]string) {
-	var rq swyapi.TenantStatsReq
 	var st swyapi.TenantStatsResp
-	var err error
 
+	ua := []string{}
 	if opts[0] != "" {
-		rq.Periods, err = strconv.Atoi(opts[0])
-		if err != nil {
-			fatal(fmt.Errorf("Bad period value %s: %s", opts[0],  err.Error()))
-		}
+		ua = append(ua, "periods=" + opts[0])
 	}
 
-	make_faas_req("stats", rq, &st)
+	make_faas_req1("GET", url("stats", ua), http.StatusOK, nil, &st)
 
 	for _, s := range(st.Stats) {
 		fmt.Printf("---\n%s ... %s\n", dateOnly(s.From), dateOnly(s.Till))
@@ -409,7 +407,7 @@ func show_stats(args []string, opts [16]string) {
 
 func list_projects(args []string, opts [16]string) {
 	var ps []swyapi.ProjectItem
-	make_faas_req("project/list", swyapi.ProjectList{}, &ps)
+	make_faas_req1("POST", "project/list", http.StatusOK, swyapi.ProjectList{}, &ps)
 
 	for _, p := range ps {
 		fmt.Printf("%s\n", p.Project)
@@ -511,25 +509,12 @@ func function_list(args []string, opts [16]string) {
 		}
 	}
 
-	if opts[0] == "" {
-		var fns []swyapi.FunctionInfo
-		make_faas_req1("GET", url("functions", ua), http.StatusOK, nil, &fns)
+	var fns []swyapi.FunctionInfo
+	make_faas_req1("GET", url("functions", ua), http.StatusOK, nil, &fns)
 
-		fmt.Printf("%-32s%-20s%-10s\n", "ID", "NAME", "STATE")
-		for _, fn := range fns {
-			fmt.Printf("%-32s%-20s%-12s%s\n", fn.Id, fn.Name, fn.State, strings.Join(fn.Labels, ","))
-		}
-	} else if opts[0] == "json" {
-		ua = append(ua, "details=1")
-		resp := make_faas_req2("GET", url("functions", ua), nil, http.StatusOK, 30)
-		defer resp.Body.Close()
-		body, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			fatal(fmt.Errorf("\tCan't parse responce: %s", err.Error()))
-		}
-		fmt.Printf("%s\n", string(body))
-	} else {
-		fatal(fmt.Errorf("Bad -o value %s", opts[0]))
+	fmt.Printf("%-32s%-20s%-10s\n", "ID", "NAME", "STATE")
+	for _, fn := range fns {
+		fmt.Printf("%-32s%-20s%-12s%s\n", fn.Id, fn.Name, fn.State, strings.Join(fn.Labels, ","))
 	}
 }
 
@@ -1072,21 +1057,10 @@ func mware_list(args []string, opts [16]string) {
 		}
 	}
 
-	if opts[0] == "" {
-		make_faas_req1("GET", url("middleware", ua), http.StatusOK, nil, &mws)
-		fmt.Printf("%-32s%-20s%-10s\n", "ID", "NAME", "TYPE")
-		for _, mw := range mws {
-			fmt.Printf("%-32s%-20s%-10s%s\n", mw.ID, mw.Name, mw.Type, strings.Join(mw.Labels, ","))
-		}
-	} else if opts[0] == "json" {
-		ua = append(ua, "details=1")
-		resp := make_faas_req2("GET", url("middleware", ua), nil, http.StatusOK, 30)
-		defer resp.Body.Close()
-		body, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			fatal(fmt.Errorf("\tCan't parse responce: %s", err.Error()))
-		}
-		fmt.Printf("%s\n", string(body))
+	make_faas_req1("GET", url("middleware", ua), http.StatusOK, nil, &mws)
+	fmt.Printf("%-32s%-20s%-10s\n", "ID", "NAME", "TYPE")
+	for _, mw := range mws {
+		fmt.Printf("%-32s%-20s%-10s%s\n", mw.ID, mw.Name, mw.Type, strings.Join(mw.Labels, ","))
 	}
 }
 
@@ -1431,18 +1405,9 @@ func s3_access(args []string, opts [16]string) {
 	fmt.Printf("AccID:   %s\n", creds.AccID)
 }
 
-func req_list(url string) {
-	var r []string
-
-	make_faas_req(url, nil, &r)
-	for _, v := range r {
-		fmt.Printf("%s\n", v)
-	}
-}
-
 func languages(args []string, opts [16]string) {
 	var ls []string
-	make_faas_req("info/langs", nil, &ls)
+	make_faas_req1("GET", "info/langs", http.StatusOK, nil, &ls)
 	for _, l := range(ls) {
 		var li swyapi.LangInfo
 		fmt.Printf("%s\n", l)
@@ -1456,7 +1421,12 @@ func languages(args []string, opts [16]string) {
 }
 
 func mware_types(args []string, opts [16]string) {
-	req_list("info/mwares")
+	var r []string
+
+	make_faas_req1("GET", "info/mwares", http.StatusOK, nil, &r)
+	for _, v := range r {
+		fmt.Printf("%s\n", v)
+	}
 }
 
 func login() {
@@ -1473,7 +1443,7 @@ func login() {
 
 func show_login() {
 	fmt.Printf("%s@%s:%s (%s)\n", conf.Login.User, conf.Login.Host, conf.Login.Port, gateProto())
-	if conf.Login.AdmHost != "" {
+	if conf.Login.AdmHost != "" || conf.Login.AdmPort != "" {
 		fmt.Printf("\tadmd: %s:%s\n", conf.Login.AdmHost, conf.Login.AdmPort)
 	}
 	if conf.Login.Relay != "" {
@@ -1790,7 +1760,7 @@ func bindCmdUsage(cmd string, args []string, help string, wp bool) {
 	if wp {
 		cd.opts.StringVar(&cd.project, "proj", "", "Project to work on")
 	}
-	cd.opts.BoolVar(&cd.verb, "V", false, "Show the request to be sent")
+	cd.opts.BoolVar(&cd.verb, "V", false, "Verbose: show the request sent and responce got")
 	cd.opts.StringVar(&cd.relay, "for", "", "Act as another user (admin-only")
 
 	cd.pargs = args
@@ -1819,7 +1789,6 @@ func main() {
 	bindCmdUsage(CMD_STATS,	[]string{}, "Show stats", false)
 	bindCmdUsage(CMD_PS,	[]string{}, "List projects", false)
 
-	cmdMap[CMD_FL].opts.StringVar(&opts[0], "o", "", "Output format (NONE, json)")
 	cmdMap[CMD_FL].opts.StringVar(&opts[1], "label", "", "Labels, comma-separated")
 	bindCmdUsage(CMD_FL,	[]string{}, "List functions", true)
 	bindCmdUsage(CMD_FI,	[]string{"NAME"}, "Function info", true)
@@ -1865,7 +1834,6 @@ func main() {
 	bindCmdUsage(CMD_EI,	[]string{"NAME", "ENAME"}, "Show event info", true)
 	bindCmdUsage(CMD_ED,	[]string{"NAME", "ENAME"}, "Remove event", true)
 
-	cmdMap[CMD_ML].opts.StringVar(&opts[0], "o", "", "Output format (NONE, json)")
 	cmdMap[CMD_ML].opts.StringVar(&opts[1], "type", "", "Filter mware by type")
 	cmdMap[CMD_ML].opts.StringVar(&opts[2], "label", "", "Labels, comma-separated")
 	bindCmdUsage(CMD_ML,	[]string{}, "List middleware", true)
@@ -1946,7 +1914,7 @@ func main() {
 		}
 	}
 
-	if len(os.Args) < 2 {
+	if len(os.Args) < 2 || os.Args[1] == "-h" {
 		flag.Usage()
 		os.Exit(1)
 	}
@@ -1954,6 +1922,11 @@ func main() {
 	cd, ok := cmdMap[os.Args[1]]
 	if !ok {
 		flag.Usage()
+		os.Exit(1)
+	}
+
+	if os.Args[2] == "-h" {
+		cd.opts.Usage()
 		os.Exit(1)
 	}
 
@@ -1968,12 +1941,11 @@ func main() {
 		return
 	}
 
-	login()
-
-	if cd.call != nil {
-		curCmd = cd
-		cd.call(os.Args[2:], opts)
-	} else {
+	if cd.call == nil {
 		fatal(fmt.Errorf("Bad cmd"))
 	}
+
+	login()
+	curCmd = cd
+	cd.call(os.Args[2:], opts)
 }

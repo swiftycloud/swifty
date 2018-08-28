@@ -1010,13 +1010,6 @@ func handleFunctionSources(ctx context.Context, w http.ResponseWriter, r *http.R
 }
 
 func handleTenantStats(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
-	var params swyapi.TenantStatsReq
-
-	err := swyhttp.ReadAndUnmarshalReq(r, &params)
-	if err != nil {
-		return GateErrE(swy.GateBadRequest, err)
-	}
-
 	ten := gctx(ctx).Tenant
 	ctxlog(ctx).Debugf("Get FN stats %s", ten)
 
@@ -1028,15 +1021,17 @@ func handleTenantStats(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	var resp swyapi.TenantStatsResp
 	prev := &td.stats
 
-	if params.Periods > 0 {
+	periods := reqPeriods(r.URL.Query())
+
+	if periods > 0 {
 		var atst []TenStats
 
-		atst, err = dbTenStatsGetArch(ctx, ten, params.Periods)
+		atst, err = dbTenStatsGetArch(ctx, ten, periods)
 		if err != nil {
 			return GateErrD(err)
 		}
 
-		for i := 0; i < params.Periods && i < len(atst); i++ {
+		for i := 0; i < periods && i < len(atst); i++ {
 			cur := &atst[i]
 			resp.Stats = append(resp.Stats, swyapi.TenantStats{
 				Called:		prev.Called - cur.Called,
@@ -2499,9 +2494,9 @@ func main() {
 	r.Handle("/v1/deployments",		genReqHandler(handleDeployments)).Methods("GET", "POST", "OPTIONS")
 	r.Handle("/v1/deployments/{did}",	genReqHandler(handleDeployment)).Methods("GET", "DELETE", "OPTIONS")
 
-	r.Handle("/v1/info/langs",		genReqHandler(handleLanguages)).Methods("POST", "OPTIONS")
+	r.Handle("/v1/info/langs",		genReqHandler(handleLanguages)).Methods("GET", "POST", "OPTIONS")
 	r.Handle("/v1/info/langs/{lang}",	genReqHandler(handleLanguage)).Methods("GET", "OPTIONS")
-	r.Handle("/v1/info/mwares",		genReqHandler(handleMwareTypes)).Methods("POST", "OPTIONS")
+	r.Handle("/v1/info/mwares",		genReqHandler(handleMwareTypes)).Methods("GET", "POST", "OPTIONS")
 
 	r.PathPrefix("/call/{fnid}").Methods("GET", "PUT", "POST", "DELETE", "PATCH", "HEAD", "OPTIONS").HandlerFunc(handleFunctionCall)
 
