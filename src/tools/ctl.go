@@ -1941,12 +1941,11 @@ func main() {
 		return
 	}
 
-	login()
-
-	if cd.call != nil {
-		curCmd = cd
-		cd.call(os.Args[2:], opts)
-	} else {
+	if cd.call == nil {
 		fatal(fmt.Errorf("Bad cmd"))
 	}
+
+	login()
+	curCmd = cd
+	cd.call(os.Args[2:], opts)
 }
