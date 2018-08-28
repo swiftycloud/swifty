@@ -1651,7 +1651,7 @@ paths:
           description: Bad authentication token
           
   /info/langs:
-    post:
+    get:
       summary: Show supported languages
       parameters:
         - in: header
@@ -1703,7 +1703,7 @@ paths:
           description: Bad authentication token
 
   /info/mwares:
-    post:
+    get:
       summary: Show supported mware types
       parameters:
         - in: header

@@ -2499,9 +2499,9 @@ func main() {
 	r.Handle("/v1/deployments",		genReqHandler(handleDeployments)).Methods("GET", "POST", "OPTIONS")
 	r.Handle("/v1/deployments/{did}",	genReqHandler(handleDeployment)).Methods("GET", "DELETE", "OPTIONS")
 
-	r.Handle("/v1/info/langs",		genReqHandler(handleLanguages)).Methods("POST", "OPTIONS")
+	r.Handle("/v1/info/langs",		genReqHandler(handleLanguages)).Methods("GET", "POST", "OPTIONS")
 	r.Handle("/v1/info/langs/{lang}",	genReqHandler(handleLanguage)).Methods("GET", "OPTIONS")
-	r.Handle("/v1/info/mwares",		genReqHandler(handleMwareTypes)).Methods("POST", "OPTIONS")
+	r.Handle("/v1/info/mwares",		genReqHandler(handleMwareTypes)).Methods("GET", "POST", "OPTIONS")
 
 	r.PathPrefix("/call/{fnid}").Methods("GET", "PUT", "POST", "DELETE", "PATCH", "HEAD", "OPTIONS").HandlerFunc(handleFunctionCall)
 
