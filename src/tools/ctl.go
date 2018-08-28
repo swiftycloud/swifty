@@ -1407,15 +1407,6 @@ func s3_access(args []string, opts [16]string) {
 	fmt.Printf("AccID:   %s\n", creds.AccID)
 }
 
-func req_list(url string) {
-	var r []string
-
-	make_faas_req(url, nil, &r)
-	for _, v := range r {
-		fmt.Printf("%s\n", v)
-	}
-}
-
 func languages(args []string, opts [16]string) {
 	var ls []string
 	make_faas_req("info/langs", nil, &ls)
@@ -1432,7 +1423,12 @@ func languages(args []string, opts [16]string) {
 }
 
 func mware_types(args []string, opts [16]string) {
-	req_list("info/mwares")
+	var r []string
+
+	make_faas_req("info/mwares", nil, &r)
+	for _, v := range r {
+		fmt.Printf("%s\n", v)
+	}
 }
 
 func login() {
