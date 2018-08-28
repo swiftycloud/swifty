@@ -199,6 +199,12 @@ func make_faas_req1(method, url string, succ int, in interface{}, out interface{
 		if err != nil {
 			fatal(err)
 		}
+
+		if curCmd.verb {
+			dat, _ := json.MarshalIndent(out, "|", "    ")
+			fmt.Printf(" `-[%d]->\n|%s\n", resp.StatusCode, string(dat))
+			fmt.Printf("---------------8<------------------------------------------\n")
+		}
 	}
 }
 
@@ -1754,7 +1760,7 @@ func bindCmdUsage(cmd string, args []string, help string, wp bool) {
 	if wp {
 		cd.opts.StringVar(&cd.project, "proj", "", "Project to work on")
 	}
-	cd.opts.BoolVar(&cd.verb, "V", false, "Show the request to be sent")
+	cd.opts.BoolVar(&cd.verb, "V", false, "Verbose: show the request sent and responce got")
 	cd.opts.StringVar(&cd.relay, "for", "", "Act as another user (admin-only")
 
 	cd.pargs = args
