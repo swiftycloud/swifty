@@ -1930,7 +1930,7 @@ func handleRepoDesc(ctx context.Context, w http.ResponseWriter, r *http.Request)
 		return cerr
 	}
 
-	d, cerr := rd.getDesc(ctx)
+	d, cerr := rd.description(ctx)
 	if cerr != nil {
 		return cerr
 	}

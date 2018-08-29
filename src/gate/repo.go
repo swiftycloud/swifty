@@ -134,6 +134,19 @@ func (rd *RepoDesc)toInfo(ctx context.Context, details bool) (*swyapi.RepoInfo, 
 	return r, nil
 }
 
+type repoHandler struct {
+	clone func (context.Context, *RepoDesc, *AccDesc) (string, error)
+}
+
+var repoHandlers = map[string]repoHandler {
+	"github":	{
+		clone:	cloneGit,
+	},
+	"gitlab":	{
+		clone:	cloneGit,
+	},
+}
+
 func (rd *RepoDesc)Attach(ctx context.Context, ac *AccDesc) *swyapi.GateErr {
 	rd.ObjID = bson.NewObjectId()
 	rd.State = swy.DBRepoStateCln
@@ -141,7 +154,8 @@ func (rd *RepoDesc)Attach(ctx context.Context, ac *AccDesc) *swyapi.GateErr {
 		rd.AccID = ac.ObjID
 	}
 
-	if rd.Type != "github" {
+	rh, ok := repoHandlers[rd.Type]
+	if !ok {
 		return GateErrM(swy.GateBadRequest, "Unsupported repo type")
 	}
 
@@ -150,7 +164,7 @@ func (rd *RepoDesc)Attach(ctx context.Context, ac *AccDesc) *swyapi.GateErr {
 		return GateErrD(err)
 	}
 
-	go rd.clone(ac)
+	go bgClone(rd, ac, &rh)
 
 	return nil
 }
@@ -190,7 +204,7 @@ func (rd *RepoDesc)Detach(ctx context.Context, conf *YAMLConf) *swyapi.GateErr {
 	return nil
 }
 
-func (rd *RepoDesc)getDesc(ctx context.Context) (*swyapi.RepoDesc, *swyapi.GateErr) {
+func (rd *RepoDesc)description(ctx context.Context) (*swyapi.RepoDesc, *swyapi.GateErr) {
 	dfile := rd.clonePath() + "/" + RepoDescFile
 	if _, err := os.Stat(dfile); os.IsNotExist(err) {
 		return nil, GateErrM(swy.GateNotAvail, "No description for repo")
@@ -435,11 +449,11 @@ func writeSources(ctx context.Context, fn *FunctionDesc, src *swyapi.FunctionSou
 	return srch.get(ctx, fn, src)
 }
 
-func (rd *RepoDesc)clone(ac *AccDesc) {
+func bgClone(rd *RepoDesc, ac *AccDesc, rh *repoHandler) {
 	ctx, done := mkContext("::gitclone")
 	defer done(ctx)
 
-	commit, err := rd.Clone(ctx, ac)
+	commit, err := rh.clone(ctx, rd, ac)
 	if err != nil {
 		/* FIXME -- keep logs and show them user */
 		dbUpdatePart(ctx, rd, bson.M{ "state": swy.DBRepoStateStl })
@@ -454,7 +468,7 @@ func (rd *RepoDesc)clone(ac *AccDesc) {
 				})
 }
 
-func (rd *RepoDesc)Clone(ctx context.Context, ac *AccDesc) (string, error) {
+func cloneGit(ctx context.Context, rd *RepoDesc, ac *AccDesc) (string, error) {
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 

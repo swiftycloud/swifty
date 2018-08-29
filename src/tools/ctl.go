@@ -1925,7 +1925,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	if os.Args[2] == "-h" {
+	if len(os.Args) > 2 && os.Args[2] == "-h" {
 		cd.opts.Usage()
 		os.Exit(1)
 	}
