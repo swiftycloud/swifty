@@ -88,7 +88,7 @@ func Activate(ctx context.Context, b *s3mgo.S3Bucket, o *s3mgo.S3Object, etag st
 	err := dbS3SetOnState(ctx, o, S3StateActive, nil,
 			bson.M{ "state": S3StateActive, "etag": etag, "rover": b.Rover })
 	if err == nil {
-		err = CmtObj(ctx, b, o.Size, -1)
+		err = commitObj(ctx, b, o.Size)
 	}
 
 	if err == nil {
@@ -112,7 +112,6 @@ func UploadToObject(ctx context.Context, iam *s3mgo.S3Iam, bucket *s3mgo.S3Bucke
 		 * not to update all the data objects
 		 */
 		ObjID:		upload.ObjID,
-		IamObjID:	iam.ObjID,
 		State:		S3StateNone,
 
 		S3ObjectProps: s3mgo.S3ObjectProps {
@@ -132,14 +131,14 @@ func UploadToObject(ctx context.Context, iam *s3mgo.S3Iam, bucket *s3mgo.S3Bucke
 	}
 	log.Debugf("s3: Converted %s", infoLong(object))
 
-	err = AddObj(ctx, bucket, object.Size, 1)
+	err = acctObj(ctx, bucket, object.Size)
 	if err != nil {
 		goto out_remove
 	}
 
 	err = Activate(ctx, bucket, object, etag)
 	if err != nil {
-		goto out_remove
+		goto out_acc
 	}
 
 	if bucket.BasicNotify != nil && bucket.BasicNotify.Put > 0 {
@@ -149,6 +148,8 @@ func UploadToObject(ctx context.Context, iam *s3mgo.S3Iam, bucket *s3mgo.S3Bucke
 	log.Debugf("s3: Added %s", infoLong(object))
 	return object, nil
 
+out_acc:
+	unacctObj(ctx, bucket, object.Size, true)
 out_remove:
 	dbS3Remove(ctx, object)
 	return nil, err
@@ -160,7 +161,6 @@ func AddObject(ctx context.Context, iam *s3mgo.S3Iam, bucket *s3mgo.S3Bucket, on
 
 	object := &s3mgo.S3Object {
 		ObjID:		bson.NewObjectId(),
-		IamObjID:	iam.ObjID,
 		State:		S3StateNone,
 
 		S3ObjectProps: s3mgo.S3ObjectProps {
@@ -180,7 +180,7 @@ func AddObject(ctx context.Context, iam *s3mgo.S3Iam, bucket *s3mgo.S3Bucket, on
 	}
 	log.Debugf("s3: Inserted %s", infoLong(object))
 
-	err = AddObj(ctx, bucket, object.Size, 1)
+	err = acctObj(ctx, bucket, object.Size)
 	if err != nil {
 		goto out_remove
 	}
@@ -205,7 +205,7 @@ func AddObject(ctx context.Context, iam *s3mgo.S3Iam, bucket *s3mgo.S3Bucket, on
 out:
 	s3ObjectPartDelOne(ctx, bucket, object.OCookie, objp)
 out_acc:
-	DelObj(ctx, bucket, object.Size, -1)
+	unacctObj(ctx, bucket, object.Size, true)
 out_remove:
 	dbS3Remove(ctx, object)
 	return nil, err
@@ -261,7 +261,7 @@ func DropObject(ctx context.Context, bucket *s3mgo.S3Bucket, object *s3mgo.S3Obj
 		return err
 	}
 
-	err = DelObj(ctx, bucket, object.Size, 0)
+	err = unacctObj(ctx, bucket, object.Size, false)
 	if err != nil {
 		return err
 	}

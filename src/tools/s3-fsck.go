@@ -13,6 +13,7 @@ import (
 const (
 	DBName					= "swifty-s3"
 	DBColS3Iams				= "S3Iams"
+	DBColS3Stats				= "S3Stats"
 	DBColS3Buckets				= "S3Buckets"
 	DBColS3Objects				= "S3Objects"
 	DBColS3Uploads				= "S3Uploads"
@@ -40,6 +41,26 @@ func dbConnect(user, pass, host string) error {
 	}
 
 	session.SetMode(mgo.Monotonic, true)
+	return nil
+}
+
+var stats map[string]*s3mgo.S3AcctStats
+func checkStats() error {
+	var sts []*s3mgo.S3AcctStats
+
+	err := session.DB(DBName).C(DBColS3Stats).Find(bson.M{}).All(&sts)
+	if err != nil {
+		fmt.Printf("Can't lookup accounts: %s", err.Error())
+		return err
+	}
+
+	stats = make(map[string]*s3mgo.S3AcctStats)
+	fmt.Printf("   Stats:\n")
+	for _, st := range sts {
+		stats[st.NamespaceID] = st
+		fmt.Printf("\t%s: nsid=%s\n", st.ObjID.Hex(), st.NamespaceID)
+	}
+
 	return nil
 }
 
@@ -162,11 +183,6 @@ func checkBuckets() error {
 		}
 
 		st := ""
-		_, ok = iams[b.IamObjID.Hex()]
-		if !ok {
-			/* FIXME -- iams can go away with keys expired */
-			st += " noiam!"
-		}
 
 		buckets[b.ObjID.Hex()] = b
 		fmt.Printf("\t%s: ac=..%s name=%-24s c=%s.. o=%d/%d%s\n", b.ObjID.Hex(),
@@ -203,18 +219,22 @@ func checkObjects() error {
 			continue
 		}
 
-		st := ""
-		_, ok = iams[b.IamObjID.Hex()]
+		s, ok := stats[b.NamespaceID]
 		if !ok {
-			/* FIXME -- iams can go away with keys expired */
-			st += " noiam!"
+			fmt.Printf("!!!\t No stats for bucket %s\n", b.ObjID.Hex())
+			continue
 		}
+
+		st := ""
 		if o.Version != 1 {
 			st += " ver"
 		}
 
 		b.CntObjects--
 		b.CntBytes -= o.Size
+		s.CntObjects--
+		s.CntBytes -= o.Size
+
 		objects[o.ObjID.Hex()] = o
 		fmt.Printf("\t%s: bk=..%s key=%-32s c=%s.. s=%d%s\n", o.ObjID.Hex(),
 				b.ObjID.Hex()[12:], b.Name + "::" + o.Key, o.OCookie[:8], o.Size, st)
@@ -226,6 +246,15 @@ func checkObjects() error {
 		}
 		if b.CntBytes != 0 {
 			fmt.Printf("!!!\tBucket %s size mismatch, %d left\n", b.ObjID.Hex(), b.CntBytes)
+		}
+	}
+
+	for _, s := range(stats) {
+		if s.CntObjects != 0 {
+			fmt.Printf("!!!\tStats %s nobj mismatch, %d left\n", s.ObjID.Hex(), s.CntObjects)
+		}
+		if s.CntBytes != 0 {
+			fmt.Printf("!!!\tStats %s size mismatch, %d left\n", s.ObjID.Hex(), s.CntBytes)
 		}
 	}
 
@@ -267,11 +296,6 @@ func checkParts() error {
 
 
 		st := ""
-		_, ok = iams[p.IamObjID.Hex()]
-		if !ok {
-			/* FIXME -- iams can go away with keys expired */
-			st += " noiam!"
-		}
 
 		for _, ci := range(p.Chunks) {
 			pchunks[ci.Hex()] = p
@@ -322,6 +346,11 @@ func main() {
 	flag.Parse()
 
 	err := dbConnect(user, pass, host)
+	if err != nil {
+		return
+	}
+
+	err = checkStats()
 	if err != nil {
 		return
 	}

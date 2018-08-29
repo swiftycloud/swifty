@@ -17,6 +17,14 @@ type S3Account struct {
 	Email				string		`bson:"email,omitempty"`
 }
 
+type S3AcctStats struct {
+	ObjID				bson.ObjectId	`bson:"_id,omitempty"`
+	NamespaceID			string		`bson:"nsid,omitempty"`
+
+	CntObjects			int64		`bson:"cnt-objects"`
+	CntBytes			int64		`bson:"cnt-bytes"`
+}
+
 type S3Iam struct {
 	ObjID				bson.ObjectId	`bson:"_id,omitempty"`
 	MTime				int64		`bson:"mtime,omitempty"`
@@ -79,7 +87,6 @@ type S3BucketEncrypt struct {
 
 type S3Bucket struct {
 	ObjID				bson.ObjectId	`bson:"_id,omitempty"`
-	IamObjID			bson.ObjectId	`bson:"iam-id,omitempty"`
 	BCookie				string		`bson:"bcookie,omitempty"`
 
 	MTime				int64		`bson:"mtime,omitempty"`
@@ -137,7 +144,6 @@ type S3ObjectProps struct {
 
 type S3Object struct {
 	ObjID				bson.ObjectId	`bson:"_id,omitempty"`
-	IamObjID			bson.ObjectId	`bson:"iam-id,omitempty"`
 	OCookie				string		`bson:"ocookie"`
 
 	MTime				int64		`bson:"mtime,omitempty"`
@@ -154,7 +160,6 @@ type S3Object struct {
 
 type S3ObjectPart struct {
 	ObjID				bson.ObjectId	`bson:"_id,omitempty"`
-	IamObjID			bson.ObjectId	`bson:"iam-id,omitempty"`
 
 	MTime				int64		`bson:"mtime,omitempty"`
 	State				uint32		`bson:"state"`

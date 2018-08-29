@@ -206,7 +206,6 @@ func s3ObjectPartAdd(ctx context.Context, iam *s3mgo.S3Iam, refid bson.ObjectId,
 
 	objp = &s3mgo.S3ObjectPart {
 		ObjID:		bson.NewObjectId(),
-		IamObjID:	iam.ObjID,
 		State:		S3StateNone,
 
 		RefID:		refid,
