@@ -17,6 +17,14 @@ type S3Account struct {
 	Email				string		`bson:"email,omitempty"`
 }
 
+type S3AcctStats struct {
+	ObjID				bson.ObjectId	`bson:"_id,omitempty"`
+	NamespaceID			string		`bson:"nsid,omitempty"`
+
+	CntObjects			int64		`bson:"cnt-objects"`
+	CntBytes			int64		`bson:"cnt-bytes"`
+}
+
 type S3Iam struct {
 	ObjID				bson.ObjectId	`bson:"_id,omitempty"`
 	MTime				int64		`bson:"mtime,omitempty"`

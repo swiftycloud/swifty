@@ -103,14 +103,24 @@ func commitObj(ctx context.Context, bucket *s3mgo.S3Bucket, size int64) (error) 
 }
 
 func acctObj(ctx context.Context, bucket *s3mgo.S3Bucket, size int64) (error) {
-	m := bson.M{ "cnt-objects": 1, "cnt-bytes": size, "ref": 1, "rover": int64(1) }
-	err := dbS3Update(ctx, bson.M{ "state": S3StateActive },
+	m := bson.M{ "cnt-objects": 1, "cnt-bytes": size }
+	err := dbS3Upsert(ctx, bson.M{ "nsid": bucket.NamespaceID }, bson.M{ "$inc": m }, &s3mgo.S3AcctStats{} )
+	if err != nil {
+		log.Errorf("s3: Can't +account %d bytes %s: %s",
+			size, infoLong(bucket), err.Error())
+		return err
+	}
+
+	m = bson.M{ "cnt-objects": 1, "cnt-bytes": size, "ref": 1, "rover": int64(1) }
+	err = dbS3Update(ctx, bson.M{ "state": S3StateActive },
 		bson.M{ "$inc": m }, true, bucket)
 	if err != nil {
 		log.Errorf("s3: Can't +account %d bytes %s: %s",
 			size, infoLong(bucket), err.Error())
+		return err
 	}
-	return err
+
+	return nil
 }
 
 func unacctObj(ctx context.Context, bucket *s3mgo.S3Bucket, size int64, dropref bool) (error) {
@@ -123,8 +133,20 @@ func unacctObj(ctx context.Context, bucket *s3mgo.S3Bucket, size int64, dropref 
 	if err != nil {
 		log.Errorf("s3: Can't -account %d bytes %s: %s",
 			size, infoLong(bucket), err.Error())
+		return err
 	}
-	return err
+
+	m = bson.M{ "cnt-objects": -1, "cnt-bytes": -size }
+	err = dbS3Update(ctx, bson.M{ "nsid": bucket.NamespaceID },
+		bson.M{ "$inc": m }, false,
+		&s3mgo.S3AcctStats {})
+	if err != nil {
+		log.Errorf("s3: Can't -account %d bytes %s: %s",
+			size, infoLong(bucket), err.Error())
+		return err
+	}
+
+	return nil
 }
 
 func FindBucket(ctx context.Context, iam *s3mgo.S3Iam, bname string) (*s3mgo.S3Bucket, error) {

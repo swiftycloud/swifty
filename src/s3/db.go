@@ -18,6 +18,7 @@ var session *mgo.Session
 const (
 	DBName					= "swifty-s3"
 	DBColS3Iams				= "S3Iams"
+	DBColS3Stats				= "S3Stats"
 	DBColS3Buckets				= "S3Buckets"
 	DBColS3Objects				= "S3Objects"
 	DBColS3Uploads				= "S3Uploads"
@@ -101,6 +102,7 @@ func dbConnect(conf *YAMLConf) error {
 	dbColMap[reflect.TypeOf(&s3mgo.S3Account{})] = DBColS3Iams
 	dbColMap[reflect.TypeOf([]s3mgo.S3Account{})] = DBColS3Iams
 	dbColMap[reflect.TypeOf(&[]s3mgo.S3Account{})] = DBColS3Iams
+	dbColMap[reflect.TypeOf(&s3mgo.S3AcctStats{})] = DBColS3Stats
 	dbColMap[reflect.TypeOf(s3mgo.S3AccessKey{})] = DBColS3AccessKeys
 	dbColMap[reflect.TypeOf(&s3mgo.S3AccessKey{})] = DBColS3AccessKeys
 	dbColMap[reflect.TypeOf([]s3mgo.S3AccessKey{})] = DBColS3AccessKeys
