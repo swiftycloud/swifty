@@ -112,7 +112,6 @@ func UploadToObject(ctx context.Context, iam *s3mgo.S3Iam, bucket *s3mgo.S3Bucke
 		 * not to update all the data objects
 		 */
 		ObjID:		upload.ObjID,
-		IamObjID:	iam.ObjID,
 		State:		S3StateNone,
 
 		S3ObjectProps: s3mgo.S3ObjectProps {
@@ -162,7 +161,6 @@ func AddObject(ctx context.Context, iam *s3mgo.S3Iam, bucket *s3mgo.S3Bucket, on
 
 	object := &s3mgo.S3Object {
 		ObjID:		bson.NewObjectId(),
-		IamObjID:	iam.ObjID,
 		State:		S3StateNone,
 
 		S3ObjectProps: s3mgo.S3ObjectProps {

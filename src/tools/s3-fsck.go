@@ -162,11 +162,6 @@ func checkBuckets() error {
 		}
 
 		st := ""
-		_, ok = iams[b.IamObjID.Hex()]
-		if !ok {
-			/* FIXME -- iams can go away with keys expired */
-			st += " noiam!"
-		}
 
 		buckets[b.ObjID.Hex()] = b
 		fmt.Printf("\t%s: ac=..%s name=%-24s c=%s.. o=%d/%d%s\n", b.ObjID.Hex(),
@@ -204,11 +199,6 @@ func checkObjects() error {
 		}
 
 		st := ""
-		_, ok = iams[b.IamObjID.Hex()]
-		if !ok {
-			/* FIXME -- iams can go away with keys expired */
-			st += " noiam!"
-		}
 		if o.Version != 1 {
 			st += " ver"
 		}
@@ -267,11 +257,6 @@ func checkParts() error {
 
 
 		st := ""
-		_, ok = iams[p.IamObjID.Hex()]
-		if !ok {
-			/* FIXME -- iams can go away with keys expired */
-			st += " noiam!"
-		}
 
 		for _, ci := range(p.Chunks) {
 			pchunks[ci.Hex()] = p

@@ -272,7 +272,6 @@ func s3InsertBucket(ctx context.Context, iam *s3mgo.S3Iam, bname, canned_acl str
 
 	bucket := &s3mgo.S3Bucket{
 		ObjID:		bson.NewObjectId(),
-		IamObjID:	iam.ObjID,
 		State:		S3StateNone,
 
 		Name:		bname,

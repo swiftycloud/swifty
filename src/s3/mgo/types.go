@@ -79,7 +79,6 @@ type S3BucketEncrypt struct {
 
 type S3Bucket struct {
 	ObjID				bson.ObjectId	`bson:"_id,omitempty"`
-	IamObjID			bson.ObjectId	`bson:"iam-id,omitempty"`
 	BCookie				string		`bson:"bcookie,omitempty"`
 
 	MTime				int64		`bson:"mtime,omitempty"`
@@ -137,7 +136,6 @@ type S3ObjectProps struct {
 
 type S3Object struct {
 	ObjID				bson.ObjectId	`bson:"_id,omitempty"`
-	IamObjID			bson.ObjectId	`bson:"iam-id,omitempty"`
 	OCookie				string		`bson:"ocookie"`
 
 	MTime				int64		`bson:"mtime,omitempty"`
@@ -154,7 +152,6 @@ type S3Object struct {
 
 type S3ObjectPart struct {
 	ObjID				bson.ObjectId	`bson:"_id,omitempty"`
-	IamObjID			bson.ObjectId	`bson:"iam-id,omitempty"`
 
 	MTime				int64		`bson:"mtime,omitempty"`
 	State				uint32		`bson:"state"`
