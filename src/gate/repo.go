@@ -417,24 +417,21 @@ func checkVersion(ctx context.Context, fn *FunctionDesc, version string, version
 }
 
 func getSources(ctx context.Context, fn *FunctionDesc, src *swyapi.FunctionSources) error {
-	srch, ok := srcHandlers[src.Type]
-	if !ok {
-		return fmt.Errorf("Unknown sources type %s", src.Type)
-	}
-
-	fn.Src.Version = zeroVersion
-	return srch.get(ctx, fn, src)
+	return writeSources(ctx, fn, src, zeroVersion)
 }
 
 func updateSources(ctx context.Context, fn *FunctionDesc, src *swyapi.FunctionSources) error {
+	ov, _ := strconv.Atoi(fn.Src.Version)
+	return writeSources(ctx, fn, src, strconv.Itoa(ov + 1))
+}
+
+func writeSources(ctx context.Context, fn *FunctionDesc, src *swyapi.FunctionSources, version string) error {
 	srch, ok := srcHandlers[src.Type]
 	if !ok {
 		return fmt.Errorf("Unknown sources type %s", src.Type)
 	}
 
-	ov, _ := strconv.Atoi(fn.Src.Version)
-	fn.Src.Version = strconv.Itoa(ov + 1)
-
+	fn.Src.Version = version
 	return srch.get(ctx, fn, src)
 }
 
@@ -507,7 +504,7 @@ func (rd *RepoDesc)Clone(ctx context.Context, ac *AccDesc) (string, error) {
 	return gitCommit(clone_to)
 }
 
-func writeSource(ctx context.Context, fn *FunctionDesc, data []byte) error {
+func writeSourceFile(ctx context.Context, fn *FunctionDesc, data []byte) error {
 	to := fnCodeLatestPath(&conf, fn)
 	err := os.MkdirAll(to, 0750)
 	if err != nil {
@@ -550,7 +547,7 @@ func getFileFromRepo(ctx context.Context, fn *FunctionDesc, src *swyapi.Function
 		return err
 	}
 
-	return writeSource(ctx, fn, fnCode)
+	return writeSourceFile(ctx, fn, fnCode)
 }
 
 func getFileFromReq(ctx context.Context, fn *FunctionDesc, src *swyapi.FunctionSources) error {
@@ -559,7 +556,7 @@ func getFileFromReq(ctx context.Context, fn *FunctionDesc, src *swyapi.FunctionS
 		return fmt.Errorf("Error decoding sources")
 	}
 
-	return writeSource(ctx, fn, data)
+	return writeSourceFile(ctx, fn, data)
 }
 
 func GCOldSources(ctx context.Context, fn *FunctionDesc, ver string) {
