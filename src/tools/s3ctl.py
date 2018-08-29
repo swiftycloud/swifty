@@ -240,7 +240,7 @@ def request_notify(data):
         return None
 
 def make_client(service_name, endpoint_url, access_key, secret_key):
-    endpoint_url = "http://" + endpoint_url + "/"
+    endpoint_url = endpoint_url + "/"
     print("Connecting to %s endpoint %s with keys %s / %s" %
           (service_name, endpoint_url, access_key, secret_key))
     return boto3.session.Session().client(service_name,
