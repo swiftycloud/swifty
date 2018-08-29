@@ -139,7 +139,7 @@ func UploadToObject(ctx context.Context, iam *s3mgo.S3Iam, bucket *s3mgo.S3Bucke
 
 	err = Activate(ctx, bucket, object, etag)
 	if err != nil {
-		goto out_remove
+		goto out_acc
 	}
 
 	if bucket.BasicNotify != nil && bucket.BasicNotify.Put > 0 {
@@ -149,6 +149,8 @@ func UploadToObject(ctx context.Context, iam *s3mgo.S3Iam, bucket *s3mgo.S3Bucke
 	log.Debugf("s3: Added %s", infoLong(object))
 	return object, nil
 
+out_acc:
+	DelObj(ctx, bucket, object.Size, -1)
 out_remove:
 	dbS3Remove(ctx, object)
 	return nil, err
