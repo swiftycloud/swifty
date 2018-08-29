@@ -190,7 +190,7 @@ func (rd *RepoDesc)Detach(ctx context.Context, conf *YAMLConf) *swyapi.GateErr {
 	return nil
 }
 
-func (rd *RepoDesc)getDesc(ctx context.Context) (*swyapi.RepoDesc, *swyapi.GateErr) {
+func (rd *RepoDesc)description(ctx context.Context) (*swyapi.RepoDesc, *swyapi.GateErr) {
 	dfile := rd.clonePath() + "/" + RepoDescFile
 	if _, err := os.Stat(dfile); os.IsNotExist(err) {
 		return nil, GateErrM(swy.GateNotAvail, "No description for repo")
