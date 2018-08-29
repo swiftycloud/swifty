@@ -417,24 +417,21 @@ func checkVersion(ctx context.Context, fn *FunctionDesc, version string, version
 }
 
 func getSources(ctx context.Context, fn *FunctionDesc, src *swyapi.FunctionSources) error {
-	srch, ok := srcHandlers[src.Type]
-	if !ok {
-		return fmt.Errorf("Unknown sources type %s", src.Type)
-	}
-
-	fn.Src.Version = zeroVersion
-	return srch.get(ctx, fn, src)
+	return writeSources(ctx, fn, src, zeroVersion)
 }
 
 func updateSources(ctx context.Context, fn *FunctionDesc, src *swyapi.FunctionSources) error {
+	ov, _ := strconv.Atoi(fn.Src.Version)
+	return writeSources(ctx, fn, src, strconv.Itoa(ov + 1))
+}
+
+func writeSources(ctx context.Context, fn *FunctionDesc, src *swyapi.FunctionSources, version string) error {
 	srch, ok := srcHandlers[src.Type]
 	if !ok {
 		return fmt.Errorf("Unknown sources type %s", src.Type)
 	}
 
-	ov, _ := strconv.Atoi(fn.Src.Version)
-	fn.Src.Version = strconv.Itoa(ov + 1)
-
+	fn.Src.Version = version
 	return srch.get(ctx, fn, src)
 }
 
@@ -507,16 +504,7 @@ func (rd *RepoDesc)Clone(ctx context.Context, ac *AccDesc) (string, error) {
 	return gitCommit(clone_to)
 }
 
-func writeSource(ctx context.Context, fn *FunctionDesc, codeb64 string) error {
-	data, err := base64.StdEncoding.DecodeString(codeb64)
-	if err != nil {
-		return fmt.Errorf("Error decoding sources")
-	}
-
-	return writeSourceRaw(ctx, fn, data)
-}
-
-func writeSourceRaw(ctx context.Context, fn *FunctionDesc, data []byte) error {
+func writeSourceFile(ctx context.Context, fn *FunctionDesc, data []byte) error {
 	to := fnCodeLatestPath(&conf, fn)
 	err := os.MkdirAll(to, 0750)
 	if err != nil {
@@ -559,11 +547,16 @@ func getFileFromRepo(ctx context.Context, fn *FunctionDesc, src *swyapi.Function
 		return err
 	}
 
-	return writeSourceRaw(ctx, fn, fnCode)
+	return writeSourceFile(ctx, fn, fnCode)
 }
 
 func getFileFromReq(ctx context.Context, fn *FunctionDesc, src *swyapi.FunctionSources) error {
-	return writeSource(ctx, fn, src.Code)
+	data, err := base64.StdEncoding.DecodeString(src.Code)
+	if err != nil {
+		return fmt.Errorf("Error decoding sources")
+	}
+
+	return writeSourceFile(ctx, fn, data)
 }
 
 func GCOldSources(ctx context.Context, fn *FunctionDesc, ver string) {
