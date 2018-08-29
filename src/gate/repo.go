@@ -507,16 +507,7 @@ func (rd *RepoDesc)Clone(ctx context.Context, ac *AccDesc) (string, error) {
 	return gitCommit(clone_to)
 }
 
-func writeSource(ctx context.Context, fn *FunctionDesc, codeb64 string) error {
-	data, err := base64.StdEncoding.DecodeString(codeb64)
-	if err != nil {
-		return fmt.Errorf("Error decoding sources")
-	}
-
-	return writeSourceRaw(ctx, fn, data)
-}
-
-func writeSourceRaw(ctx context.Context, fn *FunctionDesc, data []byte) error {
+func writeSource(ctx context.Context, fn *FunctionDesc, data []byte) error {
 	to := fnCodeLatestPath(&conf, fn)
 	err := os.MkdirAll(to, 0750)
 	if err != nil {
@@ -559,11 +550,16 @@ func getFileFromRepo(ctx context.Context, fn *FunctionDesc, src *swyapi.Function
 		return err
 	}
 
-	return writeSourceRaw(ctx, fn, fnCode)
+	return writeSource(ctx, fn, fnCode)
 }
 
 func getFileFromReq(ctx context.Context, fn *FunctionDesc, src *swyapi.FunctionSources) error {
-	return writeSource(ctx, fn, src.Code)
+	data, err := base64.StdEncoding.DecodeString(src.Code)
+	if err != nil {
+		return fmt.Errorf("Error decoding sources")
+	}
+
+	return writeSource(ctx, fn, data)
 }
 
 func GCOldSources(ctx context.Context, fn *FunctionDesc, ver string) {
