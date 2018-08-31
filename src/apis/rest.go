@@ -7,7 +7,7 @@ import (
 	"../common/http"
 )
 
-type SwyClient struct {
+type Client struct {
 	proto	string
 	token	string
 	gaddr	string
@@ -23,8 +23,8 @@ type SwyClient struct {
 	stok	func(tok string)
 }
 
-func SwyMakeClient(user, pass, addr, port string) *SwyClient {
-	ret := SwyClient{}
+func MakeClient(user, pass, addr, port string) *Client {
+	ret := Client{}
 	ret.proto = "https"
 	ret.user = user
 	ret.pass = pass
@@ -33,16 +33,16 @@ func SwyMakeClient(user, pass, addr, port string) *SwyClient {
 	return &ret
 }
 
-func (cln *SwyClient)Token(tok string) { cln.token = tok }
-func (cln *SwyClient)Relay(rly string) { cln.relay = rly }
-func (cln *SwyClient)Verbose() { cln.verb = true }
-func (cln *SwyClient)TokSaver(f func(tok string)) { cln.stok = f }
-func (cln *SwyClient)Admd(addr, port string) { cln.aaddr = addr; cln.aport = port }
-func (cln *SwyClient)NoTLS() { cln.proto = "http" }
-func (cln *SwyClient)Direct() { cln.direct = true }
-func (cln *SwyClient)ToAdmd(v bool) { cln.admd = v }
+func (cln *Client)Token(tok string) { cln.token = tok }
+func (cln *Client)Relay(rly string) { cln.relay = rly }
+func (cln *Client)Verbose() { cln.verb = true }
+func (cln *Client)TokSaver(f func(tok string)) { cln.stok = f }
+func (cln *Client)Admd(addr, port string) { cln.aaddr = addr; cln.aport = port }
+func (cln *Client)NoTLS() { cln.proto = "http" }
+func (cln *Client)Direct() { cln.direct = true }
+func (cln *Client)ToAdmd(v bool) { cln.admd = v }
 
-func (cln *SwyClient)endpoint() string {
+func (cln *Client)endpoint() string {
 	var ep string
 
 	if !cln.admd {
@@ -69,7 +69,7 @@ func (cln *SwyClient)endpoint() string {
 	return ep
 }
 
-func (cln *SwyClient)Req3(method, url string, in interface{}, succ_code int, tmo uint) (*http.Response, error) {
+func (cln *Client)Req3(method, url string, in interface{}, succ_code int, tmo uint) (*http.Response, error) {
 	address := cln.proto + "://" + cln.endpoint() + "/v1/" + url
 
 	h := make(map[string]string)
@@ -111,7 +111,7 @@ func (cln *SwyClient)Req3(method, url string, in interface{}, succ_code int, tmo
 			}, in)
 }
 
-func (cln *SwyClient)Login() (string, error) {
+func (cln *Client)Login() (string, error) {
 	resp, err := cln.Req3("POST", "login", UserLogin {
 			UserName: cln.user, Password: cln.pass,
 		}, http.StatusOK, 0)
@@ -138,7 +138,7 @@ func (cln *SwyClient)Login() (string, error) {
 	return token, nil
 }
 
-func (cln *SwyClient)Req2(method, url string, in interface{}, succ_code int, tmo uint) (*http.Response, error) {
+func (cln *Client)Req2(method, url string, in interface{}, succ_code int, tmo uint) (*http.Response, error) {
 	first_attempt := true
 again:
 	resp, err := cln.Req3(method, url, in, succ_code, tmo)
@@ -182,7 +182,7 @@ again:
 	return resp, nil
 }
 
-func (cln *SwyClient)Req1(method, url string, succ int, in interface{}, out interface{}) error {
+func (cln *Client)Req1(method, url string, succ int, in interface{}, out interface{}) error {
 	resp, err := cln.Req2(method, url, in, succ, 30)
 	if err != nil {
 		return err

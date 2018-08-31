@@ -17,7 +17,7 @@ import (
 	"../apis"
 )
 
-var swyclient *swyapi.SwyClient
+var swyclient *swyapi.Client
 
 type LoginInfo struct {
 	Host		string		`yaml:"host"`
@@ -1340,7 +1340,7 @@ func manage_login(args []string, opts [16]string) {
 }
 
 func mkClient() {
-	swyclient = swyapi.SwyMakeClient(conf.Login.User, conf.Login.Pass, conf.Login.Host, conf.Login.Port)
+	swyclient = swyapi.MakeClient(conf.Login.User, conf.Login.Pass, conf.Login.Host, conf.Login.Port)
 	if curCmd.adm {
 		swyclient.Admd(conf.Login.AdmHost, conf.Login.AdmPort)
 		swyclient.ToAdmd(true)
