@@ -1401,12 +1401,10 @@ func make_login(creds string, opts [16]string) {
 
 	mkClient()
 
-	var err error
-	conf.Login.Token, err = swyclient.Login()
+	err := swyclient.Login()
 	if err != nil {
 		fatal(err)
 	}
-	save_config()
 }
 
 func save_config() {

@@ -111,31 +111,36 @@ func (cln *Client)Req3(method, url string, in interface{}, succ_code int, tmo ui
 			}, in)
 }
 
-func (cln *Client)Login() (string, error) {
+func (cln *Client)Login() error {
 	resp, err := cln.Req3("POST", "login", UserLogin {
 			UserName: cln.user, Password: cln.pass,
 		}, http.StatusOK, 0)
 	if err != nil {
-		return "", err
+		return err
 	}
 
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("Bad responce from server: " + string(resp.Status))
+		return fmt.Errorf("Bad responce from server: " + string(resp.Status))
 	}
 
 	token := resp.Header.Get("X-Subject-Token")
 	if token == "" {
-		return "", fmt.Errorf("No auth token from server")
+		return fmt.Errorf("No auth token from server")
 	}
 
-	var td UserToken
-	err = swyhttp.ReadAndUnmarshalResp(resp, &td)
-	if err != nil {
-		return "", fmt.Errorf("Can't unmarshal login resp: %s", err.Error())
+//	var td UserToken
+//	err = swyhttp.ReadAndUnmarshalResp(resp, &td)
+//	if err != nil {
+//		return fmt.Errorf("Can't unmarshal login resp: %s", err.Error())
+//	}
+
+	cln.token = token
+	if cln.stok != nil {
+		cln.stok(token)
 	}
 
-	return token, nil
+	return nil
 }
 
 func (cln *Client)Req2(method, url string, in interface{}, succ_code int, tmo uint) (*http.Response, error) {
@@ -148,15 +153,11 @@ again:
 		}
 
 		if (resp.StatusCode == http.StatusUnauthorized) && first_attempt {
-			var err error
 			resp.Body.Close()
 			first_attempt = false
-			cln.token, err = cln.Login()
+			err := cln.Login()
 			if err != nil {
 				return nil, err
-			}
-			if cln.stok != nil {
-				cln.stok(cln.token)
 			}
 			goto again
 		}
