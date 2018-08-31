@@ -9,6 +9,7 @@ import (
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 
+	"./mgo"
 	"../common"
 	"../apis"
 )
@@ -218,7 +219,7 @@ func dbTenStatsGetLatestArch(ctx context.Context, tenant string) (*TenStats, err
 	return &ret, err
 }
 
-func dbTenStatsUpdate(ctx context.Context, tenant string, delta *TenStatValues) error {
+func dbTenStatsUpdate(ctx context.Context, tenant string, delta *gmgo.TenStatValues) error {
 	_, err := dbCol(ctx, DBColTenStats).Upsert(bson.M{"tenant": tenant}, bson.M{
 			"$set": bson.M{"tenant": tenant},
 			"$inc": bson.M{
@@ -241,7 +242,7 @@ func dbFnStatsGetArch(ctx context.Context, id string, nr int) ([]FnStats, error)
 	return ret, err
 }
 
-func dbFnStatsUpdate(ctx context.Context, cookie string, delta *FnStatValues, lastCall time.Time) error {
+func dbFnStatsUpdate(ctx context.Context, cookie string, delta *gmgo.FnStatValues, lastCall time.Time) error {
 	_, err := dbCol(ctx, DBColFnStats).Upsert(bson.M{"cookie": cookie}, bson.M{
 			"$set": bson.M{"cookie": cookie},
 			"$inc": bson.M{
