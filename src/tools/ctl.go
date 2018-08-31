@@ -14,9 +14,10 @@ import (
 	"os"
 
 	"../common"
-	"../common/http"
 	"../apis"
 )
+
+var swyclient *swyapi.SwyClient
 
 type LoginInfo struct {
 	Host		string		`yaml:"host"`
@@ -27,34 +28,6 @@ type LoginInfo struct {
 	AdmHost		string		`yaml:"admhost,omitempty"`
 	AdmPort		string		`yaml:"admport,omitempty"`
 	Relay		string		`yaml:"relay,omitempty"`
-}
-
-func (c *YAMLConf)Endpoint() string {
-	var ep string
-	li := &c.Login
-
-	if !curCmd.adm {
-		ep = li.Host + ":" + li.Port
-		if !c.Direct {
-			ep += "/gate"
-		}
-	} else {
-		if li.AdmPort == "" {
-			fatal(fmt.Errorf("Admd not set for this command"))
-		}
-
-		ah := li.AdmHost
-		if ah == "" {
-			ah = li.Host
-		}
-
-		ep = ah + ":" + li.AdmPort
-		if !c.Direct {
-			ep += "/admd"
-		}
-	}
-
-	return ep
 }
 
 type YAMLConf struct {
@@ -79,133 +52,19 @@ func gateProto() string {
 	}
 }
 
-func make_faas_req3(method, url string, in interface{}, succ_code int, tmo uint) (*http.Response, error) {
-	address := gateProto() + "://" + conf.Endpoint() + "/v1/" + url
-
-	h := make(map[string]string)
-	if conf.Login.Token != "" {
-		h["X-Auth-Token"] = conf.Login.Token
-	}
-	if curCmd.relay != "" {
-		h["X-Relay-Tennant"] = curCmd.relay
-	} else if conf.Login.Relay != "" {
-		h["X-Relay-Tennant"] = conf.Login.Relay
-	}
-
-	var crt []byte
-	if conf.TLS && conf.Certs != "" {
-		var err error
-
-		crt, err = ioutil.ReadFile(conf.Certs)
-		if err != nil {
-			return nil, fmt.Errorf("Error reading cert file: %s", err.Error())
-		}
-	}
-
-	if curCmd.verb {
-		fmt.Printf("[%s] %s\n", method, address)
-		if in != nil {
-			x, err := json.Marshal(in)
-			if err == nil {
-				fmt.Printf("`- body: %s\n", string(x))
-			}
-		}
-	}
-
-	return swyhttp.MarshalAndPost(
-			&swyhttp.RestReq{
-				Method:		method,
-				Address:	address,
-				Headers:	h,
-				Success:	succ_code,
-				Timeout:	tmo,
-				Certs:		crt,
-			}, in)
-}
-
-func faas_login() string {
-	resp, err := make_faas_req3("POST", "login", swyapi.UserLogin {
-			UserName: conf.Login.User, Password: conf.Login.Pass,
-		}, http.StatusOK, 0)
+func make_faas_req1(method, url string, succ int, in interface{}, out interface{}) {
+	err := swyclient.Req1(method, url, succ, in, out)
 	if err != nil {
 		fatal(err)
 	}
-
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		fatal(fmt.Errorf("Bad responce from server: " + string(resp.Status)))
-	}
-
-	token := resp.Header.Get("X-Subject-Token")
-	if token == "" {
-		fatal(fmt.Errorf("No auth token from server"))
-	}
-
-	var td swyapi.UserToken
-	err = swyhttp.ReadAndUnmarshalResp(resp, &td)
-	if err != nil {
-		fatal(fmt.Errorf("Can't unmarshal login resp: %s", err.Error()))
-	}
-
-	fmt.Printf("Logged in, token till %s\n", td.Expires)
-
-	return token
 }
 
 func make_faas_req2(method, url string, in interface{}, succ_code int, tmo uint) *http.Response {
-	first_attempt := true
-again:
-	resp, err := make_faas_req3(method, url, in, succ_code, tmo)
+	resp, err := swyclient.Req2(method, url, in, succ_code, tmo)
 	if err != nil {
-		if resp == nil {
-			fatal(err)
-		}
-
-		if (resp.StatusCode == http.StatusUnauthorized) && first_attempt {
-			resp.Body.Close()
-			first_attempt = false
-			refresh_token("")
-			goto again
-		}
-
-		if resp.StatusCode == http.StatusBadRequest {
-			var gerr swyapi.GateErr
-
-			err = swyhttp.ReadAndUnmarshalResp(resp, &gerr)
-			resp.Body.Close()
-
-			if err == nil {
-				err = fmt.Errorf("Operation failed (%d): %s", gerr.Code, gerr.Message)
-			} else {
-				err = fmt.Errorf("Operation failed with no details")
-			}
-		} else {
-			err = fmt.Errorf("Bad responce: %s", string(resp.Status))
-		}
-
 		fatal(err)
 	}
-
 	return resp
-}
-
-func make_faas_req1(method, url string, succ int, in interface{}, out interface{}) {
-	resp := make_faas_req2(method, url, in, succ, 30)
-	/* Here we have http.StatusOK */
-	defer resp.Body.Close()
-
-	if out != nil {
-		err := swyhttp.ReadAndUnmarshalResp(resp, out)
-		if err != nil {
-			fatal(err)
-		}
-
-		if curCmd.verb {
-			dat, _ := json.MarshalIndent(out, "|", "    ")
-			fmt.Printf(" `-[%d]->\n|%s\n", resp.StatusCode, string(dat))
-			fmt.Printf("---------------8<------------------------------------------\n")
-		}
-	}
 }
 
 func user_list(args []string, opts [16]string) {
@@ -214,8 +73,11 @@ func user_list(args []string, opts [16]string) {
 
 	for _, u := range uss {
 		en := ""
+		if u.Created != "" {
+			en += " since " + u.Created
+		}
 		if !u.Enabled {
-			en = " [X]"
+			en += " [X]"
 		}
 		fmt.Printf("%s: %s (%s)%s\n", u.ID, u.UId, u.Name, en)
 	}
@@ -1440,6 +1302,8 @@ func login() {
 	if err != nil {
 		fatal(fmt.Errorf("Login first"))
 	}
+
+	mkClient()
 }
 
 func show_login() {
@@ -1458,7 +1322,7 @@ func set_relay_tenant(rt string) {
 	}
 
 	conf.Login.Relay = rt
-	save_config("")
+	save_config()
 }
 
 func manage_login(args []string, opts [16]string) {
@@ -1475,16 +1339,38 @@ func manage_login(args []string, opts [16]string) {
 	}
 }
 
+func mkClient() {
+	swyclient = swyapi.SwyMakeClient(conf.Login.User, conf.Login.Pass, conf.Login.Host, conf.Login.Port)
+	if curCmd.adm {
+		swyclient.Admd(conf.Login.AdmHost, conf.Login.AdmPort)
+		swyclient.ToAdmd(true)
+	}
+	if curCmd.relay != "" {
+		swyclient.Relay(curCmd.relay)
+	} else if conf.Login.Relay != "" {
+		swyclient.Relay(conf.Login.Relay)
+	}
+	if curCmd.verb {
+		swyclient.Verbose()
+	}
+	if !conf.TLS {
+		swyclient.NoTLS()
+	}
+	if conf.Direct {
+		swyclient.Direct()
+	}
+	swyclient.TokSaver(func(tok string) { conf.Login.Token = tok; save_config() })
+
+	/* Guy can be cached in config */
+	swyclient.Token(conf.Login.Token)
+}
+
 func make_login(creds string, opts [16]string) {
 	//
 	// Login string is user:pass@host:port
 	//
 	// swifty.user:swifty@10.94.96.216:8686
 	//
-	home, found := os.LookupEnv("HOME")
-	if !found {
-		fatal(fmt.Errorf("No HOME dir set"))
-	}
 
 	c := swy.ParseXCreds(creds)
 	conf.Login.User = c.User
@@ -1513,21 +1399,20 @@ func make_login(creds string, opts [16]string) {
 		conf.Direct = false
 	}
 
-	refresh_token(home)
+	mkClient()
+
+	var err error
+	conf.Login.Token, err = swyclient.Login()
+	if err != nil {
+		fatal(err)
+	}
+	save_config()
 }
 
-func refresh_token(home string) {
-	conf.Login.Token = faas_login()
-	save_config(home)
-}
-
-func save_config(home string) {
-	if home == "" {
-		var found bool
-		home, found = os.LookupEnv("HOME")
-		if !found {
-			fatal(fmt.Errorf("No HOME dir set"))
-		}
+func save_config() {
+	home, found := os.LookupEnv("HOME")
+	if !found {
+		fatal(fmt.Errorf("No HOME dir set"))
 	}
 
 	err := swy.WriteYamlConfig(home + "/.swifty.conf", &conf)
@@ -1946,7 +1831,7 @@ func main() {
 		fatal(fmt.Errorf("Bad cmd"))
 	}
 
-	login()
 	curCmd = cd
+	login()
 	cd.call(os.Args[2:], opts)
 }
