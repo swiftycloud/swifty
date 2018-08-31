@@ -3,6 +3,7 @@ package main
 import (
 	"time"
 	"context"
+	"./mgo"
 	"../apis"
 	"../common"
 	"../common/http"
@@ -26,31 +27,15 @@ type statsFlush struct {
 	writer		statsWriter
 }
 
-type FnStatValues struct {
-	Called		uint64		`bson:"called"`
-	Timeouts	uint64		`bson:"timeouts"`
-	Errors		uint64		`bson:"errors"`
-	LastCall	time.Time	`bson:"lastcall"`
-	RunTime		time.Duration	`bson:"rtime"`
-	BytesIn		uint64		`bson:"bytesin"`
-	BytesOut	uint64		`bson:"bytesout"`
-
-	/* RunCost is a value that represents the amount of
-	 * resources spent for this function. It's used by
-	 * billing to change the tennant.
-	 */
-	RunCost		uint64		`bson:"runcost"`
-}
-
 type FnStats struct {
 //	ObjID		bson.ObjectId	`bson:"_id,omitempty"`
 	Cookie		string		`bson:"cookie"`
-	FnStatValues			`bson:",inline"`
+	gmgo.FnStatValues		`bson:",inline"`
 	Dropped		*time.Time	`bson:"dropped,omitempty"`
 	Till		*time.Time	`bson:"till,omitempty"`
 
 	statsFlush			`bson:"-"`
-	onDisk		*FnStatValues	`bson:"-"`
+	onDisk		*gmgo.FnStatValues	`bson:"-"`
 }
 
 func (fs *FnStats)GBS() float64 {
@@ -95,20 +80,13 @@ func (fs *FnStats)RunTimeUsec() uint64 {
 	return uint64(fs.RunTime/time.Microsecond)
 }
 
-type TenStatValues struct {
-	Called		uint64		`bson:"called"`
-	RunCost		uint64		`bson:"runcost"`
-	BytesIn		uint64		`bson:"bytesin"`
-	BytesOut	uint64		`bson:"bytesout"`
-}
-
 type TenStats struct {
 	Tenant		string		`bson:"tenant"`
-	TenStatValues			`bson:",inline"`
+	gmgo.TenStatValues			`bson:",inline"`
 	Till		*time.Time	`bson:"till,omitempty"`
 
 	statsFlush			`bson:"-"`
-	onDisk		*TenStatValues	`bson:"-"`
+	onDisk		*gmgo.TenStatValues	`bson:"-"`
 }
 
 func (fn *FunctionDesc)getStats(ctx context.Context, periods int) ([]swyapi.FunctionStats, *swyapi.GateErr) {
@@ -249,7 +227,7 @@ func statsDrop(ctx context.Context, fn *FunctionDesc) error {
 func (st *FnStats)Init(ctx context.Context, fn *FunctionDesc) error {
 	err := dbFnStatsGet(ctx, fn.Cookie, st)
 	if err == nil {
-		st.onDisk = &FnStatValues{}
+		st.onDisk = &gmgo.FnStatValues{}
 		*st.onDisk = st.FnStatValues
 		st.Cookie = fn.Cookie
 		st.statsFlush.Init(st, fn.Cookie)
@@ -258,8 +236,8 @@ func (st *FnStats)Init(ctx context.Context, fn *FunctionDesc) error {
 }
 
 func (st *FnStats)Write(ctx context.Context) {
-	var now FnStatValues = st.FnStatValues
-	delta := FnStatValues {
+	var now gmgo.FnStatValues = st.FnStatValues
+	delta := gmgo.FnStatValues {
 		Called: now.Called - st.onDisk.Called,
 		Timeouts: now.Timeouts - st.onDisk.Timeouts,
 		Errors: now.Errors - st.onDisk.Errors,
@@ -279,7 +257,7 @@ func (st *FnStats)Write(ctx context.Context) {
 func (st *TenStats)Init(ctx context.Context, tenant string) error {
 	err := dbTenStatsGet(ctx, tenant, st)
 	if err == nil {
-		st.onDisk = &TenStatValues{}
+		st.onDisk = &gmgo.TenStatValues{}
 		*st.onDisk = st.TenStatValues
 		st.Tenant = tenant
 		st.statsFlush.Init(st, tenant)
@@ -288,8 +266,8 @@ func (st *TenStats)Init(ctx context.Context, tenant string) error {
 }
 
 func (st *TenStats)Write(ctx context.Context) {
-	var now TenStatValues = st.TenStatValues
-	delta := TenStatValues {
+	var now gmgo.TenStatValues = st.TenStatValues
+	delta := gmgo.TenStatValues {
 		Called: now.Called - st.onDisk.Called,
 		RunCost: now.RunCost - st.onDisk.RunCost,
 		BytesIn: now.BytesIn - st.onDisk.BytesIn,
