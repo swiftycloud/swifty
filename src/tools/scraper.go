@@ -26,14 +26,18 @@ type TenStats struct {
 	Till			*time.Time	`bson:"till,omitempty"`
 }
 
+type YAMLConfSA struct {
+	Check		string			`yaml:"check"`
+	Period		string			`yaml:"period"`
+}
+
 type YAMLConf struct {
 	GateDB		string			`yaml:"gate-db"`
 	gateDB		*swy.XCreds
 	Admd		string			`yaml:"admd"`
 	admd		*swy.XCreds
 
-	Check		string			`yaml:"check"`
-	Period		string			`yaml:"period"`
+	SA		YAMLConfSA		`yaml:"starch"`
 }
 
 var conf YAMLConf
@@ -169,7 +173,7 @@ func doArchPass(now time.Time, s *mgo.Session) {
 		}
 
 		fmt.Printf("\tLast archive at %s\n", last)
-		if !timePassed(last, now, conf.Period) {
+		if !timePassed(last, now, conf.SA.Period) {
 			fmt.Printf("\t\tFresh archive, skipping\n")
 			continue
 		}
@@ -233,7 +237,7 @@ func main() {
 
 		fmt.Printf("-----------8<--------------------------------\n")
 
-		slp := nextPeriod(&now, conf.Check).Sub(now)
+		slp := nextPeriod(&now, conf.SA.Check).Sub(now)
 		<-time.After(slp)
 	}
 }
