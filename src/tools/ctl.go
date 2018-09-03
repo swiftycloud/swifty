@@ -778,7 +778,7 @@ func function_update(args []string, opts [16]string) {
 	}
 
 	if opts[10] != "" {
-		envs := strings.Split(opts[0], ":")
+		envs := strings.Split(opts[10], ":")
 		make_faas_req1("PUT", "functions/" + fid + "/env", http.StatusOK, envs, nil)
 	}
 

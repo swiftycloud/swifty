@@ -104,7 +104,9 @@ func swk8sGenEnvVar(ctx context.Context, fn *FunctionDesc, wd_port int) []v1.Env
 
 	for _, v := range fn.Code.Env {
 		vs := strings.SplitN(v, "=", 2)
-		s = append(s, v1.EnvVar{Name: vs[0], Value: vs[1]})
+		if len(vs) == 2 && vs[0] != "" {
+			s = append(s, v1.EnvVar{Name: vs[0], Value: vs[1]})
+		}
 	}
 
 	s = append(s, v1.EnvVar{
