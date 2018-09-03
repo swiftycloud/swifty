@@ -562,6 +562,61 @@ paths:
         '403':
           description: Bad authentication token
 
+  /functions/{fid}/env:
+    parameters:
+      - in: header
+        name: X-Auth-Token
+        type: string
+        required: true
+      - in: path
+        name: fid
+        type: string
+        required: true
+        description: Function ID
+    get:
+      tags:
+        - function
+      summary: Get function environment
+      responses:
+        '200':
+          description: OK
+          schema:
+            type: array
+            items:
+              type: string
+        '400':
+          description: Bad request
+          schema:
+            $ref: '#/definitions/GateError'
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad authentication token
+    put:
+      tags:
+        - function
+      summary: Set (update) function environment
+      parameters:
+        - in: body
+          name: data
+          schema:
+            type: array
+            items:
+              type: string
+          required: true
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+          schema:
+            $ref: '#/definitions/GateError'
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad authentication token
+
+
   /functions/{fid}/middleware:
     parameters:
       - in: header
