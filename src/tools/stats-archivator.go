@@ -1,18 +1,30 @@
 package main
 
 import (
-	"time"
 	"fmt"
+	"flag"
+	"time"
+	"strings"
+	"strconv"
+	"net/http"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
-	"./src/common"
-	"./src/apis"
+	"../common"
+	"../apis"
+	"../gate/mgo"
 )
 
 const (
+	DBName		= "swifty"
 	ColTenStats	= "TenantStats"
 	ColTenStatsA	= "TenantStatsArch"
 )
+
+type TenStats struct {
+	gmgo.TenStatValues			`bson:",inline"`
+	Tenant			string		`bson:"tenant"`
+	Till			*time.Time	`bson:"till,omitempty"`
+}
 
 type YAMLConf struct {
 	GateDB		string			`yaml:"gate-db"`
@@ -20,29 +32,77 @@ type YAMLConf struct {
 	Admd		string			`yaml:"admd"`
 	admd		*swy.XCreds
 
-	Check		int			`yaml:"check"`
-	Period		int			`yaml:"period"`
+	Check		string			`yaml:"check"`
+	Period		string			`yaml:"period"`
 }
 
 var conf YAMLConf
 
 var uis map[string]*swyapi.UserInfo
 
+func nextPeriod(since *time.Time, period string) time.Time {
+	/* Common sane types */
+	switch period {
+	case "hourly":
+		return since.Add(time.Hour)
+	case "daily":
+		return since.AddDate(0, 0, 1)
+	case "weekly":
+		return since.AddDate(0, 0, 7)
+	case "monthly":
+		return since.AddDate(0, 1, 0)
+	}
+
+	/* For debugging mostly */
+	var mult time.Duration
+	var dur string
+	if strings.HasSuffix(period, "s") {
+		dur = strings.TrimSuffix(period, "s")
+		mult = time.Second
+	} else if strings.HasSuffix(period, "m") {
+		dur = strings.TrimSuffix(period, "s")
+		mult = time.Minute
+	}
+
+	if mult != 0 {
+		i, err := strconv.Atoi(dur)
+		if err != nil {
+			goto out
+		}
+		return since.Add(time.Duration(i) * mult)
+	}
+out:
+	panic("Bad period value: " + period)
+}
+
+func timePassed(since *time.Time, now time.Time, period string) bool {
+	if now.Before(*since) {
+		return false
+	}
+
+	return nextPeriod(since, period).Before(now)
+}
+
 func getUserInfo(ten string) (*swyapi.UserInfo, error) {
 	if uis == nil {
 		cln := swyapi.MakeClient(conf.admd.User, conf.admd.Pass, conf.admd.Host, conf.admd.Port)
 		cln.Admd("", conf.admd.Port)
-		cln.ToAdmd()
+		cln.ToAdmd(true)
+		if conf.admd.Domn == "direct" {
+			cln.NoTLS()
+			cln.Direct()
+		}
+
 		err := cln.Login()
 		if err != nil {
-			fmt.Printf("  cannot login to admd: %s", err.Error())
+			fmt.Printf("  cannot login to admd: %s\n", err.Error())
 			return nil, err
 		}
 
 		var ifs []*swyapi.UserInfo
 		err = cln.Req1("GET", "users", http.StatusOK, nil, &ifs)
 		if err != nil {
-			fmt.Printf("  error getting users: %s", err.Error())
+			fmt.Printf("  error getting users: %s\n", err.Error())
 			return nil, err
 		}
 
@@ -55,6 +115,78 @@ func getUserInfo(ten string) (*swyapi.UserInfo, error) {
 	return uis[ten], nil
 }
 
+func getLastStats(arch *mgo.Collection, ten string) *time.Time {
+	var ast TenStats
+	var last *time.Time
+
+	err := arch.Find(bson.M{"tenant": ten}).Sort("-till").Limit(1).One(&ast)
+	if err == nil {
+		last = ast.Till
+	} else if err == mgo.ErrNotFound {
+		fmt.Printf("\t\tNo archive - requesting creation time\n")
+		ui, err := getUserInfo(ten)
+		if err != nil {
+			return nil
+		}
+		if ui == nil {
+			fmt.Printf("\t\tERR: user unregistered\n")
+			return nil
+		}
+		if ui.Created == "" {
+			fmt.Printf("\t\tERR: created time missing\n")
+			return nil
+		}
+		ct, err := time.Parse(time.RFC1123Z, ui.Created)
+		if err != nil {
+			fmt.Printf("\t\tERR: created time %s parse error %s\n",
+				ui.Created, err.Error())
+			return nil
+		}
+		fmt.Printf("\t\tCreated %s\n", last)
+		last = &ct
+	} else {
+		fmt.Printf("\t\tERR: arch query error: %s", err.Error())
+		return nil
+	}
+
+	return last
+}
+
+func doArchPass(now time.Time, s *mgo.Session) {
+	defer s.Close()
+	defer func() { uis = nil } ()
+
+	curr := s.DB(DBName).C(ColTenStats)
+	arch := s.DB(DBName).C(ColTenStatsA)
+
+	var st TenStats
+	iter := curr.Find(nil).Iter()
+	for iter.Next(&st) {
+		fmt.Printf("\tFound stats for %s, checking archive\n", st.Tenant)
+		last := getLastStats(arch, st.Tenant)
+		if last == nil {
+			continue
+		}
+
+		fmt.Printf("\tLast archive at %s\n", last)
+		if !timePassed(last, now, conf.Period) {
+			fmt.Printf("\t\tFresh archive, skipping\n")
+			continue
+		}
+
+		fmt.Printf("\tArchive %s stats (%s)\n", st.Tenant, now)
+		st.Till = &now
+		err := arch.Insert(&st)
+		if err != nil {
+			fmt.Printf("\t\tERR: error archiving: %s\n", err.Error())
+		}
+	}
+
+	err := iter.Close()
+	if err != nil {
+		fmt.Printf("ERR:  error requesting stats: %s", err.Error())
+	}
+}
 
 func main() {
 	var config_path string
@@ -81,7 +213,7 @@ func main() {
 
 	info := mgo.DialInfo{
 		Addrs:		[]string{conf.gateDB.Addr()},
-		Database:	"swifty",
+		Database:	DBName,
 		Timeout:	60 * time.Second,
 		Username:	conf.gateDB.User,
 		Password:	conf.gateDB.Pass,
@@ -93,73 +225,15 @@ func main() {
 		return
 	}
 
-	check := parseDuration(c.Check)
-	period := parseDuration(c.Period)
-
 	for {
-		s := session.Copy()
-		curr := s.DB("swifty").C(ColTenStats)
-		arch := s.DB("swifty").C(ColTenStatsA)
-
 		now := time.Now()
-		fmt.Printf("%s: Check stats\n", now)
+		fmt.Printf("%s: Check stats\n", now.Format("Mon Jan 2 15:04:05 2006"))
 
-		var st TenStats
-		iter := curr.Find(nil).Iter()
-		for iter.Next(&st) {
-			var ast TenStats
-			var last *time.Time
-			err = arch.Find(bson.M{"tenant": st.Tentant}).Sort("-till").Limit(1).One(&ast)
-			if err == nil {
-				last = ast.Till
-			} else if err == mgo.ErrNotFound {
-				fmt.Printf("  %s has no arch stats, requesting creation time", st.Tentant)
-				ui, err := getUserInfo(st.Tenant)
-				if err != nil {
-					continue
-				}
-				if ui == nil {
-					fmt.Printf("  %s user unregistered\n", st.Tenant)
-					continue
-				}
-				if ui.Created == "" {
-					fmt.Printf("  %s created time missing\n", st.Tenant)
-					continue
-				}
-				ct, err := time.Parse(time.RFC1123Z, ui.Created)
-				if err != nil {
-					fmt.Printf("  %s created time %s parse error %s\n",
-						st.Tenant, ui.Created, err.Error())
-					continue
-				}
-				last = &st
-			} else {
-				fmt.Printf("  %s arch query error: %s", st.Tentant, err.Error())
-				continue
-			}
+		doArchPass(now, session.Copy())
 
-			if last.Till.Add(period).After(now) {
-				continue
-			}
+		fmt.Printf("-----------8<--------------------------------\n")
 
-			fmt.Printf("-> archive %s stats\n", st.Tentant)
-			ast.Till = now
-			err = arch.Insert(ast)
-			if err != nil {
-				fmt.Printf(" error archiving: %s\n", err.Error())
-			}
-		}
-
-		err = iter.Close()
-		if err != nil {
-			fmt.Printf("  error requesting stats: %s", err.Error())
-		}
-
-		uis = nil
-
-		<-time.After(check)
+		slp := nextPeriod(&now, conf.Check).Sub(now)
+		<-time.After(slp)
 	}
-
-//	c.Insert(bson.M{"id": 1, "ts": time.Now()})
-//	c.Insert(bson.M{"id": 2, "ts": time.Now().Add(2 * time.Second)})
 }
