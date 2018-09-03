@@ -496,6 +496,15 @@ func function_info(args []string, opts [16]string) {
 			fmt.Printf("\t%s:%s\n", ac["id"], ac["type"])
 		}
 	}
+
+	var env []string
+	make_faas_req1("GET", "functions/" + args[0] + "/env", http.StatusOK, nil, &env)
+	if len(env) != 0 {
+		fmt.Printf("Environment:\n")
+		for _, ev := range env {
+			fmt.Printf("\t%s\n", ev)
+		}
+	}
 }
 
 func function_minfo(args []string, opts [16]string) {
@@ -767,6 +776,12 @@ func function_update(args []string, opts [16]string) {
 
 		make_faas_req1("PUT", "functions/" + fid + "/size", http.StatusOK, &sz, nil)
 	}
+
+	if opts[10] != "" {
+		envs := strings.Split(opts[10], ":")
+		make_faas_req1("PUT", "functions/" + fid + "/env", http.StatusOK, envs, nil)
+	}
+
 
 	if opts[5] != "" {
 		fmt.Printf("Wait FN %s\n", opts[5])
@@ -1697,6 +1712,7 @@ func main() {
 	cmdMap[CMD_FU].opts.StringVar(&opts[7], "auth", "", "Auth context (- for off)")
 	cmdMap[CMD_FU].opts.StringVar(&opts[8], "s3b", "", "Bucket to use, +/- to add/remove")
 	cmdMap[CMD_FU].opts.StringVar(&opts[9], "acc", "", "Accounts to use, +/- to add/remove")
+	cmdMap[CMD_FU].opts.StringVar(&opts[10], "env", "", "Colon-separated list of env vars")
 	bindCmdUsage(CMD_FU,	[]string{"NAME"}, "Update a function", true)
 	bindCmdUsage(CMD_FD,	[]string{"NAME"}, "Delete a function", true)
 	cmdMap[CMD_FLOG].opts.StringVar(&opts[0], "last", "", "Last N 'duration' period")
