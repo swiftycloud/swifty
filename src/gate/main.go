@@ -47,7 +47,6 @@ const (
 	TenantLimitsUpdPeriod time.Duration	= 120 * time.Second
 	URLEventID				= "000URL"
 	CloneDir				= "clone"
-	LogsCleanPeriod				= 30 * 60 * time.Second
 )
 
 var glog *zap.SugaredLogger
@@ -232,7 +231,6 @@ type YAMLConf struct {
 	Mware		YAMLConfMw		`yaml:"middleware"`
 	Runtime		YAMLConfRt		`yaml:"runtime"`
 	Wdog		YAMLConfSwd		`yaml:"wdog"`
-	LogsKeepDays	int			`yaml:"logs-keep"`
 	RepoSyncRate	int			`yaml:"repo-sync-rate"`
 	RepoSyncPeriod	int			`yaml:"repo-sync-period"`
 	DemoRepo	YAMLConfDemoRepo	`yaml:"demo-repo"`
@@ -265,9 +263,6 @@ func (c *YAMLConf)Validate() error {
 	}
 	if c.Home == "" {
 		return errors.New("'home' not set")
-	}
-	if c.LogsKeepDays == 0 {
-		fmt.Printf("'logs-keep' not set, logs will be kept forever\n")
 	}
 	if c.RepoSyncRate == 0 {
 		fmt.Printf("'repo-sync-rate' not set, pulls will be unlimited\n")
@@ -2539,11 +2534,6 @@ func main() {
 	err = DeployInit(ctx, &conf)
 	if err != nil {
 		glog.Fatalf("Can't set up deploys: %s", err.Error())
-	}
-
-	err = LogsCleanerInit(ctx, &conf)
-	if err != nil {
-		glog.Fatalf("Can't start logs cleaner: %s", err.Error())
 	}
 
 	err = ReposInit(ctx, &conf)

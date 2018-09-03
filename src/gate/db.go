@@ -436,24 +436,6 @@ func dbProjectListAll(ctx context.Context, ten string) (fn []string, mw []string
 	return
 }
 
-func LogsCleanerInit(ctx context.Context, conf *YAMLConf) error {
-	if conf.LogsKeepDays > 0 {
-		ctxlog(ctx).Debugf("Start logs cleaner (%d days old)", conf.LogsKeepDays)
-		go func() {
-			for {
-				time.Sleep(LogsCleanPeriod)
-
-				ctx, done := mkContext("::logsgc")
-				dur := time.Now().AddDate(0, 0, -conf.LogsKeepDays)
-				dbCol(ctx, DBColLogs).RemoveAll(bson.M{"ts": bson.M{"$lt": dur }})
-				ctxlog(ctx).Debugf("Cleaned logs < %s", dur.String())
-				done(ctx)
-			}
-		}()
-	}
-	return nil
-}
-
 func dbConnect(conf *YAMLConf) error {
 	var err error
 

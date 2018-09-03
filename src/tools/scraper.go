@@ -18,6 +18,8 @@ const (
 	DBName		= "swifty"
 	ColTenStats	= "TenantStats"
 	ColTenStatsA	= "TenantStatsArch"
+	ColLogs		= "Logs"
+	LogsCleanPeriod = 30 * 60 * time.Second
 )
 
 type TenStats struct {
@@ -31,6 +33,10 @@ type YAMLConfSA struct {
 	Period		string			`yaml:"period"`
 }
 
+type YAMLConfLogs struct {
+	Keep		int			`yaml:"keep"`
+}
+
 type YAMLConf struct {
 	GateDB		string			`yaml:"gate-db"`
 	gateDB		*swy.XCreds
@@ -38,6 +44,7 @@ type YAMLConf struct {
 	admd		*swy.XCreds
 
 	SA		YAMLConfSA		`yaml:"starch"`
+	Logs		YAMLConfLogs		`yaml:"logs"`
 }
 
 var conf YAMLConf
@@ -227,6 +234,22 @@ func main() {
 	if err != nil {
 		fmt.Printf("dbConnect: Can't dial (%s)\n", err.Error())
 		return
+	}
+
+	if conf.Logs.Keep > 0 {
+		fmt.Printf("Start logs cleaner (%d days old)", conf.Logs.Keep)
+		go func() {
+			for {
+				time.Sleep(LogsCleanPeriod)
+
+				s := session.Copy()
+				logs := s.DB(DBName).C(ColLogs)
+				dur := time.Now().AddDate(0, 0, -conf.Logs.Keep)
+				logs.RemoveAll(bson.M{"ts": bson.M{"$lt": dur }})
+				fmt.Printf("Cleaned logs < %s", dur.String())
+				s.Close()
+			}
+		}()
 	}
 
 	for {
