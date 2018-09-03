@@ -616,6 +616,40 @@ func handleFunctionAuthCtx(ctx context.Context, w http.ResponseWriter, r *http.R
 	return nil
 }
 
+func handleFunctionEnv(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
+	var fn FunctionDesc
+
+	cerr := objFindForReq(ctx, r, "fid", &fn)
+	if cerr != nil {
+		return cerr
+	}
+
+	switch r.Method {
+	case "GET":
+		err := swyhttp.MarshalAndWrite(w, fn.Code.Env)
+		if err != nil {
+			return GateErrE(swy.GateBadResp, err)
+		}
+
+	case "PUT":
+		var env []string
+
+		err := swyhttp.ReadAndUnmarshalReq(r, &env)
+		if err != nil {
+			return GateErrE(swy.GateBadRequest, err)
+		}
+
+		err = fn.setEnv(ctx, env)
+		if err != nil {
+			return GateErrE(swy.GateGenErr, err)
+		}
+
+		w.WriteHeader(http.StatusOK)
+	}
+
+	return nil
+}
+
 func handleFunctionSize(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
 	var fn FunctionDesc
 
@@ -2460,6 +2494,7 @@ func main() {
 	r.Handle("/v1/functions/{fid}/authctx",	genReqHandler(handleFunctionAuthCtx)).Methods("GET", "PUT", "OPTIONS")
 	r.Handle("/v1/functions/{fid}/size",	genReqHandler(handleFunctionSize)).Methods("GET", "PUT", "OPTIONS")
 	r.Handle("/v1/functions/{fid}/sources",	genReqHandler(handleFunctionSources)).Methods("GET", "PUT", "OPTIONS")
+	r.Handle("/v1/functions/{fid}/env",	genReqHandler(handleFunctionEnv)).Methods("GET", "PUT", "OPTIONS")
 	r.Handle("/v1/functions/{fid}/middleware", genReqHandler(handleFunctionMwares)).Methods("GET", "POST", "OPTIONS")
 	r.Handle("/v1/functions/{fid}/middleware/{mid}", genReqHandler(handleFunctionMware)).Methods("DELETE", "OPTIONS")
 	r.Handle("/v1/functions/{fid}/accounts", genReqHandler(handleFunctionAccounts)).Methods("GET", "POST", "OPTIONS")

@@ -401,6 +401,17 @@ func (fn *FunctionDesc)setAuthCtx(ctx context.Context, ac string) error {
 	return err
 }
 
+func (fn *FunctionDesc)setEnv(ctx context.Context, env []string) error {
+	fn.Code.Env = env
+	err := dbUpdatePart(ctx, fn, bson.M{"code.env": env})
+	if err != nil {
+		return err
+	}
+
+	swk8sUpdate(ctx, &conf, fn)
+	return nil
+}
+
 func (fn *FunctionDesc)setSize(ctx context.Context, sz *swyapi.FunctionSize) error {
 	update := make(bson.M)
 	restart := false
