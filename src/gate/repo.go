@@ -250,7 +250,7 @@ func (rd *RepoDesc)listFiles(ctx context.Context) ([]*swyapi.RepoFile, *swyapi.G
 
 		ents, err := ioutil.ReadDir(rp + "/" + dir.Path)
 		if err != nil {
-			return nil, GateErrE(swy.GateFsError, err)
+			return nil, GateErrM(swy.GateFsError, "Cannot list files in repo")
 		}
 
 		for _, ent := range ents {
