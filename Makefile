@@ -100,6 +100,7 @@ go-wdog-go-y += src/wdog/main.go
 go-ctl-y	+= src/tools/ctl.go
 go-s3fsck-y	+= src/tools/s3-fsck.go
 go-sg-y		+= src/tools/sg.go
+go-dbscr-y	+= src/tools/scraper.go
 
 $(eval $(call gen-gobuild-n,gate))
 $(eval $(call gen-gobuild-n,admd))
@@ -109,6 +110,7 @@ $(eval $(call gen-gobuild,mquotad))
 $(eval $(call gen-gobuild-t,ctl))
 $(eval $(call gen-gobuild-t,s3fsck))
 $(eval $(call gen-gobuild-t,sg))
+$(eval $(call gen-gobuild-t,dbscr))
 $(eval $(call gen-gobuild,wdog-go))
 
 # Default target
@@ -333,6 +335,8 @@ clean:
 	$(Q) $(RM) swy-s3
 	$(call msg-clean,swyctl)
 	$(Q) $(RM) swyctl
+	$(call msg-clean,swydbscr)
+	$(Q) $(RM) swydbscr
 	$(call msg-clean,swys3fsck)
 	$(Q) $(RM) swys3fsck
 	$(call msg-clean,swysg)

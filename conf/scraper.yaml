@@ -1,0 +1,8 @@
+---
+gate-db: "swygate:XXXXXXX@127.0.0.1:27017"
+admd: "swyadmin:YYYYYY@127.0.0.1:8685"
+starch:
+        check: "hourly"
+        period: "monthly"
+logs:
+        keep: 1
