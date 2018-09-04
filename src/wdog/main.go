@@ -197,7 +197,7 @@ func startQnR(runner *Runner) error {
 	runner.l.cmd = exec.Command("/usr/bin/swy-runner",
 					runner.l.fout, runner.l.ferr,
 					runner.q.GetId(),
-					runner.l.lang.runner)
+					runner.l.lang.runner, "script")
 	err = runner.l.cmd.Start()
 	if err != nil {
 		return fmt.Errorf("Can't start runner: %s", err.Error())

@@ -4,7 +4,7 @@ require 'json'
 require 'ostruct'
 
 begin
-require '/function/script.rb'
+require '/function/' + ARGV[0] + '.rb'
 def CallMain(req)
 	res, resp = Main(req)
 	ret = {:res => 0, :ret => JSON.generate(res)}

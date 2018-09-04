@@ -12,7 +12,7 @@ swytb = ""
 swycode = None
 
 try:
-    spec = importlib.util.spec_from_file_location('code', '/function/script.py')
+    spec = importlib.util.spec_from_file_location('code', '/function/' + sys.argv[1] + '.py')
     swycode = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(swycode)
 except:
