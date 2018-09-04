@@ -265,11 +265,6 @@ func doBuildGo(params *swyapi.SwdFunctionBuild) (*swyapi.SwdFunctionRunResult, e
 		return nil, fmt.Errorf("Can't symlink code: %s", err.Error())
 	}
 
-	err = os.Chdir("/go/src/swyrunner")
-	if err != nil {
-		return nil, fmt.Errorf("Can't chdir to swywdog: %s", err.Error())
-	}
-
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 
@@ -277,6 +272,7 @@ func doBuildGo(params *swyapi.SwdFunctionBuild) (*swyapi.SwdFunctionRunResult, e
 	cmd := exec.Command("go", "build", "-o", "../swycode/" + srcdir + "/function")
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
+	cmd.Dir = "/go/src/swyrunner"
 	err = cmd.Run()
 	os.Remove("/go/src/swyrunner/script.go") /* Just an attempt */
 
@@ -303,11 +299,6 @@ func doBuildSwift(params *swyapi.SwdFunctionBuild) (*swyapi.SwdFunctionRunResult
 		return nil, fmt.Errorf("Can't symlink code: %s", err.Error())
 	}
 
-	err = os.Chdir("/swift/runner")
-	if err != nil {
-		return nil, fmt.Errorf("Can't chdir to runner dir: %s", err.Error())
-	}
-
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 
@@ -315,6 +306,7 @@ func doBuildSwift(params *swyapi.SwdFunctionBuild) (*swyapi.SwdFunctionRunResult
 	cmd := exec.Command("swift", "build", "--build-path", "../swycode/" + srcdir)
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
+	cmd.Dir = "/swift/runner"
 	err = cmd.Run()
 	os.Remove("/swift/runner/Sources/script.swift")
 
