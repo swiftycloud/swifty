@@ -245,24 +245,12 @@ func doRun(runner *Runner, body []byte) (*swyapi.SwdFunctionRunResult, error) {
 	return ret, nil
 }
 
-var builders = map[string]func(*swyapi.SwdFunctionBuild) (*swyapi.SwdFunctionRunResult, error) {
+type buildFn func(*swyapi.SwdFunctionBuild) (*swyapi.SwdFunctionRunResult, error)
+var buildlock sync.Mutex
+
+var builders = map[string]buildFn {
 	"golang": doBuildGo,
 	"swift": doBuildSwift,
-}
-
-var buildlock sync.Mutex
-var buildlang string
-
-func doBuild(params *swyapi.SwdFunctionBuild) (*swyapi.SwdFunctionRunResult, error) {
-	buildlock.Lock()
-	defer buildlock.Unlock()
-
-	fn, ok := builders[buildlang]
-	if !ok {
-		return nil, fmt.Errorf("No builder for %s", buildlang)
-	}
-
-	return fn(params)
 }
 
 /*
@@ -378,7 +366,7 @@ out:
 	log.Errorf("%s", err.Error())
 }
 
-func handleBuild(w http.ResponseWriter, r *http.Request) {
+func handleBuild(w http.ResponseWriter, r *http.Request, fn buildFn) {
 	defer r.Body.Close()
 	var params swyapi.SwdFunctionBuild
 	var result *swyapi.SwdFunctionRunResult
@@ -390,7 +378,9 @@ func handleBuild(w http.ResponseWriter, r *http.Request) {
 	}
 
 	code = http.StatusInternalServerError
-	result, err = doBuild(&params)
+	buildlock.Lock()
+	result, err = fn(&params)
+	buildlock.Unlock()
 	if err != nil {
 		log.Errorf("Error building FN: %s", err.Error())
 		goto out
@@ -618,8 +608,14 @@ func main() {
 			log.Fatal("SWD_LANG not set")
 		}
 
-		buildlang = lang
-		r.HandleFunc("/v1/run", handleBuild)
+		fn, ok := builders[lang]
+		if !ok {
+			log.Fatal("No build handler for lang")
+		}
+
+		r.HandleFunc("/v1/run", func(w http.ResponseWriter, r *http.Request) {
+			handleBuild(w, r, fn)
+		})
 	} else if inst == "proxy" {
 		r.HandleFunc("/v1/run/{fnid}/{podip}", handleProxy)
 	} else {
