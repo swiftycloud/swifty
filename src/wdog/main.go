@@ -39,7 +39,7 @@ type Runner struct {
 
 type localRunner struct {
 	cmd	*exec.Cmd
-	lang	string
+	lang	*LangDesc
 	tmous	int64
 	fout	string
 	ferr	string
@@ -101,20 +101,21 @@ func makeExecutablePath(path string) {
  * dicussed in the github PR-s, but so far no good solutions. Thus
  * explicitly grant r and x bits for everything that needs it.
  */
-func prepareVolume(lang string) {
-	switch lang {
-	case "python", "ruby", "nodejs":
-		exec.Command("chmod", "-R", "o+rX", "/function").Run()
-	case "swift", "golang":
-		makeExecutablePath(runners[lang])
-	}
+
+func mkExecPath(ld *LangDesc) {
+	exec.Command("chmod", "-R", "o+rX", "/function").Run()
+}
+
+func mkExecRunner(ld *LangDesc) {
+	makeExecutablePath(ld.runner)
 }
 
 func makeLocalRunner(lang string, tmous int64) (*Runner, error) {
 	var err error
 	p := make([]int, 2)
 
-	lr := &localRunner{lang: lang, tmous: tmous}
+	ld := ldescs[lang]
+	lr := &localRunner{lang: &ld, tmous: tmous}
 	runner := &Runner {l: lr, restart: restartLocal, ready: true}
 
 	err = syscall.Pipe(p)
@@ -137,7 +138,7 @@ func makeLocalRunner(lang string, tmous int64) (*Runner, error) {
 	syscall.CloseOnExec(p[0])
 	runner.fine = os.NewFile(uintptr(p[0]), "runner.stderr")
 
-	prepareVolume(lang)
+	ld.prep(&ld)
 
 	err = startQnR(runner)
 	if err != nil {
@@ -147,12 +148,37 @@ func makeLocalRunner(lang string, tmous int64) (*Runner, error) {
 	return runner, nil
 }
 
-var runners = map[string]string {
-	"golang": "/go/src/swycode/function",
-	"python": "/usr/bin/swy-runner.py",
-	"swift": "/swift/swycode/debug/function",
-	"nodejs": "/home/swifty/runner-js.sh",
-	"ruby": "/home/swifty/runner.rb",
+type buildFn func(*swyapi.SwdFunctionBuild) (*swyapi.SwdFunctionRunResult, error)
+
+type LangDesc struct {
+	runner		string
+	build		buildFn
+	prep		func(*LangDesc)
+}
+
+var ldescs = map[string]LangDesc {
+	"golang": LangDesc {
+		runner:	"/go/src/swycode/function",
+		build:	doBuildGo,
+		prep:	mkExecRunner,
+	},
+	"python": LangDesc {
+		runner:	"/usr/bin/swy-runner.py",
+		prep:	mkExecPath,
+	},
+	"swift": LangDesc {
+		runner:	"/swift/swycode/debug/function",
+		build:	doBuildSwift,
+		prep:	mkExecRunner,
+	},
+	"nodejs": LangDesc {
+		runner:	"/home/swifty/runner-js.sh",
+		prep:	mkExecPath,
+	},
+	"ruby": LangDesc {
+		runner:	"/home/swifty/runner.rb",
+		prep:	mkExecPath,
+	},
 }
 
 func startQnR(runner *Runner) error {
@@ -171,7 +197,7 @@ func startQnR(runner *Runner) error {
 	runner.l.cmd = exec.Command("/usr/bin/swy-runner",
 					runner.l.fout, runner.l.ferr,
 					runner.q.GetId(),
-					runners[runner.l.lang])
+					runner.l.lang.runner)
 	err = runner.l.cmd.Start()
 	if err != nil {
 		return fmt.Errorf("Can't start runner: %s", err.Error())
@@ -245,13 +271,7 @@ func doRun(runner *Runner, body []byte) (*swyapi.SwdFunctionRunResult, error) {
 	return ret, nil
 }
 
-type buildFn func(*swyapi.SwdFunctionBuild) (*swyapi.SwdFunctionRunResult, error)
 var buildlock sync.Mutex
-
-var builders = map[string]buildFn {
-	"golang": doBuildGo,
-	"swift": doBuildSwift,
-}
 
 /*
  * All functions sit at /go/src/swycode/
@@ -604,13 +624,13 @@ func main() {
 			log.Fatal("SWD_LANG not set")
 		}
 
-		fn, ok := builders[lang]
-		if !ok {
+		ld, ok := ldescs[lang]
+		if !ok || ld.build == nil {
 			log.Fatal("No build handler for lang")
 		}
 
 		r.HandleFunc("/v1/run", func(w http.ResponseWriter, r *http.Request) {
-			handleBuild(w, r, fn)
+			handleBuild(w, r, ld.build)
 		})
 	} else if inst == "proxy" {
 		r.HandleFunc("/v1/run/{fnid}/{podip}", handleProxy)
