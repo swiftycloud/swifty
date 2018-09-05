@@ -149,6 +149,7 @@ func RtCodePath(scr *FnCodeDesc) string {
 }
 
 func RtScriptName(scr *FnCodeDesc, suff string) string {
+	/* This should be in sync with wdog's startQnR and builders */
 	return "script" + suff + "." + rt_handlers[scr.Lang].Ext
 }
 
