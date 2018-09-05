@@ -425,9 +425,14 @@ func checkVersion(ctx context.Context, fn *FunctionDesc, version string, version
 	return false, nil
 }
 
-func getSources(ctx context.Context, fn *FunctionDesc, src *swyapi.FunctionSources) error {
+func putSources(ctx context.Context, fn *FunctionDesc, src *swyapi.FunctionSources) error {
 	fn.Src.Version = zeroVersion
 	return writeSources(ctx, fn, src)
+}
+
+func getSources(ctx context.Context, fn *FunctionDesc) ([]byte, error) {
+	codeFile := fn.srcPath("") + "/" + RtScriptName(&fn.Code, "")
+	return ioutil.ReadFile(codeFile)
 }
 
 func updateSources(ctx context.Context, fn *FunctionDesc, src *swyapi.FunctionSources) error {

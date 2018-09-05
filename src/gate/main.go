@@ -1010,7 +1010,7 @@ func handleFunctionSources(ctx context.Context, w http.ResponseWriter, r *http.R
 
 	switch r.Method {
 	case "GET":
-		src, cerr := fn.getSources()
+		src, cerr := fn.getSources(ctx)
 		if cerr != nil {
 			return cerr
 		}
