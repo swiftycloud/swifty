@@ -1579,7 +1579,10 @@ func handleFunctionRun(ctx context.Context, w http.ResponseWriter, r *http.Reque
 			return GateErrE(swy.GateGenErr, err)
 		}
 
-		/* FIXME -- build if needed */
+		err = tryBuildFunction(ctx, &conf, &fn, suff)
+		if err != nil {
+			return GateErrM(swy.GateGenErr, "Error building function")
+		}
 
 		params.Src = nil /* not to propagate to wdog */
 	}
