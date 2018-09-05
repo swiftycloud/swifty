@@ -153,10 +153,9 @@ func RtScriptName(scr *FnCodeDesc, suff string) string {
 	return "script" + suff + "." + rt_handlers[scr.Lang].Ext
 }
 
-func RtLangInfo(lh *rt_info) *swyapi.LangInfo {
-	ret := &swyapi.LangInfo{
+func (lh *rt_info)Info() *swyapi.LangInfo {
+	return &swyapi.LangInfo{
 		Version:	lh.Version,
 		Packages:	lh.Packages,
 	}
-	return ret
 }

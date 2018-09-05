@@ -2045,7 +2045,7 @@ func handleLanguage(ctx context.Context, w http.ResponseWriter, r *http.Request)
 		return GateErrM(swy.GateGenErr, "Language not supported")
 	}
 
-	err := swyhttp.MarshalAndWrite(w, RtLangInfo(lh))
+	err := swyhttp.MarshalAndWrite(w, lh.Info())
 	if err != nil {
 		return GateErrE(swy.GateBadResp, err)
 	}
