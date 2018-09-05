@@ -447,7 +447,17 @@ func writeSources(ctx context.Context, fn *FunctionDesc, src *swyapi.FunctionSou
 		return fmt.Errorf("Unknown sources type %s", src.Type)
 	}
 
-	return srch.get(ctx, src, fnCodeLatestPath(&conf, fn), RtDefaultScriptName(&fn.Code))
+	return srch.get(ctx, src, fnCodeLatestPath(&conf, fn), RtScriptName(&fn.Code, ""))
+}
+
+func writeTempSources(ctx context.Context, fn *FunctionDesc, src *swyapi.FunctionSources) (string, error) {
+	srch, ok := srcHandlers[src.Type]
+	if !ok {
+		return "", fmt.Errorf("Unknown sources type %s", src.Type)
+	}
+
+	suff := "tmp" /* FIXME -- locking or randomness */
+	return suff, srch.get(ctx, src, fnCodeLatestPath(&conf, fn), RtScriptName(&fn.Code, suff))
 }
 
 func bgClone(rd *RepoDesc, ac *AccDesc, rh *repoHandler) {

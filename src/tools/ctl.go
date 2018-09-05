@@ -698,9 +698,19 @@ func make_args_string(args map[string]string) string {
 func run_function(args []string, opts [16]string) {
 	var rres swyapi.SwdFunctionRunResult
 
+	rq := &swyapi.SwdFunctionRun{}
+
 	args[0] = resolve_fn(args[0])
-	argmap := split_args_string(args[1])
-	make_faas_req1("POST", "functions/" + args[0] + "/run", http.StatusOK, &swyapi.SwdFunctionRun{ Args: argmap, }, &rres)
+	rq.Args = split_args_string(args[1])
+
+	if opts[0] != "" {
+		src := &swyapi.FunctionSources{}
+		src.Type = "code"
+		src.Code = encodeFile(opts[0])
+		rq.Src = src
+	}
+
+	make_faas_req1("POST", "functions/" + args[0] + "/run", http.StatusOK, rq, &rres)
 
 	fmt.Printf("returned: %s\n", rres.Return)
 	fmt.Printf("%s", rres.Stdout)
@@ -1701,6 +1711,7 @@ func main() {
 	cmdMap[CMD_FA].opts.StringVar(&opts[7], "env", "", "Colon-separated list of env vars")
 	cmdMap[CMD_FA].opts.StringVar(&opts[8], "auth", "", "ID of auth mware to verify the call")
 	bindCmdUsage(CMD_FA,	[]string{"NAME"}, "Add a function", true)
+	cmdMap[CMD_RUN].opts.StringVar(&opts[0], "src", "", "Run a custom source in it")
 	bindCmdUsage(CMD_RUN,	[]string{"NAME", "ARG=VAL,..."}, "Run a function", true)
 	cmdMap[CMD_FU].opts.StringVar(&opts[0], "src", "", "Source file")
 	cmdMap[CMD_FU].opts.StringVar(&opts[1], "tmo", "", "Timeout")
