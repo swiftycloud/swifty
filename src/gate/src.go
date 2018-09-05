@@ -427,7 +427,7 @@ func checkVersion(ctx context.Context, fn *FunctionDesc, version string, version
 
 func putSources(ctx context.Context, fn *FunctionDesc, src *swyapi.FunctionSources) error {
 	fn.Src.Version = zeroVersion
-	return writeSources(ctx, fn, src)
+	return writeSources(ctx, fn, src, "")
 }
 
 func getSources(ctx context.Context, fn *FunctionDesc) ([]byte, error) {
@@ -438,26 +438,21 @@ func getSources(ctx context.Context, fn *FunctionDesc) ([]byte, error) {
 func updateSources(ctx context.Context, fn *FunctionDesc, src *swyapi.FunctionSources) error {
 	ov, _ := strconv.Atoi(fn.Src.Version)
 	fn.Src.Version = strconv.Itoa(ov + 1)
-	return writeSources(ctx, fn, src)
+	return writeSources(ctx, fn, src, "")
 }
 
-func writeSources(ctx context.Context, fn *FunctionDesc, src *swyapi.FunctionSources) error {
+func writeSources(ctx context.Context, fn *FunctionDesc, src *swyapi.FunctionSources, suff string) error {
 	srch, ok := srcHandlers[src.Type]
 	if !ok {
 		return fmt.Errorf("Unknown sources type %s", src.Type)
 	}
 
-	return srch.get(ctx, src, fn.srcPath(""), RtScriptName(&fn.Code, ""))
+	return srch.get(ctx, src, fn.srcPath(""), RtScriptName(&fn.Code, suff))
 }
 
 func writeTempSources(ctx context.Context, fn *FunctionDesc, src *swyapi.FunctionSources) (string, error) {
-	srch, ok := srcHandlers[src.Type]
-	if !ok {
-		return "", fmt.Errorf("Unknown sources type %s", src.Type)
-	}
-
-	suff := "tmp" /* FIXME -- locking or randomness */
-	return suff, srch.get(ctx, src, fn.srcPath(""), RtScriptName(&fn.Code, suff))
+	/* Call to this fn is locked per-tenant, so ... */
+	return "tmp", writeSources(ctx, fn, src, "tmp")
 }
 
 func bgClone(rd *RepoDesc, ac *AccDesc, rh *repoHandler) {
