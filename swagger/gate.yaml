@@ -2152,6 +2152,9 @@ definitions:
       event:
         type: string
         description: An event that the FN would see. When callev via URL trigger, this would be "call"
+      src:
+        $ref: '#/definitions/FunctionSources'
+        description: Sources to run in this fn's context, instead of added ones
   FunctionRunResult:
     required:
       - code
