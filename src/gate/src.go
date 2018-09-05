@@ -25,24 +25,19 @@ const (
 	RepoDescFile	= ".swifty.yml"
 )
 
-func fnCodeDir(fn *FunctionDesc) string {
+func (fn *FunctionDesc)srcRoot() string {
 	return fn.Tennant + "/" + fn.Project + "/" + fn.Name
 }
 
-func fnCodeVersionDir(fn *FunctionDesc, version string) string {
-	return fnCodeDir(fn) + "/" + version
+func (fn *FunctionDesc)srcDir(version string) string {
+	if version == "" {
+		version = fn.Src.Version
+	}
+	return fn.srcRoot() + "/" + version
 }
 
-func fnCodeLatestDir(fn *FunctionDesc) string {
-	return fnCodeVersionDir(fn, fn.Src.Version)
-}
-
-func fnCodeVersionPath(conf *YAMLConf, fn *FunctionDesc, version string) string {
-	return conf.Wdog.Volume + "/" + fnCodeVersionDir(fn, version)
-}
-
-func fnCodeLatestPath(conf *YAMLConf, fn *FunctionDesc) string {
-	return fnCodeVersionPath(conf, fn, fn.Src.Version)
+func (fn *FunctionDesc)srcPath(version string) string {
+	return conf.Wdog.Volume + "/" + fn.srcDir(version)
 }
 
 func cloneDir() string {
@@ -430,34 +425,34 @@ func checkVersion(ctx context.Context, fn *FunctionDesc, version string, version
 	return false, nil
 }
 
-func getSources(ctx context.Context, fn *FunctionDesc, src *swyapi.FunctionSources) error {
+func putSources(ctx context.Context, fn *FunctionDesc, src *swyapi.FunctionSources) error {
 	fn.Src.Version = zeroVersion
-	return writeSources(ctx, fn, src)
+	return writeSources(ctx, fn, src, "")
+}
+
+func getSources(ctx context.Context, fn *FunctionDesc) ([]byte, error) {
+	codeFile := fn.srcPath("") + "/" + RtScriptName(&fn.Code, "")
+	return ioutil.ReadFile(codeFile)
 }
 
 func updateSources(ctx context.Context, fn *FunctionDesc, src *swyapi.FunctionSources) error {
 	ov, _ := strconv.Atoi(fn.Src.Version)
 	fn.Src.Version = strconv.Itoa(ov + 1)
-	return writeSources(ctx, fn, src)
+	return writeSources(ctx, fn, src, "")
 }
 
-func writeSources(ctx context.Context, fn *FunctionDesc, src *swyapi.FunctionSources) error {
+func writeSources(ctx context.Context, fn *FunctionDesc, src *swyapi.FunctionSources, suff string) error {
 	srch, ok := srcHandlers[src.Type]
 	if !ok {
 		return fmt.Errorf("Unknown sources type %s", src.Type)
 	}
 
-	return srch.get(ctx, src, fnCodeLatestPath(&conf, fn), RtScriptName(&fn.Code, ""))
+	return srch.get(ctx, src, fn.srcPath(""), RtScriptName(&fn.Code, suff))
 }
 
 func writeTempSources(ctx context.Context, fn *FunctionDesc, src *swyapi.FunctionSources) (string, error) {
-	srch, ok := srcHandlers[src.Type]
-	if !ok {
-		return "", fmt.Errorf("Unknown sources type %s", src.Type)
-	}
-
-	suff := "tmp" /* FIXME -- locking or randomness */
-	return suff, srch.get(ctx, src, fnCodeLatestPath(&conf, fn), RtScriptName(&fn.Code, suff))
+	/* Call to this fn is locked per-tenant, so ... */
+	return "tmp", writeSources(ctx, fn, src, "tmp")
 }
 
 func bgClone(rd *RepoDesc, ac *AccDesc, rh *repoHandler) {
@@ -582,7 +577,7 @@ func getFileFromReq(ctx context.Context, src *swyapi.FunctionSources, to, script
 }
 
 func GCOldSources(ctx context.Context, fn *FunctionDesc, ver string) {
-	np, err := swy.DropDirPrep(conf.Wdog.Volume, fnCodeVersionDir(fn, ver))
+	np, err := swy.DropDirPrep(conf.Wdog.Volume, fn.srcDir(ver))
 	if err != nil {
 		ctxlog(ctx).Errorf("Leaking %s sources till FN removal (err %s)", ver, err.Error())
 		return
@@ -742,8 +737,8 @@ func listRepos(ctx context.Context, accid, att string) ([]*swyapi.RepoInfo, *swy
 	return ret, nil
 }
 
-func cleanRepo(ctx context.Context, fn *FunctionDesc) error {
-	sd := fnCodeDir(fn)
+func removeSources(ctx context.Context, fn *FunctionDesc) error {
+	sd := fn.srcRoot()
 
 	td, err := swy.DropDir(conf.Home + "/" + CloneDir, sd)
 	if err != nil {

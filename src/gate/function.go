@@ -5,7 +5,6 @@ import (
 	"errors"
 	"strings"
 	"fmt"
-	"io/ioutil"
 	"time"
 	"context"
 	"gopkg.in/mgo.v2/bson"
@@ -282,7 +281,7 @@ func (fn *FunctionDesc)Add(ctx context.Context, src *swyapi.FunctionSources) *sw
 
 	gateFunctions.Inc()
 
-	err = getSources(ctx, fn, src)
+	err = putSources(ctx, fn, src)
 	if err != nil {
 		goto out_clean_func
 	}
@@ -330,7 +329,7 @@ func (fn *FunctionDesc)Add(ctx context.Context, src *swyapi.FunctionSources) *sw
 	return nil
 
 out_clean_repo:
-	erc = cleanRepo(ctx, fn)
+	erc = removeSources(ctx, fn)
 	if erc != nil {
 		goto stalled
 	}
@@ -619,9 +618,8 @@ func (fn *FunctionDesc)delS3Bucket(ctx context.Context, bn string) error {
 	return nil
 }
 
-func (fn *FunctionDesc)getSources() (*swyapi.FunctionSources, *swyapi.GateErr) {
-	codeFile := fnCodeLatestPath(&conf, fn) + "/" + RtScriptName(&fn.Code, "")
-	fnCode, err := ioutil.ReadFile(codeFile)
+func (fn *FunctionDesc)getSources(ctx context.Context) (*swyapi.FunctionSources, *swyapi.GateErr) {
+	fnCode, err := getSources(ctx, fn)
 	if err != nil {
 		return nil, GateErrC(swy.GateFsError)
 	}
@@ -750,7 +748,7 @@ func (fn *FunctionDesc)Remove(ctx context.Context) *swyapi.GateErr {
 	}
 
 	ctxlog(ctx).Debugf("`- clean sources")
-	err = cleanRepo(ctx, fn)
+	err = removeSources(ctx, fn)
 	if err != nil {
 		goto later
 	}
