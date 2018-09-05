@@ -25,12 +25,12 @@ const (
 	RepoDescFile	= ".swifty.yml"
 )
 
-func fnCodeDir(fn *FunctionDesc) string {
+func (fn *FunctionDesc)srcDir() string {
 	return fn.Tennant + "/" + fn.Project + "/" + fn.Name
 }
 
 func fnCodeVersionDir(fn *FunctionDesc, version string) string {
-	return fnCodeDir(fn) + "/" + version
+	return fn.srcDir() + "/" + version
 }
 
 func fnCodeLatestDir(fn *FunctionDesc) string {
@@ -743,7 +743,7 @@ func listRepos(ctx context.Context, accid, att string) ([]*swyapi.RepoInfo, *swy
 }
 
 func cleanRepo(ctx context.Context, fn *FunctionDesc) error {
-	sd := fnCodeDir(fn)
+	sd := fn.srcDir()
 
 	td, err := swy.DropDir(conf.Home + "/" + CloneDir, sd)
 	if err != nil {
