@@ -1573,6 +1573,23 @@ func handleFunctionRun(ctx context.Context, w http.ResponseWriter, r *http.Reque
 
 	suff := ""
 	if params.Src != nil {
+		td, err := tendatGet(ctx, gctx(ctx).Tenant)
+		if err != nil {
+			return GateErrD(err)
+		}
+
+		td.runlock.Lock()
+		defer td.runlock.Unlock()
+
+		if td.runrate == nil {
+			td.runrate = xratelimit.MakeRL(0, 1) /* FIXME -- configurable */
+		}
+
+		if !td.runrate.Get() {
+			http.Error(w, "Try-run is once per second", http.StatusTooManyRequests)
+			return nil
+		}
+
 		ctxlog(ctx).Debugf("Asked for custom sources... oh, well...")
 		suff, err = writeTempSources(ctx, &fn, params.Src)
 		if err != nil {

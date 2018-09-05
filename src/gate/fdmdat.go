@@ -31,6 +31,9 @@ type TenantMemData struct {
 	fnlim	uint
 	lock	sync.Mutex
 
+	runlock	sync.Mutex
+	runrate	*xratelimit.RL
+
 	GBS_l, GBS_o	float64
 	BOut_l, BOut_o	uint64
 }
