@@ -25,24 +25,19 @@ const (
 	RepoDescFile	= ".swifty.yml"
 )
 
-func (fn *FunctionDesc)srcDir() string {
+func (fn *FunctionDesc)srcRoot() string {
 	return fn.Tennant + "/" + fn.Project + "/" + fn.Name
 }
 
-func fnCodeVersionDir(fn *FunctionDesc, version string) string {
-	return fn.srcDir() + "/" + version
+func (fn *FunctionDesc)srcDir(version string) string {
+	if version == "" {
+		version = fn.Src.Version
+	}
+	return fn.srcRoot() + "/" + version
 }
 
-func fnCodeLatestDir(fn *FunctionDesc) string {
-	return fnCodeVersionDir(fn, fn.Src.Version)
-}
-
-func fnCodeVersionPath(fn *FunctionDesc, version string) string {
-	return conf.Wdog.Volume + "/" + fnCodeVersionDir(fn, version)
-}
-
-func fnCodeLatestPath(fn *FunctionDesc) string {
-	return fnCodeVersionPath(fn, fn.Src.Version)
+func (fn *FunctionDesc)srcPath(version string) string {
+	return conf.Wdog.Volume + "/" + fn.srcDir(version)
 }
 
 func cloneDir() string {
@@ -447,7 +442,7 @@ func writeSources(ctx context.Context, fn *FunctionDesc, src *swyapi.FunctionSou
 		return fmt.Errorf("Unknown sources type %s", src.Type)
 	}
 
-	return srch.get(ctx, src, fnCodeLatestPath(fn), RtScriptName(&fn.Code, ""))
+	return srch.get(ctx, src, fn.srcPath(""), RtScriptName(&fn.Code, ""))
 }
 
 func writeTempSources(ctx context.Context, fn *FunctionDesc, src *swyapi.FunctionSources) (string, error) {
@@ -457,7 +452,7 @@ func writeTempSources(ctx context.Context, fn *FunctionDesc, src *swyapi.Functio
 	}
 
 	suff := "tmp" /* FIXME -- locking or randomness */
-	return suff, srch.get(ctx, src, fnCodeLatestPath(fn), RtScriptName(&fn.Code, suff))
+	return suff, srch.get(ctx, src, fn.srcPath(""), RtScriptName(&fn.Code, suff))
 }
 
 func bgClone(rd *RepoDesc, ac *AccDesc, rh *repoHandler) {
@@ -582,7 +577,7 @@ func getFileFromReq(ctx context.Context, src *swyapi.FunctionSources, to, script
 }
 
 func GCOldSources(ctx context.Context, fn *FunctionDesc, ver string) {
-	np, err := swy.DropDirPrep(conf.Wdog.Volume, fnCodeVersionDir(fn, ver))
+	np, err := swy.DropDirPrep(conf.Wdog.Volume, fn.srcDir(ver))
 	if err != nil {
 		ctxlog(ctx).Errorf("Leaking %s sources till FN removal (err %s)", ver, err.Error())
 		return
@@ -742,8 +737,8 @@ func listRepos(ctx context.Context, accid, att string) ([]*swyapi.RepoInfo, *swy
 	return ret, nil
 }
 
-func cleanRepo(ctx context.Context, fn *FunctionDesc) error {
-	sd := fn.srcDir()
+func removeSources(ctx context.Context, fn *FunctionDesc) error {
+	sd := fn.srcRoot()
 
 	td, err := swy.DropDir(conf.Home + "/" + CloneDir, sd)
 	if err != nil {

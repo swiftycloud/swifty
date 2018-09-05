@@ -330,7 +330,7 @@ func (fn *FunctionDesc)Add(ctx context.Context, src *swyapi.FunctionSources) *sw
 	return nil
 
 out_clean_repo:
-	erc = cleanRepo(ctx, fn)
+	erc = removeSources(ctx, fn)
 	if erc != nil {
 		goto stalled
 	}
@@ -620,7 +620,7 @@ func (fn *FunctionDesc)delS3Bucket(ctx context.Context, bn string) error {
 }
 
 func (fn *FunctionDesc)getSources() (*swyapi.FunctionSources, *swyapi.GateErr) {
-	codeFile := fnCodeLatestPath(fn) + "/" + RtScriptName(&fn.Code, "")
+	codeFile := fn.srcPath("") + "/" + RtScriptName(&fn.Code, "")
 	fnCode, err := ioutil.ReadFile(codeFile)
 	if err != nil {
 		return nil, GateErrC(swy.GateFsError)
@@ -750,7 +750,7 @@ func (fn *FunctionDesc)Remove(ctx context.Context) *swyapi.GateErr {
 	}
 
 	ctxlog(ctx).Debugf("`- clean sources")
-	err = cleanRepo(ctx, fn)
+	err = removeSources(ctx, fn)
 	if err != nil {
 		goto later
 	}
