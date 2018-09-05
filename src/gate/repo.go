@@ -411,7 +411,7 @@ func gitCommit(dir string) (string, error) {
 }
 
 var srcHandlers = map[string] struct {
-	get func (context.Context, *FunctionDesc, *swyapi.FunctionSources) error
+	get func (context.Context, *swyapi.FunctionSources, string, string) error
 } {
 	"git":		{ get: getFileFromRepo, },
 	"code":		{ get: getFileFromReq, },
@@ -431,22 +431,23 @@ func checkVersion(ctx context.Context, fn *FunctionDesc, version string, version
 }
 
 func getSources(ctx context.Context, fn *FunctionDesc, src *swyapi.FunctionSources) error {
-	return writeSources(ctx, fn, src, zeroVersion)
+	fn.Src.Version = zeroVersion
+	return writeSources(ctx, fn, src)
 }
 
 func updateSources(ctx context.Context, fn *FunctionDesc, src *swyapi.FunctionSources) error {
 	ov, _ := strconv.Atoi(fn.Src.Version)
-	return writeSources(ctx, fn, src, strconv.Itoa(ov + 1))
+	fn.Src.Version = strconv.Itoa(ov + 1)
+	return writeSources(ctx, fn, src)
 }
 
-func writeSources(ctx context.Context, fn *FunctionDesc, src *swyapi.FunctionSources, version string) error {
+func writeSources(ctx context.Context, fn *FunctionDesc, src *swyapi.FunctionSources) error {
 	srch, ok := srcHandlers[src.Type]
 	if !ok {
 		return fmt.Errorf("Unknown sources type %s", src.Type)
 	}
 
-	fn.Src.Version = version
-	return srch.get(ctx, fn, src)
+	return srch.get(ctx, src, fnCodeLatestPath(&conf, fn), RtDefaultScriptName(&fn.Code))
 }
 
 func bgClone(rd *RepoDesc, ac *AccDesc, rh *repoHandler) {
@@ -518,15 +519,12 @@ func cloneGit(ctx context.Context, rd *RepoDesc, ac *AccDesc) (string, error) {
 	return gitCommit(clone_to)
 }
 
-func writeSourceFile(ctx context.Context, fn *FunctionDesc, data []byte) error {
-	to := fnCodeLatestPath(&conf, fn)
+func writeSourceFile(ctx context.Context, to, script string, data []byte) error {
 	err := os.MkdirAll(to, 0750)
 	if err != nil {
 		ctxlog(ctx).Error("Can't mkdir sources: %s", err.Error())
 		return errors.New("FS error")
 	}
-
-	script := RtDefaultScriptName(&fn.Code)
 
 	err = ioutil.WriteFile(to + "/" + script, data, 0600)
 	if err != nil {
@@ -544,7 +542,7 @@ func ctxRepoId(ctx context.Context, rid string) bson.M {
 	}
 }
 
-func getFileFromRepo(ctx context.Context, fn *FunctionDesc, src *swyapi.FunctionSources) error {
+func getFileFromRepo(ctx context.Context, src *swyapi.FunctionSources, to, script string) error {
 	ids := strings.SplitN(src.Repo, "/", 2)
 	if len(ids) != 2 || !bson.IsObjectIdHex(ids[0]) {
 		return errors.New("Bad repo file ID")
@@ -561,16 +559,16 @@ func getFileFromRepo(ctx context.Context, fn *FunctionDesc, src *swyapi.Function
 		return err
 	}
 
-	return writeSourceFile(ctx, fn, fnCode)
+	return writeSourceFile(ctx, to, script, fnCode)
 }
 
-func getFileFromReq(ctx context.Context, fn *FunctionDesc, src *swyapi.FunctionSources) error {
+func getFileFromReq(ctx context.Context, src *swyapi.FunctionSources, to, script string) error {
 	data, err := base64.StdEncoding.DecodeString(src.Code)
 	if err != nil {
 		return fmt.Errorf("Error decoding sources")
 	}
 
-	return writeSourceFile(ctx, fn, data)
+	return writeSourceFile(ctx, to, script, data)
 }
 
 func GCOldSources(ctx context.Context, fn *FunctionDesc, ver string) {
