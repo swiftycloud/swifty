@@ -2,7 +2,7 @@
 
 require('libsys/shim')
 require('libjs/shim')
-var script = require('/function/script.js')
+var script = require('/function/' + process.argv[2] + '.js')
 var qfd = 3
 var buf = Buffer.alloc(1024)
 

@@ -148,8 +148,8 @@ func RtCodePath(scr *FnCodeDesc) string {
 	return rt_handlers[scr.Lang].CodePath
 }
 
-func RtDefaultScriptName(scr *FnCodeDesc) string {
-	return "script." + rt_handlers[scr.Lang].Ext
+func RtScriptName(scr *FnCodeDesc, suff string) string {
+	return "script" + suff + "." + rt_handlers[scr.Lang].Ext
 }
 
 func RtLangInfo(lh *rt_info) *swyapi.LangInfo {

@@ -39,7 +39,8 @@ type Runner struct {
 
 type localRunner struct {
 	cmd	*exec.Cmd
-	lang	string
+	lang	*LangDesc
+	suff	string
 	tmous	int64
 	fout	string
 	ferr	string
@@ -71,7 +72,7 @@ func get_exit_code(err error) (bool, int) {
 	}
 }
 
-func restartLocal(runner *Runner) {
+func stopLocal(runner *Runner) {
 	if runner.l.cmd.Process.Kill() != nil {
 		/* Nothing else, but kill outselves, the pod will exit
 		* and k8s will restart us
@@ -81,6 +82,10 @@ func restartLocal(runner *Runner) {
 
 	runner.l.cmd.Wait()
 	runner.q.Close()
+}
+
+func restartLocal(runner *Runner) {
+	stopLocal(runner)
 	startQnR(runner)
 }
 
@@ -91,7 +96,9 @@ func makeExecutablePath(path string) {
 		sp += "/" + p
 
 		st, _ := os.Stat(sp)
-		os.Chmod(sp, st.Mode() | 0005)
+		if st != nil {
+			os.Chmod(sp, st.Mode() | 0005)
+		}
 	}
 }
 
@@ -101,20 +108,21 @@ func makeExecutablePath(path string) {
  * dicussed in the github PR-s, but so far no good solutions. Thus
  * explicitly grant r and x bits for everything that needs it.
  */
-func prepareVolume(lang string) {
-	switch lang {
-	case "python", "ruby", "nodejs":
-		exec.Command("chmod", "-R", "o+rX", "/function").Run()
-	case "swift", "golang":
-		makeExecutablePath(runners[lang])
-	}
+
+func mkExecPath(ld *LangDesc, suff string) {
+	exec.Command("chmod", "-R", "o+rX", "/function").Run()
 }
 
-func makeLocalRunner(lang string, tmous int64) (*Runner, error) {
+func mkExecRunner(ld *LangDesc, suff string) {
+	makeExecutablePath(ld.runner + suff)
+}
+
+func makeLocalRunner(lang string, tmous int64, suff string) (*Runner, error) {
 	var err error
 	p := make([]int, 2)
 
-	lr := &localRunner{lang: lang, tmous: tmous}
+	ld := ldescs[lang]
+	lr := &localRunner{lang: &ld, tmous: tmous, suff: suff}
 	runner := &Runner {l: lr, restart: restartLocal, ready: true}
 
 	err = syscall.Pipe(p)
@@ -137,7 +145,7 @@ func makeLocalRunner(lang string, tmous int64) (*Runner, error) {
 	syscall.CloseOnExec(p[0])
 	runner.fine = os.NewFile(uintptr(p[0]), "runner.stderr")
 
-	prepareVolume(lang)
+	ld.prep(&ld, suff)
 
 	err = startQnR(runner)
 	if err != nil {
@@ -147,12 +155,37 @@ func makeLocalRunner(lang string, tmous int64) (*Runner, error) {
 	return runner, nil
 }
 
-var runners = map[string]string {
-	"golang": "/go/src/swycode/function",
-	"python": "/usr/bin/swy-runner.py",
-	"swift": "/swift/swycode/debug/function",
-	"nodejs": "/home/swifty/runner-js.sh",
-	"ruby": "/home/swifty/runner.rb",
+type buildFn func(*swyapi.SwdFunctionBuild) (*swyapi.SwdFunctionRunResult, error)
+
+type LangDesc struct {
+	runner		string
+	build		buildFn
+	prep		func(*LangDesc, string)
+}
+
+var ldescs = map[string]LangDesc {
+	"golang": LangDesc {
+		runner:	"/go/src/swycode/runner",
+		build:	doBuildGo,
+		prep:	mkExecRunner,
+	},
+	"python": LangDesc {
+		runner:	"/usr/bin/swy-runner.py",
+		prep:	mkExecPath,
+	},
+	"swift": LangDesc {
+		runner:	"/swift/swycode/debug/runner",
+		build:	doBuildSwift,
+		prep:	mkExecRunner,
+	},
+	"nodejs": LangDesc {
+		runner:	"/home/swifty/runner-js.sh",
+		prep:	mkExecPath,
+	},
+	"ruby": LangDesc {
+		runner:	"/home/swifty/runner.rb",
+		prep:	mkExecPath,
+	},
 }
 
 func startQnR(runner *Runner) error {
@@ -168,10 +201,21 @@ func startQnR(runner *Runner) error {
 		return fmt.Errorf("Can't set receive timeout: %s", err.Error())
 	}
 
+	var bin, scr string
+
+	if runner.l.lang.build == nil {
+		/* /bin/interpreter script${suff}.ext */
+		bin = runner.l.lang.runner
+		scr = "script" + runner.l.suff
+	} else {
+		/* /function${suff} - */
+		bin = runner.l.lang.runner + runner.l.suff
+		scr = "-"
+	}
+
 	runner.l.cmd = exec.Command("/usr/bin/swy-runner",
 					runner.l.fout, runner.l.ferr,
-					runner.q.GetId(),
-					runners[runner.l.lang])
+					runner.q.GetId(), bin, scr)
 	err = runner.l.cmd.Start()
 	if err != nil {
 		return fmt.Errorf("Can't start runner: %s", err.Error())
@@ -245,52 +289,32 @@ func doRun(runner *Runner, body []byte) (*swyapi.SwdFunctionRunResult, error) {
 	return ret, nil
 }
 
-var builders = map[string]func(*swyapi.SwdFunctionBuild) (*swyapi.SwdFunctionRunResult, error) {
-	"golang": doBuildGo,
-	"swift": doBuildSwift,
-}
-
 var buildlock sync.Mutex
-var buildlang string
-
-func doBuild(params *swyapi.SwdFunctionBuild) (*swyapi.SwdFunctionRunResult, error) {
-	buildlock.Lock()
-	defer buildlock.Unlock()
-
-	fn, ok := builders[buildlang]
-	if !ok {
-		return nil, fmt.Errorf("No builder for %s", buildlang)
-	}
-
-	return fn(params)
-}
 
 /*
  * All functions sit at /go/src/swycode/
  * Runner sits at /go/src/swyrunner/
  */
+const goScript = "/go/src/swyrunner/script.go"
+
 func doBuildGo(params *swyapi.SwdFunctionBuild) (*swyapi.SwdFunctionRunResult, error) {
-	os.Remove("/go/src/swyrunner/script.go")
+	os.Remove(goScript)
 	srcdir := params.Sources
-	err := os.Symlink("/go/src/swycode/" + srcdir + "/script.go", "/go/src/swyrunner/script.go")
+	err := os.Symlink("/go/src/swycode/" + srcdir + "/script" + params.Suff + ".go", goScript)
 	if err != nil {
 		return nil, fmt.Errorf("Can't symlink code: %s", err.Error())
-	}
-
-	err = os.Chdir("/go/src/swyrunner")
-	if err != nil {
-		return nil, fmt.Errorf("Can't chdir to swywdog: %s", err.Error())
 	}
 
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 
 	log.Debugf("Run go build on %s", srcdir)
-	cmd := exec.Command("go", "build", "-o", "../swycode/" + srcdir + "/function")
+	cmd := exec.Command("go", "build", "-o", "../swycode/" + srcdir + "/runner" + params.Suff)
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
+	cmd.Dir = "/go/src/swyrunner"
 	err = cmd.Run()
-	os.Remove("/go/src/swyrunner/script.go") /* Just an attempt */
+	os.Remove(goScript)
 
 	if err != nil {
 		if exit, code := get_exit_code(err); exit {
@@ -307,17 +331,14 @@ func doBuildGo(params *swyapi.SwdFunctionBuild) (*swyapi.SwdFunctionRunResult, e
  * All functions sit at /swift/swycode/
  * Runner sits at /swift/runner/
  */
+const swiftScript = "/swift/runner/Sources/script.swift"
+
 func doBuildSwift(params *swyapi.SwdFunctionBuild) (*swyapi.SwdFunctionRunResult, error) {
-	os.Remove("/swift/runner/Sources/script.swift")
+	os.Remove(swiftScript)
 	srcdir := params.Sources
-	err := os.Symlink("/swift/swycode/" + srcdir + "/script.swift", "/swift/runner/Sources/script.swift")
+	err := os.Symlink("/swift/swycode/" + srcdir + "/script" + params.Suff + ".swift", swiftScript)
 	if err != nil {
 		return nil, fmt.Errorf("Can't symlink code: %s", err.Error())
-	}
-
-	err = os.Chdir("/swift/runner")
-	if err != nil {
-		return nil, fmt.Errorf("Can't chdir to runner dir: %s", err.Error())
 	}
 
 	var stdout bytes.Buffer
@@ -327,9 +348,9 @@ func doBuildSwift(params *swyapi.SwdFunctionBuild) (*swyapi.SwdFunctionRunResult
 	cmd := exec.Command("swift", "build", "--build-path", "../swycode/" + srcdir)
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
+	cmd.Dir = "/swift/runner"
 	err = cmd.Run()
-	os.Remove("/swift/runner/Sources/script.swift")
-
+	os.Remove(swiftScript)
 	if err != nil {
 		if exit, code := get_exit_code(err); exit {
 			return &swyapi.SwdFunctionRunResult{Code: code, Stdout: stdout.String(), Stderr: stderr.String()}, nil
@@ -338,7 +359,25 @@ func doBuildSwift(params *swyapi.SwdFunctionBuild) (*swyapi.SwdFunctionRunResult
 		return nil, fmt.Errorf("Can't build: %s", err.Error())
 	}
 
+	err = os.Rename("/swift/swycode/debug/function", "/swift/swycode/debug/runner" + params.Suff)
+	if err != nil {
+		return nil, fmt.Errorf("Can't rename binary: %s", err.Error())
+	}
+
 	return &swyapi.SwdFunctionRunResult{Code: 0, Stdout: stdout.String(), Stderr: stderr.String()}, nil
+}
+
+func handleTry(lang string, tmous int64, w http.ResponseWriter, r *http.Request) {
+	suff := mux.Vars(r)["suff"]
+
+	runner, err := makeLocalRunner(lang, tmous, suff)
+	if err == nil {
+		handleRun(runner, w, r)
+	} else {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Errorf("%s", err.Error())
+	}
+	stopLocal(runner)
 }
 
 func handleRun(runner *Runner, w http.ResponseWriter, r *http.Request) {
@@ -378,7 +417,7 @@ out:
 	log.Errorf("%s", err.Error())
 }
 
-func handleBuild(w http.ResponseWriter, r *http.Request) {
+func handleBuild(w http.ResponseWriter, r *http.Request, fn buildFn) {
 	defer r.Body.Close()
 	var params swyapi.SwdFunctionBuild
 	var result *swyapi.SwdFunctionRunResult
@@ -390,7 +429,9 @@ func handleBuild(w http.ResponseWriter, r *http.Request) {
 	}
 
 	code = http.StatusInternalServerError
-	result, err = doBuild(&params)
+	buildlock.Lock()
+	result, err = fn(&params)
+	buildlock.Unlock()
 	if err != nil {
 		log.Errorf("Error building FN: %s", err.Error())
 		goto out
@@ -618,8 +659,14 @@ func main() {
 			log.Fatal("SWD_LANG not set")
 		}
 
-		buildlang = lang
-		r.HandleFunc("/v1/run", handleBuild)
+		ld, ok := ldescs[lang]
+		if !ok || ld.build == nil {
+			log.Fatal("No build handler for lang")
+		}
+
+		r.HandleFunc("/v1/run", func(w http.ResponseWriter, r *http.Request) {
+			handleBuild(w, r, ld.build)
+		})
 	} else if inst == "proxy" {
 		r.HandleFunc("/v1/run/{fnid}/{podip}", handleProxy)
 	} else {
@@ -644,7 +691,7 @@ func main() {
 		}
 
 		tmous := int64((time.Duration(tmo) * time.Millisecond) / time.Microsecond)
-		runner, err := makeLocalRunner(lang, tmous)
+		runner, err := makeLocalRunner(lang, tmous, "")
 		if err != nil {
 			log.Fatal("Can't start runner")
 		}
@@ -657,6 +704,10 @@ func main() {
 		r.HandleFunc("/v1/run/" + podToken,
 				func(w http.ResponseWriter, r *http.Request) {
 					handleRun(runner, w, r)
+				})
+		r.HandleFunc("/v1/run/" + podToken + "/{suff}",
+				func(w http.ResponseWriter, r *http.Request) {
+					handleTry(lang, tmous, w, r)
 				})
 	}
 

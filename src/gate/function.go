@@ -304,7 +304,7 @@ func (fn *FunctionDesc)Add(ctx context.Context, src *swyapi.FunctionSources) *sw
 			ctx, done := mkContext("::build")
 			defer done(ctx)
 
-			err = buildFunction(ctx, &conf, bAddr, fn)
+			err = buildFunction(ctx, &conf, bAddr, fn, "")
 			if err != nil {
 				goto bstalled
 			}
@@ -620,7 +620,7 @@ func (fn *FunctionDesc)delS3Bucket(ctx context.Context, bn string) error {
 }
 
 func (fn *FunctionDesc)getSources() (*swyapi.FunctionSources, *swyapi.GateErr) {
-	codeFile := fnCodeLatestPath(&conf, fn) + "/" + RtDefaultScriptName(&fn.Code)
+	codeFile := fnCodeLatestPath(&conf, fn) + "/" + RtScriptName(&fn.Code, "")
 	fnCode, err := ioutil.ReadFile(codeFile)
 	if err != nil {
 		return nil, GateErrC(swy.GateFsError)
@@ -650,7 +650,7 @@ func (fn *FunctionDesc)updateSources(ctx context.Context, src *swyapi.FunctionSo
 		return GateErrE(swy.GateGenErr, err)
 	}
 
-	err = tryBuildFunction(ctx, &conf, fn)
+	err = tryBuildFunction(ctx, &conf, fn, "")
 	if err != nil {
 		return GateErrE(swy.GateGenErr, err)
 	}

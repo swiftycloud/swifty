@@ -1340,7 +1340,7 @@ func handleFunctionCall(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	res, err = doRunConn(ctx, conn, fnId, "call", args)
+	res, err = doRunConn(ctx, conn, fnId, "", "call", args)
 	if err != nil {
 		code = http.StatusInternalServerError
 		goto out
@@ -1571,13 +1571,28 @@ func handleFunctionRun(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		return GateErrM(swy.GateNotAvail, "Function not ready (yet)")
 	}
 
+	suff := ""
+	if params.Src != nil {
+		ctxlog(ctx).Debugf("Asked for custom sources... oh, well...")
+		suff, err = writeTempSources(ctx, &fn, params.Src)
+		if err != nil {
+			return GateErrE(swy.GateGenErr, err)
+		}
+
+		err = tryBuildFunction(ctx, &conf, &fn, suff)
+		if err != nil {
+			return GateErrM(swy.GateGenErr, "Error building function")
+		}
+
+		params.Src = nil /* not to propagate to wdog */
+	}
+
 	conn, errc := balancerGetConnExact(ctx, fn.Cookie, fn.Src.Version)
 	if errc != nil {
 		return errc
 	}
 
-	res, err = doRunConn(ctx, conn, fn.Cookie, "run",
-			&swyapi.SwdFunctionRun{Args: params.Args})
+	res, err = doRunConn(ctx, conn, fn.Cookie, suff, "run", &params)
 	if err != nil {
 		return GateErrE(swy.GateGenErr, err)
 	}

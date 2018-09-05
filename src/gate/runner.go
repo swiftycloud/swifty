@@ -32,7 +32,7 @@ func doRun(ctx context.Context, fn *FunctionDesc, event string, args *swyapi.Swd
 	}
 
 	sopq := statsStart()
-	res, err := doRunConn(ctx, conn, fn.Cookie, event, args)
+	res, err := doRunConn(ctx, conn, fn.Cookie, "", event, args)
 	if err == nil {
 		statsUpdate(fmd, sopq, res)
 	}
@@ -67,19 +67,24 @@ func talkHTTP(addr, port, url string, args *swyapi.SwdFunctionRun) (*swyapi.SwdF
 	return &res, nil
 }
 
-func doRunConn(ctx context.Context, conn *podConn, cookie, event string, args *swyapi.SwdFunctionRun) (*swyapi.SwdFunctionRunResult, error) {
+func doRunConn(ctx context.Context, conn *podConn, cookie, suff, event string, args *swyapi.SwdFunctionRun) (*swyapi.SwdFunctionRunResult, error) {
 	var res *swyapi.SwdFunctionRunResult
 	var err error
 
 	args.Event = event
+	proxy := SwdProxyOK && suff == ""
 
-	if SwdProxyOK {
+	if proxy {
 		res, err = talkHTTP(conn.Host, strconv.Itoa(conf.Wdog.Port),
 				cookie + "/" + strings.Replace(conn.Addr, ".", "_", -1), args)
 	}
 
-	if !SwdProxyOK || err != nil {
-		res, err = talkHTTP(conn.Addr, conn.Port, cookie, args)
+	if !proxy || err != nil {
+		url := cookie
+		if suff != "" {
+			url += "/" + suff
+		}
+		res, err = talkHTTP(conn.Addr, conn.Port, url, args)
 		if err != nil {
 			goto out
 		}
