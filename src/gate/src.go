@@ -37,12 +37,12 @@ func fnCodeLatestDir(fn *FunctionDesc) string {
 	return fnCodeVersionDir(fn, fn.Src.Version)
 }
 
-func fnCodeVersionPath(conf *YAMLConf, fn *FunctionDesc, version string) string {
+func fnCodeVersionPath(fn *FunctionDesc, version string) string {
 	return conf.Wdog.Volume + "/" + fnCodeVersionDir(fn, version)
 }
 
-func fnCodeLatestPath(conf *YAMLConf, fn *FunctionDesc) string {
-	return fnCodeVersionPath(conf, fn, fn.Src.Version)
+func fnCodeLatestPath(fn *FunctionDesc) string {
+	return fnCodeVersionPath(fn, fn.Src.Version)
 }
 
 func cloneDir() string {
@@ -447,7 +447,7 @@ func writeSources(ctx context.Context, fn *FunctionDesc, src *swyapi.FunctionSou
 		return fmt.Errorf("Unknown sources type %s", src.Type)
 	}
 
-	return srch.get(ctx, src, fnCodeLatestPath(&conf, fn), RtScriptName(&fn.Code, ""))
+	return srch.get(ctx, src, fnCodeLatestPath(fn), RtScriptName(&fn.Code, ""))
 }
 
 func writeTempSources(ctx context.Context, fn *FunctionDesc, src *swyapi.FunctionSources) (string, error) {
@@ -457,7 +457,7 @@ func writeTempSources(ctx context.Context, fn *FunctionDesc, src *swyapi.Functio
 	}
 
 	suff := "tmp" /* FIXME -- locking or randomness */
-	return suff, srch.get(ctx, src, fnCodeLatestPath(&conf, fn), RtScriptName(&fn.Code, suff))
+	return suff, srch.get(ctx, src, fnCodeLatestPath(fn), RtScriptName(&fn.Code, suff))
 }
 
 func bgClone(rd *RepoDesc, ac *AccDesc, rh *repoHandler) {

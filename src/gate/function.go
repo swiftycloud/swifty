@@ -620,7 +620,7 @@ func (fn *FunctionDesc)delS3Bucket(ctx context.Context, bn string) error {
 }
 
 func (fn *FunctionDesc)getSources() (*swyapi.FunctionSources, *swyapi.GateErr) {
-	codeFile := fnCodeLatestPath(&conf, fn) + "/" + RtScriptName(&fn.Code, "")
+	codeFile := fnCodeLatestPath(fn) + "/" + RtScriptName(&fn.Code, "")
 	fnCode, err := ioutil.ReadFile(codeFile)
 	if err != nil {
 		return nil, GateErrC(swy.GateFsError)
