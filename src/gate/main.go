@@ -1038,31 +1038,25 @@ func handleFunctionSources(ctx context.Context, w http.ResponseWriter, r *http.R
 	return nil
 }
 
-func handleTenantStats(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
-	ten := gctx(ctx).Tenant
-	ctxlog(ctx).Debugf("Get FN stats %s", ten)
+func getCallStats(ctx context.Context, ten string, periods int) ([]swyapi.TenantStats, *swyapi.GateErr) {
+	var cs []swyapi.TenantStats
 
 	td, err := tendatGet(ctx, ten)
 	if err != nil {
-		return GateErrD(err)
+		return nil, GateErrD(err)
 	}
 
-	var resp swyapi.TenantStatsResp
 	prev := &td.stats
 
-	periods := reqPeriods(r.URL.Query())
-
 	if periods > 0 {
-		var atst []TenStats
-
-		atst, err = dbTenStatsGetArch(ctx, ten, periods)
+		atst, err := dbTenStatsGetArch(ctx, ten, periods)
 		if err != nil {
-			return GateErrD(err)
+			return nil, GateErrD(err)
 		}
 
 		for i := 0; i < periods && i < len(atst); i++ {
 			cur := &atst[i]
-			resp.Stats = append(resp.Stats, swyapi.TenantStats{
+			cs = append(cs, swyapi.TenantStats{
 				Called:		prev.Called - cur.Called,
 				GBS:		prev.GBS() - cur.GBS(),
 				BytesOut:	prev.BytesOut - cur.BytesOut,
@@ -1073,14 +1067,31 @@ func handleTenantStats(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		}
 	}
 
-	resp.Stats = append(resp.Stats, swyapi.TenantStats{
+	cs = append(cs, swyapi.TenantStats{
 		Called:		prev.Called,
 		GBS:		prev.GBS(),
 		BytesOut:	prev.BytesOut,
 		Till:		prev.TillS(),
 	})
 
-	err = swyhttp.MarshalAndWrite(w, resp)
+	return cs, nil
+}
+
+func handleTenantStats(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
+	ten := gctx(ctx).Tenant
+	ctxlog(ctx).Debugf("Get FN stats %s", ten)
+
+	periods := reqPeriods(r.URL.Query())
+
+	var resp swyapi.TenantStatsResp
+	var cerr *swyapi.GateErr
+
+	resp.Stats, cerr = getCallStats(ctx, ten, periods)
+	if cerr != nil {
+		return cerr
+	}
+
+	err := swyhttp.MarshalAndWrite(w, resp)
 	if err != nil {
 		return GateErrE(swy.GateBadResp, err)
 	}
