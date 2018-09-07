@@ -34,7 +34,6 @@ paths:
           description: Something went wrong
         '401':
           description: Bad username/pass
-          
   /stats:
     get:
       summary: Show user statistics
@@ -61,7 +60,6 @@ paths:
           description: Need to authenticate
         '403':
           description: Bad authentication token
-          
   /project/list:
     post:
       summary: List projects
@@ -112,7 +110,6 @@ paths:
           description: Need to authenticate
         '403':
           description: Bad authentication token
-
   /functions:
     parameters:
       - in: header
@@ -138,7 +135,9 @@ paths:
           name: details
           type: string
           required: false
-          description: Whether or not to show details about functions (value itself is ignored)
+          description: >-
+            Whether or not to show details about functions (value itself is
+            ignored)
         - in: query
           name: name
           type: string
@@ -188,8 +187,7 @@ paths:
           description: Need to authenticate
         '403':
           description: Bad authentication token
-
-  /functions/{fid}:
+  '/functions/{fid}':
     parameters:
       - in: header
         name: X-Auth-Token
@@ -233,7 +231,11 @@ paths:
           schema:
             $ref: '#/definitions/FunctionUpdate'
           required: true
-          description: Parameters to update. Note, that this is not an atomic call, each of the parameters from argument gets update one-by-one without rolling back any if some fails. Once some update fails, the call stops. So it's recommended to call this with only a single parameter set.
+          description: >-
+            Parameters to update. Note, that this is not an atomic call, each of
+            the parameters from argument gets update one-by-one without rolling
+            back any if some fails. Once some update fails, the call stops. So
+            it's recommended to call this with only a single parameter set.
       responses:
         '200':
           description: OK
@@ -247,7 +249,6 @@ paths:
           description: Need to authenticate
         '403':
           description: Bad authentication token
-
     delete:
       tags:
         - function
@@ -263,7 +264,7 @@ paths:
           description: Need to authenticate
         '403':
           description: Bad authentication token
-  /functions/{fid}/run:
+  '/functions/{fid}/run':
     parameters:
       - in: header
         name: X-Auth-Token
@@ -297,9 +298,8 @@ paths:
         '401':
           description: Need to authenticate
         '403':
-          description: Bad authentication token  
-          
-  /functions/{fid}/logs:
+          description: Bad authentication token
+  '/functions/{fid}/logs':
     parameters:
       - in: header
         name: X-Auth-Token
@@ -314,7 +314,7 @@ paths:
         name: last
         type: string
         required: false
-        description: "Get logs for last pariod. Format is ([0-9]+h)?([0-9]+m)?([0-9]+s)?"
+        description: 'Get logs for last pariod. Format is ([0-9]+h)?([0-9]+m)?([0-9]+s)?'
     get:
       tags:
         - function
@@ -334,8 +334,7 @@ paths:
           description: Need to authenticate
         '403':
           description: Bad authentication token
-          
-  /functions/{fid}/stats:
+  '/functions/{fid}/stats':
     parameters:
       - in: header
         name: X-Auth-Token
@@ -371,8 +370,7 @@ paths:
           description: Need to authenticate
         '403':
           description: Bad authentication token
-          
-  /functions/{fid}/wait:
+  '/functions/{fid}/wait':
     parameters:
       - in: header
         name: X-Auth-Token
@@ -407,9 +405,7 @@ paths:
           description: Bad authentication token
         '524':
           description: TImeout has occurred
-
-          
-  /functions/{fid}/authctx:
+  '/functions/{fid}/authctx':
     parameters:
       - in: header
         name: X-Auth-Token
@@ -429,7 +425,7 @@ paths:
           description: OK
           schema:
             type: string
-            example: 'my_authjwt'
+            example: my_authjwt
         '400':
           description: Bad request
           schema:
@@ -448,7 +444,9 @@ paths:
           schema:
             type: string
           required: true
-          description: Auth mware name to set (empty string is accepted and unsets the context)
+          description: >-
+            Auth mware name to set (empty string is accepted and unsets the
+            context)
       responses:
         '200':
           description: OK
@@ -460,8 +458,7 @@ paths:
           description: Need to authenticate
         '403':
           description: Bad authentication token
-
-  /functions/{fid}/size:
+  '/functions/{fid}/size':
     parameters:
       - in: header
         name: X-Auth-Token
@@ -511,8 +508,7 @@ paths:
           description: Need to authenticate
         '403':
           description: Bad authentication token
-          
-  /functions/{fid}/sources:
+  '/functions/{fid}/sources':
     parameters:
       - in: header
         name: X-Auth-Token
@@ -561,8 +557,7 @@ paths:
           description: Need to authenticate
         '403':
           description: Bad authentication token
-
-  /functions/{fid}/env:
+  '/functions/{fid}/env':
     parameters:
       - in: header
         name: X-Auth-Token
@@ -615,9 +610,7 @@ paths:
           description: Need to authenticate
         '403':
           description: Bad authentication token
-
-
-  /functions/{fid}/middleware:
+  '/functions/{fid}/middleware':
     parameters:
       - in: header
         name: X-Auth-Token
@@ -669,7 +662,7 @@ paths:
           description: Need to authenticate
         '403':
           description: Bad authentication token
-  /functions/{fid}/middleware/{mid}:
+  '/functions/{fid}/middleware/{mid}':
     parameters:
       - in: header
         name: X-Auth-Token
@@ -700,8 +693,7 @@ paths:
           description: Need to authenticate
         '403':
           description: Bad authentication token
-
-  /functions/{fid}/accounts:
+  '/functions/{fid}/accounts':
     parameters:
       - in: header
         name: X-Auth-Token
@@ -715,7 +707,7 @@ paths:
     get:
       tags:
         - function
-      summary: Get accounts, to which the function has access to
+      summary: 'Get accounts, to which the function has access to'
       responses:
         '200':
           description: OK
@@ -753,8 +745,7 @@ paths:
           description: Need to authenticate
         '403':
           description: Bad authentication token
-
-  /functions/{fid}/accounts/{aid}:
+  '/functions/{fid}/accounts/{aid}':
     parameters:
       - in: header
         name: X-Auth-Token
@@ -785,8 +776,7 @@ paths:
           description: Need to authenticate
         '403':
           description: Bad authentication token
-
-  /functions/{fid}/s3buckets:
+  '/functions/{fid}/s3buckets':
     parameters:
       - in: header
         name: X-Auth-Token
@@ -839,7 +829,7 @@ paths:
           description: Need to authenticate
         '403':
           description: Bad authentication token
-  /functions/{fid}/s3buckets/{bname}:
+  '/functions/{fid}/s3buckets/{bname}':
     parameters:
       - in: header
         name: X-Auth-Token
@@ -870,8 +860,7 @@ paths:
           description: Need to authenticate
         '403':
           description: Bad authentication token
-
-  /functions/{fid}/triggers:
+  '/functions/{fid}/triggers':
     parameters:
       - in: path
         name: fid
@@ -897,9 +886,9 @@ paths:
         '200':
           description: OK
           schema:
-              type: array
-              items:
-                $ref: '#/definitions/FunctionEvent'
+            type: array
+            items:
+              $ref: '#/definitions/FunctionEvent'
         '400':
           description: Bad request
           schema:
@@ -932,8 +921,7 @@ paths:
           description: Need to authenticate
         '403':
           description: Bad authentication token
-
-  /functions/{fid}/triggers/{eid}:
+  '/functions/{fid}/triggers/{eid}':
     parameters:
       - in: path
         name: fid
@@ -1057,7 +1045,7 @@ paths:
           description: Need to authenticate
         '403':
           description: Bad authentication token
-  /middleware/{mid}:
+  '/middleware/{mid}':
     parameters:
       - in: path
         name: mid
@@ -1193,7 +1181,7 @@ paths:
           description: Need to authenticate
         '403':
           description: Bad authentication token
-  /deployments/{did}:
+  '/deployments/{did}':
     parameters:
       - in: header
         name: X-Auth-Token
@@ -1236,7 +1224,6 @@ paths:
           description: Need to authenticate
         '403':
           description: Bad authentication token
-
   /auths:
     parameters:
       - in: header
@@ -1291,8 +1278,7 @@ paths:
           description: Need to authenticate
         '403':
           description: Bad authentication token
-  
-  /auths/{aid}:
+  '/auths/{aid}':
     parameters:
       - in: header
         name: X-Auth-Token
@@ -1337,7 +1323,6 @@ paths:
           description: Need to authenticate
         '403':
           description: Bad authentication token
-
   /accounts:
     parameters:
       - in: header
@@ -1391,8 +1376,7 @@ paths:
           description: Need to authenticate
         '403':
           description: Bad authentication token
-          
-  /accounts/{aid}:
+  '/accounts/{aid}':
     parameters:
       - in: header
         name: X-Auth-Token
@@ -1457,7 +1441,6 @@ paths:
           description: Need to authenticate
         '403':
           description: Bad authentication token
-          
   /repos:
     parameters:
       - in: header
@@ -1516,8 +1499,7 @@ paths:
           description: Need to authenticate
         '403':
           description: Bad authentication token
-          
-  /repos/{rid}:
+  '/repos/{rid}':
     parameters:
       - in: header
         name: X-Auth-Token
@@ -1582,8 +1564,7 @@ paths:
           description: Need to authenticate
         '403':
           description: Bad authentication token
-          
-  /repos/{rid}/files:
+  '/repos/{rid}/files':
     parameters:
       - in: header
         name: X-Auth-Token
@@ -1613,8 +1594,7 @@ paths:
           description: Need to authenticate
         '403':
           description: Bad authentication token
-
-  /repos/{rid}/files/{fname}:
+  '/repos/{rid}/files/{fname}':
     parameters:
       - in: header
         name: X-Auth-Token
@@ -1647,8 +1627,7 @@ paths:
           description: Need to authenticate
         '403':
           description: Bad authentication token
-
-  /repos/{rid}/desc:
+  '/repos/{rid}/desc':
     parameters:
       - in: header
         name: X-Auth-Token
@@ -1676,8 +1655,7 @@ paths:
           description: Need to authenticate
         '403':
           description: Bad authentication token
-          
-  /repos/{rid}/pull:
+  '/repos/{rid}/pull':
     parameters:
       - in: header
         name: X-Auth-Token
@@ -1703,7 +1681,6 @@ paths:
           description: Need to authenticate
         '403':
           description: Bad authentication token
-          
   /info/langs:
     get:
       summary: Show supported languages
@@ -1729,7 +1706,7 @@ paths:
           description: Need to authenticate
         '403':
           description: Bad authentication token
-  /info/langs/{lang}:
+  '/info/langs/{lang}':
     get:
       summary: Show info about language runtime environment
       parameters:
@@ -1755,7 +1732,6 @@ paths:
           description: Need to authenticate
         '403':
           description: Bad authentication token
-
   /info/mwares:
     get:
       summary: Show supported mware types
@@ -1800,7 +1776,7 @@ definitions:
         description: UnixDate time of Token expiration
       endpoint:
         type: string
-        description: Gate addr:port to talk to further
+        description: 'Gate addr:port to talk to further'
   GateError:
     properties:
       code:
@@ -1825,7 +1801,7 @@ definitions:
     properties:
       id:
         type: string
-        description: Unique ID, system-wide
+        description: 'Unique ID, system-wide'
       name:
         type: string
         description: Function name (reported for /list/info operation)
@@ -1847,14 +1823,14 @@ definitions:
       url:
         type: string
         description: URL for direct calls if event.source is "url"
-        example: "/call/ki4r4380984csdlsiduo9049843jk"
+        example: /call/ki4r4380984csdlsiduo9049843jk
       code:
         $ref: '#/definitions/FunctionCode'
       size:
         $ref: '#/definitions/FunctionSize'
       stats:
         type: array
-        description: Per-period statistics, see FunctionStatsResp for details
+        description: 'Per-period statistics, see FunctionStatsResp for details'
         items:
           $ref: '#/definitions/FunctionStats'
       authctx:
@@ -1863,14 +1839,15 @@ definitions:
       userdata:
         type: string
         description: The data provided during /add call
-
   FunctionStatsResp:
     type: object
     description: Responce with FN stats
     properties:
       stats:
         type: array
-        description: Per-period statistics, "till"-sorted descending. Each period is incremental to previous. The 0th one is "till now"
+        description: >-
+          Per-period statistics, "till"-sorted descending. Each period is
+          incremental to previous. The 0th one is "till now"
         items:
           $ref: '#/definitions/FunctionStats'
   UserStatsResp:
@@ -1879,10 +1856,32 @@ definitions:
     properties:
       stats:
         type: array
-        description: Per-period statistics, "till"-sorted descending. Each period is incremental to previous. The 0th one is "till now"
+        description: >-
+          Per-period statistics, "till"-sorted descending. Each period is
+          incremental to previous. The 0th one is "till now"
         items:
           $ref: '#/definitions/UserStats'
-
+      mware:
+        type: object
+        description: Map 'type:stats' with per-type cumulative statistics
+        additionalProperties:
+          $ref: '#/definitions/UserMwareStats'
+        example:
+          "mongo":
+            count: 1
+            du: 42
+          "authjwt":
+            count: 1
+  UserMwareStats:
+    type: object
+    description: Here and now stats about user's mware
+    properties:
+      count:
+        type: integer
+        description: Number of mwares of that type in all projects
+      du:
+        type: integer
+        description: Total disk consumption (if applicable to that type)
   FunctionStats:
     type: object
     description: Statistics about function
@@ -1907,16 +1906,20 @@ definitions:
         example: 123000
       gbs:
         type: number
-        description: Mem*time consumed so far, in GB * sec
+        description: 'Mem*time consumed so far, in GB * sec'
       bytesout:
         type: integer
         description: Total size of JSON objects returned from function
       till:
         type: string
-        description: Time (RFC1123Z) till which stats are collected (if empty means "till now")
+        description: >-
+          Time (RFC1123Z) till which stats are collected (if empty means "till
+          now")
       from:
         type: string
-        description: Time (RFC1123Z) from which stats are collected (if empty means "till tenant creation time")
+        description: >-
+          Time (RFC1123Z) from which stats are collected (if empty means "till
+          tenant creation time")
   UserStats:
     type: object
     description: Statistics about user
@@ -1927,16 +1930,20 @@ definitions:
         example: 42
       gbs:
         type: number
-        description: Mem*time consumed so far, in GB * sec
+        description: 'Mem*time consumed so far, in GB * sec'
       bytesout:
         type: integer
         description: Total size of JSON objects returned from all user functions
       till:
         type: string
-        description: Time (RFC1123Z) till which stats are collected (if empty means "till now")
+        description: >-
+          Time (RFC1123Z) till which stats are collected (if empty means "till
+          now")
       from:
         type: string
-        description: Time (RFC1123Z) from which stats are collected (if empty means "till tenant creation time")
+        description: >-
+          Time (RFC1123Z) from which stats are collected (if empty means "till
+          tenant creation time")
   FunctionEventCron:
     type: object
     description: Cron string and arguments
@@ -1964,15 +1971,15 @@ definitions:
     properties:
       bucket:
         type: string
-        description: 'Bucket name in S3'
+        description: Bucket name in S3
       ops:
         type: string
-        description: 'Comma-separated list of operations'
-        example: 'put'
+        description: Comma-separated list of operations
+        example: put
       pattern:
         type: string
-        description: 'Pattern to match the object key'
-        example: '/foo/bar/*.img'
+        description: Pattern to match the object key
+        example: /foo/bar/*.img
   FunctionEvent:
     type: object
     description: Event specification
@@ -1995,7 +2002,7 @@ definitions:
         $ref: '#/definitions/FunctionEventS3'
       url:
         type: string
-        description: 'Function callable URL if the source is "url"'
+        description: Function callable URL if the source is "url"
   FunctionSources:
     type: object
     description: Sources description
@@ -2005,19 +2012,20 @@ definitions:
       type:
         type: string
         description: Sources type ("code")
-        example: code, git
+        example: 'code, git'
       code:
         type: string
         description: Base64 encoded source file for type == code
-        example: 'cHJpbnQoIkhlbGxvIHdvcmxkIikK'
+        example: cHJpbnQoIkhlbGxvIHdvcmxkIikK
       repo:
         type: string
         description: Path to file in a repo for type == git
-        example: '<repoId>/path/to/file.go'
+        example: <repoId>/path/to/file.go
       sync:
         type: boolean
-        description: When set and type is "git" the function will be auto-updates once the repo file changes
-
+        description: >-
+          When set and type is "git" the function will be auto-updates once the
+          repo file changes
   FunctionCode:
     type: object
     description: Code description
@@ -2095,14 +2103,13 @@ definitions:
         items:
           type: string
           example: foobucket
-
   FunctionLogEntry:
     description: Entry in function logs
     properties:
       event:
         type: string
         description: Event name
-        example: "run"
+        example: run
       ts:
         type: string
         description: Timestamp in UnixDate format
@@ -2118,9 +2125,9 @@ definitions:
       version:
         type: string
         description: >-
-                When a function version equals or (!) greater than this becomes
-                available for execution, the event occurs. Note, that older versions
-                may still be there when the event happens.
+          When a function version equals or (!) greater than this becomes
+          available for execution, the event occurs. Note, that older versions
+          may still be there when the event happens.
   FunctionRun:
     description: Function ID and arguments
     required:
@@ -2142,7 +2149,7 @@ definitions:
         description: Request body
       claims:
         type: object
-        description: A string:any dict with JWT claims as expected by FN
+        description: 'A string:any dict with JWT claims as expected by FN'
       method:
         type: string
         description: HTTP method this FN would see
@@ -2151,10 +2158,12 @@ definitions:
         description: Part of the URL the FN would see
       event:
         type: string
-        description: An event that the FN would see. When callev via URL trigger, this would be "call"
+        description: >-
+          An event that the FN would see. When callev via URL trigger, this
+          would be "call"
       src:
         $ref: '#/definitions/FunctionSources'
-        description: Sources to run in this fn's context, instead of added ones
+        description: 'Sources to run in this fn''s context, instead of added ones'
   FunctionRunResult:
     required:
       - code
@@ -2166,7 +2175,8 @@ definitions:
       return:
         type: string
         description: JSON-encoded function return object
-        example: {"message": "hello, world"}
+        example:
+          message: 'hello, world'
       stdout:
         type: string
         description: String with stdout captured while running
@@ -2231,13 +2241,15 @@ definitions:
         description: The project to get S3 creds for
       bucket:
         type: string
-        description: if empty, access to "the whole s3" within the project is requested
+        description: 'if empty, access to "the whole s3" within the project is requested'
       lifetime:
         type: integer
         description: Key validity period in seconds
       access:
         type: array
-        description: List of options. The "hidden" one is to be set for keys that are not planned to be shown to user (e.g. -- used by UI for itself).
+        description: >-
+          List of options. The "hidden" one is to be set for keys that are not
+          planned to be shown to user (e.g. -- used by UI for itself).
         items:
           type: string
           example: hidden
@@ -2247,7 +2259,7 @@ definitions:
     properties:
       endpoint:
         type: string
-        description: Addr:Port pair to talk S3 protocol to
+        description: 'Addr:Port pair to talk S3 protocol to'
       key:
         type: string
       secret:
@@ -2257,8 +2269,9 @@ definitions:
         description: Lifetime in seconds
       accid:
         type: string
-        description: Identifier of a user, used in various s3 operations, e.g. webserver access
-
+        description: >-
+          Identifier of a user, used in various s3 operations, e.g. webserver
+          access
   DeployStart:
     type: object
     description: Description of deployment
@@ -2283,12 +2296,14 @@ definitions:
     properties:
       type:
         type: string
-        description: Item type, "function" or "middleware"
+        description: 'Item type, "function" or "middleware"'
       name:
         type: string
       state:
         type: string
-        description: Item state, "ready", "dead" or other. See function/mware states for details
+        description: >-
+          Item state, "ready", "dead" or other. See function/mware states for
+          details
   DeployInfo:
     type: object
     description: Info about deployment
@@ -2308,12 +2323,11 @@ definitions:
           type: string
       state:
         type: string
-        description: State of deploying -- "starting", "ready", "stalled" or "terminating"
+        description: 'State of deploying -- "starting", "ready", "stalled" or "terminating"'
       items:
         type: array
         items:
           $ref: '#/definitions/DeployItemInfo'
-          
   AuthInfo:
     type: object
     description: AaaS entry description
@@ -2324,7 +2338,6 @@ definitions:
       name:
         type: string
         description: Deployment name
-        
   AuthAdd:
     type: object
     description: AaaS creation request
@@ -2335,7 +2348,6 @@ definitions:
         type: string
         description: AaaS type.
         example: jwt
-
   AccAdd:
     type: object
     required:
@@ -2351,7 +2363,6 @@ definitions:
       token:
         type: string
         description: Personal access token of the user
-        
   AccUpdate:
     type: object
     description: Updating an account
@@ -2359,7 +2370,6 @@ definitions:
       token:
         type: string
         description: Personal access token of the user
-        
   AccInfo:
     type: object
     description: Info about account
@@ -2372,7 +2382,6 @@ definitions:
         type: string
       token:
         type: string
-        
   RepoAdd:
     type: object
     description: Repo description
@@ -2394,15 +2403,13 @@ definitions:
       pulling:
         type: string
         description: Repo pull policy
-        example: "periodic"
-        
+        example: periodic
   RepoUpdate:
     type: object
     description: Repo update parameters
     properties:
       pulling:
         type: string
-
   RepoDesc:
     type: object
     description: Repo contents description
@@ -2414,7 +2421,6 @@ definitions:
         type: array
         items:
           $ref: '#/definitions/RepoEntry'
-
   RepoFile:
     type: object
     description: Repo file/directory description
@@ -2431,7 +2437,7 @@ definitions:
         description: Path of the entry
       type:
         type: string
-        description: Entry type, "dir" or "file"
+        description: 'Entry type, "dir" or "file"'
       lang:
         type: string
         description: Suggested (by filename extention) language
@@ -2439,7 +2445,6 @@ definitions:
         type: array
         items:
           $ref: '#/definitions/RepoFile'
-
   RepoEntry:
     type: object
     description: Repo dentry description
@@ -2456,7 +2461,6 @@ definitions:
       lang:
         type: string
         description: Suggested language
-
   RepoInfo:
     type: object
     description: Repo information
@@ -2470,7 +2474,9 @@ definitions:
         type: string
       state:
         type: string
-        description: State of the repo. Can be "cloning", "ready", "stalled" or "unattached"
+        description: >-
+          State of the repo. Can be "cloning", "ready", "stalled" or
+          "unattached"
       commit:
         type: string
         description: Top-most commit of the repo
@@ -2483,7 +2489,6 @@ definitions:
       desc:
         type: boolean
         description: Whether or not this repo has a description
-
   LangInfo:
     type: object
     description: Info about language runtime
