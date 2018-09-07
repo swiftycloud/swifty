@@ -36,8 +36,14 @@ type TenantStats struct {
 	From		string			`json:"from,omitempty"`
 }
 
+type TenantStatsMware struct {
+	Count		int			`json:"count"`
+	DU		*uint64			`json:"disk_usage,omitempty"` /* in ... KB */
+}
+
 type TenantStatsResp struct {
-	Stats		[]TenantStats		`json:"stats"`
+	Stats		[]TenantStats			`json:"stats"`
+	Mware		map[string]*TenantStatsMware	`json:"mware,omitempty"`
 }
 
 type FunctionInfo struct {

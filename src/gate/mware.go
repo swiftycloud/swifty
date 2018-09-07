@@ -201,6 +201,46 @@ func (item *MwareDesc)toInfo(ctx context.Context, details bool) (*swyapi.MwareIn
 	return resp, nil
 }
 
+func getMwareStats(ctx context.Context, ten string) (map[string]*swyapi.TenantStatsMware, *swyapi.GateErr) {
+	var mws []*MwareDesc
+
+	err := dbFindAll(ctx, bson.M{"tennant": ten}, &mws)
+	if err != nil {
+		return nil, GateErrD(err)
+	}
+
+	mst := make(map[string]*swyapi.TenantStatsMware)
+	for _, mw := range mws {
+		st, ok := mst[mw.MwareType]
+		if !ok {
+			st = &swyapi.TenantStatsMware{}
+			mst[mw.MwareType] = st
+		}
+
+		st.Count++
+
+		h := mwareHandlers[mw.MwareType]
+		if h.Info != nil {
+			var ifo swyapi.MwareInfo
+
+			err := h.Info(ctx, mw, &ifo)
+			if err != nil {
+				return nil, GateErrE(swy.GateGenErr, err)
+			}
+
+			if ifo.DU != nil {
+				if st.DU == nil {
+					var du uint64
+					st.DU = &du
+				}
+				*st.DU += *ifo.DU
+			}
+		}
+	}
+
+	return mst, nil
+}
+
 func getMwareDesc(id *SwoId, params *swyapi.MwareAdd) *MwareDesc {
 	ret := &MwareDesc {
 		SwoId:		*id,

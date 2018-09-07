@@ -1061,6 +1061,11 @@ func handleTenantStats(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		return cerr
 	}
 
+	resp.Mware, cerr = getMwareStats(ctx, ten)
+	if cerr != nil {
+		return cerr
+	}
+
 	return respond(w, resp)
 }
 
@@ -2389,7 +2394,7 @@ func main() {
 
 	r := mux.NewRouter()
 	r.HandleFunc("/v1/login",		handleUserLogin).Methods("POST", "OPTIONS")
-	r.Handle("/v1/stats",			genReqHandler(handleTenantStats)).Methods("POST", "OPTIONS")
+	r.Handle("/v1/stats",			genReqHandler(handleTenantStats)).Methods("GET", "POST", "OPTIONS")
 	r.Handle("/v1/project/list",		genReqHandler(handleProjectList)).Methods("POST", "OPTIONS")
 	r.Handle("/v1/project/del",		genReqHandler(handleProjectDel)).Methods("POST", "OPTIONS")
 
