@@ -4,7 +4,6 @@ import (
 	"strings"
 	"context"
 	"path/filepath"
-	"gopkg.in/robfig/cron.v2"
 	"gopkg.in/mgo.v2/bson"
 	"../common"
 	"../apis"
@@ -20,12 +19,6 @@ var evtHandlers = map[string]*EventOps {
 	"cron":	&cronOps,
 	"s3":	&s3EOps,
 	"url":	&urlEOps,
-}
-
-type FnEventCron struct {
-	Tab		string			`bson:"tab"`
-	Args		map[string]string	`bson:"args"`
-	JobID		int			`bson:"eid"`
 }
 
 type FnEventS3 struct {
@@ -63,67 +56,8 @@ type FnEventDesc struct {
 	S3		*FnEventS3	`bson:"s3,omitempty"`
 }
 
-var cronRunner *cron.Cron
-
-func cronEventStart(ctx context.Context, _ *FunctionDesc, evt *FnEventDesc) error {
-	id, err := cronRunner.AddFunc(evt.Cron.Tab, func() {
-		cctx, done := mkContext("::cron")
-		defer done(cctx)
-
-		var fn FunctionDesc
-
-		err := dbFind(cctx, bson.M{"cookie": evt.FnId}, &fn)
-		if err != nil {
-			glog.Errorf("Can't find FN %s to run Cron event", evt.FnId)
-			return
-		}
-
-		if fn.State != swy.DBFuncStateRdy {
-			return
-		}
-
-		_, err = doRun(cctx, &fn, "cron", &swyapi.SwdFunctionRun{Args: evt.Cron.Args})
-		if err != nil {
-			ctxlog(ctx).Errorf("cron: Error running FN %s", err.Error())
-		}
-	})
-
-	if err == nil {
-		evt.Cron.JobID = int(id)
-	}
-
-	return err
-}
-
-func cronEventStop(ctx context.Context, evt *FnEventDesc) error {
-	cronRunner.Remove(cron.EntryID(evt.Cron.JobID))
-	return nil
-}
-
 func eventsInit(ctx context.Context, conf *YAMLConf) error {
-	cronRunner = cron.New()
-	cronRunner.Start()
-
-	var evs []*FnEventDesc
-
-	err := dbFindAll(ctx, bson.M{"source":"cron"}, &evs)
-	if err != nil {
-		return err
-	}
-
-	for _, ed := range evs {
-		err = cronEventStart(ctx, nil, ed)
-		if err != nil {
-			return err
-		}
-
-		err = dbUpdateAll(ctx, ed)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
+	return cronInit(ctx, conf)
 }
 
 func (e *FnEventDesc)toInfo(fn *FunctionDesc) *swyapi.FunctionEvent {
@@ -153,17 +87,6 @@ func (e *FnEventDesc)toInfo(fn *FunctionDesc) *swyapi.FunctionEvent {
 	}
 
 	return &ae
-}
-
-var cronOps = EventOps {
-	setup: func(ed *FnEventDesc, evt *swyapi.FunctionEvent) {
-		ed.Cron = &FnEventCron{
-			Tab: evt.Cron.Tab,
-			Args: evt.Cron.Args,
-		}
-	},
-	start:	cronEventStart,
-	stop:	cronEventStop,
 }
 
 func getEventDesc(evt *swyapi.FunctionEvent) (*FnEventDesc, *swyapi.GateErr) {
