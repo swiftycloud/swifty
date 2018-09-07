@@ -120,7 +120,7 @@ func InitAuthJWT(ctx context.Context, mwd *MwareDesc) (error) {
 	return nil
 }
 
-func FiniAuthJWT(ctx context.Context, conf *YAMLConfMw, mwd *MwareDesc) error {
+func FiniAuthJWT(ctx context.Context, mwd *MwareDesc) error {
 	return nil
 }
 

@@ -102,14 +102,14 @@ func mariaDropQuota(ctx context.Context, conf *YAMLConfMaria, db *sql.DB, mwd *M
 	}
 }
 
-func FiniMariaDB(ctx context.Context, conf *YAMLConfMw, mwd *MwareDesc) error {
+func FiniMariaDB(ctx context.Context, mwd *MwareDesc) error {
 	db, err := mariaConn()
 	if err != nil {
 		return err
 	}
 	defer db.Close()
 
-	mariaDropQuota(ctx, &conf.Maria, db, mwd)
+	mariaDropQuota(ctx, &conf.Mware.Maria, db, mwd)
 	mariaDropUser(ctx, db, mwd)
 	mariaDropDb(ctx, db, mwd)
 

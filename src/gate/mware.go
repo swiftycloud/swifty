@@ -52,7 +52,7 @@ func (mw *MwareDesc)ToState(ctx context.Context, st, from int) error {
 
 type MwareOps struct {
 	Init	func(ctx context.Context, mwd *MwareDesc) (error)
-	Fini	func(ctx context.Context, conf *YAMLConfMw, mwd *MwareDesc) (error)
+	Fini	func(ctx context.Context, mwd *MwareDesc) (error)
 	Event	func(ctx context.Context, conf *YAMLConfMw, source *FnEventDesc, mwd *MwareDesc, on bool) (error)
 	GetEnv	func(conf *YAMLConfMw, mwd *MwareDesc) (map[string][]byte)
 	Info	func(ctx context.Context, conf *YAMLConfMw, mwd *MwareDesc, ifo *swyapi.MwareInfo) (error)
@@ -141,7 +141,7 @@ func (item *MwareDesc)Remove(ctx context.Context) *swyapi.GateErr {
 		return GateErrM(swy.GateGenErr, "Cannot terminate mware")
 	}
 
-	err = handler.Fini(ctx, &conf.Mware, item)
+	err = handler.Fini(ctx, item)
 	if err != nil {
 		ctxlog(ctx).Errorf("Failed cleanup for mware %s: %s", item.SwoId.Str(), err.Error())
 		goto stalled
@@ -285,7 +285,7 @@ outs:
 		goto stalled
 	}
 outh:
-	erc = handler.Fini(ctx, &conf.Mware, mwd)
+	erc = handler.Fini(ctx, mwd)
 	if erc != nil {
 		goto stalled
 	}

@@ -68,7 +68,7 @@ func InitS3(ctx context.Context, mwd *MwareDesc) (error) {
 	return fmt.Errorf("S3 mware is external")
 }
 
-func FiniS3(ctx context.Context, conf *YAMLConfMw, mwd *MwareDesc) error {
+func FiniS3(ctx context.Context, mwd *MwareDesc) error {
 	return fmt.Errorf("S3 mware is external")
 }
 

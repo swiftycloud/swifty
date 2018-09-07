@@ -66,7 +66,7 @@ func InitRabbitMQ(ctx context.Context, mwd *MwareDesc) (error) {
 	return nil
 }
 
-func FiniRabbitMQ(ctx context.Context, conf *YAMLConfMw, mwd *MwareDesc) error {
+func FiniRabbitMQ(ctx context.Context, mwd *MwareDesc) error {
 	rmqc, err := rabbitConn()
 	if err != nil {
 		return err

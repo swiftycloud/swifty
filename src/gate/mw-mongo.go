@@ -44,7 +44,7 @@ func InitMongo(ctx context.Context, mwd *MwareDesc) (error) {
 	return err
 }
 
-func FiniMongo(ctx context.Context, conf *YAMLConfMw, mwd *MwareDesc) error {
+func FiniMongo(ctx context.Context, mwd *MwareDesc) error {
 	ctxlog(ctx).Debugf("Drop DB 1")
 	sess, err := mgoDial()
 	if err != nil {

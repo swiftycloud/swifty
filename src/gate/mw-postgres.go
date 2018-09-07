@@ -31,15 +31,15 @@ func InitPostgres(ctx context.Context, mwd *MwareDesc) (error) {
 	return err
 }
 
-func FiniPostgres(ctx context.Context, conf *YAMLConfMw, mwd *MwareDesc) error {
-	addr := conf.Postgres.c.AddrP(conf.Postgres.AdminPort)
+func FiniPostgres(ctx context.Context, mwd *MwareDesc) error {
+	addr := conf.Mware.Postgres.c.AddrP(conf.Mware.Postgres.AdminPort)
 	_, err := swyhttp.MarshalAndPost(
 			&swyhttp.RestReq{
 				Address: "http://" + addr + "/drop",
 				Timeout: 120,
 			},
 			&swyapi.PgRequest{
-				Token: gateSecrets[conf.Postgres.c.Pass],
+				Token: gateSecrets[conf.Mware.Postgres.c.Pass],
 				User: mwd.Client, DbName: mwd.Namespace,
 			})
 
