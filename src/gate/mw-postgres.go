@@ -46,8 +46,8 @@ func FiniPostgres(ctx context.Context, mwd *MwareDesc) error {
 	return err
 }
 
-func GetEnvPostgres(conf *YAMLConfMw, mwd *MwareDesc) map[string][]byte {
-	e := mwd.stdEnvs(conf.Postgres.c.Addr())
+func GetEnvPostgres(ctx context.Context, mwd *MwareDesc) map[string][]byte {
+	e := mwd.stdEnvs(conf.Mware.Postgres.c.Addr())
 	e[mwd.envName("DBNAME")] = []byte(mwd.Namespace)
 	return e
 }

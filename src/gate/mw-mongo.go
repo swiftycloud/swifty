@@ -63,8 +63,8 @@ func FiniMongo(ctx context.Context, mwd *MwareDesc) error {
 	return nil
 }
 
-func GetEnvMongo(conf *YAMLConfMw, mwd *MwareDesc) map[string][]byte {
-	e := mwd.stdEnvs(conf.Mongo.c.Addr())
+func GetEnvMongo(ctx context.Context, mwd *MwareDesc) map[string][]byte {
+	e := mwd.stdEnvs(conf.Mware.Mongo.c.Addr())
 	e[mwd.envName("DBNAME")] = []byte(mwd.Namespace)
 	return e
 }

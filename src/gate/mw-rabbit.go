@@ -107,8 +107,8 @@ func mqEvent(ctx context.Context, mwid, queue, userid, data string) {
 	}
 }
 
-func GetEnvRabbitMQ(conf *YAMLConfMw, mwd *MwareDesc) map[string][]byte {
-	e := mwd.stdEnvs(conf.Rabbit.c.Addr())
+func GetEnvRabbitMQ(ctx context.Context, mwd *MwareDesc) map[string][]byte {
+	e := mwd.stdEnvs(conf.Mware.Rabbit.c.Addr())
 	e[mwd.envName("VHOST")] = []byte(mwd.Namespace)
 	return e
 }

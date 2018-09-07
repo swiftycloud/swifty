@@ -124,7 +124,7 @@ func FiniAuthJWT(ctx context.Context, mwd *MwareDesc) error {
 	return nil
 }
 
-func GetEnvAuthJWT(conf *YAMLConfMw, mwd *MwareDesc) map[string][]byte {
+func GetEnvAuthJWT(ctx context.Context, mwd *MwareDesc) map[string][]byte {
 	return map[string][]byte{mwd.envName("SIGNKEY"): []byte(mwd.Secret)}
 }
 

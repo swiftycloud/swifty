@@ -53,7 +53,7 @@ func (mw *MwareDesc)ToState(ctx context.Context, st, from int) error {
 type MwareOps struct {
 	Init	func(ctx context.Context, mwd *MwareDesc) (error)
 	Fini	func(ctx context.Context, mwd *MwareDesc) (error)
-	GetEnv	func(conf *YAMLConfMw, mwd *MwareDesc) (map[string][]byte)
+	GetEnv	func(ctx context.Context, mwd *MwareDesc) (map[string][]byte)
 	Info	func(ctx context.Context, conf *YAMLConfMw, mwd *MwareDesc, ifo *swyapi.MwareInfo) (error)
 	Devel	bool
 	LiteOK	bool
@@ -252,7 +252,7 @@ func (mwd *MwareDesc)Setup(ctx context.Context) *swyapi.GateErr {
 		goto outdb
 	}
 
-	err = swk8sMwSecretAdd(ctx, mwd.Cookie, handler.GetEnv(&conf.Mware, mwd))
+	err = swk8sMwSecretAdd(ctx, mwd.Cookie, handler.GetEnv(ctx, mwd))
 	if err != nil {
 		goto outh
 	}
