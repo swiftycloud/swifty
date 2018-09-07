@@ -10,6 +10,18 @@ import (
 	"../apis"
 )
 
+type EventOps struct {
+	setup	func(*FnEventDesc, *swyapi.FunctionEvent)
+	start	func(context.Context, *FunctionDesc, *FnEventDesc) error
+	stop	func(context.Context, *FnEventDesc) error
+}
+
+var evtHandlers = map[string]*EventOps {
+	"cron":	&cronOps,
+	"s3":	&s3EOps,
+	"url":	&urlEOps,
+}
+
 type FnEventCron struct {
 	Tab		string			`bson:"tab"`
 	Args		map[string]string	`bson:"args"`
@@ -53,7 +65,7 @@ type FnEventDesc struct {
 
 var cronRunner *cron.Cron
 
-func cronEventStart(ctx context.Context, evt *FnEventDesc) error {
+func cronEventStart(ctx context.Context, _ *FunctionDesc, evt *FnEventDesc) error {
 	id, err := cronRunner.AddFunc(evt.Cron.Tab, func() {
 		cctx, done := mkContext("::cron")
 		defer done(cctx)
@@ -100,7 +112,7 @@ func eventsInit(ctx context.Context, conf *YAMLConf) error {
 	}
 
 	for _, ed := range evs {
-		err = cronEventStart(ctx, ed)
+		err = cronEventStart(ctx, nil, ed)
 		if err != nil {
 			return err
 		}
@@ -143,30 +155,29 @@ func (e *FnEventDesc)toInfo(fn *FunctionDesc) *swyapi.FunctionEvent {
 	return &ae
 }
 
+var cronOps = EventOps {
+	setup: func(ed *FnEventDesc, evt *swyapi.FunctionEvent) {
+		ed.Cron = &FnEventCron{
+			Tab: evt.Cron.Tab,
+			Args: evt.Cron.Args,
+		}
+	},
+	start:	cronEventStart,
+	stop:	cronEventStop,
+}
+
 func getEventDesc(evt *swyapi.FunctionEvent) (*FnEventDesc, *swyapi.GateErr) {
 	ed := &FnEventDesc{
 		Name: evt.Name,
 		Source: evt.Source,
 	}
 
-	switch evt.Source {
-	case "cron":
-		ed.Cron = &FnEventCron{
-			Tab: evt.Cron.Tab,
-			Args: evt.Cron.Args,
-		}
-	case "s3":
-		ed.S3 = &FnEventS3{
-			Bucket: evt.S3.Bucket,
-			Ops: evt.S3.Ops,
-			Pattern: evt.S3.Pattern,
-		}
-	case "url":
-		/* Nothing (yet) */ ;
-	default:
+	h, ok := evtHandlers[evt.Source]
+	if !ok {
 		return nil, GateErrM(swy.GateBadRequest, "Unsupported event type")
 	}
 
+	h.setup(ed, evt)
 	return ed, nil
 }
 
@@ -181,14 +192,7 @@ func (ed *FnEventDesc)Add(ctx context.Context, fn *FunctionDesc) *swyapi.GateErr
 		return GateErrD(err)
 	}
 
-	switch ed.Source {
-	case "cron":
-		err = cronEventStart(ctx, ed)
-	case "s3":
-		err = s3EventStart(ctx, fn, ed)
-	case "url":
-		err = urlEventStart(ctx, ed)
-	}
+	evtHandlers[ed.Source].start(ctx, fn, ed)
 	if err != nil {
 		dbRemove(ctx, ed)
 		return GateErrM(swy.GateGenErr, "Can't setup event")
@@ -205,18 +209,7 @@ func (ed *FnEventDesc)Add(ctx context.Context, fn *FunctionDesc) *swyapi.GateErr
 }
 
 func eventStop(ctx context.Context, ed *FnEventDesc) error {
-	var err error
-
-	switch ed.Source {
-	case "cron":
-		err = cronEventStop(ctx, ed)
-	case "s3":
-		err = s3EventStop(ctx, ed)
-	case "url":
-		err = urlEventStop(ctx, ed)
-	}
-
-	return err
+	return evtHandlers[ed.Source].stop(ctx, ed)
 }
 
 func eventsDelete(ctx context.Context, fn *FunctionDesc, ed *FnEventDesc) *swyapi.GateErr {

@@ -240,3 +240,15 @@ func mwareGetS3Creds(ctx context.Context, conf *YAMLConf, acc *swyapi.S3Access) 
 
 	return creds, nil
 }
+
+var s3EOps = EventOps {
+	setup: func(ed *FnEventDesc, evt *swyapi.FunctionEvent) {
+		ed.S3 = &FnEventS3{
+			Bucket: evt.S3.Bucket,
+			Ops: evt.S3.Ops,
+			Pattern: evt.S3.Pattern,
+		}
+	},
+	start:	s3EventStart,
+	stop:	s3EventStop,
+}
