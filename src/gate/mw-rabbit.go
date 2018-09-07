@@ -3,7 +3,6 @@ package main
 import (
 	"net/http"
 	"context"
-	"errors"
 	"gopkg.in/mgo.v2/bson"
 	"github.com/michaelklishin/rabbit-hole"
 	"fmt"
@@ -108,24 +107,6 @@ func mqEvent(ctx context.Context, mwid, queue, userid, data string) {
 	}
 }
 
-func EventRabbitMQ(ctx context.Context, conf *YAMLConfMw, source *FnEventDesc, mwd *MwareDesc, on bool) (error) {
-	/*
-	if on {
-		return mqStartListener(conf.Rabbit.c.User, conf.Rabbit.c.Pass,
-			conf.Rabbit.c.Addr() + "/" + mwd.Namespace, source.MQueue,
-			func(ctx context.Context, userid string, data []byte) {
-				if userid != "" {
-					mqEvent(ctx, mwd.SwoId.Name, source.MQueue, userid, string(data))
-				}
-			})
-	} else {
-		mqStopListener(conf.Rabbit.c.Addr() + "/" + mwd.Namespace, source.MQueue)
-		return nil
-	}
-	*/
-	return errors.New("Not supported")
-}
-
 func GetEnvRabbitMQ(conf *YAMLConfMw, mwd *MwareDesc) map[string][]byte {
 	e := mwd.stdEnvs(conf.Rabbit.c.Addr())
 	e[mwd.envName("VHOST")] = []byte(mwd.Namespace)
@@ -135,7 +116,6 @@ func GetEnvRabbitMQ(conf *YAMLConfMw, mwd *MwareDesc) map[string][]byte {
 var MwareRabbitMQ = MwareOps {
 	Init:	InitRabbitMQ,
 	Fini:	FiniRabbitMQ,
-	Event:	EventRabbitMQ,
 	GetEnv:	GetEnvRabbitMQ,
 	Devel:	true,
 }

@@ -53,7 +53,6 @@ func (mw *MwareDesc)ToState(ctx context.Context, st, from int) error {
 type MwareOps struct {
 	Init	func(ctx context.Context, mwd *MwareDesc) (error)
 	Fini	func(ctx context.Context, mwd *MwareDesc) (error)
-	Event	func(ctx context.Context, conf *YAMLConfMw, source *FnEventDesc, mwd *MwareDesc, on bool) (error)
 	GetEnv	func(conf *YAMLConfMw, mwd *MwareDesc) (map[string][]byte)
 	Info	func(ctx context.Context, conf *YAMLConfMw, mwd *MwareDesc, ifo *swyapi.MwareInfo) (error)
 	Devel	bool
