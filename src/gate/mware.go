@@ -54,7 +54,7 @@ type MwareOps struct {
 	Init	func(ctx context.Context, mwd *MwareDesc) (error)
 	Fini	func(ctx context.Context, mwd *MwareDesc) (error)
 	GetEnv	func(ctx context.Context, mwd *MwareDesc) (map[string][]byte)
-	Info	func(ctx context.Context, conf *YAMLConfMw, mwd *MwareDesc, ifo *swyapi.MwareInfo) (error)
+	Info	func(ctx context.Context, mwd *MwareDesc, ifo *swyapi.MwareInfo) (error)
 	Devel	bool
 	LiteOK	bool
 }
@@ -192,7 +192,7 @@ func (item *MwareDesc)toInfo(ctx context.Context, details bool) (*swyapi.MwareIn
 		}
 
 		if handler.Info != nil {
-			err := handler.Info(ctx, &conf.Mware, item, resp)
+			err := handler.Info(ctx, item, resp)
 			if err != nil {
 				return nil, GateErrE(swy.GateGenErr, err)
 			}

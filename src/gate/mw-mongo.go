@@ -74,7 +74,7 @@ type MgoStat struct {
 	SSize	uint64	`bson:"storageSize"`
 }
 
-func InfoMongo(ctx context.Context, conf *YAMLConfMw, mwd *MwareDesc, ifo *swyapi.MwareInfo) error {
+func InfoMongo(ctx context.Context, mwd *MwareDesc, ifo *swyapi.MwareInfo) error {
 	sess, err := mgoDial()
 	if err != nil {
 		return err

@@ -122,7 +122,7 @@ func GetEnvMariaDB(ctx context.Context, mwd *MwareDesc) map[string][]byte {
 	return e
 }
 
-func InfoMariaDB(ctx context.Context, conf *YAMLConfMw, mwd *MwareDesc, ifo *swyapi.MwareInfo) error {
+func InfoMariaDB(ctx context.Context, mwd *MwareDesc, ifo *swyapi.MwareInfo) error {
 	db, err := mariaConn()
 	if err != nil {
 		return err
