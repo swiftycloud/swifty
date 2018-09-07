@@ -7,7 +7,7 @@ import (
 	"../apis"
 )
 
-func InitPostgres(ctx context.Context, conf *YAMLConfMw, mwd *MwareDesc) (error) {
+func InitPostgres(ctx context.Context, mwd *MwareDesc) (error) {
 	err := mwareGenerateUserPassClient(ctx, mwd)
 	if err != nil {
 		return err
@@ -18,14 +18,14 @@ func InitPostgres(ctx context.Context, conf *YAMLConfMw, mwd *MwareDesc) (error)
 	mwd.Client = "p" + strings.ToLower(mwd.Client[:30])
 	mwd.Namespace = mwd.Client
 
-	addr := conf.Postgres.c.AddrP(conf.Postgres.AdminPort)
+	addr := conf.Mware.Postgres.c.AddrP(conf.Mware.Postgres.AdminPort)
 	_, err = swyhttp.MarshalAndPost(
 			&swyhttp.RestReq{
 				Address: "http://" + addr + "/create",
 				Timeout: 120,
 			},
 			&swyapi.PgRequest{
-				Token: gateSecrets[conf.Postgres.c.Pass],
+				Token: gateSecrets[conf.Mware.Postgres.c.Pass],
 				User: mwd.Client, Pass: mwd.Secret, DbName: mwd.Namespace,
 			})
 	return err

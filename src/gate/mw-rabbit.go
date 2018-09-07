@@ -10,9 +10,9 @@ import (
 	"../apis"
 )
 
-func rabbitConn(conf *YAMLConfMw) (*rabbithole.Client, error) {
-	addr := conf.Rabbit.c.AddrP(conf.Rabbit.AdminPort)
-	return rabbithole.NewClient("http://" + addr, conf.Rabbit.c.User, gateSecrets[conf.Rabbit.c.Pass])
+func rabbitConn() (*rabbithole.Client, error) {
+	addr := conf.Mware.Rabbit.c.AddrP(conf.Mware.Rabbit.AdminPort)
+	return rabbithole.NewClient("http://" + addr, conf.Mware.Rabbit.c.User, gateSecrets[conf.Mware.Rabbit.c.Pass])
 }
 
 func rabbitErr(resp *http.Response, err error) error {
@@ -27,7 +27,7 @@ func rabbitErr(resp *http.Response, err error) error {
 	}
 }
 
-func InitRabbitMQ(ctx context.Context, conf *YAMLConfMw, mwd *MwareDesc) (error) {
+func InitRabbitMQ(ctx context.Context, mwd *MwareDesc) (error) {
 	err := mwareGenerateUserPassClient(ctx, mwd)
 	if err != nil {
 		return err
@@ -35,7 +35,7 @@ func InitRabbitMQ(ctx context.Context, conf *YAMLConfMw, mwd *MwareDesc) (error)
 
 	mwd.Namespace = mwd.Client
 
-	rmqc, err := rabbitConn(conf)
+	rmqc, err := rabbitConn()
 	if err != nil {
 		return err
 	}
@@ -57,7 +57,7 @@ func InitRabbitMQ(ctx context.Context, conf *YAMLConfMw, mwd *MwareDesc) (error)
 	}
 
 	/* Add permissions for us as well, just in case event listening is required */
-	err = rabbitErr(rmqc.UpdatePermissionsIn(mwd.Namespace, conf.Rabbit.c.User,
+	err = rabbitErr(rmqc.UpdatePermissionsIn(mwd.Namespace, conf.Mware.Rabbit.c.User,
 			rabbithole.Permissions{Configure: ".*", Write: ".*", Read: ".*"}))
 	if err != nil {
 		return fmt.Errorf("Can't set permissions %s: %s", mwd.Client, err.Error())
@@ -67,7 +67,7 @@ func InitRabbitMQ(ctx context.Context, conf *YAMLConfMw, mwd *MwareDesc) (error)
 }
 
 func FiniRabbitMQ(ctx context.Context, conf *YAMLConfMw, mwd *MwareDesc) error {
-	rmqc, err := rabbitConn(conf)
+	rmqc, err := rabbitConn()
 	if err != nil {
 		return err
 	}

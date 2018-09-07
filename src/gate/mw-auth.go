@@ -109,7 +109,7 @@ func (ac *AuthCtx)Verify(r *http.Request) (map[string]interface{}, error) {
 	return claims, nil
 }
 
-func InitAuthJWT(ctx context.Context, conf *YAMLConfMw, mwd *MwareDesc) (error) {
+func InitAuthJWT(ctx context.Context, mwd *MwareDesc) (error) {
 	var err error
 
 	mwd.Secret, err = swy.GenRandId(32)

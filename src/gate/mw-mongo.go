@@ -8,19 +8,19 @@ import (
 	"../apis"
 )
 
-func mgoDial(conf *YAMLConfMw) (*mgo.Session, error) {
+func mgoDial() (*mgo.Session, error) {
 	ifo := mgo.DialInfo {
-		Addrs:		[]string{conf.Mongo.c.Addr()},
+		Addrs:		[]string{conf.Mware.Mongo.c.Addr()},
 		Database:	"admin",
 		Timeout:	60*time.Second,
-		Username:	conf.Mongo.c.User,
-		Password:	gateSecrets[conf.Mongo.c.Pass],
+		Username:	conf.Mware.Mongo.c.User,
+		Password:	gateSecrets[conf.Mware.Mongo.c.Pass],
 	}
 
 	return mgo.DialWithInfo(&ifo)
 }
 
-func InitMongo(ctx context.Context, conf *YAMLConfMw, mwd *MwareDesc) (error) {
+func InitMongo(ctx context.Context, mwd *MwareDesc) (error) {
 	err := mwareGenerateUserPassClient(ctx, mwd)
 	if err != nil {
 		return err
@@ -28,7 +28,7 @@ func InitMongo(ctx context.Context, conf *YAMLConfMw, mwd *MwareDesc) (error) {
 
 	mwd.Namespace = mwd.Client
 
-	sess, err := mgoDial(conf)
+	sess, err := mgoDial()
 	if err != nil {
 		return err
 	}
@@ -46,7 +46,7 @@ func InitMongo(ctx context.Context, conf *YAMLConfMw, mwd *MwareDesc) (error) {
 
 func FiniMongo(ctx context.Context, conf *YAMLConfMw, mwd *MwareDesc) error {
 	ctxlog(ctx).Debugf("Drop DB 1")
-	sess, err := mgoDial(conf)
+	sess, err := mgoDial()
 	if err != nil {
 		return err
 	}
@@ -75,7 +75,7 @@ type MgoStat struct {
 }
 
 func InfoMongo(ctx context.Context, conf *YAMLConfMw, mwd *MwareDesc, ifo *swyapi.MwareInfo) error {
-	sess, err := mgoDial(conf)
+	sess, err := mgoDial()
 	if err != nil {
 		return err
 	}

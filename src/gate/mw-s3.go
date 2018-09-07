@@ -64,7 +64,7 @@ func s3KeyDel(conf *YAMLConfS3, key string) error {
 	return nil
 }
 
-func InitS3(ctx context.Context, conf *YAMLConfMw, mwd *MwareDesc) (error) {
+func InitS3(ctx context.Context, mwd *MwareDesc) (error) {
 	return fmt.Errorf("S3 mware is external")
 }
 
