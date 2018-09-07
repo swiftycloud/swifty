@@ -14,12 +14,12 @@ const (
 	mariaDefRows = "1024"
 )
 
-func mariaConn(conf *YAMLConfMw) (*sql.DB, error) {
+func mariaConn() (*sql.DB, error) {
 	return sql.Open("mysql",
 			fmt.Sprintf("%s:%s@tcp(%s)/?charset=utf8",
-				conf.Maria.c.User,
-				gateSecrets[conf.Maria.c.Pass],
-				conf.Maria.c.Addr()))
+				conf.Mware.Maria.c.User,
+				gateSecrets[conf.Mware.Maria.c.Pass],
+				conf.Mware.Maria.c.Addr()))
 }
 
 func mariaReq(db *sql.DB, req string) error {
@@ -36,7 +36,7 @@ func mariaReq(db *sql.DB, req string) error {
 // DROP USER IF EXISTS '8257fbff9618952fbd2b83b4794eb694'@'%';
 // DROP DATABASE IF EXISTS 8257fbff9618952fbd2b83b4794eb694;
 
-func InitMariaDB(ctx context.Context, conf *YAMLConfMw, mwd *MwareDesc) (error) {
+func InitMariaDB(ctx context.Context, mwd *MwareDesc) (error) {
 	err := mwareGenerateUserPassClient(ctx, mwd)
 	if err != nil {
 		return err
@@ -44,7 +44,7 @@ func InitMariaDB(ctx context.Context, conf *YAMLConfMw, mwd *MwareDesc) (error) 
 
 	mwd.Namespace = mwd.Client
 
-	db, err := mariaConn(conf)
+	db, err := mariaConn()
 	if err != nil {
 		goto out;
 	}
@@ -66,7 +66,7 @@ func InitMariaDB(ctx context.Context, conf *YAMLConfMw, mwd *MwareDesc) (error) 
 	}
 
 	/* FIXME -- these are random numbers until we decide on quoting policy */
-	err = mariaReq(db, "INSERT INTO " + conf.Maria.QDB + " VALUES ('" + mwd.Namespace + "', " + mariaDefSize + ", " + mariaDefRows + ", false)")
+	err = mariaReq(db, "INSERT INTO " + conf.Mware.Maria.QDB + " VALUES ('" + mwd.Namespace + "', " + mariaDefSize + ", " + mariaDefRows + ", false)")
 	if err != nil {
 		goto outd
 	}
@@ -102,28 +102,28 @@ func mariaDropQuota(ctx context.Context, conf *YAMLConfMaria, db *sql.DB, mwd *M
 	}
 }
 
-func FiniMariaDB(ctx context.Context, conf *YAMLConfMw, mwd *MwareDesc) error {
-	db, err := mariaConn(conf)
+func FiniMariaDB(ctx context.Context, mwd *MwareDesc) error {
+	db, err := mariaConn()
 	if err != nil {
 		return err
 	}
 	defer db.Close()
 
-	mariaDropQuota(ctx, &conf.Maria, db, mwd)
+	mariaDropQuota(ctx, &conf.Mware.Maria, db, mwd)
 	mariaDropUser(ctx, db, mwd)
 	mariaDropDb(ctx, db, mwd)
 
 	return nil
 }
 
-func GetEnvMariaDB(conf *YAMLConfMw, mwd *MwareDesc) map[string][]byte {
-	e := mwd.stdEnvs(conf.Maria.c.Addr())
+func GetEnvMariaDB(ctx context.Context, mwd *MwareDesc) map[string][]byte {
+	e := mwd.stdEnvs(conf.Mware.Maria.c.Addr())
 	e[mwd.envName("DBNAME")] = []byte(mwd.Namespace)
 	return e
 }
 
-func InfoMariaDB(ctx context.Context, conf *YAMLConfMw, mwd *MwareDesc, ifo *swyapi.MwareInfo) error {
-	db, err := mariaConn(conf)
+func InfoMariaDB(ctx context.Context, mwd *MwareDesc, ifo *swyapi.MwareInfo) error {
+	db, err := mariaConn()
 	if err != nil {
 		return err
 	}

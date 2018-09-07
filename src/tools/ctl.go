@@ -260,11 +260,21 @@ func show_stats(args []string, opts [16]string) {
 
 	make_faas_req1("GET", url("stats", ua), http.StatusOK, nil, &st)
 
+	fmt.Printf("*********** Calls ***********\n")
 	for _, s := range(st.Stats) {
 		fmt.Printf("---\n%s ... %s\n", dateOnly(s.From), dateOnly(s.Till))
 		fmt.Printf("Called:           %d\n", s.Called)
 		fmt.Printf("GBS:              %f\n", s.GBS)
 		fmt.Printf("Bytes sent:       %s\n", formatBytes(s.BytesOut))
+	}
+
+	fmt.Printf("*********** Mware ***********\n")
+	for mt, st := range(st.Mware) {
+		fmt.Printf("* %s:\n", mt)
+		fmt.Printf("  Count:        %d\n", st.Count)
+		if st.DU != nil {
+			fmt.Printf("  Disk usage:   %s\n", formatBytes(*st.DU << 10))
+		}
 	}
 }
 

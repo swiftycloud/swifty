@@ -373,6 +373,15 @@ out:
 	http.Error(w, err.Error(), resp)
 }
 
+func respond(w http.ResponseWriter, result interface{}) *swyapi.GateErr {
+	err := swyhttp.MarshalAndWrite(w, result)
+	if err != nil {
+		return GateErrE(swy.GateBadResp, err)
+	}
+
+	return nil
+}
+
 func listReq(ctx context.Context, project string, labels []string) bson.D {
 	q := bson.D{{"tennant", gctx(ctx).Tenant}, {"project", project}}
 	for _, l := range labels {
@@ -467,12 +476,7 @@ func handleProjectList(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		}
 	}
 
-	err = swyhttp.MarshalAndWrite(w, &result)
-	if err != nil {
-		return GateErrE(swy.GateBadResp, err)
-	}
-
-	return nil
+	return respond(w, &result)
 }
 
 func objFindId(ctx context.Context, id string, out interface{}, q bson.M) *swyapi.GateErr {
@@ -550,10 +554,7 @@ func handleFunctionTriggers(ctx context.Context, w http.ResponseWriter, r *http.
 			evs = append(evs, fn.getURLEvt())
 		}
 
-		err = swyhttp.MarshalAndWrite(w, evs)
-		if err != nil {
-			return GateErrE(swy.GateBadResp, err)
-		}
+		return respond(w, evs)
 
 	case "POST":
 		var evt swyapi.FunctionEvent
@@ -573,10 +574,7 @@ func handleFunctionTriggers(ctx context.Context, w http.ResponseWriter, r *http.
 			return cerr
 		}
 
-		err = swyhttp.MarshalAndWrite(w, ed.toInfo(&fn))
-		if err != nil {
-			return GateErrE(swy.GateBadResp, err)
-		}
+		return respond(w, ed.toInfo(&fn))
 	}
 
 	return nil
@@ -592,10 +590,7 @@ func handleFunctionAuthCtx(ctx context.Context, w http.ResponseWriter, r *http.R
 
 	switch r.Method {
 	case "GET":
-		err := swyhttp.MarshalAndWrite(w, fn.AuthCtx)
-		if err != nil {
-			return GateErrE(swy.GateBadResp, err)
-		}
+		return respond(w, fn.AuthCtx)
 
 	case "PUT":
 		var ac string
@@ -626,10 +621,7 @@ func handleFunctionEnv(ctx context.Context, w http.ResponseWriter, r *http.Reque
 
 	switch r.Method {
 	case "GET":
-		err := swyhttp.MarshalAndWrite(w, fn.Code.Env)
-		if err != nil {
-			return GateErrE(swy.GateBadResp, err)
-		}
+		return respond(w, fn.Code.Env)
 
 	case "PUT":
 		var env []string
@@ -660,15 +652,12 @@ func handleFunctionSize(ctx context.Context, w http.ResponseWriter, r *http.Requ
 
 	switch r.Method {
 	case "GET":
-		err := swyhttp.MarshalAndWrite(w, &swyapi.FunctionSize{
+		return respond(w, &swyapi.FunctionSize{
 			Memory:		fn.Size.Mem,
 			Timeout:	fn.Size.Tmo,
 			Rate:		fn.Size.Rate,
 			Burst:		fn.Size.Burst,
 		})
-		if err != nil {
-			return GateErrE(swy.GateBadResp, err)
-		}
 
 	case "PUT":
 		var sz swyapi.FunctionSize
@@ -717,10 +706,7 @@ func handleFunctionMwares(ctx context.Context, w http.ResponseWriter, r *http.Re
 			minf = append(minf, mi)
 		}
 
-		err := swyhttp.MarshalAndWrite(w, minf)
-		if err != nil {
-			return GateErrE(swy.GateBadResp, err)
-		}
+		return respond(w, minf)
 
 	case "POST":
 		var mid string
@@ -804,10 +790,7 @@ func handleFunctionAccounts(ctx context.Context, w http.ResponseWriter, r *http.
 			ret = append(ret, ai)
 		}
 
-		err := swyhttp.MarshalAndWrite(w, &ret)
-		if err != nil {
-			return GateErrE(swy.GateBadResp, err)
-		}
+		return respond(w, &ret)
 
 	case "POST":
 		var aid string
@@ -869,10 +852,7 @@ func handleFunctionS3Bs(ctx context.Context, w http.ResponseWriter, r *http.Requ
 
 	switch r.Method {
 	case "GET":
-		err := swyhttp.MarshalAndWrite(w, fn.S3Buckets)
-		if err != nil {
-			return GateErrE(swy.GateBadResp, err)
-		}
+		return respond(w, fn.S3Buckets)
 
 	case "POST":
 		var bname string
@@ -928,12 +908,7 @@ func handleFunctionTrigger(ctx context.Context, w http.ResponseWriter, r *http.R
 			return GateErrM(swy.GateBadRequest, "Cannot remove URL from this FN")
 		}
 
-		err := swyhttp.MarshalAndWrite(w, fn.getURLEvt())
-		if err != nil {
-			return GateErrE(swy.GateBadResp, err)
-		}
-
-		return nil
+		return respond(w, fn.getURLEvt())
 	}
 
 	if !bson.IsObjectIdHex(eid) {
@@ -949,10 +924,7 @@ func handleFunctionTrigger(ctx context.Context, w http.ResponseWriter, r *http.R
 
 	switch r.Method {
 	case "GET":
-		err := swyhttp.MarshalAndWrite(w, ed.toInfo(&fn))
-		if err != nil {
-			return GateErrE(swy.GateBadResp, err)
-		}
+		return respond(w, ed.toInfo(&fn))
 
 	case "DELETE":
 		erc := eventsDelete(ctx, &fn, &ed)
@@ -1015,10 +987,8 @@ func handleFunctionSources(ctx context.Context, w http.ResponseWriter, r *http.R
 			return cerr
 		}
 
-		err := swyhttp.MarshalAndWrite(w, src)
-		if err != nil {
-			return GateErrE(swy.GateBadResp, err)
-		}
+		return respond(w, src)
+
 	case "PUT":
 		var src swyapi.FunctionSources
 
@@ -1038,31 +1008,25 @@ func handleFunctionSources(ctx context.Context, w http.ResponseWriter, r *http.R
 	return nil
 }
 
-func handleTenantStats(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
-	ten := gctx(ctx).Tenant
-	ctxlog(ctx).Debugf("Get FN stats %s", ten)
+func getCallStats(ctx context.Context, ten string, periods int) ([]swyapi.TenantStats, *swyapi.GateErr) {
+	var cs []swyapi.TenantStats
 
 	td, err := tendatGet(ctx, ten)
 	if err != nil {
-		return GateErrD(err)
+		return nil, GateErrD(err)
 	}
 
-	var resp swyapi.TenantStatsResp
 	prev := &td.stats
 
-	periods := reqPeriods(r.URL.Query())
-
 	if periods > 0 {
-		var atst []TenStats
-
-		atst, err = dbTenStatsGetArch(ctx, ten, periods)
+		atst, err := dbTenStatsGetArch(ctx, ten, periods)
 		if err != nil {
-			return GateErrD(err)
+			return nil, GateErrD(err)
 		}
 
 		for i := 0; i < periods && i < len(atst); i++ {
 			cur := &atst[i]
-			resp.Stats = append(resp.Stats, swyapi.TenantStats{
+			cs = append(cs, swyapi.TenantStats{
 				Called:		prev.Called - cur.Called,
 				GBS:		prev.GBS() - cur.GBS(),
 				BytesOut:	prev.BytesOut - cur.BytesOut,
@@ -1073,19 +1037,36 @@ func handleTenantStats(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		}
 	}
 
-	resp.Stats = append(resp.Stats, swyapi.TenantStats{
+	cs = append(cs, swyapi.TenantStats{
 		Called:		prev.Called,
 		GBS:		prev.GBS(),
 		BytesOut:	prev.BytesOut,
 		Till:		prev.TillS(),
 	})
 
-	err = swyhttp.MarshalAndWrite(w, resp)
-	if err != nil {
-		return GateErrE(swy.GateBadResp, err)
+	return cs, nil
+}
+
+func handleTenantStats(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
+	ten := gctx(ctx).Tenant
+	ctxlog(ctx).Debugf("Get FN stats %s", ten)
+
+	periods := reqPeriods(r.URL.Query())
+
+	var resp swyapi.TenantStatsResp
+	var cerr *swyapi.GateErr
+
+	resp.Stats, cerr = getCallStats(ctx, ten, periods)
+	if cerr != nil {
+		return cerr
 	}
 
-	return nil
+	resp.Mware, cerr = getMwareStats(ctx, ten)
+	if cerr != nil {
+		return cerr
+	}
+
+	return respond(w, resp)
 }
 
 func handleFunctionStats(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
@@ -1108,10 +1089,7 @@ func handleFunctionStats(ctx context.Context, w http.ResponseWriter, r *http.Req
 			return cerr
 		}
 
-		err := swyhttp.MarshalAndWrite(w, &swyapi.FunctionStatsResp{ Stats: stats })
-		if err != nil {
-			return GateErrE(swy.GateBadResp, err)
-		}
+		return respond(w, &swyapi.FunctionStatsResp{ Stats: stats })
 	}
 
 	return nil
@@ -1161,10 +1139,7 @@ func handleFunctionLogs(ctx context.Context, w http.ResponseWriter, r *http.Requ
 			})
 		}
 
-		err = swyhttp.MarshalAndWrite(w, resp)
-		if err != nil {
-			return GateErrE(swy.GateBadResp, err)
-		}
+		return respond(w, resp)
 	}
 
 	return nil
@@ -1427,10 +1402,7 @@ func handleFunctions(ctx context.Context, w http.ResponseWriter, r *http.Request
 			ret = append(ret, fi)
 		}
 
-		err = swyhttp.MarshalAndWrite(w, &ret)
-		if err != nil {
-			return GateErrE(swy.GateBadResp, err)
-		}
+		return respond(w, &ret)
 
 	case "POST":
 		var params swyapi.FunctionAdd
@@ -1460,10 +1432,7 @@ func handleFunctions(ctx context.Context, w http.ResponseWriter, r *http.Request
 		}
 
 		fi, _ := fd.toInfo(ctx, false, 0)
-		err = swyhttp.MarshalAndWrite(w, fi)
-		if err != nil {
-			return GateErrE(swy.GateBadResp, err)
-		}
+		return respond(w, fi)
 	}
 
 	return nil
@@ -1477,13 +1446,7 @@ func handleFunctionMdat(ctx context.Context, w http.ResponseWriter, r *http.Requ
 		return cerr
 	}
 
-	fid := fn.toMInfo(ctx)
-	err := swyhttp.MarshalAndWrite(w, fid)
-	if err != nil {
-		return GateErrE(swy.GateBadResp, err)
-	}
-
-	return nil
+	return respond(w, fn.toMInfo(ctx))
 }
 
 func handleFunction(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
@@ -1506,10 +1469,7 @@ func handleFunction(ctx context.Context, w http.ResponseWriter, r *http.Request)
 			return cerr
 		}
 
-		err := swyhttp.MarshalAndWrite(w, fi)
-		if err != nil {
-			return GateErrE(swy.GateBadResp, err)
-		}
+		return respond(w, fi)
 
 	case "PUT":
 		var fu swyapi.FunctionUpdate
@@ -1534,10 +1494,7 @@ func handleFunction(ctx context.Context, w http.ResponseWriter, r *http.Request)
 		}
 
 		fi, _ := fn.toInfo(ctx, false, 0)
-		err = swyhttp.MarshalAndWrite(w, fi)
-		if err != nil {
-			return GateErrE(swy.GateBadResp, err)
-		}
+		return respond(w, fi)
 
 	case "DELETE":
 		cerr := fn.Remove(ctx)
@@ -1622,12 +1579,7 @@ func handleFunctionRun(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		}
 	}
 
-	err = swyhttp.MarshalAndWrite(w, res)
-	if err != nil {
-		return GateErrE(swy.GateBadResp, err)
-	}
-
-	return nil
+	return respond(w, res)
 }
 
 func handleMwares(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
@@ -1676,10 +1628,7 @@ func handleMwares(ctx context.Context, w http.ResponseWriter, r *http.Request) *
 			ret = append(ret, mi)
 		}
 
-		err = swyhttp.MarshalAndWrite(w, &ret)
-		if err != nil {
-			return GateErrE(swy.GateBadResp, err)
-		}
+		return respond(w, &ret)
 
 	case "POST":
 		var params swyapi.MwareAdd
@@ -1699,10 +1648,7 @@ func handleMwares(ctx context.Context, w http.ResponseWriter, r *http.Request) *
 		}
 
 		mi, _ := mw.toInfo(ctx, false)
-		err = swyhttp.MarshalAndWrite(w, &mi)
-		if err != nil {
-			return GateErrE(swy.GateBadResp, err)
-		}
+		return respond(w, &mi)
 	}
 
 	return nil
@@ -1735,10 +1681,7 @@ func handleAccounts(ctx context.Context, w http.ResponseWriter, r *http.Request)
 			ret = append(ret, ai)
 		}
 
-		err = swyhttp.MarshalAndWrite(w, &ret)
-		if err != nil {
-			return GateErrE(swy.GateBadResp, err)
-		}
+		return respond(w, &ret)
 
 	case "POST":
 		var params map[string]string
@@ -1766,10 +1709,7 @@ func handleAccounts(ctx context.Context, w http.ResponseWriter, r *http.Request)
 		}
 
 		ai, _ := ac.toInfo(ctx, false)
-		err = swyhttp.MarshalAndWrite(w, ai)
-		if err != nil {
-			return GateErrE(swy.GateBadResp, err)
-		}
+		return respond(w, ai)
 	}
 
 	return nil
@@ -1790,10 +1730,7 @@ func handleAccount(ctx context.Context, w http.ResponseWriter, r *http.Request) 
 			return cerr
 		}
 
-		err := swyhttp.MarshalAndWrite(w, ai)
-		if err != nil {
-			return GateErrE(swy.GateBadResp, err)
-		}
+		return respond(w, ai)
 
 	case "PUT":
 		var params map[string]string
@@ -1838,10 +1775,7 @@ func handleRepos(ctx context.Context, w http.ResponseWriter, r *http.Request) *s
 			return cerr
 		}
 
-		err := swyhttp.MarshalAndWrite(w, &ret)
-		if err != nil {
-			return GateErrE(swy.GateBadResp, err)
-		}
+		return respond(w, &ret)
 
 	case "POST":
 		var params swyapi.RepoAdd
@@ -1877,10 +1811,7 @@ func handleRepos(ctx context.Context, w http.ResponseWriter, r *http.Request) *s
 		}
 
 		ri, _ := rp.toInfo(ctx, false)
-		err = swyhttp.MarshalAndWrite(w, &ri)
-		if err != nil {
-			return GateErrE(swy.GateBadResp, err)
-		}
+		return respond(w, &ri)
 	}
 
 	return nil
@@ -1919,10 +1850,7 @@ func handleRepo(ctx context.Context, w http.ResponseWriter, r *http.Request) *sw
 			return cerr
 		}
 
-		err := swyhttp.MarshalAndWrite(w, ri)
-		if err != nil {
-			return GateErrE(swy.GateBadResp, err)
-		}
+		return respond(w, ri)
 
 	case "PUT":
 		var ru swyapi.RepoUpdate
@@ -1967,10 +1895,7 @@ func handleRepoFiles(ctx context.Context, w http.ResponseWriter, r *http.Request
 			return cerr
 		}
 
-		err := swyhttp.MarshalAndWrite(w, files)
-		if err != nil {
-			return GateErrE(swy.GateBadResp, err)
-		}
+		return respond(w, files)
 	} else {
 		cont, cerr := rd.readFile(ctx, p[5])
 		if cerr != nil {
@@ -1996,12 +1921,7 @@ func handleRepoDesc(ctx context.Context, w http.ResponseWriter, r *http.Request)
 		return cerr
 	}
 
-	err := swyhttp.MarshalAndWrite(w, d)
-	if err != nil {
-		return GateErrE(swy.GateBadResp, err)
-	}
-
-	return nil
+	return respond(w, d)
 }
 
 func handleRepoPull(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
@@ -2030,12 +1950,7 @@ func handleLanguages(ctx context.Context, w http.ResponseWriter, r *http.Request
 		ret = append(ret, l)
 	}
 
-	err := swyhttp.MarshalAndWrite(w, ret)
-	if err != nil {
-		return GateErrE(swy.GateBadResp, err)
-	}
-
-	return nil
+	return respond(w, ret)
 }
 
 func handleLanguage(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
@@ -2045,12 +1960,7 @@ func handleLanguage(ctx context.Context, w http.ResponseWriter, r *http.Request)
 		return GateErrM(swy.GateGenErr, "Language not supported")
 	}
 
-	err := swyhttp.MarshalAndWrite(w, lh.Info())
-	if err != nil {
-		return GateErrE(swy.GateBadResp, err)
-	}
-
-	return nil
+	return respond(w, lh.Info())
 }
 
 func handleMwareTypes(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
@@ -2064,12 +1974,7 @@ func handleMwareTypes(ctx context.Context, w http.ResponseWriter, r *http.Reques
 		ret = append(ret, mw)
 	}
 
-	err := swyhttp.MarshalAndWrite(w, ret)
-	if err != nil {
-		return GateErrE(swy.GateBadResp, err)
-	}
-
-	return nil
+	return respond(w, ret)
 }
 
 func handleS3Access(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
@@ -2085,12 +1990,7 @@ func handleS3Access(ctx context.Context, w http.ResponseWriter, r *http.Request)
 		return cerr
 	}
 
-	err = swyhttp.MarshalAndWrite(w, creds)
-	if err != nil {
-		return GateErrE(swy.GateBadResp, err)
-	}
-
-	return nil
+	return respond(w, creds)
 }
 
 func handleDeployments(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
@@ -2132,10 +2032,7 @@ func handleDeployments(ctx context.Context, w http.ResponseWriter, r *http.Reque
 			dis = append(dis, di)
 		}
 
-		err = swyhttp.MarshalAndWrite(w, dis)
-		if err != nil {
-			return GateErrE(swy.GateBadResp, err)
-		}
+		return respond(w, dis)
 
 	case "POST":
 		var ds swyapi.DeployStart
@@ -2157,10 +2054,7 @@ func handleDeployments(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		}
 
 		di, _ := dd.toInfo(ctx, false)
-		err = swyhttp.MarshalAndWrite(w, &di)
-		if err != nil {
-			return GateErrE(swy.GateBadResp, err)
-		}
+		return respond(w, &di)
 	}
 
 	return nil
@@ -2185,10 +2079,7 @@ func handleOneDeployment(ctx context.Context, w http.ResponseWriter, r *http.Req
 			return cerr
 		}
 
-		err := swyhttp.MarshalAndWrite(w, di)
-		if err != nil {
-			return GateErrE(swy.GateBadResp, err)
-		}
+		return respond(w, di)
 
 	case "DELETE":
 		cerr := deployStop(ctx, dd)
@@ -2223,10 +2114,7 @@ func handleAuths(ctx context.Context, w http.ResponseWriter, r *http.Request) *s
 			auths = append(auths, &swyapi.AuthInfo{ Id: d.ObjID.Hex(), Name: d.SwoId.Name })
 		}
 
-		err = swyhttp.MarshalAndWrite(w, auths)
-		if err != nil {
-			return GateErrE(swy.GateBadResp, err)
-		}
+		return respond(w, auths)
 
 	case "POST":
 		var aa swyapi.AuthAdd
@@ -2281,10 +2169,7 @@ func handleAuths(ctx context.Context, w http.ResponseWriter, r *http.Request) *s
 		}
 
 		di, _ := dd.toInfo(ctx, false)
-		err = swyhttp.MarshalAndWrite(w, &di)
-		if err != nil {
-			return GateErrE(swy.GateBadResp, err)
-		}
+		return respond(w, &di)
 	}
 
 	return nil
@@ -2316,10 +2201,7 @@ func handleMware(ctx context.Context, w http.ResponseWriter, r *http.Request) *s
 			return cerr
 		}
 
-		err := swyhttp.MarshalAndWrite(w, mi)
-		if err != nil {
-			return GateErrE(swy.GateBadResp, err)
-		}
+		return respond(w, mi)
 
 	case "DELETE":
 		cerr := mw.Remove(ctx)
@@ -2512,7 +2394,7 @@ func main() {
 
 	r := mux.NewRouter()
 	r.HandleFunc("/v1/login",		handleUserLogin).Methods("POST", "OPTIONS")
-	r.Handle("/v1/stats",			genReqHandler(handleTenantStats)).Methods("POST", "OPTIONS")
+	r.Handle("/v1/stats",			genReqHandler(handleTenantStats)).Methods("GET", "POST", "OPTIONS")
 	r.Handle("/v1/project/list",		genReqHandler(handleProjectList)).Methods("POST", "OPTIONS")
 	r.Handle("/v1/project/del",		genReqHandler(handleProjectDel)).Methods("POST", "OPTIONS")
 
@@ -2556,9 +2438,9 @@ func main() {
 	r.Handle("/v1/deployments",		genReqHandler(handleDeployments)).Methods("GET", "POST", "OPTIONS")
 	r.Handle("/v1/deployments/{did}",	genReqHandler(handleDeployment)).Methods("GET", "DELETE", "OPTIONS")
 
-	r.Handle("/v1/info/langs",		genReqHandler(handleLanguages)).Methods("GET", "POST", "OPTIONS")
+	r.Handle("/v1/info/langs",		genReqHandler(handleLanguages)).Methods("GET", "OPTIONS")
 	r.Handle("/v1/info/langs/{lang}",	genReqHandler(handleLanguage)).Methods("GET", "OPTIONS")
-	r.Handle("/v1/info/mwares",		genReqHandler(handleMwareTypes)).Methods("GET", "POST", "OPTIONS")
+	r.Handle("/v1/info/mwares",		genReqHandler(handleMwareTypes)).Methods("GET", "OPTIONS")
 
 	r.PathPrefix("/call/{fnid}").Methods("GET", "PUT", "POST", "DELETE", "PATCH", "HEAD", "OPTIONS").HandlerFunc(handleFunctionCall)
 

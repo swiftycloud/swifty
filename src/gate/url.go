@@ -3,11 +3,12 @@ package main
 import (
 	"context"
 	"gopkg.in/mgo.v2/bson"
+	"../apis"
 )
 
 /* FIXME -- set up public IP address/port for this FN */
 
-func urlEventStart(ctx context.Context, ed *FnEventDesc) error {
+func urlEventStart(ctx context.Context, _ *FunctionDesc, ed *FnEventDesc) error {
 	err := dbFuncUpdate(ctx, bson.M{"cookie": ed.FnId, "url": false},
 		bson.M{"$set": bson.M{"url": true}})
 	if err == nil {
@@ -29,4 +30,10 @@ func urlEventStop(ctx context.Context, ed *FnEventDesc) error {
 		}
 	}
 	return err
+}
+
+var urlEOps = EventOps {
+	setup:	func(ed *FnEventDesc, evt *swyapi.FunctionEvent) { /* nothing to do */ },
+	start:	urlEventStart,
+	stop:	urlEventStop,
 }

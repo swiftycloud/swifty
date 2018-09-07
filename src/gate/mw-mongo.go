@@ -8,19 +8,19 @@ import (
 	"../apis"
 )
 
-func mgoDial(conf *YAMLConfMw) (*mgo.Session, error) {
+func mgoDial() (*mgo.Session, error) {
 	ifo := mgo.DialInfo {
-		Addrs:		[]string{conf.Mongo.c.Addr()},
+		Addrs:		[]string{conf.Mware.Mongo.c.Addr()},
 		Database:	"admin",
 		Timeout:	60*time.Second,
-		Username:	conf.Mongo.c.User,
-		Password:	gateSecrets[conf.Mongo.c.Pass],
+		Username:	conf.Mware.Mongo.c.User,
+		Password:	gateSecrets[conf.Mware.Mongo.c.Pass],
 	}
 
 	return mgo.DialWithInfo(&ifo)
 }
 
-func InitMongo(ctx context.Context, conf *YAMLConfMw, mwd *MwareDesc) (error) {
+func InitMongo(ctx context.Context, mwd *MwareDesc) (error) {
 	err := mwareGenerateUserPassClient(ctx, mwd)
 	if err != nil {
 		return err
@@ -28,7 +28,7 @@ func InitMongo(ctx context.Context, conf *YAMLConfMw, mwd *MwareDesc) (error) {
 
 	mwd.Namespace = mwd.Client
 
-	sess, err := mgoDial(conf)
+	sess, err := mgoDial()
 	if err != nil {
 		return err
 	}
@@ -44,9 +44,9 @@ func InitMongo(ctx context.Context, conf *YAMLConfMw, mwd *MwareDesc) (error) {
 	return err
 }
 
-func FiniMongo(ctx context.Context, conf *YAMLConfMw, mwd *MwareDesc) error {
+func FiniMongo(ctx context.Context, mwd *MwareDesc) error {
 	ctxlog(ctx).Debugf("Drop DB 1")
-	sess, err := mgoDial(conf)
+	sess, err := mgoDial()
 	if err != nil {
 		return err
 	}
@@ -63,8 +63,8 @@ func FiniMongo(ctx context.Context, conf *YAMLConfMw, mwd *MwareDesc) error {
 	return nil
 }
 
-func GetEnvMongo(conf *YAMLConfMw, mwd *MwareDesc) map[string][]byte {
-	e := mwd.stdEnvs(conf.Mongo.c.Addr())
+func GetEnvMongo(ctx context.Context, mwd *MwareDesc) map[string][]byte {
+	e := mwd.stdEnvs(conf.Mware.Mongo.c.Addr())
 	e[mwd.envName("DBNAME")] = []byte(mwd.Namespace)
 	return e
 }
@@ -74,8 +74,8 @@ type MgoStat struct {
 	SSize	uint64	`bson:"storageSize"`
 }
 
-func InfoMongo(ctx context.Context, conf *YAMLConfMw, mwd *MwareDesc, ifo *swyapi.MwareInfo) error {
-	sess, err := mgoDial(conf)
+func InfoMongo(ctx context.Context, mwd *MwareDesc, ifo *swyapi.MwareInfo) error {
+	sess, err := mgoDial()
 	if err != nil {
 		return err
 	}

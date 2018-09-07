@@ -51,11 +51,10 @@ func (mw *MwareDesc)ToState(ctx context.Context, st, from int) error {
 }
 
 type MwareOps struct {
-	Init	func(ctx context.Context, conf *YAMLConfMw, mwd *MwareDesc) (error)
-	Fini	func(ctx context.Context, conf *YAMLConfMw, mwd *MwareDesc) (error)
-	Event	func(ctx context.Context, conf *YAMLConfMw, source *FnEventDesc, mwd *MwareDesc, on bool) (error)
-	GetEnv	func(conf *YAMLConfMw, mwd *MwareDesc) (map[string][]byte)
-	Info	func(ctx context.Context, conf *YAMLConfMw, mwd *MwareDesc, ifo *swyapi.MwareInfo) (error)
+	Init	func(ctx context.Context, mwd *MwareDesc) (error)
+	Fini	func(ctx context.Context, mwd *MwareDesc) (error)
+	GetEnv	func(ctx context.Context, mwd *MwareDesc) (map[string][]byte)
+	Info	func(ctx context.Context, mwd *MwareDesc, ifo *swyapi.MwareInfo) (error)
 	Devel	bool
 	LiteOK	bool
 }
@@ -114,7 +113,6 @@ var mwareHandlers = map[string]*MwareOps {
 	"postgres":	&MwarePostgres,
 	"rabbit":	&MwareRabbitMQ,
 	"mongo":	&MwareMongo,
-	"s3":		&MwareS3,
 	"authjwt":	&MwareAuthJWT,
 }
 
@@ -141,7 +139,7 @@ func (item *MwareDesc)Remove(ctx context.Context) *swyapi.GateErr {
 		return GateErrM(swy.GateGenErr, "Cannot terminate mware")
 	}
 
-	err = handler.Fini(ctx, &conf.Mware, item)
+	err = handler.Fini(ctx, item)
 	if err != nil {
 		ctxlog(ctx).Errorf("Failed cleanup for mware %s: %s", item.SwoId.Str(), err.Error())
 		goto stalled
@@ -193,7 +191,7 @@ func (item *MwareDesc)toInfo(ctx context.Context, details bool) (*swyapi.MwareIn
 		}
 
 		if handler.Info != nil {
-			err := handler.Info(ctx, &conf.Mware, item, resp)
+			err := handler.Info(ctx, item, resp)
 			if err != nil {
 				return nil, GateErrE(swy.GateGenErr, err)
 			}
@@ -201,6 +199,46 @@ func (item *MwareDesc)toInfo(ctx context.Context, details bool) (*swyapi.MwareIn
 	}
 
 	return resp, nil
+}
+
+func getMwareStats(ctx context.Context, ten string) (map[string]*swyapi.TenantStatsMware, *swyapi.GateErr) {
+	var mws []*MwareDesc
+
+	err := dbFindAll(ctx, bson.M{"tennant": ten}, &mws)
+	if err != nil {
+		return nil, GateErrD(err)
+	}
+
+	mst := make(map[string]*swyapi.TenantStatsMware)
+	for _, mw := range mws {
+		st, ok := mst[mw.MwareType]
+		if !ok {
+			st = &swyapi.TenantStatsMware{}
+			mst[mw.MwareType] = st
+		}
+
+		st.Count++
+
+		h := mwareHandlers[mw.MwareType]
+		if h.Info != nil {
+			var ifo swyapi.MwareInfo
+
+			err := h.Info(ctx, mw, &ifo)
+			if err != nil {
+				return nil, GateErrE(swy.GateGenErr, err)
+			}
+
+			if ifo.DU != nil {
+				if st.DU == nil {
+					var du uint64
+					st.DU = &du
+				}
+				*st.DU += *ifo.DU
+			}
+		}
+	}
+
+	return mst, nil
 }
 
 func getMwareDesc(id *SwoId, params *swyapi.MwareAdd) *MwareDesc {
@@ -247,13 +285,13 @@ func (mwd *MwareDesc)Setup(ctx context.Context) *swyapi.GateErr {
 		goto outdb
 	}
 
-	err = handler.Init(ctx, &conf.Mware, mwd)
+	err = handler.Init(ctx, mwd)
 	if err != nil {
 		err = fmt.Errorf("mware init error: %s", err.Error())
 		goto outdb
 	}
 
-	err = swk8sMwSecretAdd(ctx, mwd.Cookie, handler.GetEnv(&conf.Mware, mwd))
+	err = swk8sMwSecretAdd(ctx, mwd.Cookie, handler.GetEnv(ctx, mwd))
 	if err != nil {
 		goto outh
 	}
@@ -285,7 +323,7 @@ outs:
 		goto stalled
 	}
 outh:
-	erc = handler.Fini(ctx, &conf.Mware, mwd)
+	erc = handler.Fini(ctx, mwd)
 	if erc != nil {
 		goto stalled
 	}

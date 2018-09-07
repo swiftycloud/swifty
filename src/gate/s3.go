@@ -64,14 +64,6 @@ func s3KeyDel(conf *YAMLConfS3, key string) error {
 	return nil
 }
 
-func InitS3(ctx context.Context, conf *YAMLConfMw, mwd *MwareDesc) (error) {
-	return fmt.Errorf("S3 mware is external")
-}
-
-func FiniS3(ctx context.Context, conf *YAMLConfMw, mwd *MwareDesc) error {
-	return fmt.Errorf("S3 mware is external")
-}
-
 const (
 	gates3queue = "events"
 )
@@ -249,8 +241,14 @@ func mwareGetS3Creds(ctx context.Context, conf *YAMLConf, acc *swyapi.S3Access) 
 	return creds, nil
 }
 
-var MwareS3 = MwareOps {
-	Init:		InitS3,
-	Fini:		FiniS3,
-	LiteOK:		true,
+var s3EOps = EventOps {
+	setup: func(ed *FnEventDesc, evt *swyapi.FunctionEvent) {
+		ed.S3 = &FnEventS3{
+			Bucket: evt.S3.Bucket,
+			Ops: evt.S3.Ops,
+			Pattern: evt.S3.Pattern,
+		}
+	},
+	start:	s3EventStart,
+	stop:	s3EventStop,
 }
