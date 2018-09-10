@@ -1827,7 +1827,7 @@ func handleRepos(ctx context.Context, w http.ResponseWriter, r *http.Request) *s
 	return nil
 }
 
-func repoFindForReq(ctx context.Context, r *http.Request, shared bool) (*RepoDesc, *swyapi.GateErr) {
+func repoFindForReq(ctx context.Context, r *http.Request, user_action bool) (*RepoDesc, *swyapi.GateErr) {
 	rid := mux.Vars(r)["rid"]
 	if !bson.IsObjectIdHex(rid) {
 		return nil, GateErrM(swy.GateBadRequest, "Bad repo ID value")
@@ -1840,8 +1840,11 @@ func repoFindForReq(ctx context.Context, r *http.Request, shared bool) (*RepoDes
 		return nil, GateErrD(err)
 	}
 
-	if !shared && rd.SwoId.Tennant != gctx(ctx).Tenant {
-		return nil, GateErrM(swy.GateNotAvail, "Shared repo")
+	if !user_action {
+		gx := gctx(ctx)
+		if !gx.Admin && rd.SwoId.Tennant != gx.Tenant {
+			return nil, GateErrM(swy.GateNotAvail, "Shared repo")
+		}
 	}
 
 	return &rd, nil
