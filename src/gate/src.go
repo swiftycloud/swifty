@@ -74,8 +74,8 @@ func checkVersion(ctx context.Context, fn *FunctionDesc, version string, version
 }
 
 func putSources(ctx context.Context, fn *FunctionDesc, src *swyapi.FunctionSources) error {
-	fn.Src.Version = zeroVersion
-	return writeSources(ctx, fn, src, "")
+	fn.Src = FnSrcDesc{ Version: zeroVersion }
+	return writeStdSources(ctx, fn, src)
 }
 
 func getSources(ctx context.Context, fn *FunctionDesc) ([]byte, error) {
@@ -85,8 +85,23 @@ func getSources(ctx context.Context, fn *FunctionDesc) ([]byte, error) {
 
 func updateSources(ctx context.Context, fn *FunctionDesc, src *swyapi.FunctionSources) error {
 	ov, _ := strconv.Atoi(fn.Src.Version)
-	fn.Src.Version = strconv.Itoa(ov + 1)
-	return writeSources(ctx, fn, src, "")
+	fn.Src = FnSrcDesc{ Version: strconv.Itoa(ov + 1) }
+	return writeStdSources(ctx, fn, src)
+}
+
+func writeStdSources(ctx context.Context, fn *FunctionDesc, src *swyapi.FunctionSources) error {
+	err := writeSources(ctx, fn, src, "")
+	if err != nil {
+		return err
+	}
+
+	if src.Type == "git" && src.Sync {
+		ids := strings.SplitN(src.Repo, "/", 2)
+		fn.Src.Repo = ids[0]
+		fn.Src.File = ids[1]
+	}
+
+	return nil
 }
 
 func writeSources(ctx context.Context, fn *FunctionDesc, src *swyapi.FunctionSources, suff string) error {
