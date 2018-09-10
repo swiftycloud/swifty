@@ -480,6 +480,12 @@ func function_info(args []string, opts [16]string) {
 		fmt.Printf("Data:        %s\n", ifo.UserData)
 	}
 
+	var src swyapi.FunctionSources
+	make_faas_req1("GET", "functions/" + args[0] + "/sources", http.StatusOK, nil, &src)
+	if src.Sync {
+		fmt.Printf("Sync with:   %s\n", src.Repo)
+	}
+
 	var minf []*swyapi.MwareInfo
 	make_faas_req1("GET", "functions/" + args[0] + "/middleware", http.StatusOK, nil, &minf)
 	if len(minf) != 0 {
@@ -615,18 +621,22 @@ func parse_rate(val string) (uint, uint) {
 	return uint(rate), uint(burst)
 }
 
-func function_add(args []string, opts [16]string) {
-	var err error
-
-	sources := swyapi.FunctionSources{}
-	code := swyapi.FunctionCode{}
-
-	if strings.HasPrefix(opts[1], "repo:") {
-		fmt.Printf("Will add file from repo %s\n", opts[1][5:])
-		sources.Type = "git"
-		sources.Repo = opts[1][5:]
+func getSrc(opt string, src *swyapi.FunctionSources) {
+	if strings.HasPrefix(opt, "repo:") {
+		sync := false
+		repo := opt[5:]
+		fmt.Printf("[%s]\n", repo)
+		if repo[0] == '!' {
+			fmt.Printf("SYNC\n")
+			sync = true
+			repo = repo[1:]
+		}
+		fmt.Printf("Will add file from repo %s (sync %v)\n", repo, sync)
+		src.Type = "git"
+		src.Repo = repo
+		src.Sync = sync
 	} else {
-		st, err := os.Stat(opts[1])
+		st, err := os.Stat(opt)
 		if err != nil {
 			fatal(fmt.Errorf("Can't stat sources path"))
 		}
@@ -635,10 +645,19 @@ func function_add(args []string, opts [16]string) {
 			fatal(fmt.Errorf("Can't add dir as source"))
 		}
 
-		fmt.Printf("Will add file %s\n", opts[1])
-		sources.Type = "code"
-		sources.Code = encodeFile(opts[1])
+		fmt.Printf("Will add file %s\n", opt)
+		src.Type = "code"
+		src.Code = encodeFile(opt)
 	}
+}
+
+func function_add(args []string, opts [16]string) {
+	var err error
+
+	sources := swyapi.FunctionSources{}
+	code := swyapi.FunctionCode{}
+
+	getSrc(opts[0], &sources)
 
 	if opts[0] == "" {
 		opts[0] = detect_language(opts[1], sources.Type)
@@ -731,8 +750,10 @@ func function_update(args []string, opts [16]string) {
 	fid := resolve_fn(args[0])
 
 	if opts[0] != "" {
-		make_faas_req1("PUT", "functions/" + fid + "/sources", http.StatusOK,
-			&swyapi.FunctionSources{Type: "code", Code: encodeFile(opts[0])}, nil)
+		var src swyapi.FunctionSources
+
+		getSrc(opts[0], &src)
+		make_faas_req1("PUT", "functions/" + fid + "/sources", http.StatusOK, &src, nil)
 	}
 
 	if opts[3] != "" {

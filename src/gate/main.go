@@ -311,17 +311,27 @@ var CORS_Clnt_Methods = []string {
 type gateContext struct {
 	context.Context
 	Tenant	string
+	Admin	bool
 	ReqId	uint64
 	S	*mgo.Session
 }
 
 var reqIds uint64
 
+func mkContext2(tenant string, admin bool) (context.Context, func(context.Context)) {
+	gatectx := &gateContext{
+		context.Background(),
+		tenant,
+		admin,
+		atomic.AddUint64(&reqIds, 1),
+		session.Copy(),
+	}
+
+	return gatectx, func(ctx context.Context) { gctx(ctx).S.Close() }
+}
+
 func mkContext(tenant string) (context.Context, func(context.Context)) {
-	gatectx := &gateContext{context.Background(), tenant, atomic.AddUint64(&reqIds, 1), session.Copy()}
-	return gatectx, func(ctx context.Context) {
-				gctx(ctx).S.Close()
-			}
+	return mkContext2(tenant, true) /* Internal contexts are admin always! */
 }
 
 func gctx(ctx context.Context) *gateContext {
@@ -1267,7 +1277,7 @@ func handleFunctionCall(w http.ResponseWriter, r *http.Request) {
 
 	sopq := statsStart()
 
-	ctx, done := mkContext("::call")
+	ctx, done := mkContext2("::call", false)
 	defer done(ctx)
 
 	fnId := mux.Vars(r)["fnid"]
@@ -1817,7 +1827,7 @@ func handleRepos(ctx context.Context, w http.ResponseWriter, r *http.Request) *s
 	return nil
 }
 
-func repoFindForReq(ctx context.Context, r *http.Request, shared bool) (*RepoDesc, *swyapi.GateErr) {
+func repoFindForReq(ctx context.Context, r *http.Request, user_action bool) (*RepoDesc, *swyapi.GateErr) {
 	rid := mux.Vars(r)["rid"]
 	if !bson.IsObjectIdHex(rid) {
 		return nil, GateErrM(swy.GateBadRequest, "Bad repo ID value")
@@ -1830,8 +1840,11 @@ func repoFindForReq(ctx context.Context, r *http.Request, shared bool) (*RepoDes
 		return nil, GateErrD(err)
 	}
 
-	if !shared && rd.SwoId.Tennant != gctx(ctx).Tenant {
-		return nil, GateErrM(swy.GateNotAvail, "Shared repo")
+	if !user_action {
+		gx := gctx(ctx)
+		if !gx.Admin && rd.SwoId.Tennant != gx.Tenant {
+			return nil, GateErrM(swy.GateNotAvail, "Shared repo")
+		}
 	}
 
 	return &rd, nil
@@ -2215,15 +2228,17 @@ func handleMware(ctx context.Context, w http.ResponseWriter, r *http.Request) *s
 	return nil
 }
 
-func handleGenericReq(r *http.Request) (string, int, error) {
+func handleGenericReq(w http.ResponseWriter, r *http.Request) (context.Context, func(context.Context)) {
 	token := r.Header.Get("X-Auth-Token")
 	if token == "" {
-		return "", http.StatusUnauthorized, fmt.Errorf("Auth token not provided")
+		http.Error(w, "Auth token not provided", http.StatusUnauthorized)
+		return nil, nil
 	}
 
 	td, code := swyks.KeystoneGetTokenData(conf.Keystone.Addr, token)
 	if code != 0 {
-		return "", code, fmt.Errorf("Keystone authentication error")
+		http.Error(w, "Keystone authentication error", code)
+		return nil, nil
 	}
 
 	/*
@@ -2233,34 +2248,44 @@ func handleGenericReq(r *http.Request) (string, int, error) {
 	 * swifty.owner guy that can only work on his tennant.
 	 */
 
-	var role string
-
-	tennant := r.Header.Get("X-Relay-Tennant")
-	if tennant == "" {
-		role = swyks.SwyUserRole
-		tennant = td.Project.Name
-	} else {
-		role = swyks.SwyAdminRole
+	admin := false
+	user := false
+	for _, role := range td.Roles {
+		if role.Name == swyks.SwyAdminRole {
+			admin = true
+		}
+		if role.Name == swyks.SwyUserRole {
+			user = true
+		}
 	}
 
-	if !swyks.KeystoneRoleHas(td, role) {
-		return "", http.StatusForbidden, fmt.Errorf("Keystone authentication error")
+	if !admin && !user {
+		http.Error(w, "Keystone authentication error", http.StatusForbidden)
+		return nil, nil
 	}
 
-	return tennant, 0, nil
+	tenant := td.Project.Name
+	if admin {
+		rten := r.Header.Get("X-Relay-Tennant")
+		if rten != "" {
+			tenant = rten
+		}
+	}
+
+	return mkContext2(tenant, admin)
 }
 
 func genReqHandler(cb func(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if swyhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
-
-		tennant, code, err := handleGenericReq(r)
-		if err != nil {
-			http.Error(w, err.Error(), code)
+		if swyhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) {
 			return
 		}
 
-		ctx, done := mkContext(tennant)
+		ctx, done := handleGenericReq(w, r)
+		if ctx == nil {
+			return
+		}
+
 		defer done(ctx)
 
 		cerr := cb(ctx, w, r)

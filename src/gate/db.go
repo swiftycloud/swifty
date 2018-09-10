@@ -487,6 +487,14 @@ func dbConnect(conf *YAMLConf) error {
 		return fmt.Errorf("No uid index for balancerrs: %s", err.Error())
 	}
 
+	index.Key = []string{"src.repo"}
+	index.Unique = false
+	index.DropDups = false
+	err = dbs.DB(DBStateDB).C(DBColFunc).EnsureIndex(index)
+	if err != nil {
+		return fmt.Errorf("No src.repo index for functions: %s", err.Error())
+	}
+
 	return nil
 
 }

@@ -5,6 +5,8 @@ import (
 	"gopkg.in/mgo.v2/bson"
 	"bytes"
 	"os/exec"
+	"errors"
+	"bufio"
 	"os"
 	"context"
 	"time"
@@ -269,6 +271,84 @@ func (rd *RepoDesc)pull(ctx context.Context) *swyapi.GateErr {
 	return nil
 }
 
+func (rd *RepoDesc)changedFiles(ctx context.Context, till string) ([]string, error) {
+	if rd.Commit == "" {
+		/* FIXME -- pre-configured repos might have this unset */
+		ctxlog(ctx).Debugf("Repo's %s commit not set\n", rd.ObjID.Hex())
+		return []string{}, nil
+	}
+
+	cmd := exec.Command("git", "-C", rd.clonePath(), "diff", "--name-only", rd.Commit, till)
+	out, err := cmd.StdoutPipe()
+	if err != nil {
+		return nil, errors.New("Err get git out: " + err.Error())
+	}
+
+	sc := bufio.NewScanner(out)
+	err = cmd.Start()
+	if err != nil {
+		return nil, errors.New("Err start git: " + err.Error())
+	}
+	var ret []string
+	for sc.Scan() {
+		ret = append(ret, sc.Text())
+	}
+	cmd.Wait()
+
+	if err := sc.Err(); err != nil {
+		return nil, errors.New("Err reading lines: " + err.Error())
+	}
+
+	return ret, nil
+}
+
+func filesMatch(file string, files []string) bool {
+	for _, f := range files {
+		if f == file {
+			return true
+		}
+	}
+	return false
+}
+
+func tryToUpdateFunctions(ctx context.Context, rd *RepoDesc, to string) {
+	if rd.Commit == to {
+		/* Common "already up-to-date" case */
+		return
+	}
+
+	ctxlog(ctx).Debugf("Updated repo %s [%s -> %s]\n", rd.ObjID.Hex(), rd.Commit, to)
+
+	files, err := rd.changedFiles(ctx, to)
+	if err != nil || len(files) == 0 {
+		return
+	}
+
+	var fns []*FunctionDesc
+	err = dbFindAll(ctx, bson.M{"src.repo": rd.ObjID.Hex()}, &fns)
+	if err != nil {
+		ctxlog(ctx).Errorf("Error listing functions to update: %s", err.Error())
+		return
+	}
+
+	for _, fn := range(fns) {
+		if !filesMatch(fn.Src.File, files) {
+			continue
+		}
+
+		ctxlog(ctx).Debugf("Update function %s from %s", fn.SwoId.Str(), fn.Src.File)
+		cerr := fn.updateSources(ctx, &swyapi.FunctionSources {
+			Type: "git",
+			Repo: fn.Src.Repo + "/" + fn.Src.File,
+			Sync: true,
+		})
+		if cerr != nil {
+			ctxlog(ctx).Errorf("Error auto-updating sources: %s", cerr.Message)
+			logSaveEvent(ctx, fn.Cookie, "FAIL repo auto-update")
+		}
+	}
+}
+
 func (rd *RepoDesc)pullSync(ctx context.Context) *swyapi.GateErr {
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
@@ -291,15 +371,13 @@ func (rd *RepoDesc)pullSync(ctx context.Context) *swyapi.GateErr {
 	if err == nil {
 		t := time.Now()
 		dbUpdatePart(ctx, rd, bson.M{"commit": cmt, "last_pull": &t})
+		tryToUpdateFunctions(ctx, rd, cmt)
 	}
 
 	return nil
 }
 
-func pullRepos(ts time.Time) error {
-	ctx, done := mkContext("::reposync")
-	defer done(ctx)
-
+func pullRepos(ctx context.Context, ts time.Time) (int, error) {
 	var rds []*RepoDesc
 
 	err := dbFindAll(ctx, bson.M{
@@ -309,9 +387,11 @@ func pullRepos(ts time.Time) error {
 	if err != nil {
 		if !dbNF(err) {
 			ctxlog(ctx).Debugf("Can't get repos to sync: %s", err.Error())
+		} else {
+			err = nil
 		}
 
-		return err
+		return 0, err
 	}
 
 	synced := 0
@@ -322,22 +402,27 @@ func pullRepos(ts time.Time) error {
 		}
 	}
 
-	ctxlog(ctx).Debugf("Synced %d repos (%d not)", synced, len(rds) - synced)
-
-	return nil
+	return synced, nil
 }
 
 func periodicPullRepos(period time.Duration) {
 	for {
+		ctx, done := mkContext("::reposync")
+
 		t := time.Now()
 		nxt := period
 
-		if pullRepos(t.Add(-period)) != nil {
+		synced, err := pullRepos(ctx, t.Add(-period))
+		if err != nil {
 			nxt = 5 * time.Minute /* Will try in 5 minutes */
 		}
 
 		t = t.Add(nxt)
-		glog.Debugf("Next repo sync at %s", t.String())
+		if synced != 0 {
+			ctxlog(ctx).Debugf("Synced %d repos, next at %s", synced, t.String())
+		}
+
+		done(ctx)
 		<-time.After(t.Sub(time.Now()))
 	}
 }

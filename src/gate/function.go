@@ -67,6 +67,8 @@ func (c *FnCodeDesc)image() string {
 
 type FnSrcDesc struct {
 	Version		string		`bson:"version"` // Growing number, each deploy update (code push) bumps it
+	Repo		string		`bson:"repo"`
+	File		string		`bson:"file"`
 }
 
 type FnSizeDesc struct {
@@ -624,10 +626,17 @@ func (fn *FunctionDesc)getSources(ctx context.Context) (*swyapi.FunctionSources,
 		return nil, GateErrC(swy.GateFsError)
 	}
 
-	return &swyapi.FunctionSources {
+	fs := &swyapi.FunctionSources {
 		Type: "code",
 		Code: base64.StdEncoding.EncodeToString(fnCode),
-	}, nil
+	}
+
+	if fn.Src.Repo != "" {
+		fs.Sync = true
+		fs.Repo = fn.Src.Repo + "/" + fn.Src.File
+	}
+
+	return fs, nil
 
 }
 
@@ -653,7 +662,7 @@ func (fn *FunctionDesc)updateSources(ctx context.Context, src *swyapi.FunctionSo
 		return GateErrE(swy.GateGenErr, err)
 	}
 
-	update["src.version"] = fn.Src.Version
+	update["src"] = &fn.Src
 	if olds == swy.DBFuncStateStl {
 		fn.State = swy.DBFuncStateStr
 		update["state"] = fn.State
