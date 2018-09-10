@@ -2215,17 +2215,17 @@ func handleMware(ctx context.Context, w http.ResponseWriter, r *http.Request) *s
 	return nil
 }
 
-func handleGenericReq(w http.ResponseWriter, r *http.Request) string {
+func handleGenericReq(w http.ResponseWriter, r *http.Request) (context.Context, func(context.Context)) {
 	token := r.Header.Get("X-Auth-Token")
 	if token == "" {
 		http.Error(w, "Auth token not provided", http.StatusUnauthorized)
-		return ""
+		return nil, nil
 	}
 
 	td, code := swyks.KeystoneGetTokenData(conf.Keystone.Addr, token)
 	if code != 0 {
 		http.Error(w, "Keystone authentication error", code)
-		return ""
+		return nil, nil
 	}
 
 	/*
@@ -2247,10 +2247,10 @@ func handleGenericReq(w http.ResponseWriter, r *http.Request) string {
 
 	if !swyks.KeystoneRoleHas(td, role) {
 		http.Error(w, "Keystone authentication error", http.StatusForbidden)
-		return ""
+		return nil, nil
 	}
 
-	return tennant
+	return mkContext(tennant)
 }
 
 func genReqHandler(cb func(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr) http.Handler {
@@ -2259,12 +2259,11 @@ func genReqHandler(cb func(ctx context.Context, w http.ResponseWriter, r *http.R
 			return
 		}
 
-		tennant := handleGenericReq(w, r)
-		if tennant == "" {
+		ctx, done := handleGenericReq(w, r)
+		if ctx == nil {
 			return
 		}
 
-		ctx, done := mkContext(tennant)
 		defer done(ctx)
 
 		cerr := cb(ctx, w, r)
