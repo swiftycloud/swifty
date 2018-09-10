@@ -2215,15 +2215,17 @@ func handleMware(ctx context.Context, w http.ResponseWriter, r *http.Request) *s
 	return nil
 }
 
-func handleGenericReq(r *http.Request) (string, int, error) {
+func handleGenericReq(w http.ResponseWriter, r *http.Request) string {
 	token := r.Header.Get("X-Auth-Token")
 	if token == "" {
-		return "", http.StatusUnauthorized, fmt.Errorf("Auth token not provided")
+		http.Error(w, "Auth token not provided", http.StatusUnauthorized)
+		return ""
 	}
 
 	td, code := swyks.KeystoneGetTokenData(conf.Keystone.Addr, token)
 	if code != 0 {
-		return "", code, fmt.Errorf("Keystone authentication error")
+		http.Error(w, "Keystone authentication error", code)
+		return ""
 	}
 
 	/*
@@ -2244,19 +2246,21 @@ func handleGenericReq(r *http.Request) (string, int, error) {
 	}
 
 	if !swyks.KeystoneRoleHas(td, role) {
-		return "", http.StatusForbidden, fmt.Errorf("Keystone authentication error")
+		http.Error(w, "Keystone authentication error", http.StatusForbidden)
+		return ""
 	}
 
-	return tennant, 0, nil
+	return tennant
 }
 
 func genReqHandler(cb func(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if swyhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
+		if swyhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) {
+			return
+		}
 
-		tennant, code, err := handleGenericReq(r)
-		if err != nil {
-			http.Error(w, err.Error(), code)
+		tennant := handleGenericReq(w, r)
+		if tennant == "" {
 			return
 		}
 
