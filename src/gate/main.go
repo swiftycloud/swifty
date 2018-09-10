@@ -311,17 +311,27 @@ var CORS_Clnt_Methods = []string {
 type gateContext struct {
 	context.Context
 	Tenant	string
+	Admin	bool
 	ReqId	uint64
 	S	*mgo.Session
 }
 
 var reqIds uint64
 
+func mkContext2(tenant string, admin bool) (context.Context, func(context.Context)) {
+	gatectx := &gateContext{
+		context.Background(),
+		tenant,
+		admin,
+		atomic.AddUint64(&reqIds, 1),
+		session.Copy(),
+	}
+
+	return gatectx, func(ctx context.Context) { gctx(ctx).S.Close() }
+}
+
 func mkContext(tenant string) (context.Context, func(context.Context)) {
-	gatectx := &gateContext{context.Background(), tenant, atomic.AddUint64(&reqIds, 1), session.Copy()}
-	return gatectx, func(ctx context.Context) {
-				gctx(ctx).S.Close()
-			}
+	return mkContext2(tenant, true) /* Internal contexts are admin always! */
 }
 
 func gctx(ctx context.Context) *gateContext {
@@ -1267,7 +1277,7 @@ func handleFunctionCall(w http.ResponseWriter, r *http.Request) {
 
 	sopq := statsStart()
 
-	ctx, done := mkContext("::call")
+	ctx, done := mkContext2("::call", false)
 	defer done(ctx)
 
 	fnId := mux.Vars(r)["fnid"]
@@ -2235,22 +2245,31 @@ func handleGenericReq(w http.ResponseWriter, r *http.Request) (context.Context, 
 	 * swifty.owner guy that can only work on his tennant.
 	 */
 
-	var role string
-
-	tennant := r.Header.Get("X-Relay-Tennant")
-	if tennant == "" {
-		role = swyks.SwyUserRole
-		tennant = td.Project.Name
-	} else {
-		role = swyks.SwyAdminRole
+	admin := false
+	user := false
+	for _, role := range td.Roles {
+		if role.Name == swyks.SwyAdminRole {
+			admin = true
+		}
+		if role.Name == swyks.SwyUserRole {
+			user = true
+		}
 	}
 
-	if !swyks.KeystoneRoleHas(td, role) {
+	if !admin && !user {
 		http.Error(w, "Keystone authentication error", http.StatusForbidden)
 		return nil, nil
 	}
 
-	return mkContext(tennant)
+	tenant := td.Project.Name
+	if admin {
+		rten := r.Header.Get("X-Relay-Tennant")
+		if rten != "" {
+			tenant = rten
+		}
+	}
+
+	return mkContext2(tenant, admin)
 }
 
 func genReqHandler(cb func(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr) http.Handler {
