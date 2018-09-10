@@ -296,10 +296,7 @@ func (rd *RepoDesc)pullSync(ctx context.Context) *swyapi.GateErr {
 	return nil
 }
 
-func pullRepos(ts time.Time) error {
-	ctx, done := mkContext("::reposync")
-	defer done(ctx)
-
+func pullRepos(ctx context.Context, ts time.Time) (int, error) {
 	var rds []*RepoDesc
 
 	err := dbFindAll(ctx, bson.M{
@@ -313,7 +310,7 @@ func pullRepos(ts time.Time) error {
 			err = nil
 		}
 
-		return err
+		return 0, err
 	}
 
 	synced := 0
@@ -324,22 +321,27 @@ func pullRepos(ts time.Time) error {
 		}
 	}
 
-	ctxlog(ctx).Debugf("Synced %d repos (%d not)", synced, len(rds) - synced)
-
-	return nil
+	return synced, nil
 }
 
 func periodicPullRepos(period time.Duration) {
 	for {
+		ctx, done := mkContext("::reposync")
+
 		t := time.Now()
 		nxt := period
 
-		if pullRepos(t.Add(-period)) != nil {
+		synced, err := pullRepos(ctx, t.Add(-period))
+		if err != nil {
 			nxt = 5 * time.Minute /* Will try in 5 minutes */
 		}
 
 		t = t.Add(nxt)
-		glog.Debugf("Next repo sync at %s", t.String())
+		if synced != 0 {
+			ctxlog(ctx).Debugf("Synced %d repos, next at %s", synced, t.String())
+		}
+
+		done(ctx)
 		<-time.After(t.Sub(time.Now()))
 	}
 }
