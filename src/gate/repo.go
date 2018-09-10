@@ -337,11 +337,13 @@ func tryToUpdateFunctions(ctx context.Context, rd *RepoDesc, to string) {
 		}
 
 		ctxlog(ctx).Debugf("Update function %s from %s", fn.SwoId.Str(), fn.Src.File)
+		t := gctx(ctx).tpush(fn.SwoId.Tennant)
 		cerr := fn.updateSources(ctx, &swyapi.FunctionSources {
 			Type: "git",
 			Repo: fn.Src.Repo + "/" + fn.Src.File,
 			Sync: true,
 		})
+		gctx(ctx).tpop(t)
 		if cerr != nil {
 			ctxlog(ctx).Errorf("Error auto-updating sources: %s", cerr.Message)
 			logSaveEvent(ctx, fn.Cookie, "FAIL repo auto-update")
