@@ -309,6 +309,8 @@ func pullRepos(ts time.Time) error {
 	if err != nil {
 		if !dbNF(err) {
 			ctxlog(ctx).Debugf("Can't get repos to sync: %s", err.Error())
+		} else {
+			err = nil
 		}
 
 		return err
