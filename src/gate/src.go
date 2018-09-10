@@ -219,11 +219,13 @@ func getFileFromRepo(ctx context.Context, src *swyapi.FunctionSources, to, scrip
 	var rd RepoDesc
 	err := dbFind(ctx, ctxRepoId(ctx, ids[0]), &rd)
 	if err != nil {
+		ctxlog(ctx).Errorf("No repo %s: %s", ids[0], err.Error())
 		return err
 	}
 
 	fnCode, err := ioutil.ReadFile(rd.clonePath() + "/" + ids[1])
 	if err != nil {
+		ctxlog(ctx).Errorf("No file %s / %s: %s", rd.clonePath(), ids[1], err.Error())
 		return err
 	}
 

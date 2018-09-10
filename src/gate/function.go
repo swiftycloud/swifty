@@ -657,6 +657,7 @@ func (fn *FunctionDesc)updateSources(ctx context.Context, src *swyapi.FunctionSo
 		return GateErrE(swy.GateGenErr, err)
 	}
 
+	ctxlog(ctx).Debugf("Try build sources")
 	err = tryBuildFunction(ctx, &conf, fn, "")
 	if err != nil {
 		return GateErrE(swy.GateGenErr, err)
