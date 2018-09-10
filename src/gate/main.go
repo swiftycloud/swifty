@@ -338,6 +338,16 @@ func gctx(ctx context.Context) *gateContext {
 	return ctx.(*gateContext)
 }
 
+func (gx *gateContext)tpush(tenant string) string {
+	x := gx.Tenant
+	gx.Tenant = tenant
+	return x
+}
+
+func (gx *gateContext)tpop(tenant string) {
+	gx.Tenant = tenant
+}
+
 func ctxlog(ctx context.Context) *zap.SugaredLogger {
 	if gctx, ok := ctx.(*gateContext); ok {
 		return glog.With(zap.Int64("req", int64(gctx.ReqId)), zap.String("ten", gctx.Tenant))
