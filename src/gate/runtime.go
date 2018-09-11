@@ -20,7 +20,7 @@ type rt_info struct {
 }
 
 func GetLines(lng string, args ...string) []string {
-	cmd := append([]string{"run", "--rm", RtLangImage(lng)}, args...)
+	cmd := append([]string{"run", "--rm", rtLangImage(lng)}, args...)
 	out, err := exec.Command("docker", cmd...).Output()
 	if err != nil {
 		return []string{}
@@ -99,7 +99,7 @@ func RtInit() {
 	glog.Debugf("Will detect rt languages in the background")
 	go func() {
 		for l, h := range rt_handlers {
-			args := append([]string{"run", "--rm", RtLangImage(l)}, h.VArgs...)
+			args := append([]string{"run", "--rm", rtLangImage(l)}, h.VArgs...)
 			out, err := exec.Command("docker", args...).Output()
 			if err != nil {
 				glog.Debugf("Cannot detect %s version", l)
@@ -120,40 +120,40 @@ func RtInit() {
 	}()
 }
 
-func RtLangImage(lng string) string {
+func rtLangImage(lng string) string {
 	return conf.Wdog.ImgPref + "/" + lng
 }
 
-func RtLangDetect(fname string) string {
+func rtLangDetect(fname string) string {
 	e := filepath.Ext(fname)
 	return extmap[e]
 }
 
-func RtLangEnabled(lang string) bool {
+func rtLangEnabled(lang string) bool {
 	h, ok := rt_handlers[lang]
 	return ok && (SwyModeDevel || !h.Devel)
 }
 
-func RtNeedToBuild(scr *FnCodeDesc) (bool, string) {
+func rtNeedToBuild(scr *FnCodeDesc) (bool, string) {
 	rh := rt_handlers[scr.Lang]
 	return rh.Build, rh.BuildIP
 }
 
-func RtSetBuilder(lang, ip string) {
+func rtSetBuilder(lang, ip string) {
 	rt_handlers[lang].BuildIP = ip
 }
 
 /* Path where the sources would appear in container */
-func RtCodePath(scr *FnCodeDesc) string {
+func rtCodePath(scr *FnCodeDesc) string {
 	return rt_handlers[scr.Lang].CodePath
 }
 
-func RtScriptName(scr *FnCodeDesc, suff string) string {
+func rtScriptName(scr *FnCodeDesc, suff string) string {
 	/* This should be in sync with wdog's startQnR and builders */
 	return "script" + suff + "." + rt_handlers[scr.Lang].Ext
 }
 
-func (lh *rt_info)Info() *swyapi.LangInfo {
+func (lh *rt_info)info() *swyapi.LangInfo {
 	return &swyapi.LangInfo{
 		Version:	lh.Version,
 		Packages:	lh.Packages,

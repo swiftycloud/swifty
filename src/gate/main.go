@@ -1983,7 +1983,7 @@ func handleLanguage(ctx context.Context, w http.ResponseWriter, r *http.Request)
 		return GateErrM(swy.GateGenErr, "Language not supported")
 	}
 
-	return respond(w, lh.Info())
+	return respond(w, lh.info())
 }
 
 func handleMwareTypes(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {

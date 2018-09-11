@@ -62,7 +62,7 @@ type FnCodeDesc struct {
 }
 
 func (c *FnCodeDesc)image() string {
-	return RtLangImage(c.Lang)
+	return rtLangImage(c.Lang)
 }
 
 type FnSrcDesc struct {
@@ -208,7 +208,7 @@ func getFunctionDesc(id *SwoId, p_add *swyapi.FunctionAdd) (*FunctionDesc, *swya
 		return nil, GateErrE(swy.GateBadRequest, err)
 	}
 
-	if !RtLangEnabled(p_add.Code.Lang) {
+	if !rtLangEnabled(p_add.Code.Lang) {
 		return nil, GateErrM(swy.GateBadRequest, "Unsupported language")
 	}
 
@@ -299,7 +299,7 @@ func (fn *FunctionDesc)Add(ctx context.Context, src *swyapi.FunctionSources) *sw
 		goto out_clean_repo
 	}
 
-	build, bAddr = RtNeedToBuild(&fn.Code)
+	build, bAddr = rtNeedToBuild(&fn.Code)
 	if build {
 		go func() {
 			ctx, done := mkContext("::build")

@@ -79,7 +79,7 @@ func putSources(ctx context.Context, fn *FunctionDesc, src *swyapi.FunctionSourc
 }
 
 func getSources(ctx context.Context, fn *FunctionDesc) ([]byte, error) {
-	codeFile := fn.srcPath("") + "/" + RtScriptName(&fn.Code, "")
+	codeFile := fn.srcPath("") + "/" + rtScriptName(&fn.Code, "")
 	return ioutil.ReadFile(codeFile)
 }
 
@@ -110,7 +110,7 @@ func writeSources(ctx context.Context, fn *FunctionDesc, src *swyapi.FunctionSou
 		return fmt.Errorf("Unknown sources type %s", src.Type)
 	}
 
-	return srch.get(ctx, src, fn.srcPath(""), RtScriptName(&fn.Code, suff))
+	return srch.get(ctx, src, fn.srcPath(""), rtScriptName(&fn.Code, suff))
 }
 
 func writeTempSources(ctx context.Context, fn *FunctionDesc, src *swyapi.FunctionSources) (string, error) {
