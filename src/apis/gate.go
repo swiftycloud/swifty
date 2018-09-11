@@ -268,3 +268,13 @@ type LangInfo struct {
 	Version		string			`json:"version"`
 	Packages	[]string		`json:"packages"`
 }
+
+type RouterAdd struct {
+	Name		string		`json:"name"`
+}
+
+type RouterInfo struct {
+	Id		string		`json:"id"`
+	Name		string		`json:"name"`
+	Project		string		`json:"project"`
+}

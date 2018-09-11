@@ -1284,6 +1284,79 @@ func handleMwares(ctx context.Context, w http.ResponseWriter, r *http.Request) *
 	return nil
 }
 
+func handleRouters(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
+	q := r.URL.Query()
+
+	project := q.Get("project")
+	if project == "" {
+		project = DefaultProject
+	}
+
+	switch r.Method {
+	case "GET":
+		var rts []*RouterDesc
+
+		err := dbFindAll(ctx, listReq(ctx, project, []string{}), &rts)
+		if err != nil {
+			return GateErrD(err)
+		}
+
+		ret := []*swyapi.RouterInfo{}
+		for _, rt := range rts {
+			ret = append(ret, rt.toInfo(ctx, false))
+		}
+
+		return respond(w, &ret)
+
+	case "POST":
+		var params swyapi.RouterAdd
+
+		err := swyhttp.ReadAndUnmarshalReq(r, &params)
+		if err != nil {
+			return GateErrE(swy.GateBadRequest, err)
+		}
+
+		id := ctxSwoId(ctx, project, params.Name)
+		rt, cerr := getRouterDesc(id, &params)
+		if cerr != nil {
+			return cerr
+		}
+
+		cerr = rt.Create(ctx)
+		if cerr != nil {
+			return cerr
+		}
+
+		return respond(w, rt.toInfo(ctx, false))
+	}
+
+	return nil
+}
+
+func handleRouter(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
+	var rt RouterDesc
+
+	cerr := objFindForReq(ctx, r, "rid", &rt)
+	if cerr != nil {
+		return cerr
+	}
+
+	switch r.Method {
+	case "GET":
+		return respond(w, rt.toInfo(ctx, true))
+
+	case "DELETE":
+		cerr := rt.Remove(ctx)
+		if cerr != nil {
+			return cerr
+		}
+
+		w.WriteHeader(http.StatusOK)
+	}
+
+	return nil
+}
+
 func handleAccounts(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
 	q := r.URL.Query()
 
@@ -2078,6 +2151,9 @@ func main() {
 
 	r.Handle("/v1/deployments",		genReqHandler(handleDeployments)).Methods("GET", "POST", "OPTIONS")
 	r.Handle("/v1/deployments/{did}",	genReqHandler(handleDeployment)).Methods("GET", "DELETE", "OPTIONS")
+
+	r.Handle("/v1/routers",			genReqHandler(handleRouters)).Methods("GET", "POST", "OPTIONS")
+	r.Handle("/v1/routers/{rid}",		genReqHandler(handleRouter)).Methods("GET", "DELETE", "OPTIONS")
 
 	r.Handle("/v1/info/langs",		genReqHandler(handleLanguages)).Methods("GET", "OPTIONS")
 	r.Handle("/v1/info/langs/{lang}",	genReqHandler(handleLanguage)).Methods("GET", "OPTIONS")
