@@ -1568,7 +1568,7 @@ func handleFunctionRun(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		}
 
 		ctxlog(ctx).Debugf("Asked for custom sources... oh, well...")
-		suff, err = writeTempSources(ctx, &fn, params.Src)
+		suff, err = putTempSources(ctx, &fn, params.Src)
 		if err != nil {
 			return GateErrE(swy.GateGenErr, err)
 		}
