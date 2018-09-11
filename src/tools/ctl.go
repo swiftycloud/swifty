@@ -638,7 +638,7 @@ func getSrc(opt string, src *swyapi.FunctionSources) {
 	} else {
 		st, err := os.Stat(opt)
 		if err != nil {
-			fatal(fmt.Errorf("Can't stat sources path"))
+			fatal(fmt.Errorf("Can't stat sources path " + opt))
 		}
 
 		if st.IsDir() {
@@ -657,7 +657,7 @@ func function_add(args []string, opts [16]string) {
 	sources := swyapi.FunctionSources{}
 	code := swyapi.FunctionCode{}
 
-	getSrc(opts[0], &sources)
+	getSrc(opts[1], &sources)
 
 	if opts[0] == "" {
 		opts[0] = detect_language(opts[1], sources.Type)
