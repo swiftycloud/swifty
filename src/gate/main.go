@@ -708,25 +708,7 @@ func handleFunctionMwares(ctx context.Context, w http.ResponseWriter, r *http.Re
 
 	switch r.Method {
 	case "GET":
-		minf := []*swyapi.MwareInfo{}
-		for _, mwn := range fn.Mware {
-			id := fn.SwoId
-			id.Name = mwn
-
-			var mw MwareDesc
-			var mi *swyapi.MwareInfo
-
-			err := dbFind(ctx, id.dbReq(), &mw)
-
-			if err == nil {
-				mi = mw.toFnInfo(ctx)
-			} else {
-				mi = &swyapi.MwareInfo{Name: mwn}
-			}
-			minf = append(minf, mi)
-		}
-
-		return respond(w, minf)
+		return respond(w, fn.listMware(ctx))
 
 	case "POST":
 		var mid string
@@ -792,25 +774,7 @@ func handleFunctionAccounts(ctx context.Context, w http.ResponseWriter, r *http.
 
 	switch r.Method {
 	case "GET":
-		ret := []map[string]string{}
-		for _, aid := range fn.Accounts {
-			var ac AccDesc
-			var ai map[string]string
-
-			cerr = objFindId(ctx, aid, &ac, nil)
-			if cerr == nil {
-				ai, cerr = ac.toInfo(ctx, false)
-				if cerr != nil {
-					return cerr
-				}
-			} else {
-				ai = map[string]string{"id": aid }
-			}
-
-			ret = append(ret, ai)
-		}
-
-		return respond(w, &ret)
+		return respond(w, fn.listAccounts(ctx))
 
 	case "POST":
 		var aid string
@@ -1693,12 +1657,7 @@ func handleAccounts(ctx context.Context, w http.ResponseWriter, r *http.Request)
 
 		ret := []map[string]string{}
 		for _, ac := range acs {
-			ai, cerr := ac.toInfo(ctx, false)
-			if cerr != nil {
-				return cerr
-			}
-
-			ret = append(ret, ai)
+			ret = append(ret, ac.toInfo(ctx, false))
 		}
 
 		return respond(w, &ret)
@@ -1728,8 +1687,7 @@ func handleAccounts(ctx context.Context, w http.ResponseWriter, r *http.Request)
 			return cerr
 		}
 
-		ai, _ := ac.toInfo(ctx, false)
-		return respond(w, ai)
+		return respond(w, ac.toInfo(ctx, false))
 	}
 
 	return nil
@@ -1745,12 +1703,7 @@ func handleAccount(ctx context.Context, w http.ResponseWriter, r *http.Request) 
 
 	switch r.Method {
 	case "GET":
-		ai, cerr := ac.toInfo(ctx, true)
-		if cerr != nil {
-			return cerr
-		}
-
-		return respond(w, ai)
+		return respond(w, ac.toInfo(ctx, true))
 
 	case "PUT":
 		var params map[string]string

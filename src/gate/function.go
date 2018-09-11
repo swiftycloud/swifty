@@ -535,6 +535,28 @@ func (fn *FunctionDesc)delMware(ctx context.Context, mw *MwareDesc) error {
 	return nil
 }
 
+func (fn *FunctionDesc)listMware(ctx context.Context) []*swyapi.MwareInfo {
+	ret := []*swyapi.MwareInfo{}
+	for _, mwn := range fn.Mware {
+		id := fn.SwoId
+		id.Name = mwn
+
+		var mw MwareDesc
+		var mi *swyapi.MwareInfo
+
+		err := dbFind(ctx, id.dbReq(), &mw)
+
+		if err == nil {
+			mi = mw.toFnInfo(ctx)
+		} else {
+			mi = &swyapi.MwareInfo{Name: mwn}
+		}
+		ret = append(ret, mi)
+	}
+
+	return ret
+}
+
 func (fn *FunctionDesc)addAccount(ctx context.Context, ad *AccDesc) *swyapi.GateErr {
 	aid := ad.ObjID.Hex()
 	err := dbFuncUpdate(ctx, bson.M{"_id": fn.ObjID, "accounts": bson.M{"$ne": aid}},
@@ -575,6 +597,25 @@ func (fn *FunctionDesc)delAccountId(ctx context.Context, aid string) *swyapi.Gat
 		swk8sUpdate(ctx, &conf, fn)
 	}
 	return nil
+}
+
+func (fn *FunctionDesc)listAccounts(ctx context.Context) *[]map[string]string {
+	ret := []map[string]string{}
+	for _, aid := range fn.Accounts {
+		var ac AccDesc
+		var ai map[string]string
+
+		cerr := objFindId(ctx, aid, &ac, nil)
+		if cerr == nil {
+			ai = ac.toInfo(ctx, false)
+		} else {
+			ai = map[string]string{"id": aid }
+		}
+
+		ret = append(ret, ai)
+	}
+
+	return &ret
 }
 
 func (fn *FunctionDesc)addS3Bucket(ctx context.Context, b string) error {
