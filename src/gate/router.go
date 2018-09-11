@@ -9,13 +9,15 @@ import (
 type RouterDesc struct {
 	// These objects are kept in Mongo, which requires the below two
 	// fields to be present...
-	ObjID		bson.ObjectId	`bson:"_id,omitempty"`
-	SwoId				`bson:",inline"`
+	ObjID		bson.ObjectId		`bson:"_id,omitempty"`
+	SwoId					`bson:",inline"`
+	Table		[]*swyapi.RouterEntry	`bson:"table"`
 }
 
 func getRouterDesc(id *SwoId, params *swyapi.RouterAdd) (*RouterDesc, *swyapi.GateErr) {
 	rd := RouterDesc {
 		SwoId:	*id,
+		Table:	params.Table,
 	}
 
 	return &rd, nil

@@ -269,8 +269,15 @@ type LangInfo struct {
 	Packages	[]string		`json:"packages"`
 }
 
+type RouterEntry struct {
+	Method		string		`json:"method"`
+	Path		string		`json:"path"`
+	Call		string		`json:"call"`
+}
+
 type RouterAdd struct {
 	Name		string		`json:"name"`
+	Table		[]*RouterEntry	`json:"table"`
 }
 
 type RouterInfo struct {
