@@ -2058,7 +2058,7 @@ func handleOneDeployment(ctx context.Context, w http.ResponseWriter, r *http.Req
 		return respond(w, di)
 
 	case "DELETE":
-		cerr := deployStop(ctx, dd)
+		cerr := dd.Stop(ctx)
 		if cerr != nil {
 			return cerr
 		}
