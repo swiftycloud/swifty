@@ -135,7 +135,7 @@ func eventStop(ctx context.Context, ed *FnEventDesc) error {
 	return evtHandlers[ed.Source].stop(ctx, ed)
 }
 
-func eventsDelete(ctx context.Context, fn *FunctionDesc, ed *FnEventDesc) *swyapi.GateErr {
+func (ed *FnEventDesc)Delete(ctx context.Context, fn *FunctionDesc) *swyapi.GateErr {
 	err := eventStop(ctx, ed)
 	if err != nil {
 		return GateErrM(swy.GateGenErr, "Can't stop event")

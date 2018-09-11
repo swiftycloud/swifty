@@ -911,7 +911,7 @@ func handleFunctionTrigger(ctx context.Context, w http.ResponseWriter, r *http.R
 		return respond(w, ed.toInfo(&fn))
 
 	case "DELETE":
-		erc := eventsDelete(ctx, &fn, &ed)
+		erc := ed.Delete(ctx, &fn)
 		if erc != nil {
 			return erc
 		}
