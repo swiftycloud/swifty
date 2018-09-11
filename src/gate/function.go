@@ -100,11 +100,6 @@ type FunctionDesc struct {
 	Size		FnSizeDesc	`bson:"size"`
 	AuthCtx		string		`bson:"authctx,omitempty"`
 	UserData	string		`bson:"userdata,omitempty"`
-	URL		bool		`bson:"url"`
-}
-
-func (fn *FunctionDesc)isURL() bool {
-	return fn.URL
 }
 
 func (fn *FunctionDesc)isOneShot() bool {
@@ -135,15 +130,6 @@ func (fn *FunctionDesc)getURL() string {
 	return cg + "/call/" + fn.Cookie
 }
 
-func (fn *FunctionDesc)getURLEvt() *swyapi.FunctionEvent {
-	return &swyapi.FunctionEvent {
-		Id:	URLEventID,
-		Name:	"Inalienable API",
-		Source:	"url",
-		URL:	fn.getURL(),
-	}
-}
-
 func (fn *FunctionDesc)toMInfo(ctx context.Context) *swyapi.FunctionMdat {
 	var fid swyapi.FunctionMdat
 	fdm := memdGetCond(fn.Cookie)
@@ -171,7 +157,7 @@ func (fn *FunctionDesc)toInfo(ctx context.Context, details bool, periods int) (*
 		var err error
 		var cerr *swyapi.GateErr
 
-		if fn.isURL() {
+		if _, err = urlEvFind(ctx, fn.Cookie); err == nil {
 			fi.URL = fn.getURL()
 		}
 

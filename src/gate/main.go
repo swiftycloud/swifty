@@ -43,7 +43,6 @@ const (
 	DepScaleupRelax time.Duration		= 16 * time.Second
 	DepScaledownStep time.Duration		= 8 * time.Second
 	TenantLimitsUpdPeriod time.Duration	= 120 * time.Second
-	URLEventID				= "000URL"
 	CloneDir				= "clone"
 )
 
@@ -276,7 +275,6 @@ func handleFunctionTriggers(ctx context.Context, w http.ResponseWriter, r *http.
 
 		var evd []*FnEventDesc
 		var err error
-		var hasUrl = false
 
 		if ename == "" {
 			err = dbFindAll(ctx, bson.M{"fnid": fn.Cookie}, &evd)
@@ -296,15 +294,7 @@ func handleFunctionTriggers(ctx context.Context, w http.ResponseWriter, r *http.
 
 		evs := []*swyapi.FunctionEvent{}
 		for _, e := range evd {
-			if e.Source == "url" {
-				hasUrl = true
-			}
-
 			evs = append(evs, e.toInfo(&fn))
-		}
-
-		if fn.URL && !hasUrl {
-			evs = append(evs, fn.getURLEvt())
 		}
 
 		return respond(w, evs)
@@ -620,14 +610,6 @@ func handleFunctionTrigger(ctx context.Context, w http.ResponseWriter, r *http.R
 	}
 
 	eid := mux.Vars(r)["eid"]
-	if eid == URLEventID {
-		if r.Method == "DELETE" {
-			return GateErrM(swy.GateBadRequest, "Cannot remove URL from this FN")
-		}
-
-		return respond(w, fn.getURLEvt())
-	}
-
 	if !bson.IsObjectIdHex(eid) {
 		return GateErrM(swy.GateBadRequest, "Bad event ID")
 	}
@@ -862,10 +844,6 @@ func handleFunctionLogs(ctx context.Context, w http.ResponseWriter, r *http.Requ
 	return nil
 }
 
-func fnCallable(fn *FunctionDesc) bool {
-	return fn.isURL() && (fn.State == swy.DBFuncStateRdy)
-}
-
 func makeArgs(sopq *statsOpaque, r *http.Request) *swyapi.SwdFunctionRun {
 	defer r.Body.Close()
 
@@ -972,14 +950,7 @@ func rslimited(fmd *FnMemData) bool {
 	return false
 }
 
-func handleFunctionCall(w http.ResponseWriter, r *http.Request) {
-	var args *swyapi.SwdFunctionRun
-	var res *swyapi.SwdFunctionRunResult
-	var err error
-	var code int
-	var fmd *FnMemData
-	var conn *podConn
-
+func handleCall(w http.ResponseWriter, r *http.Request) {
 	if swyhttp.HandleCORS(w, r, CORS_Clnt_Methods, CORS_Clnt_Headers) { return }
 
 	sopq := statsStart()
@@ -987,20 +958,30 @@ func handleFunctionCall(w http.ResponseWriter, r *http.Request) {
 	ctx, done := mkContext2("::call", false)
 	defer done(ctx)
 
-	fnId := mux.Vars(r)["fnid"]
+	uid := mux.Vars(r)["urlid"]
 
-	fmd, err = memdGet(ctx, fnId)
+	url, err := urlFind(ctx, uid)
 	if err != nil {
-		code = http.StatusInternalServerError
-		err = errors.New("Error getting function")
-		goto out
+		http.Error(w, "Error getting function", http.StatusInternalServerError)
+		return
 	}
 
-	if fmd == nil || !fmd.public {
-		code = http.StatusServiceUnavailable
-		err = errors.New("No such function")
-		goto out
+	if url == nil {
+		http.Error(w, "No such function", http.StatusServiceUnavailable)
+		return
 	}
+
+	url.Handle(ctx, w, r, sopq)
+}
+
+func (furl *FnURL)Handle(ctx context.Context, w http.ResponseWriter, r *http.Request, sopq *statsOpaque) {
+	var args *swyapi.SwdFunctionRun
+	var res *swyapi.SwdFunctionRunResult
+	var err error
+	var code int
+	var conn *podConn
+
+	fmd := furl.fd
 
 	if ratelimited(fmd) {
 		code = http.StatusTooManyRequests
@@ -1014,7 +995,7 @@ func handleFunctionCall(w http.ResponseWriter, r *http.Request) {
 		goto out
 	}
 
-	conn, err = balancerGetConnAny(ctx, fnId, fmd)
+	conn, err = balancerGetConnAny(ctx, fmd.fnid, fmd)
 	if err != nil {
 		code = http.StatusInternalServerError
 		err = errors.New("DB error")
@@ -1032,7 +1013,7 @@ func handleFunctionCall(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	res, err = doRunConn(ctx, conn, fnId, "", "call", args)
+	res, err = doRunConn(ctx, conn, fmd.fnid, "", "call", args)
 	if err != nil {
 		code = http.StatusInternalServerError
 		goto out
@@ -2168,7 +2149,7 @@ func main() {
 	r.Handle("/v1/info/langs/{lang}",	genReqHandler(handleLanguage)).Methods("GET", "OPTIONS")
 	r.Handle("/v1/info/mwares",		genReqHandler(handleMwareTypes)).Methods("GET", "OPTIONS")
 
-	r.PathPrefix("/call/{fnid}").Methods("GET", "PUT", "POST", "DELETE", "PATCH", "HEAD", "OPTIONS").HandlerFunc(handleFunctionCall)
+	r.PathPrefix("/call/{urlid}").Methods("GET", "PUT", "POST", "DELETE", "PATCH", "HEAD", "OPTIONS").HandlerFunc(handleCall)
 
 	RtInit()
 
