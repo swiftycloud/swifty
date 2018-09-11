@@ -15,7 +15,7 @@ var depStates = map[int]string {
 	swy.DBDepStateTrm: "terminating",
 }
 
-type DeployItemDesc struct {
+type _DeployItemDesc struct {
 	Fn	*FunctionDesc	`bson:"fn"`
 	Mw	*MwareDesc	`bson:"mw"`
 
@@ -23,74 +23,72 @@ type DeployItemDesc struct {
 	src	*swyapi.FunctionSources	`bson:"-"`
 }
 
-func (i *DeployItemDesc)start(ctx context.Context) *swyapi.GateErr {
-	if i.Fn != nil {
-		if i.src == nil {
-			var src swyapi.FunctionSources
-
-			err := json.Unmarshal([]byte(i.FnSrc), &src)
-			if err != nil {
-				return GateErrE(swy.GateGenErr, err)
-			}
-			i.src = &src
-		}
-
-		return i.Fn.Add(ctx, i.src)
-	}
-
-	if i.Mw != nil {
-		return i.Mw.Setup(ctx)
-	}
-
-	return GateErrM(swy.GateGenErr, "Bad deploy item")
+type DeployFunction struct {
+	Fn	*FunctionDesc	`bson:"fn"`
+	FnSrc	string		`bson:"fnsrc,omitempty"`
+	src	*swyapi.FunctionSources	`bson:"-"`
 }
 
-func (i *DeployItemDesc)stop(ctx context.Context) *swyapi.GateErr {
-	if i.Fn != nil {
-		return removeFunctionId(ctx, &conf, &i.Fn.SwoId)
-	}
-
-	if i.Mw != nil {
-		return mwareRemoveId(ctx, &conf.Mware, &i.Mw.SwoId)
-	}
-
-	return GateErrM(swy.GateGenErr, "Bad deploy item")
+type DeployMware struct {
+	Mw	*MwareDesc	`bson:"mw"`
 }
 
-func (i *DeployItemDesc)info(ctx context.Context, details bool) (*swyapi.DeployItemInfo) {
-	if i.Fn != nil {
-		ret := &swyapi.DeployItemInfo{Type: "function", Name: i.Fn.SwoId.Name}
+func (i *DeployFunction)start(ctx context.Context) *swyapi.GateErr {
+	if i.src == nil {
+		var src swyapi.FunctionSources
 
-		if details {
-			var fn FunctionDesc
-			err := dbFind(ctx, i.Fn.SwoId.dbReq(), &fn)
-			if err == nil {
-				ret.State = fnStates[fn.State]
-			} else {
-				ret.State = fnStates[swy.DBFuncStateNo]
-			}
+		err := json.Unmarshal([]byte(i.FnSrc), &src)
+		if err != nil {
+			return GateErrE(swy.GateGenErr, err)
 		}
-
-		return ret
+		i.src = &src
 	}
 
-	if i.Mw != nil {
-		ret := &swyapi.DeployItemInfo{Type: "mware", Name: i.Mw.SwoId.Name}
+	return i.Fn.Add(ctx, i.src)
+}
 
-		if details {
-			var mw MwareDesc
-			err := dbFind(ctx, i.Mw.SwoId.dbReq(), &mw)
-			if err == nil {
-				ret.State = mwStates[mw.State]
-			} else {
-				ret.State = mwStates[swy.DBMwareStateNo]
-			}
+func (i *DeployMware)start(ctx context.Context) *swyapi.GateErr {
+	return i.Mw.Setup(ctx)
+}
+
+func (i *DeployFunction)stop(ctx context.Context) *swyapi.GateErr {
+	return removeFunctionId(ctx, &conf, &i.Fn.SwoId)
+}
+
+func (i *DeployMware)stop(ctx context.Context) *swyapi.GateErr {
+	return mwareRemoveId(ctx, &conf.Mware, &i.Mw.SwoId)
+}
+
+func (i *DeployFunction)info(ctx context.Context, details bool) (*swyapi.DeployItemInfo) {
+	ret := &swyapi.DeployItemInfo{Type: "function", Name: i.Fn.SwoId.Name}
+
+	if details {
+		var fn FunctionDesc
+		err := dbFind(ctx, i.Fn.SwoId.dbReq(), &fn)
+		if err == nil {
+			ret.State = fnStates[fn.State]
+		} else {
+			ret.State = fnStates[swy.DBFuncStateNo]
 		}
-
-		return ret
 	}
 
-	return &swyapi.DeployItemInfo{Type: "unknown"}
+	return ret
+}
+
+func (i *DeployMware)info(ctx context.Context, details bool) (*swyapi.DeployItemInfo) {
+	ret := &swyapi.DeployItemInfo{Type: "mware", Name: i.Mw.SwoId.Name}
+
+	if details {
+		var mw MwareDesc
+		err := dbFind(ctx, i.Mw.SwoId.dbReq(), &mw)
+		if err == nil {
+			ret.State = mwStates[mw.State]
+		} else {
+			ret.State = mwStates[swy.DBMwareStateNo]
+		}
+	}
+
+	return ret
 }
 
 type DeployDesc struct {
@@ -98,21 +96,36 @@ type DeployDesc struct {
 	SwoId					`bson:",inline"`
 	Labels		[]string		`bson:"labels"`
 	Cookie		string			`bson:"cookie"`
-	Items		[]*DeployItemDesc	`bson:"items"`
 	State		int			`bson:"state"`
+	Functions	[]*DeployFunction	`bson:"functions"`
+	Mwares		[]*DeployMware		`bson:"mwares"`
+
+	_Items		[]*_DeployItemDesc	`bson:"items,omitempty"`
 }
 
 func deployStartItems(dep *DeployDesc) {
 	ctx, done := mkContext("::deploy start")
 	defer done(ctx)
 
-	for i, item := range dep.Items {
-		cerr := item.start(ctx)
+	for i, mw := range dep.Mwares {
+		cerr := mw.start(ctx)
 		if cerr == nil {
 			continue
 		}
 
-		deployStopItems(ctx, dep, i)
+		deployStopMwares(ctx, dep, i)
+		dbUpdatePart(ctx, dep, bson.M{"state": swy.DBDepStateStl})
+		return
+	}
+
+	for i, fn := range dep.Functions {
+		cerr := fn.start(ctx)
+		if cerr == nil {
+			continue
+		}
+
+		deployStopFunctions(ctx, dep, i)
+		deployStopMwares(ctx, dep, len(dep.Mwares))
 		dbUpdatePart(ctx, dep, bson.M{"state": swy.DBDepStateStl})
 		return
 	}
@@ -121,15 +134,32 @@ func deployStartItems(dep *DeployDesc) {
 	return
 }
 
-func deployStopItems(ctx context.Context, dep *DeployDesc, till int) *swyapi.GateErr {
+func deployStopFunctions(ctx context.Context, dep *DeployDesc, till int) *swyapi.GateErr {
 	var err *swyapi.GateErr
 
-	for i, item := range dep.Items {
+	for i, f := range dep.Functions {
 		if i >= till {
 			break
 		}
 
-		e := item.stop(ctx)
+		e := f.stop(ctx)
+		if e != nil  && e.Code != swy.GateNotFound {
+			err = e
+		}
+	}
+
+	return err
+}
+
+func deployStopMwares(ctx context.Context, dep *DeployDesc, till int) *swyapi.GateErr {
+	var err *swyapi.GateErr
+
+	for i, m := range dep.Mwares {
+		if i >= till {
+			break
+		}
+
+		e := m.stop(ctx)
 		if e != nil  && e.Code != swy.GateNotFound {
 			err = e
 		}
@@ -164,14 +194,16 @@ func (dep *DeployDesc)getItems(ds *swyapi.DeployStart) *swyapi.GateErr {
 		}
 
 		fd.Labels = dep.Labels
-		dep.Items = append(dep.Items, &DeployItemDesc{ Fn: fd, FnSrc: string(srcd), src: &fn.Sources })
+		dep.Functions = append(dep.Functions, &DeployFunction{
+			Fn: fd, FnSrc: string(srcd), src: &fn.Sources,
+		})
 	}
 
 	for _, mw := range ds.Mwares {
 		id.Name = mw.Name
 		md := getMwareDesc(&id, mw)
 		md.Labels = dep.Labels
-		dep.Items = append(dep.Items, &DeployItemDesc{ Mw: md })
+		dep.Mwares = append(dep.Mwares, &DeployMware{ Mw: md })
 	}
 
 	return nil
@@ -198,15 +230,23 @@ func (dep *DeployDesc)toInfo(ctx context.Context, details bool) (*swyapi.DeployI
 		Labels:		dep.Labels,
 	}
 
-	for _, item := range dep.Items {
-		ret.Items = append(ret.Items, item.info(ctx, details))
+	for _, f := range dep.Functions {
+		ret.Items = append(ret.Items, f.info(ctx, details))
+	}
+	for _, m := range dep.Mwares {
+		ret.Items = append(ret.Items, m.info(ctx, details))
 	}
 
 	return ret, nil
 }
 
 func (dep *DeployDesc)Stop(ctx context.Context) (*swyapi.GateErr) {
-	cerr := deployStopItems(ctx, dep, len(dep.Items))
+	cerr := deployStopFunctions(ctx, dep, len(dep.Functions))
+	if cerr != nil {
+		return cerr
+	}
+
+	cerr = deployStopMwares(ctx, dep, len(dep.Mwares))
 	if cerr != nil {
 		return cerr
 	}
@@ -228,9 +268,31 @@ func DeployInit(ctx context.Context, conf *YAMLConf) error {
 	}
 
 	for _, dep := range deps {
+		if len(dep._Items) != 0 {
+			ctxlog(ctx).Debugf("Convert deploy %s", dep.ObjID.Hex())
+			for _, i := range dep._Items {
+				if i.Fn != nil {
+					dep.Functions = append(dep.Functions, &DeployFunction{
+						Fn: i.Fn, FnSrc: i.FnSrc,
+					})
+				}
+				if i.Mw != nil {
+					dep.Mwares = append(dep.Mwares, &DeployMware {
+						Mw: i.Mw,
+					})
+				}
+			}
+			err = dbUpdateAll(ctx, dep)
+			if err != nil {
+				ctxlog(ctx).Debugf("Error updating mware: %s", err.Error())
+				return err
+			}
+		}
+
 		if dep.State == swy.DBDepStateIni {
 			glog.Debugf("Will restart deploy %s in state %d", dep.SwoId.Str(), dep.State)
-			deployStopItems(ctx, dep, len(dep.Items))
+			deployStopFunctions(ctx, dep, len(dep.Functions))
+			deployStopMwares(ctx, dep, len(dep.Mwares))
 			go deployStartItems(dep)
 		}
 	}
