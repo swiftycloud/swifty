@@ -343,7 +343,7 @@ func swk8sRun(ctx context.Context, conf *YAMLConf, fn *FunctionDesc) error {
 						{
 							Name:		"code",
 							ReadOnly:	false,
-							MountPath:	RtCodePath(&fn.Code),
+							MountPath:	rtCodePath(&fn.Code),
 						},
 						{
 							Name:		"conn",
@@ -504,7 +504,7 @@ func swk8sPodUp(ctx context.Context, pod *k8sPod) error {
 	bld := pod.Build()
 	if bld != "" {
 		ctxlog(ctx).Debugf("Update %s builder to %s", bld, pod.WdogAddr)
-		RtSetBuilder(bld, pod.WdogAddr)
+		rtSetBuilder(bld, pod.WdogAddr)
 		return nil
 	}
 

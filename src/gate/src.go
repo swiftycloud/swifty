@@ -54,10 +54,10 @@ func gitCommit(dir string) (string, error) {
 }
 
 var srcHandlers = map[string] struct {
-	get func (context.Context, *swyapi.FunctionSources, string, string) error
+	put func (context.Context, *swyapi.FunctionSources, string, string) error
 } {
-	"git":		{ get: getFileFromRepo, },
-	"code":		{ get: getFileFromReq, },
+	"git":		{ put: putFileFromRepo, },
+	"code":		{ put: putFileFromReq, },
 }
 
 func checkVersion(ctx context.Context, fn *FunctionDesc, version string, versions []string) (bool, error) {
@@ -75,22 +75,22 @@ func checkVersion(ctx context.Context, fn *FunctionDesc, version string, version
 
 func putSources(ctx context.Context, fn *FunctionDesc, src *swyapi.FunctionSources) error {
 	fn.Src = FnSrcDesc{ Version: zeroVersion }
-	return writeStdSources(ctx, fn, src)
+	return putStdSources(ctx, fn, src)
 }
 
 func getSources(ctx context.Context, fn *FunctionDesc) ([]byte, error) {
-	codeFile := fn.srcPath("") + "/" + RtScriptName(&fn.Code, "")
+	codeFile := fn.srcPath("") + "/" + rtScriptName(&fn.Code, "")
 	return ioutil.ReadFile(codeFile)
 }
 
 func updateSources(ctx context.Context, fn *FunctionDesc, src *swyapi.FunctionSources) error {
 	ov, _ := strconv.Atoi(fn.Src.Version)
 	fn.Src = FnSrcDesc{ Version: strconv.Itoa(ov + 1) }
-	return writeStdSources(ctx, fn, src)
+	return putStdSources(ctx, fn, src)
 }
 
-func writeStdSources(ctx context.Context, fn *FunctionDesc, src *swyapi.FunctionSources) error {
-	err := writeSources(ctx, fn, src, "")
+func putStdSources(ctx context.Context, fn *FunctionDesc, src *swyapi.FunctionSources) error {
+	err := putSourceFile(ctx, fn, src, "")
 	if err != nil {
 		return err
 	}
@@ -104,18 +104,18 @@ func writeStdSources(ctx context.Context, fn *FunctionDesc, src *swyapi.Function
 	return nil
 }
 
-func writeSources(ctx context.Context, fn *FunctionDesc, src *swyapi.FunctionSources, suff string) error {
+func putTempSources(ctx context.Context, fn *FunctionDesc, src *swyapi.FunctionSources) (string, error) {
+	/* Call to this fn is locked per-tenant, so ... */
+	return "tmp", putSourceFile(ctx, fn, src, "tmp")
+}
+
+func putSourceFile(ctx context.Context, fn *FunctionDesc, src *swyapi.FunctionSources, suff string) error {
 	srch, ok := srcHandlers[src.Type]
 	if !ok {
 		return fmt.Errorf("Unknown sources type %s", src.Type)
 	}
 
-	return srch.get(ctx, src, fn.srcPath(""), RtScriptName(&fn.Code, suff))
-}
-
-func writeTempSources(ctx context.Context, fn *FunctionDesc, src *swyapi.FunctionSources) (string, error) {
-	/* Call to this fn is locked per-tenant, so ... */
-	return "tmp", writeSources(ctx, fn, src, "tmp")
+	return srch.put(ctx, src, fn.srcPath(""), rtScriptName(&fn.Code, suff))
 }
 
 func bgClone(rd *RepoDesc, ac *AccDesc, rh *repoHandler) {
@@ -210,7 +210,7 @@ func ctxRepoId(ctx context.Context, rid string) bson.M {
 	}
 }
 
-func getFileFromRepo(ctx context.Context, src *swyapi.FunctionSources, to, script string) error {
+func putFileFromRepo(ctx context.Context, src *swyapi.FunctionSources, to, script string) error {
 	ids := strings.SplitN(src.Repo, "/", 2)
 	if len(ids) != 2 || !bson.IsObjectIdHex(ids[0]) {
 		return errors.New("Bad repo file ID")
@@ -232,7 +232,7 @@ func getFileFromRepo(ctx context.Context, src *swyapi.FunctionSources, to, scrip
 	return writeSourceFile(ctx, to, script, fnCode)
 }
 
-func getFileFromReq(ctx context.Context, src *swyapi.FunctionSources, to, script string) error {
+func putFileFromReq(ctx context.Context, src *swyapi.FunctionSources, to, script string) error {
 	data, err := base64.StdEncoding.DecodeString(src.Code)
 	if err != nil {
 		return fmt.Errorf("Error decoding sources")

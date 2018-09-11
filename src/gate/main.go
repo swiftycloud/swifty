@@ -5,7 +5,6 @@ import (
 
 	"github.com/gorilla/mux"
 
-	"gopkg.in/mgo.v2"
 	"encoding/json"
 	"encoding/hex"
 	"net/http"
@@ -16,7 +15,6 @@ import (
 	"strings"
 	"context"
 	"strconv"
-	"sync/atomic"
 	"time"
 	"fmt"
 	"os"
@@ -50,231 +48,6 @@ const (
 )
 
 var glog *zap.SugaredLogger
-
-type YAMLConfSwd struct {
-	Volume		string			`yaml:"volume"`
-	Port		int			`yaml:"port"`
-	ImgPref		string			`yaml:"img-prefix"`
-	Namespace	string			`yaml:"k8s-namespace"`
-}
-
-func (cw *YAMLConfSwd)Validate() error {
-	if cw.Volume == "" {
-		return errors.New("'wdog.volume' not set")
-	}
-	if cw.Port == 0 {
-		return errors.New("'wdog.port' not set")
-	}
-	if cw.ImgPref == "" {
-		cw.ImgPref = "swifty"
-		fmt.Printf("'wdog.img-prefix' not set, using default\n")
-	}
-	if cw.Namespace == "" {
-		fmt.Printf("'wdog.k8s-namespace' not set, will us default\n")
-	}
-	return nil
-}
-
-type YAMLConfDaemon struct {
-	Addr		string			`yaml:"address"`
-	CallGate	string			`yaml:"callgate"`
-	LogLevel	string			`yaml:"loglevel"`
-	Prometheus	string			`yaml:"prometheus"`
-	HTTPS		*swyhttp.YAMLConfHTTPS	`yaml:"https,omitempty"`
-}
-
-func (cd *YAMLConfDaemon)Validate() error {
-	if cd.Addr == "" {
-		return errors.New("'daemon.address' not set, want HOST:PORT value")
-	}
-	if cd.Prometheus == "" {
-		return errors.New("'daemon.prometheus' not set, want HOST:PORT value")
-	}
-	if cd.CallGate == "" {
-		fmt.Printf("'daemon.callgate' not set, gate is callgate\n")
-	}
-	if cd.LogLevel == "" {
-		fmt.Printf("'daemon.loglevel' not set, using \"warn\" one\n")
-	}
-	if cd.HTTPS == nil {
-		fmt.Printf("'daemon.https' not set, will try to work over plain http\n")
-	}
-	return nil
-}
-
-type YAMLConfKeystone struct {
-	Addr		string			`yaml:"address"`
-	Domain		string			`yaml:"domain"`
-}
-
-func (ck *YAMLConfKeystone)Validate() error {
-	if ck.Addr == "" {
-		return errors.New("'keystone.address' not set, want HOST:PORT value")
-	}
-	if ck.Domain == "" {
-		return errors.New("'keystone.domain' not set")
-	}
-	return nil
-}
-
-type YAMLConfRabbit struct {
-	Creds		string			`yaml:"creds"`
-	AdminPort	string			`yaml:"admport"`
-	c		*swy.XCreds
-}
-
-type YAMLConfMaria struct {
-	Creds		string			`yaml:"creds"`
-	QDB		string			`yaml:"quotdb"`
-	c		*swy.XCreds
-}
-
-type YAMLConfMongo struct {
-	Creds		string			`yaml:"creds"`
-	c		*swy.XCreds
-}
-
-type YAMLConfPostgres struct {
-	Creds		string			`yaml:"creds"`
-	AdminPort	string			`yaml:"admport"`
-	c		*swy.XCreds
-}
-
-type YAMLConfS3 struct {
-	Creds		string			`yaml:"creds"`
-	API		string			`yaml:"api"`
-	Notify		string			`yaml:"notify"`
-	HiddenKeyTmo	uint32			`yaml:"hidden-key-timeout"`
-	c		*swy.XCreds
-	cn		*swy.XCreds
-}
-
-type YAMLConfMw struct {
-	SecKey		string			`yaml:"mwseckey"`
-	Rabbit		YAMLConfRabbit		`yaml:"rabbit"`
-	Maria		YAMLConfMaria		`yaml:"maria"`
-	Mongo		YAMLConfMongo		`yaml:"mongo"`
-	Postgres	YAMLConfPostgres	`yaml:"postgres"`
-	S3		YAMLConfS3		`yaml:"s3"`
-}
-
-func (cm *YAMLConfMw)Validate() error {
-	if cm.SecKey == "" {
-		return errors.New("'middleware.mwseckey' not set")
-	}
-	return nil
-}
-
-type YAMLConfRange struct {
-	Min		uint64			`yaml:"min"`
-	Max		uint64			`yaml:"max"`
-	Def		uint64			`yaml:"def"`
-}
-
-type YAMLConfRt struct {
-	Timeout		YAMLConfRange		`yaml:"timeout"`
-	Memory		YAMLConfRange		`yaml:"memory"`
-	MaxReplicas	uint32			`yaml:"max-replicas"`
-}
-
-func (cr *YAMLConfRt)Validate() error {
-	if cr.MaxReplicas == 0 {
-		cr.MaxReplicas = 8
-		fmt.Printf("'runtime.max-replicas' not set, using default 8\n")
-	}
-	if cr.Timeout.Max == 0 {
-		cr.Timeout.Max = 10
-		fmt.Printf("'runtime.timeout.max' not set, using default 10sec\n")
-	}
-	if cr.Timeout.Def == 0 {
-		cr.Timeout.Def = 2
-		fmt.Printf("'runtime.timeout.def' not set, using default 1sec\n")
-	}
-	if cr.Memory.Min == 0 {
-		cr.Memory.Min = 32
-		fmt.Printf("'runtime.memory.min' not set, using default 32m\n")
-	}
-	if cr.Memory.Max == 0 {
-		cr.Memory.Min = 256
-		fmt.Printf("'runtime.memory.max' not set, using default 256m\n")
-	}
-	if cr.Memory.Def == 0 {
-		cr.Memory.Def = 64
-		fmt.Printf("'runtime.memory.def' not set, using default 64m\n")
-	}
-	return nil
-}
-
-type YAMLConfDemoRepo struct {
-	URL		string			`yaml:"url"`
-	Functions	map[string]string	`yaml:"functions"`
-}
-
-func (dr *YAMLConfDemoRepo)Validate() error {
-	if dr.URL == "" {
-		return errors.New("'demo-repo.url' not set")
-	}
-	if len(dr.Functions) == 0 {
-		return errors.New("'demo-repo.functions' map not set")
-	}
-	if _, ok := dr.Functions["user-mgmt"]; !ok {
-		fmt.Printf("'demo-repo.functions.user-mgmt' not set, auth-as-a-service will not work")
-	}
-	return nil
-}
-
-type YAMLConf struct {
-	Home		string			`yaml:"home"`
-	DB		string			`yaml:"db"`
-	Daemon		YAMLConfDaemon		`yaml:"daemon"`
-	Keystone	YAMLConfKeystone	`yaml:"keystone"`
-	Mware		YAMLConfMw		`yaml:"middleware"`
-	Runtime		YAMLConfRt		`yaml:"runtime"`
-	Wdog		YAMLConfSwd		`yaml:"wdog"`
-	RepoSyncRate	int			`yaml:"repo-sync-rate"`
-	RepoSyncPeriod	int			`yaml:"repo-sync-period"`
-	DemoRepo	YAMLConfDemoRepo	`yaml:"demo-repo"`
-}
-
-func (c *YAMLConf)Validate() error {
-	err := c.Daemon.Validate()
-	if err != nil {
-		return err
-	}
-	err = c.Keystone.Validate()
-	if err != nil {
-		return err
-	}
-	err = c.Mware.Validate()
-	if err != nil {
-		return err
-	}
-	err = c.Runtime.Validate()
-	if err != nil {
-		return err
-	}
-	err = c.Wdog.Validate()
-	if err != nil {
-		return err
-	}
-	err = c.DemoRepo.Validate()
-	if err != nil {
-		return err
-	}
-	if c.Home == "" {
-		return errors.New("'home' not set")
-	}
-	if c.RepoSyncRate == 0 {
-		fmt.Printf("'repo-sync-rate' not set, pulls will be unlimited\n")
-	}
-	if c.RepoSyncPeriod == 0 {
-		fmt.Printf("'repo-sync-period' not set, using default 30min\n")
-		c.RepoSyncPeriod = 30
-	}
-	return nil
-}
-
-var conf YAMLConf
 var gatesrv *http.Server
 
 var CORS_Headers = []string {
@@ -306,46 +79,6 @@ var CORS_Clnt_Methods = []string {
 	http.MethodGet,
 	http.MethodDelete,
 	http.MethodHead,
-}
-
-type gateContext struct {
-	context.Context
-	Tenant	string
-	Admin	bool
-	ReqId	uint64
-	S	*mgo.Session
-}
-
-var reqIds uint64
-
-func mkContext2(tenant string, admin bool) (context.Context, func(context.Context)) {
-	gatectx := &gateContext{
-		context.Background(),
-		tenant,
-		admin,
-		atomic.AddUint64(&reqIds, 1),
-		session.Copy(),
-	}
-
-	return gatectx, func(ctx context.Context) { gctx(ctx).S.Close() }
-}
-
-func mkContext(tenant string) (context.Context, func(context.Context)) {
-	return mkContext2(tenant, true) /* Internal contexts are admin always! */
-}
-
-func gctx(ctx context.Context) *gateContext {
-	return ctx.(*gateContext)
-}
-
-func (gx *gateContext)tpush(tenant string) string {
-	x := gx.Tenant
-	gx.Tenant = tenant
-	return x
-}
-
-func (gx *gateContext)tpop(tenant string) {
-	gx.Tenant = tenant
 }
 
 func ctxlog(ctx context.Context) *zap.SugaredLogger {
@@ -708,25 +441,7 @@ func handleFunctionMwares(ctx context.Context, w http.ResponseWriter, r *http.Re
 
 	switch r.Method {
 	case "GET":
-		minf := []*swyapi.MwareInfo{}
-		for _, mwn := range fn.Mware {
-			id := fn.SwoId
-			id.Name = mwn
-
-			var mw MwareDesc
-			var mi *swyapi.MwareInfo
-
-			err := dbFind(ctx, id.dbReq(), &mw)
-
-			if err == nil {
-				mi = mw.toFnInfo(ctx)
-			} else {
-				mi = &swyapi.MwareInfo{Name: mwn}
-			}
-			minf = append(minf, mi)
-		}
-
-		return respond(w, minf)
+		return respond(w, fn.listMware(ctx))
 
 	case "POST":
 		var mid string
@@ -792,25 +507,7 @@ func handleFunctionAccounts(ctx context.Context, w http.ResponseWriter, r *http.
 
 	switch r.Method {
 	case "GET":
-		ret := []map[string]string{}
-		for _, aid := range fn.Accounts {
-			var ac AccDesc
-			var ai map[string]string
-
-			cerr = objFindId(ctx, aid, &ac, nil)
-			if cerr == nil {
-				ai, cerr = ac.toInfo(ctx, false)
-				if cerr != nil {
-					return cerr
-				}
-			} else {
-				ai = map[string]string{"id": aid }
-			}
-
-			ret = append(ret, ai)
-		}
-
-		return respond(w, &ret)
+		return respond(w, fn.listAccounts(ctx))
 
 	case "POST":
 		var aid string
@@ -947,7 +644,7 @@ func handleFunctionTrigger(ctx context.Context, w http.ResponseWriter, r *http.R
 		return respond(w, ed.toInfo(&fn))
 
 	case "DELETE":
-		erc := eventsDelete(ctx, &fn, &ed)
+		erc := ed.Delete(ctx, &fn)
 		if erc != nil {
 			return erc
 		}
@@ -1568,7 +1265,7 @@ func handleFunctionRun(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		}
 
 		ctxlog(ctx).Debugf("Asked for custom sources... oh, well...")
-		suff, err = writeTempSources(ctx, &fn, params.Src)
+		suff, err = putTempSources(ctx, &fn, params.Src)
 		if err != nil {
 			return GateErrE(swy.GateGenErr, err)
 		}
@@ -1693,12 +1390,7 @@ func handleAccounts(ctx context.Context, w http.ResponseWriter, r *http.Request)
 
 		ret := []map[string]string{}
 		for _, ac := range acs {
-			ai, cerr := ac.toInfo(ctx, false)
-			if cerr != nil {
-				return cerr
-			}
-
-			ret = append(ret, ai)
+			ret = append(ret, ac.toInfo(ctx, false))
 		}
 
 		return respond(w, &ret)
@@ -1728,8 +1420,7 @@ func handleAccounts(ctx context.Context, w http.ResponseWriter, r *http.Request)
 			return cerr
 		}
 
-		ai, _ := ac.toInfo(ctx, false)
-		return respond(w, ai)
+		return respond(w, ac.toInfo(ctx, false))
 	}
 
 	return nil
@@ -1745,12 +1436,7 @@ func handleAccount(ctx context.Context, w http.ResponseWriter, r *http.Request) 
 
 	switch r.Method {
 	case "GET":
-		ai, cerr := ac.toInfo(ctx, true)
-		if cerr != nil {
-			return cerr
-		}
-
-		return respond(w, ai)
+		return respond(w, ac.toInfo(ctx, true))
 
 	case "PUT":
 		var params map[string]string
@@ -1983,7 +1669,7 @@ func handleLanguage(ctx context.Context, w http.ResponseWriter, r *http.Request)
 		return GateErrM(swy.GateGenErr, "Language not supported")
 	}
 
-	return respond(w, lh.Info())
+	return respond(w, lh.info())
 }
 
 func handleMwareTypes(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
@@ -2105,7 +1791,7 @@ func handleOneDeployment(ctx context.Context, w http.ResponseWriter, r *http.Req
 		return respond(w, di)
 
 	case "DELETE":
-		cerr := deployStop(ctx, dd)
+		cerr := dd.Stop(ctx)
 		if cerr != nil {
 			return cerr
 		}

@@ -205,7 +205,7 @@ func (dep *DeployDesc)toInfo(ctx context.Context, details bool) (*swyapi.DeployI
 	return ret, nil
 }
 
-func deployStop(ctx context.Context, dep *DeployDesc) (*swyapi.GateErr) {
+func (dep *DeployDesc)Stop(ctx context.Context) (*swyapi.GateErr) {
 	cerr := deployStopItems(ctx, dep, len(dep.Items))
 	if cerr != nil {
 		return cerr

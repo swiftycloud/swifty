@@ -148,7 +148,7 @@ func getAccDesc(id *SwoId, params map[string]string) (*AccDesc, *swyapi.GateErr)
 	return ad, nil
 }
 
-func (ad *AccDesc)toInfo(ctx context.Context, details bool) (map[string]string, *swyapi.GateErr) {
+func (ad *AccDesc)toInfo(ctx context.Context, details bool) map[string]string {
 	ai := map[string]string {
 		"id":		ad.ObjID.Hex(),
 		"type":		ad.Type,
@@ -171,7 +171,7 @@ func (ad *AccDesc)toInfo(ctx context.Context, details bool) (map[string]string, 
 		ai[k] = v
 	}
 
-	return ai, nil
+	return ai
 }
 
 func (ad *AccDesc)getEnv() map[string]string {

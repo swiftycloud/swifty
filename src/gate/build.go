@@ -9,7 +9,7 @@ import (
 )
 
 func tryBuildFunction(ctx context.Context, conf *YAMLConf, fn *FunctionDesc, suf string) error {
-	b, addr := RtNeedToBuild(&fn.Code)
+	b, addr := rtNeedToBuild(&fn.Code)
 	if !b {
 		return nil
 	}
