@@ -170,7 +170,7 @@ type FunctionAdd struct {
 	UserData	string			`json:"userdata,omitempty"`
 	AuthCtx		string			`json:"authctx,omitempty"`
 
-	Url		bool			`json:"-"`
+	Events		[]FunctionEvent		`json:"events,omitempty"` /* Deploy only */
 }
 
 type FunctionUpdate struct {

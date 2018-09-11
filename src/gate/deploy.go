@@ -27,6 +27,7 @@ type DeployFunction struct {
 	Fn	*FunctionDesc	`bson:"fn"`
 	FnSrc	string		`bson:"fnsrc,omitempty"`
 	src	*swyapi.FunctionSources	`bson:"-"`
+	Evs	[]*FnEventDesc	`bson:"events,omitempty"`
 }
 
 type DeployMware struct {
@@ -44,7 +45,20 @@ func (i *DeployFunction)start(ctx context.Context) *swyapi.GateErr {
 		i.src = &src
 	}
 
-	return i.Fn.Add(ctx, i.src)
+	cerr := i.Fn.Add(ctx, i.src)
+	if cerr != nil {
+		return cerr
+	}
+
+	for _, ed := range i.Evs {
+		cerr = ed.Add(ctx, i.Fn)
+		if cerr != nil {
+			i.stop(ctx) /* fn.Remove() would kill all events */
+			return cerr
+		}
+	}
+
+	return nil
 }
 
 func (i *DeployMware)start(ctx context.Context) *swyapi.GateErr {
@@ -193,9 +207,19 @@ func (dep *DeployDesc)getItems(ds *swyapi.DeployStart) *swyapi.GateErr {
 			return cerr
 		}
 
+		evs := []*FnEventDesc{}
+		for _, ev := range fn.Events {
+			ed, cerr := getEventDesc(&ev)
+			if cerr != nil {
+				return cerr
+			}
+
+			evs = append(evs, ed)
+		}
+
 		fd.Labels = dep.Labels
 		dep.Functions = append(dep.Functions, &DeployFunction{
-			Fn: fd, FnSrc: string(srcd), src: &fn.Sources,
+			Fn: fd, FnSrc: string(srcd), src: &fn.Sources, Evs: evs,
 		})
 	}
 

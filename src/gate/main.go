@@ -1857,7 +1857,12 @@ func handleAuths(ctx context.Context, w http.ResponseWriter, r *http.Request) *s
 						Repo: demoRep.ObjID.Hex() + "/" + fname,
 					},
 					Mware: []string { aa.Name + "_jwt", aa.Name + "_mgo" },
-					Url: true,
+					Events: []swyapi.FunctionEvent {
+						swyapi.FunctionEvent{
+							Name: "API",
+							Source: "url",
+						},
+					},
 				},
 			},
 			Mwares: []*swyapi.MwareAdd {
