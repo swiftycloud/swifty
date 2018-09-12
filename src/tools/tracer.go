@@ -31,6 +31,14 @@ func tracerConnect(ten, addr string) (*net.UnixConn, error) {
 }
 
 func main() {
+	if len(os.Args) == 1 {
+		fmt.Printf("Usage: %s <tenant> <socket-path>\n", os.Args[0])
+		fmt.Printf("  <tenant> is the user-name to watch events for\n")
+		fmt.Printf("  <socket-path> is where gate keeps the listener\n")
+		fmt.Printf("                likely this is /var/run/swifty/gate\n")
+		return
+	}
+
 	fmt.Printf("Tracing reqs for %s (@%s)\n", os.Args[1], os.Args[2])
 
 	sk, err := tracerConnect(os.Args[1], os.Args[2])
