@@ -66,11 +66,11 @@ func (i *DeployMware)start(ctx context.Context) *swyapi.GateErr {
 }
 
 func (i *DeployFunction)stop(ctx context.Context) *swyapi.GateErr {
-	return removeFunctionId(ctx, &conf, &i.Fn.SwoId)
+	return removeFunctionId(ctx, &i.Fn.SwoId)
 }
 
 func (i *DeployMware)stop(ctx context.Context) *swyapi.GateErr {
-	return mwareRemoveId(ctx, &conf.Mware, &i.Mw.SwoId)
+	return mwareRemoveId(ctx, &i.Mw.SwoId)
 }
 
 func (i *DeployFunction)info(ctx context.Context, details bool) (*swyapi.DeployItemInfo) {

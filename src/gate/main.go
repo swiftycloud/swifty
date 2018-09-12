@@ -169,7 +169,7 @@ func handleProjectDel(ctx context.Context, w http.ResponseWriter, r *http.Reques
 	}
 	for _, fn := range fns {
 		id.Name = fn.SwoId.Name
-		xerr := removeFunctionId(ctx, &conf, id)
+		xerr := removeFunctionId(ctx, id)
 		if xerr != nil {
 			ctxlog(ctx).Error("Funciton removal failed: %s", xerr.Message)
 			ferr = GateErrM(xerr.Code, "Cannot remove " + id.Name + " function: " + xerr.Message)
@@ -183,7 +183,7 @@ func handleProjectDel(ctx context.Context, w http.ResponseWriter, r *http.Reques
 
 	for _, mw := range mws {
 		id.Name = mw.SwoId.Name
-		xerr := mwareRemoveId(ctx, &conf.Mware, id)
+		xerr := mwareRemoveId(ctx, id)
 		if xerr != nil {
 			ctxlog(ctx).Error("Mware removal failed: %s", xerr.Message)
 			ferr = GateErrM(xerr.Code, "Cannot remove " + id.Name + " mware: " + xerr.Message)
@@ -1117,7 +1117,7 @@ func handleFunction(ctx context.Context, w http.ResponseWriter, r *http.Request)
 		}
 
 		if fu.State != "" {
-			cerr := fn.setState(ctx, &conf, fu.State)
+			cerr := fn.setState(ctx, fu.State)
 			if cerr != nil {
 				return cerr
 			}
@@ -1183,7 +1183,7 @@ func handleFunctionRun(ctx context.Context, w http.ResponseWriter, r *http.Reque
 			return GateErrE(swy.GateGenErr, err)
 		}
 
-		err = tryBuildFunction(ctx, &conf, &fn, suff)
+		err = tryBuildFunction(ctx, &fn, suff)
 		if err != nil {
 			return GateErrM(swy.GateGenErr, "Error building function")
 		}
@@ -1367,7 +1367,7 @@ func handleAccount(ctx context.Context, w http.ResponseWriter, r *http.Request) 
 		w.WriteHeader(http.StatusOK)
 
 	case "DELETE":
-		cerr := ac.Del(ctx, &conf)
+		cerr := ac.Del(ctx)
 		if cerr != nil {
 			return cerr
 		}
@@ -1490,7 +1490,7 @@ func handleRepo(ctx context.Context, w http.ResponseWriter, r *http.Request) *sw
 		w.WriteHeader(http.StatusOK)
 
 	case "DELETE":
-		cerr := rd.Detach(ctx, &conf)
+		cerr := rd.Detach(ctx)
 		if cerr != nil {
 			return cerr
 		}
@@ -1607,7 +1607,7 @@ func handleS3Access(ctx context.Context, w http.ResponseWriter, r *http.Request)
 		return GateErrE(swy.GateBadRequest, err)
 	}
 
-	creds, cerr := mwareGetS3Creds(ctx, &conf, &params)
+	creds, cerr := mwareGetS3Creds(ctx, &params)
 	if cerr != nil {
 		return cerr
 	}

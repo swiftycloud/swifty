@@ -218,7 +218,7 @@ func (ad *AccDesc)Update(ctx context.Context, upd map[string]string) *swyapi.Gat
 	return nil
 }
 
-func (ad *AccDesc)Del(ctx context.Context, conf *YAMLConf) *swyapi.GateErr {
+func (ad *AccDesc)Del(ctx context.Context) *swyapi.GateErr {
 	err := dbRemove(ctx, ad)
 	if err != nil {
 		return GateErrD(err)

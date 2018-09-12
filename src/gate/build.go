@@ -8,16 +8,16 @@ import (
 	"../common/http"
 )
 
-func tryBuildFunction(ctx context.Context, conf *YAMLConf, fn *FunctionDesc, suf string) error {
+func tryBuildFunction(ctx context.Context, fn *FunctionDesc, suf string) error {
 	b, addr := rtNeedToBuild(&fn.Code)
 	if !b {
 		return nil
 	}
 
-	return buildFunction(ctx, conf, addr, fn, suf)
+	return buildFunction(ctx, addr, fn, suf)
 }
 
-func buildFunction(ctx context.Context, conf *YAMLConf, addr string, fn *FunctionDesc, suf string) error {
+func buildFunction(ctx context.Context, addr string, fn *FunctionDesc, suf string) error {
 	var wd_result swyapi.SwdFunctionRunResult
 
 	ctxlog(ctx).Debugf("Building function in %s", fn.srcPath(""))
