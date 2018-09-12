@@ -1760,12 +1760,11 @@ func bindCmdUsage(cmd string, args []string, help string, wp bool) {
 
 	cd.pargs = args
 	cd.opts.Usage = func() {
-		var astr string
+		astr := cmd
 		if len(args) != 0 {
-			astr = " <" + strings.Join(args, "> <") + ">"
+			astr += " <" + strings.Join(args, "> <") + ">"
 		}
-		fmt.Fprintf(os.Stderr, "%s%s\n\t%s\n", cmd, astr, help)
-		cd.opts.PrintDefaults()
+		fmt.Fprintf(os.Stderr, "%-32s%s\n", astr, help)
 	}
 }
 
@@ -1932,6 +1931,7 @@ func main() {
 
 	if len(os.Args) > 2 && os.Args[2] == "-h" {
 		cd.opts.Usage()
+		cd.opts.PrintDefaults()
 		os.Exit(1)
 	}
 
