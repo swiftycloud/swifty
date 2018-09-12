@@ -1607,7 +1607,7 @@ func handleS3Access(ctx context.Context, w http.ResponseWriter, r *http.Request)
 		return GateErrE(swy.GateBadRequest, err)
 	}
 
-	creds, cerr := mwareGetS3Creds(ctx, &params)
+	creds, cerr := s3GetCreds(ctx, &params)
 	if cerr != nil {
 		return cerr
 	}

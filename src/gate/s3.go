@@ -236,7 +236,7 @@ func GenBucketKeysS3(ctx context.Context, conf *YAMLConfMw, fid *SwoId, bucket s
 	}, nil
 }
 
-func mwareGetS3Creds(ctx context.Context, acc *swyapi.S3Access) (*swyapi.S3Creds, *swyapi.GateErr) {
+func s3GetCreds(ctx context.Context, acc *swyapi.S3Access) (*swyapi.S3Creds, *swyapi.GateErr) {
 	creds := &swyapi.S3Creds{}
 
 	creds.Endpoint = s3Endpoint(&conf.Mware.S3, true)
