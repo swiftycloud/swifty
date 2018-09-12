@@ -1,6 +1,7 @@
 package main
 
 import (
+	"net/http"
 	"../apis"
 	"context"
 	"gopkg.in/mgo.v2/bson"
@@ -25,7 +26,7 @@ func getRouterDesc(id *SwoId, params *swyapi.RouterAdd) (*RouterDesc, *swyapi.Ga
 }
 
 func (rt *RouterDesc)getURL() string {
-	return getURL(URLRouter, rt.SwoId.Cookie())
+	return getURL(URLRouter, rt.Cookie)
 }
 
 func (rt *RouterDesc)toInfo(ctx context.Context, details bool) *swyapi.RouterInfo {
@@ -57,5 +58,36 @@ func (rd *RouterDesc)Remove(ctx context.Context) *swyapi.GateErr {
 	if err != nil {
 		return GateErrD(err)
 	}
+
+	urlClean(ctx, URLRouter, rd.Cookie)
 	return nil
+}
+
+type RouterURL struct {
+	URL
+	table	[]*swyapi.RouterEntry
+}
+
+func (rt *RouterURL)Handle(ctx context.Context, w http.ResponseWriter, r *http.Request, sopq *statsOpaque) {
+	path_match := false
+	path := reqPath(r) /* FIXME -- this will be evaluated again in makeArgs */
+	for _, e := range rt.table {
+		if e.Path != path {
+			continue
+		}
+		path_match = true
+		if e.Method != r.Method {
+			continue
+		}
+
+		ctxlog(ctx).Debugf("Will call %s", e.Call)
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	code := http.StatusNotFound
+	if path_match {
+		code = http.StatusMethodNotAllowed
+	}
+	http.Error(w, "", code)
 }

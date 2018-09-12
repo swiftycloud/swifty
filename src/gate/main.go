@@ -843,6 +843,16 @@ func handleFunctionLogs(ctx context.Context, w http.ResponseWriter, r *http.Requ
 	return nil
 }
 
+func reqPath(r *http.Request) string {
+	p := strings.SplitN(r.URL.Path, "/", 4)
+	if len(p) >= 4 {
+		return p[3]
+	} else {
+		empty := ""
+		return empty
+	}
+}
+
 func makeArgs(sopq *statsOpaque, r *http.Request) *swyapi.SwdFunctionRun {
 	defer r.Body.Close()
 
@@ -884,15 +894,9 @@ func makeArgs(sopq *statsOpaque, r *http.Request) *swyapi.SwdFunctionRun {
 		}
 	}
 
+	path := reqPath(r)
+	args.Path = &path
 	args.Method = r.Method
-
-	p := strings.SplitN(r.URL.Path, "/", 4)
-	if len(p) >= 4 {
-		args.Path = &p[3]
-	} else {
-		empty := ""
-		args.Path = &empty
-	}
 
 	return args
 }
@@ -961,12 +965,12 @@ func handleCall(w http.ResponseWriter, r *http.Request) {
 
 	url, err := urlFind(ctx, uid)
 	if err != nil {
-		http.Error(w, "Error getting function", http.StatusInternalServerError)
+		http.Error(w, "Error getting URL handler", http.StatusInternalServerError)
 		return
 	}
 
 	if url == nil {
-		http.Error(w, "No such function", http.StatusServiceUnavailable)
+		http.Error(w, "No such URL", http.StatusServiceUnavailable)
 		return
 	}
 

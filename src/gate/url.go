@@ -47,7 +47,17 @@ func urlFind(ctx context.Context, urlid string) (URL, error) {
 	res, ok := urls.Load(urlid)
 	if !ok {
 		if urlid[0] == URLRouter[0] {
-			return nil, errors.New("Router URL not yet handled")
+			var rt RouterDesc
+
+			err := dbFind(ctx, bson.M{"cookie": urlid[1:]}, &rt)
+			if err != nil {
+				if dbNF(err) {
+					err = nil
+				}
+				return nil, err
+			}
+
+			res, _ = urls.LoadOrStore(urlid, &RouterURL{table: rt.Table})
 		} else {
 			ed, err := urlEvFind(ctx, urlid)
 			if err != nil {
@@ -80,7 +90,11 @@ func urlEventStop(ctx context.Context, ed *FnEventDesc) error {
 }
 
 func urlEventClean(ctx context.Context, ed *FnEventDesc) {
-	urls.Delete(ed.FnId)
+	urlClean(ctx, URLFunction, ed.FnId)
+}
+
+func urlClean(ctx context.Context, typ, urlid string) {
+	urls.Delete(typ + urlid)
 }
 
 var urlEOps = EventOps {

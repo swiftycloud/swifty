@@ -487,6 +487,10 @@ func dbConnect(conf *YAMLConf) error {
 	if err != nil {
 		return fmt.Errorf("No cookie index for mware: %s", err.Error())
 	}
+	err = dbs.DB(DBStateDB).C(DBColRouters).EnsureIndex(index)
+	if err != nil {
+		return fmt.Errorf("No cookie index for mware: %s", err.Error())
+	}
 
 	index.Key = []string{"uid"}
 	err = dbs.DB(DBStateDB).C(DBColBal).EnsureIndex(index)
