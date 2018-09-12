@@ -11,6 +11,7 @@ type RouterDesc struct {
 	// fields to be present...
 	ObjID		bson.ObjectId		`bson:"_id,omitempty"`
 	SwoId					`bson:",inline"`
+	Cookie		string			`bson:"cookie"`
 	Table		[]*swyapi.RouterEntry	`bson:"table"`
 }
 
@@ -41,6 +42,7 @@ func (rt *RouterDesc)toInfo(ctx context.Context, details bool) *swyapi.RouterInf
 
 func (rd *RouterDesc)Create(ctx context.Context) *swyapi.GateErr {
 	rd.ObjID = bson.NewObjectId()
+	rd.Cookie = rd.SwoId.Cookie()
 	err := dbInsert(ctx, rd)
 	if err != nil {
 		return GateErrD(err)
