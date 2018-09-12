@@ -314,7 +314,7 @@ func DeployInit(ctx context.Context, conf *YAMLConf) error {
 		}
 
 		if dep.State == swy.DBDepStateIni {
-			glog.Debugf("Will restart deploy %s in state %d", dep.SwoId.Str(), dep.State)
+			ctxlog(ctx).Debugf("Will restart deploy %s in state %d", dep.SwoId.Str(), dep.State)
 			deployStopFunctions(ctx, dep, len(dep.Functions))
 			deployStopMwares(ctx, dep, len(dep.Mwares))
 			go deployStartItems(dep)

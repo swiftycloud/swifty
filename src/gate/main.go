@@ -2182,7 +2182,7 @@ func main() {
 		glog.Fatalf("Can't setup: %s", err.Error())
 	}
 
-	err = BuilderInit(&conf)
+	err = BuilderInit(ctx, &conf)
 	if err != nil {
 		glog.Fatalf("Can't set up builder: %s", err.Error())
 	}

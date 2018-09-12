@@ -51,7 +51,7 @@ func buildFunction(ctx context.Context, conf *YAMLConf, addr string, fn *Functio
 	return nil
 }
 
-func BuilderInit(conf *YAMLConf) error {
+func BuilderInit(ctx context.Context, conf *YAMLConf) error {
 	buildIps, err := swk8sGetBuildPods()
 	if err != nil {
 		return err
@@ -68,7 +68,7 @@ func BuilderInit(conf *YAMLConf) error {
 				return fmt.Errorf("No builder for %s", l)
 			}
 
-			glog.Debugf("Set %s as builder for %s", ip, l)
+			ctxlog(ctx).Debugf("Set %s as builder for %s", ip, l)
 			rt.BuildIP = ip
 		}
 	}
