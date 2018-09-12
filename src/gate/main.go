@@ -1842,7 +1842,7 @@ func handleMware(ctx context.Context, w http.ResponseWriter, r *http.Request) *s
 	return nil
 }
 
-func handleGenericReq(w http.ResponseWriter, r *http.Request) (context.Context, func(context.Context)) {
+func getReqContext(w http.ResponseWriter, r *http.Request) (context.Context, func(context.Context)) {
 	token := r.Header.Get("X-Auth-Token")
 	if token == "" {
 		http.Error(w, "Auth token not provided", http.StatusUnauthorized)
@@ -1895,7 +1895,7 @@ func genReqHandler(cb func(ctx context.Context, w http.ResponseWriter, r *http.R
 			return
 		}
 
-		ctx, done := handleGenericReq(w, r)
+		ctx, done := getReqContext(w, r)
 		if ctx == nil {
 			return
 		}
