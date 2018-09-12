@@ -100,11 +100,6 @@ type FunctionDesc struct {
 	Size		FnSizeDesc	`bson:"size"`
 	AuthCtx		string		`bson:"authctx,omitempty"`
 	UserData	string		`bson:"userdata,omitempty"`
-	URL		bool		`bson:"url"`
-}
-
-func (fn *FunctionDesc)isURL() bool {
-	return fn.URL
 }
 
 func (fn *FunctionDesc)isOneShot() bool {
@@ -128,20 +123,7 @@ func (fn *FunctionDesc)ToState(ctx context.Context, st, from int) error {
 var zeroVersion = "0"
 
 func (fn *FunctionDesc)getURL() string {
-	cg := conf.Daemon.CallGate
-	if cg == "" {
-		cg = conf.Daemon.Addr
-	}
-	return cg + "/call/" + fn.Cookie
-}
-
-func (fn *FunctionDesc)getURLEvt() *swyapi.FunctionEvent {
-	return &swyapi.FunctionEvent {
-		Id:	URLEventID,
-		Name:	"Inalienable API",
-		Source:	"url",
-		URL:	fn.getURL(),
-	}
+	return getURL(URLFunction, fn.Cookie)
 }
 
 func (fn *FunctionDesc)toMInfo(ctx context.Context) *swyapi.FunctionMdat {
@@ -171,12 +153,12 @@ func (fn *FunctionDesc)toInfo(ctx context.Context, details bool, periods int) (*
 		var err error
 		var cerr *swyapi.GateErr
 
-		if fn.isURL() {
+		if _, err = urlEvFind(ctx, fn.Cookie); err == nil {
 			fi.URL = fn.getURL()
 		}
 
 		fi.Stats, cerr = fn.getStats(ctx, periods)
-		if err != nil {
+		if cerr != nil {
 			return nil, cerr
 		}
 
@@ -235,7 +217,6 @@ func getFunctionDesc(id *SwoId, p_add *swyapi.FunctionAdd) (*FunctionDesc, *swya
 		S3Buckets:	p_add.S3Buckets,
 		AuthCtx:	p_add.AuthCtx,
 		UserData:	p_add.UserData,
-		URL:		p_add.Url,
 	}
 
 	fn.Cookie = fn.SwoId.Cookie()
@@ -305,7 +286,7 @@ func (fn *FunctionDesc)Add(ctx context.Context, src *swyapi.FunctionSources) *sw
 			ctx, done := mkContext("::build")
 			defer done(ctx)
 
-			err = buildFunction(ctx, &conf, bAddr, fn, "")
+			err = buildFunction(ctx, bAddr, fn, "")
 			if err != nil {
 				goto bstalled
 			}
@@ -699,7 +680,7 @@ func (fn *FunctionDesc)updateSources(ctx context.Context, src *swyapi.FunctionSo
 	}
 
 	ctxlog(ctx).Debugf("Try build sources")
-	err = tryBuildFunction(ctx, &conf, fn, "")
+	err = tryBuildFunction(ctx, fn, "")
 	if err != nil {
 		return GateErrE(swy.GateGenErr, err)
 	}
@@ -733,7 +714,7 @@ func (fn *FunctionDesc)updateSources(ctx context.Context, src *swyapi.FunctionSo
 	return nil
 }
 
-func removeFunctionId(ctx context.Context, conf *YAMLConf, id *SwoId) *swyapi.GateErr {
+func removeFunctionId(ctx context.Context, id *SwoId) *swyapi.GateErr {
 	var fn FunctionDesc
 
 	err := dbFind(ctx, id.dbReq(), &fn)
@@ -881,7 +862,7 @@ out:
 	ctxlog(ctx).Errorf("POD update notify: %s", err.Error())
 }
 
-func deactivateFunction(ctx context.Context, conf *YAMLConf, fn *FunctionDesc) *swyapi.GateErr {
+func deactivateFunction(ctx context.Context, fn *FunctionDesc) *swyapi.GateErr {
 	var err error
 
 	if fn.State != swy.DBFuncStateRdy {
@@ -893,7 +874,7 @@ func deactivateFunction(ctx context.Context, conf *YAMLConf, fn *FunctionDesc) *
 		return GateErrM(swy.GateGenErr, "Cannot deactivate function")
 	}
 
-	err = swk8sRemove(ctx, conf, fn)
+	err = swk8sRemove(ctx, &conf, fn)
 	if err != nil {
 		ctxlog(ctx).Errorf("Can't remove deployment: %s", err.Error())
 		fn.ToState(ctx, swy.DBFuncStateRdy, -1)
@@ -903,7 +884,7 @@ func deactivateFunction(ctx context.Context, conf *YAMLConf, fn *FunctionDesc) *
 	return nil
 }
 
-func activateFunction(ctx context.Context, conf *YAMLConf, fn *FunctionDesc) *swyapi.GateErr {
+func activateFunction(ctx context.Context, fn *FunctionDesc) *swyapi.GateErr {
 	var err error
 
 	if fn.State != swy.DBFuncStateDea {
@@ -915,7 +896,7 @@ func activateFunction(ctx context.Context, conf *YAMLConf, fn *FunctionDesc) *sw
 		return GateErrM(swy.GateGenErr, "Cannot activate function")
 	}
 
-	err = swk8sRun(ctx, conf, fn)
+	err = swk8sRun(ctx, &conf, fn)
 	if err != nil {
 		fn.ToState(ctx, swy.DBFuncStateDea, -1)
 		ctxlog(ctx).Errorf("Can't start deployment: %s", err.Error())
@@ -925,12 +906,12 @@ func activateFunction(ctx context.Context, conf *YAMLConf, fn *FunctionDesc) *sw
 	return nil
 }
 
-func (fn *FunctionDesc)setState(ctx context.Context, conf *YAMLConf, st string) *swyapi.GateErr {
+func (fn *FunctionDesc)setState(ctx context.Context, st string) *swyapi.GateErr {
 	switch st {
 	case fnStates[swy.DBFuncStateDea]:
-		return deactivateFunction(ctx, conf, fn)
+		return deactivateFunction(ctx, fn)
 	case fnStates[swy.DBFuncStateRdy]:
-		return activateFunction(ctx, conf, fn)
+		return activateFunction(ctx, fn)
 	}
 
 	return GateErrM(swy.GateNotAvail, "Cannot set this state")

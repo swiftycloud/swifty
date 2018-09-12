@@ -87,7 +87,7 @@ func PrometheusInit(ctx context.Context, conf *YAMLConf) error {
 	psrv := &http.Server{Handler: r, Addr: conf.Daemon.Prometheus}
 	go psrv.ListenAndServe()
 
-	glog.Debugf("Prometeus exporter started at %s", conf.Daemon.Prometheus)
+	ctxlog(ctx).Debugf("Prometeus exporter started at %s", conf.Daemon.Prometheus)
 
 	return nil
 }

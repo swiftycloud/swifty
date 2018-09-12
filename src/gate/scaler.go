@@ -70,7 +70,7 @@ down:
 
 fin:
 	fdm.lock.Unlock()
-	glog.Debugf("Scaler %s done", fdm.depname)
+	scalerLog(fdm, "fin")
 }
 
 func balancerFnDepGrow(ctx context.Context, fdm *FnMemData, goal uint32) {

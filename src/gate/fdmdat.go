@@ -13,7 +13,6 @@ var fdmd sync.Map
 var tdat sync.Map
 
 type FnMemData struct {
-	public	bool
 	mem	uint64
 	depname	string
 	fnid	string
@@ -190,7 +189,6 @@ func fndatGetOrInit(ctx context.Context, cookie string, fn *FunctionDesc, forRem
 	}
 
 	nret.mem = fn.Size.Mem
-	nret.public = fn.isURL()
 	nret.depname = fn.DepName()
 	nret.fnid = fn.Cookie
 

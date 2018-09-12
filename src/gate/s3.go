@@ -1,6 +1,8 @@
 package main
 
 import (
+	"strings"
+	"path/filepath"
 	"fmt"
 	"context"
 	"net/http"
@@ -11,6 +13,32 @@ import (
 	"../apis"
 	"../apis/s3"
 )
+
+type FnEventS3 struct {
+	Ns		string		`bson:"ns"`
+	Bucket		string		`bson:"bucket"`
+	Ops		string		`bson:"ops"`
+	Pattern		string		`bson:"pattern"`
+}
+
+func (s3 *FnEventS3)hasOp(op string) bool {
+	ops := strings.Split(s3.Ops, ",")
+	for _, o := range ops {
+		if o == op {
+			return true
+		}
+	}
+	return false
+}
+
+func (s3 *FnEventS3)matchPattern(oname string) bool {
+	if s3.Pattern == "" {
+		return true
+	}
+
+	m, err := filepath.Match(s3.Pattern, oname)
+	return err == nil && m
+}
 
 func s3KeyGen(conf *YAMLConfS3, namespace, bucket string, lifetime uint32) (*swys3api.S3CtlKeyGenResult, error) {
 	addr := conf.c.Addr()
@@ -208,7 +236,7 @@ func GenBucketKeysS3(ctx context.Context, conf *YAMLConfMw, fid *SwoId, bucket s
 	}, nil
 }
 
-func mwareGetS3Creds(ctx context.Context, conf *YAMLConf, acc *swyapi.S3Access) (*swyapi.S3Creds, *swyapi.GateErr) {
+func s3GetCreds(ctx context.Context, acc *swyapi.S3Access) (*swyapi.S3Creds, *swyapi.GateErr) {
 	creds := &swyapi.S3Creds{}
 
 	creds.Endpoint = s3Endpoint(&conf.Mware.S3, true)

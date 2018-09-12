@@ -9,7 +9,6 @@ import (
 	"encoding/hex"
 	"net/http"
 	"net/url"
-	"errors"
 	"os/exec"
 	"flag"
 	"strings"
@@ -43,7 +42,6 @@ const (
 	DepScaleupRelax time.Duration		= 16 * time.Second
 	DepScaledownStep time.Duration		= 8 * time.Second
 	TenantLimitsUpdPeriod time.Duration	= 120 * time.Second
-	URLEventID				= "000URL"
 	CloneDir				= "clone"
 )
 
@@ -171,7 +169,7 @@ func handleProjectDel(ctx context.Context, w http.ResponseWriter, r *http.Reques
 	}
 	for _, fn := range fns {
 		id.Name = fn.SwoId.Name
-		xerr := removeFunctionId(ctx, &conf, id)
+		xerr := removeFunctionId(ctx, id)
 		if xerr != nil {
 			ctxlog(ctx).Error("Funciton removal failed: %s", xerr.Message)
 			ferr = GateErrM(xerr.Code, "Cannot remove " + id.Name + " function: " + xerr.Message)
@@ -185,7 +183,7 @@ func handleProjectDel(ctx context.Context, w http.ResponseWriter, r *http.Reques
 
 	for _, mw := range mws {
 		id.Name = mw.SwoId.Name
-		xerr := mwareRemoveId(ctx, &conf.Mware, id)
+		xerr := mwareRemoveId(ctx, id)
 		if xerr != nil {
 			ctxlog(ctx).Error("Mware removal failed: %s", xerr.Message)
 			ferr = GateErrM(xerr.Code, "Cannot remove " + id.Name + " mware: " + xerr.Message)
@@ -276,7 +274,6 @@ func handleFunctionTriggers(ctx context.Context, w http.ResponseWriter, r *http.
 
 		var evd []*FnEventDesc
 		var err error
-		var hasUrl = false
 
 		if ename == "" {
 			err = dbFindAll(ctx, bson.M{"fnid": fn.Cookie}, &evd)
@@ -296,15 +293,7 @@ func handleFunctionTriggers(ctx context.Context, w http.ResponseWriter, r *http.
 
 		evs := []*swyapi.FunctionEvent{}
 		for _, e := range evd {
-			if e.Source == "url" {
-				hasUrl = true
-			}
-
 			evs = append(evs, e.toInfo(&fn))
-		}
-
-		if fn.URL && !hasUrl {
-			evs = append(evs, fn.getURLEvt())
 		}
 
 		return respond(w, evs)
@@ -620,14 +609,6 @@ func handleFunctionTrigger(ctx context.Context, w http.ResponseWriter, r *http.R
 	}
 
 	eid := mux.Vars(r)["eid"]
-	if eid == URLEventID {
-		if r.Method == "DELETE" {
-			return GateErrM(swy.GateBadRequest, "Cannot remove URL from this FN")
-		}
-
-		return respond(w, fn.getURLEvt())
-	}
-
 	if !bson.IsObjectIdHex(eid) {
 		return GateErrM(swy.GateBadRequest, "Bad event ID")
 	}
@@ -862,8 +843,14 @@ func handleFunctionLogs(ctx context.Context, w http.ResponseWriter, r *http.Requ
 	return nil
 }
 
-func fnCallable(fn *FunctionDesc) bool {
-	return fn.isURL() && (fn.State == swy.DBFuncStateRdy)
+func reqPath(r *http.Request) string {
+	p := strings.SplitN(r.URL.Path, "/", 4)
+	if len(p) >= 4 {
+		return p[3]
+	} else {
+		empty := ""
+		return empty
+	}
 }
 
 func makeArgs(sopq *statsOpaque, r *http.Request) *swyapi.SwdFunctionRun {
@@ -907,15 +894,9 @@ func makeArgs(sopq *statsOpaque, r *http.Request) *swyapi.SwdFunctionRun {
 		}
 	}
 
+	path := reqPath(r)
+	args.Path = &path
 	args.Method = r.Method
-
-	p := strings.SplitN(r.URL.Path, "/", 4)
-	if len(p) >= 4 {
-		args.Path = &p[3]
-	} else {
-		empty := ""
-		args.Path = &empty
-	}
 
 	return args
 }
@@ -972,14 +953,7 @@ func rslimited(fmd *FnMemData) bool {
 	return false
 }
 
-func handleFunctionCall(w http.ResponseWriter, r *http.Request) {
-	var args *swyapi.SwdFunctionRun
-	var res *swyapi.SwdFunctionRunResult
-	var err error
-	var code int
-	var fmd *FnMemData
-	var conn *podConn
-
+func handleCall(w http.ResponseWriter, r *http.Request) {
 	if swyhttp.HandleCORS(w, r, CORS_Clnt_Methods, CORS_Clnt_Headers) { return }
 
 	sopq := statsStart()
@@ -987,90 +961,41 @@ func handleFunctionCall(w http.ResponseWriter, r *http.Request) {
 	ctx, done := mkContext2("::call", false)
 	defer done(ctx)
 
-	fnId := mux.Vars(r)["fnid"]
+	uid := mux.Vars(r)["urlid"]
 
-	fmd, err = memdGet(ctx, fnId)
+	url, err := urlFind(ctx, uid)
 	if err != nil {
-		code = http.StatusInternalServerError
-		err = errors.New("Error getting function")
-		goto out
+		http.Error(w, "Error getting URL handler", http.StatusInternalServerError)
+		return
 	}
 
-	if fmd == nil || !fmd.public {
-		code = http.StatusServiceUnavailable
-		err = errors.New("No such function")
-		goto out
+	if url == nil {
+		http.Error(w, "No such URL", http.StatusServiceUnavailable)
+		return
 	}
 
-	if ratelimited(fmd) {
-		code = http.StatusTooManyRequests
-		err = errors.New("Ratelimited")
-		goto out
-	}
+	url.Handle(ctx, w, r, sopq)
+}
 
-	if rslimited(fmd) {
-		code = http.StatusLocked
-		err = errors.New("Resources exhausted")
-		goto out
-	}
-
-	conn, err = balancerGetConnAny(ctx, fnId, fmd)
-	if err != nil {
-		code = http.StatusInternalServerError
-		err = errors.New("DB error")
-		goto out
-	}
-
-	defer balancerPutConn(fmd)
-	args = makeArgs(sopq, r)
-
-	if fmd.ac != nil {
-		args.Claims, err = fmd.ac.Verify(r)
+func reqAtoi(q url.Values, n string, def int) (int, error) {
+	aux := q.Get(n)
+	val := def
+	if aux != "" {
+		var err error
+		val, err = strconv.Atoi(aux)
 		if err != nil {
-			code = http.StatusUnauthorized
-			goto out
+			return def, err
 		}
 	}
 
-	res, err = doRunConn(ctx, conn, fnId, "", "call", args)
-	if err != nil {
-		code = http.StatusInternalServerError
-		goto out
-	}
-
-	if res.Code < 0 {
-		code = -res.Code
-		err = errors.New(res.Return)
-		goto out
-	}
-
-	if res.Code == 0 {
-		res.Code = http.StatusOK
-	}
-
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.WriteHeader(res.Code)
-	w.Write([]byte(res.Return))
-
-	statsUpdate(fmd, sopq, res)
-
-	return
-
-out:
-	http.Error(w, err.Error(), code)
+	return val, nil
 }
 
 func reqPeriods(q url.Values) int {
-	aux := q.Get("periods")
-	periods := 0
-	if aux != "" {
-		var err error
-		periods, err = strconv.Atoi(aux)
-		if err != nil {
-			return -1
-		}
+	periods, e := reqAtoi(q, "periods", 0)
+	if e != nil {
+		periods = -1
 	}
-
 	return periods
 }
 
@@ -1204,7 +1129,7 @@ func handleFunction(ctx context.Context, w http.ResponseWriter, r *http.Request)
 		}
 
 		if fu.State != "" {
-			cerr := fn.setState(ctx, &conf, fu.State)
+			cerr := fn.setState(ctx, fu.State)
 			if cerr != nil {
 				return cerr
 			}
@@ -1270,7 +1195,7 @@ func handleFunctionRun(ctx context.Context, w http.ResponseWriter, r *http.Reque
 			return GateErrE(swy.GateGenErr, err)
 		}
 
-		err = tryBuildFunction(ctx, &conf, &fn, suff)
+		err = tryBuildFunction(ctx, &fn, suff)
 		if err != nil {
 			return GateErrM(swy.GateGenErr, "Error building function")
 		}
@@ -1371,6 +1296,118 @@ func handleMwares(ctx context.Context, w http.ResponseWriter, r *http.Request) *
 	return nil
 }
 
+func handleRouters(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
+	switch r.Method {
+	case "GET":
+		q := r.URL.Query()
+
+		project := q.Get("project")
+		if project == "" {
+			project = DefaultProject
+		}
+
+		var rts []*RouterDesc
+
+		rname := q.Get("name")
+		if rname == "" {
+			err := dbFindAll(ctx, listReq(ctx, project, []string{}), &rts)
+			if err != nil {
+				return GateErrD(err)
+			}
+		} else {
+			var rt RouterDesc
+
+			err := dbFind(ctx, cookieReq(ctx, project, rname), &rt)
+			if err != nil {
+				return GateErrD(err)
+			}
+			rts = append(rts, &rt)
+		}
+
+		ret := []*swyapi.RouterInfo{}
+		for _, rt := range rts {
+			ret = append(ret, rt.toInfo(ctx, false))
+		}
+
+		return respond(w, &ret)
+
+	case "POST":
+		var params swyapi.RouterAdd
+
+		err := swyhttp.ReadAndUnmarshalReq(r, &params)
+		if err != nil {
+			return GateErrE(swy.GateBadRequest, err)
+		}
+
+		id := ctxSwoId(ctx, params.Project, params.Name)
+		rt, cerr := getRouterDesc(id, &params)
+		if cerr != nil {
+			return cerr
+		}
+
+		cerr = rt.Create(ctx)
+		if cerr != nil {
+			return cerr
+		}
+
+		return respond(w, rt.toInfo(ctx, false))
+	}
+
+	return nil
+}
+
+func handleRouter(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
+	var rt RouterDesc
+
+	/* FIXME -- omit table here */
+	cerr := objFindForReq(ctx, r, "rid", &rt)
+	if cerr != nil {
+		return cerr
+	}
+
+	switch r.Method {
+	case "GET":
+		return respond(w, rt.toInfo(ctx, true))
+
+	case "DELETE":
+		cerr := rt.Remove(ctx)
+		if cerr != nil {
+			return cerr
+		}
+
+		w.WriteHeader(http.StatusOK)
+	}
+
+	return nil
+}
+
+func handleRouterTable(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
+	var rt RouterDesc
+
+	/* FIXME -- omit table here */
+	cerr := objFindForReq(ctx, r, "rid", &rt)
+	if cerr != nil {
+		return cerr
+	}
+
+	switch r.Method {
+	case "GET":
+		q := r.URL.Query()
+		f, e := reqAtoi(q, "from", 0)
+		if f < 0 || e != nil {
+			return GateErrM(swy.GateBadRequest, "Invalid range")
+		}
+		t, e := reqAtoi(q, "to", len(rt.Table))
+		if t > len(rt.Table) || e != nil {
+			return GateErrM(swy.GateBadRequest, "Invalid range")
+		}
+
+		return respond(w, rt.Table[f:t])
+	}
+
+	return nil
+}
+
 func handleAccounts(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
 	q := r.URL.Query()
 
@@ -1454,7 +1491,7 @@ func handleAccount(ctx context.Context, w http.ResponseWriter, r *http.Request) 
 		w.WriteHeader(http.StatusOK)
 
 	case "DELETE":
-		cerr := ac.Del(ctx, &conf)
+		cerr := ac.Del(ctx)
 		if cerr != nil {
 			return cerr
 		}
@@ -1577,7 +1614,7 @@ func handleRepo(ctx context.Context, w http.ResponseWriter, r *http.Request) *sw
 		w.WriteHeader(http.StatusOK)
 
 	case "DELETE":
-		cerr := rd.Detach(ctx, &conf)
+		cerr := rd.Detach(ctx)
 		if cerr != nil {
 			return cerr
 		}
@@ -1694,7 +1731,7 @@ func handleS3Access(ctx context.Context, w http.ResponseWriter, r *http.Request)
 		return GateErrE(swy.GateBadRequest, err)
 	}
 
-	creds, cerr := mwareGetS3Creds(ctx, &conf, &params)
+	creds, cerr := s3GetCreds(ctx, &params)
 	if cerr != nil {
 		return cerr
 	}
@@ -1857,7 +1894,12 @@ func handleAuths(ctx context.Context, w http.ResponseWriter, r *http.Request) *s
 						Repo: demoRep.ObjID.Hex() + "/" + fname,
 					},
 					Mware: []string { aa.Name + "_jwt", aa.Name + "_mgo" },
-					Url: true,
+					Events: []swyapi.FunctionEvent {
+						swyapi.FunctionEvent{
+							Name: "API",
+							Source: "url",
+						},
+					},
 				},
 			},
 			Mwares: []*swyapi.MwareAdd {
@@ -1924,7 +1966,7 @@ func handleMware(ctx context.Context, w http.ResponseWriter, r *http.Request) *s
 	return nil
 }
 
-func handleGenericReq(w http.ResponseWriter, r *http.Request) (context.Context, func(context.Context)) {
+func getReqContext(w http.ResponseWriter, r *http.Request) (context.Context, func(context.Context)) {
 	token := r.Header.Get("X-Auth-Token")
 	if token == "" {
 		http.Error(w, "Auth token not provided", http.StatusUnauthorized)
@@ -1971,13 +2013,15 @@ func handleGenericReq(w http.ResponseWriter, r *http.Request) (context.Context, 
 	return mkContext2(tenant, admin)
 }
 
-func genReqHandler(cb func(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr) http.Handler {
+type gateGenReq func(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr
+
+func genReqHandler(cb gateGenReq) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if swyhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) {
 			return
 		}
 
-		ctx, done := handleGenericReq(w, r)
+		ctx, done := getReqContext(w, r)
 		if ctx == nil {
 			return
 		}
@@ -2159,11 +2203,15 @@ func main() {
 	r.Handle("/v1/deployments",		genReqHandler(handleDeployments)).Methods("GET", "POST", "OPTIONS")
 	r.Handle("/v1/deployments/{did}",	genReqHandler(handleDeployment)).Methods("GET", "DELETE", "OPTIONS")
 
+	r.Handle("/v1/routers",			genReqHandler(handleRouters)).Methods("GET", "POST", "OPTIONS")
+	r.Handle("/v1/routers/{rid}",		genReqHandler(handleRouter)).Methods("GET", "DELETE", "OPTIONS")
+	r.Handle("/v1/routers/{rid}/table",	genReqHandler(handleRouterTable)).Methods("GET", "OPTIONS")
+
 	r.Handle("/v1/info/langs",		genReqHandler(handleLanguages)).Methods("GET", "OPTIONS")
 	r.Handle("/v1/info/langs/{lang}",	genReqHandler(handleLanguage)).Methods("GET", "OPTIONS")
 	r.Handle("/v1/info/mwares",		genReqHandler(handleMwareTypes)).Methods("GET", "OPTIONS")
 
-	r.PathPrefix("/call/{fnid}").Methods("GET", "PUT", "POST", "DELETE", "PATCH", "HEAD", "OPTIONS").HandlerFunc(handleFunctionCall)
+	r.PathPrefix("/call/{urlid}").Methods("GET", "PUT", "POST", "DELETE", "PATCH", "HEAD", "OPTIONS").HandlerFunc(handleCall)
 
 	RtInit()
 
@@ -2196,7 +2244,7 @@ func main() {
 		glog.Fatalf("Can't setup: %s", err.Error())
 	}
 
-	err = BuilderInit(&conf)
+	err = BuilderInit(ctx, &conf)
 	if err != nil {
 		glog.Fatalf("Can't set up builder: %s", err.Error())
 	}

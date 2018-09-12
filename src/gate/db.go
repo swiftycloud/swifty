@@ -30,6 +30,7 @@ const (
 	DBColEvents	= "Events"
 	DBColRepos	= "Repos"
 	DBColAccounts	= "Accounts"
+	DBColRouters	= "Routers"
 )
 
 var dbColMap map[reflect.Type]string
@@ -60,6 +61,10 @@ func init() {
 	dbColMap[reflect.TypeOf(&AccDesc{})] = DBColAccounts
 	dbColMap[reflect.TypeOf([]*AccDesc{})] = DBColAccounts
 	dbColMap[reflect.TypeOf(&[]*AccDesc{})] = DBColAccounts
+	dbColMap[reflect.TypeOf(RouterDesc{})] = DBColRouters
+	dbColMap[reflect.TypeOf(&RouterDesc{})] = DBColRouters
+	dbColMap[reflect.TypeOf([]*RouterDesc{})] = DBColRouters
+	dbColMap[reflect.TypeOf(&[]*RouterDesc{})] = DBColRouters
 }
 
 func dbCol(ctx context.Context, col string) *mgo.Collection {
@@ -89,6 +94,8 @@ func objcni(o interface{}) (string, bson.ObjectId) {
 		return DBColFunc, o.ObjID
 	case *FnEventDesc:
 		return DBColEvents, o.ObjID
+	case *RouterDesc:
+		return DBColRouters, o.ObjID
 	default:
 		glog.Fatalf("Unmapped object %s", reflect.TypeOf(o).String())
 		return "", ""
@@ -477,6 +484,10 @@ func dbConnect(conf *YAMLConf) error {
 		return fmt.Errorf("No cookie index for mware: %s", err.Error())
 	}
 	err = dbs.DB(DBStateDB).C(DBColAccounts).EnsureIndex(index)
+	if err != nil {
+		return fmt.Errorf("No cookie index for mware: %s", err.Error())
+	}
+	err = dbs.DB(DBStateDB).C(DBColRouters).EnsureIndex(index)
 	if err != nil {
 		return fmt.Errorf("No cookie index for mware: %s", err.Error())
 	}

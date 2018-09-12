@@ -170,7 +170,7 @@ type FunctionAdd struct {
 	UserData	string			`json:"userdata,omitempty"`
 	AuthCtx		string			`json:"authctx,omitempty"`
 
-	Url		bool			`json:"-"`
+	Events		[]FunctionEvent		`json:"events,omitempty"` /* Deploy only */
 }
 
 type FunctionUpdate struct {
@@ -267,4 +267,24 @@ type RepoFile struct {
 type LangInfo struct {
 	Version		string			`json:"version"`
 	Packages	[]string		`json:"packages"`
+}
+
+type RouterEntry struct {
+	Method		string		`json:"method"`
+	Path		string		`json:"path"`
+	Call		string		`json:"call"`
+}
+
+type RouterAdd struct {
+	Name		string		`json:"name"`
+	Project		string		`json:"project"`
+	Table		[]*RouterEntry	`json:"table"`
+}
+
+type RouterInfo struct {
+	Id		string		`json:"id"`
+	Name		string		`json:"name"`
+	Project		string		`json:"project"`
+	TLen		int		`json:"table_len"`
+	URL		string		`json:"url"`
 }

@@ -1,9 +1,8 @@
 package main
 
 import (
-	"strings"
 	"context"
-	"path/filepath"
+	"errors"
 	"gopkg.in/mgo.v2/bson"
 	"../common"
 	"../apis"
@@ -13,38 +12,13 @@ type EventOps struct {
 	setup	func(*FnEventDesc, *swyapi.FunctionEvent)
 	start	func(context.Context, *FunctionDesc, *FnEventDesc) error
 	stop	func(context.Context, *FnEventDesc) error
+	cleanup	func(context.Context, *FnEventDesc)
 }
 
 var evtHandlers = map[string]*EventOps {
 	"cron":	&cronOps,
 	"s3":	&s3EOps,
 	"url":	&urlEOps,
-}
-
-type FnEventS3 struct {
-	Ns		string		`bson:"ns"`
-	Bucket		string		`bson:"bucket"`
-	Ops		string		`bson:"ops"`
-	Pattern		string		`bson:"pattern"`
-}
-
-func (s3 *FnEventS3)hasOp(op string) bool {
-	ops := strings.Split(s3.Ops, ",")
-	for _, o := range ops {
-		if o == op {
-			return true
-		}
-	}
-	return false
-}
-
-func (s3 *FnEventS3)matchPattern(oname string) bool {
-	if s3.Pattern == "" {
-		return true
-	}
-
-	m, err := filepath.Match(s3.Pattern, oname)
-	return err == nil && m
 }
 
 type FnEventDesc struct {
@@ -115,7 +89,8 @@ func (ed *FnEventDesc)Add(ctx context.Context, fn *FunctionDesc) *swyapi.GateErr
 		return GateErrD(err)
 	}
 
-	evtHandlers[ed.Source].start(ctx, fn, ed)
+	h := evtHandlers[ed.Source]
+	h.start(ctx, fn, ed)
 	if err != nil {
 		dbRemove(ctx, ed)
 		return GateErrM(swy.GateGenErr, "Can't setup event")
@@ -123,20 +98,20 @@ func (ed *FnEventDesc)Add(ctx context.Context, fn *FunctionDesc) *swyapi.GateErr
 
 	err = dbUpdateAll(ctx, ed)
 	if err != nil {
-		eventStop(ctx, ed)
+		h.stop(ctx, ed)
 		dbRemove(ctx, ed)
+		if h.cleanup != nil {
+			h.cleanup(ctx, ed)
+		}
 		return GateErrD(err)
 	}
 
 	return nil
 }
 
-func eventStop(ctx context.Context, ed *FnEventDesc) error {
-	return evtHandlers[ed.Source].stop(ctx, ed)
-}
-
 func (ed *FnEventDesc)Delete(ctx context.Context, fn *FunctionDesc) *swyapi.GateErr {
-	err := eventStop(ctx, ed)
+	h := evtHandlers[ed.Source]
+	err := h.stop(ctx, ed)
 	if err != nil {
 		return GateErrM(swy.GateGenErr, "Can't stop event")
 	}
@@ -146,6 +121,9 @@ func (ed *FnEventDesc)Delete(ctx context.Context, fn *FunctionDesc) *swyapi.Gate
 		return GateErrD(err)
 	}
 
+	if h.cleanup != nil {
+		h.cleanup(ctx, ed)
+	}
 	return nil
 }
 
@@ -158,14 +136,9 @@ func clearAllEvents(ctx context.Context, fn *FunctionDesc) error {
 	}
 
 	for _, e := range evs {
-		err = eventStop(ctx, e)
-		if err != nil {
-			return err
-		}
-
-		err = dbRemove(ctx, e)
-		if err != nil {
-			return err
+		cer := e.Delete(ctx, fn)
+		if cer != nil {
+			return errors.New(cer.Message)
 		}
 	}
 

@@ -116,7 +116,7 @@ var mwareHandlers = map[string]*MwareOps {
 	"authjwt":	&MwareAuthJWT,
 }
 
-func mwareRemoveId(ctx context.Context, conf *YAMLConfMw, id *SwoId) *swyapi.GateErr {
+func mwareRemoveId(ctx context.Context, id *SwoId) *swyapi.GateErr {
 	var item MwareDesc
 
 	err := dbFind(ctx, id.dbReq(), &item)

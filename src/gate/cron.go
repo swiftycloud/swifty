@@ -25,7 +25,7 @@ func cronEventStart(ctx context.Context, _ *FunctionDesc, evt *FnEventDesc) erro
 
 		err := dbFind(cctx, bson.M{"cookie": evt.FnId}, &fn)
 		if err != nil {
-			glog.Errorf("Can't find FN %s to run Cron event", evt.FnId)
+			ctxlog(cctx).Errorf("Can't find FN %s to run Cron event", evt.FnId)
 			return
 		}
 
@@ -35,7 +35,7 @@ func cronEventStart(ctx context.Context, _ *FunctionDesc, evt *FnEventDesc) erro
 
 		_, err = doRun(cctx, &fn, "cron", &swyapi.SwdFunctionRun{Args: evt.Cron.Args})
 		if err != nil {
-			ctxlog(ctx).Errorf("cron: Error running FN %s", err.Error())
+			ctxlog(cctx).Errorf("cron: Error running FN %s", err.Error())
 		}
 	})
 

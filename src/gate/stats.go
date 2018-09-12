@@ -250,7 +250,7 @@ func (st *FnStats)Write(ctx context.Context) {
 	if err == nil {
 		st.onDisk = &now
 	} else {
-		glog.Errorf("Error upserting fn stats: %s", err.Error())
+		ctxlog(ctx).Errorf("Error upserting fn stats: %s", err.Error())
 	}
 }
 
@@ -278,7 +278,7 @@ func (st *TenStats)Write(ctx context.Context) {
 		st.onDisk = &now
 	} else {
 		/* Next time we'll get here with largetr deltas */
-		glog.Errorf("Error upserting tenant stats: %s", err.Error())
+		ctxlog(ctx).Errorf("Error upserting tenant stats: %s", err.Error())
 	}
 }
 
