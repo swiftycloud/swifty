@@ -20,6 +20,19 @@ type FnURL struct {
 	fd	*FnMemData
 }
 
+const (
+	URLRouter	= "r"
+	URLFunction	= ""
+)
+
+func getURL(typ, urlid string) string {
+	cg := conf.Daemon.CallGate
+	if cg == "" {
+		cg = conf.Daemon.Addr
+	}
+	return cg + "/call/" + typ + urlid
+}
+
 func urlEvFind(ctx context.Context, urlid string) (*FnEventDesc, error) {
 	var ed FnEventDesc
 	/* URLid is FN cookie now, but we may allocate random value for it */
@@ -33,20 +46,24 @@ func urlEvFind(ctx context.Context, urlid string) (*FnEventDesc, error) {
 func urlFind(ctx context.Context, urlid string) (URL, error) {
 	res, ok := urls.Load(urlid)
 	if !ok {
-		ed, err := urlEvFind(ctx, urlid)
-		if err != nil {
-			if dbNF(err) {
-				err = nil
+		if urlid[0] == URLRouter[0] {
+			return nil, errors.New("Router URL not yet handled")
+		} else {
+			ed, err := urlEvFind(ctx, urlid)
+			if err != nil {
+				if dbNF(err) {
+					err = nil
+				}
+				return nil, err
 			}
-			return nil, err
-		}
 
-		fdm, err := memdGet(ctx, ed.FnId)
-		if err != nil {
-			return nil, err
-		}
+			fdm, err := memdGet(ctx, ed.FnId)
+			if err != nil {
+				return nil, err
+			}
 
-		res, _ = urls.LoadOrStore(urlid, &FnURL{ fd: fdm })
+			res, _ = urls.LoadOrStore(urlid, &FnURL{ fd: fdm })
+		}
 	}
 
 	return res.(URL), nil

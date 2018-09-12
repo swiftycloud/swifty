@@ -23,12 +23,18 @@ func getRouterDesc(id *SwoId, params *swyapi.RouterAdd) (*RouterDesc, *swyapi.Ga
 	return &rd, nil
 }
 
+func (rt *RouterDesc)getURL() string {
+	return getURL(URLRouter, rt.SwoId.Cookie())
+}
+
 func (rt *RouterDesc)toInfo(ctx context.Context, details bool) *swyapi.RouterInfo {
 	ri := swyapi.RouterInfo {
 		Id:		rt.ObjID.Hex(),
 		Name:		rt.SwoId.Name,
 		Project:	rt.SwoId.Project,
 	}
+
+	ri.URL = rt.getURL()
 
 	return &ri
 }

@@ -123,11 +123,7 @@ func (fn *FunctionDesc)ToState(ctx context.Context, st, from int) error {
 var zeroVersion = "0"
 
 func (fn *FunctionDesc)getURL() string {
-	cg := conf.Daemon.CallGate
-	if cg == "" {
-		cg = conf.Daemon.Addr
-	}
-	return cg + "/call/" + fn.Cookie
+	return getURL(URLFunction, fn.Cookie)
 }
 
 func (fn *FunctionDesc)toMInfo(ctx context.Context) *swyapi.FunctionMdat {
