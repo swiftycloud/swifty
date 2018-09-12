@@ -124,12 +124,13 @@ out:
 	http.Error(w, err.Error(), resp)
 }
 
-func respond(w http.ResponseWriter, result interface{}) *swyapi.GateErr {
+func respond(ctx context.Context, w http.ResponseWriter, result interface{}) *swyapi.GateErr {
 	err := swyhttp.MarshalAndWrite(w, result)
 	if err != nil {
 		return GateErrE(swy.GateBadResp, err)
 	}
 
+	traceResponce(ctx, result)
 	return nil
 }
 
@@ -227,7 +228,7 @@ func handleProjectList(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		}
 	}
 
-	return respond(w, &result)
+	return respond(ctx, w, &result)
 }
 
 func objFindId(ctx context.Context, id string, out interface{}, q bson.M) *swyapi.GateErr {
@@ -296,7 +297,7 @@ func handleFunctionTriggers(ctx context.Context, w http.ResponseWriter, r *http.
 			evs = append(evs, e.toInfo(&fn))
 		}
 
-		return respond(w, evs)
+		return respond(ctx, w, evs)
 
 	case "POST":
 		var evt swyapi.FunctionEvent
@@ -316,7 +317,7 @@ func handleFunctionTriggers(ctx context.Context, w http.ResponseWriter, r *http.
 			return cerr
 		}
 
-		return respond(w, ed.toInfo(&fn))
+		return respond(ctx, w, ed.toInfo(&fn))
 	}
 
 	return nil
@@ -332,7 +333,7 @@ func handleFunctionAuthCtx(ctx context.Context, w http.ResponseWriter, r *http.R
 
 	switch r.Method {
 	case "GET":
-		return respond(w, fn.AuthCtx)
+		return respond(ctx, w, fn.AuthCtx)
 
 	case "PUT":
 		var ac string
@@ -363,7 +364,7 @@ func handleFunctionEnv(ctx context.Context, w http.ResponseWriter, r *http.Reque
 
 	switch r.Method {
 	case "GET":
-		return respond(w, fn.Code.Env)
+		return respond(ctx, w, fn.Code.Env)
 
 	case "PUT":
 		var env []string
@@ -394,7 +395,7 @@ func handleFunctionSize(ctx context.Context, w http.ResponseWriter, r *http.Requ
 
 	switch r.Method {
 	case "GET":
-		return respond(w, &swyapi.FunctionSize{
+		return respond(ctx, w, &swyapi.FunctionSize{
 			Memory:		fn.Size.Mem,
 			Timeout:	fn.Size.Tmo,
 			Rate:		fn.Size.Rate,
@@ -430,7 +431,7 @@ func handleFunctionMwares(ctx context.Context, w http.ResponseWriter, r *http.Re
 
 	switch r.Method {
 	case "GET":
-		return respond(w, fn.listMware(ctx))
+		return respond(ctx, w, fn.listMware(ctx))
 
 	case "POST":
 		var mid string
@@ -496,7 +497,7 @@ func handleFunctionAccounts(ctx context.Context, w http.ResponseWriter, r *http.
 
 	switch r.Method {
 	case "GET":
-		return respond(w, fn.listAccounts(ctx))
+		return respond(ctx, w, fn.listAccounts(ctx))
 
 	case "POST":
 		var aid string
@@ -558,7 +559,7 @@ func handleFunctionS3Bs(ctx context.Context, w http.ResponseWriter, r *http.Requ
 
 	switch r.Method {
 	case "GET":
-		return respond(w, fn.S3Buckets)
+		return respond(ctx, w, fn.S3Buckets)
 
 	case "POST":
 		var bname string
@@ -622,7 +623,7 @@ func handleFunctionTrigger(ctx context.Context, w http.ResponseWriter, r *http.R
 
 	switch r.Method {
 	case "GET":
-		return respond(w, ed.toInfo(&fn))
+		return respond(ctx, w, ed.toInfo(&fn))
 
 	case "DELETE":
 		erc := ed.Delete(ctx, &fn)
@@ -685,7 +686,7 @@ func handleFunctionSources(ctx context.Context, w http.ResponseWriter, r *http.R
 			return cerr
 		}
 
-		return respond(w, src)
+		return respond(ctx, w, src)
 
 	case "PUT":
 		var src swyapi.FunctionSources
@@ -764,7 +765,7 @@ func handleTenantStats(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		return cerr
 	}
 
-	return respond(w, resp)
+	return respond(ctx, w, resp)
 }
 
 func handleFunctionStats(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
@@ -787,7 +788,7 @@ func handleFunctionStats(ctx context.Context, w http.ResponseWriter, r *http.Req
 			return cerr
 		}
 
-		return respond(w, &swyapi.FunctionStatsResp{ Stats: stats })
+		return respond(ctx, w, &swyapi.FunctionStatsResp{ Stats: stats })
 	}
 
 	return nil
@@ -837,7 +838,7 @@ func handleFunctionLogs(ctx context.Context, w http.ResponseWriter, r *http.Requ
 			})
 		}
 
-		return respond(w, resp)
+		return respond(ctx, w, resp)
 	}
 
 	return nil
@@ -1008,30 +1009,16 @@ func handleFunctions(ctx context.Context, w http.ResponseWriter, r *http.Request
 			project = DefaultProject
 		}
 
+		fname := q.Get("name")
 		details := (q.Get("details") != "")
 		periods := reqPeriods(q)
 		if periods < 0 {
 			return GateErrC(swy.GateBadRequest)
 		}
 
-		var fns []*FunctionDesc
-		var err error
-
-		fname := q.Get("name")
-		if fname == "" {
-			err = dbFindAll(ctx, listReq(ctx, project, q["label"]), &fns)
-			if err != nil {
-				return GateErrD(err)
-			}
-			glog.Debugf("Found %d fns", len(fns))
-		} else {
-			var fn FunctionDesc
-
-			err = dbFind(ctx, cookieReq(ctx, project, fname), &fn)
-			if err != nil {
-				return GateErrD(err)
-			}
-			fns = append(fns, &fn)
+		fns, cerr := listFunctions(ctx, project, fname, q["label"])
+		if cerr != nil {
+			return cerr
 		}
 
 		ret := []*swyapi.FunctionInfo{}
@@ -1044,7 +1031,7 @@ func handleFunctions(ctx context.Context, w http.ResponseWriter, r *http.Request
 			ret = append(ret, fi)
 		}
 
-		return respond(w, &ret)
+		return respond(ctx, w, &ret)
 
 	case "POST":
 		var params swyapi.FunctionAdd
@@ -1074,7 +1061,7 @@ func handleFunctions(ctx context.Context, w http.ResponseWriter, r *http.Request
 		}
 
 		fi, _ := fd.toInfo(ctx, false, 0)
-		return respond(w, fi)
+		return respond(ctx, w, fi)
 	}
 
 	return nil
@@ -1088,7 +1075,7 @@ func handleFunctionMdat(ctx context.Context, w http.ResponseWriter, r *http.Requ
 		return cerr
 	}
 
-	return respond(w, fn.toMInfo(ctx))
+	return respond(ctx, w, fn.toMInfo(ctx))
 }
 
 func handleFunction(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
@@ -1111,7 +1098,7 @@ func handleFunction(ctx context.Context, w http.ResponseWriter, r *http.Request)
 			return cerr
 		}
 
-		return respond(w, fi)
+		return respond(ctx, w, fi)
 
 	case "PUT":
 		var fu swyapi.FunctionUpdate
@@ -1136,7 +1123,7 @@ func handleFunction(ctx context.Context, w http.ResponseWriter, r *http.Request)
 		}
 
 		fi, _ := fn.toInfo(ctx, false, 0)
-		return respond(w, fi)
+		return respond(ctx, w, fi)
 
 	case "DELETE":
 		cerr := fn.Remove(ctx)
@@ -1221,7 +1208,7 @@ func handleFunctionRun(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		}
 	}
 
-	return respond(w, res)
+	return respond(ctx, w, res)
 }
 
 func handleMwares(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
@@ -1236,28 +1223,11 @@ func handleMwares(ctx context.Context, w http.ResponseWriter, r *http.Request) *
 
 		details := (q.Get("details") != "")
 		mwtype := q.Get("type")
-
-		var mws []*MwareDesc
-		var err error
-
 		mname := q.Get("name")
-		if mname == "" {
-			q := listReq(ctx, project, q["label"])
-			if mwtype != "" {
-				q = append(q, bson.DocElem{"mwaretype", mwtype})
-			}
-			err = dbFindAll(ctx, q, &mws)
-			if err != nil {
-				return GateErrD(err)
-			}
-		} else {
-			var mw MwareDesc
 
-			err = dbFind(ctx, cookieReq(ctx, project, mname), &mw)
-			if err != nil {
-				return GateErrD(err)
-			}
-			mws = append(mws, &mw)
+		mws, cerr := listMwares(ctx, project, mname, mwtype, q["label"])
+		if cerr != nil {
+			return cerr
 		}
 
 		ret := []*swyapi.MwareInfo{}
@@ -1270,7 +1240,7 @@ func handleMwares(ctx context.Context, w http.ResponseWriter, r *http.Request) *
 			ret = append(ret, mi)
 		}
 
-		return respond(w, &ret)
+		return respond(ctx, w, &ret)
 
 	case "POST":
 		var params swyapi.MwareAdd
@@ -1290,7 +1260,7 @@ func handleMwares(ctx context.Context, w http.ResponseWriter, r *http.Request) *
 		}
 
 		mi, _ := mw.toInfo(ctx, false)
-		return respond(w, &mi)
+		return respond(ctx, w, &mi)
 	}
 
 	return nil
@@ -1305,23 +1275,11 @@ func handleRouters(ctx context.Context, w http.ResponseWriter, r *http.Request) 
 		if project == "" {
 			project = DefaultProject
 		}
-
-		var rts []*RouterDesc
-
 		rname := q.Get("name")
-		if rname == "" {
-			err := dbFindAll(ctx, listReq(ctx, project, []string{}), &rts)
-			if err != nil {
-				return GateErrD(err)
-			}
-		} else {
-			var rt RouterDesc
 
-			err := dbFind(ctx, cookieReq(ctx, project, rname), &rt)
-			if err != nil {
-				return GateErrD(err)
-			}
-			rts = append(rts, &rt)
+		rts, cerr := listRouters(ctx, project, rname)
+		if cerr != nil {
+			return cerr
 		}
 
 		ret := []*swyapi.RouterInfo{}
@@ -1329,7 +1287,7 @@ func handleRouters(ctx context.Context, w http.ResponseWriter, r *http.Request) 
 			ret = append(ret, rt.toInfo(ctx, false))
 		}
 
-		return respond(w, &ret)
+		return respond(ctx, w, &ret)
 
 	case "POST":
 		var params swyapi.RouterAdd
@@ -1350,7 +1308,7 @@ func handleRouters(ctx context.Context, w http.ResponseWriter, r *http.Request) 
 			return cerr
 		}
 
-		return respond(w, rt.toInfo(ctx, false))
+		return respond(ctx, w, rt.toInfo(ctx, false))
 	}
 
 	return nil
@@ -1367,7 +1325,7 @@ func handleRouter(ctx context.Context, w http.ResponseWriter, r *http.Request) *
 
 	switch r.Method {
 	case "GET":
-		return respond(w, rt.toInfo(ctx, true))
+		return respond(ctx, w, rt.toInfo(ctx, true))
 
 	case "DELETE":
 		cerr := rt.Remove(ctx)
@@ -1402,7 +1360,21 @@ func handleRouterTable(ctx context.Context, w http.ResponseWriter, r *http.Reque
 			return GateErrM(swy.GateBadRequest, "Invalid range")
 		}
 
-		return respond(w, rt.Table[f:t])
+		return respond(ctx, w, rt.Table[f:t])
+	case "PUT":
+		var tbl []*swyapi.RouterEntry
+
+		err := swyhttp.ReadAndUnmarshalReq(r, &tbl)
+		if err != nil {
+			return GateErrE(swy.GateBadRequest, err)
+		}
+
+		cerr := rt.setTable(ctx, tbl)
+		if cerr != nil {
+			return cerr
+		}
+
+		w.WriteHeader(http.StatusOK)
 	}
 
 	return nil
@@ -1430,7 +1402,7 @@ func handleAccounts(ctx context.Context, w http.ResponseWriter, r *http.Request)
 			ret = append(ret, ac.toInfo(ctx, false))
 		}
 
-		return respond(w, &ret)
+		return respond(ctx, w, &ret)
 
 	case "POST":
 		var params map[string]string
@@ -1457,7 +1429,7 @@ func handleAccounts(ctx context.Context, w http.ResponseWriter, r *http.Request)
 			return cerr
 		}
 
-		return respond(w, ac.toInfo(ctx, false))
+		return respond(ctx, w, ac.toInfo(ctx, false))
 	}
 
 	return nil
@@ -1473,7 +1445,7 @@ func handleAccount(ctx context.Context, w http.ResponseWriter, r *http.Request) 
 
 	switch r.Method {
 	case "GET":
-		return respond(w, ac.toInfo(ctx, true))
+		return respond(ctx, w, ac.toInfo(ctx, true))
 
 	case "PUT":
 		var params map[string]string
@@ -1518,7 +1490,7 @@ func handleRepos(ctx context.Context, w http.ResponseWriter, r *http.Request) *s
 			return cerr
 		}
 
-		return respond(w, &ret)
+		return respond(ctx, w, &ret)
 
 	case "POST":
 		var params swyapi.RepoAdd
@@ -1554,7 +1526,7 @@ func handleRepos(ctx context.Context, w http.ResponseWriter, r *http.Request) *s
 		}
 
 		ri, _ := rp.toInfo(ctx, false)
-		return respond(w, &ri)
+		return respond(ctx, w, &ri)
 	}
 
 	return nil
@@ -1596,7 +1568,7 @@ func handleRepo(ctx context.Context, w http.ResponseWriter, r *http.Request) *sw
 			return cerr
 		}
 
-		return respond(w, ri)
+		return respond(ctx, w, ri)
 
 	case "PUT":
 		var ru swyapi.RepoUpdate
@@ -1641,7 +1613,7 @@ func handleRepoFiles(ctx context.Context, w http.ResponseWriter, r *http.Request
 			return cerr
 		}
 
-		return respond(w, files)
+		return respond(ctx, w, files)
 	} else {
 		cont, cerr := rd.readFile(ctx, p[5])
 		if cerr != nil {
@@ -1667,7 +1639,7 @@ func handleRepoDesc(ctx context.Context, w http.ResponseWriter, r *http.Request)
 		return cerr
 	}
 
-	return respond(w, d)
+	return respond(ctx, w, d)
 }
 
 func handleRepoPull(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
@@ -1696,7 +1668,7 @@ func handleLanguages(ctx context.Context, w http.ResponseWriter, r *http.Request
 		ret = append(ret, l)
 	}
 
-	return respond(w, ret)
+	return respond(ctx, w, ret)
 }
 
 func handleLanguage(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
@@ -1706,7 +1678,7 @@ func handleLanguage(ctx context.Context, w http.ResponseWriter, r *http.Request)
 		return GateErrM(swy.GateGenErr, "Language not supported")
 	}
 
-	return respond(w, lh.info())
+	return respond(ctx, w, lh.info())
 }
 
 func handleMwareTypes(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
@@ -1720,7 +1692,7 @@ func handleMwareTypes(ctx context.Context, w http.ResponseWriter, r *http.Reques
 		ret = append(ret, mw)
 	}
 
-	return respond(w, ret)
+	return respond(ctx, w, ret)
 }
 
 func handleS3Access(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
@@ -1736,7 +1708,7 @@ func handleS3Access(ctx context.Context, w http.ResponseWriter, r *http.Request)
 		return cerr
 	}
 
-	return respond(w, creds)
+	return respond(ctx, w, creds)
 }
 
 func handleDeployments(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
@@ -1778,7 +1750,7 @@ func handleDeployments(ctx context.Context, w http.ResponseWriter, r *http.Reque
 			dis = append(dis, di)
 		}
 
-		return respond(w, dis)
+		return respond(ctx, w, dis)
 
 	case "POST":
 		var ds swyapi.DeployStart
@@ -1800,7 +1772,7 @@ func handleDeployments(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		}
 
 		di, _ := dd.toInfo(ctx, false)
-		return respond(w, &di)
+		return respond(ctx, w, &di)
 	}
 
 	return nil
@@ -1825,7 +1797,7 @@ func handleOneDeployment(ctx context.Context, w http.ResponseWriter, r *http.Req
 			return cerr
 		}
 
-		return respond(w, di)
+		return respond(ctx, w, di)
 
 	case "DELETE":
 		cerr := dd.Stop(ctx)
@@ -1860,7 +1832,7 @@ func handleAuths(ctx context.Context, w http.ResponseWriter, r *http.Request) *s
 			auths = append(auths, &swyapi.AuthInfo{ Id: d.ObjID.Hex(), Name: d.SwoId.Name })
 		}
 
-		return respond(w, auths)
+		return respond(ctx, w, auths)
 
 	case "POST":
 		var aa swyapi.AuthAdd
@@ -1920,7 +1892,7 @@ func handleAuths(ctx context.Context, w http.ResponseWriter, r *http.Request) *s
 		}
 
 		di, _ := dd.toInfo(ctx, false)
-		return respond(w, &di)
+		return respond(ctx, w, &di)
 	}
 
 	return nil
@@ -1952,7 +1924,7 @@ func handleMware(ctx context.Context, w http.ResponseWriter, r *http.Request) *s
 			return cerr
 		}
 
-		return respond(w, mi)
+		return respond(ctx, w, mi)
 
 	case "DELETE":
 		cerr := mw.Remove(ctx)
@@ -2028,6 +2000,8 @@ func genReqHandler(cb gateGenReq) http.Handler {
 
 		defer done(ctx)
 
+		traceRequest(ctx, r)
+
 		cerr := cb(ctx, w, r)
 		if cerr != nil {
 			ctxlog(ctx).Errorf("Error in callback: %s", cerr.Message)
@@ -2039,6 +2013,8 @@ func genReqHandler(cb gateGenReq) http.Handler {
 			}
 
 			http.Error(w, string(jdata), http.StatusBadRequest)
+
+			traceError(ctx, cerr)
 		}
 	})
 }
@@ -2205,7 +2181,7 @@ func main() {
 
 	r.Handle("/v1/routers",			genReqHandler(handleRouters)).Methods("GET", "POST", "OPTIONS")
 	r.Handle("/v1/routers/{rid}",		genReqHandler(handleRouter)).Methods("GET", "DELETE", "OPTIONS")
-	r.Handle("/v1/routers/{rid}/table",	genReqHandler(handleRouterTable)).Methods("GET", "OPTIONS")
+	r.Handle("/v1/routers/{rid}/table",	genReqHandler(handleRouterTable)).Methods("GET", "PUT", "OPTIONS")
 
 	r.Handle("/v1/info/langs",		genReqHandler(handleLanguages)).Methods("GET", "OPTIONS")
 	r.Handle("/v1/info/langs/{lang}",	genReqHandler(handleLanguage)).Methods("GET", "OPTIONS")
@@ -2214,6 +2190,11 @@ func main() {
 	r.PathPrefix("/call/{urlid}").Methods("GET", "PUT", "POST", "DELETE", "PATCH", "HEAD", "OPTIONS").HandlerFunc(handleCall)
 
 	RtInit()
+
+	err = tracerInit()
+	if err != nil {
+		glog.Fatalf("Can't set up tracer")
+	}
 
 	err = dbConnect(&conf)
 	if err != nil {

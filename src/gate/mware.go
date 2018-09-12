@@ -108,6 +108,31 @@ func mwareGenerateUserPassClient(ctx context.Context, mwd *MwareDesc) (error) {
 	return nil
 }
 
+func listMwares(ctx context.Context, project, name, mtype string, labels []string) ([]*MwareDesc, *swyapi.GateErr) {
+	var mws []*MwareDesc
+
+	if name == "" {
+		q := listReq(ctx, project, labels)
+		if mtype != "" {
+			q = append(q, bson.DocElem{"mwaretype", mtype})
+		}
+		err := dbFindAll(ctx, q, &mws)
+		if err != nil {
+			return nil, GateErrD(err)
+		}
+	} else {
+		var mw MwareDesc
+
+		err := dbFind(ctx, cookieReq(ctx, project, name), &mw)
+		if err != nil {
+			return nil, GateErrD(err)
+		}
+		mws = append(mws, &mw)
+	}
+
+	return mws, nil
+}
+
 var mwareHandlers = map[string]*MwareOps {
 	"maria":	&MwareMariaDB,
 	"postgres":	&MwarePostgres,

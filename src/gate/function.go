@@ -120,6 +120,28 @@ func (fn *FunctionDesc)ToState(ctx context.Context, st, from int) error {
 	return err
 }
 
+func listFunctions(ctx context.Context, project, name string, labels []string) ([]*FunctionDesc, *swyapi.GateErr) {
+	var fns []*FunctionDesc
+
+	if name == "" {
+		err := dbFindAll(ctx, listReq(ctx, project, labels), &fns)
+		if err != nil {
+			return nil, GateErrD(err)
+		}
+		glog.Debugf("Found %d fns", len(fns))
+	} else {
+		var fn FunctionDesc
+
+		err := dbFind(ctx, cookieReq(ctx, project, name), &fn)
+		if err != nil {
+			return nil, GateErrD(err)
+		}
+		fns = append(fns, &fn)
+	}
+
+	return fns, nil
+}
+
 var zeroVersion = "0"
 
 func (fn *FunctionDesc)getURL() string {

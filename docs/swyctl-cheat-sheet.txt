@@ -62,3 +62,10 @@ Show file contents            # swyctl rcat %rid path/to/file.ext
 Get creds for s3              # swyctl s3acc bucket [ -life seconds ]
 Attach/detach bkt to fn       # swyctl fu fname -s3b +bucket
                               #             ... -s3b -bucket
+
+List routers                  # swyctl rtl
+Add router                    # swyctl rta %rname -table GET:path:%fname // path can be empty
+See router URL and table      # swyctl rti %rname
+Update router table           # swyctl rtu %rname -table 'GET:path:%fname;POST:path:%fname'
+Delete router                 # swyctl rtd %rname
+

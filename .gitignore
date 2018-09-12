@@ -16,6 +16,7 @@ swy-pgrest
 swy-mquotad
 swy-s3
 swyctl
+swytrace
 swys3fsck
 swysg
 swydbscr

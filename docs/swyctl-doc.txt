@@ -243,3 +243,34 @@ Also note, that the above components are accessible via fi/mi actions too.
 
 Make function be authorized
     # swyctl fu foo -auth simple_auth_jwt
+
+
+== 7. Routers ==
+
+Add a router
+
+    # swyctl rta <name> -table <table>
+
+where table entry is described by "method:path:function-name" string
+and the table is entries separated by semicolons.
+
+List routers
+
+    # swyctl rtl
+    5b98f49cf996ac3fc71c3888      myroute http://127.0.0.1:8684/call/rbd75...76a
+
+See router details, including the table (note, that :ID notation works here)
+
+    # swyctl rti myroute
+    URL:      http://127.0.0.1:8684/call/rbd7502aa3021c1190b1fec939a4d30633b2d93d0a0f4224f1504886012ee676a
+    Table:    (1 ents)
+            GET /                                 -> function
+
+Each function name is the one withing the router's project
+Set new table into router
+
+    # swyctl rtu <name> -table <table>
+
+And finally -- remove the router
+
+    # swyctl rtd <name>

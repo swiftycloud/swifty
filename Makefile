@@ -98,6 +98,7 @@ go-pgrest-y	+= src/pgrest/main.go
 go-mquotad-y	+= src/mquotad/main.go
 go-wdog-go-y += src/wdog/main.go
 go-ctl-y	+= src/tools/ctl.go
+go-trace-y	+= src/tools/tracer.go
 go-s3fsck-y	+= src/tools/s3-fsck.go
 go-sg-y		+= src/tools/sg.go
 go-dbscr-y	+= src/tools/scraper.go
@@ -108,6 +109,7 @@ $(eval $(call gen-gobuild-n,s3))
 $(eval $(call gen-gobuild,pgrest))
 $(eval $(call gen-gobuild,mquotad))
 $(eval $(call gen-gobuild-t,ctl))
+$(eval $(call gen-gobuild-t,trace))
 $(eval $(call gen-gobuild-t,s3fsck))
 $(eval $(call gen-gobuild-t,sg))
 $(eval $(call gen-gobuild-t,dbscr))
@@ -199,6 +201,7 @@ help:
 	@echo '    * swy-wdog-go     - Build golang daemon'
 	@echo '    * swy-s3          - Build s3 daemon'
 	@echo '    * swyctl          - Build gate cli'
+	@echo '    * swytrace        - Build gate eq tracing tool'
 	@echo '    * swys3fsck       - Build s3 databaase integrity checker'
 	@echo '    * swysg           - Build secrets generator cli'
 	@echo '      swifty/python   - Build swifty/python docker image'
@@ -335,6 +338,8 @@ clean:
 	$(Q) $(RM) swy-s3
 	$(call msg-clean,swyctl)
 	$(Q) $(RM) swyctl
+	$(call msg-clean,swytrace)
+	$(Q) $(RM) swytrace
 	$(call msg-clean,swydbscr)
 	$(Q) $(RM) swydbscr
 	$(call msg-clean,swys3fsck)
