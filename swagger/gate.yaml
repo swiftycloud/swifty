@@ -1224,6 +1224,165 @@ paths:
           description: Need to authenticate
         '403':
           description: Bad authentication token
+  
+  /routers:
+    parameters:
+      - in: header
+        name: X-Auth-Token
+        type: string
+        required: true
+      - name: project
+        in: query
+        description: Project to work on
+        required: false
+        type: string
+    get:
+      tags:
+        - router
+      summary: List routers
+      parameters:
+        - in: query
+          name: name
+          type: string
+          required: false
+          description: Name of router to find (useful to resolve ID by name)
+      responses:
+        '200':
+          description: OK
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/RouterInfo'
+        '400':
+          description: Bad request
+          schema:
+            $ref: '#/definitions/GateError'
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad authentication token
+    post:
+      tags:
+        - router
+      parameters:
+        - name: data
+          in: body
+          description: Router description
+          required: true
+          schema:
+            $ref: '#/definitions/RouterAdd'
+      summary: Create router
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/RouterInfo'
+        '400':
+          description: Bad request
+          schema:
+            $ref: '#/definitions/GateError'
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad authentication token
+  '/routers/{rtid}':
+    parameters:
+      - in: header
+        name: X-Auth-Token
+        type: string
+        required: true
+      - name: rtid
+        in: path
+        description: Router ID
+        required: true
+        type: string
+    get:
+      tags:
+        - router
+      summary: Show info about router
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/RouterInfo'
+        '400':
+          description: Bad request
+          schema:
+            $ref: '#/definitions/GateError'
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad authentication token
+    delete:
+      tags:
+        - router
+      summary: Remove router
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+          schema:
+            $ref: '#/definitions/GateError'
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad authentication token
+  '/routers/{rtid}/table':
+    parameters:
+      - in: header
+        name: X-Auth-Token
+        type: string
+        required: true
+      - name: rtid
+        in: path
+        description: Router ID
+        required: true
+        type: string
+    get:
+      tags:
+        - router
+      summary: Show router's table
+      responses:
+        '200':
+          description: OK
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/RouterEntry'
+        '400':
+          description: Bad request
+          schema:
+            $ref: '#/definitions/GateError'
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad authentication token
+    put:
+      tags:
+        - router
+      summary: Set new entries in a table
+      parameters:
+        - name: data
+          in: body
+          description: New entries
+          required: true
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/RouterEntry'
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+          schema:
+            $ref: '#/definitions/GateError'
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad authentication token
+  
   /auths:
     parameters:
       - in: header
@@ -1863,14 +2022,14 @@ definitions:
           $ref: '#/definitions/UserStats'
       mware:
         type: object
-        description: Map 'type:stats' with per-type cumulative statistics
+        description: 'Map ''type:stats'' with per-type cumulative statistics'
         additionalProperties:
           $ref: '#/definitions/UserMwareStats'
         example:
-          "mongo":
+          mongo:
             count: 1
             du: 42
-          "authjwt":
+          authjwt:
             count: 1
   UserMwareStats:
     type: object
@@ -2328,6 +2487,47 @@ definitions:
         type: array
         items:
           $ref: '#/definitions/DeployItemInfo'
+  RouterEntry:
+    type: object
+    description: Entry in a routing table
+    required:
+      - type
+      - name
+    properties:
+      method:
+        type: string
+      path:
+        type: string
+      call:
+        type: string
+        description: Function name to call
+  RouterAdd:
+    type: object
+    description: Router creation info
+    properties:
+      name:
+        type: string
+      project:
+        type: string
+      table:
+        type: array
+        items:
+          $ref: '#/definitions/RouterEntry'
+  RouterInfo:
+    type: object
+    description: Info about router
+    properties:
+      id:
+        type: string
+      name:
+        type: string
+      project:
+        type: string
+      talbe_len:
+        type: integer
+        description: Number of entries in a table
+      url:
+        type: string
   AuthInfo:
     type: object
     description: AaaS entry description
