@@ -1889,7 +1889,9 @@ func getReqContext(w http.ResponseWriter, r *http.Request) (context.Context, fun
 	return mkContext2(tenant, admin)
 }
 
-func genReqHandler(cb func(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr) http.Handler {
+type gateGenReq func(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr
+
+func genReqHandler(cb gateGenReq) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if swyhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) {
 			return
