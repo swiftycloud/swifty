@@ -48,7 +48,7 @@ func urlFind(ctx context.Context, urlid string) (URL, error) {
 		res, _ = urls.LoadOrStore(urlid, &FnURL{ fd: fdm })
 	}
 
-	return res.(*FnURL), nil
+	return res.(URL), nil
 }
 
 /* FIXME -- set up public IP address/port for this FN */
