@@ -1900,7 +1900,7 @@ func main() {
 	bindCmdUsage(CMD_RTI,	[]string{"NAME"}, "Show info about router", true)
 	cmdMap[CMD_RTA].opts.StringVar(&opts[0], "table", "", "Table entries [M:path:function];")
 	bindCmdUsage(CMD_RTA,	[]string{"NAME"}, "Create router", true)
-	cmdMap[CMD_RTA].opts.StringVar(&opts[0], "table", "", "New table to set")
+	cmdMap[CMD_RTU].opts.StringVar(&opts[0], "table", "", "New table to set")
 	bindCmdUsage(CMD_RTU,	[]string{"NAME"}, "Edit router", true)
 	bindCmdUsage(CMD_RTD,	[]string{"NAME"}, "Detach repo", true)
 
