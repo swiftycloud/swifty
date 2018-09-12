@@ -686,20 +686,20 @@ func swk8sDepScaleDown(depname string, replicas uint32) uint32 {
 	return uint32(swk8sDepScale(depname, int32(replicas), false))
 }
 
-func swk8sGetBuildPods() (map[string]string, error) {
+func swk8sGetBuildPods(ctx context.Context) (map[string]string, error) {
 	rv := make(map[string]string)
 
 	podiface := swk8sClientSet.CoreV1().Pods(conf.Wdog.Namespace)
 	pods, err := podiface.List(metav1.ListOptions{ LabelSelector: "swybuild" })
 	if err != nil {
-		glog.Errorf("Error listing PODs: %s", err.Error())
+		ctxlog(ctx).Errorf("Error listing PODs: %s", err.Error())
 		return nil, errors.New("Error listing PODs")
 	}
 
 	for _, pod := range pods.Items {
 		build := pod.ObjectMeta.Labels["swybuild"]
 		rv[build] = pod.Status.PodIP
-		glog.Debugf("Found building POD %s/%s\n", build, pod.Status.PodIP)
+		ctxlog(ctx).Debugf("Found building POD %s/%s\n", build, pod.Status.PodIP)
 	}
 
 	return rv, nil
@@ -728,14 +728,14 @@ func refreshDepsAndPods(ctx context.Context) error {
 
 		err := dbBalancerPodDelAll(ctx, fn.Cookie)
 		if err != nil {
-			glog.Errorf("Can't flush PODs info: %s", err.Error())
+			ctxlog(ctx).Errorf("Can't flush PODs info: %s", err.Error())
 			return err
 		}
 
 		dep, err := depiface.Get(fn.DepName(), metav1.GetOptions{})
 		if err != nil {
 			if !k8serr.IsNotFound(err) {
-				glog.Errorf("Can't get dep %s: %s", fn.DepName(), err.Error())
+				ctxlog(ctx).Errorf("Can't get dep %s: %s", fn.DepName(), err.Error())
 				return errors.New("Error getting dep")
 			}
 
@@ -747,7 +747,7 @@ func refreshDepsAndPods(ctx context.Context) error {
 
 				err = swk8sRun(ctx, &conf, fn)
 				if err != nil {
-					glog.Errorf("Can't start back %s dep: %s", fn.SwoId.Str(), err.Error())
+					ctxlog(ctx).Errorf("Can't start back %s dep: %s", fn.SwoId.Str(), err.Error())
 					return err
 				}
 
@@ -765,28 +765,28 @@ func refreshDepsAndPods(ctx context.Context) error {
 
 		}
 
-		glog.Debugf("Chk replicas for %s", fn.SwoId.Str())
+		ctxlog(ctx).Debugf("Chk replicas for %s", fn.SwoId.Str())
 		if *dep.Spec.Replicas > 1 {
-			glog.Debugf("Found grown-up (%d) deployment %s", *dep.Spec.Replicas, dep.Name)
+			ctxlog(ctx).Debugf("Found grown-up (%d) deployment %s", *dep.Spec.Replicas, dep.Name)
 			err = scalerInit(ctx, fn, uint32(*dep.Spec.Replicas))
 			if err != nil {
-				glog.Errorf("Can't reinit scaler: %s", err.Error())
+				ctxlog(ctx).Errorf("Can't reinit scaler: %s", err.Error())
 				return err
 			}
 		}
 
 		pods, err := podiface.List(metav1.ListOptions{ LabelSelector: "swyrun=" + fn.Cookie[:32] })
 		if err != nil {
-			glog.Errorf("Error listing PODs: %s", err.Error())
+			ctxlog(ctx).Errorf("Error listing PODs: %s", err.Error())
 			return errors.New("Error listing PODs")
 		}
 
-		glog.Debugf("Chk PODs for %s", fn.SwoId.Str())
+		ctxlog(ctx).Debugf("Chk PODs for %s", fn.SwoId.Str())
 		for _, pod := range pods.Items {
-			glog.Debugf("Found pod %s %s\n", pod.Name, pod.Status.PodIP)
+			ctxlog(ctx).Debugf("Found pod %s %s\n", pod.Name, pod.Status.PodIP)
 			err = swk8sPodUp(ctx, genBalancerPod(&pod))
 			if err != nil {
-				glog.Errorf("Can't refresh POD: %s", err.Error())
+				ctxlog(ctx).Errorf("Can't refresh POD: %s", err.Error())
 				return err
 			}
 		}
@@ -801,19 +801,19 @@ func swk8sInit(ctx context.Context, conf *YAMLConf, config_path string) error {
 	flag.Parse()
 
 	if conf.Wdog.Namespace == "" {
-		glog.Debugf("Will work on %s k8s namespace", v1.NamespaceDefault)
+		ctxlog(ctx).Debugf("Will work on %s k8s namespace", v1.NamespaceDefault)
 		conf.Wdog.Namespace = v1.NamespaceDefault
 	}
 
 	config, err := clientcmd.BuildConfigFromFlags("", *kubeconfig)
 	if err != nil {
-		glog.Errorf("BuildConfigFromFlags: %s", err.Error())
+		ctxlog(ctx).Errorf("BuildConfigFromFlags: %s", err.Error())
 		return err
 	}
 
 	swk8sClientSet, err = kubernetes.NewForConfig(config)
 	if err != nil {
-		glog.Errorf("NewForConfig: %s", err.Error())
+		ctxlog(ctx).Errorf("NewForConfig: %s", err.Error())
 		return err
 	}
 
@@ -832,7 +832,7 @@ func swk8sInit(ctx context.Context, conf *YAMLConf, config_path string) error {
 
 	err = refreshDepsAndPods(ctx)
 	if err != nil {
-		glog.Errorf("Can't sart scaler: %s", err.Error())
+		ctxlog(ctx).Errorf("Can't sart scaler: %s", err.Error())
 		return err
 	}
 

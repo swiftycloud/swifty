@@ -52,7 +52,7 @@ func buildFunction(ctx context.Context, conf *YAMLConf, addr string, fn *Functio
 }
 
 func BuilderInit(ctx context.Context, conf *YAMLConf) error {
-	buildIps, err := swk8sGetBuildPods()
+	buildIps, err := swk8sGetBuildPods(ctx)
 	if err != nil {
 		return err
 	}
