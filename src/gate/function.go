@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"strings"
+	"net/http"
 	"fmt"
 	"time"
 	"context"
@@ -159,6 +160,42 @@ func (fn *FunctionDesc)toMInfo(ctx context.Context) *swyapi.FunctionMdat {
 		fid.BR = []uint { uint(fdm.bd.rover[0]), uint(fdm.bd.rover[1]), uint(fdm.bd.goal) }
 	}
 	return &fid
+}
+
+func (fn *FunctionDesc)info(ctx context.Context, r *http.Request, details bool) (interface{}, *swyapi.GateErr) {
+	periods := 0
+	if r != nil {
+		periods = reqPeriods(r.URL.Query())
+		if periods < 0 {
+			return nil, GateErrC(swy.GateBadRequest)
+		}
+	}
+
+	return fn.toInfo(ctx, details, periods)
+}
+
+func (fn *FunctionDesc)upd(ctx context.Context, upd interface{}) *swyapi.GateErr {
+	fu := upd.(*swyapi.FunctionUpdate)
+
+	if fu.UserData != nil {
+		err := fn.setUserData(ctx, *fu.UserData)
+		if err != nil {
+			return GateErrE(swy.GateGenErr, err)
+		}
+	}
+
+	if fu.State != "" {
+		cerr := fn.setState(ctx, fu.State)
+		if cerr != nil {
+			return cerr
+		}
+	}
+
+	return nil
+}
+
+func (fn *FunctionDesc)del(ctx context.Context) *swyapi.GateErr {
+	return fn.Remove(ctx)
 }
 
 func (fn *FunctionDesc)toInfo(ctx context.Context, details bool, periods int) (*swyapi.FunctionInfo, *swyapi.GateErr) {

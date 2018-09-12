@@ -134,6 +134,46 @@ func respond(ctx context.Context, w http.ResponseWriter, result interface{}) *sw
 	return nil
 }
 
+type Obj interface {
+	info(context.Context, *http.Request, bool) (interface{}, *swyapi.GateErr)
+	del(context.Context) *swyapi.GateErr
+	upd(context.Context, interface{}) *swyapi.GateErr
+}
+
+func handleGetOne(ctx context.Context, w http.ResponseWriter, r *http.Request, desc Obj) *swyapi.GateErr {
+	ifo, cerr := desc.info(ctx, r, true)
+	if cerr != nil {
+		return cerr
+	}
+
+	return respond(ctx, w, ifo)
+}
+
+func handleDeleteOne(ctx context.Context, w http.ResponseWriter, r *http.Request, desc Obj) *swyapi.GateErr {
+	cerr := desc.del(ctx)
+	if cerr != nil {
+		return cerr
+	}
+
+	w.WriteHeader(http.StatusOK)
+	return nil
+}
+
+func handleUpdateOne(ctx context.Context, w http.ResponseWriter, r *http.Request, desc Obj, upd interface{}) *swyapi.GateErr {
+	err := swyhttp.ReadAndUnmarshalReq(r, upd)
+	if err != nil {
+		return GateErrE(swy.GateBadRequest, err)
+	}
+
+	cerr := desc.upd(ctx, upd)
+	if cerr != nil {
+		return cerr
+	}
+
+	ifo, _ := desc.info(ctx, nil, false)
+	return respond(ctx, w, ifo)
+}
+
 func listReq(ctx context.Context, project string, labels []string) bson.D {
 	q := bson.D{{"tennant", gctx(ctx).Tenant}, {"project", project}}
 	for _, l := range labels {
@@ -1088,50 +1128,14 @@ func handleFunction(ctx context.Context, w http.ResponseWriter, r *http.Request)
 
 	switch r.Method {
 	case "GET":
-		periods := reqPeriods(r.URL.Query())
-		if periods < 0 {
-			return GateErrC(swy.GateBadRequest)
-		}
-
-		fi, cerr := fn.toInfo(ctx, true, periods)
-		if cerr != nil {
-			return cerr
-		}
-
-		return respond(ctx, w, fi)
+		return handleGetOne(ctx, w, r, &fn)
 
 	case "PUT":
-		var fu swyapi.FunctionUpdate
-
-		err := swyhttp.ReadAndUnmarshalReq(r, &fu)
-		if err != nil {
-			return GateErrE(swy.GateBadRequest, err)
-		}
-
-		if fu.UserData != nil {
-			err = fn.setUserData(ctx, *fu.UserData)
-			if err != nil {
-				return GateErrE(swy.GateGenErr, err)
-			}
-		}
-
-		if fu.State != "" {
-			cerr := fn.setState(ctx, fu.State)
-			if cerr != nil {
-				return cerr
-			}
-		}
-
-		fi, _ := fn.toInfo(ctx, false, 0)
-		return respond(ctx, w, fi)
+		var upd swyapi.FunctionUpdate
+		return handleUpdateOne(ctx, w, r, &fn, &upd)
 
 	case "DELETE":
-		cerr := fn.Remove(ctx)
-		if cerr != nil {
-			return cerr
-		}
-
-		w.WriteHeader(http.StatusOK)
+		return handleDeleteOne(ctx, w, r, &fn)
 	}
 
 	return nil
@@ -1325,15 +1329,10 @@ func handleRouter(ctx context.Context, w http.ResponseWriter, r *http.Request) *
 
 	switch r.Method {
 	case "GET":
-		return respond(ctx, w, rt.toInfo(ctx, true))
+		return handleGetOne(ctx, w, r, &rt)
 
 	case "DELETE":
-		cerr := rt.Remove(ctx)
-		if cerr != nil {
-			return cerr
-		}
-
-		w.WriteHeader(http.StatusOK)
+		return handleDeleteOne(ctx, w, r, &rt)
 	}
 
 	return nil
@@ -1445,30 +1444,14 @@ func handleAccount(ctx context.Context, w http.ResponseWriter, r *http.Request) 
 
 	switch r.Method {
 	case "GET":
-		return respond(ctx, w, ac.toInfo(ctx, true))
+		return handleGetOne(ctx, w, r, &ac)
 
 	case "PUT":
 		var params map[string]string
-
-		err := swyhttp.ReadAndUnmarshalReq(r, &params)
-		if err != nil {
-			return GateErrE(swy.GateBadRequest, err)
-		}
-
-		cerr := ac.Update(ctx, params)
-		if cerr != nil {
-			return cerr
-		}
-
-		w.WriteHeader(http.StatusOK)
+		return handleUpdateOne(ctx, w, r, &ac, &params)
 
 	case "DELETE":
-		cerr := ac.Del(ctx)
-		if cerr != nil {
-			return cerr
-		}
-
-		w.WriteHeader(http.StatusOK)
+		return handleDeleteOne(ctx, w, r, &ac)
 	}
 
 	return nil
@@ -1563,35 +1546,14 @@ func handleRepo(ctx context.Context, w http.ResponseWriter, r *http.Request) *sw
 
 	switch r.Method {
 	case "GET":
-		ri, cerr := rd.toInfo(ctx, true)
-		if cerr != nil {
-			return cerr
-		}
-
-		return respond(ctx, w, ri)
+		return handleGetOne(ctx, w, r, rd)
 
 	case "PUT":
 		var ru swyapi.RepoUpdate
-
-		err := swyhttp.ReadAndUnmarshalReq(r, &ru)
-		if err != nil {
-			return GateErrE(swy.GateBadRequest, err)
-		}
-
-		cerr := rd.Update(ctx, &ru)
-		if cerr != nil {
-			return cerr
-		}
-
-		w.WriteHeader(http.StatusOK)
+		return handleUpdateOne(ctx, w, r, rd, &ru)
 
 	case "DELETE":
-		cerr := rd.Detach(ctx)
-		if cerr != nil {
-			return cerr
-		}
-
-		w.WriteHeader(http.StatusOK)
+		return handleDeleteOne(ctx, w, r, rd)
 	}
 
 	return nil
@@ -1792,20 +1754,10 @@ func handleDeployment(ctx context.Context, w http.ResponseWriter, r *http.Reques
 func handleOneDeployment(ctx context.Context, w http.ResponseWriter, r *http.Request, dd *DeployDesc) *swyapi.GateErr {
 	switch r.Method {
 	case "GET":
-		di, cerr := dd.toInfo(ctx, true)
-		if cerr != nil {
-			return cerr
-		}
-
-		return respond(ctx, w, di)
+		return handleGetOne(ctx, w, r, dd)
 
 	case "DELETE":
-		cerr := dd.Stop(ctx)
-		if cerr != nil {
-			return cerr
-		}
-
-		w.WriteHeader(http.StatusOK)
+		return handleDeleteOne(ctx, w, r, dd)
 	}
 
 	return nil
@@ -1919,20 +1871,10 @@ func handleMware(ctx context.Context, w http.ResponseWriter, r *http.Request) *s
 
 	switch r.Method {
 	case "GET":
-		mi, cerr := mw.toInfo(ctx, true)
-		if cerr != nil {
-			return cerr
-		}
-
-		return respond(ctx, w, mi)
+		return handleGetOne(ctx, w, r, &mw)
 
 	case "DELETE":
-		cerr := mw.Remove(ctx)
-		if cerr != nil {
-			return cerr
-		}
-
-		w.WriteHeader(http.StatusOK)
+		return handleDeleteOne(ctx, w, r, &mw)
 	}
 
 	return nil

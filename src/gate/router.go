@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"../apis"
 	"context"
+	"../common"
 	"gopkg.in/mgo.v2/bson"
 )
 
@@ -27,6 +28,18 @@ func getRouterDesc(id *SwoId, params *swyapi.RouterAdd) (*RouterDesc, *swyapi.Ga
 
 func (rt *RouterDesc)getURL() string {
 	return getURL(URLRouter, rt.Cookie)
+}
+
+func (rt *RouterDesc)info(ctx context.Context, r *http.Request, details bool) (interface{}, *swyapi.GateErr) {
+	return rt.toInfo(ctx, details), nil
+}
+
+func (rt *RouterDesc)upd(ctx context.Context, upd interface{}) *swyapi.GateErr {
+	return GateErrM(swy.GateGenErr, "Not updatable")
+}
+
+func (rt *RouterDesc)del(ctx context.Context) *swyapi.GateErr {
+	return rt.Remove(ctx)
 }
 
 func (rt *RouterDesc)toInfo(ctx context.Context, details bool) *swyapi.RouterInfo {

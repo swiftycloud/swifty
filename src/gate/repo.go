@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"os/exec"
 	"errors"
+	"net/http"
 	"bufio"
 	"os"
 	"context"
@@ -78,6 +79,19 @@ func getRepoDesc(id *SwoId, params *swyapi.RepoAdd) *RepoDesc {
 	}
 
 	return rd
+}
+
+
+func (rd *RepoDesc)info(ctx context.Context, r *http.Request, details bool) (interface{}, *swyapi.GateErr) {
+	return rd.toInfo(ctx, details)
+}
+
+func (rd *RepoDesc)upd(ctx context.Context, upd interface{}) *swyapi.GateErr {
+	return rd.Update(ctx, upd.(*swyapi.RepoUpdate))
+}
+
+func (rd *RepoDesc)del(ctx context.Context) *swyapi.GateErr {
+	return rd.Detach(ctx)
 }
 
 func (rd *RepoDesc)toInfo(ctx context.Context, details bool) (*swyapi.RepoInfo, *swyapi.GateErr) {

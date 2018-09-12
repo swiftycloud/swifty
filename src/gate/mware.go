@@ -3,6 +3,7 @@ package main
 import (
 	"gopkg.in/mgo.v2/bson"
 	"strings"
+	"net/http"
 	"fmt"
 	"context"
 	"errors"
@@ -196,6 +197,18 @@ func (item *MwareDesc)toFnInfo(ctx context.Context) *swyapi.MwareInfo {
 		Name: item.SwoId.Name,
 		Type: item.MwareType,
 	}
+}
+
+func (mw *MwareDesc)info(ctx context.Context, r *http.Request, details bool) (interface{}, *swyapi.GateErr) {
+	return mw.toInfo(ctx, details)
+}
+
+func (mw *MwareDesc)upd(ctx context.Context, upd interface{}) *swyapi.GateErr {
+	return GateErrM(swy.GateGenErr, "Not updatable")
+}
+
+func (mw *MwareDesc)del(ctx context.Context) *swyapi.GateErr {
+	return mw.Remove(ctx)
 }
 
 func (item *MwareDesc)toInfo(ctx context.Context, details bool) (*swyapi.MwareInfo, *swyapi.GateErr) {

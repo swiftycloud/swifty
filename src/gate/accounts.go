@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"net/http"
 	"context"
 	"strings"
 	"gopkg.in/mgo.v2/bson"
@@ -146,6 +147,18 @@ func getAccDesc(id *SwoId, params map[string]string) (*AccDesc, *swyapi.GateErr)
 	}
 
 	return ad, nil
+}
+
+func (ad *AccDesc)info(ctx context.Context, r *http.Request, details bool) (interface{}, *swyapi.GateErr) {
+	return ad.toInfo(ctx, details), nil
+}
+
+func (ad *AccDesc)upd(ctx context.Context, upd interface{}) *swyapi.GateErr {
+	return ad.Update(ctx, *upd.(*map[string]string))
+}
+
+func (ad *AccDesc)del(ctx context.Context) *swyapi.GateErr {
+	return ad.Del(ctx)
 }
 
 func (ad *AccDesc)toInfo(ctx context.Context, details bool) map[string]string {

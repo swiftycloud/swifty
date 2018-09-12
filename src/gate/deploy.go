@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"gopkg.in/mgo.v2/bson"
 	"context"
+	"net/http"
 	"../common"
 	"../apis"
 )
@@ -243,6 +244,18 @@ func (dep *DeployDesc)Start(ctx context.Context) *swyapi.GateErr {
 	go deployStartItems(dep)
 
 	return nil
+}
+
+func (dep *DeployDesc)info(ctx context.Context, r *http.Request, details bool) (interface{}, *swyapi.GateErr) {
+	return dep.toInfo(ctx, details)
+}
+
+func (dep *DeployDesc)upd(ctx context.Context, upd interface{}) *swyapi.GateErr {
+	return GateErrM(swy.GateGenErr, "Not updatable")
+}
+
+func (dep *DeployDesc)del(ctx context.Context) *swyapi.GateErr {
+	return dep.Stop(ctx)
 }
 
 func (dep *DeployDesc)toInfo(ctx context.Context, details bool) (*swyapi.DeployInfo, *swyapi.GateErr) {
