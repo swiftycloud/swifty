@@ -1148,7 +1148,9 @@ paths:
         '200':
           description: All objects has been /add-ed
           schema:
-            $ref: '#/definitions/DeployInfo'
+            type: array
+            items:
+              $ref: '#/definitions/DeployInfo'
         '400':
           description: Bad request
           schema:
