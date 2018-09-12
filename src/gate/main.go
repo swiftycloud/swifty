@@ -1361,6 +1361,20 @@ func handleRouterTable(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		}
 
 		return respond(ctx, w, rt.Table[f:t])
+	case "PUT":
+		var tbl []*swyapi.RouterEntry
+
+		err := swyhttp.ReadAndUnmarshalReq(r, &tbl)
+		if err != nil {
+			return GateErrE(swy.GateBadRequest, err)
+		}
+
+		cerr := rt.setTable(ctx, tbl)
+		if cerr != nil {
+			return cerr
+		}
+
+		w.WriteHeader(http.StatusOK)
 	}
 
 	return nil
@@ -2167,7 +2181,7 @@ func main() {
 
 	r.Handle("/v1/routers",			genReqHandler(handleRouters)).Methods("GET", "POST", "OPTIONS")
 	r.Handle("/v1/routers/{rid}",		genReqHandler(handleRouter)).Methods("GET", "DELETE", "OPTIONS")
-	r.Handle("/v1/routers/{rid}/table",	genReqHandler(handleRouterTable)).Methods("GET", "OPTIONS")
+	r.Handle("/v1/routers/{rid}/table",	genReqHandler(handleRouterTable)).Methods("GET", "PUT", "OPTIONS")
 
 	r.Handle("/v1/info/langs",		genReqHandler(handleLanguages)).Methods("GET", "OPTIONS")
 	r.Handle("/v1/info/langs/{lang}",	genReqHandler(handleLanguage)).Methods("GET", "OPTIONS")

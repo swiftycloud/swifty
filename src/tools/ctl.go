@@ -1129,21 +1129,27 @@ func router_list(args []string, opts [16]string) {
 	}
 }
 
+func parse_route_table(opt string) []*swyapi.RouterEntry {
+	res := []*swyapi.RouterEntry{}
+	ents := strings.Split(opt, ";")
+	for _, e := range ents {
+		ee := strings.SplitN(e, ":", 3)
+		res = append(res, &swyapi.RouterEntry {
+			Method:	ee[0],
+			Path:	ee[1],
+			Call:	ee[2],
+		})
+	}
+	return res
+}
+
 func router_add(args []string, opts [16]string) {
 	ra := swyapi.RouterAdd {
 		Name: args[0],
 		Project: curCmd.project,
 	}
 	if opts[0] != "" {
-		ents := strings.Split(opts[0], ";")
-		for _, e := range ents {
-			ee := strings.SplitN(e, ":", 3)
-			ra.Table = append(ra.Table, &swyapi.RouterEntry {
-				Method:	ee[0],
-				Path:	ee[1],
-				Call:	ee[2],
-			})
-		}
+		ra.Table = parse_route_table(opts[0])
 	}
 	var ri swyapi.RouterInfo
 	make_faas_req1("POST", "routers", http.StatusOK, &ra, &ri)
@@ -1160,6 +1166,14 @@ func router_info(args []string, opts [16]string) {
 	make_faas_req1("GET", "routers/" + args[0] + "/table", http.StatusOK, nil, &res)
 	for _, re := range res {
 		fmt.Printf("   %8s /%-32s -> %s\n", re.Method, re.Path, re.Call)
+	}
+}
+
+func router_upd(args []string, opts [16]string) {
+	args[0] = resolve_router(args[0])
+	if opts[0] != "" {
+		rt := parse_route_table
+		make_faas_req1("PUT", "routers/" + args[0] + "/table", http.StatusOK, rt, nil)
 	}
 }
 
@@ -1585,6 +1599,7 @@ const (
 	CMD_RTL string		= "rtl"
 	CMD_RTI string		= "rti"
 	CMD_RTA string		= "rta"
+	CMD_RTU string		= "rtu"
 	CMD_RTD string		= "rtd"
 
 	CMD_RL string		= "rl"
@@ -1661,6 +1676,7 @@ var cmdOrder = []string {
 	CMD_RTL,
 	CMD_RTI,
 	CMD_RTA,
+	CMD_RTU,
 	CMD_RTD,
 
 	CMD_RL,
@@ -1744,6 +1760,7 @@ var cmdMap = map[string]*cmdDesc {
 	CMD_RTL:	&cmdDesc{ call: router_list,	  opts: flag.NewFlagSet(CMD_RTL, flag.ExitOnError) },
 	CMD_RTI:	&cmdDesc{ call: router_info,	  opts: flag.NewFlagSet(CMD_RTI, flag.ExitOnError) },
 	CMD_RTA:	&cmdDesc{ call: router_add,	  opts: flag.NewFlagSet(CMD_RTA, flag.ExitOnError) },
+	CMD_RTU:	&cmdDesc{ call: router_upd,	  opts: flag.NewFlagSet(CMD_RTU, flag.ExitOnError) },
 	CMD_RTD:	&cmdDesc{ call: router_del,	  opts: flag.NewFlagSet(CMD_RTD, flag.ExitOnError) },
 
 	CMD_RL:		&cmdDesc{ call: repo_list,	  opts: flag.NewFlagSet(CMD_RL, flag.ExitOnError) },
@@ -1883,6 +1900,8 @@ func main() {
 	bindCmdUsage(CMD_RTI,	[]string{"NAME"}, "Show info about router", true)
 	cmdMap[CMD_RTA].opts.StringVar(&opts[0], "table", "", "Table entries [M:path:function];")
 	bindCmdUsage(CMD_RTA,	[]string{"NAME"}, "Create router", true)
+	cmdMap[CMD_RTA].opts.StringVar(&opts[0], "table", "", "New table to set")
+	bindCmdUsage(CMD_RTU,	[]string{"NAME"}, "Edit router", true)
 	bindCmdUsage(CMD_RTD,	[]string{"NAME"}, "Detach repo", true)
 
 	cmdMap[CMD_RL].opts.StringVar(&opts[0], "acc", "", "Account ID")

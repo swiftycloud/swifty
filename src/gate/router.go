@@ -63,6 +63,21 @@ func (rd *RouterDesc)Remove(ctx context.Context) *swyapi.GateErr {
 	return nil
 }
 
+func (rd *RouterDesc)setTable(ctx context.Context, tbl []*swyapi.RouterEntry) *swyapi.GateErr {
+	err := dbUpdatePart(ctx, rd, bson.M{"table": tbl})
+	if err != nil {
+		return GateErrD(err)
+	}
+
+	/*
+	 * XXX: Maybe it's worth fixing the table on RouterURL, but
+	 * flushing the cache and making urlFind repopulate one from
+	 * DB seems like acceptable approach, at least for now.
+	 */
+	urlClean(ctx, URLRouter, rd.Cookie)
+	return nil
+}
+
 type RouterEntry struct {
 	swyapi.RouterEntry
 	cookie	string
