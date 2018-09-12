@@ -353,6 +353,28 @@ func resolve_dep(dname string) string {
 	return ""
 }
 
+func resolve_router(rname string) string {
+	if strings.HasPrefix(rname, ":") {
+		return rname[1:]
+	}
+
+	var ifo []swyapi.RouterInfo
+	ua := []string{}
+	if curCmd.project != "" {
+		ua = append(ua, "project=" + curCmd.project)
+	}
+	ua = append(ua, "name=" + rname)
+	make_faas_req1("GET", url("routers", ua), http.StatusOK, nil, &ifo)
+	for _, i := range ifo {
+		if i.Name == rname {
+			return i.Id
+		}
+	}
+
+	fatal(fmt.Errorf("\tname %s not resolved", rname))
+	return ""
+}
+
 func resolve_evt(fnid, name string) string {
 	if strings.HasPrefix(name, ":") {
 		return name[1:]
@@ -1099,6 +1121,36 @@ func deploy_add(args []string, opts [16]string) {
 	fmt.Printf("%s deployment started\n", di.Id)
 }
 
+func router_list(args []string, opts [16]string) {
+	var rts []swyapi.RouterInfo
+	make_faas_req1("GET", "routers", http.StatusOK, nil, &rts)
+	for _, rt := range rts {
+		fmt.Printf("%s %12s %s\n", rt.Id, rt.Name, rt.URL)
+	}
+}
+
+func router_add(args []string, opts [16]string) {
+	ra := swyapi.RouterAdd {
+		Name: args[0],
+		Project: curCmd.project,
+	}
+	var ri swyapi.RouterInfo
+	make_faas_req1("POST", "routers", http.StatusOK, &ra, &ri)
+	fmt.Printf("Router %s created\n", ri.Id)
+}
+
+func router_info(args []string, opts [16]string) {
+	args[0] = resolve_router(args[0])
+	var ri swyapi.RouterInfo
+	make_faas_req1("GET", "routers/" + args[0], http.StatusOK, nil, &ri)
+	fmt.Printf("URL:      %s\n", ri.URL)
+}
+
+func router_del(args []string, opts [16]string) {
+	args[0] = resolve_router(args[0])
+	make_faas_req1("DELETE", "routers/" + args[0], http.StatusOK, nil, nil)
+}
+
 func repo_list(args []string, opts [16]string) {
 	var ris []*swyapi.RepoInfo
 	ua := []string{}
@@ -1513,6 +1565,11 @@ const (
 	CMD_DA string		= "da"
 	CMD_DD string		= "dd"
 
+	CMD_RTL string		= "rtl"
+	CMD_RTI string		= "rti"
+	CMD_RTA string		= "rta"
+	CMD_RTD string		= "rtd"
+
 	CMD_RL string		= "rl"
 	CMD_RI string		= "ri"
 	CMD_RA string		= "ra"
@@ -1583,6 +1640,11 @@ var cmdOrder = []string {
 	CMD_DI,
 	CMD_DA,
 	CMD_DD,
+
+	CMD_RTL,
+	CMD_RTI,
+	CMD_RTA,
+	CMD_RTD,
 
 	CMD_RL,
 	CMD_RI,
@@ -1661,6 +1723,11 @@ var cmdMap = map[string]*cmdDesc {
 	CMD_DI:		&cmdDesc{ call: deploy_info,	  opts: flag.NewFlagSet(CMD_DI, flag.ExitOnError) },
 	CMD_DA:		&cmdDesc{ call: deploy_add,	  opts: flag.NewFlagSet(CMD_DA, flag.ExitOnError) },
 	CMD_DD:		&cmdDesc{ call: deploy_del,	  opts: flag.NewFlagSet(CMD_DD, flag.ExitOnError) },
+
+	CMD_RTL:	&cmdDesc{ call: router_list,	  opts: flag.NewFlagSet(CMD_RTL, flag.ExitOnError) },
+	CMD_RTI:	&cmdDesc{ call: router_info,	  opts: flag.NewFlagSet(CMD_RTI, flag.ExitOnError) },
+	CMD_RTA:	&cmdDesc{ call: router_add,	  opts: flag.NewFlagSet(CMD_RTA, flag.ExitOnError) },
+	CMD_RTD:	&cmdDesc{ call: router_del,	  opts: flag.NewFlagSet(CMD_RTD, flag.ExitOnError) },
 
 	CMD_RL:		&cmdDesc{ call: repo_list,	  opts: flag.NewFlagSet(CMD_RL, flag.ExitOnError) },
 	CMD_RI:		&cmdDesc{ call: repo_info,	  opts: flag.NewFlagSet(CMD_RI, flag.ExitOnError) },
@@ -1794,6 +1861,11 @@ func main() {
 	bindCmdUsage(CMD_DI,	[]string{"NAME"}, "Show info about deployment", true)
 	bindCmdUsage(CMD_DA,	[]string{"NAME", "DESC"}, "Add (start) deployment", true)
 	bindCmdUsage(CMD_DD,	[]string{"NAME"}, "Del (stop) deployment", true)
+
+	bindCmdUsage(CMD_RTL,	[]string{},	  "List routers", true)
+	bindCmdUsage(CMD_RTI,	[]string{"NAME"}, "Show info about router", true)
+	bindCmdUsage(CMD_RTA,	[]string{"NAME"}, "Create router", true)
+	bindCmdUsage(CMD_RTD,	[]string{"NAME"}, "Detach repo", true)
 
 	cmdMap[CMD_RL].opts.StringVar(&opts[0], "acc", "", "Account ID")
 	cmdMap[CMD_RL].opts.StringVar(&opts[1], "at", "", "Attach status")
