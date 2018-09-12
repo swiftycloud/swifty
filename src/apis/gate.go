@@ -277,6 +277,7 @@ type RouterEntry struct {
 
 type RouterAdd struct {
 	Name		string		`json:"name"`
+	Project		string		`json:"project"`
 	Table		[]*RouterEntry	`json:"table"`
 }
 

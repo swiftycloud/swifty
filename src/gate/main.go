@@ -1285,20 +1285,31 @@ func handleMwares(ctx context.Context, w http.ResponseWriter, r *http.Request) *
 }
 
 func handleRouters(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
-	q := r.URL.Query()
-
-	project := q.Get("project")
-	if project == "" {
-		project = DefaultProject
-	}
-
 	switch r.Method {
 	case "GET":
+		q := r.URL.Query()
+
+		project := q.Get("project")
+		if project == "" {
+			project = DefaultProject
+		}
+
 		var rts []*RouterDesc
 
-		err := dbFindAll(ctx, listReq(ctx, project, []string{}), &rts)
-		if err != nil {
-			return GateErrD(err)
+		rname := q.Get("name")
+		if rname == "" {
+			err := dbFindAll(ctx, listReq(ctx, project, []string{}), &rts)
+			if err != nil {
+				return GateErrD(err)
+			}
+		} else {
+			var rt RouterDesc
+
+			err := dbFind(ctx, cookieReq(ctx, project, rname), &rt)
+			if err != nil {
+				return GateErrD(err)
+			}
+			rts = append(rts, &rt)
 		}
 
 		ret := []*swyapi.RouterInfo{}
@@ -1316,7 +1327,7 @@ func handleRouters(ctx context.Context, w http.ResponseWriter, r *http.Request) 
 			return GateErrE(swy.GateBadRequest, err)
 		}
 
-		id := ctxSwoId(ctx, project, params.Name)
+		id := ctxSwoId(ctx, params.Project, params.Name)
 		rt, cerr := getRouterDesc(id, &params)
 		if cerr != nil {
 			return cerr
