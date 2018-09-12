@@ -1,10 +1,8 @@
 package main
 
 import (
-	"strings"
 	"context"
 	"errors"
-	"path/filepath"
 	"gopkg.in/mgo.v2/bson"
 	"../common"
 	"../apis"
@@ -21,32 +19,6 @@ var evtHandlers = map[string]*EventOps {
 	"cron":	&cronOps,
 	"s3":	&s3EOps,
 	"url":	&urlEOps,
-}
-
-type FnEventS3 struct {
-	Ns		string		`bson:"ns"`
-	Bucket		string		`bson:"bucket"`
-	Ops		string		`bson:"ops"`
-	Pattern		string		`bson:"pattern"`
-}
-
-func (s3 *FnEventS3)hasOp(op string) bool {
-	ops := strings.Split(s3.Ops, ",")
-	for _, o := range ops {
-		if o == op {
-			return true
-		}
-	}
-	return false
-}
-
-func (s3 *FnEventS3)matchPattern(oname string) bool {
-	if s3.Pattern == "" {
-		return true
-	}
-
-	m, err := filepath.Match(s3.Pattern, oname)
-	return err == nil && m
 }
 
 type FnEventDesc struct {
