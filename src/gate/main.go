@@ -1008,30 +1008,16 @@ func handleFunctions(ctx context.Context, w http.ResponseWriter, r *http.Request
 			project = DefaultProject
 		}
 
+		fname := q.Get("name")
 		details := (q.Get("details") != "")
 		periods := reqPeriods(q)
 		if periods < 0 {
 			return GateErrC(swy.GateBadRequest)
 		}
 
-		var fns []*FunctionDesc
-		var err error
-
-		fname := q.Get("name")
-		if fname == "" {
-			err = dbFindAll(ctx, listReq(ctx, project, q["label"]), &fns)
-			if err != nil {
-				return GateErrD(err)
-			}
-			glog.Debugf("Found %d fns", len(fns))
-		} else {
-			var fn FunctionDesc
-
-			err = dbFind(ctx, cookieReq(ctx, project, fname), &fn)
-			if err != nil {
-				return GateErrD(err)
-			}
-			fns = append(fns, &fn)
+		fns, cerr := listFunctions(ctx, project, fname, q["label"])
+		if cerr != nil {
+			return cerr
 		}
 
 		ret := []*swyapi.FunctionInfo{}
@@ -1236,28 +1222,11 @@ func handleMwares(ctx context.Context, w http.ResponseWriter, r *http.Request) *
 
 		details := (q.Get("details") != "")
 		mwtype := q.Get("type")
-
-		var mws []*MwareDesc
-		var err error
-
 		mname := q.Get("name")
-		if mname == "" {
-			q := listReq(ctx, project, q["label"])
-			if mwtype != "" {
-				q = append(q, bson.DocElem{"mwaretype", mwtype})
-			}
-			err = dbFindAll(ctx, q, &mws)
-			if err != nil {
-				return GateErrD(err)
-			}
-		} else {
-			var mw MwareDesc
 
-			err = dbFind(ctx, cookieReq(ctx, project, mname), &mw)
-			if err != nil {
-				return GateErrD(err)
-			}
-			mws = append(mws, &mw)
+		mws, cerr := listMwares(ctx, project, mname, mwtype, q["label"])
+		if cerr != nil {
+			return cerr
 		}
 
 		ret := []*swyapi.MwareInfo{}
@@ -1305,23 +1274,11 @@ func handleRouters(ctx context.Context, w http.ResponseWriter, r *http.Request) 
 		if project == "" {
 			project = DefaultProject
 		}
-
-		var rts []*RouterDesc
-
 		rname := q.Get("name")
-		if rname == "" {
-			err := dbFindAll(ctx, listReq(ctx, project, []string{}), &rts)
-			if err != nil {
-				return GateErrD(err)
-			}
-		} else {
-			var rt RouterDesc
 
-			err := dbFind(ctx, cookieReq(ctx, project, rname), &rt)
-			if err != nil {
-				return GateErrD(err)
-			}
-			rts = append(rts, &rt)
+		rts, cerr := listRouters(ctx, project, rname)
+		if cerr != nil {
+			return cerr
 		}
 
 		ret := []*swyapi.RouterInfo{}

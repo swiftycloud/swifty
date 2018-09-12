@@ -73,6 +73,27 @@ type RouterURL struct {
 	table	[]*RouterEntry
 }
 
+func listRouters(ctx context.Context, project, name string) ([]*RouterDesc, *swyapi.GateErr) {
+	var rts []*RouterDesc
+
+	if name == "" {
+		err := dbFindAll(ctx, listReq(ctx, project, []string{}), &rts)
+		if err != nil {
+			return nil, GateErrD(err)
+		}
+	} else {
+		var rt RouterDesc
+
+		err := dbFind(ctx, cookieReq(ctx, project, name), &rt)
+		if err != nil {
+			return nil, GateErrD(err)
+		}
+		rts = append(rts, &rt)
+	}
+
+	return rts, nil
+}
+
 func (rt *RouterURL)Handle(ctx context.Context, w http.ResponseWriter, r *http.Request, sopq *statsOpaque) {
 	path_match := false
 	path := reqPath(r) /* FIXME -- this will be evaluated again in makeArgs */
