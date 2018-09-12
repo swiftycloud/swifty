@@ -63,9 +63,14 @@ func (rd *RouterDesc)Remove(ctx context.Context) *swyapi.GateErr {
 	return nil
 }
 
+type RouterEntry struct {
+	swyapi.RouterEntry
+	cookie	string
+}
+
 type RouterURL struct {
 	URL
-	table	[]*swyapi.RouterEntry
+	table	[]*RouterEntry
 }
 
 func (rt *RouterURL)Handle(ctx context.Context, w http.ResponseWriter, r *http.Request, sopq *statsOpaque) {
@@ -80,8 +85,20 @@ func (rt *RouterURL)Handle(ctx context.Context, w http.ResponseWriter, r *http.R
 			continue
 		}
 
-		ctxlog(ctx).Debugf("Will call %s", e.Call)
-		w.WriteHeader(http.StatusOK)
+		/* FIXME -- cache guy on e */
+		fmd, err := memdGet(ctx, e.cookie)
+		if err != nil {
+			http.Error(w, "Error getting FN handler", http.StatusInternalServerError)
+			return
+		}
+
+		if fmd == nil {
+			http.Error(w, "No such function", http.StatusServiceUnavailable)
+			return
+		}
+
+		furl := FnURL{fd: fmd}
+		furl.Handle(ctx, w, r, sopq)
 		return
 	}
 

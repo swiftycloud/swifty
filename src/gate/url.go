@@ -57,7 +57,15 @@ func urlFind(ctx context.Context, urlid string) (URL, error) {
 				return nil, err
 			}
 
-			res, _ = urls.LoadOrStore(urlid, &RouterURL{table: rt.Table})
+			rurl := RouterURL{}
+			id := rt.SwoId
+			for _, e := range rt.Table {
+				id.Name = e.Call
+				re := RouterEntry{*e, id.Cookie()}
+				rurl.table = append(rurl.table, &re)
+			}
+
+			res, _ = urls.LoadOrStore(urlid, &rurl)
 		} else {
 			ed, err := urlEvFind(ctx, urlid)
 			if err != nil {
