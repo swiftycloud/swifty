@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strings"
 	"strconv"
+	"reflect"
 	"regexp"
 	"time"
 	"flag"
@@ -287,109 +288,62 @@ func list_projects(args []string, opts [16]string) {
 	}
 }
 
-func resolve_fn(fname string) string {
-	if strings.HasPrefix(fname, ":") {
-		return fname[1:]
-	}
-
-	var ifo []swyapi.FunctionInfo
-	ua := []string{}
-	if curCmd.project != "" {
-		ua = append(ua, "project=" + curCmd.project)
-	}
-	ua = append(ua, "name=" + fname)
-	make_faas_req1("GET", url("functions", ua), http.StatusOK, nil, &ifo)
-	for _, i := range ifo {
-		if i.Name == fname {
-			return i.Id
-		}
-	}
-
-	fatal(fmt.Errorf("\tname %s not resolved", fname))
-	return ""
-}
-
-func resolve_mw(mname string) string {
-	if strings.HasPrefix(mname, ":") {
-		return mname[1:]
-	}
-
-	var ifo []swyapi.MwareInfo
-	ua := []string{}
-	if curCmd.project != "" {
-		ua = append(ua, "project=" + curCmd.project)
-	}
-	ua = append(ua, "name=" + mname)
-	make_faas_req1("GET", url("middleware", ua), http.StatusOK, nil, &ifo)
-	for _, i := range ifo {
-		if i.Name == mname {
-			return i.ID
-		}
-	}
-
-	fatal(fmt.Errorf("\tname %s not resolved", mname))
-	return ""
-}
-
-func resolve_dep(dname string) string {
-	if strings.HasPrefix(dname, ":") {
-		return dname[1:]
-	}
-
-	var ifo []swyapi.DeployInfo
-	ua := []string{}
-	if curCmd.project != "" {
-		ua = append(ua, "project=" + curCmd.project)
-	}
-	ua = append(ua, "name=" + dname)
-	make_faas_req1("GET", url("deployments", ua), http.StatusOK, nil, &ifo)
-	for _, i := range ifo {
-		if i.Name == dname {
-			return i.Id
-		}
-	}
-
-	fatal(fmt.Errorf("\tname %s not resolved", dname))
-	return ""
-}
-
-func resolve_router(rname string) string {
-	if strings.HasPrefix(rname, ":") {
-		return rname[1:]
-	}
-
-	var ifo []swyapi.RouterInfo
-	ua := []string{}
-	if curCmd.project != "" {
-		ua = append(ua, "project=" + curCmd.project)
-	}
-	ua = append(ua, "name=" + rname)
-	make_faas_req1("GET", url("routers", ua), http.StatusOK, nil, &ifo)
-	for _, i := range ifo {
-		if i.Name == rname {
-			return i.Id
-		}
-	}
-
-	fatal(fmt.Errorf("\tname %s not resolved", rname))
-	return ""
-}
-
-func resolve_evt(fnid, name string) string {
+func resolve_name(name string, path string, objs interface{}) string {
 	if strings.HasPrefix(name, ":") {
 		return name[1:]
 	}
 
-	var es []swyapi.FunctionEvent
-	make_faas_req1("GET", "functions/" + fnid + "/triggers?name=" + name, http.StatusOK,  nil, &es)
-	for _, e := range es {
-		if e.Name == name {
-			return e.Id
+	ua := []string{}
+	if curCmd.project != "" {
+		ua = append(ua, "project=" + curCmd.project)
+	}
+
+	ua = append(ua, "name=" + name)
+	make_faas_req1("GET", url(path, ua), http.StatusOK, nil, objs)
+
+	items := reflect.ValueOf(objs).Elem()
+	for i := 0; i < items.Len(); i++ {
+		obj := reflect.Indirect(items.Index(i))
+		n := obj.FieldByName("Name").Interface().(string)
+		if n == name {
+			id := obj.FieldByName("Id")
+			if id.IsValid() {
+				return id.Interface().(string)
+			}
+			id = obj.FieldByName("ID")
+			if id.IsValid() {
+				return id.Interface().(string)
+			}
 		}
 	}
 
+
 	fatal(fmt.Errorf("\tname %s not resolved", name))
 	return ""
+}
+func resolve_fn(fname string) string {
+	var ifo []swyapi.FunctionInfo
+	return resolve_name(fname, "functions", &ifo)
+}
+
+func resolve_mw(mname string) string {
+	var ifo []swyapi.MwareInfo
+	return resolve_name(mname, "middleware", &ifo)
+}
+
+func resolve_dep(dname string) string {
+	var ifo []swyapi.DeployInfo
+	return resolve_name(dname, "deployments", &ifo)
+}
+
+func resolve_router(rname string) string {
+	var ifo []swyapi.RouterInfo
+	return resolve_name(rname, "routers", &ifo)
+}
+
+func resolve_evt(fnid, name string) string {
+	var es []swyapi.FunctionEvent
+	return resolve_name(name, "functions/" + fnid + "/triggers", &es)
 }
 
 func function_list(args []string, opts [16]string) {
