@@ -9,7 +9,6 @@ import (
 	"encoding/hex"
 	"net/http"
 	"net/url"
-	"errors"
 	"os/exec"
 	"flag"
 	"strings"
@@ -972,73 +971,6 @@ func handleCall(w http.ResponseWriter, r *http.Request) {
 	}
 
 	url.Handle(ctx, w, r, sopq)
-}
-
-func (furl *FnURL)Handle(ctx context.Context, w http.ResponseWriter, r *http.Request, sopq *statsOpaque) {
-	var args *swyapi.SwdFunctionRun
-	var res *swyapi.SwdFunctionRunResult
-	var err error
-	var code int
-	var conn *podConn
-
-	fmd := furl.fd
-
-	if ratelimited(fmd) {
-		code = http.StatusTooManyRequests
-		err = errors.New("Ratelimited")
-		goto out
-	}
-
-	if rslimited(fmd) {
-		code = http.StatusLocked
-		err = errors.New("Resources exhausted")
-		goto out
-	}
-
-	conn, err = balancerGetConnAny(ctx, fmd.fnid, fmd)
-	if err != nil {
-		code = http.StatusInternalServerError
-		err = errors.New("DB error")
-		goto out
-	}
-
-	defer balancerPutConn(fmd)
-	args = makeArgs(sopq, r)
-
-	if fmd.ac != nil {
-		args.Claims, err = fmd.ac.Verify(r)
-		if err != nil {
-			code = http.StatusUnauthorized
-			goto out
-		}
-	}
-
-	res, err = doRunConn(ctx, conn, fmd.fnid, "", "call", args)
-	if err != nil {
-		code = http.StatusInternalServerError
-		goto out
-	}
-
-	if res.Code < 0 {
-		code = -res.Code
-		err = errors.New(res.Return)
-		goto out
-	}
-
-	if res.Code == 0 {
-		res.Code = http.StatusOK
-	}
-
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.WriteHeader(res.Code)
-	w.Write([]byte(res.Return))
-
-	statsUpdate(fmd, sopq, res)
-
-	return
-
-out:
-	http.Error(w, err.Error(), code)
 }
 
 func reqPeriods(q url.Values) int {
