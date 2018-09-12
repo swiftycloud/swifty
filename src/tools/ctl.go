@@ -1134,6 +1134,17 @@ func router_add(args []string, opts [16]string) {
 		Name: args[0],
 		Project: curCmd.project,
 	}
+	if opts[0] != "" {
+		ents := strings.Split(opts[0], ";")
+		for _, e := range ents {
+			ee := strings.SplitN(e, ":", 3)
+			ra.Table = append(ra.Table, &swyapi.RouterEntry {
+				Method:	ee[0],
+				Path:	ee[1],
+				Call:	ee[2],
+			})
+		}
+	}
 	var ri swyapi.RouterInfo
 	make_faas_req1("POST", "routers", http.StatusOK, &ra, &ri)
 	fmt.Printf("Router %s created\n", ri.Id)
@@ -1864,6 +1875,7 @@ func main() {
 
 	bindCmdUsage(CMD_RTL,	[]string{},	  "List routers", true)
 	bindCmdUsage(CMD_RTI,	[]string{"NAME"}, "Show info about router", true)
+	cmdMap[CMD_RTA].opts.StringVar(&opts[0], "table", "", "Table entries [M:path:function];")
 	bindCmdUsage(CMD_RTA,	[]string{"NAME"}, "Create router", true)
 	bindCmdUsage(CMD_RTD,	[]string{"NAME"}, "Detach repo", true)
 
