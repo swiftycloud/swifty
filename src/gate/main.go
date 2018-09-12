@@ -973,17 +973,25 @@ func handleCall(w http.ResponseWriter, r *http.Request) {
 	url.Handle(ctx, w, r, sopq)
 }
 
-func reqPeriods(q url.Values) int {
-	aux := q.Get("periods")
-	periods := 0
+func reqAtoi(q url.Values, n string, def int) (int, error) {
+	aux := q.Get(n)
+	val := def
 	if aux != "" {
 		var err error
-		periods, err = strconv.Atoi(aux)
+		val, err = strconv.Atoi(aux)
 		if err != nil {
-			return -1
+			return def, err
 		}
 	}
 
+	return val, nil
+}
+
+func reqPeriods(q url.Values) int {
+	periods, e := reqAtoi(q, "periods", 0)
+	if e != nil {
+		periods = -1
+	}
 	return periods
 }
 
@@ -1347,6 +1355,7 @@ func handleRouters(ctx context.Context, w http.ResponseWriter, r *http.Request) 
 func handleRouter(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
 	var rt RouterDesc
 
+	/* FIXME -- omit table here */
 	cerr := objFindForReq(ctx, r, "rid", &rt)
 	if cerr != nil {
 		return cerr
@@ -1363,6 +1372,33 @@ func handleRouter(ctx context.Context, w http.ResponseWriter, r *http.Request) *
 		}
 
 		w.WriteHeader(http.StatusOK)
+	}
+
+	return nil
+}
+
+func handleRouterTable(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
+	var rt RouterDesc
+
+	/* FIXME -- omit table here */
+	cerr := objFindForReq(ctx, r, "rid", &rt)
+	if cerr != nil {
+		return cerr
+	}
+
+	switch r.Method {
+	case "GET":
+		q := r.URL.Query()
+		f, e := reqAtoi(q, "from", 0)
+		if f < 0 || e != nil {
+			return GateErrM(swy.GateBadRequest, "Invalid range")
+		}
+		t, e := reqAtoi(q, "to", len(rt.Table))
+		if t > len(rt.Table) || e != nil {
+			return GateErrM(swy.GateBadRequest, "Invalid range")
+		}
+
+		return respond(w, rt.Table[f:t])
 	}
 
 	return nil
@@ -2165,6 +2201,7 @@ func main() {
 
 	r.Handle("/v1/routers",			genReqHandler(handleRouters)).Methods("GET", "POST", "OPTIONS")
 	r.Handle("/v1/routers/{rid}",		genReqHandler(handleRouter)).Methods("GET", "DELETE", "OPTIONS")
+	r.Handle("/v1/routers/{rid}/table",	genReqHandler(handleRouterTable)).Methods("GET", "OPTIONS")
 
 	r.Handle("/v1/info/langs",		genReqHandler(handleLanguages)).Methods("GET", "OPTIONS")
 	r.Handle("/v1/info/langs/{lang}",	genReqHandler(handleLanguage)).Methods("GET", "OPTIONS")

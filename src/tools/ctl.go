@@ -1155,6 +1155,12 @@ func router_info(args []string, opts [16]string) {
 	var ri swyapi.RouterInfo
 	make_faas_req1("GET", "routers/" + args[0], http.StatusOK, nil, &ri)
 	fmt.Printf("URL:      %s\n", ri.URL)
+	fmt.Printf("Table:    (%d ents)\n", ri.TLen)
+	var res []*swyapi.RouterEntry
+	make_faas_req1("GET", "routers/" + args[0] + "/table", http.StatusOK, nil, &res)
+	for _, re := range res {
+		fmt.Printf("   %8s /%-32s -> %s\n", re.Method, re.Path, re.Call)
+	}
 }
 
 func router_del(args []string, opts [16]string) {

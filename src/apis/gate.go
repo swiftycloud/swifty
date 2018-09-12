@@ -285,5 +285,6 @@ type RouterInfo struct {
 	Id		string		`json:"id"`
 	Name		string		`json:"name"`
 	Project		string		`json:"project"`
+	TLen		int		`json:"table_len"`
 	URL		string		`json:"url"`
 }

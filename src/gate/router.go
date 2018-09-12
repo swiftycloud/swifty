@@ -33,6 +33,7 @@ func (rt *RouterDesc)toInfo(ctx context.Context, details bool) *swyapi.RouterInf
 		Id:		rt.ObjID.Hex(),
 		Name:		rt.SwoId.Name,
 		Project:	rt.SwoId.Project,
+		TLen:		len(rt.Table),
 	}
 
 	ri.URL = rt.getURL()
