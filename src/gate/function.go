@@ -459,27 +459,29 @@ func (fn *FunctionDesc)setUserData(ctx context.Context, ud string) error {
 	return err
 }
 
-func (fn *FunctionDesc)setAuthCtx(ctx context.Context, ac string) error {
+func (fn *FunctionDesc)setAuthCtx(ctx context.Context, ac string) *xrest.ReqErr {
 	var nac *AuthCtx
 	var err error
 
 	if ac != "" {
 		nac, err = authCtxGet(ctx, fn.SwoId, ac)
 		if err != nil {
-			return err
+			return GateErrE(swy.GateGenErr, err)
 		}
 	}
 
 	err = dbUpdatePart(ctx, fn, bson.M{"authctx": ac})
-	if err == nil {
-		fn.AuthCtx = ac
-		fdm := memdGetCond(fn.Cookie)
-		if fdm != nil {
-			fdm.ac = nac
-		}
+	if err != nil {
+		return GateErrD(err)
 	}
 
-	return err
+	fn.AuthCtx = ac
+	fdm := memdGetCond(fn.Cookie)
+	if fdm != nil {
+		fdm.ac = nac
+	}
+
+	return nil
 }
 
 func (fn *FunctionDesc)setEnv(ctx context.Context, env []string) error {
@@ -1057,4 +1059,14 @@ func (_ *FnSrcProp)Info(ctx context.Context, o xrest.Obj, q url.Values) (interfa
 
 func (_ *FnSrcProp)Upd(ctx context.Context, o xrest.Obj, p interface{}) *xrest.ReqErr {
 	return o.(*FunctionDesc).updateSources(ctx, p.(*swyapi.FunctionSources))
+}
+
+type FnAuthProp struct { }
+
+func (_ *FnAuthProp)Info(ctx context.Context, o xrest.Obj, q url.Values) (interface{}, *xrest.ReqErr) {
+	return o.(*FunctionDesc).AuthCtx, nil
+}
+
+func (_ *FnAuthProp)Upd(ctx context.Context, o xrest.Obj, p interface{}) *xrest.ReqErr {
+	return o.(*FunctionDesc).setAuthCtx(ctx, *p.(*string))
 }

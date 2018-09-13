@@ -258,27 +258,8 @@ func handleFunctionAuthCtx(ctx context.Context, w http.ResponseWriter, r *http.R
 		return cerr
 	}
 
-	switch r.Method {
-	case "GET":
-		return xrest.Respond(ctx, w, fn.AuthCtx)
-
-	case "PUT":
-		var ac string
-
-		err := swyhttp.ReadAndUnmarshalReq(r, &ac)
-		if err != nil {
-			return GateErrE(swy.GateBadRequest, err)
-		}
-
-		err = fn.setAuthCtx(ctx, ac)
-		if err != nil {
-			return GateErrE(swy.GateGenErr, err)
-		}
-
-		w.WriteHeader(http.StatusOK)
-	}
-
-	return nil
+	var ac string
+	return xrest.HandleProp(ctx, w, r, &fn, &FnAuthProp{}, &ac)
 }
 
 func handleFunctionEnv(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
