@@ -124,13 +124,13 @@ func (fmd *FnMemData)Handle(ctx context.Context, w http.ResponseWriter, r *http.
 	var code int
 	var conn *podConn
 
-	if ratelimited(fmd) {
+	if fmd.ratelimited() {
 		code = http.StatusTooManyRequests
 		err = errors.New("Ratelimited")
 		goto out
 	}
 
-	if rslimited(fmd) {
+	if fmd.rslimited() {
 		code = http.StatusLocked
 		err = errors.New("Resources exhausted")
 		goto out

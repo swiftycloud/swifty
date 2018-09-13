@@ -639,56 +639,6 @@ func reqPath(r *http.Request) string {
 
 var grl *xratelimit.RL
 
-func ratelimited(fmd *FnMemData) bool {
-	var frl, trl *xratelimit.RL
-
-	/* Per-function RL first, as it's ... more likely to fail */
-	frl = fmd.crl
-	if frl != nil && !frl.Get() {
-		goto f
-	}
-
-	trl = fmd.td.crl
-	if trl != nil && !trl.Get() {
-		goto t
-	}
-
-	if grl != nil && !grl.Get() {
-		goto g
-	}
-
-	return false
-
-g:
-	if trl != nil {
-		trl.Put()
-	}
-t:
-	if frl != nil {
-		frl.Put()
-	}
-f:
-	return true
-}
-
-func rslimited(fmd *FnMemData) bool {
-	tmd := fmd.td
-
-	if tmd.GBS_l != 0 {
-		if tmd.stats.GBS() - tmd.GBS_o > tmd.GBS_l {
-			return true
-		}
-	}
-
-	if tmd.BOut_l != 0 {
-		if tmd.stats.BytesOut - tmd.BOut_o > tmd.BOut_l {
-			return true
-		}
-	}
-
-	return false
-}
-
 func handleCall(w http.ResponseWriter, r *http.Request) {
 	if swyhttp.HandleCORS(w, r, CORS_Clnt_Methods, CORS_Clnt_Headers) { return }
 
