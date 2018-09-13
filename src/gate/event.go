@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"net/http"
 	"gopkg.in/mgo.v2/bson"
 	"../common"
 	"../apis"
@@ -29,6 +30,23 @@ type FnEventDesc struct {
 	Cron		*FnEventCron	`bson:"cron,omitempty"`
 	S3		*FnEventS3	`bson:"s3,omitempty"`
 }
+
+type Trigger struct {
+	ed	*FnEventDesc
+	fn	*FunctionDesc
+}
+
+func (t *Trigger)add(ctx context.Context, _ interface{}) *swyapi.GateErr { return GateErrC(swy.GateNotAvail) }
+
+func (t *Trigger)del(ctx context.Context) *swyapi.GateErr {
+	return t.ed.Delete(ctx, t.fn)
+}
+
+func (t *Trigger)info(ctx context.Context, r *http.Request, details bool) (interface{}, *swyapi.GateErr) {
+	return t.ed.toInfo(t.fn), nil
+}
+
+func (t *Trigger)upd(context.Context, interface{}) *swyapi.GateErr { return GateErrC(swy.GateNotAvail) }
 
 func eventsInit(ctx context.Context, conf *YAMLConf) error {
 	return cronInit(ctx, conf)

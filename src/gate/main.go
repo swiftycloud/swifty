@@ -736,20 +736,7 @@ func handleFunctionTrigger(ctx context.Context, w http.ResponseWriter, r *http.R
 		return GateErrD(err)
 	}
 
-	switch r.Method {
-	case "GET":
-		return respond(ctx, w, ed.toInfo(&fn))
-
-	case "DELETE":
-		erc := ed.Delete(ctx, &fn)
-		if erc != nil {
-			return erc
-		}
-
-		w.WriteHeader(http.StatusOK)
-	}
-
-	return nil
+	return handleOne(ctx, w, r, &Trigger{&ed, &fn}, nil)
 }
 
 func handleFunctionWait(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
