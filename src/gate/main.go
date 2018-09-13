@@ -413,27 +413,8 @@ func handleFunctionEnv(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		return cerr
 	}
 
-	switch r.Method {
-	case "GET":
-		return respond(ctx, w, fn.Code.Env)
-
-	case "PUT":
-		var env []string
-
-		err := swyhttp.ReadAndUnmarshalReq(r, &env)
-		if err != nil {
-			return GateErrE(swy.GateBadRequest, err)
-		}
-
-		err = fn.setEnv(ctx, env)
-		if err != nil {
-			return GateErrE(swy.GateGenErr, err)
-		}
-
-		w.WriteHeader(http.StatusOK)
-	}
-
-	return nil
+	var env []string
+	return handleOne(ctx, w, r, &FnEnvProp{&fn}, &env)
 }
 
 func handleFunctionSize(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
@@ -444,32 +425,8 @@ func handleFunctionSize(ctx context.Context, w http.ResponseWriter, r *http.Requ
 		return cerr
 	}
 
-	switch r.Method {
-	case "GET":
-		return respond(ctx, w, &swyapi.FunctionSize{
-			Memory:		fn.Size.Mem,
-			Timeout:	fn.Size.Tmo,
-			Rate:		fn.Size.Rate,
-			Burst:		fn.Size.Burst,
-		})
-
-	case "PUT":
-		var sz swyapi.FunctionSize
-
-		err := swyhttp.ReadAndUnmarshalReq(r, &sz)
-		if err != nil {
-			return GateErrE(swy.GateBadRequest, err)
-		}
-
-		err = fn.setSize(ctx, &sz)
-		if err != nil {
-			return GateErrE(swy.GateGenErr, err)
-		}
-
-		w.WriteHeader(http.StatusOK)
-	}
-
-	return nil
+	var sz swyapi.FunctionSize
+	return handleOne(ctx, w, r, &FnSzProp{&fn}, &sz)
 }
 
 func handleFunctionMwares(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
@@ -729,32 +686,8 @@ func handleFunctionSources(ctx context.Context, w http.ResponseWriter, r *http.R
 		return cerr
 	}
 
-	switch r.Method {
-	case "GET":
-		src, cerr := fn.getSources(ctx)
-		if cerr != nil {
-			return cerr
-		}
-
-		return respond(ctx, w, src)
-
-	case "PUT":
-		var src swyapi.FunctionSources
-
-		err := swyhttp.ReadAndUnmarshalReq(r, &src)
-		if err != nil {
-			return GateErrE(swy.GateBadRequest, err)
-		}
-
-		cerr := fn.updateSources(ctx, &src)
-		if cerr != nil {
-			return cerr
-		}
-
-		w.WriteHeader(http.StatusOK)
-	}
-
-	return nil
+	var src swyapi.FunctionSources
+	return handleOne(ctx, w, r, &FnSrcProp{&fn}, &src)
 }
 
 func getCallStats(ctx context.Context, ten string, periods int) ([]swyapi.TenantStats, *swyapi.GateErr) {
@@ -1175,42 +1108,13 @@ func handleRouter(ctx context.Context, w http.ResponseWriter, r *http.Request) *
 func handleRouterTable(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
 	var rt RouterDesc
 
-	/* FIXME -- omit table here */
 	cerr := objFindForReq(ctx, r, "rid", &rt)
 	if cerr != nil {
 		return cerr
 	}
 
-	switch r.Method {
-	case "GET":
-		q := r.URL.Query()
-		f, e := reqAtoi(q, "from", 0)
-		if f < 0 || e != nil {
-			return GateErrM(swy.GateBadRequest, "Invalid range")
-		}
-		t, e := reqAtoi(q, "to", len(rt.Table))
-		if t > len(rt.Table) || e != nil {
-			return GateErrM(swy.GateBadRequest, "Invalid range")
-		}
-
-		return respond(ctx, w, rt.Table[f:t])
-	case "PUT":
-		var tbl []*swyapi.RouterEntry
-
-		err := swyhttp.ReadAndUnmarshalReq(r, &tbl)
-		if err != nil {
-			return GateErrE(swy.GateBadRequest, err)
-		}
-
-		cerr := rt.setTable(ctx, tbl)
-		if cerr != nil {
-			return cerr
-		}
-
-		w.WriteHeader(http.StatusOK)
-	}
-
-	return nil
+	var tbl []*swyapi.RouterEntry
+	return handleOne(ctx, w, r, &RtTblProp{&rt}, &tbl)
 }
 
 func handleAccounts(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {

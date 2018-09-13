@@ -1023,3 +1023,63 @@ func (fn *FunctionDesc)setState(ctx context.Context, st string) *swyapi.GateErr 
 
 	return GateErrM(swy.GateNotAvail, "Cannot set this state")
 }
+
+type FnEnvProp struct {
+	fn *FunctionDesc
+}
+
+func (e *FnEnvProp)info(ctx context.Context, r *http.Request, details bool) (interface{}, *swyapi.GateErr) {
+	return e.fn.Code.Env, nil
+}
+
+func (e *FnEnvProp)upd(ctx context.Context, p interface{}) *swyapi.GateErr {
+	err := e.fn.setEnv(ctx, *p.(*[]string))
+	if err != nil {
+		return GateErrE(swy.GateGenErr, err)
+	}
+
+	return nil
+}
+
+func (e *FnEnvProp)del(context.Context) *swyapi.GateErr { return GateErrC(swy.GateNotAvail) }
+func (e *FnEnvProp)add(context.Context, interface{}) *swyapi.GateErr { return GateErrC(swy.GateNotAvail) }
+
+type FnSzProp struct {
+	fn *FunctionDesc
+}
+
+func (s *FnSzProp)info(ctx context.Context, r *http.Request, details bool) (interface{}, *swyapi.GateErr) {
+	return &swyapi.FunctionSize{
+		Memory:		s.fn.Size.Mem,
+		Timeout:	s.fn.Size.Tmo,
+		Rate:		s.fn.Size.Rate,
+		Burst:		s.fn.Size.Burst,
+	}, nil
+}
+
+func (s *FnSzProp)upd(ctx context.Context, p interface{}) *swyapi.GateErr {
+	err := s.fn.setSize(ctx, p.(*swyapi.FunctionSize))
+	if err != nil {
+		return GateErrE(swy.GateGenErr, err)
+	}
+
+	return nil
+}
+
+func (s *FnSzProp)del(context.Context) *swyapi.GateErr { return GateErrC(swy.GateNotAvail) }
+func (s *FnSzProp)add(context.Context, interface{}) *swyapi.GateErr { return GateErrC(swy.GateNotAvail) }
+
+type FnSrcProp struct {
+	fn *FunctionDesc
+}
+
+func (s *FnSrcProp)info(ctx context.Context, r *http.Request, details bool) (interface{}, *swyapi.GateErr) {
+	return s.fn.getSources(ctx)
+}
+
+func (s *FnSrcProp)upd(ctx context.Context, p interface{}) *swyapi.GateErr {
+	return s.fn.updateSources(ctx, p.(*swyapi.FunctionSources))
+}
+
+func (s *FnSrcProp)del(context.Context) *swyapi.GateErr { return GateErrC(swy.GateNotAvail) }
+func (s *FnSrcProp)add(context.Context, interface{}) *swyapi.GateErr { return GateErrC(swy.GateNotAvail) }

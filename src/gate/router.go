@@ -214,3 +214,34 @@ func (rt *RouterURL)Handle(ctx context.Context, w http.ResponseWriter, r *http.R
 	}
 	http.Error(w, "", code)
 }
+
+type RtTblProp struct {
+	rt *RouterDesc
+}
+
+func (p *RtTblProp)info(ctx context.Context, r *http.Request, details bool) (interface{}, *swyapi.GateErr) {
+	rt := p.rt
+	f := 0
+	t := len(rt.Table)
+
+	if r != nil {
+		q := r.URL.Query()
+		f, e := reqAtoi(q, "from", f)
+		if f < 0 || e != nil {
+			return nil, GateErrM(swy.GateBadRequest, "Invalid range")
+		}
+		t, e := reqAtoi(q, "to", t)
+		if t > len(rt.Table) || e != nil {
+			return nil, GateErrM(swy.GateBadRequest, "Invalid range")
+		}
+	}
+
+	return rt.Table[f:t], nil
+}
+
+func (p *RtTblProp)upd(ctx context.Context, par interface{}) *swyapi.GateErr {
+	return p.rt.setTable(ctx, *par.(*[]*swyapi.RouterEntry))
+}
+
+func (p *RtTblProp)del(context.Context) *swyapi.GateErr { return GateErrC(swy.GateNotAvail) }
+func (p *RtTblProp)add(context.Context, interface{}) *swyapi.GateErr { return GateErrC(swy.GateNotAvail) }
