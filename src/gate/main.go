@@ -5,7 +5,6 @@ import (
 
 	"github.com/gorilla/mux"
 
-	"encoding/json"
 	"encoding/hex"
 	"net/http"
 	"net/url"
@@ -1285,15 +1284,7 @@ func genReqHandler(cb gateGenReq) http.Handler {
 		cerr := cb(ctx, w, r)
 		if cerr != nil {
 			ctxlog(ctx).Errorf("Error in callback: %s", cerr.Message)
-
-			jdata, err := json.Marshal(cerr)
-			if err != nil {
-				ctxlog(ctx).Errorf("Can't marshal back gate error: %s", err.Error())
-				jdata = []byte("")
-			}
-
-			http.Error(w, string(jdata), http.StatusBadRequest)
-
+			http.Error(w, cerr.String(), http.StatusBadRequest)
 			traceError(ctx, cerr)
 		}
 	})
