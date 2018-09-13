@@ -1070,3 +1070,23 @@ func (_ *FnAuthProp)Info(ctx context.Context, o xrest.Obj, q url.Values) (interf
 func (_ *FnAuthProp)Upd(ctx context.Context, o xrest.Obj, p interface{}) *xrest.ReqErr {
 	return o.(*FunctionDesc).setAuthCtx(ctx, *p.(*string))
 }
+
+type FnStatsProp struct { }
+
+func (_ *FnStatsProp)Info(ctx context.Context, o xrest.Obj, q url.Values) (interface{}, *xrest.ReqErr) {
+	periods := reqPeriods(q)
+	if periods < 0 {
+		return nil, GateErrC(swy.GateBadRequest)
+	}
+
+	stats, cerr := o.(*FunctionDesc).getStats(ctx, periods)
+	if cerr != nil {
+		return nil, cerr
+	}
+
+	return &swyapi.FunctionStatsResp{ Stats: stats }, nil
+}
+
+func (_ *FnStatsProp)Upd(ctx context.Context, o xrest.Obj, p interface{}) *xrest.ReqErr {
+	return GateErrC(swy.GateNotAvail)
+}

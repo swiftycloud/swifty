@@ -616,22 +616,7 @@ func handleFunctionStats(ctx context.Context, w http.ResponseWriter, r *http.Req
 		return cerr
 	}
 
-	switch r.Method {
-	case "GET":
-		periods := reqPeriods(r.URL.Query())
-		if periods < 0 {
-			return GateErrC(swy.GateBadRequest)
-		}
-
-		stats, cerr := fn.getStats(ctx, periods)
-		if cerr != nil {
-			return cerr
-		}
-
-		return xrest.Respond(ctx, w, &swyapi.FunctionStatsResp{ Stats: stats })
-	}
-
-	return nil
+	return xrest.HandleProp(ctx, w, r, &fn, &FnStatsProp{ }, nil)
 }
 
 func getSince(r *http.Request) (*time.Time, *xrest.ReqErr) {
