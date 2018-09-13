@@ -17,6 +17,8 @@ type RouterDesc struct {
 	Table		[]*swyapi.RouterEntry	`bson:"table"`
 }
 
+type Routers struct {}
+
 const TableKeyLenMax = 64
 
 func ckTable(tbl []*swyapi.RouterEntry) *swyapi.GateErr {
@@ -45,6 +47,16 @@ func getRouterDesc(id *SwoId, params *swyapi.RouterAdd) (*RouterDesc, *swyapi.Ga
 
 func (rt *RouterDesc)getURL() string {
 	return getURL(URLRouter, rt.Cookie)
+}
+
+func (_ Routers)create(ctx context.Context, r *http.Request, p interface{}) (Obj, *swyapi.GateErr) {
+	params := p.(*swyapi.RouterAdd)
+	id := ctxSwoId(ctx, params.Project, params.Name)
+	return getRouterDesc(id, params)
+}
+
+func (rt *RouterDesc)add(ctx context.Context, params interface{}) *swyapi.GateErr {
+	return rt.Create(ctx)
 }
 
 func (rt *RouterDesc)info(ctx context.Context, r *http.Request, details bool) (interface{}, *swyapi.GateErr) {

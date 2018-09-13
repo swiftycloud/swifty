@@ -49,6 +49,8 @@ type AccDesc struct {
 	Secrets		map[string]Secret	`bson:"secrets"`
 }
 
+type Accounts struct {}
+
 func mkAccEnvName(typ, name, env string) string {
 	return "ACC_" + strings.ToUpper(typ) + strings.ToUpper(name) + "_" + strings.ToUpper(env)
 }
@@ -147,6 +149,20 @@ func getAccDesc(id *SwoId, params map[string]string) (*AccDesc, *swyapi.GateErr)
 	}
 
 	return ad, nil
+}
+
+func (_ Accounts)create(ctx context.Context, r *http.Request, p interface{}) (Obj, *swyapi.GateErr) {
+	params := *p.(*map[string]string)
+	if _, ok := params["type"]; !ok {
+		return nil, GateErrM(swy.GateBadRequest, "No type")
+	}
+
+	id := ctxSwoId(ctx, NoProject, params["name"])
+	return getAccDesc(id, params)
+}
+
+func (ad *AccDesc)add(ctx context.Context, params interface{}) *swyapi.GateErr {
+	return ad.Add(ctx)
 }
 
 func (ad *AccDesc)info(ctx context.Context, r *http.Request, details bool) (interface{}, *swyapi.GateErr) {

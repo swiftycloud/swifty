@@ -118,6 +118,8 @@ type DeployDesc struct {
 	_Items		[]*_DeployItemDesc	`bson:"items,omitempty"`
 }
 
+type Deployments struct {}
+
 func deployStartItems(dep *DeployDesc) {
 	ctx, done := mkContext("::deploy start")
 	defer done(ctx)
@@ -242,6 +244,27 @@ func (dep *DeployDesc)Start(ctx context.Context) *swyapi.GateErr {
 	}
 
 	go deployStartItems(dep)
+
+	return nil
+}
+
+func (_ Deployments)create(ctx context.Context, r *http.Request, p interface{}) (Obj, *swyapi.GateErr) {
+	params := p.(*swyapi.DeployStart)
+	return getDeployDesc(ctxSwoId(ctx, params.Project, params.Name)), nil
+}
+
+func (dep *DeployDesc)add(ctx context.Context, p interface{}) *swyapi.GateErr {
+	params := p.(*swyapi.DeployStart)
+
+	cerr := dep.getItems(params)
+	if cerr != nil {
+		return cerr
+	}
+
+	cerr = dep.Start(ctx)
+	if cerr != nil {
+		return cerr
+	}
 
 	return nil
 }

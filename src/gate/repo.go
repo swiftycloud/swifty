@@ -45,6 +45,8 @@ type RepoDesc struct {
 	AccID		bson.ObjectId	`bson:"accid,omitempty"`
 }
 
+type Repos struct {}
+
 type GitHubRepo struct {
 	Name		string		`json:"name"`
 	URL		string		`json:"clone_url"`
@@ -81,6 +83,32 @@ func getRepoDesc(id *SwoId, params *swyapi.RepoAdd) *RepoDesc {
 	return rd
 }
 
+func (_ Repos)create(ctx context.Context, r *http.Request, p interface{}) (Obj, *swyapi.GateErr) {
+	params := p.(*swyapi.RepoAdd)
+	id := ctxSwoId(ctx, NoProject, params.URL)
+	return getRepoDesc(id, params), nil
+}
+
+func (rd *RepoDesc)add(ctx context.Context, p interface{}) *swyapi.GateErr {
+	var acc *AccDesc
+	params := p.(*swyapi.RepoAdd)
+	if params.AccID != "" {
+		var ac AccDesc
+
+		cerr := objFindId(ctx, params.AccID, &ac, nil)
+		if cerr != nil {
+			return cerr
+		}
+
+		if ac.Type != params.Type {
+			return GateErrM(swy.GateBadRequest, "Bad account type")
+		}
+
+		acc = &ac
+	}
+
+	return rd.Attach(ctx, acc)
+}
 
 func (rd *RepoDesc)info(ctx context.Context, r *http.Request, details bool) (interface{}, *swyapi.GateErr) {
 	return rd.toInfo(ctx, details)

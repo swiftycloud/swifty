@@ -199,6 +199,18 @@ func (item *MwareDesc)toFnInfo(ctx context.Context) *swyapi.MwareInfo {
 	}
 }
 
+type Mwares struct {}
+
+func (_ Mwares)create(ctx context.Context, r *http.Request, p interface{}) (Obj, *swyapi.GateErr) {
+	params := p.(*swyapi.MwareAdd)
+	id := ctxSwoId(ctx, params.Project, params.Name)
+	return getMwareDesc(id, params), nil
+}
+
+func (mw *MwareDesc)add(ctx context.Context, params interface{}) *swyapi.GateErr {
+	return mw.Setup(ctx)
+}
+
 func (mw *MwareDesc)info(ctx context.Context, r *http.Request, details bool) (interface{}, *swyapi.GateErr) {
 	return mw.toInfo(ctx, details)
 }

@@ -138,6 +138,11 @@ type Obj interface {
 	info(context.Context, *http.Request, bool) (interface{}, *swyapi.GateErr)
 	del(context.Context) *swyapi.GateErr
 	upd(context.Context, interface{}) *swyapi.GateErr
+	add(context.Context, interface{}) *swyapi.GateErr
+}
+
+type Factory interface {
+	create(context.Context, *http.Request, interface{}) (Obj, *swyapi.GateErr)
 }
 
 func handleGetOne(ctx context.Context, w http.ResponseWriter, r *http.Request, desc Obj) *swyapi.GateErr {
@@ -166,6 +171,26 @@ func handleUpdateOne(ctx context.Context, w http.ResponseWriter, r *http.Request
 	}
 
 	cerr := desc.upd(ctx, upd)
+	if cerr != nil {
+		return cerr
+	}
+
+	ifo, _ := desc.info(ctx, nil, false)
+	return respond(ctx, w, ifo)
+}
+
+func handleCreateOne(ctx context.Context, w http.ResponseWriter, r *http.Request, fact Factory, add interface{}) *swyapi.GateErr {
+	err := swyhttp.ReadAndUnmarshalReq(r, add)
+	if err != nil {
+		return GateErrE(swy.GateBadRequest, err)
+	}
+
+	desc, cerr := fact.create(ctx, r, add)
+	if cerr != nil {
+		return cerr
+	}
+
+	cerr = desc.add(ctx, add)
 	if cerr != nil {
 		return cerr
 	}
@@ -1078,33 +1103,7 @@ func handleFunctions(ctx context.Context, w http.ResponseWriter, r *http.Request
 
 	case "POST":
 		var params swyapi.FunctionAdd
-
-		err := swyhttp.ReadAndUnmarshalReq(r, &params)
-		if err != nil {
-			return GateErrE(swy.GateBadRequest, err)
-		}
-
-		if params.Name == "" {
-			return GateErrM(swy.GateBadRequest, "No function name")
-		}
-		if params.Code.Lang == "" {
-			return GateErrM(swy.GateBadRequest, "No language specified")
-		}
-
-		id := ctxSwoId(ctx, params.Project, params.Name)
-		fd, cerr := getFunctionDesc(id, &params)
-		if cerr != nil {
-			return cerr
-		}
-
-		cerr = fd.Add(ctx, &params.Sources)
-		if cerr != nil {
-			return cerr
-
-		}
-
-		fi, _ := fd.toInfo(ctx, false, 0)
-		return respond(ctx, w, fi)
+		return handleCreateOne(ctx, w, r, Functions{}, &params)
 	}
 
 	return nil
@@ -1251,23 +1250,7 @@ func handleMwares(ctx context.Context, w http.ResponseWriter, r *http.Request) *
 
 	case "POST":
 		var params swyapi.MwareAdd
-
-		err := swyhttp.ReadAndUnmarshalReq(r, &params)
-		if err != nil {
-			return GateErrE(swy.GateBadRequest, err)
-		}
-
-		ctxlog(ctx).Debugf("mware/add: %s params %v", gctx(ctx).Tenant, params)
-
-		id := ctxSwoId(ctx, params.Project, params.Name)
-		mw := getMwareDesc(id, &params)
-		cerr := mw.Setup(ctx)
-		if cerr != nil {
-			return cerr
-		}
-
-		mi, _ := mw.toInfo(ctx, false)
-		return respond(ctx, w, &mi)
+		return handleCreateOne(ctx, w, r, Mwares{}, &params)
 	}
 
 	return nil
@@ -1298,24 +1281,7 @@ func handleRouters(ctx context.Context, w http.ResponseWriter, r *http.Request) 
 
 	case "POST":
 		var params swyapi.RouterAdd
-
-		err := swyhttp.ReadAndUnmarshalReq(r, &params)
-		if err != nil {
-			return GateErrE(swy.GateBadRequest, err)
-		}
-
-		id := ctxSwoId(ctx, params.Project, params.Name)
-		rt, cerr := getRouterDesc(id, &params)
-		if cerr != nil {
-			return cerr
-		}
-
-		cerr = rt.Create(ctx)
-		if cerr != nil {
-			return cerr
-		}
-
-		return respond(ctx, w, rt.toInfo(ctx, false))
+		return handleCreateOne(ctx, w, r, Routers{}, &params)
 	}
 
 	return nil
@@ -1408,30 +1374,7 @@ func handleAccounts(ctx context.Context, w http.ResponseWriter, r *http.Request)
 
 	case "POST":
 		var params map[string]string
-
-		err := swyhttp.ReadAndUnmarshalReq(r, &params)
-		if err != nil {
-			return GateErrE(swy.GateBadRequest, err)
-		}
-
-		if _, ok := params["type"]; !ok {
-			return GateErrM(swy.GateBadRequest, "No type")
-		}
-
-		ctxlog(ctx).Debugf("account/add: %s params %v", gctx(ctx).Tenant, params)
-
-		id := ctxSwoId(ctx, NoProject, params["name"])
-		ac, cerr := getAccDesc(id, params)
-		if cerr != nil {
-			return cerr
-		}
-
-		cerr = ac.Add(ctx)
-		if cerr != nil {
-			return cerr
-		}
-
-		return respond(ctx, w, ac.toInfo(ctx, false))
+		return handleCreateOne(ctx, w, r, Accounts{}, &params)
 	}
 
 	return nil
@@ -1480,39 +1423,7 @@ func handleRepos(ctx context.Context, w http.ResponseWriter, r *http.Request) *s
 
 	case "POST":
 		var params swyapi.RepoAdd
-		var acc *AccDesc
-
-		err := swyhttp.ReadAndUnmarshalReq(r, &params)
-		if err != nil {
-			return GateErrE(swy.GateBadRequest, err)
-		}
-
-		ctxlog(ctx).Debugf("repo/add: %s params %v", gctx(ctx).Tenant, params)
-
-		if params.AccID != "" {
-			var ac AccDesc
-
-			cerr := objFindId(ctx, params.AccID, &ac, nil)
-			if cerr != nil {
-				return cerr
-			}
-
-			if ac.Type != params.Type {
-				return GateErrM(swy.GateBadRequest, "Bad account type")
-			}
-
-			acc = &ac
-		}
-
-		id := ctxSwoId(ctx, NoProject, params.URL)
-		rp := getRepoDesc(id, &params)
-		cerr := rp.Attach(ctx, acc)
-		if cerr != nil {
-			return cerr
-		}
-
-		ri, _ := rp.toInfo(ctx, false)
-		return respond(ctx, w, &ri)
+		return handleCreateOne(ctx, w, r, Repos{}, &params)
 	}
 
 	return nil
@@ -1719,25 +1630,7 @@ func handleDeployments(ctx context.Context, w http.ResponseWriter, r *http.Reque
 
 	case "POST":
 		var ds swyapi.DeployStart
-
-		err := swyhttp.ReadAndUnmarshalReq(r, &ds)
-		if err != nil {
-			return GateErrE(swy.GateBadRequest, err)
-		}
-
-		dd := getDeployDesc(ctxSwoId(ctx, ds.Project, ds.Name))
-		cerr := dd.getItems(&ds)
-		if cerr != nil {
-			return cerr
-		}
-
-		cerr = dd.Start(ctx)
-		if cerr != nil {
-			return cerr
-		}
-
-		di, _ := dd.toInfo(ctx, false)
-		return respond(ctx, w, &di)
+		return handleCreateOne(ctx, w, r, Deployments{}, &ds)
 	}
 
 	return nil

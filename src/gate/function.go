@@ -103,6 +103,8 @@ type FunctionDesc struct {
 	UserData	string		`bson:"userdata,omitempty"`
 }
 
+type Functions struct {}
+
 func (fn *FunctionDesc)isOneShot() bool {
 	return false
 }
@@ -160,6 +162,24 @@ func (fn *FunctionDesc)toMInfo(ctx context.Context) *swyapi.FunctionMdat {
 		fid.BR = []uint { uint(fdm.bd.rover[0]), uint(fdm.bd.rover[1]), uint(fdm.bd.goal) }
 	}
 	return &fid
+}
+
+func (_ Functions)create(ctx context.Context, r *http.Request, p interface{}) (Obj, *swyapi.GateErr) {
+	params := p.(*swyapi.FunctionAdd)
+	if params.Name == "" {
+		return nil, GateErrM(swy.GateBadRequest, "No function name")
+	}
+	if params.Code.Lang == "" {
+		return nil, GateErrM(swy.GateBadRequest, "No language specified")
+	}
+
+	id := ctxSwoId(ctx, params.Project, params.Name)
+	return getFunctionDesc(id, params)
+}
+
+func (fn *FunctionDesc)add(ctx context.Context, p interface{}) *swyapi.GateErr {
+	params := p.(*swyapi.FunctionAdd)
+	return fn.Add(ctx, &params.Sources)
 }
 
 func (fn *FunctionDesc)info(ctx context.Context, r *http.Request, details bool) (interface{}, *swyapi.GateErr) {
