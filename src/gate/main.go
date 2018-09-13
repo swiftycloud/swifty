@@ -290,7 +290,7 @@ func handleFunctionEnv(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	}
 
 	var env []string
-	return xrest.HandleOne(ctx, w, r, &FnEnvProp{&fn}, &env)
+	return xrest.HandleProp(ctx, w, r, &FnEnvProp{&fn}, &env)
 }
 
 func handleFunctionSize(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
@@ -302,7 +302,7 @@ func handleFunctionSize(ctx context.Context, w http.ResponseWriter, r *http.Requ
 	}
 
 	var sz swyapi.FunctionSize
-	return xrest.HandleOne(ctx, w, r, &FnSzProp{&fn}, &sz)
+	return xrest.HandleProp(ctx, w, r, &FnSzProp{&fn}, &sz)
 }
 
 func handleFunctionMwares(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
@@ -563,7 +563,7 @@ func handleFunctionSources(ctx context.Context, w http.ResponseWriter, r *http.R
 	}
 
 	var src swyapi.FunctionSources
-	return xrest.HandleOne(ctx, w, r, &FnSrcProp{&fn}, &src)
+	return xrest.HandleProp(ctx, w, r, &FnSrcProp{&fn}, &src)
 }
 
 func getCallStats(ctx context.Context, ten string, periods int) ([]swyapi.TenantStats, *xrest.ReqErr) {
@@ -990,7 +990,7 @@ func handleRouterTable(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	}
 
 	var tbl []*swyapi.RouterEntry
-	return xrest.HandleOne(ctx, w, r, &RtTblProp{&rt}, &tbl)
+	return xrest.HandleProp(ctx, w, r, &RtTblProp{&rt}, &tbl)
 }
 
 func handleAccounts(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {

@@ -30,6 +30,15 @@ func HandleGetOne(ctx context.Context, w http.ResponseWriter, r *http.Request, d
 	return Respond(ctx, w, ifo)
 }
 
+func HandleGetProp(ctx context.Context, w http.ResponseWriter, r *http.Request, desc Prop) *ReqErr {
+	ifo, cerr := desc.Info(ctx, r.URL.Query(), true)
+	if cerr != nil {
+		return cerr
+	}
+
+	return Respond(ctx, w, ifo)
+}
+
 func HandleDeleteOne(ctx context.Context, w http.ResponseWriter, r *http.Request, desc Obj) *ReqErr {
 	cerr := desc.Del(ctx)
 	if cerr != nil {
@@ -53,6 +62,21 @@ func HandleUpdateOne(ctx context.Context, w http.ResponseWriter, r *http.Request
 
 	ifo, _ := desc.Info(ctx, nil, false)
 	return Respond(ctx, w, ifo)
+}
+
+func HandleUpdateProp(ctx context.Context, w http.ResponseWriter, r *http.Request, desc Prop, upd interface{}) *ReqErr {
+	err := swyhttp.ReadAndUnmarshalReq(r, upd)
+	if err != nil {
+		return &ReqErr{2 /* XXX: GateBadRequest */, err.Error()}
+	}
+
+	cerr := desc.Upd(ctx, upd)
+	if cerr != nil {
+		return cerr
+	}
+
+	w.WriteHeader(http.StatusOK)
+	return nil
 }
 
 func HandleCreateOne(ctx context.Context, w http.ResponseWriter, r *http.Request, fact Factory, add interface{}) *ReqErr {
@@ -124,3 +148,14 @@ func HandleOne(ctx context.Context, w http.ResponseWriter, r *http.Request, o Ob
 	return nil
 }
 
+func HandleProp(ctx context.Context, w http.ResponseWriter, r *http.Request, p Prop, upd_param interface{}) *ReqErr {
+	switch r.Method {
+	case "GET":
+		return HandleGetProp(ctx, w, r, p)
+
+	case "PUT":
+		return HandleUpdateProp(ctx, w, r, p, upd_param)
+	}
+
+	return nil
+}

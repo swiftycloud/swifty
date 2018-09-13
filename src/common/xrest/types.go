@@ -12,6 +12,11 @@ type Obj interface {
 	Add(context.Context, interface{}) *ReqErr
 }
 
+type Prop interface {
+	Info(context.Context, url.Values, bool) (interface{}, *ReqErr)
+	Upd(context.Context, interface{}) *ReqErr
+}
+
 type Factory interface {
 	Create(context.Context, interface{}) (Obj, *ReqErr)
 	Iterate(context.Context, url.Values, func(context.Context, Obj) *ReqErr) *ReqErr

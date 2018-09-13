@@ -1033,9 +1033,6 @@ func (e *FnEnvProp)Upd(ctx context.Context, p interface{}) *xrest.ReqErr {
 	return nil
 }
 
-func (e *FnEnvProp)Del(context.Context) *xrest.ReqErr { return GateErrC(swy.GateNotAvail) }
-func (e *FnEnvProp)Add(context.Context, interface{}) *xrest.ReqErr { return GateErrC(swy.GateNotAvail) }
-
 type FnSzProp struct {
 	fn *FunctionDesc
 }
@@ -1058,9 +1055,6 @@ func (s *FnSzProp)Upd(ctx context.Context, p interface{}) *xrest.ReqErr {
 	return nil
 }
 
-func (s *FnSzProp)Del(context.Context) *xrest.ReqErr { return GateErrC(swy.GateNotAvail) }
-func (s *FnSzProp)Add(context.Context, interface{}) *xrest.ReqErr { return GateErrC(swy.GateNotAvail) }
-
 type FnSrcProp struct {
 	fn *FunctionDesc
 }
@@ -1072,6 +1066,3 @@ func (s *FnSrcProp)Info(ctx context.Context, q url.Values, details bool) (interf
 func (s *FnSrcProp)Upd(ctx context.Context, p interface{}) *xrest.ReqErr {
 	return s.fn.updateSources(ctx, p.(*swyapi.FunctionSources))
 }
-
-func (s *FnSrcProp)Del(context.Context) *xrest.ReqErr { return GateErrC(swy.GateNotAvail) }
-func (s *FnSrcProp)Add(context.Context, interface{}) *xrest.ReqErr { return GateErrC(swy.GateNotAvail) }

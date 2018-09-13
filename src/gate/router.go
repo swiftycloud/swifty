@@ -233,6 +233,3 @@ func (p *RtTblProp)Info(ctx context.Context, q url.Values, details bool) (interf
 func (p *RtTblProp)Upd(ctx context.Context, par interface{}) *xrest.ReqErr {
 	return p.rt.setTable(ctx, *par.(*[]*swyapi.RouterEntry))
 }
-
-func (p *RtTblProp)Del(context.Context) *xrest.ReqErr { return GateErrC(swy.GateNotAvail) }
-func (p *RtTblProp)Add(context.Context, interface{}) *xrest.ReqErr { return GateErrC(swy.GateNotAvail) }
