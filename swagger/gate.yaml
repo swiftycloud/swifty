@@ -2503,6 +2503,9 @@ definitions:
       call:
         type: string
         description: Function name to call
+      key:
+        type: string
+        description: Random value (up to 64 bytes long) passed into functions
   RouterAdd:
     type: object
     description: Router creation info

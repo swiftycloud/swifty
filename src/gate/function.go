@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"strings"
+	"net/url"
 	"fmt"
 	"time"
 	"context"
@@ -13,6 +14,7 @@ import (
 	"../common"
 	"../common/xratelimit"
 	"../common/xwait"
+	"../common/xrest"
 )
 
 /*
@@ -102,6 +104,8 @@ type FunctionDesc struct {
 	UserData	string		`bson:"userdata,omitempty"`
 }
 
+type Functions struct {}
+
 func (fn *FunctionDesc)isOneShot() bool {
 	return false
 }
@@ -120,7 +124,7 @@ func (fn *FunctionDesc)ToState(ctx context.Context, st, from int) error {
 	return err
 }
 
-func listFunctions(ctx context.Context, project, name string, labels []string) ([]*FunctionDesc, *swyapi.GateErr) {
+func listFunctions(ctx context.Context, project, name string, labels []string) ([]*FunctionDesc, *xrest.ReqErr) {
 	var fns []*FunctionDesc
 
 	if name == "" {
@@ -161,7 +165,79 @@ func (fn *FunctionDesc)toMInfo(ctx context.Context) *swyapi.FunctionMdat {
 	return &fid
 }
 
-func (fn *FunctionDesc)toInfo(ctx context.Context, details bool, periods int) (*swyapi.FunctionInfo, *swyapi.GateErr) {
+func (_ Functions)Iterate(ctx context.Context, q url.Values, cb func(context.Context, xrest.Obj) *xrest.ReqErr) *xrest.ReqErr {
+	project := q.Get("project")
+	if project == "" {
+		project = DefaultProject
+	}
+
+	fname := q.Get("name")
+	periods := reqPeriods(q)
+	if periods < 0 {
+		return GateErrC(swy.GateBadRequest)
+	}
+
+	fns, cerr := listFunctions(ctx, project, fname, q["label"])
+	if cerr != nil {
+		return cerr
+	}
+
+	for _, fn := range fns {
+		cerr = cb(ctx, fn)
+		if cerr != nil {
+			return cerr
+		}
+	}
+
+	return nil
+}
+
+func (_ Functions)Create(ctx context.Context, p interface{}) (xrest.Obj, *xrest.ReqErr) {
+	params := p.(*swyapi.FunctionAdd)
+	if params.Name == "" {
+		return nil, GateErrM(swy.GateBadRequest, "No function name")
+	}
+	if params.Code.Lang == "" {
+		return nil, GateErrM(swy.GateBadRequest, "No language specified")
+	}
+
+	id := ctxSwoId(ctx, params.Project, params.Name)
+	return getFunctionDesc(id, params)
+}
+
+func (fn *FunctionDesc)Info(ctx context.Context, q url.Values, details bool) (interface{}, *xrest.ReqErr) {
+	periods := 0
+	if q != nil {
+		periods = reqPeriods(q)
+		if periods < 0 {
+			return nil, GateErrC(swy.GateBadRequest)
+		}
+	}
+
+	return fn.toInfo(ctx, details, periods)
+}
+
+func (fn *FunctionDesc)Upd(ctx context.Context, upd interface{}) *xrest.ReqErr {
+	fu := upd.(*swyapi.FunctionUpdate)
+
+	if fu.UserData != nil {
+		err := fn.setUserData(ctx, *fu.UserData)
+		if err != nil {
+			return GateErrE(swy.GateGenErr, err)
+		}
+	}
+
+	if fu.State != "" {
+		cerr := fn.setState(ctx, fu.State)
+		if cerr != nil {
+			return cerr
+		}
+	}
+
+	return nil
+}
+
+func (fn *FunctionDesc)toInfo(ctx context.Context, details bool, periods int) (*swyapi.FunctionInfo, *xrest.ReqErr) {
 	fi := &swyapi.FunctionInfo {
 		Id:		fn.ObjID.Hex(),
 		Name:		fn.SwoId.Name,
@@ -173,7 +249,7 @@ func (fn *FunctionDesc)toInfo(ctx context.Context, details bool, periods int) (*
 
 	if details {
 		var err error
-		var cerr *swyapi.GateErr
+		var cerr *xrest.ReqErr
 
 		if _, err = urlEvFind(ctx, fn.Cookie); err == nil {
 			fi.URL = fn.getURL()
@@ -206,7 +282,7 @@ func (fn *FunctionDesc)toInfo(ctx context.Context, details bool, periods int) (*
 	return fi, nil
 }
 
-func getFunctionDesc(id *SwoId, p_add *swyapi.FunctionAdd) (*FunctionDesc, *swyapi.GateErr) {
+func getFunctionDesc(id *SwoId, p_add *swyapi.FunctionAdd) (*FunctionDesc, *xrest.ReqErr) {
 	err := fnFixSize(&p_add.Size)
 	if err != nil {
 		return nil, GateErrE(swy.GateBadRequest, err)
@@ -264,11 +340,12 @@ func checkCount(ctx context.Context, id *SwoId) error {
 	return nil
 }
 
-func (fn *FunctionDesc)Add(ctx context.Context, src *swyapi.FunctionSources) *swyapi.GateErr {
+func (fn *FunctionDesc)Add(ctx context.Context, p interface{}) *xrest.ReqErr {
 	var err, erc error
 	var build bool
 	var bAddr string
 
+	src := &p.(*swyapi.FunctionAdd).Sources
 	ctxlog(ctx).Debugf("function/add %s (cookie %s)", fn.SwoId.Str(), fn.Cookie[:32])
 
 	fn.ObjID = bson.NewObjectId()
@@ -382,27 +459,29 @@ func (fn *FunctionDesc)setUserData(ctx context.Context, ud string) error {
 	return err
 }
 
-func (fn *FunctionDesc)setAuthCtx(ctx context.Context, ac string) error {
+func (fn *FunctionDesc)setAuthCtx(ctx context.Context, ac string) *xrest.ReqErr {
 	var nac *AuthCtx
 	var err error
 
 	if ac != "" {
 		nac, err = authCtxGet(ctx, fn.SwoId, ac)
 		if err != nil {
-			return err
+			return GateErrE(swy.GateGenErr, err)
 		}
 	}
 
 	err = dbUpdatePart(ctx, fn, bson.M{"authctx": ac})
-	if err == nil {
-		fn.AuthCtx = ac
-		fdm := memdGetCond(fn.Cookie)
-		if fdm != nil {
-			fdm.ac = nac
-		}
+	if err != nil {
+		return GateErrD(err)
 	}
 
-	return err
+	fn.AuthCtx = ac
+	fdm := memdGetCond(fn.Cookie)
+	if fdm != nil {
+		fdm.ac = nac
+	}
+
+	return nil
 }
 
 func (fn *FunctionDesc)setEnv(ctx context.Context, env []string) error {
@@ -416,7 +495,7 @@ func (fn *FunctionDesc)setEnv(ctx context.Context, env []string) error {
 	return nil
 }
 
-func (fn *FunctionDesc)setSize(ctx context.Context, sz *swyapi.FunctionSize) error {
+func (fn *FunctionDesc)setSize(ctx context.Context, sz *swyapi.FunctionSize) *xrest.ReqErr {
 	update := make(bson.M)
 	restart := false
 	mfix := false
@@ -424,7 +503,7 @@ func (fn *FunctionDesc)setSize(ctx context.Context, sz *swyapi.FunctionSize) err
 
 	err := fnFixSize(sz)
 	if err != nil {
-		return err
+		return GateErrE(swy.GateGenErr, err)
 	}
 
 	if fn.Size.Tmo != sz.Timeout {
@@ -457,7 +536,7 @@ func (fn *FunctionDesc)setSize(ctx context.Context, sz *swyapi.FunctionSize) err
 
 	err = dbUpdatePart(ctx, fn, update)
 	if err != nil {
-		return err
+		return GateErrD(err)
 	}
 
 	if rlfix || mfix {
@@ -560,7 +639,7 @@ func (fn *FunctionDesc)listMware(ctx context.Context) []*swyapi.MwareInfo {
 	return ret
 }
 
-func (fn *FunctionDesc)addAccount(ctx context.Context, ad *AccDesc) *swyapi.GateErr {
+func (fn *FunctionDesc)addAccount(ctx context.Context, ad *AccDesc) *xrest.ReqErr {
 	aid := ad.ObjID.Hex()
 	err := dbFuncUpdate(ctx, bson.M{"_id": fn.ObjID, "accounts": bson.M{"$ne": aid}},
 				bson.M{"$push": bson.M{"accounts":aid}})
@@ -579,7 +658,7 @@ func (fn *FunctionDesc)addAccount(ctx context.Context, ad *AccDesc) *swyapi.Gate
 	return nil
 }
 
-func (fn *FunctionDesc)delAccountId(ctx context.Context, aid string) *swyapi.GateErr {
+func (fn *FunctionDesc)delAccountId(ctx context.Context, aid string) *xrest.ReqErr {
 	err := dbFuncUpdate(ctx, bson.M{"_id": fn.ObjID, "accounts": aid},
 				bson.M{"$pull": bson.M{"accounts": aid}})
 	if err != nil {
@@ -664,7 +743,7 @@ func (fn *FunctionDesc)delS3Bucket(ctx context.Context, bn string) error {
 	return nil
 }
 
-func (fn *FunctionDesc)getSources(ctx context.Context) (*swyapi.FunctionSources, *swyapi.GateErr) {
+func (fn *FunctionDesc)getSources(ctx context.Context) (*swyapi.FunctionSources, *xrest.ReqErr) {
 	fnCode, err := getSources(ctx, fn)
 	if err != nil {
 		return nil, GateErrC(swy.GateFsError)
@@ -684,7 +763,7 @@ func (fn *FunctionDesc)getSources(ctx context.Context) (*swyapi.FunctionSources,
 
 }
 
-func (fn *FunctionDesc)updateSources(ctx context.Context, src *swyapi.FunctionSources) *swyapi.GateErr {
+func (fn *FunctionDesc)updateSources(ctx context.Context, src *swyapi.FunctionSources) *xrest.ReqErr {
 	var err error
 
 	update := make(bson.M)
@@ -736,7 +815,7 @@ func (fn *FunctionDesc)updateSources(ctx context.Context, src *swyapi.FunctionSo
 	return nil
 }
 
-func removeFunctionId(ctx context.Context, id *SwoId) *swyapi.GateErr {
+func removeFunctionId(ctx context.Context, id *SwoId) *xrest.ReqErr {
 	var fn FunctionDesc
 
 	err := dbFind(ctx, id.dbReq(), &fn)
@@ -744,10 +823,10 @@ func removeFunctionId(ctx context.Context, id *SwoId) *swyapi.GateErr {
 		return GateErrD(err)
 	}
 
-	return fn.Remove(ctx)
+	return fn.Del(ctx)
 }
 
-func (fn *FunctionDesc)Remove(ctx context.Context) *swyapi.GateErr {
+func (fn *FunctionDesc)Del(ctx context.Context) *xrest.ReqErr {
 	var err error
 	var dea bool
 
@@ -884,7 +963,7 @@ out:
 	ctxlog(ctx).Errorf("POD update notify: %s", err.Error())
 }
 
-func deactivateFunction(ctx context.Context, fn *FunctionDesc) *swyapi.GateErr {
+func deactivateFunction(ctx context.Context, fn *FunctionDesc) *xrest.ReqErr {
 	var err error
 
 	if fn.State != swy.DBFuncStateRdy {
@@ -906,7 +985,7 @@ func deactivateFunction(ctx context.Context, fn *FunctionDesc) *swyapi.GateErr {
 	return nil
 }
 
-func activateFunction(ctx context.Context, fn *FunctionDesc) *swyapi.GateErr {
+func activateFunction(ctx context.Context, fn *FunctionDesc) *xrest.ReqErr {
 	var err error
 
 	if fn.State != swy.DBFuncStateDea {
@@ -928,7 +1007,7 @@ func activateFunction(ctx context.Context, fn *FunctionDesc) *swyapi.GateErr {
 	return nil
 }
 
-func (fn *FunctionDesc)setState(ctx context.Context, st string) *swyapi.GateErr {
+func (fn *FunctionDesc)setState(ctx context.Context, st string) *xrest.ReqErr {
 	switch st {
 	case fnStates[swy.DBFuncStateDea]:
 		return deactivateFunction(ctx, fn)
@@ -937,4 +1016,122 @@ func (fn *FunctionDesc)setState(ctx context.Context, st string) *swyapi.GateErr 
 	}
 
 	return GateErrM(swy.GateNotAvail, "Cannot set this state")
+}
+
+type FnEnvProp struct { }
+
+func (_ *FnEnvProp)Info(ctx context.Context, o xrest.Obj, q url.Values) (interface{}, *xrest.ReqErr) {
+	fn := o.(*FunctionDesc)
+	return fn.Code.Env, nil
+}
+
+func (_ *FnEnvProp)Upd(ctx context.Context, o xrest.Obj, p interface{}) *xrest.ReqErr {
+	fn := o.(*FunctionDesc)
+	err := fn.setEnv(ctx, *p.(*[]string))
+	if err != nil {
+		return GateErrE(swy.GateGenErr, err)
+	}
+
+	return nil
+}
+
+type FnSzProp struct { }
+
+func (_ *FnSzProp)Info(ctx context.Context, o xrest.Obj, q url.Values) (interface{}, *xrest.ReqErr) {
+	fn := o.(*FunctionDesc)
+	return &swyapi.FunctionSize{
+		Memory:		fn.Size.Mem,
+		Timeout:	fn.Size.Tmo,
+		Rate:		fn.Size.Rate,
+		Burst:		fn.Size.Burst,
+	}, nil
+}
+
+func (_ *FnSzProp)Upd(ctx context.Context, o xrest.Obj, p interface{}) *xrest.ReqErr {
+	return o.(*FunctionDesc).setSize(ctx, p.(*swyapi.FunctionSize))
+}
+
+type FnSrcProp struct { }
+
+func (_ *FnSrcProp)Info(ctx context.Context, o xrest.Obj, q url.Values) (interface{}, *xrest.ReqErr) {
+	return o.(*FunctionDesc).getSources(ctx)
+}
+
+func (_ *FnSrcProp)Upd(ctx context.Context, o xrest.Obj, p interface{}) *xrest.ReqErr {
+	return o.(*FunctionDesc).updateSources(ctx, p.(*swyapi.FunctionSources))
+}
+
+type FnAuthProp struct { }
+
+func (_ *FnAuthProp)Info(ctx context.Context, o xrest.Obj, q url.Values) (interface{}, *xrest.ReqErr) {
+	return o.(*FunctionDesc).AuthCtx, nil
+}
+
+func (_ *FnAuthProp)Upd(ctx context.Context, o xrest.Obj, p interface{}) *xrest.ReqErr {
+	return o.(*FunctionDesc).setAuthCtx(ctx, *p.(*string))
+}
+
+type FnStatsProp struct { }
+
+func (_ *FnStatsProp)Info(ctx context.Context, o xrest.Obj, q url.Values) (interface{}, *xrest.ReqErr) {
+	periods := reqPeriods(q)
+	if periods < 0 {
+		return nil, GateErrC(swy.GateBadRequest)
+	}
+
+	stats, cerr := o.(*FunctionDesc).getStats(ctx, periods)
+	if cerr != nil {
+		return nil, cerr
+	}
+
+	return &swyapi.FunctionStatsResp{ Stats: stats }, nil
+}
+
+func (_ *FnStatsProp)Upd(ctx context.Context, o xrest.Obj, p interface{}) *xrest.ReqErr {
+	return GateErrC(swy.GateNotAvail)
+}
+
+type FnLogsProp struct { }
+
+func getSince(q url.Values) (*time.Time, *xrest.ReqErr) {
+	s := q.Get("last")
+	if s == "" {
+		return nil, nil
+	}
+
+	d, err := time.ParseDuration(s)
+	if err != nil {
+		return nil, GateErrE(swy.GateBadRequest, err)
+	}
+
+	t := time.Now().Add(-d)
+	return &t, nil
+}
+
+func (_ *FnLogsProp)Info(ctx context.Context, o xrest.Obj, q url.Values) (interface{}, *xrest.ReqErr) {
+	since, cerr := getSince(q)
+	if cerr != nil {
+		return nil, cerr
+	}
+
+	fn := o.(*FunctionDesc)
+	logs, err := logGetFor(ctx, &fn.SwoId, since)
+	if err != nil {
+		return nil, GateErrD(err)
+	}
+
+	var resp []*swyapi.FunctionLogEntry
+	for _, loge := range logs {
+		resp = append(resp, &swyapi.FunctionLogEntry{
+			Event:	loge.Event,
+			Ts:	loge.Time.Format(time.RFC1123Z),
+			Text:	loge.Text,
+		})
+	}
+
+	return resp, nil
+}
+
+func (_ *FnLogsProp)Upd(ctx context.Context, o xrest.Obj, p interface{}) *xrest.ReqErr {
+	return GateErrC(swy.GateNotAvail)
 }

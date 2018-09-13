@@ -212,3 +212,13 @@ func ParseXCreds(url string) *XCreds {
 
 	return xc
 }
+
+func Fortune() string {
+	var fort []byte
+	fort, err := exec.Command("fortune", "fortunes").Output()
+	if err == nil {
+		return string(fort)
+	} else {
+		return ""
+	}
+}

@@ -3,8 +3,10 @@ package main
 import (
 	"context"
 	"errors"
+	"net/url"
 	"gopkg.in/mgo.v2/bson"
 	"../common"
+	"../common/xrest"
 	"../apis"
 )
 
@@ -30,8 +32,75 @@ type FnEventDesc struct {
 	S3		*FnEventS3	`bson:"s3,omitempty"`
 }
 
+type Trigger struct {
+	ed	*FnEventDesc
+	fn	*FunctionDesc
+}
+
+func (t *Trigger)Add(ctx context.Context, _ interface{}) *xrest.ReqErr {
+	return t.ed.Add(ctx, t.fn)
+}
+
+func (t *Trigger)Del(ctx context.Context) *xrest.ReqErr {
+	return t.ed.Delete(ctx, t.fn)
+}
+
+func (t *Trigger)Info(ctx context.Context, q url.Values, details bool) (interface{}, *xrest.ReqErr) {
+	return t.ed.toInfo(t.fn), nil
+}
+
+func (t *Trigger)Upd(context.Context, interface{}) *xrest.ReqErr { return GateErrC(swy.GateNotAvail) }
+
 func eventsInit(ctx context.Context, conf *YAMLConf) error {
 	return cronInit(ctx, conf)
+}
+
+type Triggers struct {
+	fn	*FunctionDesc
+}
+
+func (ts Triggers)Create(ctx context.Context, p interface{}) (xrest.Obj, *xrest.ReqErr) {
+	params := p.(*swyapi.FunctionEvent)
+	ed, cerr := getEventDesc(params)
+	if cerr != nil {
+		return nil, cerr
+	}
+
+	return &Trigger{ed, ts.fn}, nil
+}
+
+func (ts Triggers)Iterate(ctx context.Context, q url.Values, cb func(context.Context, xrest.Obj) *xrest.ReqErr) *xrest.ReqErr {
+	ename := q.Get("name")
+
+	var evd []*FnEventDesc
+	var err error
+
+	fn := ts.fn
+
+	if ename == "" {
+		err = dbFindAll(ctx, bson.M{"fnid": fn.Cookie}, &evd)
+		if err != nil {
+			return GateErrD(err)
+		}
+	} else {
+		var ev FnEventDesc
+
+		err = dbFind(ctx, bson.M{"fnid": fn.Cookie, "name": ename}, &ev)
+		if err != nil {
+			return GateErrD(err)
+		}
+
+		evd = append(evd, &ev)
+	}
+
+	for _, e := range evd {
+		cerr := cb(ctx, &Trigger{e, fn})
+		if cerr != nil {
+			return cerr
+		}
+	}
+
+	return nil
 }
 
 func (e *FnEventDesc)toInfo(fn *FunctionDesc) *swyapi.FunctionEvent {
@@ -63,7 +132,7 @@ func (e *FnEventDesc)toInfo(fn *FunctionDesc) *swyapi.FunctionEvent {
 	return &ae
 }
 
-func getEventDesc(evt *swyapi.FunctionEvent) (*FnEventDesc, *swyapi.GateErr) {
+func getEventDesc(evt *swyapi.FunctionEvent) (*FnEventDesc, *xrest.ReqErr) {
 	ed := &FnEventDesc{
 		Name: evt.Name,
 		Source: evt.Source,
@@ -78,7 +147,7 @@ func getEventDesc(evt *swyapi.FunctionEvent) (*FnEventDesc, *swyapi.GateErr) {
 	return ed, nil
 }
 
-func (ed *FnEventDesc)Add(ctx context.Context, fn *FunctionDesc) *swyapi.GateErr {
+func (ed *FnEventDesc)Add(ctx context.Context, fn *FunctionDesc) *xrest.ReqErr {
 	var err error
 
 	ed.ObjID = bson.NewObjectId()
@@ -109,7 +178,7 @@ func (ed *FnEventDesc)Add(ctx context.Context, fn *FunctionDesc) *swyapi.GateErr
 	return nil
 }
 
-func (ed *FnEventDesc)Delete(ctx context.Context, fn *FunctionDesc) *swyapi.GateErr {
+func (ed *FnEventDesc)Delete(ctx context.Context, fn *FunctionDesc) *xrest.ReqErr {
 	h := evtHandlers[ed.Source]
 	err := h.stop(ctx, ed)
 	if err != nil {

@@ -1,7 +1,7 @@
 package main
 
 import (
-	"../apis"
+	"../common/xrest"
 	"../common"
 	"gopkg.in/mgo.v2"
 )
@@ -17,19 +17,19 @@ var gateErrMsg = map[uint]string {
 	swy.GateNotAvail:	"Operation not (yet) available",
 }
 
-func GateErrC(code uint) *swyapi.GateErr {
-	return &swyapi.GateErr{code, gateErrMsg[code]}
+func GateErrC(code uint) *xrest.ReqErr {
+	return &xrest.ReqErr{code, gateErrMsg[code]}
 }
 
-func GateErrE(code uint, err error) *swyapi.GateErr {
-	return &swyapi.GateErr{code, err.Error()}
+func GateErrE(code uint, err error) *xrest.ReqErr {
+	return &xrest.ReqErr{code, err.Error()}
 }
 
-func GateErrM(code uint, msg string) *swyapi.GateErr {
-	return &swyapi.GateErr{code, msg}
+func GateErrM(code uint, msg string) *xrest.ReqErr {
+	return &xrest.ReqErr{code, msg}
 }
 
-func GateErrD(err error) *swyapi.GateErr {
+func GateErrD(err error) *xrest.ReqErr {
 	if err == mgo.ErrNotFound {
 		return GateErrC(swy.GateNotFound)
 	} else if mgo.IsDup(err) {

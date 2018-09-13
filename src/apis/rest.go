@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"encoding/json"
 	"../common/http"
+	"../common/xrest"
 )
 
 type Client struct {
@@ -163,7 +164,7 @@ again:
 		}
 
 		if resp.StatusCode == http.StatusBadRequest {
-			var gerr GateErr
+			var gerr xrest.ReqErr
 
 			err = swyhttp.ReadAndUnmarshalResp(resp, &gerr)
 			resp.Body.Close()

@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"os/exec"
 	"errors"
+	"net/url"
 	"bufio"
 	"os"
 	"context"
@@ -13,6 +14,7 @@ import (
 	"io/ioutil"
 	"../common"
 	"../common/http"
+	"../common/xrest"
 	"../apis"
 )
 
@@ -43,6 +45,8 @@ type RepoDesc struct {
 
 	AccID		bson.ObjectId	`bson:"accid,omitempty"`
 }
+
+type Repos struct {}
 
 type GitHubRepo struct {
 	Name		string		`json:"name"`
@@ -80,7 +84,38 @@ func getRepoDesc(id *SwoId, params *swyapi.RepoAdd) *RepoDesc {
 	return rd
 }
 
-func (rd *RepoDesc)toInfo(ctx context.Context, details bool) (*swyapi.RepoInfo, *swyapi.GateErr) {
+func (_ Repos)Create(ctx context.Context, p interface{}) (xrest.Obj, *xrest.ReqErr) {
+	params := p.(*swyapi.RepoAdd)
+	id := ctxSwoId(ctx, NoProject, params.URL)
+	return getRepoDesc(id, params), nil
+}
+
+func (rd *RepoDesc)Add(ctx context.Context, p interface{}) *xrest.ReqErr {
+	var acc *AccDesc
+	params := p.(*swyapi.RepoAdd)
+	if params.AccID != "" {
+		var ac AccDesc
+
+		cerr := objFindId(ctx, params.AccID, &ac, nil)
+		if cerr != nil {
+			return cerr
+		}
+
+		if ac.Type != params.Type {
+			return GateErrM(swy.GateBadRequest, "Bad account type")
+		}
+
+		acc = &ac
+	}
+
+	return rd.Attach(ctx, acc)
+}
+
+func (rd *RepoDesc)Info(ctx context.Context, q url.Values, details bool) (interface{}, *xrest.ReqErr) {
+	return rd.toInfo(ctx, details)
+}
+
+func (rd *RepoDesc)toInfo(ctx context.Context, details bool) (*swyapi.RepoInfo, *xrest.ReqErr) {
 	r := &swyapi.RepoInfo {
 		ID:		rd.ObjID.Hex(),
 		Type:		rd.Type,
@@ -118,7 +153,7 @@ var repoHandlers = map[string]repoHandler {
 	},
 }
 
-func (rd *RepoDesc)Attach(ctx context.Context, ac *AccDesc) *swyapi.GateErr {
+func (rd *RepoDesc)Attach(ctx context.Context, ac *AccDesc) *xrest.ReqErr {
 	rd.ObjID = bson.NewObjectId()
 	rd.State = swy.DBRepoStateCln
 	if ac != nil {
@@ -140,7 +175,8 @@ func (rd *RepoDesc)Attach(ctx context.Context, ac *AccDesc) *swyapi.GateErr {
 	return nil
 }
 
-func (rd *RepoDesc)Update(ctx context.Context, ru *swyapi.RepoUpdate) *swyapi.GateErr {
+func (rd *RepoDesc)Upd(ctx context.Context, p interface{}) *xrest.ReqErr {
+	ru := p.(*swyapi.RepoUpdate)
 	if ru.Pull != nil {
 		rd.Pull = *ru.Pull
 		err := dbUpdatePart(ctx, rd, bson.M{"pulling": rd.Pull})
@@ -152,7 +188,7 @@ func (rd *RepoDesc)Update(ctx context.Context, ru *swyapi.RepoUpdate) *swyapi.Ga
 	return nil
 }
 
-func (rd *RepoDesc)Detach(ctx context.Context) *swyapi.GateErr {
+func (rd *RepoDesc)Del(ctx context.Context) *xrest.ReqErr {
 	err := dbUpdatePart(ctx, rd, bson.M{"state": swy.DBRepoStateRem})
 	if err != nil {
 		return GateErrD(err)
@@ -175,7 +211,7 @@ func (rd *RepoDesc)Detach(ctx context.Context) *swyapi.GateErr {
 	return nil
 }
 
-func (rd *RepoDesc)description(ctx context.Context) (*swyapi.RepoDesc, *swyapi.GateErr) {
+func (rd *RepoDesc)description(ctx context.Context) (*swyapi.RepoDesc, *xrest.ReqErr) {
 	dfile := rd.clonePath() + "/" + RepoDescFile
 	if _, err := os.Stat(dfile); os.IsNotExist(err) {
 		return nil, GateErrM(swy.GateNotAvail, "No description for repo")
@@ -196,7 +232,7 @@ func (rd *RepoDesc)description(ctx context.Context) (*swyapi.RepoDesc, *swyapi.G
 	return &out, nil
 }
 
-func (rd *RepoDesc)readFile(ctx context.Context, fname string) ([]byte, *swyapi.GateErr) {
+func (rd *RepoDesc)readFile(ctx context.Context, fname string) ([]byte, *xrest.ReqErr) {
 	dfile := rd.clonePath() + "/" + fname
 	if _, err := os.Stat(dfile); os.IsNotExist(err) {
 		return nil, GateErrM(swy.GateNotAvail, "No such file in repo")
@@ -210,7 +246,7 @@ func (rd *RepoDesc)readFile(ctx context.Context, fname string) ([]byte, *swyapi.
 	return cont, nil
 }
 
-func (rd *RepoDesc)listFiles(ctx context.Context) ([]*swyapi.RepoFile, *swyapi.GateErr) {
+func (rd *RepoDesc)listFiles(ctx context.Context) ([]*swyapi.RepoFile, *xrest.ReqErr) {
 	rp := rd.clonePath()
 	root := swyapi.RepoFile { Path: "", Children: &[]*swyapi.RepoFile{} }
 	dirs := []*swyapi.RepoFile{&root}
@@ -257,7 +293,7 @@ func (rd *RepoDesc)listFiles(ctx context.Context) ([]*swyapi.RepoFile, *swyapi.G
 	return *root.Children, nil
 }
 
-func (rd *RepoDesc)pull(ctx context.Context) *swyapi.GateErr {
+func (rd *RepoDesc)pull(ctx context.Context) *xrest.ReqErr {
 	if rd.LastPull != nil && time.Now().Before( rd.LastPull.Add(time.Duration(conf.RepoSyncRate) * time.Minute)) {
 		return GateErrM(swy.GateNotAvail, "To frequent sync")
 	}
@@ -351,7 +387,7 @@ func tryToUpdateFunctions(ctx context.Context, rd *RepoDesc, to string) {
 	}
 }
 
-func (rd *RepoDesc)pullSync(ctx context.Context) *swyapi.GateErr {
+func (rd *RepoDesc)pullSync(ctx context.Context) *xrest.ReqErr {
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 
@@ -485,8 +521,33 @@ func listReposGH(ac *AccDesc) ([]*GitHubRepo, error) {
 	return grs, nil
 }
 
-func listRepos(ctx context.Context, accid, att string) ([]*swyapi.RepoInfo, *swyapi.GateErr) {
-	ret := []*swyapi.RepoInfo{}
+type DetachedRepo struct {
+	typ	string
+	URL	string
+	accid	string
+}
+
+func (rd *DetachedRepo)Info(ctx context.Context, q url.Values, details bool) (interface{}, *xrest.ReqErr) {
+	return &swyapi.RepoInfo {
+		Type:	rd.typ,
+		URL:	rd.URL,
+		State:	"unattached",
+		AccID:	rd.accid,
+	}, nil
+}
+
+func (rd *DetachedRepo)Del(context.Context) *xrest.ReqErr { return GateErrC(swy.GateNotAvail) }
+func (rd *DetachedRepo)Upd(context.Context, interface{}) *xrest.ReqErr { return GateErrC(swy.GateNotAvail) }
+func (rd *DetachedRepo)Add(context.Context, interface{}) *xrest.ReqErr { return GateErrC(swy.GateNotAvail) }
+
+func (_ Repos)Iterate(ctx context.Context, q url.Values, cb func(context.Context, xrest.Obj) *xrest.ReqErr) *xrest.ReqErr {
+	accid := q.Get("aid")
+	if accid != "" && !bson.IsObjectIdHex(accid) {
+		return GateErrM(swy.GateBadRequest, "Bad account ID value")
+	}
+
+	att := q.Get("attached")
+
 	urls := make(map[string]bool)
 
 	if att == "" || att == "true" {
@@ -500,7 +561,7 @@ func listRepos(ctx context.Context, accid, att string) ([]*swyapi.RepoInfo, *swy
 		}
 		err := dbFindAll(ctx, q, &reps)
 		if err != nil {
-			return nil, GateErrD(err)
+			return GateErrD(err)
 		}
 
 		for _, rp := range reps {
@@ -508,13 +569,12 @@ func listRepos(ctx context.Context, accid, att string) ([]*swyapi.RepoInfo, *swy
 				continue
 			}
 
-			ri, cerr := rp.toInfo(ctx, false)
+			cerr := cb(ctx, rp)
 			if cerr != nil {
-				return nil, cerr
+				return cerr
 			}
 
-			ret = append(ret, ri)
-			urls[ri.URL] = true
+			urls[rp.URL()] = true
 		}
 	}
 
@@ -528,7 +588,7 @@ func listRepos(ctx context.Context, accid, att string) ([]*swyapi.RepoInfo, *swy
 		}
 		err := dbFindAll(ctx, q, &acs)
 		if err != nil && !dbNF(err) {
-			return nil, GateErrD(err)
+			return GateErrD(err)
 		}
 
 		for _, ac := range acs {
@@ -543,22 +603,23 @@ func listRepos(ctx context.Context, accid, att string) ([]*swyapi.RepoInfo, *swy
 					continue
 				}
 
-				ri := &swyapi.RepoInfo {
-					Type:	"github",
-					URL:	gr.URL,
-					State:	"unattached",
-				}
-
+				rd := &DetachedRepo{}
+				rd.typ = "github"
+				rd.URL = gr.URL
 				if gr.Private {
-					ri.AccID = ac.ObjID.Hex()
+					rd.accid = ac.ObjID.Hex()
 				}
 
-				ret = append(ret, ri)
+				cerr := cb(ctx, rd)
+				if cerr != nil {
+					return cerr
+				}
+
 				urls[gr.URL] = true
 			}
 		}
 	}
 
-	return ret, nil
+	return nil
 }
 

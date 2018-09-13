@@ -1087,11 +1087,12 @@ func parse_route_table(opt string) []*swyapi.RouterEntry {
 	res := []*swyapi.RouterEntry{}
 	ents := strings.Split(opt, ";")
 	for _, e := range ents {
-		ee := strings.SplitN(e, ":", 3)
+		ee := strings.SplitN(e, ":", 4)
 		res = append(res, &swyapi.RouterEntry {
 			Method:	ee[0],
 			Path:	ee[1],
 			Call:	ee[2],
+			Key:	ee[3],
 		})
 	}
 	return res
@@ -1851,7 +1852,7 @@ func main() {
 
 	bindCmdUsage(CMD_RTL,	[]string{},	  "List routers", true)
 	bindCmdUsage(CMD_RTI,	[]string{"NAME"}, "Show info about router", true)
-	cmdMap[CMD_RTA].opts.StringVar(&opts[0], "table", "", "Table entries [M:path:function];")
+	cmdMap[CMD_RTA].opts.StringVar(&opts[0], "table", "", "Table entries [M:path:function:key];")
 	bindCmdUsage(CMD_RTA,	[]string{"NAME"}, "Create router", true)
 	cmdMap[CMD_RTU].opts.StringVar(&opts[0], "table", "", "New table to set")
 	bindCmdUsage(CMD_RTU,	[]string{"NAME"}, "Edit router", true)

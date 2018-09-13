@@ -8,7 +8,7 @@ import (
 	"fmt"
 
 	"../common"
-	"../apis"
+	"../common/xrest"
 )
 
 type BalancerDat struct {
@@ -89,7 +89,7 @@ func balancerPodsFlush(fnid string) {
 	}
 }
 
-func balancerGetConnExact(ctx context.Context, cookie, version string) (*podConn, *swyapi.GateErr) {
+func balancerGetConnExact(ctx context.Context, cookie, version string) (*podConn, *xrest.ReqErr) {
 	/*
 	 * We can lookup id.Cookie() here, but ... it's manual run,
 	 * let's also make sure the FN exists at all

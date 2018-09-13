@@ -11,6 +11,7 @@ import (
 	"sync"
 	"container/list"
 	"../apis"
+	"../common/xrest"
 )
 
 const GateTracerPath = "/var/run/swifty/gate"
@@ -35,7 +36,7 @@ func traceRequest(ctx context.Context, r *http.Request) {
 	})
 }
 
-func traceError(ctx context.Context, ce *swyapi.GateErr) {
+func traceError(ctx context.Context, ce *xrest.ReqErr) {
 	if tracers.Len() == 0 {
 		return
 	}
@@ -173,6 +174,7 @@ func tracerListen(sk *net.UnixListener) {
 
 func tracerInit() error {
 	tracers = list.New()
+	xrest.TraceFn = traceResponce
 
 	os.Remove(GateTracerPath)
 	addr, err := net.ResolveUnixAddr("unixpacket", GateTracerPath)
