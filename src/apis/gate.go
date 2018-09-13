@@ -273,6 +273,7 @@ type RouterEntry struct {
 	Method		string		`json:"method"`
 	Path		string		`json:"path"`
 	Call		string		`json:"call"`
+	Key		string		`json:"key"`
 }
 
 type RouterAdd struct {

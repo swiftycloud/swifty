@@ -17,7 +17,24 @@ type RouterDesc struct {
 	Table		[]*swyapi.RouterEntry	`bson:"table"`
 }
 
+const TableKeyLenMax = 64
+
+func ckTable(tbl []*swyapi.RouterEntry) *swyapi.GateErr {
+	for _, t := range tbl {
+		if len(t.Key) > TableKeyLenMax {
+			return GateErrM(swy.GateBadRequest, "Too long key")
+		}
+	}
+
+	return nil
+}
+
 func getRouterDesc(id *SwoId, params *swyapi.RouterAdd) (*RouterDesc, *swyapi.GateErr) {
+	cerr := ckTable(params.Table)
+	if cerr != nil {
+		return nil, cerr
+	}
+
 	rd := RouterDesc {
 		SwoId:	*id,
 		Table:	params.Table,
@@ -77,6 +94,11 @@ func (rd *RouterDesc)Remove(ctx context.Context) *swyapi.GateErr {
 }
 
 func (rd *RouterDesc)setTable(ctx context.Context, tbl []*swyapi.RouterEntry) *swyapi.GateErr {
+	cerr := ckTable(tbl)
+	if cerr != nil {
+		return cerr
+	}
+
 	err := dbUpdatePart(ctx, rd, bson.M{"table": tbl})
 	if err != nil {
 		return GateErrD(err)
@@ -124,7 +146,7 @@ func listRouters(ctx context.Context, project, name string) ([]*RouterDesc, *swy
 
 func (rt *RouterURL)Handle(ctx context.Context, w http.ResponseWriter, r *http.Request, sopq *statsOpaque) {
 	path_match := false
-	path := reqPath(r) /* FIXME -- this will be evaluated again in makeArgs */
+	path := reqPath(r)
 	for _, e := range rt.table {
 		if e.Path != path {
 			continue
@@ -146,8 +168,7 @@ func (rt *RouterURL)Handle(ctx context.Context, w http.ResponseWriter, r *http.R
 			return
 		}
 
-		furl := FnURL{fd: fmd}
-		furl.Handle(ctx, w, r, sopq)
+		fmd.Handle(ctx, w, r, sopq, path, e.Key)
 		return
 	}
 

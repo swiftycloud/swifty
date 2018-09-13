@@ -113,13 +113,16 @@ var urlEOps = EventOps {
 }
 
 func (furl *FnURL)Handle(ctx context.Context, w http.ResponseWriter, r *http.Request, sopq *statsOpaque) {
+	furl.fd.Handle(ctx, w, r, sopq, "", "")
+}
+
+func (fmd *FnMemData)Handle(ctx context.Context, w http.ResponseWriter, r *http.Request, sopq *statsOpaque,
+		path, key string) {
 	var args *swyapi.SwdFunctionRun
 	var res *swyapi.SwdFunctionRunResult
 	var err error
 	var code int
 	var conn *podConn
-
-	fmd := furl.fd
 
 	if ratelimited(fmd) {
 		code = http.StatusTooManyRequests
@@ -141,7 +144,7 @@ func (furl *FnURL)Handle(ctx context.Context, w http.ResponseWriter, r *http.Req
 	}
 
 	defer balancerPutConn(fmd)
-	args = makeArgs(sopq, r)
+	args = makeArgs(sopq, r, path, key)
 
 	if fmd.ac != nil {
 		args.Claims, err = fmd.ac.Verify(r)

@@ -894,7 +894,7 @@ func reqPath(r *http.Request) string {
 	}
 }
 
-func makeArgs(sopq *statsOpaque, r *http.Request) *swyapi.SwdFunctionRun {
+func makeArgs(sopq *statsOpaque, r *http.Request, path, key string) *swyapi.SwdFunctionRun {
 	defer r.Body.Close()
 
 	args := &swyapi.SwdFunctionRun{}
@@ -935,9 +935,12 @@ func makeArgs(sopq *statsOpaque, r *http.Request) *swyapi.SwdFunctionRun {
 		}
 	}
 
-	path := reqPath(r)
+	if path == "" {
+		path = reqPath(r)
+	}
 	args.Path = &path
 	args.Method = r.Method
+	args.Key = key
 
 	return args
 }
