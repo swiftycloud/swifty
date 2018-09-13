@@ -9,7 +9,6 @@ import (
 	"encoding/hex"
 	"net/http"
 	"net/url"
-	"os/exec"
 	"flag"
 	"strings"
 	"context"
@@ -881,11 +880,7 @@ func handleFunctionRun(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	}
 
 	if fn.SwoId.Project == "test" {
-		var fort []byte
-		fort, err = exec.Command("fortune", "fortunes").Output()
-		if err == nil {
-			res.Stdout = string(fort)
-		}
+		res.Stdout = swy.Fortune()
 	}
 
 	return xrest.Respond(ctx, w, res)
