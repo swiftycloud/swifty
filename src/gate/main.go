@@ -222,6 +222,33 @@ func handleGetList(ctx context.Context, w http.ResponseWriter, r *http.Request, 
 	return respond(ctx, w, ifos)
 }
 
+func handleMany(ctx context.Context, w http.ResponseWriter, r *http.Request, f Factory, add_param interface{}) *swyapi.GateErr {
+	switch r.Method {
+	case "GET":
+		return handleGetList(ctx, w, r, f)
+
+	case "POST":
+		return handleCreateOne(ctx, w, r, f, add_param)
+	}
+
+	return nil
+}
+
+func handleOne(ctx context.Context, w http.ResponseWriter, r *http.Request, o Obj, upd_param interface{}) *swyapi.GateErr {
+	switch r.Method {
+	case "GET":
+		return handleGetOne(ctx, w, r, o)
+
+	case "PUT":
+		return handleUpdateOne(ctx, w, r, o, upd_param)
+
+	case "DELETE":
+		return handleDeleteOne(ctx, w, r, o)
+	}
+
+	return nil
+}
+
 func listReq(ctx context.Context, project string, labels []string) bson.D {
 	q := bson.D{{"tennant", gctx(ctx).Tenant}, {"project", project}}
 	for _, l := range labels {
@@ -1092,16 +1119,8 @@ func reqPeriods(q url.Values) int {
 }
 
 func handleFunctions(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
-	switch r.Method {
-	case "GET":
-		return handleGetList(ctx, w, r, Functions{})
-
-	case "POST":
-		var params swyapi.FunctionAdd
-		return handleCreateOne(ctx, w, r, Functions{}, &params)
-	}
-
-	return nil
+	var params swyapi.FunctionAdd
+	return handleMany(ctx, w, r, Functions{}, &params)
 }
 
 func handleFunctionMdat(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
@@ -1123,19 +1142,8 @@ func handleFunction(ctx context.Context, w http.ResponseWriter, r *http.Request)
 		return cerr
 	}
 
-	switch r.Method {
-	case "GET":
-		return handleGetOne(ctx, w, r, &fn)
-
-	case "PUT":
-		var upd swyapi.FunctionUpdate
-		return handleUpdateOne(ctx, w, r, &fn, &upd)
-
-	case "DELETE":
-		return handleDeleteOne(ctx, w, r, &fn)
-	}
-
-	return nil
+	var upd swyapi.FunctionUpdate
+	return handleOne(ctx, w, r, &fn, &upd)
 }
 
 func handleFunctionRun(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
@@ -1213,29 +1221,13 @@ func handleFunctionRun(ctx context.Context, w http.ResponseWriter, r *http.Reque
 }
 
 func handleMwares(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
-	switch r.Method {
-	case "GET":
-		return handleGetList(ctx, w, r, Mwares{})
-
-	case "POST":
-		var params swyapi.MwareAdd
-		return handleCreateOne(ctx, w, r, Mwares{}, &params)
-	}
-
-	return nil
+	var params swyapi.MwareAdd
+	return handleMany(ctx, w, r, Mwares{}, &params)
 }
 
 func handleRouters(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
-	switch r.Method {
-	case "GET":
-		return handleGetList(ctx, w, r, Routers{})
-
-	case "POST":
-		var params swyapi.RouterAdd
-		return handleCreateOne(ctx, w, r, Routers{}, &params)
-	}
-
-	return nil
+	var params swyapi.RouterAdd
+	return handleMany(ctx, w, r, Routers{}, &params)
 }
 
 func handleRouter(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
@@ -1247,15 +1239,7 @@ func handleRouter(ctx context.Context, w http.ResponseWriter, r *http.Request) *
 		return cerr
 	}
 
-	switch r.Method {
-	case "GET":
-		return handleGetOne(ctx, w, r, &rt)
-
-	case "DELETE":
-		return handleDeleteOne(ctx, w, r, &rt)
-	}
-
-	return nil
+	return handleOne(ctx, w, r, &rt, nil)
 }
 
 func handleRouterTable(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
@@ -1300,16 +1284,8 @@ func handleRouterTable(ctx context.Context, w http.ResponseWriter, r *http.Reque
 }
 
 func handleAccounts(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
-	switch r.Method {
-	case "GET":
-		return handleGetList(ctx, w, r, Accounts{})
-
-	case "POST":
-		var params map[string]string
-		return handleCreateOne(ctx, w, r, Accounts{}, &params)
-	}
-
-	return nil
+	var params map[string]string
+	return handleMany(ctx, w, r, Accounts{}, &params)
 }
 
 func handleAccount(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
@@ -1320,32 +1296,13 @@ func handleAccount(ctx context.Context, w http.ResponseWriter, r *http.Request) 
 		return cerr
 	}
 
-	switch r.Method {
-	case "GET":
-		return handleGetOne(ctx, w, r, &ac)
-
-	case "PUT":
-		var params map[string]string
-		return handleUpdateOne(ctx, w, r, &ac, &params)
-
-	case "DELETE":
-		return handleDeleteOne(ctx, w, r, &ac)
-	}
-
-	return nil
+	var params map[string]string
+	return handleOne(ctx, w, r, &ac, &params)
 }
 
 func handleRepos(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
-	switch r.Method {
-	case "GET":
-		return handleGetList(ctx, w, r, Repos{})
-
-	case "POST":
-		var params swyapi.RepoAdd
-		return handleCreateOne(ctx, w, r, Repos{}, &params)
-	}
-
-	return nil
+	var params swyapi.RepoAdd
+	return handleMany(ctx, w, r, Repos{}, &params)
 }
 
 func repoFindForReq(ctx context.Context, r *http.Request, user_action bool) (*RepoDesc, *swyapi.GateErr) {
@@ -1377,19 +1334,8 @@ func handleRepo(ctx context.Context, w http.ResponseWriter, r *http.Request) *sw
 		return cerr
 	}
 
-	switch r.Method {
-	case "GET":
-		return handleGetOne(ctx, w, r, rd)
-
-	case "PUT":
-		var ru swyapi.RepoUpdate
-		return handleUpdateOne(ctx, w, r, rd, &ru)
-
-	case "DELETE":
-		return handleDeleteOne(ctx, w, r, rd)
-	}
-
-	return nil
+	var ru swyapi.RepoUpdate
+	return handleOne(ctx, w, r, rd, &ru)
 }
 
 func handleRepoFiles(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
@@ -1507,16 +1453,8 @@ func handleS3Access(ctx context.Context, w http.ResponseWriter, r *http.Request)
 }
 
 func handleDeployments(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
-	switch r.Method {
-	case "GET":
-		return handleGetList(ctx, w, r, Deployments{})
-
-	case "POST":
-		var ds swyapi.DeployStart
-		return handleCreateOne(ctx, w, r, Deployments{}, &ds)
-	}
-
-	return nil
+	var ds swyapi.DeployStart
+	return handleMany(ctx, w, r, Deployments{}, &ds)
 }
 
 func handleDeployment(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
@@ -1531,15 +1469,7 @@ func handleDeployment(ctx context.Context, w http.ResponseWriter, r *http.Reques
 }
 
 func handleOneDeployment(ctx context.Context, w http.ResponseWriter, r *http.Request, dd *DeployDesc) *swyapi.GateErr {
-	switch r.Method {
-	case "GET":
-		return handleGetOne(ctx, w, r, dd)
-
-	case "DELETE":
-		return handleDeleteOne(ctx, w, r, dd)
-	}
-
-	return nil
+	return handleOne(ctx, w, r, dd, nil)
 }
 
 func handleAuths(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
@@ -1648,15 +1578,7 @@ func handleMware(ctx context.Context, w http.ResponseWriter, r *http.Request) *s
 		return cerr
 	}
 
-	switch r.Method {
-	case "GET":
-		return handleGetOne(ctx, w, r, &mw)
-
-	case "DELETE":
-		return handleDeleteOne(ctx, w, r, &mw)
-	}
-
-	return nil
+	return handleOne(ctx, w, r, &mw, nil)
 }
 
 func getReqContext(w http.ResponseWriter, r *http.Request) (context.Context, func(context.Context)) {
