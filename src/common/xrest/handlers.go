@@ -50,6 +50,10 @@ func HandleDeleteOne(ctx context.Context, w http.ResponseWriter, r *http.Request
 }
 
 func HandleUpdateOne(ctx context.Context, w http.ResponseWriter, r *http.Request, desc Obj, upd interface{}) *ReqErr {
+	if upd == nil {
+		return &ReqErr{2, "Not editable"}
+	}
+
 	err := swyhttp.ReadAndUnmarshalReq(r, upd)
 	if err != nil {
 		return &ReqErr{2 /* XXX: GateBadRequest */, err.Error()}
@@ -65,6 +69,10 @@ func HandleUpdateOne(ctx context.Context, w http.ResponseWriter, r *http.Request
 }
 
 func HandleUpdateProp(ctx context.Context, w http.ResponseWriter, r *http.Request, o Obj, desc Prop, upd interface{}) *ReqErr {
+	if upd == nil {
+		return &ReqErr{2, "Not editable"}
+	}
+
 	err := swyhttp.ReadAndUnmarshalReq(r, upd)
 	if err != nil {
 		return &ReqErr{2 /* XXX: GateBadRequest */, err.Error()}
