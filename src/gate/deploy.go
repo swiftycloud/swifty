@@ -283,7 +283,7 @@ func (_ Deployments)iterate(ctx context.Context, q url.Values, cb func(context.C
 	return nil
 }
 
-func (_ Deployments)create(ctx context.Context, q url.Values, p interface{}) (Obj, *swyapi.GateErr) {
+func (_ Deployments)create(ctx context.Context, p interface{}) (Obj, *swyapi.GateErr) {
 	params := p.(*swyapi.DeployStart)
 	return getDeployDesc(ctxSwoId(ctx, params.Project, params.Name)), nil
 }

@@ -72,7 +72,7 @@ func (_ Routers)iterate(ctx context.Context, q url.Values, cb func(context.Conte
 	return nil
 }
 
-func (_ Routers)create(ctx context.Context, q url.Values, p interface{}) (Obj, *swyapi.GateErr) {
+func (_ Routers)create(ctx context.Context, p interface{}) (Obj, *swyapi.GateErr) {
 	params := p.(*swyapi.RouterAdd)
 	id := ctxSwoId(ctx, params.Project, params.Name)
 	return getRouterDesc(id, params)

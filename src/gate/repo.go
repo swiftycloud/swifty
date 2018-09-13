@@ -83,7 +83,7 @@ func getRepoDesc(id *SwoId, params *swyapi.RepoAdd) *RepoDesc {
 	return rd
 }
 
-func (_ Repos)create(ctx context.Context, q url.Values, p interface{}) (Obj, *swyapi.GateErr) {
+func (_ Repos)create(ctx context.Context, p interface{}) (Obj, *swyapi.GateErr) {
 	params := p.(*swyapi.RepoAdd)
 	id := ctxSwoId(ctx, NoProject, params.URL)
 	return getRepoDesc(id, params), nil

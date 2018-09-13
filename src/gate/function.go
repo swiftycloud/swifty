@@ -191,7 +191,7 @@ func (_ Functions)iterate(ctx context.Context, q url.Values, cb func(context.Con
 	return nil
 }
 
-func (_ Functions)create(ctx context.Context, q url.Values, p interface{}) (Obj, *swyapi.GateErr) {
+func (_ Functions)create(ctx context.Context, p interface{}) (Obj, *swyapi.GateErr) {
 	params := p.(*swyapi.FunctionAdd)
 	if params.Name == "" {
 		return nil, GateErrM(swy.GateBadRequest, "No function name")

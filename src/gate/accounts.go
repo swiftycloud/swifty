@@ -174,7 +174,7 @@ func (_ Accounts)iterate(ctx context.Context, q url.Values, cb func(context.Cont
 	return nil
 }
 
-func (_ Accounts)create(ctx context.Context, q url.Values, p interface{}) (Obj, *swyapi.GateErr) {
+func (_ Accounts)create(ctx context.Context, p interface{}) (Obj, *swyapi.GateErr) {
 	params := *p.(*map[string]string)
 	if _, ok := params["type"]; !ok {
 		return nil, GateErrM(swy.GateBadRequest, "No type")

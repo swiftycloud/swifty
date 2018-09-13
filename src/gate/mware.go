@@ -225,7 +225,7 @@ func (_ Mwares)iterate(ctx context.Context, q url.Values, cb func(context.Contex
 	return nil
 }
 
-func (_ Mwares)create(ctx context.Context, q url.Values, p interface{}) (Obj, *swyapi.GateErr) {
+func (_ Mwares)create(ctx context.Context, p interface{}) (Obj, *swyapi.GateErr) {
 	params := p.(*swyapi.MwareAdd)
 	id := ctxSwoId(ctx, params.Project, params.Name)
 	return getMwareDesc(id, params), nil

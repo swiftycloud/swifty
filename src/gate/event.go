@@ -58,7 +58,7 @@ type Triggers struct {
 	fn	*FunctionDesc
 }
 
-func (ts Triggers)create(ctx context.Context, q url.Values, p interface{}) (Obj, *swyapi.GateErr) {
+func (ts Triggers)create(ctx context.Context, p interface{}) (Obj, *swyapi.GateErr) {
 	params := p.(*swyapi.FunctionEvent)
 	ed, cerr := getEventDesc(params)
 	if cerr != nil {

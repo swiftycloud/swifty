@@ -142,7 +142,7 @@ type Obj interface {
 }
 
 type Factory interface {
-	create(context.Context, url.Values, interface{}) (Obj, *swyapi.GateErr)
+	create(context.Context, interface{}) (Obj, *swyapi.GateErr)
 	iterate(context.Context, url.Values, func(context.Context, Obj) *swyapi.GateErr) *swyapi.GateErr
 }
 
@@ -186,7 +186,7 @@ func handleCreateOne(ctx context.Context, w http.ResponseWriter, r *http.Request
 		return GateErrE(swy.GateBadRequest, err)
 	}
 
-	desc, cerr := fact.create(ctx, r.URL.Query(), add)
+	desc, cerr := fact.create(ctx, add)
 	if cerr != nil {
 		return cerr
 	}
