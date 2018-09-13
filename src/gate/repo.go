@@ -83,10 +83,6 @@ func getRepoDesc(id *SwoId, params *swyapi.RepoAdd) *RepoDesc {
 	return rd
 }
 
-func (_ Repos)iterate(ctx context.Context, r *http.Request, cb func(context.Context, Obj) *swyapi.GateErr) *swyapi.GateErr {
-	return GateErrM(swy.GateGenErr, "Not iterable")
-}
-
 func (_ Repos)create(ctx context.Context, r *http.Request, p interface{}) (Obj, *swyapi.GateErr) {
 	params := p.(*swyapi.RepoAdd)
 	id := ctxSwoId(ctx, NoProject, params.URL)
@@ -531,8 +527,35 @@ func listReposGH(ac *AccDesc) ([]*GitHubRepo, error) {
 	return grs, nil
 }
 
-func listRepos(ctx context.Context, accid, att string) ([]*swyapi.RepoInfo, *swyapi.GateErr) {
-	ret := []*swyapi.RepoInfo{}
+type DetachedRepo struct {
+	typ	string
+	URL	string
+	accid	string
+}
+
+func (rd *DetachedRepo)info(ctx context.Context, r *http.Request, details bool) (interface{}, *swyapi.GateErr) {
+	return &swyapi.RepoInfo {
+		Type:	rd.typ,
+		URL:	rd.URL,
+		State:	"unattached",
+		AccID:	rd.accid,
+	}, nil
+}
+
+func (rd *DetachedRepo)del(context.Context) *swyapi.GateErr { return GateErrC(swy.GateNotAvail) }
+func (rd *DetachedRepo)upd(context.Context, interface{}) *swyapi.GateErr { return GateErrC(swy.GateNotAvail) }
+func (rd *DetachedRepo)add(context.Context, interface{}) *swyapi.GateErr { return GateErrC(swy.GateNotAvail) }
+
+func (_ Repos)iterate(ctx context.Context, r *http.Request, cb func(context.Context, Obj) *swyapi.GateErr) *swyapi.GateErr {
+	q := r.URL.Query()
+
+	accid := q.Get("aid")
+	if accid != "" && !bson.IsObjectIdHex(accid) {
+		return GateErrM(swy.GateBadRequest, "Bad account ID value")
+	}
+
+	att := q.Get("attached")
+
 	urls := make(map[string]bool)
 
 	if att == "" || att == "true" {
@@ -546,7 +569,7 @@ func listRepos(ctx context.Context, accid, att string) ([]*swyapi.RepoInfo, *swy
 		}
 		err := dbFindAll(ctx, q, &reps)
 		if err != nil {
-			return nil, GateErrD(err)
+			return GateErrD(err)
 		}
 
 		for _, rp := range reps {
@@ -554,13 +577,12 @@ func listRepos(ctx context.Context, accid, att string) ([]*swyapi.RepoInfo, *swy
 				continue
 			}
 
-			ri, cerr := rp.toInfo(ctx, false)
+			cerr := cb(ctx, rp)
 			if cerr != nil {
-				return nil, cerr
+				return cerr
 			}
 
-			ret = append(ret, ri)
-			urls[ri.URL] = true
+			urls[rp.URL()] = true
 		}
 	}
 
@@ -574,7 +596,7 @@ func listRepos(ctx context.Context, accid, att string) ([]*swyapi.RepoInfo, *swy
 		}
 		err := dbFindAll(ctx, q, &acs)
 		if err != nil && !dbNF(err) {
-			return nil, GateErrD(err)
+			return GateErrD(err)
 		}
 
 		for _, ac := range acs {
@@ -589,22 +611,23 @@ func listRepos(ctx context.Context, accid, att string) ([]*swyapi.RepoInfo, *swy
 					continue
 				}
 
-				ri := &swyapi.RepoInfo {
-					Type:	"github",
-					URL:	gr.URL,
-					State:	"unattached",
-				}
-
+				rd := &DetachedRepo{}
+				rd.typ = "github"
+				rd.URL = gr.URL
 				if gr.Private {
-					ri.AccID = ac.ObjID.Hex()
+					rd.accid = ac.ObjID.Hex()
 				}
 
-				ret = append(ret, ri)
+				cerr := cb(ctx, rd)
+				if cerr != nil {
+					return cerr
+				}
+
 				urls[gr.URL] = true
 			}
 		}
 	}
 
-	return ret, nil
+	return nil
 }
 
