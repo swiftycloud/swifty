@@ -151,10 +151,10 @@ func mwareRemoveId(ctx context.Context, id *SwoId) *xrest.ReqErr {
 		return GateErrD(err)
 	}
 
-	return item.Remove(ctx)
+	return item.Del(ctx)
 }
 
-func (item *MwareDesc)Remove(ctx context.Context) *xrest.ReqErr {
+func (item *MwareDesc)Del(ctx context.Context) *xrest.ReqErr {
 	handler, ok := mwareHandlers[item.MwareType]
 	if !ok {
 		return GateErrC(swy.GateGenErr) /* Shouldn't happen */
@@ -202,7 +202,7 @@ func (item *MwareDesc)toFnInfo(ctx context.Context) *swyapi.MwareInfo {
 
 type Mwares struct {}
 
-func (_ Mwares)iterate(ctx context.Context, q url.Values, cb func(context.Context, Obj) *xrest.ReqErr) *xrest.ReqErr {
+func (_ Mwares)Iterate(ctx context.Context, q url.Values, cb func(context.Context, xrest.Obj) *xrest.ReqErr) *xrest.ReqErr {
 	project := q.Get("project")
 	if project == "" {
 		project = DefaultProject
@@ -226,26 +226,18 @@ func (_ Mwares)iterate(ctx context.Context, q url.Values, cb func(context.Contex
 	return nil
 }
 
-func (_ Mwares)create(ctx context.Context, p interface{}) (Obj, *xrest.ReqErr) {
+func (_ Mwares)Create(ctx context.Context, p interface{}) (xrest.Obj, *xrest.ReqErr) {
 	params := p.(*swyapi.MwareAdd)
 	id := ctxSwoId(ctx, params.Project, params.Name)
 	return getMwareDesc(id, params), nil
 }
 
-func (mw *MwareDesc)add(ctx context.Context, params interface{}) *xrest.ReqErr {
-	return mw.Setup(ctx)
-}
-
-func (mw *MwareDesc)info(ctx context.Context, q url.Values, details bool) (interface{}, *xrest.ReqErr) {
+func (mw *MwareDesc)Info(ctx context.Context, q url.Values, details bool) (interface{}, *xrest.ReqErr) {
 	return mw.toInfo(ctx, details)
 }
 
-func (mw *MwareDesc)upd(ctx context.Context, upd interface{}) *xrest.ReqErr {
+func (mw *MwareDesc)Upd(ctx context.Context, upd interface{}) *xrest.ReqErr {
 	return GateErrM(swy.GateGenErr, "Not updatable")
-}
-
-func (mw *MwareDesc)del(ctx context.Context) *xrest.ReqErr {
-	return mw.Remove(ctx)
 }
 
 func (item *MwareDesc)toInfo(ctx context.Context, details bool) (*swyapi.MwareInfo, *xrest.ReqErr) {
@@ -328,7 +320,7 @@ func getMwareDesc(id *SwoId, params *swyapi.MwareAdd) *MwareDesc {
 	return ret
 }
 
-func (mwd *MwareDesc)Setup(ctx context.Context) *xrest.ReqErr {
+func (mwd *MwareDesc)Add(ctx context.Context, _ interface{}) *xrest.ReqErr {
 	var handler *MwareOps
 	var ok bool
 	var err, erc error

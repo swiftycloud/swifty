@@ -51,7 +51,7 @@ func (rt *RouterDesc)getURL() string {
 	return getURL(URLRouter, rt.Cookie)
 }
 
-func (_ Routers)iterate(ctx context.Context, q url.Values, cb func(context.Context, Obj) *xrest.ReqErr) *xrest.ReqErr {
+func (_ Routers)Iterate(ctx context.Context, q url.Values, cb func(context.Context, xrest.Obj) *xrest.ReqErr) *xrest.ReqErr {
 	project := q.Get("project")
 	if project == "" {
 		project = DefaultProject
@@ -73,26 +73,18 @@ func (_ Routers)iterate(ctx context.Context, q url.Values, cb func(context.Conte
 	return nil
 }
 
-func (_ Routers)create(ctx context.Context, p interface{}) (Obj, *xrest.ReqErr) {
+func (_ Routers)Create(ctx context.Context, p interface{}) (xrest.Obj, *xrest.ReqErr) {
 	params := p.(*swyapi.RouterAdd)
 	id := ctxSwoId(ctx, params.Project, params.Name)
 	return getRouterDesc(id, params)
 }
 
-func (rt *RouterDesc)add(ctx context.Context, params interface{}) *xrest.ReqErr {
-	return rt.Create(ctx)
-}
-
-func (rt *RouterDesc)info(ctx context.Context, q url.Values, details bool) (interface{}, *xrest.ReqErr) {
+func (rt *RouterDesc)Info(ctx context.Context, q url.Values, details bool) (interface{}, *xrest.ReqErr) {
 	return rt.toInfo(ctx, details), nil
 }
 
-func (rt *RouterDesc)upd(ctx context.Context, upd interface{}) *xrest.ReqErr {
+func (rt *RouterDesc)Upd(ctx context.Context, upd interface{}) *xrest.ReqErr {
 	return GateErrM(swy.GateGenErr, "Not updatable")
-}
-
-func (rt *RouterDesc)del(ctx context.Context) *xrest.ReqErr {
-	return rt.Remove(ctx)
 }
 
 func (rt *RouterDesc)toInfo(ctx context.Context, details bool) *swyapi.RouterInfo {
@@ -108,7 +100,7 @@ func (rt *RouterDesc)toInfo(ctx context.Context, details bool) *swyapi.RouterInf
 	return &ri
 }
 
-func (rd *RouterDesc)Create(ctx context.Context) *xrest.ReqErr {
+func (rd *RouterDesc)Add(ctx context.Context, _ interface{}) *xrest.ReqErr {
 	rd.ObjID = bson.NewObjectId()
 	rd.Cookie = rd.SwoId.Cookie()
 	err := dbInsert(ctx, rd)
@@ -119,7 +111,7 @@ func (rd *RouterDesc)Create(ctx context.Context) *xrest.ReqErr {
 	return nil
 }
 
-func (rd *RouterDesc)Remove(ctx context.Context) *xrest.ReqErr {
+func (rd *RouterDesc)Del(ctx context.Context) *xrest.ReqErr {
 	err := dbRemove(ctx, rd)
 	if err != nil {
 		return GateErrD(err)
@@ -219,7 +211,7 @@ type RtTblProp struct {
 	rt *RouterDesc
 }
 
-func (p *RtTblProp)info(ctx context.Context, q url.Values, details bool) (interface{}, *xrest.ReqErr) {
+func (p *RtTblProp)Info(ctx context.Context, q url.Values, details bool) (interface{}, *xrest.ReqErr) {
 	rt := p.rt
 	f := 0
 	t := len(rt.Table)
@@ -238,9 +230,9 @@ func (p *RtTblProp)info(ctx context.Context, q url.Values, details bool) (interf
 	return rt.Table[f:t], nil
 }
 
-func (p *RtTblProp)upd(ctx context.Context, par interface{}) *xrest.ReqErr {
+func (p *RtTblProp)Upd(ctx context.Context, par interface{}) *xrest.ReqErr {
 	return p.rt.setTable(ctx, *par.(*[]*swyapi.RouterEntry))
 }
 
-func (p *RtTblProp)del(context.Context) *xrest.ReqErr { return GateErrC(swy.GateNotAvail) }
-func (p *RtTblProp)add(context.Context, interface{}) *xrest.ReqErr { return GateErrC(swy.GateNotAvail) }
+func (p *RtTblProp)Del(context.Context) *xrest.ReqErr { return GateErrC(swy.GateNotAvail) }
+func (p *RtTblProp)Add(context.Context, interface{}) *xrest.ReqErr { return GateErrC(swy.GateNotAvail) }

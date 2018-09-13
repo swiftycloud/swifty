@@ -64,7 +64,7 @@ func (i *DeployFunction)start(ctx context.Context) *xrest.ReqErr {
 }
 
 func (i *DeployMware)start(ctx context.Context) *xrest.ReqErr {
-	return i.Mw.Setup(ctx)
+	return i.Mw.Add(ctx, nil)
 }
 
 func (i *DeployFunction)stop(ctx context.Context) *xrest.ReqErr {
@@ -249,7 +249,7 @@ func (dep *DeployDesc)Start(ctx context.Context) *xrest.ReqErr {
 	return nil
 }
 
-func (_ Deployments)iterate(ctx context.Context, q url.Values, cb func(context.Context, Obj) *xrest.ReqErr) *xrest.ReqErr {
+func (_ Deployments)Iterate(ctx context.Context, q url.Values, cb func(context.Context, xrest.Obj) *xrest.ReqErr) *xrest.ReqErr {
 	var deps []*DeployDesc
 	var err error
 
@@ -284,12 +284,12 @@ func (_ Deployments)iterate(ctx context.Context, q url.Values, cb func(context.C
 	return nil
 }
 
-func (_ Deployments)create(ctx context.Context, p interface{}) (Obj, *xrest.ReqErr) {
+func (_ Deployments)Create(ctx context.Context, p interface{}) (xrest.Obj, *xrest.ReqErr) {
 	params := p.(*swyapi.DeployStart)
 	return getDeployDesc(ctxSwoId(ctx, params.Project, params.Name)), nil
 }
 
-func (dep *DeployDesc)add(ctx context.Context, p interface{}) *xrest.ReqErr {
+func (dep *DeployDesc)Add(ctx context.Context, p interface{}) *xrest.ReqErr {
 	params := p.(*swyapi.DeployStart)
 
 	cerr := dep.getItems(params)
@@ -305,16 +305,12 @@ func (dep *DeployDesc)add(ctx context.Context, p interface{}) *xrest.ReqErr {
 	return nil
 }
 
-func (dep *DeployDesc)info(ctx context.Context, q url.Values, details bool) (interface{}, *xrest.ReqErr) {
+func (dep *DeployDesc)Info(ctx context.Context, q url.Values, details bool) (interface{}, *xrest.ReqErr) {
 	return dep.toInfo(ctx, details)
 }
 
-func (dep *DeployDesc)upd(ctx context.Context, upd interface{}) *xrest.ReqErr {
+func (dep *DeployDesc)Upd(ctx context.Context, upd interface{}) *xrest.ReqErr {
 	return GateErrM(swy.GateGenErr, "Not updatable")
-}
-
-func (dep *DeployDesc)del(ctx context.Context) *xrest.ReqErr {
-	return dep.Stop(ctx)
 }
 
 func (dep *DeployDesc)toInfo(ctx context.Context, details bool) (*swyapi.DeployInfo, *xrest.ReqErr) {
@@ -336,7 +332,7 @@ func (dep *DeployDesc)toInfo(ctx context.Context, details bool) (*swyapi.DeployI
 	return ret, nil
 }
 
-func (dep *DeployDesc)Stop(ctx context.Context) (*xrest.ReqErr) {
+func (dep *DeployDesc)Del(ctx context.Context) (*xrest.ReqErr) {
 	cerr := deployStopFunctions(ctx, dep, len(dep.Functions))
 	if cerr != nil {
 		return cerr

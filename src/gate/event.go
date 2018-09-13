@@ -37,19 +37,19 @@ type Trigger struct {
 	fn	*FunctionDesc
 }
 
-func (t *Trigger)add(ctx context.Context, _ interface{}) *xrest.ReqErr {
+func (t *Trigger)Add(ctx context.Context, _ interface{}) *xrest.ReqErr {
 	return t.ed.Add(ctx, t.fn)
 }
 
-func (t *Trigger)del(ctx context.Context) *xrest.ReqErr {
+func (t *Trigger)Del(ctx context.Context) *xrest.ReqErr {
 	return t.ed.Delete(ctx, t.fn)
 }
 
-func (t *Trigger)info(ctx context.Context, q url.Values, details bool) (interface{}, *xrest.ReqErr) {
+func (t *Trigger)Info(ctx context.Context, q url.Values, details bool) (interface{}, *xrest.ReqErr) {
 	return t.ed.toInfo(t.fn), nil
 }
 
-func (t *Trigger)upd(context.Context, interface{}) *xrest.ReqErr { return GateErrC(swy.GateNotAvail) }
+func (t *Trigger)Upd(context.Context, interface{}) *xrest.ReqErr { return GateErrC(swy.GateNotAvail) }
 
 func eventsInit(ctx context.Context, conf *YAMLConf) error {
 	return cronInit(ctx, conf)
@@ -59,7 +59,7 @@ type Triggers struct {
 	fn	*FunctionDesc
 }
 
-func (ts Triggers)create(ctx context.Context, p interface{}) (Obj, *xrest.ReqErr) {
+func (ts Triggers)Create(ctx context.Context, p interface{}) (xrest.Obj, *xrest.ReqErr) {
 	params := p.(*swyapi.FunctionEvent)
 	ed, cerr := getEventDesc(params)
 	if cerr != nil {
@@ -69,7 +69,7 @@ func (ts Triggers)create(ctx context.Context, p interface{}) (Obj, *xrest.ReqErr
 	return &Trigger{ed, ts.fn}, nil
 }
 
-func (ts Triggers)iterate(ctx context.Context, q url.Values, cb func(context.Context, Obj) *xrest.ReqErr) *xrest.ReqErr {
+func (ts Triggers)Iterate(ctx context.Context, q url.Values, cb func(context.Context, xrest.Obj) *xrest.ReqErr) *xrest.ReqErr {
 	ename := q.Get("name")
 
 	var evd []*FnEventDesc

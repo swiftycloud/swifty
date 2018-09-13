@@ -151,7 +151,7 @@ func getAccDesc(id *SwoId, params map[string]string) (*AccDesc, *xrest.ReqErr) {
 	return ad, nil
 }
 
-func (_ Accounts)iterate(ctx context.Context, q url.Values, cb func(context.Context, Obj) *xrest.ReqErr) *xrest.ReqErr {
+func (_ Accounts)Iterate(ctx context.Context, q url.Values, cb func(context.Context, xrest.Obj) *xrest.ReqErr) *xrest.ReqErr {
 	var acs []*AccDesc
 
 	rq := listReq(ctx, NoProject, []string{})
@@ -174,7 +174,7 @@ func (_ Accounts)iterate(ctx context.Context, q url.Values, cb func(context.Cont
 	return nil
 }
 
-func (_ Accounts)create(ctx context.Context, p interface{}) (Obj, *xrest.ReqErr) {
+func (_ Accounts)Create(ctx context.Context, p interface{}) (xrest.Obj, *xrest.ReqErr) {
 	params := *p.(*map[string]string)
 	if _, ok := params["type"]; !ok {
 		return nil, GateErrM(swy.GateBadRequest, "No type")
@@ -184,20 +184,12 @@ func (_ Accounts)create(ctx context.Context, p interface{}) (Obj, *xrest.ReqErr)
 	return getAccDesc(id, params)
 }
 
-func (ad *AccDesc)add(ctx context.Context, params interface{}) *xrest.ReqErr {
-	return ad.Add(ctx)
-}
-
-func (ad *AccDesc)info(ctx context.Context, q url.Values, details bool) (interface{}, *xrest.ReqErr) {
+func (ad *AccDesc)Info(ctx context.Context, q url.Values, details bool) (interface{}, *xrest.ReqErr) {
 	return ad.toInfo(ctx, details), nil
 }
 
-func (ad *AccDesc)upd(ctx context.Context, upd interface{}) *xrest.ReqErr {
+func (ad *AccDesc)Upd(ctx context.Context, upd interface{}) *xrest.ReqErr {
 	return ad.Update(ctx, *upd.(*map[string]string))
-}
-
-func (ad *AccDesc)del(ctx context.Context) *xrest.ReqErr {
-	return ad.Del(ctx)
 }
 
 func (ad *AccDesc)toInfo(ctx context.Context, details bool) map[string]string {
@@ -245,7 +237,7 @@ func (ad *AccDesc)getEnv() map[string]string {
 	return envs
 }
 
-func (ad *AccDesc)Add(ctx context.Context) *xrest.ReqErr {
+func (ad *AccDesc)Add(ctx context.Context, _ interface{}) *xrest.ReqErr {
 	ad.ObjID = bson.NewObjectId()
 	ad.Cookie = ad.SwoId.Cookie()
 

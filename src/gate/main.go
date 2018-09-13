@@ -125,121 +125,6 @@ out:
 	http.Error(w, err.Error(), resp)
 }
 
-type Obj interface {
-	info(context.Context, url.Values, bool) (interface{}, *xrest.ReqErr)
-	del(context.Context) *xrest.ReqErr
-	upd(context.Context, interface{}) *xrest.ReqErr
-	add(context.Context, interface{}) *xrest.ReqErr
-}
-
-type Factory interface {
-	create(context.Context, interface{}) (Obj, *xrest.ReqErr)
-	iterate(context.Context, url.Values, func(context.Context, Obj) *xrest.ReqErr) *xrest.ReqErr
-}
-
-func handleGetOne(ctx context.Context, w http.ResponseWriter, r *http.Request, desc Obj) *xrest.ReqErr {
-	ifo, cerr := desc.info(ctx, r.URL.Query(), true)
-	if cerr != nil {
-		return cerr
-	}
-
-	return xrest.Respond(ctx, w, ifo)
-}
-
-func handleDeleteOne(ctx context.Context, w http.ResponseWriter, r *http.Request, desc Obj) *xrest.ReqErr {
-	cerr := desc.del(ctx)
-	if cerr != nil {
-		return cerr
-	}
-
-	w.WriteHeader(http.StatusOK)
-	return nil
-}
-
-func handleUpdateOne(ctx context.Context, w http.ResponseWriter, r *http.Request, desc Obj, upd interface{}) *xrest.ReqErr {
-	err := swyhttp.ReadAndUnmarshalReq(r, upd)
-	if err != nil {
-		return GateErrE(swy.GateBadRequest, err)
-	}
-
-	cerr := desc.upd(ctx, upd)
-	if cerr != nil {
-		return cerr
-	}
-
-	ifo, _ := desc.info(ctx, nil, false)
-	return xrest.Respond(ctx, w, ifo)
-}
-
-func handleCreateOne(ctx context.Context, w http.ResponseWriter, r *http.Request, fact Factory, add interface{}) *xrest.ReqErr {
-	err := swyhttp.ReadAndUnmarshalReq(r, add)
-	if err != nil {
-		return GateErrE(swy.GateBadRequest, err)
-	}
-
-	desc, cerr := fact.create(ctx, add)
-	if cerr != nil {
-		return cerr
-	}
-
-	cerr = desc.add(ctx, add)
-	if cerr != nil {
-		return cerr
-	}
-
-	ifo, _ := desc.info(ctx, nil, false)
-	return xrest.Respond(ctx, w, ifo)
-}
-
-func handleGetList(ctx context.Context, w http.ResponseWriter, r *http.Request, fact Factory) *xrest.ReqErr {
-	var ifos []interface{}
-
-	q := r.URL.Query()
-	details := (q.Get("details") != "")
-
-	cerr := fact.iterate(ctx, q, func(ctx context.Context, desc Obj) *xrest.ReqErr {
-		ifo, cer2 := desc.info(ctx, q, details)
-		if cer2 != nil {
-			return cer2
-		}
-
-		ifos = append(ifos, ifo)
-		return nil
-	})
-	if cerr != nil {
-		return cerr
-	}
-
-	return xrest.Respond(ctx, w, ifos)
-}
-
-func handleMany(ctx context.Context, w http.ResponseWriter, r *http.Request, f Factory, add_param interface{}) *xrest.ReqErr {
-	switch r.Method {
-	case "GET":
-		return handleGetList(ctx, w, r, f)
-
-	case "POST":
-		return handleCreateOne(ctx, w, r, f, add_param)
-	}
-
-	return nil
-}
-
-func handleOne(ctx context.Context, w http.ResponseWriter, r *http.Request, o Obj, upd_param interface{}) *xrest.ReqErr {
-	switch r.Method {
-	case "GET":
-		return handleGetOne(ctx, w, r, o)
-
-	case "PUT":
-		return handleUpdateOne(ctx, w, r, o, upd_param)
-
-	case "DELETE":
-		return handleDeleteOne(ctx, w, r, o)
-	}
-
-	return nil
-}
-
 func listReq(ctx context.Context, project string, labels []string) bson.D {
 	q := bson.D{{"tennant", gctx(ctx).Tenant}, {"project", project}}
 	for _, l := range labels {
@@ -405,7 +290,7 @@ func handleFunctionEnv(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	}
 
 	var env []string
-	return handleOne(ctx, w, r, &FnEnvProp{&fn}, &env)
+	return xrest.HandleOne(ctx, w, r, &FnEnvProp{&fn}, &env)
 }
 
 func handleFunctionSize(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
@@ -417,7 +302,7 @@ func handleFunctionSize(ctx context.Context, w http.ResponseWriter, r *http.Requ
 	}
 
 	var sz swyapi.FunctionSize
-	return handleOne(ctx, w, r, &FnSzProp{&fn}, &sz)
+	return xrest.HandleOne(ctx, w, r, &FnSzProp{&fn}, &sz)
 }
 
 func handleFunctionMwares(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
@@ -609,7 +494,7 @@ func handleFunctionTriggers(ctx context.Context, w http.ResponseWriter, r *http.
 	}
 
 	var evt swyapi.FunctionEvent
-	return handleMany(ctx, w, r, Triggers{&fn}, &evt)
+	return xrest.HandleMany(ctx, w, r, Triggers{&fn}, &evt)
 }
 
 func handleFunctionTrigger(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
@@ -632,7 +517,7 @@ func handleFunctionTrigger(ctx context.Context, w http.ResponseWriter, r *http.R
 		return GateErrD(err)
 	}
 
-	return handleOne(ctx, w, r, &Trigger{&ed, &fn}, nil)
+	return xrest.HandleOne(ctx, w, r, &Trigger{&ed, &fn}, nil)
 }
 
 func handleFunctionWait(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
@@ -678,7 +563,7 @@ func handleFunctionSources(ctx context.Context, w http.ResponseWriter, r *http.R
 	}
 
 	var src swyapi.FunctionSources
-	return handleOne(ctx, w, r, &FnSrcProp{&fn}, &src)
+	return xrest.HandleOne(ctx, w, r, &FnSrcProp{&fn}, &src)
 }
 
 func getCallStats(ctx context.Context, ten string, periods int) ([]swyapi.TenantStats, *xrest.ReqErr) {
@@ -979,7 +864,7 @@ func reqPeriods(q url.Values) int {
 
 func handleFunctions(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
 	var params swyapi.FunctionAdd
-	return handleMany(ctx, w, r, Functions{}, &params)
+	return xrest.HandleMany(ctx, w, r, Functions{}, &params)
 }
 
 func handleFunction(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
@@ -991,7 +876,7 @@ func handleFunction(ctx context.Context, w http.ResponseWriter, r *http.Request)
 	}
 
 	var upd swyapi.FunctionUpdate
-	return handleOne(ctx, w, r, &fn, &upd)
+	return xrest.HandleOne(ctx, w, r, &fn, &upd)
 }
 
 func handleFunctionMdat(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
@@ -1081,7 +966,7 @@ func handleFunctionRun(ctx context.Context, w http.ResponseWriter, r *http.Reque
 
 func handleRouters(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
 	var params swyapi.RouterAdd
-	return handleMany(ctx, w, r, Routers{}, &params)
+	return xrest.HandleMany(ctx, w, r, Routers{}, &params)
 }
 
 func handleRouter(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
@@ -1093,7 +978,7 @@ func handleRouter(ctx context.Context, w http.ResponseWriter, r *http.Request) *
 		return cerr
 	}
 
-	return handleOne(ctx, w, r, &rt, nil)
+	return xrest.HandleOne(ctx, w, r, &rt, nil)
 }
 
 func handleRouterTable(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
@@ -1105,12 +990,12 @@ func handleRouterTable(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	}
 
 	var tbl []*swyapi.RouterEntry
-	return handleOne(ctx, w, r, &RtTblProp{&rt}, &tbl)
+	return xrest.HandleOne(ctx, w, r, &RtTblProp{&rt}, &tbl)
 }
 
 func handleAccounts(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
 	var params map[string]string
-	return handleMany(ctx, w, r, Accounts{}, &params)
+	return xrest.HandleMany(ctx, w, r, Accounts{}, &params)
 }
 
 func handleAccount(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
@@ -1122,7 +1007,7 @@ func handleAccount(ctx context.Context, w http.ResponseWriter, r *http.Request) 
 	}
 
 	var params map[string]string
-	return handleOne(ctx, w, r, &ac, &params)
+	return xrest.HandleOne(ctx, w, r, &ac, &params)
 }
 
 func repoFindForReq(ctx context.Context, r *http.Request, user_action bool) (*RepoDesc, *xrest.ReqErr) {
@@ -1150,7 +1035,7 @@ func repoFindForReq(ctx context.Context, r *http.Request, user_action bool) (*Re
 
 func handleRepos(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
 	var params swyapi.RepoAdd
-	return handleMany(ctx, w, r, Repos{}, &params)
+	return xrest.HandleMany(ctx, w, r, Repos{}, &params)
 }
 
 func handleRepo(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
@@ -1160,7 +1045,7 @@ func handleRepo(ctx context.Context, w http.ResponseWriter, r *http.Request) *xr
 	}
 
 	var ru swyapi.RepoUpdate
-	return handleOne(ctx, w, r, rd, &ru)
+	return xrest.HandleOne(ctx, w, r, rd, &ru)
 }
 
 func handleRepoFiles(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
@@ -1279,7 +1164,7 @@ func handleS3Access(ctx context.Context, w http.ResponseWriter, r *http.Request)
 
 func handleDeployments(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
 	var ds swyapi.DeployStart
-	return handleMany(ctx, w, r, Deployments{}, &ds)
+	return xrest.HandleMany(ctx, w, r, Deployments{}, &ds)
 }
 
 func handleDeployment(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
@@ -1294,7 +1179,7 @@ func handleDeployment(ctx context.Context, w http.ResponseWriter, r *http.Reques
 }
 
 func handleOneDeployment(ctx context.Context, w http.ResponseWriter, r *http.Request, dd *DeployDesc) *xrest.ReqErr {
-	return handleOne(ctx, w, r, dd, nil)
+	return xrest.HandleOne(ctx, w, r, dd, nil)
 }
 
 func handleAuths(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
@@ -1397,7 +1282,7 @@ func handleAuth(ctx context.Context, w http.ResponseWriter, r *http.Request) *xr
 
 func handleMwares(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
 	var params swyapi.MwareAdd
-	return handleMany(ctx, w, r, Mwares{}, &params)
+	return xrest.HandleMany(ctx, w, r, Mwares{}, &params)
 }
 
 func handleMware(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
@@ -1408,7 +1293,7 @@ func handleMware(ctx context.Context, w http.ResponseWriter, r *http.Request) *x
 		return cerr
 	}
 
-	return handleOne(ctx, w, r, &mw, nil)
+	return xrest.HandleOne(ctx, w, r, &mw, nil)
 }
 
 func getReqContext(w http.ResponseWriter, r *http.Request) (context.Context, func(context.Context)) {
