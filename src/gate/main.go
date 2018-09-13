@@ -771,7 +771,7 @@ func handleFunctionRun(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		return errc
 	}
 
-	res, err = doRunConn(ctx, conn, fn.Cookie, suff, "run", &params)
+	res, err = doRunConn(ctx, conn, nil, fn.Cookie, suff, "run", &params)
 	if err != nil {
 		return GateErrE(swy.GateGenErr, err)
 	}

@@ -162,6 +162,7 @@ func (fn *FunctionDesc)toMInfo(ctx context.Context) *swyapi.FunctionMdat {
 
 		fid.BR = []uint { uint(fdm.bd.rover[0]), uint(fdm.bd.rover[1]), uint(fdm.bd.goal) }
 	}
+	fid.Cookie = fn.Cookie
 	return &fid
 }
 

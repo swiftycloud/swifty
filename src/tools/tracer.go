@@ -3,12 +3,13 @@ package main
 import (
 	"net"
 	"encoding/json"
+	"sort"
 	"os"
 	"fmt"
 	"../apis"
 )
 
-func tracerConnect(ten, addr string) (*net.UnixConn, error) {
+func tracerConnect(id, addr string) (*net.UnixConn, error) {
 	ua, err := net.ResolveUnixAddr("unixpacket", addr)
 	if err != nil {
 		return nil, err
@@ -19,7 +20,7 @@ func tracerConnect(ten, addr string) (*net.UnixConn, error) {
 		return nil, err
 	}
 
-	hm := swyapi.TracerHello{ Tenant: ten }
+	hm := swyapi.TracerHello{ ID: id }
 	data, _ := json.Marshal(&hm)
 	_, err = sk.Write(data)
 	if err != nil {
@@ -32,8 +33,9 @@ func tracerConnect(ten, addr string) (*net.UnixConn, error) {
 
 func main() {
 	if len(os.Args) == 1 {
-		fmt.Printf("Usage: %s <tenant> <socket-path>\n", os.Args[0])
-		fmt.Printf("  <tenant> is the user-name to watch events for\n")
+		fmt.Printf("Usage: %s <id> <socket-path>\n", os.Args[0])
+		fmt.Printf("  <id> can be\n")
+		fmt.Printf("       - 'ten:user-name' to watch events for a user\n")
 		fmt.Printf("  <socket-path> is where gate keeps the listener\n")
 		fmt.Printf("                likely this is /var/run/swifty/gate\n")
 		return
@@ -83,6 +85,22 @@ func main() {
 			fmt.Printf("%s\n", tm.Data["values"])
 		case "error":
 			fmt.Printf("%d %s\n", tm.Data["code"], tm.Data["message"])
+		case "call":
+			fmt.Printf("\n")
+			type x struct {
+				n	string
+				d	uint64
+			}
+			times := []x{}
+			for n, dur := range tm.Data["times"].(map[string]interface{}) {
+				times = append(times, x{n:n, d:uint64(dur.(float64))})
+			}
+			sort.Slice(times, func(i, j int) bool {
+				return times[i].d < times[j].d
+			})
+			for _, t := range times {
+				fmt.Printf("\t%-10s%16d\n", t.n, t.d)
+			}
 		default:
 			fmt.Printf("%v\n", tm.Data)
 		}

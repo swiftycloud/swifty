@@ -17,7 +17,7 @@ import (
 const GateTracerPath = "/var/run/swifty/gate"
 
 type Tracer struct {
-	ten	string
+	id	string
 	evs	chan *swyapi.TracerEvent
 	l	*list.Element
 }
@@ -25,8 +25,12 @@ type Tracer struct {
 var tLock sync.RWMutex
 var tracers *list.List
 
+func traceEnabled() bool {
+	return tracers.Len() != 0
+}
+
 func traceRequest(ctx context.Context, r *http.Request) {
-	if tracers.Len() == 0 {
+	if !traceEnabled() {
 		return
 	}
 
@@ -37,7 +41,7 @@ func traceRequest(ctx context.Context, r *http.Request) {
 }
 
 func traceError(ctx context.Context, ce *xrest.ReqErr) {
-	if tracers.Len() == 0 {
+	if !traceEnabled() {
 		return
 	}
 
@@ -48,7 +52,7 @@ func traceError(ctx context.Context, ce *xrest.ReqErr) {
 }
 
 func traceResponce(ctx context.Context, r interface{}) {
-	if tracers.Len() == 0 {
+	if !traceEnabled() {
 		return
 	}
 
@@ -70,18 +74,37 @@ func traceEventSlow(ctx context.Context, typ string, values map[string]interface
 	tLock.RLock()
 	for e := tracers.Front(); e != nil; e = e.Next() {
 		t := e.Value.(*Tracer)
-		if t.ten == gct.Tenant {
+		if t.id == "ten:" + gct.Tenant {
 			t.evs <-evt
 		}
 	}
 	tLock.RUnlock()
 }
 
-func addTracer(tenant string) *Tracer {
-	glog.Debugf("Setup tracer for %s client (%d already)", tenant, tracers.Len())
+func traceCall(cookie string, times map[string]time.Duration) {
+	evt := &swyapi.TracerEvent {
+		Ts: time.Now(),
+		Type: "call",
+		Data: map[string]interface{} {
+			"times": times,
+		},
+	}
+
+	tLock.RLock()
+	for e := tracers.Front(); e != nil; e = e.Next() {
+		t := e.Value.(*Tracer)
+		if t.id == "url:" + cookie {
+			t.evs <-evt
+		}
+	}
+	tLock.RUnlock()
+}
+
+func addTracer(id string) *Tracer {
+	glog.Debugf("Setup tracer for %s client (%d already)", id, tracers.Len())
 
 	t := Tracer{
-		ten: tenant,
+		id: id,
 		evs: make(chan *swyapi.TracerEvent),
 	}
 
@@ -114,7 +137,7 @@ func delTracer(t *Tracer) {
 	tLock.Unlock()
 	done <-true
 
-	glog.Debugf("Terminating tracer for %s (%d left)", t.ten, tracers.Len())
+	glog.Debugf("Terminating tracer for %s (%d left)", t.id, tracers.Len())
 }
 
 func tracerRun(cln *net.UnixConn) {
@@ -134,7 +157,7 @@ func tracerRun(cln *net.UnixConn) {
 		return
 	}
 
-	t := addTracer(hm.Tenant)
+	t := addTracer(hm.ID)
 	defer delTracer(t)
 
 	stop := make(chan bool)
