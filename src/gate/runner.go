@@ -6,11 +6,63 @@ import (
 	"context"
 	"strconv"
 	"strings"
+	"io/ioutil"
 
 	"../apis"
 	"../common"
 	"../common/http"
 )
+
+func makeArgs(sopq *statsOpaque, r *http.Request, path, key string) *swyapi.SwdFunctionRun {
+	defer r.Body.Close()
+
+	args := &swyapi.SwdFunctionRun{}
+	args.Args = make(map[string]string)
+
+	for k, v := range r.URL.Query() {
+		if len(v) < 1 {
+			continue
+		}
+
+		args.Args[k] = v[0]
+		sopq.argsSz += len(k) + len(v[0])
+	}
+
+	body, err := ioutil.ReadAll(r.Body)
+	if err == nil && len(body) > 0 {
+		ct := r.Header.Get("Content-Type")
+		ctp := strings.SplitN(ct, ";", 2)
+		if len(ctp) > 0 {
+			/*
+			 * Some comments on the content/type
+			 * THe text/plain type is simple
+			 * The app/json type means, there's an object
+			 * inside and we can decode it rigt in the
+			 * runner. On the other hand, decoding the
+			 * json into a struct, rather into a generic
+			 * map is better for compile-able languages.
+			 * Any binary type is better to be handled
+			 * with asyncs, as binary data can be big and
+			 * tranferring is back and firth is not good.
+			 */
+			switch ctp[0] {
+			case "application/json", "text/plain":
+				args.ContentType = ctp[0]
+				args.Body = string(body)
+				sopq.bodySz = len(body)
+			}
+		}
+	}
+
+	if path == "" {
+		path = reqPath(r)
+	}
+	args.Path = &path
+	args.Method = r.Method
+	args.Key = key
+
+	return args
+}
 
 type podConn struct {
 	Addr	string
