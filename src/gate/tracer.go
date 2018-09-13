@@ -174,6 +174,7 @@ func tracerListen(sk *net.UnixListener) {
 
 func tracerInit() error {
 	tracers = list.New()
+	xrest.TraceFn = traceResponce
 
 	os.Remove(GateTracerPath)
 	addr, err := net.ResolveUnixAddr("unixpacket", GateTracerPath)

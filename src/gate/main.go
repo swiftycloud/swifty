@@ -125,16 +125,6 @@ out:
 	http.Error(w, err.Error(), resp)
 }
 
-func respond(ctx context.Context, w http.ResponseWriter, result interface{}) *xrest.ReqErr {
-	err := swyhttp.MarshalAndWrite(w, result)
-	if err != nil {
-		return GateErrE(swy.GateBadResp, err)
-	}
-
-	traceResponce(ctx, result)
-	return nil
-}
-
 type Obj interface {
 	info(context.Context, url.Values, bool) (interface{}, *xrest.ReqErr)
 	del(context.Context) *xrest.ReqErr
@@ -153,7 +143,7 @@ func handleGetOne(ctx context.Context, w http.ResponseWriter, r *http.Request, d
 		return cerr
 	}
 
-	return respond(ctx, w, ifo)
+	return xrest.Respond(ctx, w, ifo)
 }
 
 func handleDeleteOne(ctx context.Context, w http.ResponseWriter, r *http.Request, desc Obj) *xrest.ReqErr {
@@ -178,7 +168,7 @@ func handleUpdateOne(ctx context.Context, w http.ResponseWriter, r *http.Request
 	}
 
 	ifo, _ := desc.info(ctx, nil, false)
-	return respond(ctx, w, ifo)
+	return xrest.Respond(ctx, w, ifo)
 }
 
 func handleCreateOne(ctx context.Context, w http.ResponseWriter, r *http.Request, fact Factory, add interface{}) *xrest.ReqErr {
@@ -198,7 +188,7 @@ func handleCreateOne(ctx context.Context, w http.ResponseWriter, r *http.Request
 	}
 
 	ifo, _ := desc.info(ctx, nil, false)
-	return respond(ctx, w, ifo)
+	return xrest.Respond(ctx, w, ifo)
 }
 
 func handleGetList(ctx context.Context, w http.ResponseWriter, r *http.Request, fact Factory) *xrest.ReqErr {
@@ -220,7 +210,7 @@ func handleGetList(ctx context.Context, w http.ResponseWriter, r *http.Request, 
 		return cerr
 	}
 
-	return respond(ctx, w, ifos)
+	return xrest.Respond(ctx, w, ifos)
 }
 
 func handleMany(ctx context.Context, w http.ResponseWriter, r *http.Request, f Factory, add_param interface{}) *xrest.ReqErr {
@@ -344,7 +334,7 @@ func handleProjectList(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		}
 	}
 
-	return respond(ctx, w, &result)
+	return xrest.Respond(ctx, w, &result)
 }
 
 func objFindId(ctx context.Context, id string, out interface{}, q bson.M) *xrest.ReqErr {
@@ -385,7 +375,7 @@ func handleFunctionAuthCtx(ctx context.Context, w http.ResponseWriter, r *http.R
 
 	switch r.Method {
 	case "GET":
-		return respond(ctx, w, fn.AuthCtx)
+		return xrest.Respond(ctx, w, fn.AuthCtx)
 
 	case "PUT":
 		var ac string
@@ -440,7 +430,7 @@ func handleFunctionMwares(ctx context.Context, w http.ResponseWriter, r *http.Re
 
 	switch r.Method {
 	case "GET":
-		return respond(ctx, w, fn.listMware(ctx))
+		return xrest.Respond(ctx, w, fn.listMware(ctx))
 
 	case "POST":
 		var mid string
@@ -506,7 +496,7 @@ func handleFunctionAccounts(ctx context.Context, w http.ResponseWriter, r *http.
 
 	switch r.Method {
 	case "GET":
-		return respond(ctx, w, fn.listAccounts(ctx))
+		return xrest.Respond(ctx, w, fn.listAccounts(ctx))
 
 	case "POST":
 		var aid string
@@ -568,7 +558,7 @@ func handleFunctionS3Bs(ctx context.Context, w http.ResponseWriter, r *http.Requ
 
 	switch r.Method {
 	case "GET":
-		return respond(ctx, w, fn.S3Buckets)
+		return xrest.Respond(ctx, w, fn.S3Buckets)
 
 	case "POST":
 		var bname string
@@ -749,7 +739,7 @@ func handleTenantStats(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		return cerr
 	}
 
-	return respond(ctx, w, resp)
+	return xrest.Respond(ctx, w, resp)
 }
 
 func handleFunctionStats(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
@@ -772,7 +762,7 @@ func handleFunctionStats(ctx context.Context, w http.ResponseWriter, r *http.Req
 			return cerr
 		}
 
-		return respond(ctx, w, &swyapi.FunctionStatsResp{ Stats: stats })
+		return xrest.Respond(ctx, w, &swyapi.FunctionStatsResp{ Stats: stats })
 	}
 
 	return nil
@@ -822,7 +812,7 @@ func handleFunctionLogs(ctx context.Context, w http.ResponseWriter, r *http.Requ
 			})
 		}
 
-		return respond(ctx, w, resp)
+		return xrest.Respond(ctx, w, resp)
 	}
 
 	return nil
@@ -1012,7 +1002,7 @@ func handleFunctionMdat(ctx context.Context, w http.ResponseWriter, r *http.Requ
 		return cerr
 	}
 
-	return respond(ctx, w, fn.toMInfo(ctx))
+	return xrest.Respond(ctx, w, fn.toMInfo(ctx))
 }
 
 func handleFunctionRun(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
@@ -1086,7 +1076,7 @@ func handleFunctionRun(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		}
 	}
 
-	return respond(ctx, w, res)
+	return xrest.Respond(ctx, w, res)
 }
 
 func handleRouters(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
@@ -1189,7 +1179,7 @@ func handleRepoFiles(ctx context.Context, w http.ResponseWriter, r *http.Request
 			return cerr
 		}
 
-		return respond(ctx, w, files)
+		return xrest.Respond(ctx, w, files)
 	} else {
 		cont, cerr := rd.readFile(ctx, p[5])
 		if cerr != nil {
@@ -1215,7 +1205,7 @@ func handleRepoDesc(ctx context.Context, w http.ResponseWriter, r *http.Request)
 		return cerr
 	}
 
-	return respond(ctx, w, d)
+	return xrest.Respond(ctx, w, d)
 }
 
 func handleRepoPull(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
@@ -1244,7 +1234,7 @@ func handleLanguages(ctx context.Context, w http.ResponseWriter, r *http.Request
 		ret = append(ret, l)
 	}
 
-	return respond(ctx, w, ret)
+	return xrest.Respond(ctx, w, ret)
 }
 
 func handleLanguage(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
@@ -1254,7 +1244,7 @@ func handleLanguage(ctx context.Context, w http.ResponseWriter, r *http.Request)
 		return GateErrM(swy.GateGenErr, "Language not supported")
 	}
 
-	return respond(ctx, w, lh.info())
+	return xrest.Respond(ctx, w, lh.info())
 }
 
 func handleMwareTypes(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
@@ -1268,7 +1258,7 @@ func handleMwareTypes(ctx context.Context, w http.ResponseWriter, r *http.Reques
 		ret = append(ret, mw)
 	}
 
-	return respond(ctx, w, ret)
+	return xrest.Respond(ctx, w, ret)
 }
 
 func handleS3Access(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
@@ -1284,7 +1274,7 @@ func handleS3Access(ctx context.Context, w http.ResponseWriter, r *http.Request)
 		return cerr
 	}
 
-	return respond(ctx, w, creds)
+	return xrest.Respond(ctx, w, creds)
 }
 
 func handleDeployments(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
@@ -1328,7 +1318,7 @@ func handleAuths(ctx context.Context, w http.ResponseWriter, r *http.Request) *x
 			auths = append(auths, &swyapi.AuthInfo{ Id: d.ObjID.Hex(), Name: d.SwoId.Name })
 		}
 
-		return respond(ctx, w, auths)
+		return xrest.Respond(ctx, w, auths)
 
 	case "POST":
 		var aa swyapi.AuthAdd
@@ -1388,7 +1378,7 @@ func handleAuths(ctx context.Context, w http.ResponseWriter, r *http.Request) *x
 		}
 
 		di, _ := dd.toInfo(ctx, false)
-		return respond(ctx, w, &di)
+		return xrest.Respond(ctx, w, &di)
 	}
 
 	return nil
