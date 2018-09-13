@@ -17,7 +17,7 @@ import (
 const GateTracerPath = "/var/run/swifty/gate"
 
 type Tracer struct {
-	ten	string
+	id	string
 	evs	chan *swyapi.TracerEvent
 	l	*list.Element
 }
@@ -70,18 +70,18 @@ func traceEventSlow(ctx context.Context, typ string, values map[string]interface
 	tLock.RLock()
 	for e := tracers.Front(); e != nil; e = e.Next() {
 		t := e.Value.(*Tracer)
-		if t.ten == gct.Tenant {
+		if t.id == "ten:" + gct.Tenant {
 			t.evs <-evt
 		}
 	}
 	tLock.RUnlock()
 }
 
-func addTracer(tenant string) *Tracer {
-	glog.Debugf("Setup tracer for %s client (%d already)", tenant, tracers.Len())
+func addTracer(id string) *Tracer {
+	glog.Debugf("Setup tracer for %s client (%d already)", id, tracers.Len())
 
 	t := Tracer{
-		ten: tenant,
+		id: id,
 		evs: make(chan *swyapi.TracerEvent),
 	}
 
@@ -114,7 +114,7 @@ func delTracer(t *Tracer) {
 	tLock.Unlock()
 	done <-true
 
-	glog.Debugf("Terminating tracer for %s (%d left)", t.ten, tracers.Len())
+	glog.Debugf("Terminating tracer for %s (%d left)", t.id, tracers.Len())
 }
 
 func tracerRun(cln *net.UnixConn) {
@@ -134,7 +134,7 @@ func tracerRun(cln *net.UnixConn) {
 		return
 	}
 
-	t := addTracer(hm.Tenant)
+	t := addTracer(hm.ID)
 	defer delTracer(t)
 
 	stop := make(chan bool)

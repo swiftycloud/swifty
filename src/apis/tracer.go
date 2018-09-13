@@ -5,7 +5,7 @@ import (
 )
 
 type TracerHello struct {
-	Tenant	string
+	ID	string
 }
 
 type TracerEvent struct {

@@ -8,7 +8,7 @@ import (
 	"../apis"
 )
 
-func tracerConnect(ten, addr string) (*net.UnixConn, error) {
+func tracerConnect(id, addr string) (*net.UnixConn, error) {
 	ua, err := net.ResolveUnixAddr("unixpacket", addr)
 	if err != nil {
 		return nil, err
@@ -19,7 +19,7 @@ func tracerConnect(ten, addr string) (*net.UnixConn, error) {
 		return nil, err
 	}
 
-	hm := swyapi.TracerHello{ Tenant: ten }
+	hm := swyapi.TracerHello{ ID: id }
 	data, _ := json.Marshal(&hm)
 	_, err = sk.Write(data)
 	if err != nil {
@@ -32,8 +32,9 @@ func tracerConnect(ten, addr string) (*net.UnixConn, error) {
 
 func main() {
 	if len(os.Args) == 1 {
-		fmt.Printf("Usage: %s <tenant> <socket-path>\n", os.Args[0])
-		fmt.Printf("  <tenant> is the user-name to watch events for\n")
+		fmt.Printf("Usage: %s <id> <socket-path>\n", os.Args[0])
+		fmt.Printf("  <id> can be\n")
+		fmt.Printf("       - 'ten:user-name' to watch events for a user\n")
 		fmt.Printf("  <socket-path> is where gate keeps the listener\n")
 		fmt.Printf("                likely this is /var/run/swifty/gate\n")
 		return
