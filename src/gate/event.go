@@ -36,7 +36,9 @@ type Trigger struct {
 	fn	*FunctionDesc
 }
 
-func (t *Trigger)add(ctx context.Context, _ interface{}) *swyapi.GateErr { return GateErrC(swy.GateNotAvail) }
+func (t *Trigger)add(ctx context.Context, _ interface{}) *swyapi.GateErr {
+	return t.ed.Add(ctx, t.fn)
+}
 
 func (t *Trigger)del(ctx context.Context) *swyapi.GateErr {
 	return t.ed.Delete(ctx, t.fn)
@@ -50,6 +52,55 @@ func (t *Trigger)upd(context.Context, interface{}) *swyapi.GateErr { return Gate
 
 func eventsInit(ctx context.Context, conf *YAMLConf) error {
 	return cronInit(ctx, conf)
+}
+
+type Triggers struct {
+	fn	*FunctionDesc
+}
+
+func (ts Triggers)create(ctx context.Context, r *http.Request, p interface{}) (Obj, *swyapi.GateErr) {
+	params := p.(*swyapi.FunctionEvent)
+	ed, cerr := getEventDesc(params)
+	if cerr != nil {
+		return nil, cerr
+	}
+
+	return &Trigger{ed, ts.fn}, nil
+}
+
+func (ts Triggers)iterate(ctx context.Context, r *http.Request, cb func(context.Context, Obj) *swyapi.GateErr) *swyapi.GateErr {
+	q := r.URL.Query()
+	ename := q.Get("name")
+
+	var evd []*FnEventDesc
+	var err error
+
+	fn := ts.fn
+
+	if ename == "" {
+		err = dbFindAll(ctx, bson.M{"fnid": fn.Cookie}, &evd)
+		if err != nil {
+			return GateErrD(err)
+		}
+	} else {
+		var ev FnEventDesc
+
+		err = dbFind(ctx, bson.M{"fnid": fn.Cookie, "name": ename}, &ev)
+		if err != nil {
+			return GateErrD(err)
+		}
+
+		evd = append(evd, &ev)
+	}
+
+	for _, e := range evd {
+		cerr := cb(ctx, &Trigger{e, fn})
+		if cerr != nil {
+			return cerr
+		}
+	}
+
+	return nil
 }
 
 func (e *FnEventDesc)toInfo(fn *FunctionDesc) *swyapi.FunctionEvent {

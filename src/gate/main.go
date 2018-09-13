@@ -374,70 +374,6 @@ func objFindForReq(ctx context.Context, r *http.Request, n string, out interface
 	return objFindForReq2(ctx, r, n, out, nil)
 }
 
-func handleFunctionTriggers(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
-	var fn FunctionDesc
-
-	cerr := objFindForReq(ctx, r, "fid", &fn)
-	if cerr != nil {
-		return cerr
-	}
-
-	q := r.URL.Query()
-
-	switch r.Method {
-	case "GET":
-		ename := q.Get("name")
-
-		var evd []*FnEventDesc
-		var err error
-
-		if ename == "" {
-			err = dbFindAll(ctx, bson.M{"fnid": fn.Cookie}, &evd)
-			if err != nil {
-				return GateErrD(err)
-			}
-		} else {
-			var ev FnEventDesc
-
-			err = dbFind(ctx, bson.M{"fnid": fn.Cookie, "name": ename}, &ev)
-			if err != nil {
-				return GateErrD(err)
-			}
-
-			evd = append(evd, &ev)
-		}
-
-		evs := []*swyapi.FunctionEvent{}
-		for _, e := range evd {
-			evs = append(evs, e.toInfo(&fn))
-		}
-
-		return respond(ctx, w, evs)
-
-	case "POST":
-		var evt swyapi.FunctionEvent
-
-		err := swyhttp.ReadAndUnmarshalReq(r, &evt)
-		if err != nil {
-			return GateErrE(swy.GateBadRequest, err)
-		}
-
-		ed, cerr := getEventDesc(&evt)
-		if cerr != nil {
-			return cerr
-		}
-
-		cerr = ed.Add(ctx, &fn)
-		if cerr != nil {
-			return cerr
-		}
-
-		return respond(ctx, w, ed.toInfo(&fn))
-	}
-
-	return nil
-}
-
 func handleFunctionAuthCtx(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
 	var fn FunctionDesc
 
@@ -714,6 +650,18 @@ func handleFunctionS3B(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	}
 
 	return nil
+}
+
+func handleFunctionTriggers(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
+	var fn FunctionDesc
+
+	cerr := objFindForReq(ctx, r, "fid", &fn)
+	if cerr != nil {
+		return cerr
+	}
+
+	var evt swyapi.FunctionEvent
+	return handleMany(ctx, w, r, Triggers{&fn}, &evt)
 }
 
 func handleFunctionTrigger(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
