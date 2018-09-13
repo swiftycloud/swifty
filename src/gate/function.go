@@ -493,7 +493,7 @@ func (fn *FunctionDesc)setEnv(ctx context.Context, env []string) error {
 	return nil
 }
 
-func (fn *FunctionDesc)setSize(ctx context.Context, sz *swyapi.FunctionSize) error {
+func (fn *FunctionDesc)setSize(ctx context.Context, sz *swyapi.FunctionSize) *xrest.ReqErr {
 	update := make(bson.M)
 	restart := false
 	mfix := false
@@ -501,7 +501,7 @@ func (fn *FunctionDesc)setSize(ctx context.Context, sz *swyapi.FunctionSize) err
 
 	err := fnFixSize(sz)
 	if err != nil {
-		return err
+		return GateErrE(swy.GateGenErr, err)
 	}
 
 	if fn.Size.Tmo != sz.Timeout {
@@ -534,7 +534,7 @@ func (fn *FunctionDesc)setSize(ctx context.Context, sz *swyapi.FunctionSize) err
 
 	err = dbUpdatePart(ctx, fn, update)
 	if err != nil {
-		return err
+		return GateErrD(err)
 	}
 
 	if rlfix || mfix {
@@ -1046,13 +1046,7 @@ func (_ *FnSzProp)Info(ctx context.Context, o xrest.Obj, q url.Values) (interfac
 }
 
 func (_ *FnSzProp)Upd(ctx context.Context, o xrest.Obj, p interface{}) *xrest.ReqErr {
-	fn := o.(*FunctionDesc)
-	err := fn.setSize(ctx, p.(*swyapi.FunctionSize))
-	if err != nil {
-		return GateErrE(swy.GateGenErr, err)
-	}
-
-	return nil
+	return o.(*FunctionDesc).setSize(ctx, p.(*swyapi.FunctionSize))
 }
 
 type FnSrcProp struct { }
