@@ -1123,17 +1123,6 @@ func handleFunctions(ctx context.Context, w http.ResponseWriter, r *http.Request
 	return handleMany(ctx, w, r, Functions{}, &params)
 }
 
-func handleFunctionMdat(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
-	var fn FunctionDesc
-
-	cerr := objFindForReq(ctx, r, "fid", &fn)
-	if cerr != nil {
-		return cerr
-	}
-
-	return respond(ctx, w, fn.toMInfo(ctx))
-}
-
 func handleFunction(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
 	var fn FunctionDesc
 
@@ -1144,6 +1133,17 @@ func handleFunction(ctx context.Context, w http.ResponseWriter, r *http.Request)
 
 	var upd swyapi.FunctionUpdate
 	return handleOne(ctx, w, r, &fn, &upd)
+}
+
+func handleFunctionMdat(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
+	var fn FunctionDesc
+
+	cerr := objFindForReq(ctx, r, "fid", &fn)
+	if cerr != nil {
+		return cerr
+	}
+
+	return respond(ctx, w, fn.toMInfo(ctx))
 }
 
 func handleFunctionRun(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
@@ -1218,11 +1218,6 @@ func handleFunctionRun(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	}
 
 	return respond(ctx, w, res)
-}
-
-func handleMwares(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
-	var params swyapi.MwareAdd
-	return handleMany(ctx, w, r, Mwares{}, &params)
 }
 
 func handleRouters(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
@@ -1300,11 +1295,6 @@ func handleAccount(ctx context.Context, w http.ResponseWriter, r *http.Request) 
 	return handleOne(ctx, w, r, &ac, &params)
 }
 
-func handleRepos(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
-	var params swyapi.RepoAdd
-	return handleMany(ctx, w, r, Repos{}, &params)
-}
-
 func repoFindForReq(ctx context.Context, r *http.Request, user_action bool) (*RepoDesc, *swyapi.GateErr) {
 	rid := mux.Vars(r)["rid"]
 	if !bson.IsObjectIdHex(rid) {
@@ -1326,6 +1316,11 @@ func repoFindForReq(ctx context.Context, r *http.Request, user_action bool) (*Re
 	}
 
 	return &rd, nil
+}
+
+func handleRepos(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
+	var params swyapi.RepoAdd
+	return handleMany(ctx, w, r, Repos{}, &params)
 }
 
 func handleRepo(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
@@ -1568,6 +1563,11 @@ func handleAuth(ctx context.Context, w http.ResponseWriter, r *http.Request) *sw
 	}
 
 	return handleOneDeployment(ctx, w, r, &ad)
+}
+
+func handleMwares(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
+	var params swyapi.MwareAdd
+	return handleMany(ctx, w, r, Mwares{}, &params)
 }
 
 func handleMware(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
