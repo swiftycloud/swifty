@@ -2,6 +2,7 @@ package main
 
 import (
 	"net/http"
+	"net/url"
 	"../apis"
 	"context"
 	"../common"
@@ -49,9 +50,7 @@ func (rt *RouterDesc)getURL() string {
 	return getURL(URLRouter, rt.Cookie)
 }
 
-func (_ Routers)iterate(ctx context.Context, r *http.Request, cb func(context.Context, Obj) *swyapi.GateErr) *swyapi.GateErr {
-	q := r.URL.Query()
-
+func (_ Routers)iterate(ctx context.Context, q url.Values, cb func(context.Context, Obj) *swyapi.GateErr) *swyapi.GateErr {
 	project := q.Get("project")
 	if project == "" {
 		project = DefaultProject
@@ -73,7 +72,7 @@ func (_ Routers)iterate(ctx context.Context, r *http.Request, cb func(context.Co
 	return nil
 }
 
-func (_ Routers)create(ctx context.Context, r *http.Request, p interface{}) (Obj, *swyapi.GateErr) {
+func (_ Routers)create(ctx context.Context, q url.Values, p interface{}) (Obj, *swyapi.GateErr) {
 	params := p.(*swyapi.RouterAdd)
 	id := ctxSwoId(ctx, params.Project, params.Name)
 	return getRouterDesc(id, params)
@@ -83,7 +82,7 @@ func (rt *RouterDesc)add(ctx context.Context, params interface{}) *swyapi.GateEr
 	return rt.Create(ctx)
 }
 
-func (rt *RouterDesc)info(ctx context.Context, r *http.Request, details bool) (interface{}, *swyapi.GateErr) {
+func (rt *RouterDesc)info(ctx context.Context, q url.Values, details bool) (interface{}, *swyapi.GateErr) {
 	return rt.toInfo(ctx, details), nil
 }
 
@@ -219,13 +218,12 @@ type RtTblProp struct {
 	rt *RouterDesc
 }
 
-func (p *RtTblProp)info(ctx context.Context, r *http.Request, details bool) (interface{}, *swyapi.GateErr) {
+func (p *RtTblProp)info(ctx context.Context, q url.Values, details bool) (interface{}, *swyapi.GateErr) {
 	rt := p.rt
 	f := 0
 	t := len(rt.Table)
 
-	if r != nil {
-		q := r.URL.Query()
+	if q != nil {
 		f, e := reqAtoi(q, "from", f)
 		if f < 0 || e != nil {
 			return nil, GateErrM(swy.GateBadRequest, "Invalid range")

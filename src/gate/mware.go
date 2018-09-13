@@ -3,7 +3,7 @@ package main
 import (
 	"gopkg.in/mgo.v2/bson"
 	"strings"
-	"net/http"
+	"net/url"
 	"fmt"
 	"context"
 	"errors"
@@ -201,9 +201,7 @@ func (item *MwareDesc)toFnInfo(ctx context.Context) *swyapi.MwareInfo {
 
 type Mwares struct {}
 
-func (_ Mwares)iterate(ctx context.Context, r *http.Request, cb func(context.Context, Obj) *swyapi.GateErr) *swyapi.GateErr {
-	q := r.URL.Query()
-
+func (_ Mwares)iterate(ctx context.Context, q url.Values, cb func(context.Context, Obj) *swyapi.GateErr) *swyapi.GateErr {
 	project := q.Get("project")
 	if project == "" {
 		project = DefaultProject
@@ -227,7 +225,7 @@ func (_ Mwares)iterate(ctx context.Context, r *http.Request, cb func(context.Con
 	return nil
 }
 
-func (_ Mwares)create(ctx context.Context, r *http.Request, p interface{}) (Obj, *swyapi.GateErr) {
+func (_ Mwares)create(ctx context.Context, q url.Values, p interface{}) (Obj, *swyapi.GateErr) {
 	params := p.(*swyapi.MwareAdd)
 	id := ctxSwoId(ctx, params.Project, params.Name)
 	return getMwareDesc(id, params), nil
@@ -237,7 +235,7 @@ func (mw *MwareDesc)add(ctx context.Context, params interface{}) *swyapi.GateErr
 	return mw.Setup(ctx)
 }
 
-func (mw *MwareDesc)info(ctx context.Context, r *http.Request, details bool) (interface{}, *swyapi.GateErr) {
+func (mw *MwareDesc)info(ctx context.Context, q url.Values, details bool) (interface{}, *swyapi.GateErr) {
 	return mw.toInfo(ctx, details)
 }
 

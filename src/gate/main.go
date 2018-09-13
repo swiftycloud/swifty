@@ -135,19 +135,19 @@ func respond(ctx context.Context, w http.ResponseWriter, result interface{}) *sw
 }
 
 type Obj interface {
-	info(context.Context, *http.Request, bool) (interface{}, *swyapi.GateErr)
+	info(context.Context, url.Values, bool) (interface{}, *swyapi.GateErr)
 	del(context.Context) *swyapi.GateErr
 	upd(context.Context, interface{}) *swyapi.GateErr
 	add(context.Context, interface{}) *swyapi.GateErr
 }
 
 type Factory interface {
-	create(context.Context, *http.Request, interface{}) (Obj, *swyapi.GateErr)
-	iterate(context.Context, *http.Request, func(context.Context, Obj) *swyapi.GateErr) *swyapi.GateErr
+	create(context.Context, url.Values, interface{}) (Obj, *swyapi.GateErr)
+	iterate(context.Context, url.Values, func(context.Context, Obj) *swyapi.GateErr) *swyapi.GateErr
 }
 
 func handleGetOne(ctx context.Context, w http.ResponseWriter, r *http.Request, desc Obj) *swyapi.GateErr {
-	ifo, cerr := desc.info(ctx, r, true)
+	ifo, cerr := desc.info(ctx, r.URL.Query(), true)
 	if cerr != nil {
 		return cerr
 	}
@@ -186,7 +186,7 @@ func handleCreateOne(ctx context.Context, w http.ResponseWriter, r *http.Request
 		return GateErrE(swy.GateBadRequest, err)
 	}
 
-	desc, cerr := fact.create(ctx, r, add)
+	desc, cerr := fact.create(ctx, r.URL.Query(), add)
 	if cerr != nil {
 		return cerr
 	}
@@ -206,8 +206,8 @@ func handleGetList(ctx context.Context, w http.ResponseWriter, r *http.Request, 
 	q := r.URL.Query()
 	details := (q.Get("details") != "")
 
-	cerr := fact.iterate(ctx, r, func(ctx context.Context, desc Obj) *swyapi.GateErr {
-		ifo, cer2 := desc.info(ctx, r, details)
+	cerr := fact.iterate(ctx, q, func(ctx context.Context, desc Obj) *swyapi.GateErr {
+		ifo, cer2 := desc.info(ctx, q, details)
 		if cer2 != nil {
 			return cer2
 		}

@@ -6,7 +6,7 @@ import (
 	"bytes"
 	"os/exec"
 	"errors"
-	"net/http"
+	"net/url"
 	"bufio"
 	"os"
 	"context"
@@ -83,7 +83,7 @@ func getRepoDesc(id *SwoId, params *swyapi.RepoAdd) *RepoDesc {
 	return rd
 }
 
-func (_ Repos)create(ctx context.Context, r *http.Request, p interface{}) (Obj, *swyapi.GateErr) {
+func (_ Repos)create(ctx context.Context, q url.Values, p interface{}) (Obj, *swyapi.GateErr) {
 	params := p.(*swyapi.RepoAdd)
 	id := ctxSwoId(ctx, NoProject, params.URL)
 	return getRepoDesc(id, params), nil
@@ -110,7 +110,7 @@ func (rd *RepoDesc)add(ctx context.Context, p interface{}) *swyapi.GateErr {
 	return rd.Attach(ctx, acc)
 }
 
-func (rd *RepoDesc)info(ctx context.Context, r *http.Request, details bool) (interface{}, *swyapi.GateErr) {
+func (rd *RepoDesc)info(ctx context.Context, q url.Values, details bool) (interface{}, *swyapi.GateErr) {
 	return rd.toInfo(ctx, details)
 }
 
@@ -533,7 +533,7 @@ type DetachedRepo struct {
 	accid	string
 }
 
-func (rd *DetachedRepo)info(ctx context.Context, r *http.Request, details bool) (interface{}, *swyapi.GateErr) {
+func (rd *DetachedRepo)info(ctx context.Context, q url.Values, details bool) (interface{}, *swyapi.GateErr) {
 	return &swyapi.RepoInfo {
 		Type:	rd.typ,
 		URL:	rd.URL,
@@ -546,9 +546,7 @@ func (rd *DetachedRepo)del(context.Context) *swyapi.GateErr { return GateErrC(sw
 func (rd *DetachedRepo)upd(context.Context, interface{}) *swyapi.GateErr { return GateErrC(swy.GateNotAvail) }
 func (rd *DetachedRepo)add(context.Context, interface{}) *swyapi.GateErr { return GateErrC(swy.GateNotAvail) }
 
-func (_ Repos)iterate(ctx context.Context, r *http.Request, cb func(context.Context, Obj) *swyapi.GateErr) *swyapi.GateErr {
-	q := r.URL.Query()
-
+func (_ Repos)iterate(ctx context.Context, q url.Values, cb func(context.Context, Obj) *swyapi.GateErr) *swyapi.GateErr {
 	accid := q.Get("aid")
 	if accid != "" && !bson.IsObjectIdHex(accid) {
 		return GateErrM(swy.GateBadRequest, "Bad account ID value")

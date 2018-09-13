@@ -4,7 +4,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"strings"
-	"net/http"
+	"net/url"
 	"fmt"
 	"time"
 	"context"
@@ -164,8 +164,7 @@ func (fn *FunctionDesc)toMInfo(ctx context.Context) *swyapi.FunctionMdat {
 	return &fid
 }
 
-func (_ Functions)iterate(ctx context.Context, r *http.Request, cb func(context.Context, Obj) *swyapi.GateErr) *swyapi.GateErr {
-	q := r.URL.Query()
+func (_ Functions)iterate(ctx context.Context, q url.Values, cb func(context.Context, Obj) *swyapi.GateErr) *swyapi.GateErr {
 	project := q.Get("project")
 	if project == "" {
 		project = DefaultProject
@@ -192,7 +191,7 @@ func (_ Functions)iterate(ctx context.Context, r *http.Request, cb func(context.
 	return nil
 }
 
-func (_ Functions)create(ctx context.Context, r *http.Request, p interface{}) (Obj, *swyapi.GateErr) {
+func (_ Functions)create(ctx context.Context, q url.Values, p interface{}) (Obj, *swyapi.GateErr) {
 	params := p.(*swyapi.FunctionAdd)
 	if params.Name == "" {
 		return nil, GateErrM(swy.GateBadRequest, "No function name")
@@ -210,10 +209,10 @@ func (fn *FunctionDesc)add(ctx context.Context, p interface{}) *swyapi.GateErr {
 	return fn.Add(ctx, &params.Sources)
 }
 
-func (fn *FunctionDesc)info(ctx context.Context, r *http.Request, details bool) (interface{}, *swyapi.GateErr) {
+func (fn *FunctionDesc)info(ctx context.Context, q url.Values, details bool) (interface{}, *swyapi.GateErr) {
 	periods := 0
-	if r != nil {
-		periods = reqPeriods(r.URL.Query())
+	if q != nil {
+		periods = reqPeriods(q)
 		if periods < 0 {
 			return nil, GateErrC(swy.GateBadRequest)
 		}
@@ -1028,7 +1027,7 @@ type FnEnvProp struct {
 	fn *FunctionDesc
 }
 
-func (e *FnEnvProp)info(ctx context.Context, r *http.Request, details bool) (interface{}, *swyapi.GateErr) {
+func (e *FnEnvProp)info(ctx context.Context, q url.Values, details bool) (interface{}, *swyapi.GateErr) {
 	return e.fn.Code.Env, nil
 }
 
@@ -1048,7 +1047,7 @@ type FnSzProp struct {
 	fn *FunctionDesc
 }
 
-func (s *FnSzProp)info(ctx context.Context, r *http.Request, details bool) (interface{}, *swyapi.GateErr) {
+func (s *FnSzProp)info(ctx context.Context, q url.Values, details bool) (interface{}, *swyapi.GateErr) {
 	return &swyapi.FunctionSize{
 		Memory:		s.fn.Size.Mem,
 		Timeout:	s.fn.Size.Tmo,
@@ -1073,7 +1072,7 @@ type FnSrcProp struct {
 	fn *FunctionDesc
 }
 
-func (s *FnSrcProp)info(ctx context.Context, r *http.Request, details bool) (interface{}, *swyapi.GateErr) {
+func (s *FnSrcProp)info(ctx context.Context, q url.Values, details bool) (interface{}, *swyapi.GateErr) {
 	return s.fn.getSources(ctx)
 }
 

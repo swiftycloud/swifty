@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"gopkg.in/mgo.v2/bson"
 	"context"
-	"net/http"
+	"net/url"
 	"../common"
 	"../apis"
 )
@@ -248,9 +248,7 @@ func (dep *DeployDesc)Start(ctx context.Context) *swyapi.GateErr {
 	return nil
 }
 
-func (_ Deployments)iterate(ctx context.Context, r *http.Request, cb func(context.Context, Obj) *swyapi.GateErr) *swyapi.GateErr {
-	q := r.URL.Query()
-
+func (_ Deployments)iterate(ctx context.Context, q url.Values, cb func(context.Context, Obj) *swyapi.GateErr) *swyapi.GateErr {
 	var deps []*DeployDesc
 	var err error
 
@@ -285,7 +283,7 @@ func (_ Deployments)iterate(ctx context.Context, r *http.Request, cb func(contex
 	return nil
 }
 
-func (_ Deployments)create(ctx context.Context, r *http.Request, p interface{}) (Obj, *swyapi.GateErr) {
+func (_ Deployments)create(ctx context.Context, q url.Values, p interface{}) (Obj, *swyapi.GateErr) {
 	params := p.(*swyapi.DeployStart)
 	return getDeployDesc(ctxSwoId(ctx, params.Project, params.Name)), nil
 }
@@ -306,7 +304,7 @@ func (dep *DeployDesc)add(ctx context.Context, p interface{}) *swyapi.GateErr {
 	return nil
 }
 
-func (dep *DeployDesc)info(ctx context.Context, r *http.Request, details bool) (interface{}, *swyapi.GateErr) {
+func (dep *DeployDesc)info(ctx context.Context, q url.Values, details bool) (interface{}, *swyapi.GateErr) {
 	return dep.toInfo(ctx, details)
 }
 

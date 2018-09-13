@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	"errors"
-	"net/http"
+	"net/url"
 	"gopkg.in/mgo.v2/bson"
 	"../common"
 	"../apis"
@@ -44,7 +44,7 @@ func (t *Trigger)del(ctx context.Context) *swyapi.GateErr {
 	return t.ed.Delete(ctx, t.fn)
 }
 
-func (t *Trigger)info(ctx context.Context, r *http.Request, details bool) (interface{}, *swyapi.GateErr) {
+func (t *Trigger)info(ctx context.Context, q url.Values, details bool) (interface{}, *swyapi.GateErr) {
 	return t.ed.toInfo(t.fn), nil
 }
 
@@ -58,7 +58,7 @@ type Triggers struct {
 	fn	*FunctionDesc
 }
 
-func (ts Triggers)create(ctx context.Context, r *http.Request, p interface{}) (Obj, *swyapi.GateErr) {
+func (ts Triggers)create(ctx context.Context, q url.Values, p interface{}) (Obj, *swyapi.GateErr) {
 	params := p.(*swyapi.FunctionEvent)
 	ed, cerr := getEventDesc(params)
 	if cerr != nil {
@@ -68,8 +68,7 @@ func (ts Triggers)create(ctx context.Context, r *http.Request, p interface{}) (O
 	return &Trigger{ed, ts.fn}, nil
 }
 
-func (ts Triggers)iterate(ctx context.Context, r *http.Request, cb func(context.Context, Obj) *swyapi.GateErr) *swyapi.GateErr {
-	q := r.URL.Query()
+func (ts Triggers)iterate(ctx context.Context, q url.Values, cb func(context.Context, Obj) *swyapi.GateErr) *swyapi.GateErr {
 	ename := q.Get("name")
 
 	var evd []*FnEventDesc

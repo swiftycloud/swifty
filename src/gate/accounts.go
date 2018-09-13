@@ -2,7 +2,7 @@ package main
 
 import (
 	"errors"
-	"net/http"
+	"net/url"
 	"context"
 	"strings"
 	"gopkg.in/mgo.v2/bson"
@@ -151,9 +151,7 @@ func getAccDesc(id *SwoId, params map[string]string) (*AccDesc, *swyapi.GateErr)
 	return ad, nil
 }
 
-func (_ Accounts)iterate(ctx context.Context, r *http.Request, cb func(context.Context, Obj) *swyapi.GateErr) *swyapi.GateErr {
-	q := r.URL.Query()
-
+func (_ Accounts)iterate(ctx context.Context, q url.Values, cb func(context.Context, Obj) *swyapi.GateErr) *swyapi.GateErr {
 	var acs []*AccDesc
 
 	rq := listReq(ctx, NoProject, []string{})
@@ -176,7 +174,7 @@ func (_ Accounts)iterate(ctx context.Context, r *http.Request, cb func(context.C
 	return nil
 }
 
-func (_ Accounts)create(ctx context.Context, r *http.Request, p interface{}) (Obj, *swyapi.GateErr) {
+func (_ Accounts)create(ctx context.Context, q url.Values, p interface{}) (Obj, *swyapi.GateErr) {
 	params := *p.(*map[string]string)
 	if _, ok := params["type"]; !ok {
 		return nil, GateErrM(swy.GateBadRequest, "No type")
@@ -190,7 +188,7 @@ func (ad *AccDesc)add(ctx context.Context, params interface{}) *swyapi.GateErr {
 	return ad.Add(ctx)
 }
 
-func (ad *AccDesc)info(ctx context.Context, r *http.Request, details bool) (interface{}, *swyapi.GateErr) {
+func (ad *AccDesc)info(ctx context.Context, q url.Values, details bool) (interface{}, *swyapi.GateErr) {
 	return ad.toInfo(ctx, details), nil
 }
 
