@@ -83,6 +83,10 @@ func getRepoDesc(id *SwoId, params *swyapi.RepoAdd) *RepoDesc {
 	return rd
 }
 
+func (_ Repos)iterate(ctx context.Context, r *http.Request, cb func(context.Context, Obj) *swyapi.GateErr) *swyapi.GateErr {
+	return GateErrM(swy.GateGenErr, "Not iterable")
+}
+
 func (_ Repos)create(ctx context.Context, r *http.Request, p interface{}) (Obj, *swyapi.GateErr) {
 	params := p.(*swyapi.RepoAdd)
 	id := ctxSwoId(ctx, NoProject, params.URL)

@@ -201,6 +201,32 @@ func (item *MwareDesc)toFnInfo(ctx context.Context) *swyapi.MwareInfo {
 
 type Mwares struct {}
 
+func (_ Mwares)iterate(ctx context.Context, r *http.Request, cb func(context.Context, Obj) *swyapi.GateErr) *swyapi.GateErr {
+	q := r.URL.Query()
+
+	project := q.Get("project")
+	if project == "" {
+		project = DefaultProject
+	}
+
+	mwtype := q.Get("type")
+	mname := q.Get("name")
+
+	mws, cerr := listMwares(ctx, project, mname, mwtype, q["label"])
+	if cerr != nil {
+		return cerr
+	}
+
+	for _, mw := range mws {
+		cerr = cb(ctx, mw)
+		if cerr != nil {
+			return cerr
+		}
+	}
+
+	return nil
+}
+
 func (_ Mwares)create(ctx context.Context, r *http.Request, p interface{}) (Obj, *swyapi.GateErr) {
 	params := p.(*swyapi.MwareAdd)
 	id := ctxSwoId(ctx, params.Project, params.Name)

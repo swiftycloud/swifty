@@ -151,6 +151,31 @@ func getAccDesc(id *SwoId, params map[string]string) (*AccDesc, *swyapi.GateErr)
 	return ad, nil
 }
 
+func (_ Accounts)iterate(ctx context.Context, r *http.Request, cb func(context.Context, Obj) *swyapi.GateErr) *swyapi.GateErr {
+	q := r.URL.Query()
+
+	var acs []*AccDesc
+
+	rq := listReq(ctx, NoProject, []string{})
+	if atype := q.Get("type"); atype != "" {
+		rq = append(rq, bson.DocElem{"type", atype})
+	}
+
+	err := dbFindAll(ctx, rq, &acs)
+	if err != nil {
+		return GateErrD(err)
+	}
+
+	for _, ac := range acs {
+		cerr := cb(ctx, ac)
+		if cerr != nil {
+			return cerr
+		}
+	}
+
+	return nil
+}
+
 func (_ Accounts)create(ctx context.Context, r *http.Request, p interface{}) (Obj, *swyapi.GateErr) {
 	params := *p.(*map[string]string)
 	if _, ok := params["type"]; !ok {

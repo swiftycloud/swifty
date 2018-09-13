@@ -248,6 +248,43 @@ func (dep *DeployDesc)Start(ctx context.Context) *swyapi.GateErr {
 	return nil
 }
 
+func (_ Deployments)iterate(ctx context.Context, r *http.Request, cb func(context.Context, Obj) *swyapi.GateErr) *swyapi.GateErr {
+	q := r.URL.Query()
+
+	var deps []*DeployDesc
+	var err error
+
+	project := q.Get("project")
+	if project == "" {
+		project = DefaultProject
+	}
+
+	dname := q.Get("name")
+	if dname == "" {
+		err = dbFindAll(ctx, listReq(ctx, project, q["label"]), &deps)
+		if err != nil {
+			return GateErrD(err)
+		}
+	} else {
+		var dep DeployDesc
+
+		err = dbFind(ctx, cookieReq(ctx, project, dname), &dep)
+		if err != nil {
+			return GateErrD(err)
+		}
+		deps = append(deps, &dep)
+	}
+
+	for _, d := range deps {
+		cerr := cb(ctx, d)
+		if cerr != nil {
+			return cerr
+		}
+	}
+
+	return nil
+}
+
 func (_ Deployments)create(ctx context.Context, r *http.Request, p interface{}) (Obj, *swyapi.GateErr) {
 	params := p.(*swyapi.DeployStart)
 	return getDeployDesc(ctxSwoId(ctx, params.Project, params.Name)), nil

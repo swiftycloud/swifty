@@ -143,6 +143,7 @@ type Obj interface {
 
 type Factory interface {
 	create(context.Context, *http.Request, interface{}) (Obj, *swyapi.GateErr)
+	iterate(context.Context, *http.Request, func(context.Context, Obj) *swyapi.GateErr) *swyapi.GateErr
 }
 
 func handleGetOne(ctx context.Context, w http.ResponseWriter, r *http.Request, desc Obj) *swyapi.GateErr {
@@ -197,6 +198,28 @@ func handleCreateOne(ctx context.Context, w http.ResponseWriter, r *http.Request
 
 	ifo, _ := desc.info(ctx, nil, false)
 	return respond(ctx, w, ifo)
+}
+
+func handleGetList(ctx context.Context, w http.ResponseWriter, r *http.Request, fact Factory) *swyapi.GateErr {
+	var ifos []interface{}
+
+	q := r.URL.Query()
+	details := (q.Get("details") != "")
+
+	cerr := fact.iterate(ctx, r, func(ctx context.Context, desc Obj) *swyapi.GateErr {
+		ifo, cer2 := desc.info(ctx, r, details)
+		if cer2 != nil {
+			return cer2
+		}
+
+		ifos = append(ifos, ifo)
+		return nil
+	})
+	if cerr != nil {
+		return cerr
+	}
+
+	return respond(ctx, w, ifos)
 }
 
 func listReq(ctx context.Context, project string, labels []string) bson.D {
@@ -1069,37 +1092,9 @@ func reqPeriods(q url.Values) int {
 }
 
 func handleFunctions(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
-	q := r.URL.Query()
 	switch r.Method {
 	case "GET":
-		project := q.Get("project")
-		if project == "" {
-			project = DefaultProject
-		}
-
-		fname := q.Get("name")
-		details := (q.Get("details") != "")
-		periods := reqPeriods(q)
-		if periods < 0 {
-			return GateErrC(swy.GateBadRequest)
-		}
-
-		fns, cerr := listFunctions(ctx, project, fname, q["label"])
-		if cerr != nil {
-			return cerr
-		}
-
-		ret := []*swyapi.FunctionInfo{}
-		for _, fn := range fns {
-			fi, cerr := fn.toInfo(ctx, details, periods)
-			if cerr != nil {
-				return cerr
-			}
-
-			ret = append(ret, fi)
-		}
-
-		return respond(ctx, w, &ret)
+		return handleGetList(ctx, w, r, Functions{})
 
 	case "POST":
 		var params swyapi.FunctionAdd
@@ -1218,35 +1213,9 @@ func handleFunctionRun(ctx context.Context, w http.ResponseWriter, r *http.Reque
 }
 
 func handleMwares(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
-	q := r.URL.Query()
-
 	switch r.Method {
 	case "GET":
-		project := q.Get("project")
-		if project == "" {
-			project = DefaultProject
-		}
-
-		details := (q.Get("details") != "")
-		mwtype := q.Get("type")
-		mname := q.Get("name")
-
-		mws, cerr := listMwares(ctx, project, mname, mwtype, q["label"])
-		if cerr != nil {
-			return cerr
-		}
-
-		ret := []*swyapi.MwareInfo{}
-		for _, mw := range mws {
-			mi, cerr := mw.toInfo(ctx, details)
-			if cerr != nil {
-				return cerr
-			}
-
-			ret = append(ret, mi)
-		}
-
-		return respond(ctx, w, &ret)
+		return handleGetList(ctx, w, r, Mwares{})
 
 	case "POST":
 		var params swyapi.MwareAdd
@@ -1259,25 +1228,7 @@ func handleMwares(ctx context.Context, w http.ResponseWriter, r *http.Request) *
 func handleRouters(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
 	switch r.Method {
 	case "GET":
-		q := r.URL.Query()
-
-		project := q.Get("project")
-		if project == "" {
-			project = DefaultProject
-		}
-		rname := q.Get("name")
-
-		rts, cerr := listRouters(ctx, project, rname)
-		if cerr != nil {
-			return cerr
-		}
-
-		ret := []*swyapi.RouterInfo{}
-		for _, rt := range rts {
-			ret = append(ret, rt.toInfo(ctx, false))
-		}
-
-		return respond(ctx, w, &ret)
+		return handleGetList(ctx, w, r, Routers{})
 
 	case "POST":
 		var params swyapi.RouterAdd
@@ -1349,28 +1300,9 @@ func handleRouterTable(ctx context.Context, w http.ResponseWriter, r *http.Reque
 }
 
 func handleAccounts(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
-	q := r.URL.Query()
-
 	switch r.Method {
 	case "GET":
-		var acs []*AccDesc
-
-		rq := listReq(ctx, NoProject, []string{})
-		if atype := q.Get("type"); atype != "" {
-			rq = append(rq, bson.DocElem{"type", atype})
-		}
-
-		err := dbFindAll(ctx, rq, &acs)
-		if err != nil {
-			return GateErrD(err)
-		}
-
-		ret := []map[string]string{}
-		for _, ac := range acs {
-			ret = append(ret, ac.toInfo(ctx, false))
-		}
-
-		return respond(ctx, w, &ret)
+		return handleGetList(ctx, w, r, Accounts{})
 
 	case "POST":
 		var params map[string]string
@@ -1588,45 +1520,9 @@ func handleS3Access(ctx context.Context, w http.ResponseWriter, r *http.Request)
 }
 
 func handleDeployments(ctx context.Context, w http.ResponseWriter, r *http.Request) *swyapi.GateErr {
-	q := r.URL.Query()
-
 	switch r.Method {
 	case "GET":
-		var deps []*DeployDesc
-		var err error
-
-		project := q.Get("project")
-		if project == "" {
-			project = DefaultProject
-		}
-
-		dname := q.Get("name")
-		if dname == "" {
-			err = dbFindAll(ctx, listReq(ctx, project, q["label"]), &deps)
-			if err != nil {
-				return GateErrD(err)
-			}
-		} else {
-			var dep DeployDesc
-
-			err = dbFind(ctx, cookieReq(ctx, project, dname), &dep)
-			if err != nil {
-				return GateErrD(err)
-			}
-			deps = append(deps, &dep)
-		}
-
-		dis := []*swyapi.DeployInfo{}
-		for _, d := range deps {
-			di, cerr := d.toInfo(ctx, false)
-			if cerr != nil {
-				return cerr
-			}
-
-			dis = append(dis, di)
-		}
-
-		return respond(ctx, w, dis)
+		return handleGetList(ctx, w, r, Deployments{})
 
 	case "POST":
 		var ds swyapi.DeployStart

@@ -49,6 +49,30 @@ func (rt *RouterDesc)getURL() string {
 	return getURL(URLRouter, rt.Cookie)
 }
 
+func (_ Routers)iterate(ctx context.Context, r *http.Request, cb func(context.Context, Obj) *swyapi.GateErr) *swyapi.GateErr {
+	q := r.URL.Query()
+
+	project := q.Get("project")
+	if project == "" {
+		project = DefaultProject
+	}
+	rname := q.Get("name")
+
+	rts, cerr := listRouters(ctx, project, rname)
+	if cerr != nil {
+		return cerr
+	}
+
+	for _, rt := range rts {
+		cerr = cb(ctx, rt)
+		if cerr != nil {
+			return cerr
+		}
+	}
+
+	return nil
+}
+
 func (_ Routers)create(ctx context.Context, r *http.Request, p interface{}) (Obj, *swyapi.GateErr) {
 	params := p.(*swyapi.RouterAdd)
 	id := ctxSwoId(ctx, params.Project, params.Name)

@@ -164,6 +164,34 @@ func (fn *FunctionDesc)toMInfo(ctx context.Context) *swyapi.FunctionMdat {
 	return &fid
 }
 
+func (_ Functions)iterate(ctx context.Context, r *http.Request, cb func(context.Context, Obj) *swyapi.GateErr) *swyapi.GateErr {
+	q := r.URL.Query()
+	project := q.Get("project")
+	if project == "" {
+		project = DefaultProject
+	}
+
+	fname := q.Get("name")
+	periods := reqPeriods(q)
+	if periods < 0 {
+		return GateErrC(swy.GateBadRequest)
+	}
+
+	fns, cerr := listFunctions(ctx, project, fname, q["label"])
+	if cerr != nil {
+		return cerr
+	}
+
+	for _, fn := range fns {
+		cerr = cb(ctx, fn)
+		if cerr != nil {
+			return cerr
+		}
+	}
+
+	return nil
+}
+
 func (_ Functions)create(ctx context.Context, r *http.Request, p interface{}) (Obj, *swyapi.GateErr) {
 	params := p.(*swyapi.FunctionAdd)
 	if params.Name == "" {
