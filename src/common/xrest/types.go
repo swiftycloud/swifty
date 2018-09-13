@@ -13,8 +13,8 @@ type Obj interface {
 }
 
 type Prop interface {
-	Info(context.Context, url.Values, bool) (interface{}, *ReqErr)
-	Upd(context.Context, interface{}) *ReqErr
+	Info(context.Context, Obj, url.Values) (interface{}, *ReqErr)
+	Upd(context.Context, Obj, interface{}) *ReqErr
 }
 
 type Factory interface {

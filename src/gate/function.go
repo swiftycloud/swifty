@@ -1016,16 +1016,16 @@ func (fn *FunctionDesc)setState(ctx context.Context, st string) *xrest.ReqErr {
 	return GateErrM(swy.GateNotAvail, "Cannot set this state")
 }
 
-type FnEnvProp struct {
-	fn *FunctionDesc
+type FnEnvProp struct { }
+
+func (_ *FnEnvProp)Info(ctx context.Context, o xrest.Obj, q url.Values) (interface{}, *xrest.ReqErr) {
+	fn := o.(*FunctionDesc)
+	return fn.Code.Env, nil
 }
 
-func (e *FnEnvProp)Info(ctx context.Context, q url.Values, details bool) (interface{}, *xrest.ReqErr) {
-	return e.fn.Code.Env, nil
-}
-
-func (e *FnEnvProp)Upd(ctx context.Context, p interface{}) *xrest.ReqErr {
-	err := e.fn.setEnv(ctx, *p.(*[]string))
+func (_ *FnEnvProp)Upd(ctx context.Context, o xrest.Obj, p interface{}) *xrest.ReqErr {
+	fn := o.(*FunctionDesc)
+	err := fn.setEnv(ctx, *p.(*[]string))
 	if err != nil {
 		return GateErrE(swy.GateGenErr, err)
 	}
@@ -1033,21 +1033,21 @@ func (e *FnEnvProp)Upd(ctx context.Context, p interface{}) *xrest.ReqErr {
 	return nil
 }
 
-type FnSzProp struct {
-	fn *FunctionDesc
-}
+type FnSzProp struct { }
 
-func (s *FnSzProp)Info(ctx context.Context, q url.Values, details bool) (interface{}, *xrest.ReqErr) {
+func (_ *FnSzProp)Info(ctx context.Context, o xrest.Obj, q url.Values) (interface{}, *xrest.ReqErr) {
+	fn := o.(*FunctionDesc)
 	return &swyapi.FunctionSize{
-		Memory:		s.fn.Size.Mem,
-		Timeout:	s.fn.Size.Tmo,
-		Rate:		s.fn.Size.Rate,
-		Burst:		s.fn.Size.Burst,
+		Memory:		fn.Size.Mem,
+		Timeout:	fn.Size.Tmo,
+		Rate:		fn.Size.Rate,
+		Burst:		fn.Size.Burst,
 	}, nil
 }
 
-func (s *FnSzProp)Upd(ctx context.Context, p interface{}) *xrest.ReqErr {
-	err := s.fn.setSize(ctx, p.(*swyapi.FunctionSize))
+func (_ *FnSzProp)Upd(ctx context.Context, o xrest.Obj, p interface{}) *xrest.ReqErr {
+	fn := o.(*FunctionDesc)
+	err := fn.setSize(ctx, p.(*swyapi.FunctionSize))
 	if err != nil {
 		return GateErrE(swy.GateGenErr, err)
 	}
@@ -1055,14 +1055,12 @@ func (s *FnSzProp)Upd(ctx context.Context, p interface{}) *xrest.ReqErr {
 	return nil
 }
 
-type FnSrcProp struct {
-	fn *FunctionDesc
+type FnSrcProp struct { }
+
+func (_ *FnSrcProp)Info(ctx context.Context, o xrest.Obj, q url.Values) (interface{}, *xrest.ReqErr) {
+	return o.(*FunctionDesc).getSources(ctx)
 }
 
-func (s *FnSrcProp)Info(ctx context.Context, q url.Values, details bool) (interface{}, *xrest.ReqErr) {
-	return s.fn.getSources(ctx)
-}
-
-func (s *FnSrcProp)Upd(ctx context.Context, p interface{}) *xrest.ReqErr {
-	return s.fn.updateSources(ctx, p.(*swyapi.FunctionSources))
+func (_ *FnSrcProp)Upd(ctx context.Context, o xrest.Obj, p interface{}) *xrest.ReqErr {
+	return o.(*FunctionDesc).updateSources(ctx, p.(*swyapi.FunctionSources))
 }

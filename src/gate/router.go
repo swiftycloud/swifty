@@ -207,12 +207,10 @@ func (rt *RouterURL)Handle(ctx context.Context, w http.ResponseWriter, r *http.R
 	http.Error(w, "", code)
 }
 
-type RtTblProp struct {
-	rt *RouterDesc
-}
+type RtTblProp struct { }
 
-func (p *RtTblProp)Info(ctx context.Context, q url.Values, details bool) (interface{}, *xrest.ReqErr) {
-	rt := p.rt
+func (_ *RtTblProp)Info(ctx context.Context, o xrest.Obj, q url.Values) (interface{}, *xrest.ReqErr) {
+	rt := o.(*RouterDesc)
 	f := 0
 	t := len(rt.Table)
 
@@ -230,6 +228,6 @@ func (p *RtTblProp)Info(ctx context.Context, q url.Values, details bool) (interf
 	return rt.Table[f:t], nil
 }
 
-func (p *RtTblProp)Upd(ctx context.Context, par interface{}) *xrest.ReqErr {
-	return p.rt.setTable(ctx, *par.(*[]*swyapi.RouterEntry))
+func (_ *RtTblProp)Upd(ctx context.Context, o xrest.Obj, par interface{}) *xrest.ReqErr {
+	return o.(*RouterDesc).setTable(ctx, *par.(*[]*swyapi.RouterEntry))
 }
