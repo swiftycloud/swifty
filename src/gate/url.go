@@ -154,7 +154,7 @@ func (fmd *FnMemData)Handle(ctx context.Context, w http.ResponseWriter, r *http.
 		}
 	}
 
-	res, err = doRunConn(ctx, conn, fmd.fnid, "", "call", args)
+	res, err = doRunConn(ctx, conn, sopq, fmd.fnid, "", "call", args)
 	if err != nil {
 		code = http.StatusInternalServerError
 		goto out

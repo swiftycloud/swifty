@@ -141,6 +141,7 @@ type statsOpaque struct {
 	ts		time.Time
 	argsSz		int
 	bodySz		int
+	trace		map[string]time.Duration
 }
 
 func statsGet(ctx context.Context, fn *FunctionDesc) (*FnStats, error) {
@@ -153,12 +154,23 @@ func statsGet(ctx context.Context, fn *FunctionDesc) (*FnStats, error) {
 }
 
 func statsStart() *statsOpaque {
-	return &statsOpaque{ts: time.Now()}
+	sopq := &statsOpaque{ts: time.Now()}
+	if traceEnabled() {
+		sopq.trace = make(map[string]time.Duration)
+		sopq.trace["start"] = time.Duration(0)
+	}
+	return sopq
 }
 
 func statsUpdate(fmd *FnMemData, op *statsOpaque, res *swyapi.SwdFunctionRunResult) {
+	lat := time.Since(op.ts)
+	if op.trace != nil {
+		op.trace["stop"] = lat
+		traceCall(fmd.fnid, op.trace)
+	}
+
 	rt := res.FnTime()
-	gatelat := time.Since(op.ts) - rt
+	gatelat := lat - rt
 	gateCalLat.Observe(gatelat.Seconds())
 	gateCalls.WithLabelValues("calls").Inc()
 

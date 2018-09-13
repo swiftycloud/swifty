@@ -25,8 +25,12 @@ type Tracer struct {
 var tLock sync.RWMutex
 var tracers *list.List
 
+func traceEnabled() bool {
+	return tracers.Len() != 0
+}
+
 func traceRequest(ctx context.Context, r *http.Request) {
-	if tracers.Len() == 0 {
+	if !traceEnabled() {
 		return
 	}
 
@@ -37,7 +41,7 @@ func traceRequest(ctx context.Context, r *http.Request) {
 }
 
 func traceError(ctx context.Context, ce *xrest.ReqErr) {
-	if tracers.Len() == 0 {
+	if !traceEnabled() {
 		return
 	}
 
@@ -48,7 +52,7 @@ func traceError(ctx context.Context, ce *xrest.ReqErr) {
 }
 
 func traceResponce(ctx context.Context, r interface{}) {
-	if tracers.Len() == 0 {
+	if !traceEnabled() {
 		return
 	}
 
@@ -71,6 +75,25 @@ func traceEventSlow(ctx context.Context, typ string, values map[string]interface
 	for e := tracers.Front(); e != nil; e = e.Next() {
 		t := e.Value.(*Tracer)
 		if t.id == "ten:" + gct.Tenant {
+			t.evs <-evt
+		}
+	}
+	tLock.RUnlock()
+}
+
+func traceCall(cookie string, times map[string]time.Duration) {
+	evt := &swyapi.TracerEvent {
+		Ts: time.Now(),
+		Type: "call",
+		Data: map[string]interface{} {
+			"times": times,
+		},
+	}
+
+	tLock.RLock()
+	for e := tracers.Front(); e != nil; e = e.Next() {
+		t := e.Value.(*Tracer)
+		if t.id == "url:" + cookie {
 			t.evs <-evt
 		}
 	}

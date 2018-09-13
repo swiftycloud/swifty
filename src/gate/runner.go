@@ -3,6 +3,7 @@ package main
 import (
 	"net/http"
 	"fmt"
+	"time"
 	"context"
 	"strconv"
 	"strings"
@@ -84,7 +85,7 @@ func doRun(ctx context.Context, fn *FunctionDesc, event string, args *swyapi.Swd
 	}
 
 	sopq := statsStart()
-	res, err := doRunConn(ctx, conn, fn.Cookie, "", event, args)
+	res, err := doRunConn(ctx, conn, sopq, fn.Cookie, "", event, args)
 	if err == nil {
 		statsUpdate(fmd, sopq, res)
 	}
@@ -119,7 +120,7 @@ func talkHTTP(addr, port, url string, args *swyapi.SwdFunctionRun) (*swyapi.SwdF
 	return &res, nil
 }
 
-func doRunConn(ctx context.Context, conn *podConn, cookie, suff, event string, args *swyapi.SwdFunctionRun) (*swyapi.SwdFunctionRunResult, error) {
+func doRunConn(ctx context.Context, conn *podConn, sopq *statsOpaque, cookie, suff, event string, args *swyapi.SwdFunctionRun) (*swyapi.SwdFunctionRunResult, error) {
 	var res *swyapi.SwdFunctionRunResult
 	var err error
 
@@ -136,7 +137,13 @@ func doRunConn(ctx context.Context, conn *podConn, cookie, suff, event string, a
 		if suff != "" {
 			url += "/" + suff
 		}
+		if sopq != nil && sopq.trace != nil {
+			sopq.trace["wdog.req"] = time.Since(sopq.ts)
+		}
 		res, err = talkHTTP(conn.Addr, conn.Port, url, args)
+		if sopq != nil && sopq.trace != nil {
+			sopq.trace["wdog.resp"] = time.Since(sopq.ts)
+		}
 		if err != nil {
 			goto out
 		}
