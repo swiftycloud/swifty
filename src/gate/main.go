@@ -619,21 +619,6 @@ func handleFunctionStats(ctx context.Context, w http.ResponseWriter, r *http.Req
 	return xrest.HandleProp(ctx, w, r, &fn, &FnStatsProp{ }, nil)
 }
 
-func getSince(r *http.Request) (*time.Time, *xrest.ReqErr) {
-	s := r.URL.Query().Get("last")
-	if s == "" {
-		return nil, nil
-	}
-
-	d, err := time.ParseDuration(s)
-	if err != nil {
-		return nil, GateErrE(swy.GateBadRequest, err)
-	}
-
-	t := time.Now().Add(-d)
-	return &t, nil
-}
-
 func handleFunctionLogs(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
 	var fn FunctionDesc
 
@@ -642,31 +627,7 @@ func handleFunctionLogs(ctx context.Context, w http.ResponseWriter, r *http.Requ
 		return cerr
 	}
 
-	switch r.Method {
-	case "GET":
-		since, cerr := getSince(r)
-		if cerr != nil {
-			return cerr
-		}
-
-		logs, err := logGetFor(ctx, &fn.SwoId, since)
-		if err != nil {
-			return GateErrD(err)
-		}
-
-		var resp []*swyapi.FunctionLogEntry
-		for _, loge := range logs {
-			resp = append(resp, &swyapi.FunctionLogEntry{
-				Event:	loge.Event,
-				Ts:	loge.Time.Format(time.RFC1123Z),
-				Text:	loge.Text,
-			})
-		}
-
-		return xrest.Respond(ctx, w, resp)
-	}
-
-	return nil
+	return xrest.HandleProp(ctx, w, r, &fn, &FnLogsProp{}, nil)
 }
 
 func reqPath(r *http.Request) string {

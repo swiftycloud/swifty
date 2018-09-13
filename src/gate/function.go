@@ -1090,3 +1090,48 @@ func (_ *FnStatsProp)Info(ctx context.Context, o xrest.Obj, q url.Values) (inter
 func (_ *FnStatsProp)Upd(ctx context.Context, o xrest.Obj, p interface{}) *xrest.ReqErr {
 	return GateErrC(swy.GateNotAvail)
 }
+
+type FnLogsProp struct { }
+
+func getSince(q url.Values) (*time.Time, *xrest.ReqErr) {
+	s := q.Get("last")
+	if s == "" {
+		return nil, nil
+	}
+
+	d, err := time.ParseDuration(s)
+	if err != nil {
+		return nil, GateErrE(swy.GateBadRequest, err)
+	}
+
+	t := time.Now().Add(-d)
+	return &t, nil
+}
+
+func (_ *FnLogsProp)Info(ctx context.Context, o xrest.Obj, q url.Values) (interface{}, *xrest.ReqErr) {
+	since, cerr := getSince(q)
+	if cerr != nil {
+		return nil, cerr
+	}
+
+	fn := o.(*FunctionDesc)
+	logs, err := logGetFor(ctx, &fn.SwoId, since)
+	if err != nil {
+		return nil, GateErrD(err)
+	}
+
+	var resp []*swyapi.FunctionLogEntry
+	for _, loge := range logs {
+		resp = append(resp, &swyapi.FunctionLogEntry{
+			Event:	loge.Event,
+			Ts:	loge.Time.Format(time.RFC1123Z),
+			Text:	loge.Text,
+		})
+	}
+
+	return resp, nil
+}
+
+func (_ *FnLogsProp)Upd(ctx context.Context, o xrest.Obj, p interface{}) *xrest.ReqErr {
+	return GateErrC(swy.GateNotAvail)
+}
