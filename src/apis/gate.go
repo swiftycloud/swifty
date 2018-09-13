@@ -58,6 +58,7 @@ type FunctionInfo struct {
 }
 
 type FunctionMdat struct {
+	Cookie		string			`json:"cookie"`
 	RL		[]uint			`json:"rl"`
 	BR		[]uint			`json:"br"`
 }

@@ -503,6 +503,7 @@ func function_minfo(args []string, opts [16]string) {
 	var ifo swyapi.FunctionMdat
 	args[0] = resolve_fn(args[0])
 	make_faas_req1("GET", "functions/" + args[0] + "/mdat", http.StatusOK, nil, &ifo)
+	fmt.Printf("Cookie: %s\n", ifo.Cookie)
 	if len(ifo.RL) != 0 {
 		fmt.Printf("RL: %d/%d (%d left)\n", ifo.RL[1], ifo.RL[2], ifo.RL[0])
 	}
