@@ -6,10 +6,10 @@ import (
 	"context"
 	"strings"
 	"gopkg.in/mgo.v2/bson"
-	"../apis"
 	"../common"
 	"../common/http"
 	"../common/crypto"
+	"../common/xrest"
 )
 
 type Secret string
@@ -56,7 +56,7 @@ func mkAccEnvName(typ, name, env string) string {
 }
 
 type acHandler struct {
-	setup func (*AccDesc) *swyapi.GateErr
+	setup func (*AccDesc) *xrest.ReqErr
 }
 
 var accHandlers = map[string]acHandler {
@@ -83,7 +83,7 @@ func githubResolveName(token string) (string, error) {
 	return u.Login, nil
 }
 
-func setupGithubAcc(ad *AccDesc) *swyapi.GateErr {
+func setupGithubAcc(ad *AccDesc) *xrest.ReqErr {
 	/* If there's no name -- resolve it */
 	if ad.SwoId.Name == "" {
 		var err error
@@ -107,7 +107,7 @@ func setupGithubAcc(ad *AccDesc) *swyapi.GateErr {
 	return nil
 }
 
-func (ad *AccDesc)fill(values map[string]string) *swyapi.GateErr {
+func (ad *AccDesc)fill(values map[string]string) *xrest.ReqErr {
 	var err error
 
 	for k, v := range(values) {
@@ -127,7 +127,7 @@ func (ad *AccDesc)fill(values map[string]string) *swyapi.GateErr {
 	return nil
 }
 
-func getAccDesc(id *SwoId, params map[string]string) (*AccDesc, *swyapi.GateErr) {
+func getAccDesc(id *SwoId, params map[string]string) (*AccDesc, *xrest.ReqErr) {
 	ad := &AccDesc {
 		SwoId:		*id,
 		Type:		params["type"],
@@ -151,7 +151,7 @@ func getAccDesc(id *SwoId, params map[string]string) (*AccDesc, *swyapi.GateErr)
 	return ad, nil
 }
 
-func (_ Accounts)iterate(ctx context.Context, q url.Values, cb func(context.Context, Obj) *swyapi.GateErr) *swyapi.GateErr {
+func (_ Accounts)iterate(ctx context.Context, q url.Values, cb func(context.Context, Obj) *xrest.ReqErr) *xrest.ReqErr {
 	var acs []*AccDesc
 
 	rq := listReq(ctx, NoProject, []string{})
@@ -174,7 +174,7 @@ func (_ Accounts)iterate(ctx context.Context, q url.Values, cb func(context.Cont
 	return nil
 }
 
-func (_ Accounts)create(ctx context.Context, p interface{}) (Obj, *swyapi.GateErr) {
+func (_ Accounts)create(ctx context.Context, p interface{}) (Obj, *xrest.ReqErr) {
 	params := *p.(*map[string]string)
 	if _, ok := params["type"]; !ok {
 		return nil, GateErrM(swy.GateBadRequest, "No type")
@@ -184,19 +184,19 @@ func (_ Accounts)create(ctx context.Context, p interface{}) (Obj, *swyapi.GateEr
 	return getAccDesc(id, params)
 }
 
-func (ad *AccDesc)add(ctx context.Context, params interface{}) *swyapi.GateErr {
+func (ad *AccDesc)add(ctx context.Context, params interface{}) *xrest.ReqErr {
 	return ad.Add(ctx)
 }
 
-func (ad *AccDesc)info(ctx context.Context, q url.Values, details bool) (interface{}, *swyapi.GateErr) {
+func (ad *AccDesc)info(ctx context.Context, q url.Values, details bool) (interface{}, *xrest.ReqErr) {
 	return ad.toInfo(ctx, details), nil
 }
 
-func (ad *AccDesc)upd(ctx context.Context, upd interface{}) *swyapi.GateErr {
+func (ad *AccDesc)upd(ctx context.Context, upd interface{}) *xrest.ReqErr {
 	return ad.Update(ctx, *upd.(*map[string]string))
 }
 
-func (ad *AccDesc)del(ctx context.Context) *swyapi.GateErr {
+func (ad *AccDesc)del(ctx context.Context) *xrest.ReqErr {
 	return ad.Del(ctx)
 }
 
@@ -245,7 +245,7 @@ func (ad *AccDesc)getEnv() map[string]string {
 	return envs
 }
 
-func (ad *AccDesc)Add(ctx context.Context) *swyapi.GateErr {
+func (ad *AccDesc)Add(ctx context.Context) *xrest.ReqErr {
 	ad.ObjID = bson.NewObjectId()
 	ad.Cookie = ad.SwoId.Cookie()
 
@@ -257,7 +257,7 @@ func (ad *AccDesc)Add(ctx context.Context) *swyapi.GateErr {
 	return nil
 }
 
-func (ad *AccDesc)Update(ctx context.Context, upd map[string]string) *swyapi.GateErr {
+func (ad *AccDesc)Update(ctx context.Context, upd map[string]string) *xrest.ReqErr {
 	cerr := ad.fill(upd)
 	if cerr != nil {
 		return cerr
@@ -270,7 +270,7 @@ func (ad *AccDesc)Update(ctx context.Context, upd map[string]string) *swyapi.Gat
 	return nil
 }
 
-func (ad *AccDesc)Del(ctx context.Context) *swyapi.GateErr {
+func (ad *AccDesc)Del(ctx context.Context) *xrest.ReqErr {
 	err := dbRemove(ctx, ad)
 	if err != nil {
 		return GateErrD(err)

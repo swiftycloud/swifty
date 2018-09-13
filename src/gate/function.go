@@ -14,6 +14,7 @@ import (
 	"../common"
 	"../common/xratelimit"
 	"../common/xwait"
+	"../common/xrest"
 )
 
 /*
@@ -123,7 +124,7 @@ func (fn *FunctionDesc)ToState(ctx context.Context, st, from int) error {
 	return err
 }
 
-func listFunctions(ctx context.Context, project, name string, labels []string) ([]*FunctionDesc, *swyapi.GateErr) {
+func listFunctions(ctx context.Context, project, name string, labels []string) ([]*FunctionDesc, *xrest.ReqErr) {
 	var fns []*FunctionDesc
 
 	if name == "" {
@@ -164,7 +165,7 @@ func (fn *FunctionDesc)toMInfo(ctx context.Context) *swyapi.FunctionMdat {
 	return &fid
 }
 
-func (_ Functions)iterate(ctx context.Context, q url.Values, cb func(context.Context, Obj) *swyapi.GateErr) *swyapi.GateErr {
+func (_ Functions)iterate(ctx context.Context, q url.Values, cb func(context.Context, Obj) *xrest.ReqErr) *xrest.ReqErr {
 	project := q.Get("project")
 	if project == "" {
 		project = DefaultProject
@@ -191,7 +192,7 @@ func (_ Functions)iterate(ctx context.Context, q url.Values, cb func(context.Con
 	return nil
 }
 
-func (_ Functions)create(ctx context.Context, p interface{}) (Obj, *swyapi.GateErr) {
+func (_ Functions)create(ctx context.Context, p interface{}) (Obj, *xrest.ReqErr) {
 	params := p.(*swyapi.FunctionAdd)
 	if params.Name == "" {
 		return nil, GateErrM(swy.GateBadRequest, "No function name")
@@ -204,12 +205,12 @@ func (_ Functions)create(ctx context.Context, p interface{}) (Obj, *swyapi.GateE
 	return getFunctionDesc(id, params)
 }
 
-func (fn *FunctionDesc)add(ctx context.Context, p interface{}) *swyapi.GateErr {
+func (fn *FunctionDesc)add(ctx context.Context, p interface{}) *xrest.ReqErr {
 	params := p.(*swyapi.FunctionAdd)
 	return fn.Add(ctx, &params.Sources)
 }
 
-func (fn *FunctionDesc)info(ctx context.Context, q url.Values, details bool) (interface{}, *swyapi.GateErr) {
+func (fn *FunctionDesc)info(ctx context.Context, q url.Values, details bool) (interface{}, *xrest.ReqErr) {
 	periods := 0
 	if q != nil {
 		periods = reqPeriods(q)
@@ -221,7 +222,7 @@ func (fn *FunctionDesc)info(ctx context.Context, q url.Values, details bool) (in
 	return fn.toInfo(ctx, details, periods)
 }
 
-func (fn *FunctionDesc)upd(ctx context.Context, upd interface{}) *swyapi.GateErr {
+func (fn *FunctionDesc)upd(ctx context.Context, upd interface{}) *xrest.ReqErr {
 	fu := upd.(*swyapi.FunctionUpdate)
 
 	if fu.UserData != nil {
@@ -241,11 +242,11 @@ func (fn *FunctionDesc)upd(ctx context.Context, upd interface{}) *swyapi.GateErr
 	return nil
 }
 
-func (fn *FunctionDesc)del(ctx context.Context) *swyapi.GateErr {
+func (fn *FunctionDesc)del(ctx context.Context) *xrest.ReqErr {
 	return fn.Remove(ctx)
 }
 
-func (fn *FunctionDesc)toInfo(ctx context.Context, details bool, periods int) (*swyapi.FunctionInfo, *swyapi.GateErr) {
+func (fn *FunctionDesc)toInfo(ctx context.Context, details bool, periods int) (*swyapi.FunctionInfo, *xrest.ReqErr) {
 	fi := &swyapi.FunctionInfo {
 		Id:		fn.ObjID.Hex(),
 		Name:		fn.SwoId.Name,
@@ -257,7 +258,7 @@ func (fn *FunctionDesc)toInfo(ctx context.Context, details bool, periods int) (*
 
 	if details {
 		var err error
-		var cerr *swyapi.GateErr
+		var cerr *xrest.ReqErr
 
 		if _, err = urlEvFind(ctx, fn.Cookie); err == nil {
 			fi.URL = fn.getURL()
@@ -290,7 +291,7 @@ func (fn *FunctionDesc)toInfo(ctx context.Context, details bool, periods int) (*
 	return fi, nil
 }
 
-func getFunctionDesc(id *SwoId, p_add *swyapi.FunctionAdd) (*FunctionDesc, *swyapi.GateErr) {
+func getFunctionDesc(id *SwoId, p_add *swyapi.FunctionAdd) (*FunctionDesc, *xrest.ReqErr) {
 	err := fnFixSize(&p_add.Size)
 	if err != nil {
 		return nil, GateErrE(swy.GateBadRequest, err)
@@ -348,7 +349,7 @@ func checkCount(ctx context.Context, id *SwoId) error {
 	return nil
 }
 
-func (fn *FunctionDesc)Add(ctx context.Context, src *swyapi.FunctionSources) *swyapi.GateErr {
+func (fn *FunctionDesc)Add(ctx context.Context, src *swyapi.FunctionSources) *xrest.ReqErr {
 	var err, erc error
 	var build bool
 	var bAddr string
@@ -644,7 +645,7 @@ func (fn *FunctionDesc)listMware(ctx context.Context) []*swyapi.MwareInfo {
 	return ret
 }
 
-func (fn *FunctionDesc)addAccount(ctx context.Context, ad *AccDesc) *swyapi.GateErr {
+func (fn *FunctionDesc)addAccount(ctx context.Context, ad *AccDesc) *xrest.ReqErr {
 	aid := ad.ObjID.Hex()
 	err := dbFuncUpdate(ctx, bson.M{"_id": fn.ObjID, "accounts": bson.M{"$ne": aid}},
 				bson.M{"$push": bson.M{"accounts":aid}})
@@ -663,7 +664,7 @@ func (fn *FunctionDesc)addAccount(ctx context.Context, ad *AccDesc) *swyapi.Gate
 	return nil
 }
 
-func (fn *FunctionDesc)delAccountId(ctx context.Context, aid string) *swyapi.GateErr {
+func (fn *FunctionDesc)delAccountId(ctx context.Context, aid string) *xrest.ReqErr {
 	err := dbFuncUpdate(ctx, bson.M{"_id": fn.ObjID, "accounts": aid},
 				bson.M{"$pull": bson.M{"accounts": aid}})
 	if err != nil {
@@ -748,7 +749,7 @@ func (fn *FunctionDesc)delS3Bucket(ctx context.Context, bn string) error {
 	return nil
 }
 
-func (fn *FunctionDesc)getSources(ctx context.Context) (*swyapi.FunctionSources, *swyapi.GateErr) {
+func (fn *FunctionDesc)getSources(ctx context.Context) (*swyapi.FunctionSources, *xrest.ReqErr) {
 	fnCode, err := getSources(ctx, fn)
 	if err != nil {
 		return nil, GateErrC(swy.GateFsError)
@@ -768,7 +769,7 @@ func (fn *FunctionDesc)getSources(ctx context.Context) (*swyapi.FunctionSources,
 
 }
 
-func (fn *FunctionDesc)updateSources(ctx context.Context, src *swyapi.FunctionSources) *swyapi.GateErr {
+func (fn *FunctionDesc)updateSources(ctx context.Context, src *swyapi.FunctionSources) *xrest.ReqErr {
 	var err error
 
 	update := make(bson.M)
@@ -820,7 +821,7 @@ func (fn *FunctionDesc)updateSources(ctx context.Context, src *swyapi.FunctionSo
 	return nil
 }
 
-func removeFunctionId(ctx context.Context, id *SwoId) *swyapi.GateErr {
+func removeFunctionId(ctx context.Context, id *SwoId) *xrest.ReqErr {
 	var fn FunctionDesc
 
 	err := dbFind(ctx, id.dbReq(), &fn)
@@ -831,7 +832,7 @@ func removeFunctionId(ctx context.Context, id *SwoId) *swyapi.GateErr {
 	return fn.Remove(ctx)
 }
 
-func (fn *FunctionDesc)Remove(ctx context.Context) *swyapi.GateErr {
+func (fn *FunctionDesc)Remove(ctx context.Context) *xrest.ReqErr {
 	var err error
 	var dea bool
 
@@ -968,7 +969,7 @@ out:
 	ctxlog(ctx).Errorf("POD update notify: %s", err.Error())
 }
 
-func deactivateFunction(ctx context.Context, fn *FunctionDesc) *swyapi.GateErr {
+func deactivateFunction(ctx context.Context, fn *FunctionDesc) *xrest.ReqErr {
 	var err error
 
 	if fn.State != swy.DBFuncStateRdy {
@@ -990,7 +991,7 @@ func deactivateFunction(ctx context.Context, fn *FunctionDesc) *swyapi.GateErr {
 	return nil
 }
 
-func activateFunction(ctx context.Context, fn *FunctionDesc) *swyapi.GateErr {
+func activateFunction(ctx context.Context, fn *FunctionDesc) *xrest.ReqErr {
 	var err error
 
 	if fn.State != swy.DBFuncStateDea {
@@ -1012,7 +1013,7 @@ func activateFunction(ctx context.Context, fn *FunctionDesc) *swyapi.GateErr {
 	return nil
 }
 
-func (fn *FunctionDesc)setState(ctx context.Context, st string) *swyapi.GateErr {
+func (fn *FunctionDesc)setState(ctx context.Context, st string) *xrest.ReqErr {
 	switch st {
 	case fnStates[swy.DBFuncStateDea]:
 		return deactivateFunction(ctx, fn)
@@ -1027,11 +1028,11 @@ type FnEnvProp struct {
 	fn *FunctionDesc
 }
 
-func (e *FnEnvProp)info(ctx context.Context, q url.Values, details bool) (interface{}, *swyapi.GateErr) {
+func (e *FnEnvProp)info(ctx context.Context, q url.Values, details bool) (interface{}, *xrest.ReqErr) {
 	return e.fn.Code.Env, nil
 }
 
-func (e *FnEnvProp)upd(ctx context.Context, p interface{}) *swyapi.GateErr {
+func (e *FnEnvProp)upd(ctx context.Context, p interface{}) *xrest.ReqErr {
 	err := e.fn.setEnv(ctx, *p.(*[]string))
 	if err != nil {
 		return GateErrE(swy.GateGenErr, err)
@@ -1040,14 +1041,14 @@ func (e *FnEnvProp)upd(ctx context.Context, p interface{}) *swyapi.GateErr {
 	return nil
 }
 
-func (e *FnEnvProp)del(context.Context) *swyapi.GateErr { return GateErrC(swy.GateNotAvail) }
-func (e *FnEnvProp)add(context.Context, interface{}) *swyapi.GateErr { return GateErrC(swy.GateNotAvail) }
+func (e *FnEnvProp)del(context.Context) *xrest.ReqErr { return GateErrC(swy.GateNotAvail) }
+func (e *FnEnvProp)add(context.Context, interface{}) *xrest.ReqErr { return GateErrC(swy.GateNotAvail) }
 
 type FnSzProp struct {
 	fn *FunctionDesc
 }
 
-func (s *FnSzProp)info(ctx context.Context, q url.Values, details bool) (interface{}, *swyapi.GateErr) {
+func (s *FnSzProp)info(ctx context.Context, q url.Values, details bool) (interface{}, *xrest.ReqErr) {
 	return &swyapi.FunctionSize{
 		Memory:		s.fn.Size.Mem,
 		Timeout:	s.fn.Size.Tmo,
@@ -1056,7 +1057,7 @@ func (s *FnSzProp)info(ctx context.Context, q url.Values, details bool) (interfa
 	}, nil
 }
 
-func (s *FnSzProp)upd(ctx context.Context, p interface{}) *swyapi.GateErr {
+func (s *FnSzProp)upd(ctx context.Context, p interface{}) *xrest.ReqErr {
 	err := s.fn.setSize(ctx, p.(*swyapi.FunctionSize))
 	if err != nil {
 		return GateErrE(swy.GateGenErr, err)
@@ -1065,20 +1066,20 @@ func (s *FnSzProp)upd(ctx context.Context, p interface{}) *swyapi.GateErr {
 	return nil
 }
 
-func (s *FnSzProp)del(context.Context) *swyapi.GateErr { return GateErrC(swy.GateNotAvail) }
-func (s *FnSzProp)add(context.Context, interface{}) *swyapi.GateErr { return GateErrC(swy.GateNotAvail) }
+func (s *FnSzProp)del(context.Context) *xrest.ReqErr { return GateErrC(swy.GateNotAvail) }
+func (s *FnSzProp)add(context.Context, interface{}) *xrest.ReqErr { return GateErrC(swy.GateNotAvail) }
 
 type FnSrcProp struct {
 	fn *FunctionDesc
 }
 
-func (s *FnSrcProp)info(ctx context.Context, q url.Values, details bool) (interface{}, *swyapi.GateErr) {
+func (s *FnSrcProp)info(ctx context.Context, q url.Values, details bool) (interface{}, *xrest.ReqErr) {
 	return s.fn.getSources(ctx)
 }
 
-func (s *FnSrcProp)upd(ctx context.Context, p interface{}) *swyapi.GateErr {
+func (s *FnSrcProp)upd(ctx context.Context, p interface{}) *xrest.ReqErr {
 	return s.fn.updateSources(ctx, p.(*swyapi.FunctionSources))
 }
 
-func (s *FnSrcProp)del(context.Context) *swyapi.GateErr { return GateErrC(swy.GateNotAvail) }
-func (s *FnSrcProp)add(context.Context, interface{}) *swyapi.GateErr { return GateErrC(swy.GateNotAvail) }
+func (s *FnSrcProp)del(context.Context) *xrest.ReqErr { return GateErrC(swy.GateNotAvail) }
+func (s *FnSrcProp)add(context.Context, interface{}) *xrest.ReqErr { return GateErrC(swy.GateNotAvail) }

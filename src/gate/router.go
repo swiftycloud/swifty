@@ -6,6 +6,7 @@ import (
 	"../apis"
 	"context"
 	"../common"
+	"../common/xrest"
 	"gopkg.in/mgo.v2/bson"
 )
 
@@ -22,7 +23,7 @@ type Routers struct {}
 
 const TableKeyLenMax = 64
 
-func ckTable(tbl []*swyapi.RouterEntry) *swyapi.GateErr {
+func ckTable(tbl []*swyapi.RouterEntry) *xrest.ReqErr {
 	for _, t := range tbl {
 		if len(t.Key) > TableKeyLenMax {
 			return GateErrM(swy.GateBadRequest, "Too long key")
@@ -32,7 +33,7 @@ func ckTable(tbl []*swyapi.RouterEntry) *swyapi.GateErr {
 	return nil
 }
 
-func getRouterDesc(id *SwoId, params *swyapi.RouterAdd) (*RouterDesc, *swyapi.GateErr) {
+func getRouterDesc(id *SwoId, params *swyapi.RouterAdd) (*RouterDesc, *xrest.ReqErr) {
 	cerr := ckTable(params.Table)
 	if cerr != nil {
 		return nil, cerr
@@ -50,7 +51,7 @@ func (rt *RouterDesc)getURL() string {
 	return getURL(URLRouter, rt.Cookie)
 }
 
-func (_ Routers)iterate(ctx context.Context, q url.Values, cb func(context.Context, Obj) *swyapi.GateErr) *swyapi.GateErr {
+func (_ Routers)iterate(ctx context.Context, q url.Values, cb func(context.Context, Obj) *xrest.ReqErr) *xrest.ReqErr {
 	project := q.Get("project")
 	if project == "" {
 		project = DefaultProject
@@ -72,25 +73,25 @@ func (_ Routers)iterate(ctx context.Context, q url.Values, cb func(context.Conte
 	return nil
 }
 
-func (_ Routers)create(ctx context.Context, p interface{}) (Obj, *swyapi.GateErr) {
+func (_ Routers)create(ctx context.Context, p interface{}) (Obj, *xrest.ReqErr) {
 	params := p.(*swyapi.RouterAdd)
 	id := ctxSwoId(ctx, params.Project, params.Name)
 	return getRouterDesc(id, params)
 }
 
-func (rt *RouterDesc)add(ctx context.Context, params interface{}) *swyapi.GateErr {
+func (rt *RouterDesc)add(ctx context.Context, params interface{}) *xrest.ReqErr {
 	return rt.Create(ctx)
 }
 
-func (rt *RouterDesc)info(ctx context.Context, q url.Values, details bool) (interface{}, *swyapi.GateErr) {
+func (rt *RouterDesc)info(ctx context.Context, q url.Values, details bool) (interface{}, *xrest.ReqErr) {
 	return rt.toInfo(ctx, details), nil
 }
 
-func (rt *RouterDesc)upd(ctx context.Context, upd interface{}) *swyapi.GateErr {
+func (rt *RouterDesc)upd(ctx context.Context, upd interface{}) *xrest.ReqErr {
 	return GateErrM(swy.GateGenErr, "Not updatable")
 }
 
-func (rt *RouterDesc)del(ctx context.Context) *swyapi.GateErr {
+func (rt *RouterDesc)del(ctx context.Context) *xrest.ReqErr {
 	return rt.Remove(ctx)
 }
 
@@ -107,7 +108,7 @@ func (rt *RouterDesc)toInfo(ctx context.Context, details bool) *swyapi.RouterInf
 	return &ri
 }
 
-func (rd *RouterDesc)Create(ctx context.Context) *swyapi.GateErr {
+func (rd *RouterDesc)Create(ctx context.Context) *xrest.ReqErr {
 	rd.ObjID = bson.NewObjectId()
 	rd.Cookie = rd.SwoId.Cookie()
 	err := dbInsert(ctx, rd)
@@ -118,7 +119,7 @@ func (rd *RouterDesc)Create(ctx context.Context) *swyapi.GateErr {
 	return nil
 }
 
-func (rd *RouterDesc)Remove(ctx context.Context) *swyapi.GateErr {
+func (rd *RouterDesc)Remove(ctx context.Context) *xrest.ReqErr {
 	err := dbRemove(ctx, rd)
 	if err != nil {
 		return GateErrD(err)
@@ -128,7 +129,7 @@ func (rd *RouterDesc)Remove(ctx context.Context) *swyapi.GateErr {
 	return nil
 }
 
-func (rd *RouterDesc)setTable(ctx context.Context, tbl []*swyapi.RouterEntry) *swyapi.GateErr {
+func (rd *RouterDesc)setTable(ctx context.Context, tbl []*swyapi.RouterEntry) *xrest.ReqErr {
 	cerr := ckTable(tbl)
 	if cerr != nil {
 		return cerr
@@ -158,7 +159,7 @@ type RouterURL struct {
 	table	[]*RouterEntry
 }
 
-func listRouters(ctx context.Context, project, name string) ([]*RouterDesc, *swyapi.GateErr) {
+func listRouters(ctx context.Context, project, name string) ([]*RouterDesc, *xrest.ReqErr) {
 	var rts []*RouterDesc
 
 	if name == "" {
@@ -218,7 +219,7 @@ type RtTblProp struct {
 	rt *RouterDesc
 }
 
-func (p *RtTblProp)info(ctx context.Context, q url.Values, details bool) (interface{}, *swyapi.GateErr) {
+func (p *RtTblProp)info(ctx context.Context, q url.Values, details bool) (interface{}, *xrest.ReqErr) {
 	rt := p.rt
 	f := 0
 	t := len(rt.Table)
@@ -237,9 +238,9 @@ func (p *RtTblProp)info(ctx context.Context, q url.Values, details bool) (interf
 	return rt.Table[f:t], nil
 }
 
-func (p *RtTblProp)upd(ctx context.Context, par interface{}) *swyapi.GateErr {
+func (p *RtTblProp)upd(ctx context.Context, par interface{}) *xrest.ReqErr {
 	return p.rt.setTable(ctx, *par.(*[]*swyapi.RouterEntry))
 }
 
-func (p *RtTblProp)del(context.Context) *swyapi.GateErr { return GateErrC(swy.GateNotAvail) }
-func (p *RtTblProp)add(context.Context, interface{}) *swyapi.GateErr { return GateErrC(swy.GateNotAvail) }
+func (p *RtTblProp)del(context.Context) *xrest.ReqErr { return GateErrC(swy.GateNotAvail) }
+func (p *RtTblProp)add(context.Context, interface{}) *xrest.ReqErr { return GateErrC(swy.GateNotAvail) }

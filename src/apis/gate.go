@@ -1,10 +1,5 @@
 package swyapi
 
-type GateErr struct {
-	Code		uint			`json:"code"`
-	Message		string			`json:"message"`
-}
-
 type ProjectList struct {
 }
 

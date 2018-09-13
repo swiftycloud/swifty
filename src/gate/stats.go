@@ -7,6 +7,7 @@ import (
 	"../apis"
 	"../common"
 	"../common/http"
+	"../common/xrest"
 )
 
 const (
@@ -89,7 +90,7 @@ type TenStats struct {
 	onDisk		*gmgo.TenStatValues	`bson:"-"`
 }
 
-func (fn *FunctionDesc)getStats(ctx context.Context, periods int) ([]swyapi.FunctionStats, *swyapi.GateErr) {
+func (fn *FunctionDesc)getStats(ctx context.Context, periods int) ([]swyapi.FunctionStats, *xrest.ReqErr) {
 	var stats []swyapi.FunctionStats
 
 	prev, err := statsGet(ctx, fn)

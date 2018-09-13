@@ -11,6 +11,7 @@ import (
 	"../apis"
 	"../common"
 	"../common/crypto"
+	"../common/xrest"
 )
 
 type MwareDesc struct {
@@ -109,7 +110,7 @@ func mwareGenerateUserPassClient(ctx context.Context, mwd *MwareDesc) (error) {
 	return nil
 }
 
-func listMwares(ctx context.Context, project, name, mtype string, labels []string) ([]*MwareDesc, *swyapi.GateErr) {
+func listMwares(ctx context.Context, project, name, mtype string, labels []string) ([]*MwareDesc, *xrest.ReqErr) {
 	var mws []*MwareDesc
 
 	if name == "" {
@@ -142,7 +143,7 @@ var mwareHandlers = map[string]*MwareOps {
 	"authjwt":	&MwareAuthJWT,
 }
 
-func mwareRemoveId(ctx context.Context, id *SwoId) *swyapi.GateErr {
+func mwareRemoveId(ctx context.Context, id *SwoId) *xrest.ReqErr {
 	var item MwareDesc
 
 	err := dbFind(ctx, id.dbReq(), &item)
@@ -153,7 +154,7 @@ func mwareRemoveId(ctx context.Context, id *SwoId) *swyapi.GateErr {
 	return item.Remove(ctx)
 }
 
-func (item *MwareDesc)Remove(ctx context.Context) *swyapi.GateErr {
+func (item *MwareDesc)Remove(ctx context.Context) *xrest.ReqErr {
 	handler, ok := mwareHandlers[item.MwareType]
 	if !ok {
 		return GateErrC(swy.GateGenErr) /* Shouldn't happen */
@@ -201,7 +202,7 @@ func (item *MwareDesc)toFnInfo(ctx context.Context) *swyapi.MwareInfo {
 
 type Mwares struct {}
 
-func (_ Mwares)iterate(ctx context.Context, q url.Values, cb func(context.Context, Obj) *swyapi.GateErr) *swyapi.GateErr {
+func (_ Mwares)iterate(ctx context.Context, q url.Values, cb func(context.Context, Obj) *xrest.ReqErr) *xrest.ReqErr {
 	project := q.Get("project")
 	if project == "" {
 		project = DefaultProject
@@ -225,29 +226,29 @@ func (_ Mwares)iterate(ctx context.Context, q url.Values, cb func(context.Contex
 	return nil
 }
 
-func (_ Mwares)create(ctx context.Context, p interface{}) (Obj, *swyapi.GateErr) {
+func (_ Mwares)create(ctx context.Context, p interface{}) (Obj, *xrest.ReqErr) {
 	params := p.(*swyapi.MwareAdd)
 	id := ctxSwoId(ctx, params.Project, params.Name)
 	return getMwareDesc(id, params), nil
 }
 
-func (mw *MwareDesc)add(ctx context.Context, params interface{}) *swyapi.GateErr {
+func (mw *MwareDesc)add(ctx context.Context, params interface{}) *xrest.ReqErr {
 	return mw.Setup(ctx)
 }
 
-func (mw *MwareDesc)info(ctx context.Context, q url.Values, details bool) (interface{}, *swyapi.GateErr) {
+func (mw *MwareDesc)info(ctx context.Context, q url.Values, details bool) (interface{}, *xrest.ReqErr) {
 	return mw.toInfo(ctx, details)
 }
 
-func (mw *MwareDesc)upd(ctx context.Context, upd interface{}) *swyapi.GateErr {
+func (mw *MwareDesc)upd(ctx context.Context, upd interface{}) *xrest.ReqErr {
 	return GateErrM(swy.GateGenErr, "Not updatable")
 }
 
-func (mw *MwareDesc)del(ctx context.Context) *swyapi.GateErr {
+func (mw *MwareDesc)del(ctx context.Context) *xrest.ReqErr {
 	return mw.Remove(ctx)
 }
 
-func (item *MwareDesc)toInfo(ctx context.Context, details bool) (*swyapi.MwareInfo, *swyapi.GateErr) {
+func (item *MwareDesc)toInfo(ctx context.Context, details bool) (*swyapi.MwareInfo, *xrest.ReqErr) {
 	resp := &swyapi.MwareInfo{
 		ID:		item.ObjID.Hex(),
 		Name:		item.SwoId.Name,
@@ -275,7 +276,7 @@ func (item *MwareDesc)toInfo(ctx context.Context, details bool) (*swyapi.MwareIn
 	return resp, nil
 }
 
-func getMwareStats(ctx context.Context, ten string) (map[string]*swyapi.TenantStatsMware, *swyapi.GateErr) {
+func getMwareStats(ctx context.Context, ten string) (map[string]*swyapi.TenantStatsMware, *xrest.ReqErr) {
 	var mws []*MwareDesc
 
 	err := dbFindAll(ctx, bson.M{"tennant": ten}, &mws)
@@ -327,7 +328,7 @@ func getMwareDesc(id *SwoId, params *swyapi.MwareAdd) *MwareDesc {
 	return ret
 }
 
-func (mwd *MwareDesc)Setup(ctx context.Context) *swyapi.GateErr {
+func (mwd *MwareDesc)Setup(ctx context.Context) *xrest.ReqErr {
 	var handler *MwareOps
 	var ok bool
 	var err, erc error

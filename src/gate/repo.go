@@ -14,6 +14,7 @@ import (
 	"io/ioutil"
 	"../common"
 	"../common/http"
+	"../common/xrest"
 	"../apis"
 )
 
@@ -83,13 +84,13 @@ func getRepoDesc(id *SwoId, params *swyapi.RepoAdd) *RepoDesc {
 	return rd
 }
 
-func (_ Repos)create(ctx context.Context, p interface{}) (Obj, *swyapi.GateErr) {
+func (_ Repos)create(ctx context.Context, p interface{}) (Obj, *xrest.ReqErr) {
 	params := p.(*swyapi.RepoAdd)
 	id := ctxSwoId(ctx, NoProject, params.URL)
 	return getRepoDesc(id, params), nil
 }
 
-func (rd *RepoDesc)add(ctx context.Context, p interface{}) *swyapi.GateErr {
+func (rd *RepoDesc)add(ctx context.Context, p interface{}) *xrest.ReqErr {
 	var acc *AccDesc
 	params := p.(*swyapi.RepoAdd)
 	if params.AccID != "" {
@@ -110,19 +111,19 @@ func (rd *RepoDesc)add(ctx context.Context, p interface{}) *swyapi.GateErr {
 	return rd.Attach(ctx, acc)
 }
 
-func (rd *RepoDesc)info(ctx context.Context, q url.Values, details bool) (interface{}, *swyapi.GateErr) {
+func (rd *RepoDesc)info(ctx context.Context, q url.Values, details bool) (interface{}, *xrest.ReqErr) {
 	return rd.toInfo(ctx, details)
 }
 
-func (rd *RepoDesc)upd(ctx context.Context, upd interface{}) *swyapi.GateErr {
+func (rd *RepoDesc)upd(ctx context.Context, upd interface{}) *xrest.ReqErr {
 	return rd.Update(ctx, upd.(*swyapi.RepoUpdate))
 }
 
-func (rd *RepoDesc)del(ctx context.Context) *swyapi.GateErr {
+func (rd *RepoDesc)del(ctx context.Context) *xrest.ReqErr {
 	return rd.Detach(ctx)
 }
 
-func (rd *RepoDesc)toInfo(ctx context.Context, details bool) (*swyapi.RepoInfo, *swyapi.GateErr) {
+func (rd *RepoDesc)toInfo(ctx context.Context, details bool) (*swyapi.RepoInfo, *xrest.ReqErr) {
 	r := &swyapi.RepoInfo {
 		ID:		rd.ObjID.Hex(),
 		Type:		rd.Type,
@@ -160,7 +161,7 @@ var repoHandlers = map[string]repoHandler {
 	},
 }
 
-func (rd *RepoDesc)Attach(ctx context.Context, ac *AccDesc) *swyapi.GateErr {
+func (rd *RepoDesc)Attach(ctx context.Context, ac *AccDesc) *xrest.ReqErr {
 	rd.ObjID = bson.NewObjectId()
 	rd.State = swy.DBRepoStateCln
 	if ac != nil {
@@ -182,7 +183,7 @@ func (rd *RepoDesc)Attach(ctx context.Context, ac *AccDesc) *swyapi.GateErr {
 	return nil
 }
 
-func (rd *RepoDesc)Update(ctx context.Context, ru *swyapi.RepoUpdate) *swyapi.GateErr {
+func (rd *RepoDesc)Update(ctx context.Context, ru *swyapi.RepoUpdate) *xrest.ReqErr {
 	if ru.Pull != nil {
 		rd.Pull = *ru.Pull
 		err := dbUpdatePart(ctx, rd, bson.M{"pulling": rd.Pull})
@@ -194,7 +195,7 @@ func (rd *RepoDesc)Update(ctx context.Context, ru *swyapi.RepoUpdate) *swyapi.Ga
 	return nil
 }
 
-func (rd *RepoDesc)Detach(ctx context.Context) *swyapi.GateErr {
+func (rd *RepoDesc)Detach(ctx context.Context) *xrest.ReqErr {
 	err := dbUpdatePart(ctx, rd, bson.M{"state": swy.DBRepoStateRem})
 	if err != nil {
 		return GateErrD(err)
@@ -217,7 +218,7 @@ func (rd *RepoDesc)Detach(ctx context.Context) *swyapi.GateErr {
 	return nil
 }
 
-func (rd *RepoDesc)description(ctx context.Context) (*swyapi.RepoDesc, *swyapi.GateErr) {
+func (rd *RepoDesc)description(ctx context.Context) (*swyapi.RepoDesc, *xrest.ReqErr) {
 	dfile := rd.clonePath() + "/" + RepoDescFile
 	if _, err := os.Stat(dfile); os.IsNotExist(err) {
 		return nil, GateErrM(swy.GateNotAvail, "No description for repo")
@@ -238,7 +239,7 @@ func (rd *RepoDesc)description(ctx context.Context) (*swyapi.RepoDesc, *swyapi.G
 	return &out, nil
 }
 
-func (rd *RepoDesc)readFile(ctx context.Context, fname string) ([]byte, *swyapi.GateErr) {
+func (rd *RepoDesc)readFile(ctx context.Context, fname string) ([]byte, *xrest.ReqErr) {
 	dfile := rd.clonePath() + "/" + fname
 	if _, err := os.Stat(dfile); os.IsNotExist(err) {
 		return nil, GateErrM(swy.GateNotAvail, "No such file in repo")
@@ -252,7 +253,7 @@ func (rd *RepoDesc)readFile(ctx context.Context, fname string) ([]byte, *swyapi.
 	return cont, nil
 }
 
-func (rd *RepoDesc)listFiles(ctx context.Context) ([]*swyapi.RepoFile, *swyapi.GateErr) {
+func (rd *RepoDesc)listFiles(ctx context.Context) ([]*swyapi.RepoFile, *xrest.ReqErr) {
 	rp := rd.clonePath()
 	root := swyapi.RepoFile { Path: "", Children: &[]*swyapi.RepoFile{} }
 	dirs := []*swyapi.RepoFile{&root}
@@ -299,7 +300,7 @@ func (rd *RepoDesc)listFiles(ctx context.Context) ([]*swyapi.RepoFile, *swyapi.G
 	return *root.Children, nil
 }
 
-func (rd *RepoDesc)pull(ctx context.Context) *swyapi.GateErr {
+func (rd *RepoDesc)pull(ctx context.Context) *xrest.ReqErr {
 	if rd.LastPull != nil && time.Now().Before( rd.LastPull.Add(time.Duration(conf.RepoSyncRate) * time.Minute)) {
 		return GateErrM(swy.GateNotAvail, "To frequent sync")
 	}
@@ -393,7 +394,7 @@ func tryToUpdateFunctions(ctx context.Context, rd *RepoDesc, to string) {
 	}
 }
 
-func (rd *RepoDesc)pullSync(ctx context.Context) *swyapi.GateErr {
+func (rd *RepoDesc)pullSync(ctx context.Context) *xrest.ReqErr {
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 
@@ -533,7 +534,7 @@ type DetachedRepo struct {
 	accid	string
 }
 
-func (rd *DetachedRepo)info(ctx context.Context, q url.Values, details bool) (interface{}, *swyapi.GateErr) {
+func (rd *DetachedRepo)info(ctx context.Context, q url.Values, details bool) (interface{}, *xrest.ReqErr) {
 	return &swyapi.RepoInfo {
 		Type:	rd.typ,
 		URL:	rd.URL,
@@ -542,11 +543,11 @@ func (rd *DetachedRepo)info(ctx context.Context, q url.Values, details bool) (in
 	}, nil
 }
 
-func (rd *DetachedRepo)del(context.Context) *swyapi.GateErr { return GateErrC(swy.GateNotAvail) }
-func (rd *DetachedRepo)upd(context.Context, interface{}) *swyapi.GateErr { return GateErrC(swy.GateNotAvail) }
-func (rd *DetachedRepo)add(context.Context, interface{}) *swyapi.GateErr { return GateErrC(swy.GateNotAvail) }
+func (rd *DetachedRepo)del(context.Context) *xrest.ReqErr { return GateErrC(swy.GateNotAvail) }
+func (rd *DetachedRepo)upd(context.Context, interface{}) *xrest.ReqErr { return GateErrC(swy.GateNotAvail) }
+func (rd *DetachedRepo)add(context.Context, interface{}) *xrest.ReqErr { return GateErrC(swy.GateNotAvail) }
 
-func (_ Repos)iterate(ctx context.Context, q url.Values, cb func(context.Context, Obj) *swyapi.GateErr) *swyapi.GateErr {
+func (_ Repos)iterate(ctx context.Context, q url.Values, cb func(context.Context, Obj) *xrest.ReqErr) *xrest.ReqErr {
 	accid := q.Get("aid")
 	if accid != "" && !bson.IsObjectIdHex(accid) {
 		return GateErrM(swy.GateBadRequest, "Bad account ID value")

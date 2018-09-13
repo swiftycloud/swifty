@@ -12,6 +12,7 @@ import (
 	"../common/http"
 	"../apis"
 	"../apis/s3"
+	"../common/xrest"
 )
 
 type FnEventS3 struct {
@@ -236,7 +237,7 @@ func GenBucketKeysS3(ctx context.Context, conf *YAMLConfMw, fid *SwoId, bucket s
 	}, nil
 }
 
-func s3GetCreds(ctx context.Context, acc *swyapi.S3Access) (*swyapi.S3Creds, *swyapi.GateErr) {
+func s3GetCreds(ctx context.Context, acc *swyapi.S3Access) (*swyapi.S3Creds, *xrest.ReqErr) {
 	creds := &swyapi.S3Creds{}
 
 	creds.Endpoint = s3Endpoint(&conf.Mware.S3, true)
