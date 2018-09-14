@@ -124,28 +124,6 @@ func (fn *FunctionDesc)ToState(ctx context.Context, st, from int) error {
 	return err
 }
 
-func listFunctions(ctx context.Context, project, name string, labels []string) ([]*FunctionDesc, *xrest.ReqErr) {
-	var fns []*FunctionDesc
-
-	if name == "" {
-		err := dbFindAll(ctx, listReq(ctx, project, labels), &fns)
-		if err != nil {
-			return nil, GateErrD(err)
-		}
-		glog.Debugf("Found %d fns", len(fns))
-	} else {
-		var fn FunctionDesc
-
-		err := dbFind(ctx, cookieReq(ctx, project, name), &fn)
-		if err != nil {
-			return nil, GateErrD(err)
-		}
-		fns = append(fns, &fn)
-	}
-
-	return fns, nil
-}
-
 var zeroVersion = "0"
 
 func (fn *FunctionDesc)getURL() string {
@@ -173,21 +151,37 @@ func (_ Functions)Iterate(ctx context.Context, q url.Values, cb func(context.Con
 	}
 
 	fname := q.Get("name")
-	periods := reqPeriods(q)
-	if periods < 0 {
-		return GateErrC(swy.GateBadRequest)
+
+	var fn FunctionDesc
+
+	if fname != "" {
+		err := dbFind(ctx, cookieReq(ctx, project, fname), &fn)
+		if err != nil {
+			return GateErrD(err)
+		}
+
+		return cb(ctx, &fn)
 	}
 
-	fns, cerr := listFunctions(ctx, project, fname, q["label"])
-	if cerr != nil {
-		return cerr
-	}
+	pref := q.Get("prefix")
 
-	for _, fn := range fns {
-		cerr = cb(ctx, fn)
+	iter := dbIterAll(ctx, listReq(ctx, project, q["label"]), &fn)
+	defer iter.Close()
+
+	for iter.Next(&fn) {
+		if pref != "" && !strings.HasPrefix(fn.SwoId.Name, pref) {
+			continue /* XXX -- tune request? */
+		}
+
+		cerr := cb(ctx, &fn)
 		if cerr != nil {
 			return cerr
 		}
+	}
+
+	err := iter.Err()
+	if err != nil {
+		return GateErrD(err)
 	}
 
 	return nil
@@ -268,11 +262,11 @@ func (fn *FunctionDesc)toInfo(ctx context.Context, details bool, periods int) (*
 
 		fi.AuthCtx = fn.AuthCtx
 		fi.UserData = fn.UserData
-		fi.Code = swyapi.FunctionCode{
+		fi.Code = &swyapi.FunctionCode{
 			Lang:		fn.Code.Lang,
 			Env:		fn.Code.Env,
 		}
-		fi.Size = swyapi.FunctionSize {
+		fi.Size = &swyapi.FunctionSize {
 			Memory:		fn.Size.Mem,
 			Timeout:	fn.Size.Tmo,
 			Rate:		fn.Size.Rate,

@@ -144,6 +144,11 @@ paths:
           required: false
           description: Name of a function to find (useful to resolve ID by name)
         - in: query
+          name: prefix
+          type: string
+          required: false
+          description: Filter functions by name prefix
+        - in: query
           name: label
           type: string
           required: false
