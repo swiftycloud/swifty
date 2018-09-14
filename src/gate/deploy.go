@@ -100,7 +100,7 @@ func (i *DeployMware)info(ctx context.Context, details bool) (*swyapi.DeployItem
 		if err == nil {
 			ret.State = mwStates[mw.State]
 		} else {
-			ret.State = mwStates[swy.DBMwareStateNo]
+			ret.State = mwStates[DBMwareStateNo]
 		}
 	}
 

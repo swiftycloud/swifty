@@ -14,6 +14,15 @@ import (
 	"../common/xrest"
 )
 
+const (
+	DBMwareStatePrp	int = 1		// Preparing
+	DBMwareStateRdy	int = 2		// Ready
+	DBMwareStateTrm	int = 3		// Terminating
+	DBMwareStateStl	int = 4		// Stalled (while terminating or cleaning up)
+
+	DBMwareStateNo	int = -1	// Doesn't exists :)
+)
+
 type MwareDesc struct {
 	// These objects are kept in Mongo, which requires the below
 	// field to be present...
@@ -31,11 +40,11 @@ type MwareDesc struct {
 }
 
 var mwStates = map[int]string {
-	swy.DBMwareStatePrp:	"preparing",
-	swy.DBMwareStateRdy:	"ready",
-	swy.DBMwareStateTrm:	"terminating",
-	swy.DBMwareStateStl:	"stalled",
-	swy.DBMwareStateNo:	"dead",
+	DBMwareStatePrp:	"preparing",
+	DBMwareStateRdy:	"ready",
+	DBMwareStateTrm:	"terminating",
+	DBMwareStateStl:	"stalled",
+	DBMwareStateNo:	"dead",
 }
 
 func (mw *MwareDesc)ToState(ctx context.Context, st, from int) error {
@@ -85,7 +94,7 @@ func mwareGetCookie(ctx context.Context, id SwoId, name string) (string, error) 
 	if err != nil {
 		return "", fmt.Errorf("No such mware: %s", id.Str())
 	}
-	if mw.State != swy.DBMwareStateRdy {
+	if mw.State != DBMwareStateRdy {
 		return "", errors.New("Mware not ready")
 	}
 
@@ -160,7 +169,7 @@ func (item *MwareDesc)Del(ctx context.Context) *xrest.ReqErr {
 		return GateErrC(swy.GateGenErr) /* Shouldn't happen */
 	}
 
-	err := item.ToState(ctx, swy.DBMwareStateTrm, item.State)
+	err := item.ToState(ctx, DBMwareStateTrm, item.State)
 	if err != nil {
 		ctxlog(ctx).Errorf("Can't terminate mware %s", item.SwoId.Str())
 		return GateErrM(swy.GateGenErr, "Cannot terminate mware")
@@ -188,7 +197,7 @@ func (item *MwareDesc)Del(ctx context.Context) *xrest.ReqErr {
 	return nil
 
 stalled:
-	item.ToState(ctx, swy.DBMwareStateStl, -1)
+	item.ToState(ctx, DBMwareStateStl, -1)
 	return GateErrE(swy.GateGenErr, err)
 }
 
@@ -312,7 +321,7 @@ func getMwareDesc(id *SwoId, params *swyapi.MwareAdd) *MwareDesc {
 	ret := &MwareDesc {
 		SwoId:		*id,
 		MwareType:	params.Type,
-		State:		swy.DBMwareStatePrp,
+		State:		DBMwareStatePrp,
 		UserData:	params.UserData,
 	}
 
@@ -370,7 +379,7 @@ func (mwd *MwareDesc)Add(ctx context.Context, _ interface{}) *xrest.ReqErr {
 		goto outs
 	}
 
-	mwd.State = swy.DBMwareStateRdy
+	mwd.State = DBMwareStateRdy
 	err = dbUpdatePart(ctx, mwd, bson.M {
 				"client":	mwd.Client,
 				"secret":	mwd.Secret,
@@ -405,6 +414,6 @@ out:
 	return GateErrE(swy.GateGenErr, err)
 
 stalled:
-	mwd.ToState(ctx, swy.DBMwareStateStl, -1)
+	mwd.ToState(ctx, DBMwareStateStl, -1)
 	goto out
 }

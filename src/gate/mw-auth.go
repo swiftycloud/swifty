@@ -35,7 +35,7 @@ func authCtxGet(ctx context.Context, id SwoId, ac string) (*AuthCtx, error) {
 	if err != nil {
 		return nil, err
 	}
-	if item.State != swy.DBMwareStateRdy {
+	if item.State != DBMwareStateRdy {
 		return nil, errors.New("Mware not ready")
 	}
 
