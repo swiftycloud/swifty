@@ -47,11 +47,11 @@ type FunctionInfo struct {
 	Labels		[]string		`json:"labels,omitempty"`
 	State		string			`json:"state"`
 	Version		string			`json:"version"`
-	RdyVersions	[]string		`json:"rversions"`
-	Code		FunctionCode		`json:"code"`
+	RdyVersions	[]string		`json:"rversions,omitempty"`
+	Code		*FunctionCode		`json:"code,omitempty"`
 	URL		string			`json:"url,omitempty"`
-	Stats		[]FunctionStats		`json:"stats"`
-	Size		FunctionSize		`json:"size"`
+	Stats		[]FunctionStats		`json:"stats,omitempty"`
+	Size		*FunctionSize		`json:"size,omitempty"`
 	AuthCtx		string			`json:"authctx,omitempty"`
 	UserData	string			`json:"userdata,omitempty"`
 	Id		string			`json:"id"`

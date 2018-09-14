@@ -256,11 +256,11 @@ func (fn *FunctionDesc)toInfo(ctx context.Context, details bool, periods int) (*
 
 		fi.AuthCtx = fn.AuthCtx
 		fi.UserData = fn.UserData
-		fi.Code = swyapi.FunctionCode{
+		fi.Code = &swyapi.FunctionCode{
 			Lang:		fn.Code.Lang,
 			Env:		fn.Code.Env,
 		}
-		fi.Size = swyapi.FunctionSize {
+		fi.Size = &swyapi.FunctionSize {
 			Memory:		fn.Size.Mem,
 			Timeout:	fn.Size.Tmo,
 			Rate:		fn.Size.Rate,
