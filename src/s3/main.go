@@ -901,6 +901,10 @@ func handleNotifyDel(w http.ResponseWriter, r *http.Request) {
 	handleNotify(w, r, false)
 }
 
+func makeAdminURL(clienturl, admport string) string {
+	return strings.Split(clienturl, ":")[0] + ":" + admport
+}
+
 func main() {
 	var config_path string
 	var showVersion bool
@@ -1017,7 +1021,7 @@ func main() {
 	go func() {
 		adminsrv = &http.Server{
 			Handler:      radminsrv,
-			Addr:         swy.MakeAdminURL(conf.Daemon.Addr, conf.Daemon.AdminPort),
+			Addr:         makeAdminURL(conf.Daemon.Addr, conf.Daemon.AdminPort),
 			WriteTimeout: 60 * time.Second,
 			ReadTimeout:  60 * time.Second,
 		}

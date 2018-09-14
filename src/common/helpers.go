@@ -22,10 +22,6 @@ func Sha256sum(s []byte) string {
 	return hex.EncodeToString(h.Sum(nil))
 }
 
-func MakeAdminURL(clienturl, admport string) string {
-	return strings.Split(clienturl, ":")[0] + ":" + admport
-}
-
 var Letters = []byte("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789")
 
 func Retry(callback func(interface{}) error, data interface{}, attempts int, sleep time.Duration) error {
