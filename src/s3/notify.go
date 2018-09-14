@@ -88,7 +88,7 @@ func notifyInit(conf *YAMLConfNotify) error {
 		return nil
 	}
 
-	xc := swy.ParseXCreds(conf.Rabbit)
+	xc := xh.ParseXCreds(conf.Rabbit)
 	xc.Pass = s3Secrets[xc.Pass]
 
 	log.Debugf("Turn on AMQP notifications via %s", xc.Domn)

@@ -118,7 +118,7 @@ func genNewAccessKey(ctx context.Context, namespace, bname string, lifetime uint
 		goto out_2
 	}
 
-	akey.AccessKeySecret, err = swycrypt.EncryptString(s3SecKey, akey.AccessKeySecret)
+	akey.AccessKeySecret, err = xcrypt.EncryptString(s3SecKey, akey.AccessKeySecret)
 	if err != nil {
 		goto out_2
 	}
@@ -153,7 +153,7 @@ func FindBuckets(ctx context.Context) ([]s3mgo.S3Bucket, error) {
 }
 
 func s3DecryptAccessKeySecret(akey *s3mgo.S3AccessKey) string {
-	sec, err := swycrypt.DecryptString(s3SecKey, akey.AccessKeySecret)
+	sec, err := xcrypt.DecryptString(s3SecKey, akey.AccessKeySecret)
 	if err != nil {
 		return ""
 	}

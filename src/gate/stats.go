@@ -5,7 +5,6 @@ import (
 	"context"
 	"./mgo"
 	"../apis"
-	"../common"
 	"../common/http"
 	"../common/xrest"
 )
@@ -95,7 +94,7 @@ func (fn *FunctionDesc)getStats(ctx context.Context, periods int) ([]swyapi.Func
 
 	prev, err := statsGet(ctx, fn)
 	if err != nil {
-		return nil, GateErrM(swy.GateGenErr, "Error getting stats")
+		return nil, GateErrM(swyapi.GateGenErr, "Error getting stats")
 	}
 
 	if periods > 0 {
@@ -177,7 +176,7 @@ func statsUpdate(fmd *FnMemData, op *statsOpaque, res *swyapi.SwdFunctionRunResu
 	fmd.lock.Lock()
 	fmd.stats.Called++
 	if res.Code != 0 {
-		if res.Code == swyhttp.StatusTimeoutOccurred {
+		if res.Code == xhttp.StatusTimeoutOccurred {
 			fmd.stats.Timeouts++
 			gateCalls.WithLabelValues("timeout").Inc()
 		} else {

@@ -14,6 +14,15 @@ import (
 	"../common/xrest"
 )
 
+const (
+	DBMwareStatePrp	int = 1		// Preparing
+	DBMwareStateRdy	int = 2		// Ready
+	DBMwareStateTrm	int = 3		// Terminating
+	DBMwareStateStl	int = 4		// Stalled (while terminating or cleaning up)
+
+	DBMwareStateNo	int = -1	// Doesn't exists :)
+)
+
 type MwareDesc struct {
 	// These objects are kept in Mongo, which requires the below
 	// field to be present...
@@ -31,11 +40,11 @@ type MwareDesc struct {
 }
 
 var mwStates = map[int]string {
-	swy.DBMwareStatePrp:	"preparing",
-	swy.DBMwareStateRdy:	"ready",
-	swy.DBMwareStateTrm:	"terminating",
-	swy.DBMwareStateStl:	"stalled",
-	swy.DBMwareStateNo:	"dead",
+	DBMwareStatePrp:	"preparing",
+	DBMwareStateRdy:	"ready",
+	DBMwareStateTrm:	"terminating",
+	DBMwareStateStl:	"stalled",
+	DBMwareStateNo:	"dead",
 }
 
 func (mw *MwareDesc)ToState(ctx context.Context, st, from int) error {
@@ -85,7 +94,7 @@ func mwareGetCookie(ctx context.Context, id SwoId, name string) (string, error) 
 	if err != nil {
 		return "", fmt.Errorf("No such mware: %s", id.Str())
 	}
-	if mw.State != swy.DBMwareStateRdy {
+	if mw.State != DBMwareStateRdy {
 		return "", errors.New("Mware not ready")
 	}
 
@@ -95,13 +104,13 @@ func mwareGetCookie(ctx context.Context, id SwoId, name string) (string, error) 
 func mwareGenerateUserPassClient(ctx context.Context, mwd *MwareDesc) (error) {
 	var err error
 
-	mwd.Client, err = swy.GenRandId(32)
+	mwd.Client, err = xh.GenRandId(32)
 	if err != nil {
 		ctxlog(ctx).Errorf("Can't generate clnt for %s: %s", mwd.SwoId.Str(), err.Error())
 		return err
 	}
 
-	mwd.Secret, err = swy.GenRandId(64)
+	mwd.Secret, err = xh.GenRandId(64)
 	if err != nil {
 		ctxlog(ctx).Errorf("Can't generate secret for %s: %s", mwd.SwoId.Str(), err.Error())
 		return err
@@ -157,13 +166,13 @@ func mwareRemoveId(ctx context.Context, id *SwoId) *xrest.ReqErr {
 func (item *MwareDesc)Del(ctx context.Context) *xrest.ReqErr {
 	handler, ok := mwareHandlers[item.MwareType]
 	if !ok {
-		return GateErrC(swy.GateGenErr) /* Shouldn't happen */
+		return GateErrC(swyapi.GateGenErr) /* Shouldn't happen */
 	}
 
-	err := item.ToState(ctx, swy.DBMwareStateTrm, item.State)
+	err := item.ToState(ctx, DBMwareStateTrm, item.State)
 	if err != nil {
 		ctxlog(ctx).Errorf("Can't terminate mware %s", item.SwoId.Str())
-		return GateErrM(swy.GateGenErr, "Cannot terminate mware")
+		return GateErrM(swyapi.GateGenErr, "Cannot terminate mware")
 	}
 
 	err = handler.Fini(ctx, item)
@@ -188,8 +197,8 @@ func (item *MwareDesc)Del(ctx context.Context) *xrest.ReqErr {
 	return nil
 
 stalled:
-	item.ToState(ctx, swy.DBMwareStateStl, -1)
-	return GateErrE(swy.GateGenErr, err)
+	item.ToState(ctx, DBMwareStateStl, -1)
+	return GateErrE(swyapi.GateGenErr, err)
 }
 
 func (item *MwareDesc)toFnInfo(ctx context.Context) *swyapi.MwareInfo {
@@ -237,7 +246,7 @@ func (mw *MwareDesc)Info(ctx context.Context, q url.Values, details bool) (inter
 }
 
 func (mw *MwareDesc)Upd(ctx context.Context, upd interface{}) *xrest.ReqErr {
-	return GateErrM(swy.GateGenErr, "Not updatable")
+	return GateErrM(swyapi.GateGenErr, "Not updatable")
 }
 
 func (item *MwareDesc)toInfo(ctx context.Context, details bool) (*swyapi.MwareInfo, *xrest.ReqErr) {
@@ -254,13 +263,13 @@ func (item *MwareDesc)toInfo(ctx context.Context, details bool) (*swyapi.MwareIn
 
 		handler, ok := mwareHandlers[item.MwareType]
 		if !ok {
-			return nil, GateErrC(swy.GateGenErr) /* Shouldn't happen */
+			return nil, GateErrC(swyapi.GateGenErr) /* Shouldn't happen */
 		}
 
 		if handler.Info != nil {
 			err := handler.Info(ctx, item, resp)
 			if err != nil {
-				return nil, GateErrE(swy.GateGenErr, err)
+				return nil, GateErrE(swyapi.GateGenErr, err)
 			}
 		}
 	}
@@ -292,7 +301,7 @@ func getMwareStats(ctx context.Context, ten string) (map[string]*swyapi.TenantSt
 
 			err := h.Info(ctx, mw, &ifo)
 			if err != nil {
-				return nil, GateErrE(swy.GateGenErr, err)
+				return nil, GateErrE(swyapi.GateGenErr, err)
 			}
 
 			if ifo.DU != nil {
@@ -312,7 +321,7 @@ func getMwareDesc(id *SwoId, params *swyapi.MwareAdd) *MwareDesc {
 	ret := &MwareDesc {
 		SwoId:		*id,
 		MwareType:	params.Type,
-		State:		swy.DBMwareStatePrp,
+		State:		DBMwareStatePrp,
 		UserData:	params.UserData,
 	}
 
@@ -363,14 +372,14 @@ func (mwd *MwareDesc)Add(ctx context.Context, _ interface{}) *xrest.ReqErr {
 		goto outh
 	}
 
-	mwd.Secret, err = swycrypt.EncryptString(gateSecPas, mwd.Secret)
+	mwd.Secret, err = xcrypt.EncryptString(gateSecPas, mwd.Secret)
 	if err != nil {
 		ctxlog(ctx).Errorf("Mw secret encrypt error: %s", err.Error())
 		err = errors.New("Encrypt error")
 		goto outs
 	}
 
-	mwd.State = swy.DBMwareStateRdy
+	mwd.State = DBMwareStateRdy
 	err = dbUpdatePart(ctx, mwd, bson.M {
 				"client":	mwd.Client,
 				"secret":	mwd.Secret,
@@ -402,9 +411,9 @@ outdb:
 	gateMwares.WithLabelValues(mwd.MwareType).Dec()
 out:
 	ctxlog(ctx).Errorf("mwareSetup: %s", err.Error())
-	return GateErrE(swy.GateGenErr, err)
+	return GateErrE(swyapi.GateGenErr, err)
 
 stalled:
-	mwd.ToState(ctx, swy.DBMwareStateStl, -1)
+	mwd.ToState(ctx, DBMwareStateStl, -1)
 	goto out
 }

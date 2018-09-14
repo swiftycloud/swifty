@@ -101,7 +101,7 @@ func main() {
 				"path to the configuration file")
 	flag.Parse()
 	if _, err := os.Stat(conf_path); err == nil {
-		err = swy.ReadYamlConfig(conf_path, &conf)
+		err = xh.ReadYamlConfig(conf_path, &conf)
 	}
 	if err != nil {
 		log.Errorf("Can't read config: %s", err.Error())
@@ -110,7 +110,7 @@ func main() {
 
 	log.Debugf("Config: %v", conf)
 
-	qdSecrets, err = swysec.ReadSecrets("mqd")
+	qdSecrets, err = xsecret.ReadSecrets("mqd")
 	if err != nil {
 		log.Errorf("Can't read gate secrets: %s", err.Error())
 		return

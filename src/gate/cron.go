@@ -4,7 +4,6 @@ import (
 	"context"
 	"gopkg.in/robfig/cron.v2"
 	"gopkg.in/mgo.v2/bson"
-	"../common"
 	"../apis"
 )
 
@@ -29,7 +28,7 @@ func cronEventStart(ctx context.Context, _ *FunctionDesc, evt *FnEventDesc) erro
 			return
 		}
 
-		if fn.State != swy.DBFuncStateRdy {
+		if fn.State != DBFuncStateRdy {
 			return
 		}
 

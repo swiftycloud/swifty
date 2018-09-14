@@ -35,12 +35,12 @@ func authCtxGet(ctx context.Context, id SwoId, ac string) (*AuthCtx, error) {
 	if err != nil {
 		return nil, err
 	}
-	if item.State != swy.DBMwareStateRdy {
+	if item.State != DBMwareStateRdy {
 		return nil, errors.New("Mware not ready")
 	}
 
 	if item.MwareType == "authjwt" {
-		key, err := swycrypt.DecryptString(gateSecPas, item.Secret)
+		key, err := xcrypt.DecryptString(gateSecPas, item.Secret)
 		if err != nil {
 			return nil, err
 		}
@@ -112,7 +112,7 @@ func (ac *AuthCtx)Verify(r *http.Request) (map[string]interface{}, error) {
 func InitAuthJWT(ctx context.Context, mwd *MwareDesc) (error) {
 	var err error
 
-	mwd.Secret, err = swy.GenRandId(32)
+	mwd.Secret, err = xh.GenRandId(32)
 	if err != nil {
 		return err
 	}

@@ -39,9 +39,9 @@ type YAMLConfLogs struct {
 
 type YAMLConf struct {
 	GateDB		string			`yaml:"gate-db"`
-	gateDB		*swy.XCreds
+	gateDB		*xh.XCreds
 	Admd		string			`yaml:"admd"`
-	admd		*swy.XCreds
+	admd		*xh.XCreds
 
 	SA		YAMLConfSA		`yaml:"starch"`
 	Logs		YAMLConfLogs		`yaml:"logs"`
@@ -210,16 +210,16 @@ func main() {
 		return
 	}
 
-	err := swy.ReadYamlConfig(config_path, &conf)
+	err := xh.ReadYamlConfig(config_path, &conf)
 	if err != nil {
 		fmt.Printf("Bad config: %s\n", err.Error())
 		return
 	}
 
-	conf.gateDB = swy.ParseXCreds(conf.GateDB)
+	conf.gateDB = xh.ParseXCreds(conf.GateDB)
 	conf.gateDB.Resolve()
 
-	conf.admd = swy.ParseXCreds(conf.Admd)
+	conf.admd = xh.ParseXCreds(conf.Admd)
 	conf.admd.Resolve()
 
 	info := mgo.DialInfo{

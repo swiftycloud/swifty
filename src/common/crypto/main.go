@@ -1,4 +1,4 @@
-package swycrypt
+package xcrypt
 
 import (
 	"bytes"

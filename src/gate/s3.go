@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"encoding/json"
 	"gopkg.in/mgo.v2/bson"
-	"../common"
 	"../common/http"
 	"../apis"
 	"../apis/s3"
@@ -44,8 +43,8 @@ func (s3 *FnEventS3)matchPattern(oname string) bool {
 func s3KeyGen(conf *YAMLConfS3, namespace, bucket string, lifetime uint32) (*swys3api.S3CtlKeyGenResult, error) {
 	addr := conf.c.Addr()
 
-	resp, err := swyhttp.MarshalAndPost(
-		&swyhttp.RestReq{
+	resp, err := xhttp.MarshalAndPost(
+		&xhttp.RestReq{
 			Address: "http://" + addr + "/v1/api/admin/keygen",
 			Timeout: 120,
 			Headers: map[string]string{"X-SwyS3-Token": gateSecrets[conf.c.Pass]},
@@ -66,7 +65,7 @@ func s3KeyGen(conf *YAMLConfS3, namespace, bucket string, lifetime uint32) (*swy
 
 	var out swys3api.S3CtlKeyGenResult
 
-	err = swyhttp.ReadAndUnmarshalResp(resp, &out)
+	err = xhttp.ReadAndUnmarshalResp(resp, &out)
 	if err != nil {
 		return nil, fmt.Errorf("Error reading responce from S3: %s", err.Error())
 	}
@@ -77,8 +76,8 @@ func s3KeyGen(conf *YAMLConfS3, namespace, bucket string, lifetime uint32) (*swy
 func s3KeyDel(conf *YAMLConfS3, key string) error {
 	addr := conf.c.Addr()
 
-	_, err := swyhttp.MarshalAndPost(
-		&swyhttp.RestReq{
+	_, err := xhttp.MarshalAndPost(
+		&xhttp.RestReq{
 			Address: "http://" + addr + "/v1/api/admin/keydel",
 			Timeout: 120,
 			Headers: map[string]string{"X-SwyS3-Token": gateSecrets[conf.c.Pass]},
@@ -100,8 +99,8 @@ const (
 func s3Subscribe(ctx context.Context, conf *YAMLConfMw, evt *FnEventS3) error {
 	addr := conf.S3.c.Addr()
 
-	_, err := swyhttp.MarshalAndPost(
-		&swyhttp.RestReq{
+	_, err := xhttp.MarshalAndPost(
+		&xhttp.RestReq{
 			Address: "http://" + addr + "/v1/api/notify/subscribe",
 			Headers: map[string]string{"X-SwyS3-Token": gateSecrets[conf.S3.c.Pass]},
 			Success: http.StatusAccepted,
@@ -122,8 +121,8 @@ func s3Subscribe(ctx context.Context, conf *YAMLConfMw, evt *FnEventS3) error {
 func s3Unsubscribe(ctx context.Context, conf *YAMLConfMw, evt *FnEventS3) error {
 	addr := conf.S3.c.Addr()
 
-	_, err := swyhttp.MarshalAndPost(
-		&swyhttp.RestReq{
+	_, err := xhttp.MarshalAndPost(
+		&xhttp.RestReq{
 			Address: "http://" + addr + "/v1/api/notify/unsubscribe",
 			Headers: map[string]string{"X-SwyS3-Token": gateSecrets[conf.S3.c.Pass]},
 			Success: http.StatusAccepted,
@@ -173,7 +172,7 @@ func handleS3Event(ctx context.Context, user string, data []byte) {
 			continue
 		}
 
-		if fn.State != swy.DBFuncStateRdy {
+		if fn.State != DBFuncStateRdy {
 			continue
 		}
 
@@ -249,18 +248,18 @@ func s3GetCreds(ctx context.Context, acc *swyapi.S3Access) (*swyapi.S3Creds, *xr
 			continue
 		}
 
-		return nil, GateErrM(swy.GateBadRequest, "Unknown access option " + acc)
+		return nil, GateErrM(swyapi.GateBadRequest, "Unknown access option " + acc)
 	}
 
 	if creds.Expires == 0 {
-		return nil, GateErrM(swy.GateBadRequest, "Perpetual keys not allowed")
+		return nil, GateErrM(swyapi.GateBadRequest, "Perpetual keys not allowed")
 	}
 
 	id := ctxSwoId(ctx, acc.Project, "")
 	k, err := s3KeyGen(&conf.Mware.S3, id.Namespace(), acc.Bucket, creds.Expires)
 	if err != nil {
 		ctxlog(ctx).Errorf("Can't get S3 keys for %s.%s", id.Str(), acc.Bucket, err.Error())
-		return nil, GateErrM(swy.GateGenErr, "Error getting S3 keys")
+		return nil, GateErrM(swyapi.GateGenErr, "Error getting S3 keys")
 	}
 
 	creds.Key = k.AccessKeyID

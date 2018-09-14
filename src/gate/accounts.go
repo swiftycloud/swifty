@@ -6,10 +6,10 @@ import (
 	"context"
 	"strings"
 	"gopkg.in/mgo.v2/bson"
-	"../common"
 	"../common/http"
 	"../common/crypto"
 	"../common/xrest"
+	"../apis"
 )
 
 type Secret string
@@ -18,7 +18,7 @@ func (ct Secret)value() (string, error) {
 	var err error
 	t := string(ct)
 	if t != "" {
-		t, err = swycrypt.DecryptString(gateSecPas, t)
+		t, err = xcrypt.DecryptString(gateSecPas, t)
 	}
 	return t, err
 }
@@ -31,7 +31,7 @@ func mkSecret(v string) (Secret, error) {
 
 		var err error
 
-		v, err = swycrypt.EncryptString(gateSecPas, v)
+		v, err = xcrypt.EncryptString(gateSecPas, v)
 		if err != nil {
 			return "", err
 		}
@@ -66,7 +66,7 @@ var accHandlers = map[string]acHandler {
 }
 
 func githubResolveName(token string) (string, error) {
-	rsp, err := swyhttp.MarshalAndPost(&swyhttp.RestReq{
+	rsp, err := xhttp.MarshalAndPost(&xhttp.RestReq{
 			Method: "GET",
 			Address: "https://api.github.com/user?access_token=" + token,
 		}, nil)
@@ -75,7 +75,7 @@ func githubResolveName(token string) (string, error) {
 	}
 
 	var u GitHubUser
-	err = swyhttp.ReadAndUnmarshalResp(rsp, &u)
+	err = xhttp.ReadAndUnmarshalResp(rsp, &u)
 	if err != nil {
 		return "", err
 	}
@@ -90,17 +90,17 @@ func setupGithubAcc(ad *AccDesc) *xrest.ReqErr {
 
 		tok, ok := ad.Secrets["token"]
 		if !ok || tok == "" {
-			return GateErrM(swy.GateBadRequest, "Need either name or token")
+			return GateErrM(swyapi.GateBadRequest, "Need either name or token")
 		}
 
 		v, err := tok.value()
 		if err != nil {
-			return GateErrE(swy.GateGenErr, err)
+			return GateErrE(swyapi.GateGenErr, err)
 		}
 
 		ad.SwoId.Name, err = githubResolveName(v)
 		if err != nil {
-			return GateErrE(swy.GateGenErr, err)
+			return GateErrE(swyapi.GateGenErr, err)
 		}
 	}
 
@@ -117,7 +117,7 @@ func (ad *AccDesc)fill(values map[string]string) *xrest.ReqErr {
 		case "token", "secret", "password", "key":
 			ad.Secrets[k], err = mkSecret(v)
 			if err != nil {
-				return GateErrE(swy.GateGenErr, err)
+				return GateErrE(swyapi.GateGenErr, err)
 			}
 		default:
 			ad.Values[k] = v
@@ -177,7 +177,7 @@ func (_ Accounts)Iterate(ctx context.Context, q url.Values, cb func(context.Cont
 func (_ Accounts)Create(ctx context.Context, p interface{}) (xrest.Obj, *xrest.ReqErr) {
 	params := *p.(*map[string]string)
 	if _, ok := params["type"]; !ok {
-		return nil, GateErrM(swy.GateBadRequest, "No type")
+		return nil, GateErrM(swyapi.GateBadRequest, "No type")
 	}
 
 	id := ctxSwoId(ctx, NoProject, params["name"])

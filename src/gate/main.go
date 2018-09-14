@@ -11,7 +11,6 @@ import (
 	"flag"
 	"strings"
 	"context"
-	"strconv"
 	"time"
 	"fmt"
 	"os"
@@ -91,16 +90,16 @@ func handleUserLogin(w http.ResponseWriter, r *http.Request) {
 	var resp = http.StatusBadRequest
 	var td swyapi.UserToken
 
-	if swyhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
+	if xhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
 
-	err := swyhttp.ReadAndUnmarshalReq(r, &params)
+	err := xhttp.ReadAndUnmarshalReq(r, &params)
 	if err != nil {
 		goto out
 	}
 
 	glog.Debugf("Trying to login user %s", params.UserName)
 
-	token, td.Expires, err = swyks.KeystoneAuthWithPass(conf.Keystone.Addr, conf.Keystone.Domain, &params)
+	token, td.Expires, err = xkst.KeystoneAuthWithPass(conf.Keystone.Addr, conf.Keystone.Domain, &params)
 	if err != nil {
 		resp = http.StatusUnauthorized
 		goto out
@@ -110,7 +109,7 @@ func handleUserLogin(w http.ResponseWriter, r *http.Request) {
 	glog.Debugf("Login passed, token %s (exp %s)", token[:16], td.Expires)
 
 	w.Header().Set("X-Subject-Token", token)
-	err = swyhttp.MarshalAndWrite(w, &td)
+	err = xhttp.MarshalAndWrite(w, &td)
 	if err != nil {
 		resp = http.StatusInternalServerError
 		goto out
@@ -145,9 +144,9 @@ func handleProjectDel(ctx context.Context, w http.ResponseWriter, r *http.Reques
 	var id *SwoId
 	var ferr *xrest.ReqErr
 
-	err := swyhttp.ReadAndUnmarshalReq(r, &par)
+	err := xhttp.ReadAndUnmarshalReq(r, &par)
 	if err != nil {
-		return GateErrE(swy.GateBadRequest, err)
+		return GateErrE(swyapi.GateBadRequest, err)
 	}
 
 	id = ctxSwoId(ctx, par.Project, "")
@@ -194,9 +193,9 @@ func handleProjectList(ctx context.Context, w http.ResponseWriter, r *http.Reque
 
 	projects := make(map[string]struct{})
 
-	err := swyhttp.ReadAndUnmarshalReq(r, &params)
+	err := xhttp.ReadAndUnmarshalReq(r, &params)
 	if err != nil {
-		return GateErrE(swy.GateBadRequest, err)
+		return GateErrE(swyapi.GateBadRequest, err)
 	}
 
 	ctxlog(ctx).Debugf("List projects for %s", gctx(ctx).Tenant)
@@ -221,7 +220,7 @@ func handleProjectList(ctx context.Context, w http.ResponseWriter, r *http.Reque
 
 func objFindId(ctx context.Context, id string, out interface{}, q bson.M) *xrest.ReqErr {
 	if !bson.IsObjectIdHex(id) {
-		return GateErrM(swy.GateBadRequest, "Bad ID value")
+		return GateErrM(swyapi.GateBadRequest, "Bad ID value")
 	}
 
 	if q == nil {
@@ -298,9 +297,9 @@ func handleFunctionMwares(ctx context.Context, w http.ResponseWriter, r *http.Re
 	case "POST":
 		var mid string
 
-		err := swyhttp.ReadAndUnmarshalReq(r, &mid)
+		err := xhttp.ReadAndUnmarshalReq(r, &mid)
 		if err != nil {
-			return GateErrE(swy.GateBadRequest, err)
+			return GateErrE(swyapi.GateBadRequest, err)
 		}
 
 		var mw MwareDesc
@@ -312,7 +311,7 @@ func handleFunctionMwares(ctx context.Context, w http.ResponseWriter, r *http.Re
 
 		err = fn.addMware(ctx, &mw)
 		if err != nil {
-			return GateErrE(swy.GateGenErr, err)
+			return GateErrE(swyapi.GateGenErr, err)
 		}
 
 		w.WriteHeader(http.StatusOK)
@@ -340,7 +339,7 @@ func handleFunctionMware(ctx context.Context, w http.ResponseWriter, r *http.Req
 	case "DELETE":
 		err := fn.delMware(ctx, &mw)
 		if err != nil {
-			return GateErrE(swy.GateGenErr, err)
+			return GateErrE(swyapi.GateGenErr, err)
 		}
 
 		w.WriteHeader(http.StatusOK)
@@ -364,9 +363,9 @@ func handleFunctionAccounts(ctx context.Context, w http.ResponseWriter, r *http.
 	case "POST":
 		var aid string
 
-		err := swyhttp.ReadAndUnmarshalReq(r, &aid)
+		err := xhttp.ReadAndUnmarshalReq(r, &aid)
 		if err != nil {
-			return GateErrE(swy.GateBadRequest, err)
+			return GateErrE(swyapi.GateBadRequest, err)
 		}
 
 		var acc AccDesc
@@ -425,13 +424,13 @@ func handleFunctionS3Bs(ctx context.Context, w http.ResponseWriter, r *http.Requ
 
 	case "POST":
 		var bname string
-		err := swyhttp.ReadAndUnmarshalReq(r, &bname)
+		err := xhttp.ReadAndUnmarshalReq(r, &bname)
 		if err != nil {
-			return GateErrE(swy.GateBadRequest, err)
+			return GateErrE(swyapi.GateBadRequest, err)
 		}
 		err = fn.addS3Bucket(ctx, bname)
 		if err != nil {
-			return GateErrE(swy.GateGenErr, err)
+			return GateErrE(swyapi.GateGenErr, err)
 		}
 
 		w.WriteHeader(http.StatusOK)
@@ -454,7 +453,7 @@ func handleFunctionS3B(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	case "DELETE":
 		err := fn.delS3Bucket(ctx, bname)
 		if err != nil {
-			return GateErrE(swy.GateGenErr, err)
+			return GateErrE(swyapi.GateGenErr, err)
 		}
 
 		w.WriteHeader(http.StatusOK)
@@ -485,7 +484,7 @@ func handleFunctionTrigger(ctx context.Context, w http.ResponseWriter, r *http.R
 
 	eid := mux.Vars(r)["eid"]
 	if !bson.IsObjectIdHex(eid) {
-		return GateErrM(swy.GateBadRequest, "Bad event ID")
+		return GateErrM(swyapi.GateBadRequest, "Bad event ID")
 	}
 
 	var ed FnEventDesc
@@ -507,9 +506,9 @@ func handleFunctionWait(ctx context.Context, w http.ResponseWriter, r *http.Requ
 	}
 
 	var wo swyapi.FunctionWait
-	err := swyhttp.ReadAndUnmarshalReq(r, &wo)
+	err := xhttp.ReadAndUnmarshalReq(r, &wo)
 	if err != nil {
-		return GateErrE(swy.GateBadRequest, err)
+		return GateErrE(swyapi.GateBadRequest, err)
 	}
 
 	timeout := time.Duration(wo.Timeout) * time.Millisecond
@@ -519,14 +518,14 @@ func handleFunctionWait(ctx context.Context, w http.ResponseWriter, r *http.Requ
 		ctxlog(ctx).Debugf("function/wait %s -> version >= %s, tmo %d", fn.SwoId.Str(), wo.Version, int(timeout))
 		err, tmo = waitFunctionVersion(ctx, &fn, wo.Version, timeout)
 		if err != nil {
-			return GateErrE(swy.GateGenErr, err)
+			return GateErrE(swyapi.GateGenErr, err)
 		}
 	}
 
 	if !tmo {
 		w.WriteHeader(http.StatusOK)
 	} else {
-		w.WriteHeader(swyhttp.StatusTimeoutOccurred) /* CloudFlare's timeout */
+		w.WriteHeader(xhttp.StatusTimeoutOccurred) /* CloudFlare's timeout */
 	}
 
 	return nil
@@ -640,7 +639,7 @@ func reqPath(r *http.Request) string {
 var grl *xratelimit.RL
 
 func handleCall(w http.ResponseWriter, r *http.Request) {
-	if swyhttp.HandleCORS(w, r, CORS_Clnt_Methods, CORS_Clnt_Headers) { return }
+	if xhttp.HandleCORS(w, r, CORS_Clnt_Methods, CORS_Clnt_Headers) { return }
 
 	sopq := statsStart()
 
@@ -663,22 +662,8 @@ func handleCall(w http.ResponseWriter, r *http.Request) {
 	url.Handle(ctx, w, r, sopq)
 }
 
-func reqAtoi(q url.Values, n string, def int) (int, error) {
-	aux := q.Get(n)
-	val := def
-	if aux != "" {
-		var err error
-		val, err = strconv.Atoi(aux)
-		if err != nil {
-			return def, err
-		}
-	}
-
-	return val, nil
-}
-
 func reqPeriods(q url.Values) int {
-	periods, e := reqAtoi(q, "periods", 0)
+	periods, e := xhttp.ReqAtoi(q, "periods", 0)
 	if e != nil {
 		periods = -1
 	}
@@ -724,13 +709,13 @@ func handleFunctionRun(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	var params swyapi.SwdFunctionRun
 	var res *swyapi.SwdFunctionRunResult
 
-	err := swyhttp.ReadAndUnmarshalReq(r, &params)
+	err := xhttp.ReadAndUnmarshalReq(r, &params)
 	if err != nil {
-		return GateErrE(swy.GateBadRequest, err)
+		return GateErrE(swyapi.GateBadRequest, err)
 	}
 
-	if fn.State != swy.DBFuncStateRdy {
-		return GateErrM(swy.GateNotAvail, "Function not ready (yet)")
+	if fn.State != DBFuncStateRdy {
+		return GateErrM(swyapi.GateNotAvail, "Function not ready (yet)")
 	}
 
 	suff := ""
@@ -755,12 +740,12 @@ func handleFunctionRun(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		ctxlog(ctx).Debugf("Asked for custom sources... oh, well...")
 		suff, err = putTempSources(ctx, &fn, params.Src)
 		if err != nil {
-			return GateErrE(swy.GateGenErr, err)
+			return GateErrE(swyapi.GateGenErr, err)
 		}
 
 		err = tryBuildFunction(ctx, &fn, suff)
 		if err != nil {
-			return GateErrM(swy.GateGenErr, "Error building function")
+			return GateErrM(swyapi.GateGenErr, "Error building function")
 		}
 
 		params.Src = nil /* not to propagate to wdog */
@@ -773,11 +758,11 @@ func handleFunctionRun(ctx context.Context, w http.ResponseWriter, r *http.Reque
 
 	res, err = doRunConn(ctx, conn, nil, fn.Cookie, suff, "run", &params)
 	if err != nil {
-		return GateErrE(swy.GateGenErr, err)
+		return GateErrE(swyapi.GateGenErr, err)
 	}
 
 	if fn.SwoId.Project == "test" {
-		res.Stdout = swy.Fortune()
+		res.Stdout = xh.Fortune()
 	}
 
 	return xrest.Respond(ctx, w, res)
@@ -832,7 +817,7 @@ func handleAccount(ctx context.Context, w http.ResponseWriter, r *http.Request) 
 func repoFindForReq(ctx context.Context, r *http.Request, user_action bool) (*RepoDesc, *xrest.ReqErr) {
 	rid := mux.Vars(r)["rid"]
 	if !bson.IsObjectIdHex(rid) {
-		return nil, GateErrM(swy.GateBadRequest, "Bad repo ID value")
+		return nil, GateErrM(swyapi.GateBadRequest, "Bad repo ID value")
 	}
 
 	var rd RepoDesc
@@ -845,7 +830,7 @@ func repoFindForReq(ctx context.Context, r *http.Request, user_action bool) (*Re
 	if !user_action {
 		gx := gctx(ctx)
 		if !gx.Admin && rd.SwoId.Tennant != gx.Tenant {
-			return nil, GateErrM(swy.GateNotAvail, "Shared repo")
+			return nil, GateErrM(swyapi.GateNotAvail, "Shared repo")
 		}
 	}
 
@@ -876,7 +861,7 @@ func handleRepoFiles(ctx context.Context, w http.ResponseWriter, r *http.Request
 	p := strings.SplitN(r.URL.Path, "/", 6)
 	if len(p) < 5 {
 		/* This is panic, actually */
-		return GateErrM(swy.GateBadRequest, "Bad repo req")
+		return GateErrM(swyapi.GateBadRequest, "Bad repo req")
 	} else if len(p) == 5 {
 		files, cerr := rd.listFiles(ctx)
 		if cerr != nil {
@@ -945,7 +930,7 @@ func handleLanguage(ctx context.Context, w http.ResponseWriter, r *http.Request)
 	lang := mux.Vars(r)["lang"]
 	lh, ok := rt_handlers[lang]
 	if !ok || (lh.Devel && !SwyModeDevel) {
-		return GateErrM(swy.GateGenErr, "Language not supported")
+		return GateErrM(swyapi.GateGenErr, "Language not supported")
 	}
 
 	return xrest.Respond(ctx, w, lh.info())
@@ -968,9 +953,9 @@ func handleMwareTypes(ctx context.Context, w http.ResponseWriter, r *http.Reques
 func handleS3Access(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
 	var params swyapi.S3Access
 
-	err := swyhttp.ReadAndUnmarshalReq(r, &params)
+	err := xhttp.ReadAndUnmarshalReq(r, &params)
 	if err != nil {
-		return GateErrE(swy.GateBadRequest, err)
+		return GateErrE(swyapi.GateBadRequest, err)
 	}
 
 	creds, cerr := s3GetCreds(ctx, &params)
@@ -1027,18 +1012,18 @@ func handleAuths(ctx context.Context, w http.ResponseWriter, r *http.Request) *x
 	case "POST":
 		var aa swyapi.AuthAdd
 
-		err := swyhttp.ReadAndUnmarshalReq(r, &aa)
+		err := xhttp.ReadAndUnmarshalReq(r, &aa)
 		if err != nil {
-			return GateErrE(swy.GateBadRequest, err)
+			return GateErrE(swyapi.GateBadRequest, err)
 		}
 
 		if aa.Type != "" && aa.Type != "jwt" {
-			return GateErrM(swy.GateBadRequest, "No such auth type")
+			return GateErrM(swyapi.GateBadRequest, "No such auth type")
 		}
 
 		fname := conf.DemoRepo.Functions["user-mgmt"]
 		if demoRep.ObjID == "" || fname == "" {
-			return GateErrM(swy.GateGenErr, "AaaS configuration error")
+			return GateErrM(swyapi.GateGenErr, "AaaS configuration error")
 		}
 
 		dd := getDeployDesc(ctxSwoId(ctx, project, aa.Name))
@@ -1122,7 +1107,7 @@ func getReqContext(w http.ResponseWriter, r *http.Request) (context.Context, fun
 		return nil, nil
 	}
 
-	td, code := swyks.KeystoneGetTokenData(conf.Keystone.Addr, token)
+	td, code := xkst.KeystoneGetTokenData(conf.Keystone.Addr, token)
 	if code != 0 {
 		http.Error(w, "Keystone authentication error", code)
 		return nil, nil
@@ -1138,10 +1123,10 @@ func getReqContext(w http.ResponseWriter, r *http.Request) (context.Context, fun
 	admin := false
 	user := false
 	for _, role := range td.Roles {
-		if role.Name == swyks.SwyAdminRole {
+		if role.Name == xkst.SwyAdminRole {
 			admin = true
 		}
-		if role.Name == swyks.SwyUserRole {
+		if role.Name == xkst.SwyUserRole {
 			user = true
 		}
 	}
@@ -1166,7 +1151,7 @@ type gateGenReq func(ctx context.Context, w http.ResponseWriter, r *http.Request
 
 func genReqHandler(cb gateGenReq) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if swyhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) {
+		if xhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) {
 			return
 		}
 
@@ -1189,22 +1174,22 @@ func genReqHandler(cb gateGenReq) http.Handler {
 }
 
 func setupMwareAddr(conf *YAMLConf) {
-	conf.Mware.Maria.c = swy.ParseXCreds(conf.Mware.Maria.Creds)
+	conf.Mware.Maria.c = xh.ParseXCreds(conf.Mware.Maria.Creds)
 	conf.Mware.Maria.c.Resolve()
 
-	conf.Mware.Rabbit.c = swy.ParseXCreds(conf.Mware.Rabbit.Creds)
+	conf.Mware.Rabbit.c = xh.ParseXCreds(conf.Mware.Rabbit.Creds)
 	conf.Mware.Rabbit.c.Resolve()
 
-	conf.Mware.Mongo.c = swy.ParseXCreds(conf.Mware.Mongo.Creds)
+	conf.Mware.Mongo.c = xh.ParseXCreds(conf.Mware.Mongo.Creds)
 	conf.Mware.Mongo.c.Resolve()
 
-	conf.Mware.Postgres.c = swy.ParseXCreds(conf.Mware.Postgres.Creds)
+	conf.Mware.Postgres.c = xh.ParseXCreds(conf.Mware.Postgres.Creds)
 	conf.Mware.Postgres.c.Resolve()
 
-	conf.Mware.S3.c = swy.ParseXCreds(conf.Mware.S3.Creds)
+	conf.Mware.S3.c = xh.ParseXCreds(conf.Mware.S3.Creds)
 	conf.Mware.S3.c.Resolve()
 
-	conf.Mware.S3.cn = swy.ParseXCreds(conf.Mware.S3.Notify)
+	conf.Mware.S3.cn = xh.ParseXCreds(conf.Mware.S3.Notify)
 	conf.Mware.S3.cn.Resolve()
 }
 
@@ -1262,7 +1247,7 @@ func main() {
 	}
 
 	if _, err := os.Stat(config_path); err == nil {
-		err := swy.ReadYamlConfig(config_path, &conf)
+		err := xh.ReadYamlConfig(config_path, &conf)
 		if err != nil {
 			fmt.Printf("Bad config: %s\n", err.Error())
 			return
@@ -1283,7 +1268,7 @@ func main() {
 		return
 	}
 
-	gateSecrets, err = swysec.ReadSecrets("gate")
+	gateSecrets, err = xsecret.ReadSecrets("gate")
 	if err != nil {
 		glog.Errorf("Can't read gate secrets: %s", err.Error())
 		return
@@ -1416,7 +1401,7 @@ func main() {
 
 	done(ctx)
 
-	err = swyhttp.ListenAndServe(
+	err = xhttp.ListenAndServe(
 		&http.Server{
 			Handler:      r,
 			Addr:         conf.Daemon.Addr,

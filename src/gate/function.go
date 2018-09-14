@@ -11,10 +11,21 @@ import (
 	"gopkg.in/mgo.v2/bson"
 
 	"../apis"
-	"../common"
 	"../common/xratelimit"
 	"../common/xwait"
 	"../common/xrest"
+)
+
+const (
+	DBFuncStateIni	int = 1		// Initializing for add -> Bld/Str
+	DBFuncStateStr	int = 2		// Starting -> Rdy
+	DBFuncStateRdy	int = 3		// Ready
+
+	DBFuncStateTrm	int = 6		// Terminating
+	DBFuncStateStl	int = 7		// Stalled
+	DBFuncStateDea	int = 8		// Deactivated
+
+	DBFuncStateNo	int = -1	// Doesn't exists :)
 )
 
 /*
@@ -49,13 +60,13 @@ import (
  *
  */
 var fnStates = map[int]string {
-	swy.DBFuncStateIni: "initializing",
-	swy.DBFuncStateStr: "starting",
-	swy.DBFuncStateRdy: "ready",
-	swy.DBFuncStateDea: "deactivated",
-	swy.DBFuncStateTrm: "terminating",
-	swy.DBFuncStateStl: "stalled",
-	swy.DBFuncStateNo:  "dead",
+	DBFuncStateIni: "initializing",
+	DBFuncStateStr: "starting",
+	DBFuncStateRdy: "ready",
+	DBFuncStateDea: "deactivated",
+	DBFuncStateTrm: "terminating",
+	DBFuncStateStl: "stalled",
+	DBFuncStateNo:  "dead",
 }
 
 type FnCodeDesc struct {
@@ -190,10 +201,10 @@ func (_ Functions)Iterate(ctx context.Context, q url.Values, cb func(context.Con
 func (_ Functions)Create(ctx context.Context, p interface{}) (xrest.Obj, *xrest.ReqErr) {
 	params := p.(*swyapi.FunctionAdd)
 	if params.Name == "" {
-		return nil, GateErrM(swy.GateBadRequest, "No function name")
+		return nil, GateErrM(swyapi.GateBadRequest, "No function name")
 	}
 	if params.Code.Lang == "" {
-		return nil, GateErrM(swy.GateBadRequest, "No language specified")
+		return nil, GateErrM(swyapi.GateBadRequest, "No language specified")
 	}
 
 	id := ctxSwoId(ctx, params.Project, params.Name)
@@ -205,7 +216,7 @@ func (fn *FunctionDesc)Info(ctx context.Context, q url.Values, details bool) (in
 	if q != nil {
 		periods = reqPeriods(q)
 		if periods < 0 {
-			return nil, GateErrC(swy.GateBadRequest)
+			return nil, GateErrC(swyapi.GateBadRequest)
 		}
 	}
 
@@ -218,7 +229,7 @@ func (fn *FunctionDesc)Upd(ctx context.Context, upd interface{}) *xrest.ReqErr {
 	if fu.UserData != nil {
 		err := fn.setUserData(ctx, *fu.UserData)
 		if err != nil {
-			return GateErrE(swy.GateGenErr, err)
+			return GateErrE(swyapi.GateGenErr, err)
 		}
 	}
 
@@ -280,16 +291,16 @@ func (fn *FunctionDesc)toInfo(ctx context.Context, details bool, periods int) (*
 func getFunctionDesc(id *SwoId, p_add *swyapi.FunctionAdd) (*FunctionDesc, *xrest.ReqErr) {
 	err := fnFixSize(&p_add.Size)
 	if err != nil {
-		return nil, GateErrE(swy.GateBadRequest, err)
+		return nil, GateErrE(swyapi.GateBadRequest, err)
 	}
 
 	if !rtLangEnabled(p_add.Code.Lang) {
-		return nil, GateErrM(swy.GateBadRequest, "Unsupported language")
+		return nil, GateErrM(swyapi.GateBadRequest, "Unsupported language")
 	}
 
 	for _, env := range(p_add.Code.Env) {
 		if strings.HasPrefix(env, "SWD_") {
-			return nil, GateErrM(swy.GateBadRequest, "Environment var cannot start with SWD_")
+			return nil, GateErrM(swyapi.GateBadRequest, "Environment var cannot start with SWD_")
 		}
 	}
 
@@ -344,7 +355,7 @@ func (fn *FunctionDesc)Add(ctx context.Context, p interface{}) *xrest.ReqErr {
 	ctxlog(ctx).Debugf("function/add %s (cookie %s)", fn.SwoId.Str(), fn.Cookie[:32])
 
 	fn.ObjID = bson.NewObjectId()
-	fn.State = swy.DBFuncStateIni
+	fn.State = DBFuncStateIni
 	err = dbInsert(ctx, fn)
 	if err != nil {
 		ctxlog(ctx).Errorf("Can't add function %s: %s", fn.SwoId.Str(), err.Error())
@@ -363,7 +374,7 @@ func (fn *FunctionDesc)Add(ctx context.Context, p interface{}) *xrest.ReqErr {
 		goto out_clean_func
 	}
 
-	fn.State = swy.DBFuncStateStr
+	fn.State = DBFuncStateStr
 
 	err = dbUpdatePart(ctx, fn, bson.M{
 			"src": &fn.Src, "state": fn.State,
@@ -393,7 +404,7 @@ func (fn *FunctionDesc)Add(ctx context.Context, p interface{}) *xrest.ReqErr {
 			return
 
 		bstalled:
-			fn.ToState(ctx, swy.DBFuncStateStl, -1)
+			fn.ToState(ctx, DBFuncStateStl, -1)
 		}()
 	} else {
 		err = swk8sRun(ctx, &conf, fn)
@@ -418,10 +429,10 @@ out_clean_func:
 
 	gateFunctions.Dec()
 out:
-	return GateErrE(swy.GateGenErr, err)
+	return GateErrE(swyapi.GateGenErr, err)
 
 stalled:
-	fn.ToState(ctx, swy.DBFuncStateStl, -1)
+	fn.ToState(ctx, DBFuncStateStl, -1)
 	goto out
 }
 
@@ -461,7 +472,7 @@ func (fn *FunctionDesc)setAuthCtx(ctx context.Context, ac string) *xrest.ReqErr 
 	if ac != "" {
 		nac, err = authCtxGet(ctx, fn.SwoId, ac)
 		if err != nil {
-			return GateErrE(swy.GateGenErr, err)
+			return GateErrE(swyapi.GateGenErr, err)
 		}
 	}
 
@@ -498,7 +509,7 @@ func (fn *FunctionDesc)setSize(ctx context.Context, sz *swyapi.FunctionSize) *xr
 
 	err := fnFixSize(sz)
 	if err != nil {
-		return GateErrE(swy.GateGenErr, err)
+		return GateErrE(swyapi.GateGenErr, err)
 	}
 
 	if fn.Size.Tmo != sz.Timeout {
@@ -562,7 +573,7 @@ func (fn *FunctionDesc)setSize(ctx context.Context, sz *swyapi.FunctionSize) *xr
 		;
 	}
 
-	if restart && fn.State == swy.DBFuncStateRdy {
+	if restart && fn.State == DBFuncStateRdy {
 		swk8sUpdate(ctx, &conf, fn)
 	}
 
@@ -581,7 +592,7 @@ func (fn *FunctionDesc)addMware(ctx context.Context, mw *MwareDesc) error {
 	}
 
 	fn.Mware = append(fn.Mware, mw.SwoId.Name)
-	if fn.State == swy.DBFuncStateRdy {
+	if fn.State == DBFuncStateRdy {
 		swk8sUpdate(ctx, &conf, fn)
 	}
 	return nil
@@ -606,7 +617,7 @@ func (fn *FunctionDesc)delMware(ctx context.Context, mw *MwareDesc) error {
 	}
 
 	fn.Mware = append(fn.Mware[:found], fn.Mware[found+1:]...)
-	if fn.State == swy.DBFuncStateRdy {
+	if fn.State == DBFuncStateRdy {
 		swk8sUpdate(ctx, &conf, fn)
 	}
 	return nil
@@ -640,14 +651,14 @@ func (fn *FunctionDesc)addAccount(ctx context.Context, ad *AccDesc) *xrest.ReqEr
 				bson.M{"$push": bson.M{"accounts":aid}})
 	if err != nil {
 		if dbNF(err) {
-			return GateErrM(swy.GateBadRequest, "Account already attached")
+			return GateErrM(swyapi.GateBadRequest, "Account already attached")
 		} else {
 			return GateErrD(err)
 		}
 	}
 
 	fn.Accounts = append(fn.Accounts, aid)
-	if fn.State == swy.DBFuncStateRdy {
+	if fn.State == DBFuncStateRdy {
 		swk8sUpdate(ctx, &conf, fn)
 	}
 	return nil
@@ -658,7 +669,7 @@ func (fn *FunctionDesc)delAccountId(ctx context.Context, aid string) *xrest.ReqE
 				bson.M{"$pull": bson.M{"accounts": aid}})
 	if err != nil {
 		if dbNF(err) {
-			return GateErrM(swy.GateBadRequest, "Account not attached")
+			return GateErrM(swyapi.GateBadRequest, "Account not attached")
 		} else {
 			return GateErrD(err)
 		}
@@ -670,7 +681,7 @@ func (fn *FunctionDesc)delAccountId(ctx context.Context, aid string) *xrest.ReqE
 			break
 		}
 	}
-	if fn.State == swy.DBFuncStateRdy {
+	if fn.State == DBFuncStateRdy {
 		swk8sUpdate(ctx, &conf, fn)
 	}
 	return nil
@@ -707,7 +718,7 @@ func (fn *FunctionDesc)addS3Bucket(ctx context.Context, b string) error {
 	}
 
 	fn.S3Buckets = append(fn.S3Buckets, b)
-	if fn.State == swy.DBFuncStateRdy {
+	if fn.State == DBFuncStateRdy {
 		swk8sUpdate(ctx, &conf, fn)
 	}
 	return nil
@@ -732,7 +743,7 @@ func (fn *FunctionDesc)delS3Bucket(ctx context.Context, bn string) error {
 	}
 
 	fn.S3Buckets = append(fn.S3Buckets[:found], fn.S3Buckets[found+1:]...)
-	if fn.State == swy.DBFuncStateRdy {
+	if fn.State == DBFuncStateRdy {
 		swk8sUpdate(ctx, &conf, fn)
 	}
 	return nil
@@ -741,7 +752,7 @@ func (fn *FunctionDesc)delS3Bucket(ctx context.Context, bn string) error {
 func (fn *FunctionDesc)getSources(ctx context.Context) (*swyapi.FunctionSources, *xrest.ReqErr) {
 	fnCode, err := getSources(ctx, fn)
 	if err != nil {
-		return nil, GateErrC(swy.GateFsError)
+		return nil, GateErrC(swyapi.GateFsError)
 	}
 
 	fs := &swyapi.FunctionSources {
@@ -765,25 +776,25 @@ func (fn *FunctionDesc)updateSources(ctx context.Context, src *swyapi.FunctionSo
 	olds := fn.State
 	oldver := fn.Src.Version
 
-	if olds != swy.DBFuncStateRdy && olds != swy.DBFuncStateStl {
-		return GateErrM(swy.GateGenErr, "Function should be running or stalled")
+	if olds != DBFuncStateRdy && olds != DBFuncStateStl {
+		return GateErrM(swyapi.GateGenErr, "Function should be running or stalled")
 	}
 
 	ctxlog(ctx).Debugf("Will update sources for %s", fn.SwoId.Str())
 	err = updateSources(ctx, fn, src)
 	if err != nil {
-		return GateErrE(swy.GateGenErr, err)
+		return GateErrE(swyapi.GateGenErr, err)
 	}
 
 	ctxlog(ctx).Debugf("Try build sources")
 	err = tryBuildFunction(ctx, fn, "")
 	if err != nil {
-		return GateErrE(swy.GateGenErr, err)
+		return GateErrE(swyapi.GateGenErr, err)
 	}
 
 	update["src"] = &fn.Src
-	if olds == swy.DBFuncStateStl {
-		fn.State = swy.DBFuncStateStr
+	if olds == DBFuncStateStl {
+		fn.State = DBFuncStateStr
 		update["state"] = fn.State
 	}
 
@@ -793,15 +804,15 @@ func (fn *FunctionDesc)updateSources(ctx context.Context, src *swyapi.FunctionSo
 		return GateErrD(err)
 	}
 
-	if olds == swy.DBFuncStateRdy {
+	if olds == DBFuncStateRdy {
 		ctxlog(ctx).Debugf("Updating deploy")
 		swk8sUpdate(ctx, &conf, fn)
 	} else {
 		ctxlog(ctx).Debugf("Starting deploy")
 		err = swk8sRun(ctx, &conf, fn)
 		if err != nil {
-			fn.ToState(ctx, swy.DBFuncStateStl, -1)
-			return GateErrE(swy.GateGenErr, err)
+			fn.ToState(ctx, DBFuncStateStl, -1)
+			return GateErrE(swyapi.GateGenErr, err)
 		}
 	}
 
@@ -826,25 +837,25 @@ func (fn *FunctionDesc)Del(ctx context.Context) *xrest.ReqErr {
 	var dea bool
 
 	switch fn.State {
-	case swy.DBFuncStateDea:
+	case DBFuncStateDea:
 		dea = true
-	case swy.DBFuncStateStr:
-	case swy.DBFuncStateRdy:
-	case swy.DBFuncStateStl:
-	case swy.DBFuncStateTrm:
+	case DBFuncStateStr:
+	case DBFuncStateRdy:
+	case DBFuncStateStl:
+	case DBFuncStateTrm:
 		;
 	default:
 		ctxlog(ctx).Errorf("Can't terminate %s function %s", fnStates[fn.State], fn.SwoId.Str())
-		return GateErrM(swy.GateGenErr, "Cannot terminate fn")
+		return GateErrM(swyapi.GateGenErr, "Cannot terminate fn")
 	}
 
 	ctxlog(ctx).Debugf("Forget function %s", fn.SwoId.Str())
 	// Allow to remove function if only we're in known state,
 	// otherwise wait for function building to complete
-	err = fn.ToState(ctx, swy.DBFuncStateTrm, fn.State)
+	err = fn.ToState(ctx, DBFuncStateTrm, fn.State)
 	if err != nil {
 		ctxlog(ctx).Errorf("Can't terminate function %s: %s", fn.SwoId.Str(), err.Error())
-		return GateErrM(swy.GateGenErr, "Cannot terminate fn")
+		return GateErrM(swyapi.GateGenErr, "Cannot terminate fn")
 	}
 
 	if !fn.isOneShot() && !dea {
@@ -895,7 +906,7 @@ func (fn *FunctionDesc)Del(ctx context.Context) *xrest.ReqErr {
 	return nil
 
 later:
-	return GateErrE(swy.GateGenErr, err)
+	return GateErrE(swyapi.GateGenErr, err)
 }
 
 func waitFunctionVersion(ctx context.Context, fn *FunctionDesc, version string, tmo time.Duration) (error, bool) {
@@ -945,8 +956,8 @@ func notifyPodUp(ctx context.Context, pod *k8sPod) {
 		goto out
 	}
 
-	if fn.State != swy.DBFuncStateRdy {
-		fn.ToState(ctx, swy.DBFuncStateRdy, -1)
+	if fn.State != DBFuncStateRdy {
+		fn.ToState(ctx, DBFuncStateRdy, -1)
 		if fn.isOneShot() {
 			runFunctionOnce(ctx, &fn)
 		}
@@ -961,20 +972,20 @@ out:
 func deactivateFunction(ctx context.Context, fn *FunctionDesc) *xrest.ReqErr {
 	var err error
 
-	if fn.State != swy.DBFuncStateRdy {
-		return GateErrM(swy.GateGenErr, "Function is not ready")
+	if fn.State != DBFuncStateRdy {
+		return GateErrM(swyapi.GateGenErr, "Function is not ready")
 	}
 
-	err = fn.ToState(ctx, swy.DBFuncStateDea, fn.State)
+	err = fn.ToState(ctx, DBFuncStateDea, fn.State)
 	if err != nil {
-		return GateErrM(swy.GateGenErr, "Cannot deactivate function")
+		return GateErrM(swyapi.GateGenErr, "Cannot deactivate function")
 	}
 
 	err = swk8sRemove(ctx, &conf, fn)
 	if err != nil {
 		ctxlog(ctx).Errorf("Can't remove deployment: %s", err.Error())
-		fn.ToState(ctx, swy.DBFuncStateRdy, -1)
-		return GateErrM(swy.GateGenErr, "Cannot deactivate function")
+		fn.ToState(ctx, DBFuncStateRdy, -1)
+		return GateErrM(swyapi.GateGenErr, "Cannot deactivate function")
 	}
 
 	return nil
@@ -983,20 +994,20 @@ func deactivateFunction(ctx context.Context, fn *FunctionDesc) *xrest.ReqErr {
 func activateFunction(ctx context.Context, fn *FunctionDesc) *xrest.ReqErr {
 	var err error
 
-	if fn.State != swy.DBFuncStateDea {
-		return GateErrM(swy.GateGenErr, "Function is not deactivated")
+	if fn.State != DBFuncStateDea {
+		return GateErrM(swyapi.GateGenErr, "Function is not deactivated")
 	}
 
-	err = fn.ToState(ctx, swy.DBFuncStateStr, swy.DBFuncStateDea)
+	err = fn.ToState(ctx, DBFuncStateStr, DBFuncStateDea)
 	if err != nil {
-		return GateErrM(swy.GateGenErr, "Cannot activate function")
+		return GateErrM(swyapi.GateGenErr, "Cannot activate function")
 	}
 
 	err = swk8sRun(ctx, &conf, fn)
 	if err != nil {
-		fn.ToState(ctx, swy.DBFuncStateDea, -1)
+		fn.ToState(ctx, DBFuncStateDea, -1)
 		ctxlog(ctx).Errorf("Can't start deployment: %s", err.Error())
-		return GateErrM(swy.GateGenErr, "Cannot activate FN")
+		return GateErrM(swyapi.GateGenErr, "Cannot activate FN")
 	}
 
 	return nil
@@ -1004,13 +1015,13 @@ func activateFunction(ctx context.Context, fn *FunctionDesc) *xrest.ReqErr {
 
 func (fn *FunctionDesc)setState(ctx context.Context, st string) *xrest.ReqErr {
 	switch st {
-	case fnStates[swy.DBFuncStateDea]:
+	case fnStates[DBFuncStateDea]:
 		return deactivateFunction(ctx, fn)
-	case fnStates[swy.DBFuncStateRdy]:
+	case fnStates[DBFuncStateRdy]:
 		return activateFunction(ctx, fn)
 	}
 
-	return GateErrM(swy.GateNotAvail, "Cannot set this state")
+	return GateErrM(swyapi.GateNotAvail, "Cannot set this state")
 }
 
 type FnEnvProp struct { }
@@ -1024,7 +1035,7 @@ func (_ *FnEnvProp)Upd(ctx context.Context, o xrest.Obj, p interface{}) *xrest.R
 	fn := o.(*FunctionDesc)
 	err := fn.setEnv(ctx, *p.(*[]string))
 	if err != nil {
-		return GateErrE(swy.GateGenErr, err)
+		return GateErrE(swyapi.GateGenErr, err)
 	}
 
 	return nil
@@ -1071,7 +1082,7 @@ type FnStatsProp struct { }
 func (_ *FnStatsProp)Info(ctx context.Context, o xrest.Obj, q url.Values) (interface{}, *xrest.ReqErr) {
 	periods := reqPeriods(q)
 	if periods < 0 {
-		return nil, GateErrC(swy.GateBadRequest)
+		return nil, GateErrC(swyapi.GateBadRequest)
 	}
 
 	stats, cerr := o.(*FunctionDesc).getStats(ctx, periods)
@@ -1083,7 +1094,7 @@ func (_ *FnStatsProp)Info(ctx context.Context, o xrest.Obj, q url.Values) (inter
 }
 
 func (_ *FnStatsProp)Upd(ctx context.Context, o xrest.Obj, p interface{}) *xrest.ReqErr {
-	return GateErrC(swy.GateNotAvail)
+	return GateErrC(swyapi.GateNotAvail)
 }
 
 type FnLogsProp struct { }
@@ -1096,7 +1107,7 @@ func getSince(q url.Values) (*time.Time, *xrest.ReqErr) {
 
 	d, err := time.ParseDuration(s)
 	if err != nil {
-		return nil, GateErrE(swy.GateBadRequest, err)
+		return nil, GateErrE(swyapi.GateBadRequest, err)
 	}
 
 	t := time.Now().Add(-d)
@@ -1128,5 +1139,5 @@ func (_ *FnLogsProp)Info(ctx context.Context, o xrest.Obj, q url.Values) (interf
 }
 
 func (_ *FnLogsProp)Upd(ctx context.Context, o xrest.Obj, p interface{}) *xrest.ReqErr {
-	return GateErrC(swy.GateNotAvail)
+	return GateErrC(swyapi.GateNotAvail)
 }

@@ -49,5 +49,5 @@ import (
 
 // Object part key in backend and index in DB for lookup
 func (upload *S3Upload)UCookie(oname string, part int) string {
-	return swy.Sha256sum([]byte(upload.UploadID + oname + strconv.Itoa(part)))
+	return xh.Sha256sum([]byte(upload.UploadID + oname + strconv.Itoa(part)))
 }

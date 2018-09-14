@@ -118,75 +118,6 @@ func putSourceFile(ctx context.Context, fn *FunctionDesc, src *swyapi.FunctionSo
 	return srch.put(ctx, src, fn.srcPath(""), rtScriptName(&fn.Code, suff))
 }
 
-func bgClone(rd *RepoDesc, ac *AccDesc, rh *repoHandler) {
-	ctx, done := mkContext("::gitclone")
-	defer done(ctx)
-
-	commit, err := rh.clone(ctx, rd, ac)
-	if err != nil {
-		/* FIXME -- keep logs and show them user */
-		dbUpdatePart(ctx, rd, bson.M{ "state": swy.DBRepoStateStl })
-		return
-	}
-
-	t := time.Now()
-	dbUpdatePart(ctx, rd, bson.M{
-					"state": swy.DBRepoStateRdy,
-					"commit": commit,
-					"last_pull": &t,
-				})
-}
-
-func cloneGit(ctx context.Context, rd *RepoDesc, ac *AccDesc) (string, error) {
-	var stdout bytes.Buffer
-	var stderr bytes.Buffer
-
-	clone_to := rd.clonePath()
-
-	_, err := os.Stat(clone_to)
-	if err == nil || !os.IsNotExist(err) {
-		ctxlog(ctx).Errorf("repo for %s is already there", rd.SwoId.Str())
-		return "", fmt.Errorf("can't clone repo")
-	}
-
-	if os.MkdirAll(clone_to, 0777) != nil {
-		ctxlog(ctx).Errorf("can't create %s: %s", clone_to, err.Error())
-		return "", err
-	}
-
-	curl := rd.URL()
-
-	if ac != nil {
-		if ac.Type != "github" {
-			return "", errors.New("Corrupted acc type")
-		}
-
-		t, err := ac.Secrets["token"].value()
-		if err != nil {
-			return "", err
-		}
-
-		if t != "" && strings.HasPrefix(curl, "https://") {
-			curl = "https://" + ac.SwoId.Name + ":" + t + "@" + curl[8:]
-		}
-	}
-
-	ctxlog(ctx).Debugf("Git clone %s -> %s", curl, clone_to)
-
-	cmd := exec.Command("git", "-C", clone_to, "clone", "--depth=1", curl, ".")
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-	err = cmd.Run()
-	if err != nil {
-		ctxlog(ctx).Errorf("can't clone %s -> %s: %s (%s:%s)",
-				rd.URL(), clone_to, err.Error(),
-				stdout.String(), stderr.String())
-		return "", err
-	}
-
-	return gitCommit(clone_to)
-}
-
 func writeSourceFile(ctx context.Context, to, script string, data []byte) error {
 	err := os.MkdirAll(to, 0750)
 	if err != nil {
@@ -242,7 +173,7 @@ func putFileFromReq(ctx context.Context, src *swyapi.FunctionSources, to, script
 }
 
 func GCOldSources(ctx context.Context, fn *FunctionDesc, ver string) {
-	np, err := swy.DropDirPrep(conf.Wdog.Volume, fn.srcDir(ver))
+	np, err := xh.DropDirPrep(conf.Wdog.Volume, fn.srcDir(ver))
 	if err != nil {
 		ctxlog(ctx).Errorf("Leaking %s sources till FN removal (err %s)", ver, err.Error())
 		return
@@ -277,7 +208,7 @@ func GCOldSources(ctx context.Context, fn *FunctionDesc, ver string) {
 
 			if !found {
 				ctxlog(ctx).Debugf("Dropping %s.%s sources", cookie, ver)
-				swy.DropDirComplete(np)
+				xh.DropDirComplete(np)
 				break
 			}
 
@@ -294,7 +225,7 @@ func GCOldSources(ctx context.Context, fn *FunctionDesc, ver string) {
 func removeSources(ctx context.Context, fn *FunctionDesc) error {
 	sd := fn.srcRoot()
 
-	td, err := swy.DropDir(conf.Home + "/" + CloneDir, sd)
+	td, err := xh.DropDir(conf.Home + "/" + CloneDir, sd)
 	if err != nil {
 		return err
 	}
@@ -303,7 +234,7 @@ func removeSources(ctx context.Context, fn *FunctionDesc) error {
 		ctxlog(ctx).Debugf("Will remove %s repo clone via %s", fn.SwoId.Str(), td)
 	}
 
-	td, err = swy.DropDir(conf.Wdog.Volume, sd)
+	td, err = xh.DropDir(conf.Wdog.Volume, sd)
 	if err != nil {
 		return err
 	}

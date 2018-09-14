@@ -10,7 +10,6 @@ import (
 	"io/ioutil"
 
 	"../apis"
-	"../common"
 	"../common/http"
 )
 
@@ -98,8 +97,8 @@ func talkHTTP(addr, port, url string, args *swyapi.SwdFunctionRun) (*swyapi.SwdF
 	var res swyapi.SwdFunctionRunResult
 	var err error
 
-	resp, err = swyhttp.MarshalAndPost(
-			&swyhttp.RestReq{
+	resp, err = xhttp.MarshalAndPost(
+			&xhttp.RestReq{
 				Address: "http://" + addr + ":" + port + "/v1/run/" + url,
 				Timeout: uint(conf.Runtime.Timeout.Max),
 			}, args)
@@ -112,7 +111,7 @@ func talkHTTP(addr, port, url string, args *swyapi.SwdFunctionRun) (*swyapi.SwdF
 		return nil, err
 	}
 
-	err = swyhttp.ReadAndUnmarshalResp(resp, &res)
+	err = xhttp.ReadAndUnmarshalResp(resp, &res)
 	if err != nil {
 		return nil, err
 	}
@@ -165,5 +164,5 @@ func runFunctionOnce(ctx context.Context, fn *FunctionDesc) {
 	ctxlog(ctx).Debugf("oneshor %s finished", fn.SwoId.Str())
 
 	swk8sRemove(ctx, &conf, fn)
-	fn.ToState(ctx, swy.DBFuncStateStl, -1)
+	fn.ToState(ctx, DBFuncStateStl, -1)
 }

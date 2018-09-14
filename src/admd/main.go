@@ -25,7 +25,7 @@ var admdSecrets map[string]string
 
 type YAMLConfDaemon struct {
 	Address		string			`yaml:"address"`
-	HTTPS		*swyhttp.YAMLConfHTTPS	`yaml:"https,omitempty"`
+	HTTPS		*xhttp.YAMLConfHTTPS	`yaml:"https,omitempty"`
 }
 
 type YAMLConf struct {
@@ -33,7 +33,7 @@ type YAMLConf struct {
 	Gate		string			`yaml:"gate"`
 	Keystone	string			`yaml:"keystone"`
 	DB		string			`yaml:"db"`
-	kc		*swy.XCreds
+	kc		*xh.XCreds
 }
 
 var conf YAMLConf
@@ -61,16 +61,16 @@ func handleUserLogin(w http.ResponseWriter, r *http.Request) {
 	var resp = http.StatusBadRequest
 	var td swyapi.UserToken
 
-	if swyhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
+	if xhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
 
-	err := swyhttp.ReadAndUnmarshalReq(r, &params)
+	err := xhttp.ReadAndUnmarshalReq(r, &params)
 	if err != nil {
 		goto out
 	}
 
 	log.Debugf("Try to login user %s", params.UserName)
 
-	token, td.Expires, err = swyks.KeystoneAuthWithPass(conf.kc.Addr(), conf.kc.Domn, &params)
+	token, td.Expires, err = xkst.KeystoneAuthWithPass(conf.kc.Addr(), conf.kc.Domn, &params)
 	if err != nil {
 		resp = http.StatusUnauthorized
 		goto out
@@ -80,7 +80,7 @@ func handleUserLogin(w http.ResponseWriter, r *http.Request) {
 	log.Debugf("Login passed, token %s (exp %s)", token[:16], td.Expires)
 
 	w.Header().Set("X-Subject-Token", token)
-	err = swyhttp.MarshalAndWrite(w, &td)
+	err = xhttp.MarshalAndWrite(w, &td)
 	if err != nil {
 		resp = http.StatusInternalServerError
 		goto out
@@ -92,13 +92,13 @@ out:
 	http.Error(w, err.Error(), resp)
 }
 
-func handleAdmdReq(r *http.Request) (*swyks.KeystoneTokenData, int, error) {
+func handleAdmdReq(r *http.Request) (*xkst.KeystoneTokenData, int, error) {
 	token := r.Header.Get("X-Auth-Token")
 	if token == "" {
 		return nil, http.StatusUnauthorized, fmt.Errorf("Auth token not provided")
 	}
 
-	td, code := swyks.KeystoneGetTokenData(conf.kc.Addr(), token)
+	td, code := xkst.KeystoneGetTokenData(conf.kc.Addr(), token)
 	if code != 0 {
 		return nil, code, fmt.Errorf("Keystone auth error")
 	}
@@ -107,7 +107,7 @@ func handleAdmdReq(r *http.Request) (*swyks.KeystoneTokenData, int, error) {
 }
 
 func handleUser(w http.ResponseWriter, r *http.Request) {
-	if swyhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
+	if xhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
 
 	td, code, err := handleAdmdReq(r)
 	if err != nil {
@@ -127,7 +127,7 @@ func handleUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func handlePlan(w http.ResponseWriter, r *http.Request) {
-	if swyhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
+	if xhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
 
 	td, code, err := handleAdmdReq(r)
 	if err != nil {
@@ -150,7 +150,7 @@ func handlePlan(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func handleUserUpdate(w http.ResponseWriter, r *http.Request, uid string, td *swyks.KeystoneTokenData) {
+func handleUserUpdate(w http.ResponseWriter, r *http.Request, uid string, td *xkst.KeystoneTokenData) {
 	var params swyapi.ModUser
 	var rui *swyapi.UserInfo
 	var err error
@@ -159,18 +159,18 @@ func handleUserUpdate(w http.ResponseWriter, r *http.Request, uid string, td *sw
 	if uid == "me" {
 		uid = td.User.Id
 	} else if uid == td.User.Id {
-		if !swyks.KeystoneRoleHas(td, swyks.SwyAdminRole) &&
-				!swyks.KeystoneRoleHas(td, swyks.SwyUserRole) {
+		if !xkst.KeystoneRoleHas(td, xkst.SwyAdminRole) &&
+				!xkst.KeystoneRoleHas(td, xkst.SwyUserRole) {
 			goto out
 		}
 	} else {
-		if !swyks.KeystoneRoleHas(td, swyks.SwyAdminRole) {
+		if !xkst.KeystoneRoleHas(td, xkst.SwyAdminRole) {
 			goto out
 		}
 	}
 
 	code = http.StatusBadRequest
-	err = swyhttp.ReadAndUnmarshalReq(r, &params)
+	err = xhttp.ReadAndUnmarshalReq(r, &params)
 	if err != nil {
 		goto out
 	}
@@ -190,7 +190,7 @@ func handleUserUpdate(w http.ResponseWriter, r *http.Request, uid string, td *sw
 		rui.Enabled = *params.Enabled
 	}
 
-	err = swyhttp.MarshalAndWrite(w, rui)
+	err = xhttp.MarshalAndWrite(w, rui)
 	if err != nil {
 		goto out
 	}
@@ -201,7 +201,7 @@ out:
 	http.Error(w, err.Error(), code)
 }
 
-func handleUserInfo(w http.ResponseWriter, r *http.Request, uid string, td *swyks.KeystoneTokenData) {
+func handleUserInfo(w http.ResponseWriter, r *http.Request, uid string, td *xkst.KeystoneTokenData) {
 	var rui *swyapi.UserInfo
 	var err error
 
@@ -209,12 +209,12 @@ func handleUserInfo(w http.ResponseWriter, r *http.Request, uid string, td *swyk
 	if uid == "me" {
 		uid = td.User.Id
 	} else if uid == td.User.Id {
-		if !swyks.KeystoneRoleHas(td, swyks.SwyAdminRole) &&
-				!swyks.KeystoneRoleHas(td, swyks.SwyUserRole) {
+		if !xkst.KeystoneRoleHas(td, xkst.SwyAdminRole) &&
+				!xkst.KeystoneRoleHas(td, xkst.SwyUserRole) {
 			goto out
 		}
 	} else {
-		if !swyks.KeystoneRoleHas(td, swyks.SwyAdminRole) {
+		if !xkst.KeystoneRoleHas(td, xkst.SwyAdminRole) {
 			goto out
 		}
 	}
@@ -226,7 +226,7 @@ func handleUserInfo(w http.ResponseWriter, r *http.Request, uid string, td *swyk
 		goto out
 	}
 
-	err = swyhttp.MarshalAndWrite(w, rui)
+	err = xhttp.MarshalAndWrite(w, rui)
 	if err != nil {
 		goto out
 	}
@@ -237,7 +237,7 @@ out:
 	http.Error(w, err.Error(), code)
 }
 
-func handlePlanInfo(w http.ResponseWriter, r *http.Request, pid bson.ObjectId, td *swyks.KeystoneTokenData) {
+func handlePlanInfo(w http.ResponseWriter, r *http.Request, pid bson.ObjectId, td *xkst.KeystoneTokenData) {
 	var pl *PlanLimits
 	var err error
 
@@ -250,7 +250,7 @@ func handlePlanInfo(w http.ResponseWriter, r *http.Request, pid bson.ObjectId, t
 		goto out
 	}
 
-	err = swyhttp.MarshalAndWrite(w, pl.toInfo())
+	err = xhttp.MarshalAndWrite(w, pl.toInfo())
 	if err != nil {
 		goto out
 	}
@@ -262,7 +262,7 @@ out:
 }
 
 func handleUsers(w http.ResponseWriter, r *http.Request) {
-	if swyhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
+	if xhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
 
 	td, code, err := handleAdmdReq(r)
 	if err != nil {
@@ -279,7 +279,7 @@ func handleUsers(w http.ResponseWriter, r *http.Request) {
 }
 
 func handlePlans(w http.ResponseWriter, r *http.Request) {
-	if swyhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
+	if xhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
 
 	td, code, err := handleAdmdReq(r)
 	if err != nil {
@@ -295,17 +295,17 @@ func handlePlans(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func handleListUsers(w http.ResponseWriter, r *http.Request, td *swyks.KeystoneTokenData) {
+func handleListUsers(w http.ResponseWriter, r *http.Request, td *xkst.KeystoneTokenData) {
 	var result []*swyapi.UserInfo
 	var err error
 
 	code := http.StatusInternalServerError
-	if swyks.KeystoneRoleHas(td, swyks.SwyAdminRole) {
+	if xkst.KeystoneRoleHas(td, xkst.SwyAdminRole) {
 		result, err = listUsers(conf.kc)
 		if err != nil {
 			goto out
 		}
-	} else if swyks.KeystoneRoleHas(td, swyks.SwyUserRole) {
+	} else if xkst.KeystoneRoleHas(td, xkst.SwyUserRole) {
 		var ui *swyapi.UserInfo
 		ui, err = getUserInfo(conf.kc, td.User.Id, false)
 		if err != nil {
@@ -318,7 +318,7 @@ func handleListUsers(w http.ResponseWriter, r *http.Request, td *swyks.KeystoneT
 		goto out
 	}
 
-	err = swyhttp.MarshalAndWrite(w, result)
+	err = xhttp.MarshalAndWrite(w, result)
 	if err != nil {
 		goto out
 	}
@@ -337,7 +337,7 @@ func (pl *PlanLimits)toInfo() *swyapi.PlanLimits {
 	}
 }
 
-func handleListPlans(w http.ResponseWriter, r *http.Request, td *swyks.KeystoneTokenData) {
+func handleListPlans(w http.ResponseWriter, r *http.Request, td *xkst.KeystoneTokenData) {
 	var result []*swyapi.PlanLimits
 
 	code := http.StatusInternalServerError
@@ -353,7 +353,7 @@ func handleListPlans(w http.ResponseWriter, r *http.Request, td *swyks.KeystoneT
 		result = append(result, pl.toInfo())
 	}
 
-	err = swyhttp.MarshalAndWrite(w, result)
+	err = xhttp.MarshalAndWrite(w, result)
 	if err != nil {
 		goto out
 	}
@@ -365,8 +365,8 @@ out:
 }
 
 func makeGateReq(gate, tennant, addr string, in interface{}, out interface{}, authToken string) error {
-	resp, err := swyhttp.MarshalAndPost(
-			&swyhttp.RestReq{
+	resp, err := xhttp.MarshalAndPost(
+			&xhttp.RestReq{
 				Address: "http://" + gate + "/v1/" + addr,
 				Headers: map[string]string {
 					"X-Auth-Token": authToken,
@@ -385,7 +385,7 @@ func makeGateReq(gate, tennant, addr string, in interface{}, out interface{}, au
 	}
 
 	if out != nil {
-		err = swyhttp.ReadAndUnmarshalResp(resp, out)
+		err = xhttp.ReadAndUnmarshalResp(resp, out)
 		if err != nil {
 			return fmt.Errorf("Bad responce body: %s", err.Error())
 		}
@@ -411,7 +411,7 @@ func tryRemoveAllProjects(uid string, authToken string) error {
 	return err
 }
 
-func handleDelUser(w http.ResponseWriter, r *http.Request, uid string, td *swyks.KeystoneTokenData) {
+func handleDelUser(w http.ResponseWriter, r *http.Request, uid string, td *xkst.KeystoneTokenData) {
 	var rui *swyapi.UserInfo
 	var err error
 
@@ -422,13 +422,13 @@ func handleDelUser(w http.ResponseWriter, r *http.Request, uid string, td *swyks
 	 * cannot delete self */
 	code := http.StatusForbidden
 	if uid == td.User.Id {
-		if !swyks.KeystoneRoleHas(td, swyks.SwyUserRole) ||
-				swyks.KeystoneRoleHas(td, swyks.SwyAdminRole) {
+		if !xkst.KeystoneRoleHas(td, xkst.SwyUserRole) ||
+				xkst.KeystoneRoleHas(td, xkst.SwyAdminRole) {
 			err = errors.New("Not authorized")
 			goto out
 		}
 	} else {
-		if !swyks.KeystoneRoleHas(td, swyks.SwyAdminRole) {
+		if !xkst.KeystoneRoleHas(td, xkst.SwyAdminRole) {
 			err = errors.New("Not an admin")
 			goto out
 		}
@@ -466,7 +466,7 @@ out:
 	http.Error(w, err.Error(), code)
 }
 
-func handleDelPlan(w http.ResponseWriter, r *http.Request, pid bson.ObjectId, td *swyks.KeystoneTokenData) {
+func handleDelPlan(w http.ResponseWriter, r *http.Request, pid bson.ObjectId, td *xkst.KeystoneTokenData) {
 	var err error
 
 	ses := session.Copy()
@@ -475,7 +475,7 @@ func handleDelPlan(w http.ResponseWriter, r *http.Request, pid bson.ObjectId, td
 	/* User can be deleted by admin or self only. Admin
 	 * cannot delete self */
 	code := http.StatusForbidden
-	if !swyks.KeystoneRoleHas(td, swyks.SwyAdminRole) {
+	if !xkst.KeystoneRoleHas(td, xkst.SwyAdminRole) {
 		err = errors.New("Not an admin")
 		goto out
 	}
@@ -494,7 +494,7 @@ out:
 	http.Error(w, err.Error(), code)
 }
 
-func handleAddUser(w http.ResponseWriter, r *http.Request, td *swyks.KeystoneTokenData) {
+func handleAddUser(w http.ResponseWriter, r *http.Request, td *xkst.KeystoneTokenData) {
 	var params swyapi.AddUser
 	var kid string
 	var err error
@@ -503,14 +503,14 @@ func handleAddUser(w http.ResponseWriter, r *http.Request, td *swyks.KeystoneTok
 	defer ses.Close()
 
 	code := http.StatusBadRequest
-	err = swyhttp.ReadAndUnmarshalReq(r, &params)
+	err = xhttp.ReadAndUnmarshalReq(r, &params)
 	if err != nil {
 		goto out
 	}
 
 	/* User can be added by admin or UI */
 	code = http.StatusForbidden
-	if !swyks.KeystoneRoleHas(td, swyks.SwyAdminRole) && !swyks.KeystoneRoleHas(td, swyks.SwyUIRole) {
+	if !xkst.KeystoneRoleHas(td, xkst.SwyAdminRole) && !xkst.KeystoneRoleHas(td, xkst.SwyUIRole) {
 		err = errors.New("Only admin or UI may add users")
 		goto out
 	}
@@ -551,11 +551,11 @@ func handleAddUser(w http.ResponseWriter, r *http.Request, td *swyks.KeystoneTok
 		goto out
 	}
 
-	err = swyhttp.MarshalAndWrite2(w, &swyapi.UserInfo{
+	err = xhttp.MarshalAndWrite2(w, &swyapi.UserInfo{
 			ID:		kid,
 			UId:		params.UId,
 			Name:		params.Name,
-			Roles:		[]string{swyks.SwyUserRole},
+			Roles:		[]string{xkst.SwyUserRole},
 		}, http.StatusCreated)
 	if err != nil {
 		goto out
@@ -573,7 +573,7 @@ type PlanLimits struct {
 	Fn	*swyapi.FunctionLimits	`bson:"function,omitempty"`
 }
 
-func handleAddPlan(w http.ResponseWriter, r *http.Request, td *swyks.KeystoneTokenData) {
+func handleAddPlan(w http.ResponseWriter, r *http.Request, td *xkst.KeystoneTokenData) {
 	var params swyapi.PlanLimits
 	var pl *PlanLimits
 	var err error
@@ -583,13 +583,13 @@ func handleAddPlan(w http.ResponseWriter, r *http.Request, td *swyks.KeystoneTok
 
 	/* User can be added by admin or UI */
 	code := http.StatusForbidden
-	if !swyks.KeystoneRoleHas(td, swyks.SwyAdminRole) {
+	if !xkst.KeystoneRoleHas(td, xkst.SwyAdminRole) {
 		err = errors.New("Only admin may add plans")
 		goto out
 	}
 
 	code = http.StatusBadRequest
-	err = swyhttp.ReadAndUnmarshalReq(r, &params)
+	err = xhttp.ReadAndUnmarshalReq(r, &params)
 	if err != nil {
 		goto out
 	}
@@ -611,7 +611,7 @@ func handleAddPlan(w http.ResponseWriter, r *http.Request, td *swyks.KeystoneTok
 	}
 
 	params.Id = pl.ObjID.Hex()
-	err = swyhttp.MarshalAndWrite2(w, &params, http.StatusCreated)
+	err = xhttp.MarshalAndWrite2(w, &params, http.StatusCreated)
 	if err != nil {
 		goto out
 	}
@@ -622,7 +622,7 @@ out:
 	http.Error(w, err.Error(), code)
 }
 
-func handleSetLimits(w http.ResponseWriter, r *http.Request, uid string, td *swyks.KeystoneTokenData) {
+func handleSetLimits(w http.ResponseWriter, r *http.Request, uid string, td *xkst.KeystoneTokenData) {
 	var params swyapi.UserLimits
 	var rui *swyapi.UserInfo
 	var err error
@@ -631,13 +631,13 @@ func handleSetLimits(w http.ResponseWriter, r *http.Request, uid string, td *swy
 	defer ses.Close()
 
 	code := http.StatusForbidden
-	if !swyks.KeystoneRoleHas(td, swyks.SwyAdminRole) {
+	if !xkst.KeystoneRoleHas(td, xkst.SwyAdminRole) {
 		err = errors.New("Only admin may change user limits")
 		goto out
 	}
 
 	code = http.StatusBadRequest
-	err = swyhttp.ReadAndUnmarshalReq(r, &params)
+	err = xhttp.ReadAndUnmarshalReq(r, &params)
 	if err != nil {
 		goto out
 	}
@@ -698,7 +698,7 @@ out:
 	http.Error(w, err.Error(), code)
 }
 
-func handleGetLimits(w http.ResponseWriter, uid string, td *swyks.KeystoneTokenData) {
+func handleGetLimits(w http.ResponseWriter, uid string, td *xkst.KeystoneTokenData) {
 	ses := session.Copy()
 	defer ses.Close()
 
@@ -708,12 +708,12 @@ func handleGetLimits(w http.ResponseWriter, uid string, td *swyks.KeystoneTokenD
 
 	code := http.StatusForbidden
 	if uid == td.User.Id {
-		if !swyks.KeystoneRoleHas(td, swyks.SwyAdminRole) &&
-				!swyks.KeystoneRoleHas(td, swyks.SwyUserRole) {
+		if !xkst.KeystoneRoleHas(td, xkst.SwyAdminRole) &&
+				!xkst.KeystoneRoleHas(td, xkst.SwyUserRole) {
 			goto out
 		}
 	} else {
-		if !swyks.KeystoneRoleHas(td, swyks.SwyAdminRole) {
+		if !xkst.KeystoneRoleHas(td, xkst.SwyAdminRole) {
 			goto out
 		}
 	}
@@ -729,7 +729,7 @@ func handleGetLimits(w http.ResponseWriter, uid string, td *swyks.KeystoneTokenD
 		goto out
 	}
 
-	err = swyhttp.MarshalAndWrite(w, ulim)
+	err = xhttp.MarshalAndWrite(w, ulim)
 	if err != nil {
 		goto out
 	}
@@ -744,7 +744,7 @@ func handleSetPassword(w http.ResponseWriter, r *http.Request) {
 	var params swyapi.UserLogin
 	var code = http.StatusBadRequest
 
-	if swyhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
+	if xhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
 
 	uid := mux.Vars(r)["uid"]
 
@@ -754,7 +754,7 @@ func handleSetPassword(w http.ResponseWriter, r *http.Request) {
 	}
 
 	code = http.StatusBadRequest
-	err = swyhttp.ReadAndUnmarshalReq(r, &params)
+	err = xhttp.ReadAndUnmarshalReq(r, &params)
 	if err != nil {
 		goto out
 	}
@@ -769,12 +769,12 @@ func handleSetPassword(w http.ResponseWriter, r *http.Request) {
 	if uid == "me" {
 		uid = td.User.Id
 	} else if uid == td.User.Id {
-		if !swyks.KeystoneRoleHas(td, swyks.SwyAdminRole) &&
-				!swyks.KeystoneRoleHas(td, swyks.SwyUserRole) {
+		if !xkst.KeystoneRoleHas(td, xkst.SwyAdminRole) &&
+				!xkst.KeystoneRoleHas(td, xkst.SwyUserRole) {
 			goto out
 		}
 	} else {
-		if !swyks.KeystoneRoleHas(td, swyks.SwyAdminRole) {
+		if !xkst.KeystoneRoleHas(td, xkst.SwyAdminRole) {
 			goto out
 		}
 	}
@@ -794,7 +794,7 @@ out:
 }
 
 func handleUserLimits(w http.ResponseWriter, r *http.Request) {
-	if swyhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
+	if xhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
 
 	uid := mux.Vars(r)["uid"]
 
@@ -852,7 +852,7 @@ func main() {
 	flag.Parse()
 
 	if _, err := os.Stat(config_path); err == nil {
-		swy.ReadYamlConfig(config_path, &conf)
+		xh.ReadYamlConfig(config_path, &conf)
 		setupLogger(&conf)
 	} else {
 		setupLogger(nil)
@@ -860,7 +860,7 @@ func main() {
 		return
 	}
 
-	admdSecrets, err = swysec.ReadSecrets("admd")
+	admdSecrets, err = xsecret.ReadSecrets("admd")
 	if err != nil {
 		log.Errorf("Can't read gate secrets: %s", err.Error())
 		return
@@ -868,7 +868,7 @@ func main() {
 
 	log.Debugf("config: %v", &conf)
 
-	conf.kc = swy.ParseXCreds(conf.Keystone)
+	conf.kc = xh.ParseXCreds(conf.Keystone)
 
 	err = ksInit(conf.kc)
 	if err != nil {
@@ -890,7 +890,7 @@ func main() {
 	r.HandleFunc("/v1/plans", handlePlans).Methods("POST", "GET", "OPTIONS")
 	r.HandleFunc("/v1/plans/{pid}", handlePlan).Methods("GET", "DELETE", "OPTIONS")
 
-	err = swyhttp.ListenAndServe(
+	err = xhttp.ListenAndServe(
 		&http.Server{
 			Handler:      r,
 			Addr:         conf.Daemon.Address,

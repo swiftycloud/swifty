@@ -2,19 +2,19 @@ package main
 
 import (
 	"../common/xrest"
-	"../common"
 	"gopkg.in/mgo.v2"
+	"../apis"
 )
 
 var gateErrMsg = map[uint]string {
-	swy.GateGenErr:		"Unknown error",
-	swy.GateBadRequest:	"Error parsing request parameters",
-	swy.GateBadResp:	"Error writing responce",
-	swy.GateDbError:	"Database request failed",
-	swy.GateDuplicate:	"ID already exists",
-	swy.GateNotFound:	"ID not found",
-	swy.GateFsError:	"Files access failed",
-	swy.GateNotAvail:	"Operation not (yet) available",
+	swyapi.GateGenErr:	"Unknown error",
+	swyapi.GateBadRequest:	"Error parsing request parameters",
+	swyapi.GateBadResp:	"Error writing responce",
+	swyapi.GateDbError:	"Database request failed",
+	swyapi.GateDuplicate:	"ID already exists",
+	swyapi.GateNotFound:	"ID not found",
+	swyapi.GateFsError:	"Files access failed",
+	swyapi.GateNotAvail:	"Operation not (yet) available",
 }
 
 func GateErrC(code uint) *xrest.ReqErr {
@@ -31,10 +31,10 @@ func GateErrM(code uint, msg string) *xrest.ReqErr {
 
 func GateErrD(err error) *xrest.ReqErr {
 	if err == mgo.ErrNotFound {
-		return GateErrC(swy.GateNotFound)
+		return GateErrC(swyapi.GateNotFound)
 	} else if mgo.IsDup(err) {
-		return GateErrC(swy.GateDuplicate)
+		return GateErrC(swyapi.GateDuplicate)
 	} else {
-		return GateErrE(swy.GateDbError, err)
+		return GateErrE(swyapi.GateDbError, err)
 	}
 }

@@ -5,7 +5,6 @@ import (
 	"errors"
 	"net/url"
 	"gopkg.in/mgo.v2/bson"
-	"../common"
 	"../common/xrest"
 	"../apis"
 )
@@ -49,7 +48,7 @@ func (t *Trigger)Info(ctx context.Context, q url.Values, details bool) (interfac
 	return t.ed.toInfo(t.fn), nil
 }
 
-func (t *Trigger)Upd(context.Context, interface{}) *xrest.ReqErr { return GateErrC(swy.GateNotAvail) }
+func (t *Trigger)Upd(context.Context, interface{}) *xrest.ReqErr { return GateErrC(swyapi.GateNotAvail) }
 
 func eventsInit(ctx context.Context, conf *YAMLConf) error {
 	return cronInit(ctx, conf)
@@ -140,7 +139,7 @@ func getEventDesc(evt *swyapi.FunctionEvent) (*FnEventDesc, *xrest.ReqErr) {
 
 	h, ok := evtHandlers[evt.Source]
 	if !ok {
-		return nil, GateErrM(swy.GateBadRequest, "Unsupported event type")
+		return nil, GateErrM(swyapi.GateBadRequest, "Unsupported event type")
 	}
 
 	h.setup(ed, evt)
@@ -162,7 +161,7 @@ func (ed *FnEventDesc)Add(ctx context.Context, fn *FunctionDesc) *xrest.ReqErr {
 	h.start(ctx, fn, ed)
 	if err != nil {
 		dbRemove(ctx, ed)
-		return GateErrM(swy.GateGenErr, "Can't setup event")
+		return GateErrM(swyapi.GateGenErr, "Can't setup event")
 	}
 
 	err = dbUpdateAll(ctx, ed)
@@ -182,7 +181,7 @@ func (ed *FnEventDesc)Delete(ctx context.Context, fn *FunctionDesc) *xrest.ReqEr
 	h := evtHandlers[ed.Source]
 	err := h.stop(ctx, ed)
 	if err != nil {
-		return GateErrM(swy.GateGenErr, "Can't stop event")
+		return GateErrM(swyapi.GateGenErr, "Can't stop event")
 	}
 
 	err = dbRemove(ctx, ed)

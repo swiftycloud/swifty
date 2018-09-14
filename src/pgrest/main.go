@@ -38,7 +38,7 @@ var logger, _ = zcfg.Build()
 var log = logger.Sugar()
 
 func pgCheckString(str string) bool {
-	return swy.NameSymsAllowed(str)
+	return xh.NameSymsAllowed(str)
 }
 
 func pgRun(cmd *exec.Cmd) error {
@@ -141,7 +141,7 @@ func handleRequest(w http.ResponseWriter, r *http.Request,
 	var params swyapi.PgRequest
 
 	code = http.StatusBadRequest
-	err := swyhttp.ReadAndUnmarshalReq(r, &params)
+	err := xhttp.ReadAndUnmarshalReq(r, &params)
 	if err != nil {
 		goto out
 	}
@@ -183,10 +183,10 @@ func main() {
 				"path to the configuration file")
 	flag.Parse()
 	if _, err := os.Stat(conf_path); err == nil {
-		swy.ReadYamlConfig(conf_path, &conf)
+		xh.ReadYamlConfig(conf_path, &conf)
 	}
 
-	pgrSecrets, err = swysec.ReadSecrets("pgrest")
+	pgrSecrets, err = xsecret.ReadSecrets("pgrest")
 	if err != nil {
 		log.Errorf("Can't read gate secrets: %s", err.Error())
 		return

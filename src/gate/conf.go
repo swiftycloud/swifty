@@ -36,7 +36,7 @@ type YAMLConfDaemon struct {
 	CallGate	string			`yaml:"callgate"`
 	LogLevel	string			`yaml:"loglevel"`
 	Prometheus	string			`yaml:"prometheus"`
-	HTTPS		*swyhttp.YAMLConfHTTPS	`yaml:"https,omitempty"`
+	HTTPS		*xhttp.YAMLConfHTTPS	`yaml:"https,omitempty"`
 }
 
 func (cd *YAMLConfDaemon)Validate() error {
@@ -76,24 +76,24 @@ func (ck *YAMLConfKeystone)Validate() error {
 type YAMLConfRabbit struct {
 	Creds		string			`yaml:"creds"`
 	AdminPort	string			`yaml:"admport"`
-	c		*swy.XCreds
+	c		*xh.XCreds
 }
 
 type YAMLConfMaria struct {
 	Creds		string			`yaml:"creds"`
 	QDB		string			`yaml:"quotdb"`
-	c		*swy.XCreds
+	c		*xh.XCreds
 }
 
 type YAMLConfMongo struct {
 	Creds		string			`yaml:"creds"`
-	c		*swy.XCreds
+	c		*xh.XCreds
 }
 
 type YAMLConfPostgres struct {
 	Creds		string			`yaml:"creds"`
 	AdminPort	string			`yaml:"admport"`
-	c		*swy.XCreds
+	c		*xh.XCreds
 }
 
 type YAMLConfS3 struct {
@@ -101,8 +101,8 @@ type YAMLConfS3 struct {
 	API		string			`yaml:"api"`
 	Notify		string			`yaml:"notify"`
 	HiddenKeyTmo	uint32			`yaml:"hidden-key-timeout"`
-	c		*swy.XCreds
-	cn		*swy.XCreds
+	c		*xh.XCreds
+	cn		*xh.XCreds
 }
 
 type YAMLConfMw struct {

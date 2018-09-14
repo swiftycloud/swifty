@@ -5,7 +5,7 @@ import (
 	"net/url"
 	"../apis"
 	"context"
-	"../common"
+	"../common/http"
 	"../common/xrest"
 	"gopkg.in/mgo.v2/bson"
 )
@@ -26,7 +26,7 @@ const TableKeyLenMax = 64
 func ckTable(tbl []*swyapi.RouterEntry) *xrest.ReqErr {
 	for _, t := range tbl {
 		if len(t.Key) > TableKeyLenMax {
-			return GateErrM(swy.GateBadRequest, "Too long key")
+			return GateErrM(swyapi.GateBadRequest, "Too long key")
 		}
 	}
 
@@ -84,7 +84,7 @@ func (rt *RouterDesc)Info(ctx context.Context, q url.Values, details bool) (inte
 }
 
 func (rt *RouterDesc)Upd(ctx context.Context, upd interface{}) *xrest.ReqErr {
-	return GateErrM(swy.GateGenErr, "Not updatable")
+	return GateErrM(swyapi.GateGenErr, "Not updatable")
 }
 
 func (rt *RouterDesc)toInfo(ctx context.Context, details bool) *swyapi.RouterInfo {
@@ -215,13 +215,13 @@ func (_ *RtTblProp)Info(ctx context.Context, o xrest.Obj, q url.Values) (interfa
 	t := len(rt.Table)
 
 	if q != nil {
-		f, e := reqAtoi(q, "from", f)
+		f, e := xhttp.ReqAtoi(q, "from", f)
 		if f < 0 || e != nil {
-			return nil, GateErrM(swy.GateBadRequest, "Invalid range")
+			return nil, GateErrM(swyapi.GateBadRequest, "Invalid range")
 		}
-		t, e := reqAtoi(q, "to", t)
+		t, e := xhttp.ReqAtoi(q, "to", t)
 		if t > len(rt.Table) || e != nil {
-			return nil, GateErrM(swy.GateBadRequest, "Invalid range")
+			return nil, GateErrM(swyapi.GateBadRequest, "Invalid range")
 		}
 	}
 
