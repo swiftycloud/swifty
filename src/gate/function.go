@@ -151,10 +151,6 @@ func (_ Functions)Iterate(ctx context.Context, q url.Values, cb func(context.Con
 	}
 
 	fname := q.Get("name")
-	periods := reqPeriods(q)
-	if periods < 0 {
-		return GateErrC(swy.GateBadRequest)
-	}
 
 	var fns []*FunctionDesc
 
