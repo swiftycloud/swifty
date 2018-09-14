@@ -346,6 +346,52 @@ func resolve_evt(fnid, name string) string {
 	return resolve_name(name, "functions/" + fnid + "/triggers", &es)
 }
 
+type node struct {
+	name	string
+	id	string
+	kids	[]*node
+}
+
+func show_names(pfx string, n *node) {
+	if n.name != "/" {
+		if n.id == "" {
+			fmt.Printf("%24s", "")
+		} else {
+			fmt.Printf("%s", n.id)
+		}
+		fmt.Printf("  %s%s\n", pfx, n.name)
+		pfx += "    "
+	}
+	for _, k := range n.kids {
+		show_names(pfx, k)
+	}
+}
+
+func show_fn_tree(fns []*swyapi.FunctionInfo) {
+	root := node{name:"/", kids:[]*node{}}
+	for _, fn := range fns {
+		n := &root
+		path := strings.Split(fn.Name, ".")
+		for _, p := range path {
+			var tn *node
+			for _, c := range n.kids {
+				if c.name == p {
+					tn = c
+					break
+				}
+			}
+			if tn == nil {
+				tn = &node{name: p, kids:[]*node{}}
+				n.kids = append(n.kids, tn)
+			}
+			n = tn
+		}
+		n.id = fn.Id
+	}
+
+	show_names("", &root)
+}
+
 func function_list(args []string, opts [16]string) {
 	ua := []string{}
 	if curCmd.project != "" {
@@ -358,12 +404,17 @@ func function_list(args []string, opts [16]string) {
 		}
 	}
 
-	var fns []swyapi.FunctionInfo
+	var fns []*swyapi.FunctionInfo
 	make_faas_req1("GET", url("functions", ua), http.StatusOK, nil, &fns)
 
-	fmt.Printf("%-32s%-20s%-10s\n", "ID", "NAME", "STATE")
-	for _, fn := range fns {
-		fmt.Printf("%-32s%-20s%-12s%s\n", fn.Id, fn.Name, fn.State, strings.Join(fn.Labels, ","))
+	switch opts[0] {
+	case "tree":
+		show_fn_tree(fns)
+	default:
+		fmt.Printf("%-32s%-20s%-10s\n", "ID", "NAME", "STATE")
+		for _, fn := range fns {
+			fmt.Printf("%-32s%-20s%-12s%s\n", fn.Id, fn.Name, fn.State, strings.Join(fn.Labels, ","))
+		}
 	}
 }
 
@@ -1785,6 +1836,7 @@ func main() {
 	bindCmdUsage(CMD_STATS,	[]string{}, "Show stats", false)
 	bindCmdUsage(CMD_PS,	[]string{}, "List projects", false)
 
+	cmdMap[CMD_FL].opts.StringVar(&opts[0], "pretty", "", "Format of output")
 	cmdMap[CMD_FL].opts.StringVar(&opts[1], "label", "", "Labels, comma-separated")
 	bindCmdUsage(CMD_FL,	[]string{}, "List functions", true)
 	bindCmdUsage(CMD_FI,	[]string{"NAME"}, "Function info", true)
