@@ -288,9 +288,9 @@ func list_projects(args []string, opts [16]string) {
 	}
 }
 
-func resolve_name(name string, path string, objs interface{}) string {
+func resolve_name(name string, path string, objs interface{}) (string, bool) {
 	if strings.HasPrefix(name, ":") {
-		return name[1:]
+		return name[1:], false
 	}
 
 	ua := []string{}
@@ -308,40 +308,40 @@ func resolve_name(name string, path string, objs interface{}) string {
 		if n == name {
 			id := obj.FieldByName("Id")
 			if id.IsValid() {
-				return id.Interface().(string)
+				return id.Interface().(string), true
 			}
 			id = obj.FieldByName("ID")
 			if id.IsValid() {
-				return id.Interface().(string)
+				return id.Interface().(string), true
 			}
 		}
 	}
 
 
 	fatal(fmt.Errorf("\tname %s not resolved", name))
-	return ""
+	return "", false
 }
-func resolve_fn(fname string) string {
+func resolve_fn(fname string) (string, bool) {
 	var ifo []swyapi.FunctionInfo
 	return resolve_name(fname, "functions", &ifo)
 }
 
-func resolve_mw(mname string) string {
+func resolve_mw(mname string) (string, bool) {
 	var ifo []swyapi.MwareInfo
 	return resolve_name(mname, "middleware", &ifo)
 }
 
-func resolve_dep(dname string) string {
+func resolve_dep(dname string) (string, bool) {
 	var ifo []swyapi.DeployInfo
 	return resolve_name(dname, "deployments", &ifo)
 }
 
-func resolve_router(rname string) string {
+func resolve_router(rname string) (string, bool) {
 	var ifo []swyapi.RouterInfo
 	return resolve_name(rname, "routers", &ifo)
 }
 
-func resolve_evt(fnid, name string) string {
+func resolve_evt(fnid, name string) (string, bool) {
 	var es []swyapi.FunctionEvent
 	return resolve_name(name, "functions/" + fnid + "/triggers", &es)
 }
@@ -458,13 +458,17 @@ func formatBytes(b uint64) string {
 
 func function_info(args []string, opts [16]string) {
 	var ifo swyapi.FunctionInfo
-	args[0] = resolve_fn(args[0])
+	var r bool
+	args[0], r = resolve_fn(args[0])
 	make_faas_req1("GET", "functions/" + args[0], http.StatusOK, nil, &ifo)
 	ver := ifo.Version
 	if len(ver) > 8 {
 		ver = ver[:8]
 	}
 
+	if !r {
+		fmt.Printf("Name:        %s\n", ifo.Name)
+	}
 	fmt.Printf("Lang:        %s\n", ifo.Code.Lang)
 
 	rv := ""
@@ -552,7 +556,7 @@ func function_info(args []string, opts [16]string) {
 
 func function_minfo(args []string, opts [16]string) {
 	var ifo swyapi.FunctionMdat
-	args[0] = resolve_fn(args[0])
+	args[0], _ = resolve_fn(args[0])
 	make_faas_req1("GET", "functions/" + args[0] + "/mdat", http.StatusOK, nil, &ifo)
 	fmt.Printf("Cookie: %s\n", ifo.Cookie)
 	if len(ifo.RL) != 0 {
@@ -757,7 +761,7 @@ func run_function(args []string, opts [16]string) {
 
 	rq := &swyapi.SwdFunctionRun{}
 
-	args[0] = resolve_fn(args[0])
+	args[0], _ = resolve_fn(args[0])
 	rq.Args = split_args_string(args[1])
 
 	if opts[0] != "" {
@@ -775,7 +779,7 @@ func run_function(args []string, opts [16]string) {
 }
 
 func function_update(args []string, opts [16]string) {
-	fid := resolve_fn(args[0])
+	fid, _ := resolve_fn(args[0])
 
 	if opts[0] != "" {
 		var src swyapi.FunctionSources
@@ -785,7 +789,7 @@ func function_update(args []string, opts [16]string) {
 	}
 
 	if opts[3] != "" {
-		mid := resolve_mw(opts[3][1:])
+		mid, _ := resolve_mw(opts[3][1:])
 		if opts[3][0] == '+' {
 			make_faas_req1("POST", "functions/" + fid + "/middleware", http.StatusOK, mid, nil)
 		} else if opts[3][0] == '-' {
@@ -864,24 +868,24 @@ func function_update(args []string, opts [16]string) {
 }
 
 func function_del(args []string, opts [16]string) {
-	args[0] = resolve_fn(args[0])
+	args[0], _ = resolve_fn(args[0])
 	make_faas_req1("DELETE", "functions/" + args[0], http.StatusOK, nil, nil)
 }
 
 func function_on(args []string, opts [16]string) {
-	args[0] = resolve_fn(args[0])
+	args[0], _ = resolve_fn(args[0])
 	make_faas_req1("PUT", "functions/" + args[0], http.StatusOK,
 			&swyapi.FunctionUpdate{State: "ready"}, nil)
 }
 
 func function_off(args []string, opts [16]string) {
-	args[0] = resolve_fn(args[0])
+	args[0], _ = resolve_fn(args[0])
 	make_faas_req1("PUT", "functions/" + args[0], http.StatusOK,
 			&swyapi.FunctionUpdate{State: "deactivated"}, nil)
 }
 
 func event_list(args []string, opts [16]string) {
-	args[0] = resolve_fn(args[0])
+	args[0], _ = resolve_fn(args[0])
 	var eds []swyapi.FunctionEvent
 	make_faas_req1("GET", "functions/" + args[0] + "/triggers", http.StatusOK,  nil, &eds)
 	for _, e := range eds {
@@ -890,7 +894,7 @@ func event_list(args []string, opts [16]string) {
 }
 
 func event_add(args []string, opts [16]string) {
-	args[0] = resolve_fn(args[0])
+	args[0], _ = resolve_fn(args[0])
 	e := swyapi.FunctionEvent {
 		Name: args[1],
 		Source: args[2],
@@ -913,11 +917,14 @@ func event_add(args []string, opts [16]string) {
 }
 
 func event_info(args []string, opts [16]string) {
-	args[0] = resolve_fn(args[0])
-	args[1] = resolve_evt(args[0], args[1])
+	var r bool
+	args[0], _ = resolve_fn(args[0])
+	args[1], r = resolve_evt(args[0], args[1])
 	var e swyapi.FunctionEvent
 	make_faas_req1("GET", "functions/" + args[0] + "/triggers/" + args[1], http.StatusOK,  nil, &e)
-	fmt.Printf("Name:          %s\n", e.Name)
+	if !r {
+		fmt.Printf("Name:          %s\n", e.Name)
+	}
 	fmt.Printf("Source:        %s\n", e.Source)
 	if e.Cron != nil {
 		fmt.Printf("Tab:           %s\n", e.Cron.Tab)
@@ -933,8 +940,8 @@ func event_info(args []string, opts [16]string) {
 }
 
 func event_del(args []string, opts [16]string) {
-	args[0] = resolve_fn(args[0])
-	args[1] = resolve_evt(args[0], args[1])
+	args[0], _ = resolve_fn(args[0])
+	args[1], _ = resolve_evt(args[0], args[1])
 	make_faas_req1("DELETE", "functions/" + args[0] + "/triggers/" + args[1], http.StatusOK, nil, nil)
 }
 
@@ -951,13 +958,13 @@ func function_wait(args []string, opts [16]string) {
 		wo.Timeout = uint(t)
 	}
 
-	args[0] = resolve_fn(args[0])
+	args[0], _ = resolve_fn(args[0])
 	make_faas_req2("POST", "functions/" + args[0] + "/wait", &wo, http.StatusOK, 300)
 }
 
 func function_code(args []string, opts [16]string) {
 	var res swyapi.FunctionSources
-	args[0] = resolve_fn(args[0])
+	args[0], _ = resolve_fn(args[0])
 	make_faas_req1("GET", "functions/" + args[0] + "/sources", http.StatusOK, nil, &res)
 	data, err := base64.StdEncoding.DecodeString(res.Code)
 	if err != nil {
@@ -968,7 +975,7 @@ func function_code(args []string, opts [16]string) {
 
 func function_logs(args []string, opts [16]string) {
 	var res []swyapi.FunctionLogEntry
-	args[0] = resolve_fn(args[0])
+	args[0], _ = resolve_fn(args[0])
 
 	fa := []string{}
 	if opts[0] != "" {
@@ -1013,10 +1020,13 @@ func mware_list(args []string, opts [16]string) {
 
 func mware_info(args []string, opts [16]string) {
 	var resp swyapi.MwareInfo
+	var r bool
 
-	args[0] = resolve_mw(args[0])
+	args[0], r = resolve_mw(args[0])
 	make_faas_req1("GET", "middleware/" + args[0], http.StatusOK, nil, &resp)
-	fmt.Printf("Name:         %s\n", resp.Name)
+	if !r {
+		fmt.Printf("Name:         %s\n", resp.Name)
+	}
 	fmt.Printf("Type:         %s\n", resp.Type)
 	if resp.DU != nil {
 		fmt.Printf("Disk usage:   %s\n", formatBytes(*resp.DU << 10))
@@ -1040,7 +1050,7 @@ func mware_add(args []string, opts [16]string) {
 }
 
 func mware_del(args []string, opts [16]string) {
-	args[0] = resolve_mw(args[0])
+	args[0], _ = resolve_mw(args[0])
 	make_faas_req1("DELETE", "middleware/" + args[0], http.StatusOK, nil, nil)
 }
 
@@ -1077,13 +1087,13 @@ func auth_cfg(args []string, opts [16]string) {
 }
 
 func deploy_del(args []string, opts [16]string) {
-	args[0] = resolve_dep(args[0])
+	args[0], _ = resolve_dep(args[0])
 	make_faas_req1("DELETE", "deployments/" + args[0], http.StatusOK, nil, nil)
 }
 
 func deploy_info(args []string, opts [16]string) {
 	var di swyapi.DeployInfo
-	args[0] = resolve_dep(args[0])
+	args[0], _ = resolve_dep(args[0])
 	make_faas_req1("GET", "deployments/" + args[0], http.StatusOK, nil, &di)
 	fmt.Printf("State:        %s\n", di.State)
 	fmt.Printf("Items:\n")
@@ -1164,7 +1174,7 @@ func router_add(args []string, opts [16]string) {
 }
 
 func router_info(args []string, opts [16]string) {
-	args[0] = resolve_router(args[0])
+	args[0], _ = resolve_router(args[0])
 	var ri swyapi.RouterInfo
 	make_faas_req1("GET", "routers/" + args[0], http.StatusOK, nil, &ri)
 	fmt.Printf("URL:      %s\n", ri.URL)
@@ -1177,7 +1187,7 @@ func router_info(args []string, opts [16]string) {
 }
 
 func router_upd(args []string, opts [16]string) {
-	args[0] = resolve_router(args[0])
+	args[0], _ = resolve_router(args[0])
 	if opts[0] != "" {
 		rt := parse_route_table
 		make_faas_req1("PUT", "routers/" + args[0] + "/table", http.StatusOK, rt, nil)
@@ -1185,7 +1195,7 @@ func router_upd(args []string, opts [16]string) {
 }
 
 func router_del(args []string, opts [16]string) {
-	args[0] = resolve_router(args[0])
+	args[0], _ = resolve_router(args[0])
 	make_faas_req1("DELETE", "routers/" + args[0], http.StatusOK, nil, nil)
 }
 
