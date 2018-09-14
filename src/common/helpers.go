@@ -24,24 +24,6 @@ func Sha256sum(s []byte) string {
 
 var Letters = []byte("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789")
 
-func Retry(callback func(interface{}) error, data interface{}, attempts int, sleep time.Duration) error {
-	var err error
-
-	for i := 0; i < attempts; i++ {
-		err = callback(data)
-		if err == nil {
-			return nil
-		} else {
-			time.Sleep(sleep)
-		}
-	}
-	return fmt.Errorf("Retry: %s", err.Error())
-}
-
-func Retry10(callback func(interface{}) error, data interface{}) error {
-	return Retry(callback, data, 100, 100 * time.Millisecond)
-}
-
 func GenRandId(length int) (string, error) {
 	idx := make([]byte, length)
 	pass:= make([]byte, length)
