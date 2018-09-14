@@ -403,6 +403,9 @@ func function_list(args []string, opts [16]string) {
 			ua = append(ua, "label=" + l)
 		}
 	}
+	if opts[2] != "" {
+		ua = append(ua, "prefix=" + opts[2])
+	}
 
 	var fns []*swyapi.FunctionInfo
 	make_faas_req1("GET", url("functions", ua), http.StatusOK, nil, &fns)
@@ -1848,6 +1851,7 @@ func main() {
 
 	cmdMap[CMD_FL].opts.StringVar(&opts[0], "pretty", "", "Format of output")
 	cmdMap[CMD_FL].opts.StringVar(&opts[1], "label", "", "Labels, comma-separated")
+	cmdMap[CMD_FL].opts.StringVar(&opts[2], "pref", "", "Prefix")
 	bindCmdUsage(CMD_FL,	[]string{}, "List functions", true)
 	bindCmdUsage(CMD_FI,	[]string{"NAME"}, "Function info", true)
 	bindCmdUsage(CMD_FIM,	[]string{"NAME"}, "Function memdat info", true)

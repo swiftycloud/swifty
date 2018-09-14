@@ -163,10 +163,16 @@ func (_ Functions)Iterate(ctx context.Context, q url.Values, cb func(context.Con
 		return cb(ctx, &fn)
 	}
 
+	pref := q.Get("prefix")
+
 	iter := dbIterAll(ctx, listReq(ctx, project, q["label"]), &fn)
 	defer iter.Close()
 
 	for iter.Next(&fn) {
+		if pref != "" && !strings.HasPrefix(fn.SwoId.Name, pref) {
+			continue /* XXX -- tune request? */
+		}
+
 		cerr := cb(ctx, &fn)
 		if cerr != nil {
 			return cerr
