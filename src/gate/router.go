@@ -215,11 +215,11 @@ func (_ *RtTblProp)Info(ctx context.Context, o xrest.Obj, q url.Values) (interfa
 	t := len(rt.Table)
 
 	if q != nil {
-		f, e := swyhttp.ReqAtoi(q, "from", f)
+		f, e := xhttp.ReqAtoi(q, "from", f)
 		if f < 0 || e != nil {
 			return nil, GateErrM(swyapi.GateBadRequest, "Invalid range")
 		}
-		t, e := swyhttp.ReqAtoi(q, "to", t)
+		t, e := xhttp.ReqAtoi(q, "to", t)
 		if t > len(rt.Table) || e != nil {
 			return nil, GateErrM(swyapi.GateBadRequest, "Invalid range")
 		}

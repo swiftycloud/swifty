@@ -277,7 +277,7 @@ func doRun(runner *Runner, body []byte) (*swyapi.SwdFunctionRunResult, error) {
 			ret.Code = -http.StatusInternalServerError
 			ret.Return = "exited"
 		case err == xqueue.TIMEOUT:
-			ret.Code = -swyhttp.StatusTimeoutOccurred
+			ret.Code = -xhttp.StatusTimeoutOccurred
 			ret.Return = "timeout"
 		default:
 			log.Errorf("Can't read data back: %s", err.Error())
@@ -405,7 +405,7 @@ func handleRun(runner *Runner, w http.ResponseWriter, r *http.Request) {
 		goto out
 	}
 
-	err = swyhttp.MarshalAndWrite(w, result)
+	err = xhttp.MarshalAndWrite(w, result)
 	if err != nil {
 		goto out
 	}
@@ -423,7 +423,7 @@ func handleBuild(w http.ResponseWriter, r *http.Request, fn buildFn) {
 	var result *swyapi.SwdFunctionRunResult
 
 	code := http.StatusBadRequest
-	err := swyhttp.ReadAndUnmarshalReq(r, &params)
+	err := xhttp.ReadAndUnmarshalReq(r, &params)
 	if err != nil {
 		goto out
 	}
@@ -437,7 +437,7 @@ func handleBuild(w http.ResponseWriter, r *http.Request, fn buildFn) {
 		goto out
 	}
 
-	err = swyhttp.MarshalAndWrite(w, result)
+	err = xhttp.MarshalAndWrite(w, result)
 	if err != nil {
 		goto out
 	}

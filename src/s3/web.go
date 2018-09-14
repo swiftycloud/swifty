@@ -193,7 +193,7 @@ func handleAdminOp(w http.ResponseWriter, r *http.Request) {
 	ctx, done := mkContext("adminreq")
 	defer done(ctx)
 
-	if swyhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
+	if xhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
 
 	err = s3VerifyAdmin(r)
 	if err != nil {

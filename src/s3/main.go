@@ -43,7 +43,7 @@ type YAMLConfDaemon struct {
 	Token		string			`yaml:"token"`
 	LogLevel	string			`yaml:"loglevel"`
 	Prometheus	string			`yaml:"prometheus"`
-	HTTPS		*swyhttp.YAMLConfHTTPS	`yaml:"https,omitempty"`
+	HTTPS		*xhttp.YAMLConfHTTPS	`yaml:"https,omitempty"`
 }
 
 type YAMLConfNotify struct {
@@ -781,7 +781,7 @@ func handleS3API(cb func(ctx context.Context, w http.ResponseWriter, r *http.Req
 
 		logRequest(r)
 
-		if swyhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
+		if xhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
 
 		err := s3Authorize(ctx, r)
 		if err != nil {
@@ -800,7 +800,7 @@ func handleKeygen(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	var kg swys3api.S3CtlKeyGen
 	var err error
 
-	err = swyhttp.ReadAndUnmarshalReq(r, &kg)
+	err = xhttp.ReadAndUnmarshalReq(r, &kg)
 	if err != nil {
 		goto out
 	}
@@ -816,7 +816,7 @@ func handleKeygen(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 		goto out
 	}
 
-	err = swyhttp.MarshalAndWrite(w, &swys3api.S3CtlKeyGenResult{
+	err = xhttp.MarshalAndWrite(w, &swys3api.S3CtlKeyGenResult{
 			AccessKeyID:	akey.AccessKeyID,
 			AccessKeySecret:s3DecryptAccessKeySecret(akey),
 			AccID:		akey.AccountObjID.Hex(),
@@ -835,7 +835,7 @@ func handleKeydel(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	var kd swys3api.S3CtlKeyDel
 	var err error
 
-	err = swyhttp.ReadAndUnmarshalReq(r, &kd)
+	err = xhttp.ReadAndUnmarshalReq(r, &kd)
 	if err != nil {
 		goto out
 	}
@@ -859,7 +859,7 @@ out:
 func handleNotify(w http.ResponseWriter, r *http.Request, subscribe bool) {
 	var params swys3api.S3Subscribe
 
-	if swyhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
+	if xhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
 
 	ctx, done := mkContext("notifyreq")
 	defer done(ctx)
@@ -871,7 +871,7 @@ func handleNotify(w http.ResponseWriter, r *http.Request, subscribe bool) {
 		return
 	}
 
-	err = swyhttp.ReadAndUnmarshalReq(r, &params)
+	err = xhttp.ReadAndUnmarshalReq(r, &params)
 	if err != nil {
 		goto out
 	}
@@ -1045,7 +1045,7 @@ func main() {
 		}
 	}()
 
-	err = swyhttp.ListenAndServe(
+	err = xhttp.ListenAndServe(
 		&http.Server{
 			Handler:      rgatesrv,
 			Addr:         conf.Daemon.Addr,

@@ -36,7 +36,7 @@ type YAMLConfDaemon struct {
 	CallGate	string			`yaml:"callgate"`
 	LogLevel	string			`yaml:"loglevel"`
 	Prometheus	string			`yaml:"prometheus"`
-	HTTPS		*swyhttp.YAMLConfHTTPS	`yaml:"https,omitempty"`
+	HTTPS		*xhttp.YAMLConfHTTPS	`yaml:"https,omitempty"`
 }
 
 func (cd *YAMLConfDaemon)Validate() error {

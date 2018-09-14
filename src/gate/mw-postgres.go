@@ -19,8 +19,8 @@ func InitPostgres(ctx context.Context, mwd *MwareDesc) (error) {
 	mwd.Namespace = mwd.Client
 
 	addr := conf.Mware.Postgres.c.AddrP(conf.Mware.Postgres.AdminPort)
-	_, err = swyhttp.MarshalAndPost(
-			&swyhttp.RestReq{
+	_, err = xhttp.MarshalAndPost(
+			&xhttp.RestReq{
 				Address: "http://" + addr + "/create",
 				Timeout: 120,
 			},
@@ -33,8 +33,8 @@ func InitPostgres(ctx context.Context, mwd *MwareDesc) (error) {
 
 func FiniPostgres(ctx context.Context, mwd *MwareDesc) error {
 	addr := conf.Mware.Postgres.c.AddrP(conf.Mware.Postgres.AdminPort)
-	_, err := swyhttp.MarshalAndPost(
-			&swyhttp.RestReq{
+	_, err := xhttp.MarshalAndPost(
+			&xhttp.RestReq{
 				Address: "http://" + addr + "/drop",
 				Timeout: 120,
 			},

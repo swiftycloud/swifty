@@ -1,4 +1,4 @@
-package swyhttp
+package xhttp
 
 import (
 	"encoding/json"

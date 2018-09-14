@@ -9,7 +9,7 @@ import (
 var TraceFn func(context.Context, interface{})
 
 func Respond(ctx context.Context, w http.ResponseWriter, result interface{}) *ReqErr {
-	err := swyhttp.MarshalAndWrite(w, result)
+	err := xhttp.MarshalAndWrite(w, result)
 	if err != nil {
 		return &ReqErr{3 /* XXX: GateBadResp */, err.Error()}
 	}
@@ -54,7 +54,7 @@ func HandleUpdateOne(ctx context.Context, w http.ResponseWriter, r *http.Request
 		return &ReqErr{2, "Not editable"}
 	}
 
-	err := swyhttp.ReadAndUnmarshalReq(r, upd)
+	err := xhttp.ReadAndUnmarshalReq(r, upd)
 	if err != nil {
 		return &ReqErr{2 /* XXX: GateBadRequest */, err.Error()}
 	}
@@ -73,7 +73,7 @@ func HandleUpdateProp(ctx context.Context, w http.ResponseWriter, r *http.Reques
 		return &ReqErr{2, "Not editable"}
 	}
 
-	err := swyhttp.ReadAndUnmarshalReq(r, upd)
+	err := xhttp.ReadAndUnmarshalReq(r, upd)
 	if err != nil {
 		return &ReqErr{2 /* XXX: GateBadRequest */, err.Error()}
 	}
@@ -88,7 +88,7 @@ func HandleUpdateProp(ctx context.Context, w http.ResponseWriter, r *http.Reques
 }
 
 func HandleCreateOne(ctx context.Context, w http.ResponseWriter, r *http.Request, fact Factory, add interface{}) *ReqErr {
-	err := swyhttp.ReadAndUnmarshalReq(r, add)
+	err := xhttp.ReadAndUnmarshalReq(r, add)
 	if err != nil {
 		return &ReqErr{2 /* XXX: GateBadRequest */, err.Error()}
 	}

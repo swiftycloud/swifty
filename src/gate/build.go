@@ -22,8 +22,8 @@ func buildFunction(ctx context.Context, addr string, fn *FunctionDesc, suf strin
 
 	ctxlog(ctx).Debugf("Building function in %s", fn.srcPath(""))
 
-	resp, err := swyhttp.MarshalAndPost(
-			&swyhttp.RestReq{
+	resp, err := xhttp.MarshalAndPost(
+			&xhttp.RestReq{
 				Address: "http://" + addr + ":" + strconv.Itoa(conf.Wdog.Port) + "/v1/run",
 				Timeout: 120,
 			},
@@ -36,7 +36,7 @@ func buildFunction(ctx context.Context, addr string, fn *FunctionDesc, suf strin
 		return fmt.Errorf("Can't build function")
 	}
 
-	err = swyhttp.ReadAndUnmarshalResp(resp, &wd_result)
+	err = xhttp.ReadAndUnmarshalResp(resp, &wd_result)
 	if err != nil {
 		ctxlog(ctx).Errorf("Can't get build result back: %s", err.Error())
 		return fmt.Errorf("Error building function")

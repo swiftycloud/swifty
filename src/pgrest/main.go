@@ -141,7 +141,7 @@ func handleRequest(w http.ResponseWriter, r *http.Request,
 	var params swyapi.PgRequest
 
 	code = http.StatusBadRequest
-	err := swyhttp.ReadAndUnmarshalReq(r, &params)
+	err := xhttp.ReadAndUnmarshalReq(r, &params)
 	if err != nil {
 		goto out
 	}

@@ -43,8 +43,8 @@ func (s3 *FnEventS3)matchPattern(oname string) bool {
 func s3KeyGen(conf *YAMLConfS3, namespace, bucket string, lifetime uint32) (*swys3api.S3CtlKeyGenResult, error) {
 	addr := conf.c.Addr()
 
-	resp, err := swyhttp.MarshalAndPost(
-		&swyhttp.RestReq{
+	resp, err := xhttp.MarshalAndPost(
+		&xhttp.RestReq{
 			Address: "http://" + addr + "/v1/api/admin/keygen",
 			Timeout: 120,
 			Headers: map[string]string{"X-SwyS3-Token": gateSecrets[conf.c.Pass]},
@@ -65,7 +65,7 @@ func s3KeyGen(conf *YAMLConfS3, namespace, bucket string, lifetime uint32) (*swy
 
 	var out swys3api.S3CtlKeyGenResult
 
-	err = swyhttp.ReadAndUnmarshalResp(resp, &out)
+	err = xhttp.ReadAndUnmarshalResp(resp, &out)
 	if err != nil {
 		return nil, fmt.Errorf("Error reading responce from S3: %s", err.Error())
 	}
@@ -76,8 +76,8 @@ func s3KeyGen(conf *YAMLConfS3, namespace, bucket string, lifetime uint32) (*swy
 func s3KeyDel(conf *YAMLConfS3, key string) error {
 	addr := conf.c.Addr()
 
-	_, err := swyhttp.MarshalAndPost(
-		&swyhttp.RestReq{
+	_, err := xhttp.MarshalAndPost(
+		&xhttp.RestReq{
 			Address: "http://" + addr + "/v1/api/admin/keydel",
 			Timeout: 120,
 			Headers: map[string]string{"X-SwyS3-Token": gateSecrets[conf.c.Pass]},
@@ -99,8 +99,8 @@ const (
 func s3Subscribe(ctx context.Context, conf *YAMLConfMw, evt *FnEventS3) error {
 	addr := conf.S3.c.Addr()
 
-	_, err := swyhttp.MarshalAndPost(
-		&swyhttp.RestReq{
+	_, err := xhttp.MarshalAndPost(
+		&xhttp.RestReq{
 			Address: "http://" + addr + "/v1/api/notify/subscribe",
 			Headers: map[string]string{"X-SwyS3-Token": gateSecrets[conf.S3.c.Pass]},
 			Success: http.StatusAccepted,
@@ -121,8 +121,8 @@ func s3Subscribe(ctx context.Context, conf *YAMLConfMw, evt *FnEventS3) error {
 func s3Unsubscribe(ctx context.Context, conf *YAMLConfMw, evt *FnEventS3) error {
 	addr := conf.S3.c.Addr()
 
-	_, err := swyhttp.MarshalAndPost(
-		&swyhttp.RestReq{
+	_, err := xhttp.MarshalAndPost(
+		&xhttp.RestReq{
 			Address: "http://" + addr + "/v1/api/notify/unsubscribe",
 			Headers: map[string]string{"X-SwyS3-Token": gateSecrets[conf.S3.c.Pass]},
 			Success: http.StatusAccepted,

@@ -566,7 +566,7 @@ func ReposInit(ctx context.Context, conf *YAMLConf) error {
 }
 
 func listReposGH(ac *AccDesc) ([]*GitHubRepo, error) {
-	var rq *swyhttp.RestReq
+	var rq *xhttp.RestReq
 
 	t, err := ac.Secrets["token"].value()
 	if err != nil {
@@ -574,24 +574,24 @@ func listReposGH(ac *AccDesc) ([]*GitHubRepo, error) {
 	}
 
 	if t == "" {
-		rq = &swyhttp.RestReq{
+		rq = &xhttp.RestReq{
 			Address: "https://api.github.com/users/" + ac.SwoId.Name + "/repos",
 			Method: "GET",
 		}
 	} else {
-		rq = &swyhttp.RestReq{
+		rq = &xhttp.RestReq{
 			Address: "https://api.github.com/user/repos?access_token=" + t,
 			Method: "GET",
 		}
 	}
 
-	rsp, err := swyhttp.MarshalAndPost(rq, nil)
+	rsp, err := xhttp.MarshalAndPost(rq, nil)
 	if err != nil {
 		return nil, err
 	}
 
 	var grs []*GitHubRepo
-	err = swyhttp.ReadAndUnmarshalResp(rsp, &grs)
+	err = xhttp.ReadAndUnmarshalResp(rsp, &grs)
 	if err != nil {
 		return nil, err
 	}

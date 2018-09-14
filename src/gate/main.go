@@ -90,9 +90,9 @@ func handleUserLogin(w http.ResponseWriter, r *http.Request) {
 	var resp = http.StatusBadRequest
 	var td swyapi.UserToken
 
-	if swyhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
+	if xhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
 
-	err := swyhttp.ReadAndUnmarshalReq(r, &params)
+	err := xhttp.ReadAndUnmarshalReq(r, &params)
 	if err != nil {
 		goto out
 	}
@@ -109,7 +109,7 @@ func handleUserLogin(w http.ResponseWriter, r *http.Request) {
 	glog.Debugf("Login passed, token %s (exp %s)", token[:16], td.Expires)
 
 	w.Header().Set("X-Subject-Token", token)
-	err = swyhttp.MarshalAndWrite(w, &td)
+	err = xhttp.MarshalAndWrite(w, &td)
 	if err != nil {
 		resp = http.StatusInternalServerError
 		goto out
@@ -144,7 +144,7 @@ func handleProjectDel(ctx context.Context, w http.ResponseWriter, r *http.Reques
 	var id *SwoId
 	var ferr *xrest.ReqErr
 
-	err := swyhttp.ReadAndUnmarshalReq(r, &par)
+	err := xhttp.ReadAndUnmarshalReq(r, &par)
 	if err != nil {
 		return GateErrE(swyapi.GateBadRequest, err)
 	}
@@ -193,7 +193,7 @@ func handleProjectList(ctx context.Context, w http.ResponseWriter, r *http.Reque
 
 	projects := make(map[string]struct{})
 
-	err := swyhttp.ReadAndUnmarshalReq(r, &params)
+	err := xhttp.ReadAndUnmarshalReq(r, &params)
 	if err != nil {
 		return GateErrE(swyapi.GateBadRequest, err)
 	}
@@ -297,7 +297,7 @@ func handleFunctionMwares(ctx context.Context, w http.ResponseWriter, r *http.Re
 	case "POST":
 		var mid string
 
-		err := swyhttp.ReadAndUnmarshalReq(r, &mid)
+		err := xhttp.ReadAndUnmarshalReq(r, &mid)
 		if err != nil {
 			return GateErrE(swyapi.GateBadRequest, err)
 		}
@@ -363,7 +363,7 @@ func handleFunctionAccounts(ctx context.Context, w http.ResponseWriter, r *http.
 	case "POST":
 		var aid string
 
-		err := swyhttp.ReadAndUnmarshalReq(r, &aid)
+		err := xhttp.ReadAndUnmarshalReq(r, &aid)
 		if err != nil {
 			return GateErrE(swyapi.GateBadRequest, err)
 		}
@@ -424,7 +424,7 @@ func handleFunctionS3Bs(ctx context.Context, w http.ResponseWriter, r *http.Requ
 
 	case "POST":
 		var bname string
-		err := swyhttp.ReadAndUnmarshalReq(r, &bname)
+		err := xhttp.ReadAndUnmarshalReq(r, &bname)
 		if err != nil {
 			return GateErrE(swyapi.GateBadRequest, err)
 		}
@@ -506,7 +506,7 @@ func handleFunctionWait(ctx context.Context, w http.ResponseWriter, r *http.Requ
 	}
 
 	var wo swyapi.FunctionWait
-	err := swyhttp.ReadAndUnmarshalReq(r, &wo)
+	err := xhttp.ReadAndUnmarshalReq(r, &wo)
 	if err != nil {
 		return GateErrE(swyapi.GateBadRequest, err)
 	}
@@ -525,7 +525,7 @@ func handleFunctionWait(ctx context.Context, w http.ResponseWriter, r *http.Requ
 	if !tmo {
 		w.WriteHeader(http.StatusOK)
 	} else {
-		w.WriteHeader(swyhttp.StatusTimeoutOccurred) /* CloudFlare's timeout */
+		w.WriteHeader(xhttp.StatusTimeoutOccurred) /* CloudFlare's timeout */
 	}
 
 	return nil
@@ -639,7 +639,7 @@ func reqPath(r *http.Request) string {
 var grl *xratelimit.RL
 
 func handleCall(w http.ResponseWriter, r *http.Request) {
-	if swyhttp.HandleCORS(w, r, CORS_Clnt_Methods, CORS_Clnt_Headers) { return }
+	if xhttp.HandleCORS(w, r, CORS_Clnt_Methods, CORS_Clnt_Headers) { return }
 
 	sopq := statsStart()
 
@@ -663,7 +663,7 @@ func handleCall(w http.ResponseWriter, r *http.Request) {
 }
 
 func reqPeriods(q url.Values) int {
-	periods, e := swyhttp.ReqAtoi(q, "periods", 0)
+	periods, e := xhttp.ReqAtoi(q, "periods", 0)
 	if e != nil {
 		periods = -1
 	}
@@ -709,7 +709,7 @@ func handleFunctionRun(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	var params swyapi.SwdFunctionRun
 	var res *swyapi.SwdFunctionRunResult
 
-	err := swyhttp.ReadAndUnmarshalReq(r, &params)
+	err := xhttp.ReadAndUnmarshalReq(r, &params)
 	if err != nil {
 		return GateErrE(swyapi.GateBadRequest, err)
 	}
@@ -953,7 +953,7 @@ func handleMwareTypes(ctx context.Context, w http.ResponseWriter, r *http.Reques
 func handleS3Access(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
 	var params swyapi.S3Access
 
-	err := swyhttp.ReadAndUnmarshalReq(r, &params)
+	err := xhttp.ReadAndUnmarshalReq(r, &params)
 	if err != nil {
 		return GateErrE(swyapi.GateBadRequest, err)
 	}
@@ -1012,7 +1012,7 @@ func handleAuths(ctx context.Context, w http.ResponseWriter, r *http.Request) *x
 	case "POST":
 		var aa swyapi.AuthAdd
 
-		err := swyhttp.ReadAndUnmarshalReq(r, &aa)
+		err := xhttp.ReadAndUnmarshalReq(r, &aa)
 		if err != nil {
 			return GateErrE(swyapi.GateBadRequest, err)
 		}
@@ -1151,7 +1151,7 @@ type gateGenReq func(ctx context.Context, w http.ResponseWriter, r *http.Request
 
 func genReqHandler(cb gateGenReq) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if swyhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) {
+		if xhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) {
 			return
 		}
 
@@ -1401,7 +1401,7 @@ func main() {
 
 	done(ctx)
 
-	err = swyhttp.ListenAndServe(
+	err = xhttp.ListenAndServe(
 		&http.Server{
 			Handler:      r,
 			Addr:         conf.Daemon.Addr,

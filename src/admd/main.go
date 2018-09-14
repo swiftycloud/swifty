@@ -25,7 +25,7 @@ var admdSecrets map[string]string
 
 type YAMLConfDaemon struct {
 	Address		string			`yaml:"address"`
-	HTTPS		*swyhttp.YAMLConfHTTPS	`yaml:"https,omitempty"`
+	HTTPS		*xhttp.YAMLConfHTTPS	`yaml:"https,omitempty"`
 }
 
 type YAMLConf struct {
@@ -61,9 +61,9 @@ func handleUserLogin(w http.ResponseWriter, r *http.Request) {
 	var resp = http.StatusBadRequest
 	var td swyapi.UserToken
 
-	if swyhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
+	if xhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
 
-	err := swyhttp.ReadAndUnmarshalReq(r, &params)
+	err := xhttp.ReadAndUnmarshalReq(r, &params)
 	if err != nil {
 		goto out
 	}
@@ -80,7 +80,7 @@ func handleUserLogin(w http.ResponseWriter, r *http.Request) {
 	log.Debugf("Login passed, token %s (exp %s)", token[:16], td.Expires)
 
 	w.Header().Set("X-Subject-Token", token)
-	err = swyhttp.MarshalAndWrite(w, &td)
+	err = xhttp.MarshalAndWrite(w, &td)
 	if err != nil {
 		resp = http.StatusInternalServerError
 		goto out
@@ -107,7 +107,7 @@ func handleAdmdReq(r *http.Request) (*xkst.KeystoneTokenData, int, error) {
 }
 
 func handleUser(w http.ResponseWriter, r *http.Request) {
-	if swyhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
+	if xhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
 
 	td, code, err := handleAdmdReq(r)
 	if err != nil {
@@ -127,7 +127,7 @@ func handleUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func handlePlan(w http.ResponseWriter, r *http.Request) {
-	if swyhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
+	if xhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
 
 	td, code, err := handleAdmdReq(r)
 	if err != nil {
@@ -170,7 +170,7 @@ func handleUserUpdate(w http.ResponseWriter, r *http.Request, uid string, td *xk
 	}
 
 	code = http.StatusBadRequest
-	err = swyhttp.ReadAndUnmarshalReq(r, &params)
+	err = xhttp.ReadAndUnmarshalReq(r, &params)
 	if err != nil {
 		goto out
 	}
@@ -190,7 +190,7 @@ func handleUserUpdate(w http.ResponseWriter, r *http.Request, uid string, td *xk
 		rui.Enabled = *params.Enabled
 	}
 
-	err = swyhttp.MarshalAndWrite(w, rui)
+	err = xhttp.MarshalAndWrite(w, rui)
 	if err != nil {
 		goto out
 	}
@@ -226,7 +226,7 @@ func handleUserInfo(w http.ResponseWriter, r *http.Request, uid string, td *xkst
 		goto out
 	}
 
-	err = swyhttp.MarshalAndWrite(w, rui)
+	err = xhttp.MarshalAndWrite(w, rui)
 	if err != nil {
 		goto out
 	}
@@ -250,7 +250,7 @@ func handlePlanInfo(w http.ResponseWriter, r *http.Request, pid bson.ObjectId, t
 		goto out
 	}
 
-	err = swyhttp.MarshalAndWrite(w, pl.toInfo())
+	err = xhttp.MarshalAndWrite(w, pl.toInfo())
 	if err != nil {
 		goto out
 	}
@@ -262,7 +262,7 @@ out:
 }
 
 func handleUsers(w http.ResponseWriter, r *http.Request) {
-	if swyhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
+	if xhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
 
 	td, code, err := handleAdmdReq(r)
 	if err != nil {
@@ -279,7 +279,7 @@ func handleUsers(w http.ResponseWriter, r *http.Request) {
 }
 
 func handlePlans(w http.ResponseWriter, r *http.Request) {
-	if swyhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
+	if xhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
 
 	td, code, err := handleAdmdReq(r)
 	if err != nil {
@@ -318,7 +318,7 @@ func handleListUsers(w http.ResponseWriter, r *http.Request, td *xkst.KeystoneTo
 		goto out
 	}
 
-	err = swyhttp.MarshalAndWrite(w, result)
+	err = xhttp.MarshalAndWrite(w, result)
 	if err != nil {
 		goto out
 	}
@@ -353,7 +353,7 @@ func handleListPlans(w http.ResponseWriter, r *http.Request, td *xkst.KeystoneTo
 		result = append(result, pl.toInfo())
 	}
 
-	err = swyhttp.MarshalAndWrite(w, result)
+	err = xhttp.MarshalAndWrite(w, result)
 	if err != nil {
 		goto out
 	}
@@ -365,8 +365,8 @@ out:
 }
 
 func makeGateReq(gate, tennant, addr string, in interface{}, out interface{}, authToken string) error {
-	resp, err := swyhttp.MarshalAndPost(
-			&swyhttp.RestReq{
+	resp, err := xhttp.MarshalAndPost(
+			&xhttp.RestReq{
 				Address: "http://" + gate + "/v1/" + addr,
 				Headers: map[string]string {
 					"X-Auth-Token": authToken,
@@ -385,7 +385,7 @@ func makeGateReq(gate, tennant, addr string, in interface{}, out interface{}, au
 	}
 
 	if out != nil {
-		err = swyhttp.ReadAndUnmarshalResp(resp, out)
+		err = xhttp.ReadAndUnmarshalResp(resp, out)
 		if err != nil {
 			return fmt.Errorf("Bad responce body: %s", err.Error())
 		}
@@ -503,7 +503,7 @@ func handleAddUser(w http.ResponseWriter, r *http.Request, td *xkst.KeystoneToke
 	defer ses.Close()
 
 	code := http.StatusBadRequest
-	err = swyhttp.ReadAndUnmarshalReq(r, &params)
+	err = xhttp.ReadAndUnmarshalReq(r, &params)
 	if err != nil {
 		goto out
 	}
@@ -551,7 +551,7 @@ func handleAddUser(w http.ResponseWriter, r *http.Request, td *xkst.KeystoneToke
 		goto out
 	}
 
-	err = swyhttp.MarshalAndWrite2(w, &swyapi.UserInfo{
+	err = xhttp.MarshalAndWrite2(w, &swyapi.UserInfo{
 			ID:		kid,
 			UId:		params.UId,
 			Name:		params.Name,
@@ -589,7 +589,7 @@ func handleAddPlan(w http.ResponseWriter, r *http.Request, td *xkst.KeystoneToke
 	}
 
 	code = http.StatusBadRequest
-	err = swyhttp.ReadAndUnmarshalReq(r, &params)
+	err = xhttp.ReadAndUnmarshalReq(r, &params)
 	if err != nil {
 		goto out
 	}
@@ -611,7 +611,7 @@ func handleAddPlan(w http.ResponseWriter, r *http.Request, td *xkst.KeystoneToke
 	}
 
 	params.Id = pl.ObjID.Hex()
-	err = swyhttp.MarshalAndWrite2(w, &params, http.StatusCreated)
+	err = xhttp.MarshalAndWrite2(w, &params, http.StatusCreated)
 	if err != nil {
 		goto out
 	}
@@ -637,7 +637,7 @@ func handleSetLimits(w http.ResponseWriter, r *http.Request, uid string, td *xks
 	}
 
 	code = http.StatusBadRequest
-	err = swyhttp.ReadAndUnmarshalReq(r, &params)
+	err = xhttp.ReadAndUnmarshalReq(r, &params)
 	if err != nil {
 		goto out
 	}
@@ -729,7 +729,7 @@ func handleGetLimits(w http.ResponseWriter, uid string, td *xkst.KeystoneTokenDa
 		goto out
 	}
 
-	err = swyhttp.MarshalAndWrite(w, ulim)
+	err = xhttp.MarshalAndWrite(w, ulim)
 	if err != nil {
 		goto out
 	}
@@ -744,7 +744,7 @@ func handleSetPassword(w http.ResponseWriter, r *http.Request) {
 	var params swyapi.UserLogin
 	var code = http.StatusBadRequest
 
-	if swyhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
+	if xhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
 
 	uid := mux.Vars(r)["uid"]
 
@@ -754,7 +754,7 @@ func handleSetPassword(w http.ResponseWriter, r *http.Request) {
 	}
 
 	code = http.StatusBadRequest
-	err = swyhttp.ReadAndUnmarshalReq(r, &params)
+	err = xhttp.ReadAndUnmarshalReq(r, &params)
 	if err != nil {
 		goto out
 	}
@@ -794,7 +794,7 @@ out:
 }
 
 func handleUserLimits(w http.ResponseWriter, r *http.Request) {
-	if swyhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
+	if xhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
 
 	uid := mux.Vars(r)["uid"]
 
@@ -890,7 +890,7 @@ func main() {
 	r.HandleFunc("/v1/plans", handlePlans).Methods("POST", "GET", "OPTIONS")
 	r.HandleFunc("/v1/plans/{pid}", handlePlan).Methods("GET", "DELETE", "OPTIONS")
 
-	err = swyhttp.ListenAndServe(
+	err = xhttp.ListenAndServe(
 		&http.Server{
 			Handler:      r,
 			Addr:         conf.Daemon.Address,

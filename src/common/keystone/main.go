@@ -167,8 +167,8 @@ retry:
 		headers[h] = hv
 	}
 
-	resp, err := swyhttp.MarshalAndPost(
-			&swyhttp.RestReq{
+	resp, err := xhttp.MarshalAndPost(
+			&xhttp.RestReq{
 				Method:  ksreq.Type,
 				Address: "http://" + kc.addr + "/v3/" + ksreq.URL,
 				Headers: headers,
@@ -189,7 +189,7 @@ retry:
 	ksreq.outToken = resp.Header.Get("X-Subject-Token")
 
 	if out != nil {
-		err = swyhttp.ReadAndUnmarshalResp(resp, out)
+		err = xhttp.ReadAndUnmarshalResp(resp, out)
 		if err != nil {
 			return err
 		}

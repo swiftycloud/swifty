@@ -66,7 +66,7 @@ var accHandlers = map[string]acHandler {
 }
 
 func githubResolveName(token string) (string, error) {
-	rsp, err := swyhttp.MarshalAndPost(&swyhttp.RestReq{
+	rsp, err := xhttp.MarshalAndPost(&xhttp.RestReq{
 			Method: "GET",
 			Address: "https://api.github.com/user?access_token=" + token,
 		}, nil)
@@ -75,7 +75,7 @@ func githubResolveName(token string) (string, error) {
 	}
 
 	var u GitHubUser
-	err = swyhttp.ReadAndUnmarshalResp(rsp, &u)
+	err = xhttp.ReadAndUnmarshalResp(rsp, &u)
 	if err != nil {
 		return "", err
 	}
