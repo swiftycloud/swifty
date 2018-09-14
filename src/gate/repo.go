@@ -19,14 +19,21 @@ import (
 )
 
 const (
+	DBRepoStateCln	int = 1
+	DBRepoStateRem	int = 2
+	DBRepoStateStl	int = 3
+	DBRepoStateRdy	int = 4
+)
+
+const (
 	RepoDescFile	= ".swifty.yml"
 )
 
 var repStates = map[int]string {
-	swy.DBRepoStateCln:	"cloning",
-	swy.DBRepoStateStl:	"stalled",
-	swy.DBRepoStateRem:	"removing",
-	swy.DBRepoStateRdy:	"ready",
+	DBRepoStateCln:	"cloning",
+	DBRepoStateStl:	"stalled",
+	DBRepoStateRem:	"removing",
+	DBRepoStateRdy:	"ready",
 }
 
 type RepoDesc struct {
@@ -155,7 +162,7 @@ var repoHandlers = map[string]repoHandler {
 
 func (rd *RepoDesc)Attach(ctx context.Context, ac *AccDesc) *xrest.ReqErr {
 	rd.ObjID = bson.NewObjectId()
-	rd.State = swy.DBRepoStateCln
+	rd.State = DBRepoStateCln
 	if ac != nil {
 		rd.AccID = ac.ObjID
 	}
@@ -189,12 +196,12 @@ func (rd *RepoDesc)Upd(ctx context.Context, p interface{}) *xrest.ReqErr {
 }
 
 func (rd *RepoDesc)Del(ctx context.Context) *xrest.ReqErr {
-	err := dbUpdatePart(ctx, rd, bson.M{"state": swy.DBRepoStateRem})
+	err := dbUpdatePart(ctx, rd, bson.M{"state": DBRepoStateRem})
 	if err != nil {
 		return GateErrD(err)
 	}
 
-	rd.State = swy.DBRepoStateRem
+	rd.State = DBRepoStateRem
 
 	if rd.Path == "" {
 		_, err = swy.DropDir(cloneDir(), rd.path())
@@ -476,7 +483,7 @@ func ReposInit(ctx context.Context, conf *YAMLConf) error {
 		"name": conf.DemoRepo.URL,
 		"tennant": "*",
 		"project": NoProject,
-		"state": swy.DBRepoStateRdy,
+		"state": DBRepoStateRdy,
 	}
 	err := dbFind(ctx, q, &demoRep)
 	if err != nil && ! dbNF(err) {

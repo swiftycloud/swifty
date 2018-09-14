@@ -1,13 +1,6 @@
 package swy
 
 const (
-	DBRepoStateCln	int = 1
-	DBRepoStateRem	int = 2
-	DBRepoStateStl	int = 3
-	DBRepoStateRdy	int = 4
-)
-
-const (
 	GateGenErr	uint = 1	// Unclassified error
 	GateBadRequest	uint = 2	// Error parsing request data
 	GateBadResp	uint = 3	// Error generating responce

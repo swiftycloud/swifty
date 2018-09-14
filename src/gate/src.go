@@ -125,13 +125,13 @@ func bgClone(rd *RepoDesc, ac *AccDesc, rh *repoHandler) {
 	commit, err := rh.clone(ctx, rd, ac)
 	if err != nil {
 		/* FIXME -- keep logs and show them user */
-		dbUpdatePart(ctx, rd, bson.M{ "state": swy.DBRepoStateStl })
+		dbUpdatePart(ctx, rd, bson.M{ "state": DBRepoStateStl })
 		return
 	}
 
 	t := time.Now()
 	dbUpdatePart(ctx, rd, bson.M{
-					"state": swy.DBRepoStateRdy,
+					"state": DBRepoStateRdy,
 					"commit": commit,
 					"last_pull": &t,
 				})
