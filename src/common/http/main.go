@@ -82,16 +82,9 @@ func MarshalAndWrite(w http.ResponseWriter, data interface{}) error {
 }
 
 func MarshalAndWrite2(w http.ResponseWriter, data interface{}, status int) error {
-	jdata, err := json.Marshal(data)
-	if err != nil {
-		return fmt.Errorf("\tMarshal error: %s", err.Error())
-	}
-
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(status)
-	w.Write(jdata)
-
-	return nil
+	return json.NewEncoder(w).Encode(data)
 }
 
 func MarshalAndPost(req *RestReq, data interface{}) (*http.Response, error) {
