@@ -10,11 +10,18 @@ import (
 	"../apis"
 )
 
+const (
+	DBDepStateIni	int = 1
+	DBDepStateRdy	int = 2
+	DBDepStateStl	int = 3
+	DBDepStateTrm	int = 4
+)
+
 var depStates = map[int]string {
-	swy.DBDepStateIni: "initializing",
-	swy.DBDepStateRdy: "ready",
-	swy.DBDepStateStl: "stalled",
-	swy.DBDepStateTrm: "terminating",
+	DBDepStateIni: "initializing",
+	DBDepStateRdy: "ready",
+	DBDepStateStl: "stalled",
+	DBDepStateTrm: "terminating",
 }
 
 type _DeployItemDesc struct {
@@ -132,7 +139,7 @@ func deployStartItems(dep *DeployDesc) {
 		}
 
 		deployStopMwares(ctx, dep, i)
-		dbUpdatePart(ctx, dep, bson.M{"state": swy.DBDepStateStl})
+		dbUpdatePart(ctx, dep, bson.M{"state": DBDepStateStl})
 		return
 	}
 
@@ -144,11 +151,11 @@ func deployStartItems(dep *DeployDesc) {
 
 		deployStopFunctions(ctx, dep, i)
 		deployStopMwares(ctx, dep, len(dep.Mwares))
-		dbUpdatePart(ctx, dep, bson.M{"state": swy.DBDepStateStl})
+		dbUpdatePart(ctx, dep, bson.M{"state": DBDepStateStl})
 		return
 	}
 
-	dbUpdatePart(ctx, dep, bson.M{"state": swy.DBDepStateRdy})
+	dbUpdatePart(ctx, dep, bson.M{"state": DBDepStateRdy})
 	return
 }
 
@@ -189,7 +196,7 @@ func deployStopMwares(ctx context.Context, dep *DeployDesc, till int) *xrest.Req
 func getDeployDesc(id *SwoId) *DeployDesc {
 	dd := &DeployDesc {
 		SwoId: *id,
-		State: swy.DBDepStateIni,
+		State: DBDepStateIni,
 		Cookie: id.Cookie(),
 	}
 
@@ -381,7 +388,7 @@ func DeployInit(ctx context.Context, conf *YAMLConf) error {
 			}
 		}
 
-		if dep.State == swy.DBDepStateIni {
+		if dep.State == DBDepStateIni {
 			ctxlog(ctx).Debugf("Will restart deploy %s in state %d", dep.SwoId.Str(), dep.State)
 			deployStopFunctions(ctx, dep, len(dep.Functions))
 			deployStopMwares(ctx, dep, len(dep.Mwares))

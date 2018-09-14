@@ -1,13 +1,6 @@
 package swy
 
 const (
-	DBDepStateIni	int = 1
-	DBDepStateRdy	int = 2
-	DBDepStateStl	int = 3
-	DBDepStateTrm	int = 4
-)
-
-const (
 	DBRepoStateCln	int = 1
 	DBRepoStateRem	int = 2
 	DBRepoStateStl	int = 3
