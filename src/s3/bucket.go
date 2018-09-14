@@ -149,11 +149,11 @@ func unacctObj(ctx context.Context, bucket *s3mgo.S3Bucket, size int64, dropref 
 	return nil
 }
 
-func FindBucket(ctx context.Context, iam *s3mgo.S3Iam, bname string) (*s3mgo.S3Bucket, error) {
+func FindBucket(ctx context.Context, bname string) (*s3mgo.S3Bucket, error) {
 	var res s3mgo.S3Bucket
 	var err error
 
-	account, err := s3AccountLookup(ctx, iam)
+	account, err := s3AccountLookup(ctx)
 	if err != nil { return nil, err }
 
 	query := bson.M{ "bcookie": account.BCookie(bname), "state": S3StateActive }
@@ -161,7 +161,7 @@ func FindBucket(ctx context.Context, iam *s3mgo.S3Iam, bname string) (*s3mgo.S3B
 	if err != nil {
 		if err != mgo.ErrNotFound {
 			log.Errorf("s3: Can't find bucket %s/%s: %s",
-				infoLong(account), infoLong(iam), err.Error())
+				infoLong(account), infoLong(ctxIam(ctx)), err.Error())
 		}
 		return nil, err
 	}
@@ -281,10 +281,10 @@ func s3RepairBucket(ctx context.Context) error {
 	return nil
 }
 
-func s3InsertBucket(ctx context.Context, iam *s3mgo.S3Iam, bname, canned_acl string) (*S3Error) {
+func s3InsertBucket(ctx context.Context, bname, canned_acl string) (*S3Error) {
 	var err error
 
-	account, err := s3AccountLookup(ctx, iam)
+	account, err := s3AccountLookup(ctx)
 	if err != nil {
 		if err == mgo.ErrNotFound {
 			return &S3Error{ ErrorCode: S3ErrNoSuchBucket }
@@ -328,11 +328,11 @@ out_nopool:
 	return &S3Error{ ErrorCode: S3ErrInternalError }
 }
 
-func s3DeleteBucket(ctx context.Context, iam *s3mgo.S3Iam, bname, acl string) (*S3Error) {
+func s3DeleteBucket(ctx context.Context, bname, acl string) (*S3Error) {
 	var bucket *s3mgo.S3Bucket
 	var err error
 
-	bucket, err = FindBucket(ctx, iam, bname)
+	bucket, err = FindBucket(ctx, bname)
 	if err != nil {
 		if err == mgo.ErrNotFound {
 			return &S3Error{ ErrorCode: S3ErrNoSuchBucket }
@@ -380,11 +380,11 @@ func FindAllObjects(ctx context.Context, bucket *s3mgo.S3Bucket, query bson.M) (
 	return res, nil
 }
 
-func s3GetBucketMetricOutput(ctx context.Context, iam *s3mgo.S3Iam, bname, metric_name string) (*swys3api.S3GetMetricStatisticsOutput, *S3Error) {
+func s3GetBucketMetricOutput(ctx context.Context, bname, metric_name string) (*swys3api.S3GetMetricStatisticsOutput, *S3Error) {
 	var res swys3api.S3GetMetricStatisticsOutput
 	var point swys3api.S3Datapoint
 
-	bucket, err := FindBucket(ctx, iam, bname)
+	bucket, err := FindBucket(ctx, bname)
 	if err != nil {
 		if err == mgo.ErrNotFound {
 			return nil, &S3Error{ ErrorCode: S3ErrNoSuchBucket }
@@ -440,7 +440,7 @@ func (params *S3ListObjectsRP) Validate() (bool) {
 	return true
 }
 
-func s3ListBucket(ctx context.Context, iam *s3mgo.S3Iam, bname string, params *S3ListObjectsRP) (*swys3api.S3Bucket, *S3Error) {
+func s3ListBucket(ctx context.Context, bname string, params *S3ListObjectsRP) (*swys3api.S3Bucket, *S3Error) {
 	var start_after, cont_after bool
 	var prefixes_map map[string]bool
 	var list swys3api.S3Bucket
@@ -455,7 +455,7 @@ func s3ListBucket(ctx context.Context, iam *s3mgo.S3Iam, bname string, params *S
 		return nil, &S3Error{ ErrorCode: S3ErrInvalidArgument }
 	}
 
-	bucket, err = FindBucket(ctx, iam, bname)
+	bucket, err = FindBucket(ctx, bname)
 	if err != nil {
 		if err == mgo.ErrNotFound {
 			return nil, &S3Error{ ErrorCode: S3ErrNoSuchBucket }
@@ -524,6 +524,7 @@ func s3ListBucket(ctx context.Context, iam *s3mgo.S3Iam, bname string, params *S
 		}
 
 		if params.FetchOwner {
+			iam := ctxIam(ctx)
 			o.Owner.DisplayName = iam.User
 			o.Owner.ID = iam.AwsID
 		}
@@ -556,21 +557,22 @@ func s3ListBucket(ctx context.Context, iam *s3mgo.S3Iam, bname string, params *S
 	return &list, nil
 }
 
-func s3ListBuckets(ctx context.Context, iam *s3mgo.S3Iam) (*swys3api.S3BucketList, *S3Error) {
+func s3ListBuckets(ctx context.Context) (*swys3api.S3BucketList, *S3Error) {
 	var list swys3api.S3BucketList
 	var buckets []s3mgo.S3Bucket
 	var err error
 
-	buckets, err = FindBuckets(ctx, iam)
+	buckets, err = FindBuckets(ctx)
 	if err != nil {
 		if err == mgo.ErrNotFound {
 			return nil, &S3Error{ ErrorCode: S3ErrNoSuchBucket }
 		}
 
-		log.Errorf("s3: Can't find buckets %s: %s", infoLong(iam), err.Error())
+		log.Errorf("s3: Can't find buckets %s: %s", infoLong(ctxIam(ctx)), err.Error())
 		return nil, &S3Error{ ErrorCode: S3ErrInternalError }
 	}
 
+	iam := ctxIam(ctx)
 	list.Owner.DisplayName	= iam.User
 	list.Owner.ID		= iam.AwsID[:16]
 

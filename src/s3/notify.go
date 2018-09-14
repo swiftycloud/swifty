@@ -61,8 +61,8 @@ func s3Unsubscribe(ctx context.Context, params *swys3api.S3Subscribe) error {
 
 var nChan *amqp.Channel
 
-func s3Notify(ctx context.Context, iam *s3mgo.S3Iam, bucket *s3mgo.S3Bucket, object *s3mgo.S3Object, op string) {
-	account, err := s3AccountLookup(ctx, iam)
+func s3Notify(ctx context.Context, bucket *s3mgo.S3Bucket, object *s3mgo.S3Object, op string) {
+	account, err := s3AccountLookup(ctx)
 	if err != nil { return }
 
 	data, err := json.Marshal(&swys3api.S3Event{

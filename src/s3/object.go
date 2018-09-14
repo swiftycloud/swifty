@@ -99,7 +99,7 @@ func Activate(ctx context.Context, b *s3mgo.S3Bucket, o *s3mgo.S3Object, etag st
 	return err
 }
 
-func UploadToObject(ctx context.Context, iam *s3mgo.S3Iam, bucket *s3mgo.S3Bucket, upload *S3Upload) (*s3mgo.S3Object, error) {
+func UploadToObject(ctx context.Context, bucket *s3mgo.S3Bucket, upload *S3Upload) (*s3mgo.S3Object, error) {
 	var err error
 
 	size, etag, err := s3ObjectPartsResum(ctx, upload)
@@ -142,7 +142,7 @@ func UploadToObject(ctx context.Context, iam *s3mgo.S3Iam, bucket *s3mgo.S3Bucke
 	}
 
 	if bucket.BasicNotify != nil && bucket.BasicNotify.Put > 0 {
-		s3Notify(ctx, iam, bucket, object, "put")
+		s3Notify(ctx, bucket, object, "put")
 	}
 
 	log.Debugf("s3: Added %s", infoLong(object))
@@ -154,7 +154,7 @@ out_remove:
 	dbS3Remove(ctx, object)
 	return nil, err
 }
-func AddObject(ctx context.Context, iam *s3mgo.S3Iam, bucket *s3mgo.S3Bucket, oname string,
+func AddObject(ctx context.Context, bucket *s3mgo.S3Bucket, oname string,
 		acl string, data []byte) (*s3mgo.S3Object, error) {
 	var objp *s3mgo.S3ObjectPart
 	var err error
@@ -185,7 +185,7 @@ func AddObject(ctx context.Context, iam *s3mgo.S3Iam, bucket *s3mgo.S3Bucket, on
 		goto out_remove
 	}
 
-	objp, err = s3ObjectPartAdd(ctx, iam, object.ObjID, bucket.BCookie, object.OCookie, 0, data)
+	objp, err = s3ObjectPartAdd(ctx, object.ObjID, bucket.BCookie, object.OCookie, 0, data)
 	if err != nil {
 		goto out_acc
 	}
@@ -196,7 +196,7 @@ func AddObject(ctx context.Context, iam *s3mgo.S3Iam, bucket *s3mgo.S3Bucket, on
 	}
 
 	if bucket.BasicNotify != nil && bucket.BasicNotify.Put > 0 {
-		s3Notify(ctx, iam, bucket, object, "put")
+		s3Notify(ctx, bucket, object, "put")
 	}
 
 	log.Debugf("s3: Added %s", infoLong(object))
@@ -211,7 +211,7 @@ out_remove:
 	return nil, err
 }
 
-func s3DeleteObject(ctx context.Context, iam *s3mgo.S3Iam, bucket *s3mgo.S3Bucket, oname string) error {
+func s3DeleteObject(ctx context.Context, bucket *s3mgo.S3Bucket, oname string) error {
 	var object *s3mgo.S3Object
 	var err error
 
@@ -234,7 +234,7 @@ func s3DeleteObject(ctx context.Context, iam *s3mgo.S3Iam, bucket *s3mgo.S3Bucke
 	}
 
 	if bucket.BasicNotify != nil && bucket.BasicNotify.Delete > 0 {
-		s3Notify(ctx, iam, bucket, object, "delete")
+		s3Notify(ctx, bucket, object, "delete")
 	}
 
 	log.Debugf("s3: Deleted %s", infoLong(object))

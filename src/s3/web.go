@@ -16,15 +16,15 @@ import (
 	"../apis/s3"
 )
 
-func handleGetWebsite(ctx context.Context, bname string, iam *s3mgo.S3Iam, w http.ResponseWriter, r *http.Request) *S3Error {
-	if !iam.Policy.MayAccess(bname) {
+func handleGetWebsite(ctx context.Context, bname string, w http.ResponseWriter, r *http.Request) *S3Error {
+	if !ctxMayAccess(ctx, bname) {
 		return &S3Error{ ErrorCode: S3ErrAccessDenied }
 	}
-	if !iam.Policy.Allowed(S3P_GetBucketWebsite) {
+	if !ctxAllowed(ctx, S3P_GetBucketWebsite) {
 		return &S3Error{ ErrorCode: S3ErrMethodNotAllowed }
 	}
 
-	b, err := FindBucket(ctx, iam, bname)
+	b, err := FindBucket(ctx, bname)
 	if err != nil {
 		return &S3Error{ ErrorCode: S3ErrNoSuchBucket }
 	}
@@ -47,11 +47,11 @@ func handleGetWebsite(ctx context.Context, bname string, iam *s3mgo.S3Iam, w htt
 	return nil
 }
 
-func handlePutWebsite(ctx context.Context, bname string, iam *s3mgo.S3Iam, w http.ResponseWriter, r *http.Request) *S3Error {
-	if !iam.Policy.MayAccess(bname) {
+func handlePutWebsite(ctx context.Context, bname string, w http.ResponseWriter, r *http.Request) *S3Error {
+	if !ctxMayAccess(ctx, bname) {
 		return &S3Error{ ErrorCode: S3ErrAccessDenied }
 	}
-	if !iam.Policy.Allowed(S3P_PutBucketWebsite) {
+	if !ctxAllowed(ctx, S3P_PutBucketWebsite) {
 		return &S3Error{ ErrorCode: S3ErrMethodNotAllowed }
 	}
 
@@ -67,7 +67,7 @@ func handlePutWebsite(ctx context.Context, bname string, iam *s3mgo.S3Iam, w htt
 		return &S3Error{ ErrorCode: S3ErrMissingRequestBodyError }
 	}
 
-	b, err := FindBucket(ctx, iam, bname)
+	b, err := FindBucket(ctx, bname)
 	if err != nil {
 		return &S3Error{ ErrorCode: S3ErrNoSuchBucket }
 	}
@@ -80,15 +80,15 @@ func handlePutWebsite(ctx context.Context, bname string, iam *s3mgo.S3Iam, w htt
 	return nil
 }
 
-func handleDelWebsite(ctx context.Context, bname string, iam *s3mgo.S3Iam, w http.ResponseWriter, r *http.Request) *S3Error {
-	if !iam.Policy.MayAccess(bname) {
+func handleDelWebsite(ctx context.Context, bname string, w http.ResponseWriter, r *http.Request) *S3Error {
+	if !ctxMayAccess(ctx, bname) {
 		return &S3Error{ ErrorCode: S3ErrAccessDenied }
 	}
-	if !iam.Policy.Allowed(S3P_DeleteBucketWebsite) {
+	if !ctxAllowed(ctx, S3P_DeleteBucketWebsite) {
 		return &S3Error{ ErrorCode: S3ErrMethodNotAllowed }
 	}
 
-	b, err := FindBucket(ctx, iam, bname)
+	b, err := FindBucket(ctx, bname)
 	if err != nil {
 		return &S3Error{ ErrorCode: S3ErrNoSuchBucket }
 	}
@@ -165,7 +165,8 @@ func handleWebReq(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	serr := handleObject(ctx, iam, w, r, aux[0], oname)
+	ctxAuthorize(ctx, iam)
+	serr := handleObject(ctx, w, r, aux[0], oname)
 	if serr != nil {
 		if serr.ErrorCode != S3ErrNoSuchKey {
 			http.Error(w, serr.Message, http.StatusInternalServerError)
@@ -175,7 +176,7 @@ func handleWebReq(w http.ResponseWriter, r *http.Request) {
 		if ws.ErrDoc != "" {
 			/* Try to report back the 4xx.html page */
 			ctx.(*s3Context).errCode = http.StatusNotFound
-			serr = handleObject(ctx, iam, w, r, aux[0], ws.ErrDoc)
+			serr = handleObject(ctx, w, r, aux[0], ws.ErrDoc)
 			if serr == nil {
 				return
 			}
