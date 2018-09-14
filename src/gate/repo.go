@@ -14,9 +14,9 @@ import (
 	"context"
 	"time"
 	"io/ioutil"
-	"../common"
 	"../common/http"
 	"../common/xrest"
+	"../common"
 	"../apis"
 )
 
@@ -111,7 +111,7 @@ func (rd *RepoDesc)Add(ctx context.Context, p interface{}) *xrest.ReqErr {
 		}
 
 		if ac.Type != params.Type {
-			return GateErrM(swy.GateBadRequest, "Bad account type")
+			return GateErrM(swyapi.GateBadRequest, "Bad account type")
 		}
 
 		acc = &ac
@@ -240,7 +240,7 @@ func (rd *RepoDesc)Attach(ctx context.Context, ac *AccDesc) *xrest.ReqErr {
 
 	rh, ok := repoHandlers[rd.Type]
 	if !ok {
-		return GateErrM(swy.GateBadRequest, "Unsupported repo type")
+		return GateErrM(swyapi.GateBadRequest, "Unsupported repo type")
 	}
 
 	err := dbInsert(ctx, rd)
@@ -277,7 +277,7 @@ func (rd *RepoDesc)Del(ctx context.Context) *xrest.ReqErr {
 	if rd.Path == "" {
 		_, err = swy.DropDir(cloneDir(), rd.path())
 		if err != nil {
-			return GateErrE(swy.GateFsError, err)
+			return GateErrE(swyapi.GateFsError, err)
 		}
 	}
 
@@ -292,19 +292,19 @@ func (rd *RepoDesc)Del(ctx context.Context) *xrest.ReqErr {
 func (rd *RepoDesc)description(ctx context.Context) (*swyapi.RepoDesc, *xrest.ReqErr) {
 	dfile := rd.clonePath() + "/" + RepoDescFile
 	if _, err := os.Stat(dfile); os.IsNotExist(err) {
-		return nil, GateErrM(swy.GateNotAvail, "No description for repo")
+		return nil, GateErrM(swyapi.GateNotAvail, "No description for repo")
 	}
 
 	var out swyapi.RepoDesc
 
 	desc, err := ioutil.ReadFile(dfile)
 	if err != nil {
-		return nil, GateErrE(swy.GateFsError, err)
+		return nil, GateErrE(swyapi.GateFsError, err)
 	}
 
 	err = yaml.Unmarshal(desc, &out)
 	if err != nil {
-		return nil, GateErrE(swy.GateGenErr, err)
+		return nil, GateErrE(swyapi.GateGenErr, err)
 	}
 
 	return &out, nil
@@ -313,12 +313,12 @@ func (rd *RepoDesc)description(ctx context.Context) (*swyapi.RepoDesc, *xrest.Re
 func (rd *RepoDesc)readFile(ctx context.Context, fname string) ([]byte, *xrest.ReqErr) {
 	dfile := rd.clonePath() + "/" + fname
 	if _, err := os.Stat(dfile); os.IsNotExist(err) {
-		return nil, GateErrM(swy.GateNotAvail, "No such file in repo")
+		return nil, GateErrM(swyapi.GateNotAvail, "No such file in repo")
 	}
 
 	cont, err := ioutil.ReadFile(dfile)
 	if err != nil {
-		return nil, GateErrM(swy.GateFsError, "Error reading file")
+		return nil, GateErrM(swyapi.GateFsError, "Error reading file")
 	}
 
 	return cont, nil
@@ -335,7 +335,7 @@ func (rd *RepoDesc)listFiles(ctx context.Context) ([]*swyapi.RepoFile, *xrest.Re
 
 		ents, err := ioutil.ReadDir(rp + "/" + dir.Path)
 		if err != nil {
-			return nil, GateErrM(swy.GateFsError, "Cannot list files in repo")
+			return nil, GateErrM(swyapi.GateFsError, "Cannot list files in repo")
 		}
 
 		for _, ent := range ents {
@@ -373,7 +373,7 @@ func (rd *RepoDesc)listFiles(ctx context.Context) ([]*swyapi.RepoFile, *xrest.Re
 
 func (rd *RepoDesc)pull(ctx context.Context) *xrest.ReqErr {
 	if rd.LastPull != nil && time.Now().Before( rd.LastPull.Add(time.Duration(conf.RepoSyncRate) * time.Minute)) {
-		return GateErrM(swy.GateNotAvail, "To frequent sync")
+		return GateErrM(swyapi.GateNotAvail, "To frequent sync")
 	}
 
 	go func() {
@@ -480,7 +480,7 @@ func (rd *RepoDesc)pullSync(ctx context.Context) *xrest.ReqErr {
 		ctxlog(ctx).Errorf("can't pull %s -> %s: %s (%s:%s)",
 			rd.URL(), clone_to, err.Error(),
 			stdout.String(), stderr.String())
-		return GateErrE(swy.GateGenErr, err)
+		return GateErrE(swyapi.GateGenErr, err)
 	}
 
 	cmt, err := gitCommit(clone_to)
@@ -614,14 +614,14 @@ func (rd *DetachedRepo)Info(ctx context.Context, q url.Values, details bool) (in
 	}, nil
 }
 
-func (rd *DetachedRepo)Del(context.Context) *xrest.ReqErr { return GateErrC(swy.GateNotAvail) }
-func (rd *DetachedRepo)Upd(context.Context, interface{}) *xrest.ReqErr { return GateErrC(swy.GateNotAvail) }
-func (rd *DetachedRepo)Add(context.Context, interface{}) *xrest.ReqErr { return GateErrC(swy.GateNotAvail) }
+func (rd *DetachedRepo)Del(context.Context) *xrest.ReqErr { return GateErrC(swyapi.GateNotAvail) }
+func (rd *DetachedRepo)Upd(context.Context, interface{}) *xrest.ReqErr { return GateErrC(swyapi.GateNotAvail) }
+func (rd *DetachedRepo)Add(context.Context, interface{}) *xrest.ReqErr { return GateErrC(swyapi.GateNotAvail) }
 
 func (_ Repos)Iterate(ctx context.Context, q url.Values, cb func(context.Context, xrest.Obj) *xrest.ReqErr) *xrest.ReqErr {
 	accid := q.Get("aid")
 	if accid != "" && !bson.IsObjectIdHex(accid) {
-		return GateErrM(swy.GateBadRequest, "Bad account ID value")
+		return GateErrM(swyapi.GateBadRequest, "Bad account ID value")
 	}
 
 	att := q.Get("attached")

@@ -5,7 +5,6 @@ import (
 	"gopkg.in/mgo.v2/bson"
 	"context"
 	"net/url"
-	"../common"
 	"../common/xrest"
 	"../apis"
 )
@@ -49,7 +48,7 @@ func (i *DeployFunction)start(ctx context.Context) *xrest.ReqErr {
 
 		err := json.Unmarshal([]byte(i.FnSrc), &src)
 		if err != nil {
-			return GateErrE(swy.GateGenErr, err)
+			return GateErrE(swyapi.GateGenErr, err)
 		}
 		i.src = &src
 	}
@@ -168,7 +167,7 @@ func deployStopFunctions(ctx context.Context, dep *DeployDesc, till int) *xrest.
 		}
 
 		e := f.stop(ctx)
-		if e != nil  && e.Code != swy.GateNotFound {
+		if e != nil  && e.Code != swyapi.GateNotFound {
 			err = e
 		}
 	}
@@ -185,7 +184,7 @@ func deployStopMwares(ctx context.Context, dep *DeployDesc, till int) *xrest.Req
 		}
 
 		e := m.stop(ctx)
-		if e != nil  && e.Code != swy.GateNotFound {
+		if e != nil  && e.Code != swyapi.GateNotFound {
 			err = e
 		}
 	}
@@ -209,7 +208,7 @@ func (dep *DeployDesc)getItems(ds *swyapi.DeployStart) *xrest.ReqErr {
 	for _, fn := range ds.Functions {
 		srcd, er := json.Marshal(&fn.Sources)
 		if er != nil {
-			return GateErrE(swy.GateGenErr, er)
+			return GateErrE(swyapi.GateGenErr, er)
 		}
 
 		id.Name = fn.Name
@@ -317,7 +316,7 @@ func (dep *DeployDesc)Info(ctx context.Context, q url.Values, details bool) (int
 }
 
 func (dep *DeployDesc)Upd(ctx context.Context, upd interface{}) *xrest.ReqErr {
-	return GateErrM(swy.GateGenErr, "Not updatable")
+	return GateErrM(swyapi.GateGenErr, "Not updatable")
 }
 
 func (dep *DeployDesc)toInfo(ctx context.Context, details bool) (*swyapi.DeployInfo, *xrest.ReqErr) {

@@ -146,7 +146,7 @@ func handleProjectDel(ctx context.Context, w http.ResponseWriter, r *http.Reques
 
 	err := swyhttp.ReadAndUnmarshalReq(r, &par)
 	if err != nil {
-		return GateErrE(swy.GateBadRequest, err)
+		return GateErrE(swyapi.GateBadRequest, err)
 	}
 
 	id = ctxSwoId(ctx, par.Project, "")
@@ -195,7 +195,7 @@ func handleProjectList(ctx context.Context, w http.ResponseWriter, r *http.Reque
 
 	err := swyhttp.ReadAndUnmarshalReq(r, &params)
 	if err != nil {
-		return GateErrE(swy.GateBadRequest, err)
+		return GateErrE(swyapi.GateBadRequest, err)
 	}
 
 	ctxlog(ctx).Debugf("List projects for %s", gctx(ctx).Tenant)
@@ -220,7 +220,7 @@ func handleProjectList(ctx context.Context, w http.ResponseWriter, r *http.Reque
 
 func objFindId(ctx context.Context, id string, out interface{}, q bson.M) *xrest.ReqErr {
 	if !bson.IsObjectIdHex(id) {
-		return GateErrM(swy.GateBadRequest, "Bad ID value")
+		return GateErrM(swyapi.GateBadRequest, "Bad ID value")
 	}
 
 	if q == nil {
@@ -299,7 +299,7 @@ func handleFunctionMwares(ctx context.Context, w http.ResponseWriter, r *http.Re
 
 		err := swyhttp.ReadAndUnmarshalReq(r, &mid)
 		if err != nil {
-			return GateErrE(swy.GateBadRequest, err)
+			return GateErrE(swyapi.GateBadRequest, err)
 		}
 
 		var mw MwareDesc
@@ -311,7 +311,7 @@ func handleFunctionMwares(ctx context.Context, w http.ResponseWriter, r *http.Re
 
 		err = fn.addMware(ctx, &mw)
 		if err != nil {
-			return GateErrE(swy.GateGenErr, err)
+			return GateErrE(swyapi.GateGenErr, err)
 		}
 
 		w.WriteHeader(http.StatusOK)
@@ -339,7 +339,7 @@ func handleFunctionMware(ctx context.Context, w http.ResponseWriter, r *http.Req
 	case "DELETE":
 		err := fn.delMware(ctx, &mw)
 		if err != nil {
-			return GateErrE(swy.GateGenErr, err)
+			return GateErrE(swyapi.GateGenErr, err)
 		}
 
 		w.WriteHeader(http.StatusOK)
@@ -365,7 +365,7 @@ func handleFunctionAccounts(ctx context.Context, w http.ResponseWriter, r *http.
 
 		err := swyhttp.ReadAndUnmarshalReq(r, &aid)
 		if err != nil {
-			return GateErrE(swy.GateBadRequest, err)
+			return GateErrE(swyapi.GateBadRequest, err)
 		}
 
 		var acc AccDesc
@@ -426,11 +426,11 @@ func handleFunctionS3Bs(ctx context.Context, w http.ResponseWriter, r *http.Requ
 		var bname string
 		err := swyhttp.ReadAndUnmarshalReq(r, &bname)
 		if err != nil {
-			return GateErrE(swy.GateBadRequest, err)
+			return GateErrE(swyapi.GateBadRequest, err)
 		}
 		err = fn.addS3Bucket(ctx, bname)
 		if err != nil {
-			return GateErrE(swy.GateGenErr, err)
+			return GateErrE(swyapi.GateGenErr, err)
 		}
 
 		w.WriteHeader(http.StatusOK)
@@ -453,7 +453,7 @@ func handleFunctionS3B(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	case "DELETE":
 		err := fn.delS3Bucket(ctx, bname)
 		if err != nil {
-			return GateErrE(swy.GateGenErr, err)
+			return GateErrE(swyapi.GateGenErr, err)
 		}
 
 		w.WriteHeader(http.StatusOK)
@@ -484,7 +484,7 @@ func handleFunctionTrigger(ctx context.Context, w http.ResponseWriter, r *http.R
 
 	eid := mux.Vars(r)["eid"]
 	if !bson.IsObjectIdHex(eid) {
-		return GateErrM(swy.GateBadRequest, "Bad event ID")
+		return GateErrM(swyapi.GateBadRequest, "Bad event ID")
 	}
 
 	var ed FnEventDesc
@@ -508,7 +508,7 @@ func handleFunctionWait(ctx context.Context, w http.ResponseWriter, r *http.Requ
 	var wo swyapi.FunctionWait
 	err := swyhttp.ReadAndUnmarshalReq(r, &wo)
 	if err != nil {
-		return GateErrE(swy.GateBadRequest, err)
+		return GateErrE(swyapi.GateBadRequest, err)
 	}
 
 	timeout := time.Duration(wo.Timeout) * time.Millisecond
@@ -518,7 +518,7 @@ func handleFunctionWait(ctx context.Context, w http.ResponseWriter, r *http.Requ
 		ctxlog(ctx).Debugf("function/wait %s -> version >= %s, tmo %d", fn.SwoId.Str(), wo.Version, int(timeout))
 		err, tmo = waitFunctionVersion(ctx, &fn, wo.Version, timeout)
 		if err != nil {
-			return GateErrE(swy.GateGenErr, err)
+			return GateErrE(swyapi.GateGenErr, err)
 		}
 	}
 
@@ -711,11 +711,11 @@ func handleFunctionRun(ctx context.Context, w http.ResponseWriter, r *http.Reque
 
 	err := swyhttp.ReadAndUnmarshalReq(r, &params)
 	if err != nil {
-		return GateErrE(swy.GateBadRequest, err)
+		return GateErrE(swyapi.GateBadRequest, err)
 	}
 
 	if fn.State != DBFuncStateRdy {
-		return GateErrM(swy.GateNotAvail, "Function not ready (yet)")
+		return GateErrM(swyapi.GateNotAvail, "Function not ready (yet)")
 	}
 
 	suff := ""
@@ -740,12 +740,12 @@ func handleFunctionRun(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		ctxlog(ctx).Debugf("Asked for custom sources... oh, well...")
 		suff, err = putTempSources(ctx, &fn, params.Src)
 		if err != nil {
-			return GateErrE(swy.GateGenErr, err)
+			return GateErrE(swyapi.GateGenErr, err)
 		}
 
 		err = tryBuildFunction(ctx, &fn, suff)
 		if err != nil {
-			return GateErrM(swy.GateGenErr, "Error building function")
+			return GateErrM(swyapi.GateGenErr, "Error building function")
 		}
 
 		params.Src = nil /* not to propagate to wdog */
@@ -758,7 +758,7 @@ func handleFunctionRun(ctx context.Context, w http.ResponseWriter, r *http.Reque
 
 	res, err = doRunConn(ctx, conn, nil, fn.Cookie, suff, "run", &params)
 	if err != nil {
-		return GateErrE(swy.GateGenErr, err)
+		return GateErrE(swyapi.GateGenErr, err)
 	}
 
 	if fn.SwoId.Project == "test" {
@@ -817,7 +817,7 @@ func handleAccount(ctx context.Context, w http.ResponseWriter, r *http.Request) 
 func repoFindForReq(ctx context.Context, r *http.Request, user_action bool) (*RepoDesc, *xrest.ReqErr) {
 	rid := mux.Vars(r)["rid"]
 	if !bson.IsObjectIdHex(rid) {
-		return nil, GateErrM(swy.GateBadRequest, "Bad repo ID value")
+		return nil, GateErrM(swyapi.GateBadRequest, "Bad repo ID value")
 	}
 
 	var rd RepoDesc
@@ -830,7 +830,7 @@ func repoFindForReq(ctx context.Context, r *http.Request, user_action bool) (*Re
 	if !user_action {
 		gx := gctx(ctx)
 		if !gx.Admin && rd.SwoId.Tennant != gx.Tenant {
-			return nil, GateErrM(swy.GateNotAvail, "Shared repo")
+			return nil, GateErrM(swyapi.GateNotAvail, "Shared repo")
 		}
 	}
 
@@ -861,7 +861,7 @@ func handleRepoFiles(ctx context.Context, w http.ResponseWriter, r *http.Request
 	p := strings.SplitN(r.URL.Path, "/", 6)
 	if len(p) < 5 {
 		/* This is panic, actually */
-		return GateErrM(swy.GateBadRequest, "Bad repo req")
+		return GateErrM(swyapi.GateBadRequest, "Bad repo req")
 	} else if len(p) == 5 {
 		files, cerr := rd.listFiles(ctx)
 		if cerr != nil {
@@ -930,7 +930,7 @@ func handleLanguage(ctx context.Context, w http.ResponseWriter, r *http.Request)
 	lang := mux.Vars(r)["lang"]
 	lh, ok := rt_handlers[lang]
 	if !ok || (lh.Devel && !SwyModeDevel) {
-		return GateErrM(swy.GateGenErr, "Language not supported")
+		return GateErrM(swyapi.GateGenErr, "Language not supported")
 	}
 
 	return xrest.Respond(ctx, w, lh.info())
@@ -955,7 +955,7 @@ func handleS3Access(ctx context.Context, w http.ResponseWriter, r *http.Request)
 
 	err := swyhttp.ReadAndUnmarshalReq(r, &params)
 	if err != nil {
-		return GateErrE(swy.GateBadRequest, err)
+		return GateErrE(swyapi.GateBadRequest, err)
 	}
 
 	creds, cerr := s3GetCreds(ctx, &params)
@@ -1014,16 +1014,16 @@ func handleAuths(ctx context.Context, w http.ResponseWriter, r *http.Request) *x
 
 		err := swyhttp.ReadAndUnmarshalReq(r, &aa)
 		if err != nil {
-			return GateErrE(swy.GateBadRequest, err)
+			return GateErrE(swyapi.GateBadRequest, err)
 		}
 
 		if aa.Type != "" && aa.Type != "jwt" {
-			return GateErrM(swy.GateBadRequest, "No such auth type")
+			return GateErrM(swyapi.GateBadRequest, "No such auth type")
 		}
 
 		fname := conf.DemoRepo.Functions["user-mgmt"]
 		if demoRep.ObjID == "" || fname == "" {
-			return GateErrM(swy.GateGenErr, "AaaS configuration error")
+			return GateErrM(swyapi.GateGenErr, "AaaS configuration error")
 		}
 
 		dd := getDeployDesc(ctxSwoId(ctx, project, aa.Name))

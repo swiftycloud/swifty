@@ -166,13 +166,13 @@ func mwareRemoveId(ctx context.Context, id *SwoId) *xrest.ReqErr {
 func (item *MwareDesc)Del(ctx context.Context) *xrest.ReqErr {
 	handler, ok := mwareHandlers[item.MwareType]
 	if !ok {
-		return GateErrC(swy.GateGenErr) /* Shouldn't happen */
+		return GateErrC(swyapi.GateGenErr) /* Shouldn't happen */
 	}
 
 	err := item.ToState(ctx, DBMwareStateTrm, item.State)
 	if err != nil {
 		ctxlog(ctx).Errorf("Can't terminate mware %s", item.SwoId.Str())
-		return GateErrM(swy.GateGenErr, "Cannot terminate mware")
+		return GateErrM(swyapi.GateGenErr, "Cannot terminate mware")
 	}
 
 	err = handler.Fini(ctx, item)
@@ -198,7 +198,7 @@ func (item *MwareDesc)Del(ctx context.Context) *xrest.ReqErr {
 
 stalled:
 	item.ToState(ctx, DBMwareStateStl, -1)
-	return GateErrE(swy.GateGenErr, err)
+	return GateErrE(swyapi.GateGenErr, err)
 }
 
 func (item *MwareDesc)toFnInfo(ctx context.Context) *swyapi.MwareInfo {
@@ -246,7 +246,7 @@ func (mw *MwareDesc)Info(ctx context.Context, q url.Values, details bool) (inter
 }
 
 func (mw *MwareDesc)Upd(ctx context.Context, upd interface{}) *xrest.ReqErr {
-	return GateErrM(swy.GateGenErr, "Not updatable")
+	return GateErrM(swyapi.GateGenErr, "Not updatable")
 }
 
 func (item *MwareDesc)toInfo(ctx context.Context, details bool) (*swyapi.MwareInfo, *xrest.ReqErr) {
@@ -263,13 +263,13 @@ func (item *MwareDesc)toInfo(ctx context.Context, details bool) (*swyapi.MwareIn
 
 		handler, ok := mwareHandlers[item.MwareType]
 		if !ok {
-			return nil, GateErrC(swy.GateGenErr) /* Shouldn't happen */
+			return nil, GateErrC(swyapi.GateGenErr) /* Shouldn't happen */
 		}
 
 		if handler.Info != nil {
 			err := handler.Info(ctx, item, resp)
 			if err != nil {
-				return nil, GateErrE(swy.GateGenErr, err)
+				return nil, GateErrE(swyapi.GateGenErr, err)
 			}
 		}
 	}
@@ -301,7 +301,7 @@ func getMwareStats(ctx context.Context, ten string) (map[string]*swyapi.TenantSt
 
 			err := h.Info(ctx, mw, &ifo)
 			if err != nil {
-				return nil, GateErrE(swy.GateGenErr, err)
+				return nil, GateErrE(swyapi.GateGenErr, err)
 			}
 
 			if ifo.DU != nil {
@@ -411,7 +411,7 @@ outdb:
 	gateMwares.WithLabelValues(mwd.MwareType).Dec()
 out:
 	ctxlog(ctx).Errorf("mwareSetup: %s", err.Error())
-	return GateErrE(swy.GateGenErr, err)
+	return GateErrE(swyapi.GateGenErr, err)
 
 stalled:
 	mwd.ToState(ctx, DBMwareStateStl, -1)

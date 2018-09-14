@@ -6,10 +6,10 @@ import (
 	"context"
 	"strings"
 	"gopkg.in/mgo.v2/bson"
-	"../common"
 	"../common/http"
 	"../common/crypto"
 	"../common/xrest"
+	"../apis"
 )
 
 type Secret string
@@ -90,17 +90,17 @@ func setupGithubAcc(ad *AccDesc) *xrest.ReqErr {
 
 		tok, ok := ad.Secrets["token"]
 		if !ok || tok == "" {
-			return GateErrM(swy.GateBadRequest, "Need either name or token")
+			return GateErrM(swyapi.GateBadRequest, "Need either name or token")
 		}
 
 		v, err := tok.value()
 		if err != nil {
-			return GateErrE(swy.GateGenErr, err)
+			return GateErrE(swyapi.GateGenErr, err)
 		}
 
 		ad.SwoId.Name, err = githubResolveName(v)
 		if err != nil {
-			return GateErrE(swy.GateGenErr, err)
+			return GateErrE(swyapi.GateGenErr, err)
 		}
 	}
 
@@ -117,7 +117,7 @@ func (ad *AccDesc)fill(values map[string]string) *xrest.ReqErr {
 		case "token", "secret", "password", "key":
 			ad.Secrets[k], err = mkSecret(v)
 			if err != nil {
-				return GateErrE(swy.GateGenErr, err)
+				return GateErrE(swyapi.GateGenErr, err)
 			}
 		default:
 			ad.Values[k] = v
@@ -177,7 +177,7 @@ func (_ Accounts)Iterate(ctx context.Context, q url.Values, cb func(context.Cont
 func (_ Accounts)Create(ctx context.Context, p interface{}) (xrest.Obj, *xrest.ReqErr) {
 	params := *p.(*map[string]string)
 	if _, ok := params["type"]; !ok {
-		return nil, GateErrM(swy.GateBadRequest, "No type")
+		return nil, GateErrM(swyapi.GateBadRequest, "No type")
 	}
 
 	id := ctxSwoId(ctx, NoProject, params["name"])

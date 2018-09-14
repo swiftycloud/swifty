@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"encoding/json"
 	"gopkg.in/mgo.v2/bson"
-	"../common"
 	"../common/http"
 	"../apis"
 	"../apis/s3"
@@ -249,18 +248,18 @@ func s3GetCreds(ctx context.Context, acc *swyapi.S3Access) (*swyapi.S3Creds, *xr
 			continue
 		}
 
-		return nil, GateErrM(swy.GateBadRequest, "Unknown access option " + acc)
+		return nil, GateErrM(swyapi.GateBadRequest, "Unknown access option " + acc)
 	}
 
 	if creds.Expires == 0 {
-		return nil, GateErrM(swy.GateBadRequest, "Perpetual keys not allowed")
+		return nil, GateErrM(swyapi.GateBadRequest, "Perpetual keys not allowed")
 	}
 
 	id := ctxSwoId(ctx, acc.Project, "")
 	k, err := s3KeyGen(&conf.Mware.S3, id.Namespace(), acc.Bucket, creds.Expires)
 	if err != nil {
 		ctxlog(ctx).Errorf("Can't get S3 keys for %s.%s", id.Str(), acc.Bucket, err.Error())
-		return nil, GateErrM(swy.GateGenErr, "Error getting S3 keys")
+		return nil, GateErrM(swyapi.GateGenErr, "Error getting S3 keys")
 	}
 
 	creds.Key = k.AccessKeyID

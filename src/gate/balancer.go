@@ -7,8 +7,8 @@ import (
 	"context"
 	"fmt"
 
-	"../common"
 	"../common/xrest"
+	"../apis"
 )
 
 type BalancerDat struct {
@@ -97,7 +97,7 @@ func balancerGetConnExact(ctx context.Context, cookie, version string) (*podConn
 	ap, err := dbBalancerGetConnExact(ctx, cookie, version)
 	if ap == nil {
 		if err == nil {
-			return nil, GateErrM(swy.GateGenErr, "Nothing to run (yet)")
+			return nil, GateErrM(swyapi.GateGenErr, "Nothing to run (yet)")
 		}
 
 		ctxlog(ctx).Errorf("balancer-db: Can't find pod %s/%s: %s",
