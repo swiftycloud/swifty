@@ -152,9 +152,9 @@ func (_ Functions)Iterate(ctx context.Context, q url.Values, cb func(context.Con
 
 	fname := q.Get("name")
 
-	if fname != "" {
-		var fn FunctionDesc
+	var fn FunctionDesc
 
+	if fname != "" {
 		err := dbFind(ctx, cookieReq(ctx, project, fname), &fn)
 		if err != nil {
 			return GateErrD(err)
@@ -163,19 +163,19 @@ func (_ Functions)Iterate(ctx context.Context, q url.Values, cb func(context.Con
 		return cb(ctx, &fn)
 	}
 
-	var fns []*FunctionDesc
+	iter := dbIterAll(ctx, listReq(ctx, project, q["label"]), &fn)
+	defer iter.Close()
 
-	err := dbFindAll(ctx, listReq(ctx, project, q["label"]), &fns)
-	if err != nil {
-		return GateErrD(err)
-	}
-	glog.Debugf("Found %d fns", len(fns))
-
-	for _, fn := range fns {
-		cerr := cb(ctx, fn)
+	for iter.Next(&fn) {
+		cerr := cb(ctx, &fn)
 		if cerr != nil {
 			return cerr
 		}
+	}
+
+	err := iter.Err()
+	if err != nil {
+		return GateErrD(err)
 	}
 
 	return nil

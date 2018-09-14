@@ -121,6 +121,11 @@ func dbFindAll(ctx context.Context, q interface{}, o interface{}) error {
 	return dbColSlow(ctx, o).Find(q).All(o)
 }
 
+func dbIterAll(ctx context.Context, q interface{}, o interface{}) *mgo.Iter {
+	col, _ := objq(ctx, o)
+	return col.Find(q).Iter()
+}
+
 func dbFind(ctx context.Context, q bson.M, o interface{}) error {
 	return dbColSlow(ctx, o).Find(q).One(o)
 }
