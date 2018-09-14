@@ -124,28 +124,6 @@ func (fn *FunctionDesc)ToState(ctx context.Context, st, from int) error {
 	return err
 }
 
-func listFunctions(ctx context.Context, project, name string, labels []string) ([]*FunctionDesc, *xrest.ReqErr) {
-	var fns []*FunctionDesc
-
-	if name == "" {
-		err := dbFindAll(ctx, listReq(ctx, project, labels), &fns)
-		if err != nil {
-			return nil, GateErrD(err)
-		}
-		glog.Debugf("Found %d fns", len(fns))
-	} else {
-		var fn FunctionDesc
-
-		err := dbFind(ctx, cookieReq(ctx, project, name), &fn)
-		if err != nil {
-			return nil, GateErrD(err)
-		}
-		fns = append(fns, &fn)
-	}
-
-	return fns, nil
-}
-
 var zeroVersion = "0"
 
 func (fn *FunctionDesc)getURL() string {
@@ -178,13 +156,26 @@ func (_ Functions)Iterate(ctx context.Context, q url.Values, cb func(context.Con
 		return GateErrC(swy.GateBadRequest)
 	}
 
-	fns, cerr := listFunctions(ctx, project, fname, q["label"])
-	if cerr != nil {
-		return cerr
+	var fns []*FunctionDesc
+
+	if fname == "" {
+		err := dbFindAll(ctx, listReq(ctx, project, q["label"]), &fns)
+		if err != nil {
+			return GateErrD(err)
+		}
+		glog.Debugf("Found %d fns", len(fns))
+	} else {
+		var fn FunctionDesc
+
+		err := dbFind(ctx, cookieReq(ctx, project, fname), &fn)
+		if err != nil {
+			return GateErrD(err)
+		}
+		fns = append(fns, &fn)
 	}
 
 	for _, fn := range fns {
-		cerr = cb(ctx, fn)
+		cerr := cb(ctx, fn)
 		if cerr != nil {
 			return cerr
 		}
