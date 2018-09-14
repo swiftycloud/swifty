@@ -6,6 +6,7 @@ import (
 	"../apis"
 	"context"
 	"../common"
+	"../common/http"
 	"../common/xrest"
 	"gopkg.in/mgo.v2/bson"
 )
@@ -215,11 +216,11 @@ func (_ *RtTblProp)Info(ctx context.Context, o xrest.Obj, q url.Values) (interfa
 	t := len(rt.Table)
 
 	if q != nil {
-		f, e := reqAtoi(q, "from", f)
+		f, e := swyhttp.ReqAtoi(q, "from", f)
 		if f < 0 || e != nil {
 			return nil, GateErrM(swy.GateBadRequest, "Invalid range")
 		}
-		t, e := reqAtoi(q, "to", t)
+		t, e := swyhttp.ReqAtoi(q, "to", t)
 		if t > len(rt.Table) || e != nil {
 			return nil, GateErrM(swy.GateBadRequest, "Invalid range")
 		}

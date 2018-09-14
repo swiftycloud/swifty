@@ -11,7 +11,6 @@ import (
 	"flag"
 	"strings"
 	"context"
-	"strconv"
 	"time"
 	"fmt"
 	"os"
@@ -663,22 +662,8 @@ func handleCall(w http.ResponseWriter, r *http.Request) {
 	url.Handle(ctx, w, r, sopq)
 }
 
-func reqAtoi(q url.Values, n string, def int) (int, error) {
-	aux := q.Get(n)
-	val := def
-	if aux != "" {
-		var err error
-		val, err = strconv.Atoi(aux)
-		if err != nil {
-			return def, err
-		}
-	}
-
-	return val, nil
-}
-
 func reqPeriods(q url.Values) int {
-	periods, e := reqAtoi(q, "periods", 0)
+	periods, e := swyhttp.ReqAtoi(q, "periods", 0)
 	if e != nil {
 		periods = -1
 	}

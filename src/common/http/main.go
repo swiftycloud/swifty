@@ -5,7 +5,9 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"net/http"
+	"net/url"
 	"strings"
+	"strconv"
 	"errors"
 	"bytes"
 	"time"
@@ -145,4 +147,18 @@ func ListenAndServe(srv *http.Server, https *YAMLConfHTTPS, devel bool, log func
 	}
 
 	return errors.New("Can't go non-https in production mode")
+}
+
+func ReqAtoi(q url.Values, n string, def int) (int, error) {
+	aux := q.Get(n)
+	val := def
+	if aux != "" {
+		var err error
+		val, err = strconv.Atoi(aux)
+		if err != nil {
+			return def, err
+		}
+	}
+
+	return val, nil
 }
