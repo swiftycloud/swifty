@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"crypto/tls"
 	"crypto/x509"
-	"io/ioutil"
 	"net/http"
 	"strings"
 	"errors"
@@ -47,34 +46,12 @@ func HandleCORS(w http.ResponseWriter, r *http.Request, methods []string, header
 
 func ReadAndUnmarshalReq(r *http.Request, data interface{}) error {
 	defer r.Body.Close()
-
-	body, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		return fmt.Errorf("\tCan't parse request: %s", err.Error())
-	}
-
-	err = json.Unmarshal(body, data)
-	if err != nil {
-		return fmt.Errorf("\tUnmarshal error: %s", err.Error())
-	}
-
-	return nil
+	return json.NewDecoder(r.Body).Decode(data)
 }
 
 func ReadAndUnmarshalResp(r *http.Response, data interface{}) error {
 	defer r.Body.Close()
-
-	body, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		return fmt.Errorf("\tCan't parse request: %s", err.Error())
-	}
-
-	err = json.Unmarshal(body, data)
-	if err != nil {
-		return fmt.Errorf("\tUnmarshal error: %s", err.Error())
-	}
-
-	return nil
+	return json.NewDecoder(r.Body).Decode(data)
 }
 
 func MarshalAndWrite(w http.ResponseWriter, data interface{}) error {
