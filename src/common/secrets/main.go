@@ -1,4 +1,4 @@
-package swysec
+package xsecret
 
 import (
 	"gopkg.in/yaml.v2"

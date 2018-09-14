@@ -1268,7 +1268,7 @@ func main() {
 		return
 	}
 
-	gateSecrets, err = swysec.ReadSecrets("gate")
+	gateSecrets, err = xsecret.ReadSecrets("gate")
 	if err != nil {
 		glog.Errorf("Can't read gate secrets: %s", err.Error())
 		return

@@ -941,7 +941,7 @@ func main() {
 
 	log.Debugf("config: %v", &conf)
 
-	s3Secrets, err = swysec.ReadSecrets("s3")
+	s3Secrets, err = xsecret.ReadSecrets("s3")
 	if err != nil {
 		log.Errorf("Can't read gate secrets: %s", err.Error())
 		return

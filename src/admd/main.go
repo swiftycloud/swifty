@@ -860,7 +860,7 @@ func main() {
 		return
 	}
 
-	admdSecrets, err = swysec.ReadSecrets("admd")
+	admdSecrets, err = xsecret.ReadSecrets("admd")
 	if err != nil {
 		log.Errorf("Can't read gate secrets: %s", err.Error())
 		return

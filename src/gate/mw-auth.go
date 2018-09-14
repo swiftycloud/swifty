@@ -40,7 +40,7 @@ func authCtxGet(ctx context.Context, id SwoId, ac string) (*AuthCtx, error) {
 	}
 
 	if item.MwareType == "authjwt" {
-		key, err := swycrypt.DecryptString(gateSecPas, item.Secret)
+		key, err := xcrypt.DecryptString(gateSecPas, item.Secret)
 		if err != nil {
 			return nil, err
 		}

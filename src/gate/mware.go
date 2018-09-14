@@ -372,7 +372,7 @@ func (mwd *MwareDesc)Add(ctx context.Context, _ interface{}) *xrest.ReqErr {
 		goto outh
 	}
 
-	mwd.Secret, err = swycrypt.EncryptString(gateSecPas, mwd.Secret)
+	mwd.Secret, err = xcrypt.EncryptString(gateSecPas, mwd.Secret)
 	if err != nil {
 		ctxlog(ctx).Errorf("Mw secret encrypt error: %s", err.Error())
 		err = errors.New("Encrypt error")

@@ -186,7 +186,7 @@ func main() {
 		xh.ReadYamlConfig(conf_path, &conf)
 	}
 
-	pgrSecrets, err = swysec.ReadSecrets("pgrest")
+	pgrSecrets, err = xsecret.ReadSecrets("pgrest")
 	if err != nil {
 		log.Errorf("Can't read gate secrets: %s", err.Error())
 		return

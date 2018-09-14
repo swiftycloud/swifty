@@ -110,7 +110,7 @@ func main() {
 
 	log.Debugf("Config: %v", conf)
 
-	qdSecrets, err = swysec.ReadSecrets("mqd")
+	qdSecrets, err = xsecret.ReadSecrets("mqd")
 	if err != nil {
 		log.Errorf("Can't read gate secrets: %s", err.Error())
 		return

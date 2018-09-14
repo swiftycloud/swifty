@@ -18,7 +18,7 @@ func (ct Secret)value() (string, error) {
 	var err error
 	t := string(ct)
 	if t != "" {
-		t, err = swycrypt.DecryptString(gateSecPas, t)
+		t, err = xcrypt.DecryptString(gateSecPas, t)
 	}
 	return t, err
 }
@@ -31,7 +31,7 @@ func mkSecret(v string) (Secret, error) {
 
 		var err error
 
-		v, err = swycrypt.EncryptString(gateSecPas, v)
+		v, err = xcrypt.EncryptString(gateSecPas, v)
 		if err != nil {
 			return "", err
 		}
