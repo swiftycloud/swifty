@@ -99,7 +99,7 @@ func handleUserLogin(w http.ResponseWriter, r *http.Request) {
 
 	glog.Debugf("Trying to login user %s", params.UserName)
 
-	token, td.Expires, err = swyks.KeystoneAuthWithPass(conf.Keystone.Addr, conf.Keystone.Domain, &params)
+	token, td.Expires, err = xkst.KeystoneAuthWithPass(conf.Keystone.Addr, conf.Keystone.Domain, &params)
 	if err != nil {
 		resp = http.StatusUnauthorized
 		goto out
@@ -1107,7 +1107,7 @@ func getReqContext(w http.ResponseWriter, r *http.Request) (context.Context, fun
 		return nil, nil
 	}
 
-	td, code := swyks.KeystoneGetTokenData(conf.Keystone.Addr, token)
+	td, code := xkst.KeystoneGetTokenData(conf.Keystone.Addr, token)
 	if code != 0 {
 		http.Error(w, "Keystone authentication error", code)
 		return nil, nil
@@ -1123,10 +1123,10 @@ func getReqContext(w http.ResponseWriter, r *http.Request) (context.Context, fun
 	admin := false
 	user := false
 	for _, role := range td.Roles {
-		if role.Name == swyks.SwyAdminRole {
+		if role.Name == xkst.SwyAdminRole {
 			admin = true
 		}
-		if role.Name == swyks.SwyUserRole {
+		if role.Name == xkst.SwyUserRole {
 			user = true
 		}
 	}

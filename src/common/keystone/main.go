@@ -1,4 +1,4 @@
-package swyks
+package xkst
 
 import (
 	"sync"
