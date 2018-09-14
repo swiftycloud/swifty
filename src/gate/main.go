@@ -714,7 +714,7 @@ func handleFunctionRun(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		return GateErrE(swy.GateBadRequest, err)
 	}
 
-	if fn.State != swy.DBFuncStateRdy {
+	if fn.State != DBFuncStateRdy {
 		return GateErrM(swy.GateNotAvail, "Function not ready (yet)")
 	}
 

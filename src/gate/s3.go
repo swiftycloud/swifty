@@ -173,7 +173,7 @@ func handleS3Event(ctx context.Context, user string, data []byte) {
 			continue
 		}
 
-		if fn.State != swy.DBFuncStateRdy {
+		if fn.State != DBFuncStateRdy {
 			continue
 		}
 

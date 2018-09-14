@@ -15,7 +15,6 @@ import (
 
 	"gopkg.in/mgo.v2/bson"
 
-	"../common"
 	"path/filepath"
 	"context"
 	"strconv"
@@ -722,7 +721,7 @@ func refreshDepsAndPods(ctx context.Context) error {
 	podiface := swk8sClientSet.CoreV1().Pods(conf.Wdog.Namespace)
 
 	for _, fn := range(fns) {
-		if fn.State != swy.DBFuncStateRdy && fn.State != swy.DBFuncStateStr {
+		if fn.State != DBFuncStateRdy && fn.State != DBFuncStateStr {
 			continue
 		}
 
@@ -739,7 +738,7 @@ func refreshDepsAndPods(ctx context.Context) error {
 				return errors.New("Error getting dep")
 			}
 
-			if fn.State == swy.DBFuncStateStr {
+			if fn.State == DBFuncStateStr {
 				/* That's OK, the deployment just didn't have time to
 				 * to get created. Just create one and ... go agead,
 				 * no replicas to check, no PODs to revitalize.
@@ -754,12 +753,12 @@ func refreshDepsAndPods(ctx context.Context) error {
 				continue
 			}
 
-			if fn.State == swy.DBFuncStateRdy {
+			if fn.State == DBFuncStateRdy {
 				/* Function is running, but the deploy is not there
 				 * Mark FN as stalled and let client handle it
 				 */
 
-				 fn.ToState(ctx, swy.DBFuncStateStl, -1)
+				 fn.ToState(ctx, DBFuncStateStl, -1)
 				 continue
 			}
 

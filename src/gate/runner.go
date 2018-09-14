@@ -10,7 +10,6 @@ import (
 	"io/ioutil"
 
 	"../apis"
-	"../common"
 	"../common/http"
 )
 
@@ -165,5 +164,5 @@ func runFunctionOnce(ctx context.Context, fn *FunctionDesc) {
 	ctxlog(ctx).Debugf("oneshor %s finished", fn.SwoId.Str())
 
 	swk8sRemove(ctx, &conf, fn)
-	fn.ToState(ctx, swy.DBFuncStateStl, -1)
+	fn.ToState(ctx, DBFuncStateStl, -1)
 }

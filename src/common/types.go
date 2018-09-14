@@ -1,18 +1,6 @@
 package swy
 
 const (
-	DBFuncStateIni	int = 1		// Initializing for add -> Bld/Str
-	DBFuncStateStr	int = 2		// Starting -> Rdy
-	DBFuncStateRdy	int = 3		// Ready
-
-	DBFuncStateTrm	int = 6		// Terminating
-	DBFuncStateStl	int = 7		// Stalled
-	DBFuncStateDea	int = 8		// Deactivated
-
-	DBFuncStateNo	int = -1	// Doesn't exists :)
-)
-
-const (
 	DBDepStateIni	int = 1
 	DBDepStateRdy	int = 2
 	DBDepStateStl	int = 3

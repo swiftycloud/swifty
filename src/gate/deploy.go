@@ -84,7 +84,7 @@ func (i *DeployFunction)info(ctx context.Context, details bool) (*swyapi.DeployI
 		if err == nil {
 			ret.State = fnStates[fn.State]
 		} else {
-			ret.State = fnStates[swy.DBFuncStateNo]
+			ret.State = fnStates[DBFuncStateNo]
 		}
 	}
 
