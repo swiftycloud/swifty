@@ -451,7 +451,7 @@ func dbProjectListAll(ctx context.Context, ten string) (fn []string, mw []string
 func dbConnect(conf *YAMLConf) error {
 	var err error
 
-	dbc := swy.ParseXCreds(conf.DB)
+	dbc := xh.ParseXCreds(conf.DB)
 
 	info := mgo.DialInfo{
 		Addrs:		[]string{dbc.Addr()},

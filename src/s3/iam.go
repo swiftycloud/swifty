@@ -25,7 +25,7 @@ func s3AccountInsert(ctx context.Context, namespace, user string) (*s3mgo.S3Acco
 		"mtime":		timestamp,
 		"state":		S3StateActive,
 
-		"aws-id":		swy.Sha256sum([]byte(id.String())),
+		"aws-id":		xh.Sha256sum([]byte(id.String())),
 		"namespace":		namespace,
 
 		"creation-time":	time.Now().Format(time.RFC3339),
@@ -116,7 +116,7 @@ func s3IamNew(ctx context.Context, account *s3mgo.S3Account, policy *s3mgo.S3Pol
 		ObjID:		id,
 		MTime:		current_timestamp(),
 		State:		S3StateActive,
-		AwsID:		swy.Sha256sum([]byte(id.String())),
+		AwsID:		xh.Sha256sum([]byte(id.String())),
 		AccountObjID:	account.ObjID,
 		Policy:		*policy,
 		CreationTime:	time.Now().Format(time.RFC3339),

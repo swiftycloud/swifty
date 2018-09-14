@@ -640,21 +640,21 @@ func startCResponder(runner *Runner, podip string) error {
 }
 
 func main() {
-	podIP := swy.SafeEnv("SWD_POD_IP", "")
+	podIP := xh.SafeEnv("SWD_POD_IP", "")
 	if podIP == "" {
 		log.Fatal("NO POD_IP")
 	}
 
-	podPort := swy.SafeEnv("SWD_PORT", "")
+	podPort := xh.SafeEnv("SWD_PORT", "")
 	if podPort == "" {
 		log.Fatal("NO PORT")
 	}
 
 	r := mux.NewRouter()
 
-	inst := swy.SafeEnv("SWD_INSTANCE", "")
+	inst := xh.SafeEnv("SWD_INSTANCE", "")
 	if inst == "build" {
-		lang := swy.SafeEnv("SWD_LANG", "")
+		lang := xh.SafeEnv("SWD_LANG", "")
 		if lang == "" {
 			log.Fatal("SWD_LANG not set")
 		}
@@ -670,12 +670,12 @@ func main() {
 	} else if inst == "proxy" {
 		r.HandleFunc("/v1/run/{fnid}/{podip}", handleProxy)
 	} else {
-		lang := swy.SafeEnv("SWD_LANG", "")
+		lang := xh.SafeEnv("SWD_LANG", "")
 		if lang == "" {
 			log.Fatal("SWD_LANG not set")
 		}
 
-		tmos := swy.SafeEnv("SWD_FN_TMO", "")
+		tmos := xh.SafeEnv("SWD_FN_TMO", "")
 		if tmos == "" {
 			log.Fatal("SWD_FN_TMO not set")
 		}
@@ -685,7 +685,7 @@ func main() {
 			log.Fatal("Bad timeout value")
 		}
 
-		podToken := swy.SafeEnv("SWD_POD_TOKEN", "")
+		podToken := xh.SafeEnv("SWD_POD_TOKEN", "")
 		if podToken == "" {
 			log.Fatal("SWD_POD_TOKEN not set")
 		}

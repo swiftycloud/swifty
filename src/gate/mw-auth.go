@@ -112,7 +112,7 @@ func (ac *AuthCtx)Verify(r *http.Request) (map[string]interface{}, error) {
 func InitAuthJWT(ctx context.Context, mwd *MwareDesc) (error) {
 	var err error
 
-	mwd.Secret, err = swy.GenRandId(32)
+	mwd.Secret, err = xh.GenRandId(32)
 	if err != nil {
 		return err
 	}

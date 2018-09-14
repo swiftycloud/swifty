@@ -1,4 +1,4 @@
-package swy
+package xh
 
 import (
 	"crypto/sha256"
@@ -10,7 +10,6 @@ import (
 	"strconv"
 	"strings"
 	"bytes"
-	"time"
 	"net"
 	"fmt"
 	"os"

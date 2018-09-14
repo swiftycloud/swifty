@@ -104,13 +104,13 @@ func mwareGetCookie(ctx context.Context, id SwoId, name string) (string, error) 
 func mwareGenerateUserPassClient(ctx context.Context, mwd *MwareDesc) (error) {
 	var err error
 
-	mwd.Client, err = swy.GenRandId(32)
+	mwd.Client, err = xh.GenRandId(32)
 	if err != nil {
 		ctxlog(ctx).Errorf("Can't generate clnt for %s: %s", mwd.SwoId.Str(), err.Error())
 		return err
 	}
 
-	mwd.Secret, err = swy.GenRandId(64)
+	mwd.Secret, err = xh.GenRandId(64)
 	if err != nil {
 		ctxlog(ctx).Errorf("Can't generate secret for %s: %s", mwd.SwoId.Str(), err.Error())
 		return err

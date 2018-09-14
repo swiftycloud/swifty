@@ -74,7 +74,7 @@ func dbDelUserLimits(ses *mgo.Session, conf *YAMLConf, id string) error {
 func dbConnect(conf *YAMLConf) error {
 	var err error
 
-	dbc := swy.ParseXCreds(conf.DB)
+	dbc := xh.ParseXCreds(conf.DB)
 	info := mgo.DialInfo{
 		Addrs:		[]string{dbc.Addr()},
 		Database:	DBSwiftyDB,

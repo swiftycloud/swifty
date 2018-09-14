@@ -173,7 +173,7 @@ func putFileFromReq(ctx context.Context, src *swyapi.FunctionSources, to, script
 }
 
 func GCOldSources(ctx context.Context, fn *FunctionDesc, ver string) {
-	np, err := swy.DropDirPrep(conf.Wdog.Volume, fn.srcDir(ver))
+	np, err := xh.DropDirPrep(conf.Wdog.Volume, fn.srcDir(ver))
 	if err != nil {
 		ctxlog(ctx).Errorf("Leaking %s sources till FN removal (err %s)", ver, err.Error())
 		return
@@ -208,7 +208,7 @@ func GCOldSources(ctx context.Context, fn *FunctionDesc, ver string) {
 
 			if !found {
 				ctxlog(ctx).Debugf("Dropping %s.%s sources", cookie, ver)
-				swy.DropDirComplete(np)
+				xh.DropDirComplete(np)
 				break
 			}
 
@@ -225,7 +225,7 @@ func GCOldSources(ctx context.Context, fn *FunctionDesc, ver string) {
 func removeSources(ctx context.Context, fn *FunctionDesc) error {
 	sd := fn.srcRoot()
 
-	td, err := swy.DropDir(conf.Home + "/" + CloneDir, sd)
+	td, err := xh.DropDir(conf.Home + "/" + CloneDir, sd)
 	if err != nil {
 		return err
 	}
@@ -234,7 +234,7 @@ func removeSources(ctx context.Context, fn *FunctionDesc) error {
 		ctxlog(ctx).Debugf("Will remove %s repo clone via %s", fn.SwoId.Str(), td)
 	}
 
-	td, err = swy.DropDir(conf.Wdog.Volume, sd)
+	td, err = xh.DropDir(conf.Wdog.Volume, sd)
 	if err != nil {
 		return err
 	}

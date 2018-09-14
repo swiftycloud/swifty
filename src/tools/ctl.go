@@ -1457,7 +1457,7 @@ func login() {
 		fatal(fmt.Errorf("No HOME dir set"))
 	}
 
-	err := swy.ReadYamlConfig(home + "/.swifty.conf", &conf)
+	err := xh.ReadYamlConfig(home + "/.swifty.conf", &conf)
 	if err != nil {
 		fatal(fmt.Errorf("Login first"))
 	}
@@ -1531,7 +1531,7 @@ func make_login(creds string, opts [16]string) {
 	// swifty.user:swifty@10.94.96.216:8686
 	//
 
-	c := swy.ParseXCreds(creds)
+	c := xh.ParseXCreds(creds)
 	conf.Login.User = c.User
 	conf.Login.Pass = c.Pass
 	conf.Login.Host = c.Host
@@ -1572,7 +1572,7 @@ func save_config() {
 		fatal(fmt.Errorf("No HOME dir set"))
 	}
 
-	err := swy.WriteYamlConfig(home + "/.swifty.conf", &conf)
+	err := xh.WriteYamlConfig(home + "/.swifty.conf", &conf)
 	if err != nil {
 		fatal(fmt.Errorf("Can't write swifty.conf: %s", err.Error()))
 	}

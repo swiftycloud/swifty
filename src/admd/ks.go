@@ -29,7 +29,7 @@ var ksSwyDomainId string
 var ksSwyOwnerRole string
 var ksSwyAdminRole string
 
-func keystoneGetDomainId(c *swy.XCreds) (string, error) {
+func keystoneGetDomainId(c *xh.XCreds) (string, error) {
 	var doms swyks.KeystoneDomainsResp
 
 	err := ksClient.MakeReq(&swyks.KeystoneReq {
@@ -51,7 +51,7 @@ func keystoneGetDomainId(c *swy.XCreds) (string, error) {
 	return "", fmt.Errorf("Can't find domain %s", c.Domn)
 }
 
-func keystoneGetRolesId(c *swy.XCreds) (string, string, error) {
+func keystoneGetRolesId(c *xh.XCreds) (string, string, error) {
 	var roles swyks.KeystoneRolesResp
 
 	err := ksClient.MakeReq(&swyks.KeystoneReq {
@@ -85,7 +85,7 @@ func keystoneGetRolesId(c *swy.XCreds) (string, string, error) {
 	return or, ar, nil
 }
 
-func listUsers(c *swy.XCreds) ([]*swyapi.UserInfo, error) {
+func listUsers(c *xh.XCreds) ([]*swyapi.UserInfo, error) {
 	var users swyks.KeystoneUsersResp
 	var res []*swyapi.UserInfo
 
@@ -113,7 +113,7 @@ func listUsers(c *swy.XCreds) ([]*swyapi.UserInfo, error) {
 	return res, nil
 }
 
-func ksAddUserAndProject(c *swy.XCreds, user *swyapi.AddUser) (string, error) {
+func ksAddUserAndProject(c *xh.XCreds, user *swyapi.AddUser) (string, error) {
 	var presp swyks.KeystoneProjectAdd
 
 	now := time.Now()
@@ -204,7 +204,7 @@ func toUserInfo(ui *swyks.KeystoneUser) (*swyapi.UserInfo, error) {
 	}, nil
 }
 
-func getUserInfo(c *swy.XCreds, id string, details bool) (*swyapi.UserInfo, error) {
+func getUserInfo(c *xh.XCreds, id string, details bool) (*swyapi.UserInfo, error) {
 	kui, err := ksGetUserInfo(c, id)
 	if err != nil {
 		return nil, err
@@ -229,7 +229,7 @@ func getUserInfo(c *swy.XCreds, id string, details bool) (*swyapi.UserInfo, erro
 	return ui, nil
 }
 
-func ksGetUserRoles(c *swy.XCreds, ui *swyks.KeystoneUser) ([]*swyks.KeystoneRole, error) {
+func ksGetUserRoles(c *xh.XCreds, ui *swyks.KeystoneUser) ([]*swyks.KeystoneRole, error) {
 	var rass swyks.KeystoneRoleAssignments
 
 	err := ksClient.MakeReq(
@@ -250,7 +250,7 @@ func ksGetUserRoles(c *swy.XCreds, ui *swyks.KeystoneUser) ([]*swyks.KeystoneRol
 	return ret, nil
 }
 
-func ksGetUserInfo(c *swy.XCreds, id string) (*swyks.KeystoneUser, error) {
+func ksGetUserInfo(c *xh.XCreds, id string) (*swyks.KeystoneUser, error) {
 	var uresp swyks.KeystoneUserResp
 
 	err := ksClient.MakeReq(
@@ -266,7 +266,7 @@ func ksGetUserInfo(c *swy.XCreds, id string) (*swyks.KeystoneUser, error) {
 	return &uresp.User, nil
 }
 
-func ksGetProjectInfo(c *swy.XCreds, project string) (*swyks.KeystoneProject, error) {
+func ksGetProjectInfo(c *xh.XCreds, project string) (*swyks.KeystoneProject, error) {
 	var presp swyks.KeystoneProjectsResp
 
 	err := ksClient.MakeReq(
@@ -285,7 +285,7 @@ func ksGetProjectInfo(c *swy.XCreds, project string) (*swyks.KeystoneProject, er
 	return &presp.Projects[0], nil
 }
 
-func ksChangeUserPass(c *swy.XCreds, uid string, up *swyapi.UserLogin) error {
+func ksChangeUserPass(c *xh.XCreds, uid string, up *swyapi.UserLogin) error {
 	log.Debugf("Change pass for %s", uid)
 	err := ksClient.MakeReq(
 		&swyks.KeystoneReq {
@@ -304,7 +304,7 @@ func ksChangeUserPass(c *swy.XCreds, uid string, up *swyapi.UserLogin) error {
 	return nil
 }
 
-func ksSetUserEnabled(c *swy.XCreds, uid string, enabled bool) error {
+func ksSetUserEnabled(c *xh.XCreds, uid string, enabled bool) error {
 	log.Debugf("Change enabled status for %s", uid)
 	err := ksClient.MakeReq(
 		&swyks.KeystoneReq {
@@ -323,7 +323,7 @@ func ksSetUserEnabled(c *swy.XCreds, uid string, enabled bool) error {
 	return nil
 }
 
-func ksDelUserAndProject(c *swy.XCreds, kuid, kproj string) error {
+func ksDelUserAndProject(c *xh.XCreds, kuid, kproj string) error {
 	var err error
 
 	err = ksClient.MakeReq(
@@ -352,7 +352,7 @@ func ksDelUserAndProject(c *swy.XCreds, kuid, kproj string) error {
 	return nil
 }
 
-func ksInit(c *swy.XCreds) error {
+func ksInit(c *xh.XCreds) error {
 	var err error
 
 	log.Debugf("Logging in")

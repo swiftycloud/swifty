@@ -33,7 +33,7 @@ type YAMLConf struct {
 	Gate		string			`yaml:"gate"`
 	Keystone	string			`yaml:"keystone"`
 	DB		string			`yaml:"db"`
-	kc		*swy.XCreds
+	kc		*xh.XCreds
 }
 
 var conf YAMLConf
@@ -852,7 +852,7 @@ func main() {
 	flag.Parse()
 
 	if _, err := os.Stat(config_path); err == nil {
-		swy.ReadYamlConfig(config_path, &conf)
+		xh.ReadYamlConfig(config_path, &conf)
 		setupLogger(&conf)
 	} else {
 		setupLogger(nil)
@@ -868,7 +868,7 @@ func main() {
 
 	log.Debugf("config: %v", &conf)
 
-	conf.kc = swy.ParseXCreds(conf.Keystone)
+	conf.kc = xh.ParseXCreds(conf.Keystone)
 
 	err = ksInit(conf.kc)
 	if err != nil {

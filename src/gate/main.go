@@ -762,7 +762,7 @@ func handleFunctionRun(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	}
 
 	if fn.SwoId.Project == "test" {
-		res.Stdout = swy.Fortune()
+		res.Stdout = xh.Fortune()
 	}
 
 	return xrest.Respond(ctx, w, res)
@@ -1174,22 +1174,22 @@ func genReqHandler(cb gateGenReq) http.Handler {
 }
 
 func setupMwareAddr(conf *YAMLConf) {
-	conf.Mware.Maria.c = swy.ParseXCreds(conf.Mware.Maria.Creds)
+	conf.Mware.Maria.c = xh.ParseXCreds(conf.Mware.Maria.Creds)
 	conf.Mware.Maria.c.Resolve()
 
-	conf.Mware.Rabbit.c = swy.ParseXCreds(conf.Mware.Rabbit.Creds)
+	conf.Mware.Rabbit.c = xh.ParseXCreds(conf.Mware.Rabbit.Creds)
 	conf.Mware.Rabbit.c.Resolve()
 
-	conf.Mware.Mongo.c = swy.ParseXCreds(conf.Mware.Mongo.Creds)
+	conf.Mware.Mongo.c = xh.ParseXCreds(conf.Mware.Mongo.Creds)
 	conf.Mware.Mongo.c.Resolve()
 
-	conf.Mware.Postgres.c = swy.ParseXCreds(conf.Mware.Postgres.Creds)
+	conf.Mware.Postgres.c = xh.ParseXCreds(conf.Mware.Postgres.Creds)
 	conf.Mware.Postgres.c.Resolve()
 
-	conf.Mware.S3.c = swy.ParseXCreds(conf.Mware.S3.Creds)
+	conf.Mware.S3.c = xh.ParseXCreds(conf.Mware.S3.Creds)
 	conf.Mware.S3.c.Resolve()
 
-	conf.Mware.S3.cn = swy.ParseXCreds(conf.Mware.S3.Notify)
+	conf.Mware.S3.cn = xh.ParseXCreds(conf.Mware.S3.Notify)
 	conf.Mware.S3.cn.Resolve()
 }
 
@@ -1247,7 +1247,7 @@ func main() {
 	}
 
 	if _, err := os.Stat(config_path); err == nil {
-		err := swy.ReadYamlConfig(config_path, &conf)
+		err := xh.ReadYamlConfig(config_path, &conf)
 		if err != nil {
 			fmt.Printf("Bad config: %s\n", err.Error())
 			return

@@ -275,7 +275,7 @@ func (rd *RepoDesc)Del(ctx context.Context) *xrest.ReqErr {
 	rd.State = DBRepoStateRem
 
 	if rd.Path == "" {
-		_, err = swy.DropDir(cloneDir(), rd.path())
+		_, err = xh.DropDir(cloneDir(), rd.path())
 		if err != nil {
 			return GateErrE(swyapi.GateFsError, err)
 		}

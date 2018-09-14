@@ -931,7 +931,7 @@ func main() {
 	}
 
 	if _, err := os.Stat(config_path); err == nil {
-		swy.ReadYamlConfig(config_path, &conf)
+		xh.ReadYamlConfig(config_path, &conf)
 		setupLogger(&conf)
 	} else {
 		setupLogger(nil)
