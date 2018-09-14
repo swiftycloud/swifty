@@ -100,6 +100,7 @@ func setupLogger(conf *YAMLConf) {
 
 type s3Context struct {
 	context.Context
+	id	string
 	S	*mgo.Session
 	errCode	int
 	mime	string
@@ -128,7 +129,7 @@ func ctxMayAccess(ctx context.Context, bname string) bool {
 
 func mkContext(id string) (context.Context, func(context.Context)) {
 	ctx := &s3Context{
-		context.Background(),
+		context.Background(), id,
 		session.Copy(),
 		0, "", nil,
 	}
@@ -533,6 +534,16 @@ func handleGetObject(ctx context.Context, oname string, bucket *s3mgo.S3Bucket, 
 		}
 	}
 
+	mn := "out-bytes"
+	if ctx.(*s3Context).id == "web" {
+		mn += "-web"
+	}
+
+	err = StatsAcctInt64(ctx, bucket.NamespaceID, mn, int64(len(body)))
+	if err != nil {
+		return &S3Error{ ErrorCode: S3ErrInternalError } /* XXX : Huh? */
+	}
+
 	if m := ctx.(*s3Context).mime; m != "" {
 		w.Header().Set("Content-Type", m)
 	}
@@ -765,7 +776,7 @@ func handleS3API(cb func(ctx context.Context, w http.ResponseWriter, r *http.Req
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer r.Body.Close()
 
-		ctx, done := mkContext("s3 req")
+		ctx, done := mkContext("api")
 		defer done(ctx)
 
 		logRequest(r)

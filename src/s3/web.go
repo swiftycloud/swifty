@@ -106,7 +106,7 @@ var webRoot string
 
 func handleWebReq(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
-	ctx, done := mkContext("s3 req")
+	ctx, done := mkContext("web")
 	defer done(ctx)
 
 	host := strings.SplitN(r.Host, ":", 2)[0]

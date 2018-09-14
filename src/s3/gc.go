@@ -14,7 +14,7 @@ func gcInit(period uint32) error {
 
 	go func() {
 		for {
-			ctx, done := mkContext("GC keys")
+			ctx, done := mkContext("GC.keys")
 			gc_keys(ctx);
 			done(ctx)
 			time.Sleep(time.Duration(period) * time.Second)
@@ -25,7 +25,7 @@ func gcInit(period uint32) error {
 }
 
 func gcOldVersions(b *s3mgo.S3Bucket, key string, rover int64) {
-	ctx, done := mkContext("GC old obj")
+	ctx, done := mkContext("GC.obj")
 	defer done(ctx)
 
 	var object s3mgo.S3Object
