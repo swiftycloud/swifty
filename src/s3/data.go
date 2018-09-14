@@ -200,7 +200,7 @@ func s3ObjectPartFindFull(ctx context.Context, refID bson.ObjectId) ([]*s3mgo.S3
 	return res, nil
 }
 
-func s3ObjectPartAdd(ctx context.Context, iam *s3mgo.S3Iam, refid bson.ObjectId, bucket_bid, object_bid string, part int, data []byte) (*s3mgo.S3ObjectPart, error) {
+func s3ObjectPartAdd(ctx context.Context, refid bson.ObjectId, bucket_bid, object_bid string, part int, data []byte) (*s3mgo.S3ObjectPart, error) {
 	var objp *s3mgo.S3ObjectPart
 	var err error
 

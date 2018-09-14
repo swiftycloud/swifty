@@ -44,10 +44,11 @@ func s3AccountInsert(ctx context.Context, namespace, user string) (*s3mgo.S3Acco
 	return &account, nil
 }
 
-func s3AccountLookup(ctx context.Context, iam *s3mgo.S3Iam) (*s3mgo.S3Account, error) {
+func s3AccountLookup(ctx context.Context) (*s3mgo.S3Account, error) {
 	var account s3mgo.S3Account
 	var err error
 
+	iam := ctxIam(ctx)
 	query := bson.M{ "_id": iam.AccountObjID, "state": S3StateActive }
 	err = dbS3FindOne(ctx, query, &account)
 	if err != nil {

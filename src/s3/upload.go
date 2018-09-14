@@ -212,12 +212,12 @@ func s3UploadRemoveLocked(ctx context.Context, bucket *s3mgo.S3Bucket, upload *S
 	return nil
 }
 
-func s3UploadInit(ctx context.Context, iam *s3mgo.S3Iam, bucket *s3mgo.S3Bucket, oname, acl string) (*S3Upload, error) {
+func s3UploadInit(ctx context.Context, bucket *s3mgo.S3Bucket, oname, acl string) (*S3Upload, error) {
 	var err error
 
 	upload := &S3Upload{
 		ObjID:		bson.NewObjectId(),
-		IamObjID:	iam.ObjID,
+		IamObjID:	ctxIam(ctx).ObjID,
 		State:		S3StateActive,
 
 		S3ObjectProps: s3mgo.S3ObjectProps {
@@ -238,7 +238,7 @@ func s3UploadInit(ctx context.Context, iam *s3mgo.S3Iam, bucket *s3mgo.S3Bucket,
 	return upload, err
 }
 
-func s3UploadPart(ctx context.Context, iam *s3mgo.S3Iam, bucket *s3mgo.S3Bucket, oname,
+func s3UploadPart(ctx context.Context, bucket *s3mgo.S3Bucket, oname,
 			uid string, partno int, data []byte) (string, error) {
 	var objp *s3mgo.S3ObjectPart
 	var upload S3Upload
@@ -260,7 +260,7 @@ func s3UploadPart(ctx context.Context, iam *s3mgo.S3Iam, bucket *s3mgo.S3Bucket,
 		return "", err
 	}
 
-	objp, err = s3ObjectPartAdd(ctx, iam, upload.ObjID, bucket.BCookie, upload.UCookie(oname, partno), partno, data)
+	objp, err = s3ObjectPartAdd(ctx, upload.ObjID, bucket.BCookie, upload.UCookie(oname, partno), partno, data)
 	if err != nil {
 		upload.dbRefDec(ctx)
 		log.Errorf("s3: Can't store data %s: %s", infoLong(objp), err.Error())
@@ -275,7 +275,7 @@ func s3UploadPart(ctx context.Context, iam *s3mgo.S3Iam, bucket *s3mgo.S3Bucket,
 	return objp.ETag, nil
 }
 
-func s3UploadFini(ctx context.Context, iam *s3mgo.S3Iam, bucket *s3mgo.S3Bucket, uid string,
+func s3UploadFini(ctx context.Context, bucket *s3mgo.S3Bucket, uid string,
 			compete *swys3api.S3MpuFiniParts) (*swys3api.S3MpuFini, error) {
 	var res swys3api.S3MpuFini
 	var object *s3mgo.S3Object
@@ -293,7 +293,7 @@ func s3UploadFini(ctx context.Context, iam *s3mgo.S3Iam, bucket *s3mgo.S3Bucket,
 		return nil, err
 	}
 
-	object, err = UploadToObject(ctx, iam, bucket, &upload)
+	object, err = UploadToObject(ctx, bucket, &upload)
 	if err != nil {
 		log.Errorf("s3: Can't insert object on %s: %s",
 			infoLong(&upload), err.Error())
@@ -314,13 +314,13 @@ func s3UploadFini(ctx context.Context, iam *s3mgo.S3Iam, bucket *s3mgo.S3Bucket,
 	return &res, nil
 }
 
-func s3Uploads(ctx context.Context, iam *s3mgo.S3Iam, bname string) (*swys3api.S3MpuList,  *S3Error) {
+func s3Uploads(ctx context.Context, bname string) (*swys3api.S3MpuList,  *S3Error) {
 	var res swys3api.S3MpuList
 	var bucket *s3mgo.S3Bucket
 	var uploads []S3Upload
 	var err error
 
-	bucket, err = FindBucket(ctx, iam, bname)
+	bucket, err = FindBucket(ctx, bname)
 	if err != nil {
 		if err == mgo.ErrNotFound {
 			return nil, &S3Error{ ErrorCode: S3ErrNoSuchBucket }

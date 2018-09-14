@@ -23,6 +23,8 @@ type S3AcctStats struct {
 
 	CntObjects			int64		`bson:"cnt-objects"`
 	CntBytes			int64		`bson:"cnt-bytes"`
+	OutBytes			int64		`bson:"out-bytes"`
+	OutBytesWeb			int64		`bson:"out-bytes-web"`
 }
 
 type S3Iam struct {

@@ -137,11 +137,11 @@ out_1:
 	return nil, err
 }
 
-func FindBuckets(ctx context.Context, iam *s3mgo.S3Iam) ([]s3mgo.S3Bucket, error) {
+func FindBuckets(ctx context.Context) ([]s3mgo.S3Bucket, error) {
 	var res []s3mgo.S3Bucket
 	var err error
 
-	account, err := s3AccountLookup(ctx, iam)
+	account, err := s3AccountLookup(ctx)
 	if err != nil { return nil, err }
 
 	err = dbS3FindAll(ctx, bson.M{"nsid": account.NamespaceID()}, &res)

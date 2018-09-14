@@ -53,7 +53,7 @@ func s3AuthorizeAdmin(ctx context.Context, r *http.Request) (*s3mgo.S3AccessKey,
 	return LookupAccessKey(ctx, access_key)
 }
 
-func s3CheckAccess(iam *s3mgo.S3Iam, bname, oname string) error {
+func s3CheckAccess(ctx context.Context, bname, oname string) error {
 	// FIXME Implement lookup and ACL, for now just allow
 	return nil
 }
