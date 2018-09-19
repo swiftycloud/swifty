@@ -192,6 +192,7 @@ type FunctionLogEntry struct {
 type DeployDescription struct {
 	Functions	[]*FunctionAdd		`yaml:"functions"`
 	Mwares		[]*MwareAdd		`yaml:"mwares"`
+	Routers		[]*RouterAdd		`yaml:"routers"`
 }
 
 type DeploySource struct {
