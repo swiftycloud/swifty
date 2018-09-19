@@ -111,6 +111,17 @@ func (rd *RouterDesc)Add(ctx context.Context, _ interface{}) *xrest.ReqErr {
 	return nil
 }
 
+func routerStopId(ctx context.Context, id *SwoId) *xrest.ReqErr {
+	var rt RouterDesc
+
+	err := dbFind(ctx, id.dbReq(), &rt)
+	if err != nil {
+		return GateErrD(err)
+	}
+
+	return rt.Del(ctx)
+}
+
 func (rd *RouterDesc)Del(ctx context.Context) *xrest.ReqErr {
 	err := dbRemove(ctx, rd)
 	if err != nil {

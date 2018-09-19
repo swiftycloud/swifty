@@ -49,6 +49,12 @@ type DeployMware struct {
 	Mw	*MwareDesc	`bson:"mw,omitempty"`
 }
 
+type DeployRouter struct {
+	Id	SwoId		`bson:"id"`
+
+	Rt	*RouterDesc	`bson:"rt,omitempty"`
+}
+
 func (i *DeployFunction)start(ctx context.Context) *xrest.ReqErr {
 	if i.src == nil {
 		var src swyapi.FunctionSources
@@ -80,12 +86,20 @@ func (i *DeployMware)start(ctx context.Context) *xrest.ReqErr {
 	return i.Mw.Add(ctx, nil)
 }
 
+func (i *DeployRouter)start(ctx context.Context) *xrest.ReqErr {
+	return i.Rt.Add(ctx, nil)
+}
+
 func (i *DeployFunction)stop(ctx context.Context) *xrest.ReqErr {
 	return removeFunctionId(ctx, &i.Id)
 }
 
 func (i *DeployMware)stop(ctx context.Context) *xrest.ReqErr {
 	return mwareRemoveId(ctx, &i.Id)
+}
+
+func (i *DeployRouter)stop(ctx context.Context) *xrest.ReqErr {
+	return routerStopId(ctx, &i.Id)
 }
 
 func (i *DeployFunction)info(ctx context.Context, details bool) (*swyapi.DeployItemInfo) {
@@ -120,6 +134,10 @@ func (i *DeployMware)info(ctx context.Context, details bool) (*swyapi.DeployItem
 	return ret
 }
 
+func (i *DeployRouter)info(ctx context.Context, details bool) (*swyapi.DeployItemInfo) {
+	return &swyapi.DeployItemInfo{Type: "routers", Name: i.Id.Name}
+}
+
 type DeployDesc struct {
 	ObjID		bson.ObjectId		`bson:"_id,omitempty"`
 	SwoId					`bson:",inline"`
@@ -128,6 +146,7 @@ type DeployDesc struct {
 	State		int			`bson:"state"`
 	Functions	[]*DeployFunction	`bson:"functions"`
 	Mwares		[]*DeployMware		`bson:"mwares"`
+	Routers		[]*DeployRouter		`bson:"routers"`
 
 	_Items		[]*_DeployItemDesc	`bson:"items,omitempty"`
 }
@@ -138,38 +157,60 @@ func deployStartItems(dep *DeployDesc) {
 	ctx, done := mkContext("::deploy start")
 	defer done(ctx)
 
+	var fs, ms, rs int
+	var fn *DeployFunction
+	var mw *DeployMware
+	var rt *DeployRouter
+
 	mws := []*DeployMware{}
-	for i, mw := range dep.Mwares {
+	fns := []*DeployFunction{}
+	rts := []*DeployRouter{}
+
+	for ms, mw = range dep.Mwares {
 		cerr := mw.start(ctx)
 		if cerr == nil {
 			mws = append(mws, &DeployMware{Id: mw.Id})
-			continue
+		} else {
+			goto erm
 		}
 
-		deployStopMwares(ctx, dep, i)
-		dbUpdatePart(ctx, dep, bson.M{"state": DBDepStateStl})
 		return
 	}
 
-	fns := []*DeployFunction{}
-	for i, fn := range dep.Functions {
+	for fs, fn = range dep.Functions {
 		cerr := fn.start(ctx)
 		if cerr == nil {
 			fns = append(fns, &DeployFunction{Id: fn.Id})
-			continue
+		} else {
+			goto erf
 		}
+	}
 
-		deployStopFunctions(ctx, dep, i)
-		deployStopMwares(ctx, dep, len(dep.Mwares))
-		dbUpdatePart(ctx, dep, bson.M{"state": DBDepStateStl})
-		return
+	for rs, rt = range dep.Routers {
+		cerr := rt.start(ctx)
+		if cerr != nil {
+			rts = append(rts, &DeployRouter{Id: rt.Id})
+		} else {
+			goto err
+		}
 	}
 
 	dep.State = DBDepStateRdy
 	dep.Functions = fns
 	dep.Mwares = mws
+	dep.Routers = rts
 	dbUpdateAll(ctx, dep)
 	return
+
+err:
+	deployStopRouters(ctx, dep, rs)
+erf:
+	deployStopFunctions(ctx, dep, fs)
+erm:
+	deployStopMwares(ctx, dep, ms)
+
+	ctxlog(ctx).Errorf("Failed to start %s dep (stopped %d,%d,%d)", dep.SwoId.Str(), rs, fs, ms)
+	dbUpdatePart(ctx, dep, bson.M{"state": DBDepStateStl})
 }
 
 func deployStopFunctions(ctx context.Context, dep *DeployDesc, till int) *xrest.ReqErr {
@@ -198,6 +239,23 @@ func deployStopMwares(ctx context.Context, dep *DeployDesc, till int) *xrest.Req
 		}
 
 		e := m.stop(ctx)
+		if e != nil  && e.Code != swyapi.GateNotFound {
+			err = e
+		}
+	}
+
+	return err
+}
+
+func deployStopRouters(ctx context.Context, dep *DeployDesc, till int) *xrest.ReqErr {
+	var err *xrest.ReqErr
+
+	for i, r := range dep.Routers {
+		if i >= till {
+			break
+		}
+
+		e := r.stop(ctx)
 		if e != nil  && e.Code != swyapi.GateNotFound {
 			err = e
 		}
@@ -300,6 +358,18 @@ func (dep *DeployDesc)getItemsDesc(dd *swyapi.DeployDescription) *xrest.ReqErr {
 		})
 	}
 
+	for _, rt := range dd.Routers {
+		id.Name = rt.Name
+		rt, cerr := getRouterDesc(&id, rt)
+		if cerr != nil {
+			return cerr
+		}
+
+		dep.Routers = append(dep.Routers, &DeployRouter{
+			Id: id, Rt: rt,
+		})
+	}
+
 	return nil
 }
 
@@ -393,6 +463,10 @@ func (dep *DeployDesc)toInfo(ctx context.Context, details bool) (*swyapi.DeployI
 	}
 	for _, m := range dep.Mwares {
 		ret.Items = append(ret.Items, m.info(ctx, details))
+	}
+
+	for _, r := range dep.Routers {
+		ret.Items = append(ret.Items, r.info(ctx, details))
 	}
 
 	return ret, nil
