@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"gopkg.in/mgo.v2/bson"
+	"gopkg.in/yaml.v2"
 	"context"
 	"net/url"
 	"../common/xrest"
@@ -214,9 +215,24 @@ func getDeployDesc(id *SwoId) *DeployDesc {
 }
 
 func (dep *DeployDesc)getItems(ds *swyapi.DeployStart) *xrest.ReqErr {
+	var dd swyapi.DeployDescription
+
+	if ds.From.Type != "desc" {
+		return GateErrM(swyapi.GateBadRequest, "Unsupported type")
+	}
+
+	err := yaml.Unmarshal([]byte(ds.From.Descr), &dd)
+	if err != nil {
+		return GateErrE(swyapi.GateBadRequest, err)
+	}
+
+	return dep.getItemsDesc(&dd)
+}
+
+func (dep *DeployDesc)getItemsDesc(dd *swyapi.DeployDescription) *xrest.ReqErr {
 	id := dep.SwoId
 
-	for _, fn := range ds.Functions {
+	for _, fn := range dd.Functions {
 		srcd, er := json.Marshal(fn.Sources)
 		if er != nil {
 			return GateErrE(swyapi.GateGenErr, er)
@@ -244,7 +260,7 @@ func (dep *DeployDesc)getItems(ds *swyapi.DeployStart) *xrest.ReqErr {
 		})
 	}
 
-	for _, mw := range ds.Mwares {
+	for _, mw := range dd.Mwares {
 		id.Name = mw.Name
 		md := getMwareDesc(&id, mw)
 		md.Labels = dep.Labels

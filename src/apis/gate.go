@@ -177,7 +177,7 @@ type FunctionAdd struct {
 	UserData	string			`json:"userdata,omitempty"`
 	AuthCtx		string			`json:"authctx,omitempty"`
 
-	Events		[]FunctionEvent		`json:"events,omitempty"` /* Deploy only */
+	Events		[]FunctionEvent		`json:"-" yaml:"events"` /* Deploy only */
 }
 
 type FunctionUpdate struct {
@@ -195,11 +195,20 @@ type FunctionLogEntry struct {
 	Text		string			`json:"text"`
 }
 
+type DeployDescription struct {
+	Functions	[]*FunctionAdd		`yaml:"functions"`
+	Mwares		[]*MwareAdd		`yaml:"mwares"`
+}
+
+type DeploySource struct {
+	Type		string			`json:"type"`
+	Descr		string			`json:"desc,omitempty"`
+}
+
 type DeployStart struct {
 	Name		string			`json:"name"`
 	Project		string			`json:"project,omitempty"`
-	Functions	[]*FunctionAdd		`json:"functions"`
-	Mwares		[]*MwareAdd		`json:"mwares"`
+	From		DeploySource		`json:"from"`
 }
 
 type DeployItemInfo struct {

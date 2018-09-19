@@ -1028,7 +1028,7 @@ func handleAuths(ctx context.Context, w http.ResponseWriter, r *http.Request) *x
 
 		dd := getDeployDesc(ctxSwoId(ctx, project, aa.Name))
 		dd.Labels = []string{ "auth" }
-		dd.getItems(&swyapi.DeployStart {
+		dd.getItemsDesc(&swyapi.DeployDescription {
 			Functions: []*swyapi.FunctionAdd {
 				&swyapi.FunctionAdd {
 					Name: aa.Name + "_um",
