@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"gopkg.in/mgo.v2/bson"
 	"gopkg.in/yaml.v2"
+	"encoding/base64"
 	"context"
 	"net/url"
 	"../common/xrest"
@@ -214,14 +215,28 @@ func getDeployDesc(id *SwoId) *DeployDesc {
 	return dd
 }
 
-func (dep *DeployDesc)getItems(ds *swyapi.DeployStart) *xrest.ReqErr {
+func (dep *DeployDesc)getItems(ctx context.Context, ds *swyapi.DeployStart) *xrest.ReqErr {
 	var dd swyapi.DeployDescription
+	var desc []byte
+	var err error
 
-	if ds.From.Type != "desc" {
+	switch ds.From.Type {
+	case "desc":
+		desc, err = base64.StdEncoding.DecodeString(ds.From.Descr)
+		if err != nil {
+			return GateErrE(swyapi.GateGenErr, err)
+		}
+	case "repo":
+		desc, err = repoReadFile(ctx, ds.From.Repo)
+		if err != nil {
+			return GateErrE(swyapi.GateGenErr, err)
+		}
+
+	default:
 		return GateErrM(swyapi.GateBadRequest, "Unsupported type")
 	}
 
-	err := yaml.Unmarshal([]byte(ds.From.Descr), &dd)
+	err = yaml.Unmarshal(desc, &dd)
 	if err != nil {
 		return GateErrE(swyapi.GateBadRequest, err)
 	}
@@ -327,7 +342,7 @@ func (_ Deployments)Create(ctx context.Context, p interface{}) (xrest.Obj, *xres
 func (dep *DeployDesc)Add(ctx context.Context, p interface{}) *xrest.ReqErr {
 	params := p.(*swyapi.DeployStart)
 
-	cerr := dep.getItems(params)
+	cerr := dep.getItems(ctx, params)
 	if cerr != nil {
 		return cerr
 	}

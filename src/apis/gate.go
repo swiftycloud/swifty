@@ -203,6 +203,7 @@ type DeployDescription struct {
 type DeploySource struct {
 	Type		string			`json:"type"`
 	Descr		string			`json:"desc,omitempty"`
+	Repo		string			`json:"repo,omitempty"`
 }
 
 type DeployStart struct {
