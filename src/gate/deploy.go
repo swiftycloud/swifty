@@ -134,6 +134,10 @@ func (i *DeployMware)info(ctx context.Context, details bool) (*swyapi.DeployItem
 	return ret
 }
 
+func (i *DeployRouter)info(ctx context.Context, details bool) (*swyapi.DeployItemInfo) {
+	return &swyapi.DeployItemInfo{Type: "routers", Name: i.Id.Name}
+}
+
 type DeployDesc struct {
 	ObjID		bson.ObjectId		`bson:"_id,omitempty"`
 	SwoId					`bson:",inline"`
@@ -453,6 +457,10 @@ func (dep *DeployDesc)toInfo(ctx context.Context, details bool) (*swyapi.DeployI
 	}
 	for _, m := range dep.Mwares {
 		ret.Items = append(ret.Items, m.info(ctx, details))
+	}
+
+	for _, r := range dep.Routers {
+		ret.Items = append(ret.Items, r.info(ctx, details))
 	}
 
 	return ret, nil
