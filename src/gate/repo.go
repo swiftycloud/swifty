@@ -701,18 +701,49 @@ func (_ Repos)Iterate(ctx context.Context, q url.Values, cb func(context.Context
 	return nil
 }
 
+func ctxRepoId(ctx context.Context, rid string) bson.M {
+	return  bson.M{
+		"tennant": bson.M { "$in": []string{gctx(ctx).Tenant, "*"}},
+		"_id": bson.ObjectIdHex(rid),
+	}
+}
+
+func ctxRepoName(ctx context.Context, name string) bson.M {
+	return  bson.M{
+		"tennant": bson.M { "$in": []string{gctx(ctx).Tenant, "*"}},
+		"name": name,
+	}
+}
 
 func repoReadFile(ctx context.Context, rf string) ([]byte, error) {
-	ids := strings.SplitN(rf, "/", 2)
-	if len(ids) != 2 || !bson.IsObjectIdHex(ids[0]) {
-		return nil, errors.New("Bad repo file ID")
-	}
-
 	var rd RepoDesc
-	err := dbFind(ctx, ctxRepoId(ctx, ids[0]), &rd)
-	if err != nil {
-		return nil, err
+	var fname string
+
+	ids := strings.SplitN(rf, "/", 2)
+	if len(ids) == 2 && bson.IsObjectIdHex(ids[0]) {
+		err := dbFind(ctx, ctxRepoId(ctx, ids[0]), &rd)
+		if err != nil {
+			return nil, err
+		}
+
+		fname = ids[1]
+		goto got_rd
+
 	}
 
-	return ioutil.ReadFile(rd.clonePath() + "/" + ids[1])
+	ids = strings.SplitN(rf, "//", 3)
+	if len(ids) == 3 {
+		err := dbFind(ctx, ctxRepoName(ctx, ids[0] + "//" + ids[1]), &rd)
+		if err != nil {
+			return nil, err
+		}
+
+		fname = ids[2]
+		goto got_rd
+	}
+
+	return nil, errors.New("Bad repo file ID")
+
+got_rd:
+	return ioutil.ReadFile(rd.clonePath() + "/" + fname)
 }

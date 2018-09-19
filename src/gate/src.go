@@ -1,7 +1,6 @@
 package main
 
 import (
-	"gopkg.in/mgo.v2/bson"
 	"fmt"
 	"bytes"
 	"strings"
@@ -132,13 +131,6 @@ func writeSourceFile(ctx context.Context, to, script string, data []byte) error 
 	}
 
 	return nil
-}
-
-func ctxRepoId(ctx context.Context, rid string) bson.M {
-	return  bson.M{
-		"tennant": bson.M { "$in": []string{gctx(ctx).Tenant, "*"}},
-		"_id": bson.ObjectIdHex(rid),
-	}
 }
 
 func putFileFromRepo(ctx context.Context, src *swyapi.FunctionSources, to, script string) error {
