@@ -701,3 +701,18 @@ func (_ Repos)Iterate(ctx context.Context, q url.Values, cb func(context.Context
 	return nil
 }
 
+
+func repoReadFile(ctx context.Context, rf string) ([]byte, error) {
+	ids := strings.SplitN(rf, "/", 2)
+	if len(ids) != 2 || !bson.IsObjectIdHex(ids[0]) {
+		return nil, errors.New("Bad repo file ID")
+	}
+
+	var rd RepoDesc
+	err := dbFind(ctx, ctxRepoId(ctx, ids[0]), &rd)
+	if err != nil {
+		return nil, err
+	}
+
+	return ioutil.ReadFile(rd.clonePath() + "/" + ids[1])
+}
