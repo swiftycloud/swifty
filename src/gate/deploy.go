@@ -157,46 +157,42 @@ func deployStartItems(dep *DeployDesc) {
 	ctx, done := mkContext("::deploy start")
 	defer done(ctx)
 
+	var fs, ms, rs int
+	var fn *DeployFunction
+	var mw *DeployMware
+	var rt *DeployRouter
+
 	mws := []*DeployMware{}
-	for i, mw := range dep.Mwares {
+	fns := []*DeployFunction{}
+	rts := []*DeployRouter{}
+
+	for ms, mw = range dep.Mwares {
 		cerr := mw.start(ctx)
 		if cerr == nil {
 			mws = append(mws, &DeployMware{Id: mw.Id})
-			continue
+		} else {
+			goto erm
 		}
 
-		deployStopMwares(ctx, dep, i)
-		dbUpdatePart(ctx, dep, bson.M{"state": DBDepStateStl})
 		return
 	}
 
-	fns := []*DeployFunction{}
-	for i, fn := range dep.Functions {
+	for fs, fn = range dep.Functions {
 		cerr := fn.start(ctx)
 		if cerr == nil {
 			fns = append(fns, &DeployFunction{Id: fn.Id})
-			continue
+		} else {
+			goto erf
 		}
-
-		deployStopFunctions(ctx, dep, i)
-		deployStopMwares(ctx, dep, len(dep.Mwares))
-		dbUpdatePart(ctx, dep, bson.M{"state": DBDepStateStl})
-		return
 	}
 
-	rts := []*DeployRouter{}
-	for i, rt := range dep.Routers {
+	for rs, rt = range dep.Routers {
 		cerr := rt.start(ctx)
 		if cerr != nil {
 			rts = append(rts, &DeployRouter{Id: rt.Id})
-			continue
+		} else {
+			goto err
 		}
-
-		deployStopRouters(ctx, dep, i)
-		deployStopFunctions(ctx, dep, len(dep.Functions))
-		deployStopMwares(ctx, dep, len(dep.Mwares))
-		dbUpdatePart(ctx, dep, bson.M{"state": DBDepStateStl})
-		return
 	}
 
 	dep.State = DBDepStateRdy
@@ -205,6 +201,16 @@ func deployStartItems(dep *DeployDesc) {
 	dep.Routers = rts
 	dbUpdateAll(ctx, dep)
 	return
+
+err:
+	deployStopRouters(ctx, dep, rs)
+erf:
+	deployStopFunctions(ctx, dep, fs)
+erm:
+	deployStopMwares(ctx, dep, ms)
+
+	ctxlog(ctx).Errorf("Failed to start %s dep (stopped %d,%d,%d)", dep.SwoId.Str(), rs, fs, ms)
+	dbUpdatePart(ctx, dep, bson.M{"state": DBDepStateStl})
 }
 
 func deployStopFunctions(ctx context.Context, dep *DeployDesc, till int) *xrest.ReqErr {
