@@ -46,5 +46,3 @@ wdog:
         k8s-namespace: "default"
 demo-repo:
         url: "https://github.com/swiftycloud/swifty.demo"
-        functions:
-                user-mgmt: "functions/golang/simple-user-mgmt.go"

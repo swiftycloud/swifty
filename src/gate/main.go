@@ -1021,8 +1021,7 @@ func handleAuths(ctx context.Context, w http.ResponseWriter, r *http.Request) *x
 			return GateErrM(swyapi.GateBadRequest, "No such auth type")
 		}
 
-		fname := conf.DemoRepo.Functions["user-mgmt"]
-		if demoRep.ObjID == "" || fname == "" {
+		if demoRep.ObjID == "" {
 			return GateErrM(swyapi.GateGenErr, "AaaS configuration error")
 		}
 

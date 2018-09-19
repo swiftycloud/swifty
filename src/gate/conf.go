@@ -163,18 +163,11 @@ func (cr *YAMLConfRt)Validate() error {
 
 type YAMLConfDemoRepo struct {
 	URL		string			`yaml:"url"`
-	Functions	map[string]string	`yaml:"functions"`
 }
 
 func (dr *YAMLConfDemoRepo)Validate() error {
 	if dr.URL == "" {
 		return errors.New("'demo-repo.url' not set")
-	}
-	if len(dr.Functions) == 0 {
-		return errors.New("'demo-repo.functions' map not set")
-	}
-	if _, ok := dr.Functions["user-mgmt"]; !ok {
-		fmt.Printf("'demo-repo.functions.user-mgmt' not set, auth-as-a-service will not work")
 	}
 	return nil
 }
