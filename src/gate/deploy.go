@@ -3,8 +3,11 @@ package main
 import (
 	"encoding/json"
 	"gopkg.in/mgo.v2/bson"
+	"gopkg.in/yaml.v2"
+	"encoding/base64"
 	"context"
 	"net/url"
+	"bytes"
 	"../common/xrest"
 	"../apis"
 )
@@ -32,14 +35,18 @@ type _DeployItemDesc struct {
 }
 
 type DeployFunction struct {
-	Fn	*FunctionDesc	`bson:"fn"`
+	Id	SwoId		`bson:"id"`
+
+	Fn	*FunctionDesc	`bson:"fn,omitempty"`
 	FnSrc	string		`bson:"fnsrc,omitempty"`
 	src	*swyapi.FunctionSources	`bson:"-"`
 	Evs	[]*FnEventDesc	`bson:"events,omitempty"`
 }
 
 type DeployMware struct {
-	Mw	*MwareDesc	`bson:"mw"`
+	Id	SwoId		`bson:"id"`
+
+	Mw	*MwareDesc	`bson:"mw,omitempty"`
 }
 
 func (i *DeployFunction)start(ctx context.Context) *xrest.ReqErr {
@@ -53,7 +60,7 @@ func (i *DeployFunction)start(ctx context.Context) *xrest.ReqErr {
 		i.src = &src
 	}
 
-	cerr := i.Fn.Add(ctx, i.src)
+	cerr := i.Fn.Add(ctx, &swyapi.FunctionAdd{Sources: *i.src})
 	if cerr != nil {
 		return cerr
 	}
@@ -74,19 +81,19 @@ func (i *DeployMware)start(ctx context.Context) *xrest.ReqErr {
 }
 
 func (i *DeployFunction)stop(ctx context.Context) *xrest.ReqErr {
-	return removeFunctionId(ctx, &i.Fn.SwoId)
+	return removeFunctionId(ctx, &i.Id)
 }
 
 func (i *DeployMware)stop(ctx context.Context) *xrest.ReqErr {
-	return mwareRemoveId(ctx, &i.Mw.SwoId)
+	return mwareRemoveId(ctx, &i.Id)
 }
 
 func (i *DeployFunction)info(ctx context.Context, details bool) (*swyapi.DeployItemInfo) {
-	ret := &swyapi.DeployItemInfo{Type: "function", Name: i.Fn.SwoId.Name}
+	ret := &swyapi.DeployItemInfo{Type: "function", Name: i.Id.Name}
 
 	if details {
 		var fn FunctionDesc
-		err := dbFind(ctx, i.Fn.SwoId.dbReq(), &fn)
+		err := dbFind(ctx, i.Id.dbReq(), &fn)
 		if err == nil {
 			ret.State = fnStates[fn.State]
 		} else {
@@ -98,11 +105,11 @@ func (i *DeployFunction)info(ctx context.Context, details bool) (*swyapi.DeployI
 }
 
 func (i *DeployMware)info(ctx context.Context, details bool) (*swyapi.DeployItemInfo) {
-	ret := &swyapi.DeployItemInfo{Type: "mware", Name: i.Mw.SwoId.Name}
+	ret := &swyapi.DeployItemInfo{Type: "mware", Name: i.Id.Name}
 
 	if details {
 		var mw MwareDesc
-		err := dbFind(ctx, i.Mw.SwoId.dbReq(), &mw)
+		err := dbFind(ctx, i.Id.dbReq(), &mw)
 		if err == nil {
 			ret.State = mwStates[mw.State]
 		} else {
@@ -131,9 +138,11 @@ func deployStartItems(dep *DeployDesc) {
 	ctx, done := mkContext("::deploy start")
 	defer done(ctx)
 
+	mws := []*DeployMware{}
 	for i, mw := range dep.Mwares {
 		cerr := mw.start(ctx)
 		if cerr == nil {
+			mws = append(mws, &DeployMware{Id: mw.Id})
 			continue
 		}
 
@@ -142,9 +151,11 @@ func deployStartItems(dep *DeployDesc) {
 		return
 	}
 
+	fns := []*DeployFunction{}
 	for i, fn := range dep.Functions {
 		cerr := fn.start(ctx)
 		if cerr == nil {
+			fns = append(fns, &DeployFunction{Id: fn.Id})
 			continue
 		}
 
@@ -154,7 +165,10 @@ func deployStartItems(dep *DeployDesc) {
 		return
 	}
 
-	dbUpdatePart(ctx, dep, bson.M{"state": DBDepStateRdy})
+	dep.State = DBDepStateRdy
+	dep.Functions = fns
+	dep.Mwares = mws
+	dbUpdateAll(ctx, dep)
 	return
 }
 
@@ -202,11 +216,55 @@ func getDeployDesc(id *SwoId) *DeployDesc {
 	return dd
 }
 
-func (dep *DeployDesc)getItems(ds *swyapi.DeployStart) *xrest.ReqErr {
+type DepParam struct {
+	name, value string
+}
+
+func (dep *DeployDesc)getItems(ctx context.Context, ds *swyapi.DeployStart) *xrest.ReqErr {
+	return dep.getItemsParams(ctx, &ds.From, []*DepParam{})
+}
+
+func (dep *DeployDesc)getItemsParams(ctx context.Context, from *swyapi.DeploySource, params []*DepParam) *xrest.ReqErr {
+	var dd swyapi.DeployDescription
+	var desc []byte
+	var err error
+
+	switch from.Type {
+	case "desc":
+		desc, err = base64.StdEncoding.DecodeString(from.Descr)
+		if err != nil {
+			return GateErrE(swyapi.GateGenErr, err)
+		}
+	case "repo":
+		ctxlog(ctx).Debugf("Read [%s] deploy desc", from.Repo)
+		desc, err = repoReadFile(ctx, from.Repo)
+		if err != nil {
+			return GateErrE(swyapi.GateGenErr, err)
+		}
+
+	default:
+		return GateErrM(swyapi.GateBadRequest, "Unsupported type")
+	}
+
+	for _, p := range params {
+		ctxlog(ctx).Debugf("`- Fix [%s:%s]", p.name, p.value)
+		desc = bytes.Replace(desc, []byte("%" + p.name + "%"), []byte(p.value), -1)
+	}
+
+	err = yaml.Unmarshal(desc, &dd)
+	if err != nil {
+		return GateErrE(swyapi.GateBadRequest, err)
+	}
+
+	ctxlog(ctx).Debugf("Initialize deploy from desc")
+	return dep.getItemsDesc(&dd)
+}
+
+func (dep *DeployDesc)getItemsDesc(dd *swyapi.DeployDescription) *xrest.ReqErr {
 	id := dep.SwoId
 
-	for _, fn := range ds.Functions {
-		srcd, er := json.Marshal(&fn.Sources)
+	for _, fn := range dd.Functions {
+		srcd, er := json.Marshal(fn.Sources)
 		if er != nil {
 			return GateErrE(swyapi.GateGenErr, er)
 		}
@@ -229,15 +287,17 @@ func (dep *DeployDesc)getItems(ds *swyapi.DeployStart) *xrest.ReqErr {
 
 		fd.Labels = dep.Labels
 		dep.Functions = append(dep.Functions, &DeployFunction{
-			Fn: fd, FnSrc: string(srcd), src: &fn.Sources, Evs: evs,
+			Id: id, Fn: fd, FnSrc: string(srcd), src: &fn.Sources, Evs: evs,
 		})
 	}
 
-	for _, mw := range ds.Mwares {
+	for _, mw := range dd.Mwares {
 		id.Name = mw.Name
 		md := getMwareDesc(&id, mw)
 		md.Labels = dep.Labels
-		dep.Mwares = append(dep.Mwares, &DeployMware{ Mw: md })
+		dep.Mwares = append(dep.Mwares, &DeployMware{
+			Id: id, Mw: md,
+		})
 	}
 
 	return nil
@@ -298,7 +358,7 @@ func (_ Deployments)Create(ctx context.Context, p interface{}) (xrest.Obj, *xres
 func (dep *DeployDesc)Add(ctx context.Context, p interface{}) *xrest.ReqErr {
 	params := p.(*swyapi.DeployStart)
 
-	cerr := dep.getItems(params)
+	cerr := dep.getItems(ctx, params)
 	if cerr != nil {
 		return cerr
 	}

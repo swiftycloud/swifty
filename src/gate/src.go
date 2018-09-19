@@ -1,7 +1,6 @@
 package main
 
 import (
-	"gopkg.in/mgo.v2/bson"
 	"fmt"
 	"bytes"
 	"strings"
@@ -134,29 +133,10 @@ func writeSourceFile(ctx context.Context, to, script string, data []byte) error 
 	return nil
 }
 
-func ctxRepoId(ctx context.Context, rid string) bson.M {
-	return  bson.M{
-		"tennant": bson.M { "$in": []string{gctx(ctx).Tenant, "*"}},
-		"_id": bson.ObjectIdHex(rid),
-	}
-}
-
 func putFileFromRepo(ctx context.Context, src *swyapi.FunctionSources, to, script string) error {
-	ids := strings.SplitN(src.Repo, "/", 2)
-	if len(ids) != 2 || !bson.IsObjectIdHex(ids[0]) {
-		return errors.New("Bad repo file ID")
-	}
-
-	var rd RepoDesc
-	err := dbFind(ctx, ctxRepoId(ctx, ids[0]), &rd)
+	fnCode, err := repoReadFile(ctx, src.Repo)
 	if err != nil {
-		ctxlog(ctx).Errorf("No repo %s: %s", ids[0], err.Error())
-		return err
-	}
-
-	fnCode, err := ioutil.ReadFile(rd.clonePath() + "/" + ids[1])
-	if err != nil {
-		ctxlog(ctx).Errorf("No file %s / %s: %s", rd.clonePath(), ids[1], err.Error())
+		ctxlog(ctx).Errorf("Can't read file %s: %s", src.Repo, err.Error())
 		return err
 	}
 
