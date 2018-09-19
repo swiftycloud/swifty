@@ -84,16 +84,10 @@ type FunctionCode struct {
 	Env		[]string		`json:"env,omitempty"`
 }
 
-type FunctionSwage struct {
-	Template	string			`json:"template"`
-	Params		map[string]string	`json:"params"`
-}
-
 type FunctionSources struct {
 	Type		string			`json:"type"`
 	Repo		string			`json:"repo,omitempty"`
 	Code		string			`json:"code,omitempty"`
-	Swage		*FunctionSwage		`json:"swage,omitempty"`
 	Sync		bool			`json:"sync"`
 }
 
