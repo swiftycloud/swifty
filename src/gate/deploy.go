@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"context"
 	"net/url"
+	"bytes"
 	"../common/xrest"
 	"../apis"
 )
@@ -215,19 +216,28 @@ func getDeployDesc(id *SwoId) *DeployDesc {
 	return dd
 }
 
+type DepParam struct {
+	name, value string
+}
+
 func (dep *DeployDesc)getItems(ctx context.Context, ds *swyapi.DeployStart) *xrest.ReqErr {
+	return dep.getItemsParams(ctx, &ds.From, []*DepParam{})
+}
+
+func (dep *DeployDesc)getItemsParams(ctx context.Context, from *swyapi.DeploySource, params []*DepParam) *xrest.ReqErr {
 	var dd swyapi.DeployDescription
 	var desc []byte
 	var err error
 
-	switch ds.From.Type {
+	switch from.Type {
 	case "desc":
-		desc, err = base64.StdEncoding.DecodeString(ds.From.Descr)
+		desc, err = base64.StdEncoding.DecodeString(from.Descr)
 		if err != nil {
 			return GateErrE(swyapi.GateGenErr, err)
 		}
 	case "repo":
-		desc, err = repoReadFile(ctx, ds.From.Repo)
+		ctxlog(ctx).Debugf("Read [%s] deploy desc", from.Repo)
+		desc, err = repoReadFile(ctx, from.Repo)
 		if err != nil {
 			return GateErrE(swyapi.GateGenErr, err)
 		}
@@ -236,11 +246,17 @@ func (dep *DeployDesc)getItems(ctx context.Context, ds *swyapi.DeployStart) *xre
 		return GateErrM(swyapi.GateBadRequest, "Unsupported type")
 	}
 
+	for _, p := range params {
+		ctxlog(ctx).Debugf("`- Fix [%s:%s]", p.name, p.value)
+		desc = bytes.Replace(desc, []byte("%" + p.name + "%"), []byte(p.value), -1)
+	}
+
 	err = yaml.Unmarshal(desc, &dd)
 	if err != nil {
 		return GateErrE(swyapi.GateBadRequest, err)
 	}
 
+	ctxlog(ctx).Debugf("Initialize deploy from desc")
 	return dep.getItemsDesc(&dd)
 }
 

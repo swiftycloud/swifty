@@ -1028,40 +1028,16 @@ func handleAuths(ctx context.Context, w http.ResponseWriter, r *http.Request) *x
 
 		dd := getDeployDesc(ctxSwoId(ctx, project, aa.Name))
 		dd.Labels = []string{ "auth" }
-		dd.getItemsDesc(&swyapi.DeployDescription {
-			Functions: []*swyapi.FunctionAdd {
-				&swyapi.FunctionAdd {
-					Name: aa.Name + "_um",
-					Code: swyapi.FunctionCode {
-						Lang: "golang",
-						Env: []string{ "SWIFTY_AUTH_NAME=" + aa.Name },
-					},
-					Sources: swyapi.FunctionSources {
-						Type: "git",
-						Repo: demoRep.ObjID.Hex() + "/" + fname,
-					},
-					Mware: []string { aa.Name + "_jwt", aa.Name + "_mgo" },
-					Events: []swyapi.FunctionEvent {
-						swyapi.FunctionEvent{
-							Name: "API",
-							Source: "url",
-						},
-					},
-				},
-			},
-			Mwares: []*swyapi.MwareAdd {
-				&swyapi.MwareAdd {
-					Name: aa.Name + "_jwt",
-					Type: "authjwt",
-				},
-				&swyapi.MwareAdd {
-					Name: aa.Name + "_mgo",
-					Type: "mongo",
-				},
-			},
-		})
+		cerr := dd.getItemsParams(ctx, &swyapi.DeploySource{
+			Type:	"repo",
+			Repo:	"https://github.com/swiftycloud/swifty.demo//swy-aaas.yaml",
+		}, []*DepParam { &DepParam{ name: "name", value: aa.Name } })
+		if cerr != nil {
+			ctxlog(ctx).Errorf("Error getting swy-aaas.yaml file")
+			return cerr
+		}
 
-		cerr := dd.Start(ctx)
+		cerr = dd.Start(ctx)
 		if cerr != nil {
 			return cerr
 		}
