@@ -1120,8 +1120,10 @@ func deploy_list(args []string, opts [16]string) {
 }
 
 func deploy_add(args []string, opts [16]string) {
+	fmt.Printf("Starting deploy %s\n", args[0])
+
 	da := swyapi.DeployStart{
-		Name: args[1],
+		Name: args[0],
 		Project: curCmd.project,
 	}
 
@@ -1131,6 +1133,7 @@ func deploy_add(args []string, opts [16]string) {
 			Repo: opts[0][5:],
 		}
 	} else {
+		fmt.Printf("Adding deploy from %s\n", opts[0])
 		da.From = swyapi.DeploySource {
 			Type: "desc",
 			Descr: encodeFile(opts[0]),
@@ -1916,8 +1919,8 @@ func main() {
 	cmdMap[CMD_DL].opts.StringVar(&opts[0], "label", "", "Labels, comma-separated")
 	bindCmdUsage(CMD_DL,	[]string{},	"List deployments", true)
 	bindCmdUsage(CMD_DI,	[]string{"NAME"}, "Show info about deployment", true)
-	cmdMap[CMD_DL].opts.StringVar(&opts[0], "from", "", "File from which to get info")
-	bindCmdUsage(CMD_DA,	[]string{"NAME", "DESC"}, "Add (start) deployment", true)
+	cmdMap[CMD_DA].opts.StringVar(&opts[0], "from", "", "File from which to get info")
+	bindCmdUsage(CMD_DA,	[]string{"NAME"}, "Add (start) deployment", true)
 	bindCmdUsage(CMD_DD,	[]string{"NAME"}, "Del (stop) deployment", true)
 
 	bindCmdUsage(CMD_RTL,	[]string{},	  "List routers", true)

@@ -193,7 +193,7 @@ func (rt *RouterURL)Handle(ctx context.Context, w http.ResponseWriter, r *http.R
 			continue
 		}
 		path_match = true
-		if e.Method != r.Method {
+		if e.Method != "*" && e.Method != r.Method {
 			continue
 		}
 
