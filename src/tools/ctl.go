@@ -1100,7 +1100,7 @@ func deploy_info(args []string, opts [16]string) {
 	fmt.Printf("State:        %s\n", di.State)
 	fmt.Printf("Items:\n")
 	for _, i := range di.Items {
-		fmt.Printf("\t%s: %s, %s\n", i.Name, i.Type, i.State)
+		fmt.Printf("\t%-32s%-12s%s\n", i.Name + ":", i.Type + ",", i.State)
 	}
 }
 
