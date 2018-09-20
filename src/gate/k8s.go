@@ -702,6 +702,11 @@ func swk8sGetBuildPods(ctx context.Context) (map[string]string, error) {
 	return rv, nil
 }
 
+func listFnPods(fn *FunctionDesc) (*v1.PodList, error) {
+	podiface := swk8sClientSet.CoreV1().Pods(conf.Wdog.Namespace)
+	return podiface.List(metav1.ListOptions{ LabelSelector: "swyrun=" + fn.Cookie[:32] })
+}
+
 func refreshDepsAndPods(ctx context.Context) error {
 	var fns []*FunctionDesc
 

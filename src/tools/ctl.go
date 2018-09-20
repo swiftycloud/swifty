@@ -567,6 +567,9 @@ func function_minfo(args []string, opts [16]string) {
 	if len(ifo.BR) != 0 {
 		fmt.Printf("BR: %d:%d -> %d\n", ifo.BR[0], ifo.BR[1], ifo.BR[2])
 	}
+	if len(ifo.Hosts) != 0 {
+		fmt.Printf("PODs at %s\n", strings.Join(ifo.Hosts, " "))
+	}
 }
 
 func check_lang(args []string, opts [16]string) {

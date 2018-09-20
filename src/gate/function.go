@@ -152,6 +152,16 @@ func (fn *FunctionDesc)toMInfo(ctx context.Context) *swyapi.FunctionMdat {
 		fid.BR = []uint { uint(fdm.bd.rover[0]), uint(fdm.bd.rover[1]), uint(fdm.bd.goal) }
 	}
 	fid.Cookie = fn.Cookie
+
+	if gctx(ctx).Admin {
+		pods, err := listFnPods(fn)
+		if err == nil {
+			for _, pod := range pods.Items {
+				fid.Hosts = append(fid.Hosts, pod.Status.HostIP)
+			}
+		}
+	}
+
 	return &fid
 }
 
