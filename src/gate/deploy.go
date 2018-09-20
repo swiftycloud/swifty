@@ -365,6 +365,7 @@ func (dep *DeployDesc)getItemsDesc(dd *swyapi.DeployDescription) *xrest.ReqErr {
 			return cerr
 		}
 
+		rt.Labels = dep.Labels
 		dep.Routers = append(dep.Routers, &DeployRouter{
 			Id: id, Rt: rt,
 		})

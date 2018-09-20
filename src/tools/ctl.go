@@ -1144,7 +1144,7 @@ func router_list(args []string, opts [16]string) {
 	var rts []swyapi.RouterInfo
 	make_faas_req1("GET", "routers", http.StatusOK, nil, &rts)
 	for _, rt := range rts {
-		fmt.Printf("%s %12s %s\n", rt.Id, rt.Name, rt.URL)
+		fmt.Printf("%s %12s %s (%s)\n", rt.Id, rt.Name, rt.URL, strings.Join(rt.Labels, ","))
 	}
 }
 
