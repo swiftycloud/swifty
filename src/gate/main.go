@@ -1029,7 +1029,7 @@ func handleAuths(ctx context.Context, w http.ResponseWriter, r *http.Request) *x
 		dd.Labels = []string{ "auth" }
 		cerr := dd.getItemsParams(ctx, &swyapi.DeploySource{
 			Type:	"repo",
-			Repo:	"https://github.com/swiftycloud/swifty.demo//swy-aaas.yaml",
+			Repo:	demoRep.ObjID.Hex() + "/swy-aaas.yaml",
 		}, []*DepParam { &DepParam{ name: "name", value: aa.Name } })
 		if cerr != nil {
 			ctxlog(ctx).Errorf("Error getting swy-aaas.yaml file")
