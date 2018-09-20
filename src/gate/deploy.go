@@ -480,7 +480,15 @@ func (dep *DeployDesc)toInfo(ctx context.Context, details bool) (*swyapi.DeployI
 }
 
 func (dep *DeployDesc)Del(ctx context.Context) (*xrest.ReqErr) {
-	cerr := deployStopFunctions(ctx, dep, len(dep.Functions))
+	/* FIXME -- change state to terminating, then stop. On
+	 * restart kill the terminating deployments further
+	 */
+	cerr := deployStopRouters(ctx, dep, len(dep.Routers))
+	if cerr != nil {
+		return cerr
+	}
+
+	cerr = deployStopFunctions(ctx, dep, len(dep.Functions))
 	if cerr != nil {
 		return cerr
 	}
