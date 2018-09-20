@@ -23,10 +23,10 @@ func (ct Secret)value() (string, error) {
 	return t, err
 }
 
-func mkSecret(v string) (Secret, error) {
+func mkSecret(k, v string) (Secret, error) {
 	if v != "" {
 		if len(v) < 10 {
-			return "", errors.New("Invalid secret value")
+			return "", errors.New("Invalid secret value for " + k)
 		}
 
 		var err error
@@ -115,7 +115,7 @@ func (ad *AccDesc)fill(values map[string]string) *xrest.ReqErr {
 		case "id", "name", "type":
 			continue
 		case "token", "secret", "password", "key":
-			ad.Secrets[k], err = mkSecret(v)
+			ad.Secrets[k], err = mkSecret(k, v)
 			if err != nil {
 				return GateErrE(swyapi.GateGenErr, err)
 			}
@@ -237,9 +237,27 @@ func (ad *AccDesc)getEnv() map[string]string {
 	return envs
 }
 
+func (ad *AccDesc)ID() string {
+	return ad.Type + ":" + ad.Name
+}
+
+func accFindByID(ctx context.Context, id SwoId, aid string) (*AccDesc, error) {
+	var ac AccDesc
+
+	ps := strings.SplitN(aid, ":", 2)
+	if len(ps) != 2 {
+		return nil, errors.New("Bad AID")
+	}
+
+	id.Project = NoProject
+	id.Name = ps[1]
+	err := dbFind(ctx, bson.M{"cookie": id.Cookie2(ps[0])}, &ac)
+	return &ac, err
+}
+
 func (ad *AccDesc)Add(ctx context.Context, _ interface{}) *xrest.ReqErr {
 	ad.ObjID = bson.NewObjectId()
-	ad.Cookie = ad.SwoId.Cookie()
+	ad.Cookie = ad.SwoId.Cookie2(ad.Type)
 
 	err := dbInsert(ctx, ad)
 	if err != nil {

@@ -319,6 +319,7 @@ func getFunctionDesc(id *SwoId, p_add *swyapi.FunctionAdd) (*FunctionDesc, *xres
 		},
 		Mware:		p_add.Mware,
 		S3Buckets:	p_add.S3Buckets,
+		Accounts:	p_add.Accounts,
 		AuthCtx:	p_add.AuthCtx,
 		UserData:	p_add.UserData,
 	}
@@ -646,7 +647,7 @@ func (fn *FunctionDesc)listMware(ctx context.Context) []*swyapi.MwareInfo {
 }
 
 func (fn *FunctionDesc)addAccount(ctx context.Context, ad *AccDesc) *xrest.ReqErr {
-	aid := ad.ObjID.Hex()
+	aid := ad.ID()
 	err := dbFuncUpdate(ctx, bson.M{"_id": fn.ObjID, "accounts": bson.M{"$ne": aid}},
 				bson.M{"$push": bson.M{"accounts":aid}})
 	if err != nil {
@@ -664,7 +665,8 @@ func (fn *FunctionDesc)addAccount(ctx context.Context, ad *AccDesc) *xrest.ReqEr
 	return nil
 }
 
-func (fn *FunctionDesc)delAccountId(ctx context.Context, aid string) *xrest.ReqErr {
+func (fn *FunctionDesc)delAccount(ctx context.Context, acc *AccDesc) *xrest.ReqErr {
+	aid := acc.ID()
 	err := dbFuncUpdate(ctx, bson.M{"_id": fn.ObjID, "accounts": aid},
 				bson.M{"$pull": bson.M{"accounts": aid}})
 	if err != nil {
@@ -690,11 +692,10 @@ func (fn *FunctionDesc)delAccountId(ctx context.Context, aid string) *xrest.ReqE
 func (fn *FunctionDesc)listAccounts(ctx context.Context) *[]map[string]string {
 	ret := []map[string]string{}
 	for _, aid := range fn.Accounts {
-		var ac AccDesc
 		var ai map[string]string
 
-		cerr := objFindId(ctx, aid, &ac, nil)
-		if cerr == nil {
+		ac, err := accFindByID(ctx, fn.SwoId, aid)
+		if err == nil {
 			ai = ac.toInfo(ctx, false)
 		} else {
 			ai = map[string]string{"id": aid }

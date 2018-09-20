@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"encoding/base64"
 	"io/ioutil"
 	"net/http"
@@ -1121,22 +1120,28 @@ func deploy_list(args []string, opts [16]string) {
 }
 
 func deploy_add(args []string, opts [16]string) {
-	cont, err := ioutil.ReadFile(args[1])
-	if err != nil {
-		fatal(fmt.Errorf("Can't read desc flie: %s", err.Error()))
+	fmt.Printf("Starting deploy %s\n", args[0])
+
+	da := swyapi.DeployStart{
+		Name: args[0],
+		Project: curCmd.project,
 	}
 
-	var dd swyapi.DeployStart
-	err = json.Unmarshal(cont, &dd)
-	if err != nil {
-		fatal(fmt.Errorf("Can't parse items: %s", err.Error()))
+	if strings.HasPrefix(opts[0], "repo:") {
+		da.From = swyapi.DeploySource {
+			Type: "repo",
+			Repo: opts[0][5:],
+		}
+	} else {
+		fmt.Printf("Adding deploy from %s\n", opts[0])
+		da.From = swyapi.DeploySource {
+			Type: "desc",
+			Descr: encodeFile(opts[0]),
+		}
 	}
-
-	dd.Name = args[0]
-	dd.Project = curCmd.project
 
 	var di swyapi.DeployInfo
-	make_faas_req1("POST", "deployments", http.StatusOK, &dd, &di)
+	make_faas_req1("POST", "deployments", http.StatusOK, &da, &di)
 	fmt.Printf("%s deployment started\n", di.Id)
 }
 
@@ -1144,7 +1149,7 @@ func router_list(args []string, opts [16]string) {
 	var rts []swyapi.RouterInfo
 	make_faas_req1("GET", "routers", http.StatusOK, nil, &rts)
 	for _, rt := range rts {
-		fmt.Printf("%s %12s %s\n", rt.Id, rt.Name, rt.URL)
+		fmt.Printf("%s %12s %s (%s)\n", rt.Id, rt.Name, rt.URL, strings.Join(rt.Labels, ","))
 	}
 }
 
@@ -1914,7 +1919,8 @@ func main() {
 	cmdMap[CMD_DL].opts.StringVar(&opts[0], "label", "", "Labels, comma-separated")
 	bindCmdUsage(CMD_DL,	[]string{},	"List deployments", true)
 	bindCmdUsage(CMD_DI,	[]string{"NAME"}, "Show info about deployment", true)
-	bindCmdUsage(CMD_DA,	[]string{"NAME", "DESC"}, "Add (start) deployment", true)
+	cmdMap[CMD_DA].opts.StringVar(&opts[0], "from", "", "File from which to get info")
+	bindCmdUsage(CMD_DA,	[]string{"NAME"}, "Add (start) deployment", true)
 	bindCmdUsage(CMD_DD,	[]string{"NAME"}, "Del (stop) deployment", true)
 
 	bindCmdUsage(CMD_RTL,	[]string{},	  "List routers", true)

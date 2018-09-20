@@ -168,6 +168,7 @@ type FunctionAdd struct {
 	Size		FunctionSize		`json:"size"`
 	Mware		[]string		`json:"mware,omitempty"`
 	S3Buckets	[]string		`json:"s3buckets,omitempty"`
+	Accounts	[]string		`json:"accounts,omitempty"`
 	UserData	string			`json:"userdata,omitempty"`
 	AuthCtx		string			`json:"authctx,omitempty"`
 
@@ -298,6 +299,7 @@ type RouterInfo struct {
 	Id		string		`json:"id"`
 	Name		string		`json:"name"`
 	Project		string		`json:"project"`
+	Labels		[]string	`json:"labels,omitempty"`
 	TLen		int		`json:"table_len"`
 	URL		string		`json:"url"`
 }

@@ -53,6 +53,10 @@ func (id *SwoId) Cookie() string {
 	return cookify(id.Tennant + "/" + id.Project + "/" + id.Name)
 }
 
+func (id *SwoId) Cookie2(salt string) string {
+	return cookify(salt + ":" + id.Tennant + "/" + id.Project + "/" + id.Name)
+}
+
 func (id *SwoId) Namespace() string {
 	return cookify(id.Tennant + "/" + id.Project)
 }

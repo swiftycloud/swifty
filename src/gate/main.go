@@ -398,7 +398,14 @@ func handleFunctionAccount(ctx context.Context, w http.ResponseWriter, r *http.R
 
 	switch r.Method {
 	case "DELETE":
-		cerr = fn.delAccountId(ctx, aid)
+		var acc AccDesc
+
+		cerr := objFindId(ctx, aid, &acc, nil)
+		if cerr != nil {
+			return cerr
+		}
+
+		cerr = fn.delAccount(ctx, &acc)
 		if cerr != nil {
 			return cerr
 		}
@@ -1029,7 +1036,7 @@ func handleAuths(ctx context.Context, w http.ResponseWriter, r *http.Request) *x
 		dd.Labels = []string{ "auth" }
 		cerr := dd.getItemsParams(ctx, &swyapi.DeploySource{
 			Type:	"repo",
-			Repo:	"https://github.com/swiftycloud/swifty.demo//swy-aaas.yaml",
+			Repo:	demoRep.ObjID.Hex() + "/swy-aaas.yaml",
 		}, []*DepParam { &DepParam{ name: "name", value: aa.Name } })
 		if cerr != nil {
 			ctxlog(ctx).Errorf("Error getting swy-aaas.yaml file")

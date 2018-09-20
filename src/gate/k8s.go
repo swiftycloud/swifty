@@ -191,11 +191,9 @@ func swk8sGenEnvVar(ctx context.Context, fn *FunctionDesc, wd_port int) []v1.Env
 	}
 
 	for _, aid := range fn.Accounts {
-		var ac AccDesc
-
-		err := dbFind(ctx, bson.M{"_id": bson.ObjectIdHex(aid)}, &ac)
+		ac, err := accFindByID(ctx, fn.SwoId, aid)
 		if err != nil {
-			ctxlog(ctx).Errorf("No account for %s", aid)
+			ctxlog(ctx).Errorf("No account for %s: %s", aid, err.Error())
 			continue
 		}
 

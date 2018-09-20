@@ -167,34 +167,39 @@ func deployStartItems(dep *DeployDesc) {
 	rts := []*DeployRouter{}
 
 	for ms, mw = range dep.Mwares {
+		ctxlog(ctx).Debugf("Start mw.%s", mw.Id.Str())
 		cerr := mw.start(ctx)
 		if cerr == nil {
 			mws = append(mws, &DeployMware{Id: mw.Id})
 		} else {
+			ctxlog(ctx).Errorf("Cannot start mw.%s: %s", mw.Id.Str(), cerr.Message)
 			goto erm
 		}
-
-		return
 	}
 
 	for fs, fn = range dep.Functions {
+		ctxlog(ctx).Debugf("Start fn.%s", mw.Id.Str())
 		cerr := fn.start(ctx)
 		if cerr == nil {
 			fns = append(fns, &DeployFunction{Id: fn.Id})
 		} else {
+			ctxlog(ctx).Errorf("Cannot start fn.%s: %s", fn.Id.Str(), cerr.Message)
 			goto erf
 		}
 	}
 
 	for rs, rt = range dep.Routers {
+		ctxlog(ctx).Debugf("Start rt.%s", mw.Id.Str())
 		cerr := rt.start(ctx)
-		if cerr != nil {
+		if cerr == nil {
 			rts = append(rts, &DeployRouter{Id: rt.Id})
 		} else {
+			ctxlog(ctx).Errorf("Cannot start rt.%s: %s", rt.Id.Str(), cerr.Message)
 			goto err
 		}
 	}
 
+	ctxlog(ctx).Debugf("Started %s", dep.SwoId.Str())
 	dep.State = DBDepStateRdy
 	dep.Functions = fns
 	dep.Mwares = mws
@@ -279,7 +284,8 @@ type DepParam struct {
 }
 
 func (dep *DeployDesc)getItems(ctx context.Context, ds *swyapi.DeployStart) *xrest.ReqErr {
-	return dep.getItemsParams(ctx, &ds.From, []*DepParam{})
+	return dep.getItemsParams(ctx, &ds.From,
+			[]*DepParam { &DepParam{ name: "name", value: dep.SwoId.Name } })
 }
 
 func (dep *DeployDesc)getItemsParams(ctx context.Context, from *swyapi.DeploySource, params []*DepParam) *xrest.ReqErr {
@@ -365,6 +371,7 @@ func (dep *DeployDesc)getItemsDesc(dd *swyapi.DeployDescription) *xrest.ReqErr {
 			return cerr
 		}
 
+		rt.Labels = dep.Labels
 		dep.Routers = append(dep.Routers, &DeployRouter{
 			Id: id, Rt: rt,
 		})
@@ -473,7 +480,15 @@ func (dep *DeployDesc)toInfo(ctx context.Context, details bool) (*swyapi.DeployI
 }
 
 func (dep *DeployDesc)Del(ctx context.Context) (*xrest.ReqErr) {
-	cerr := deployStopFunctions(ctx, dep, len(dep.Functions))
+	/* FIXME -- change state to terminating, then stop. On
+	 * restart kill the terminating deployments further
+	 */
+	cerr := deployStopRouters(ctx, dep, len(dep.Routers))
+	if cerr != nil {
+		return cerr
+	}
+
+	cerr = deployStopFunctions(ctx, dep, len(dep.Functions))
 	if cerr != nil {
 		return cerr
 	}

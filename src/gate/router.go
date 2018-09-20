@@ -16,6 +16,7 @@ type RouterDesc struct {
 	ObjID		bson.ObjectId		`bson:"_id,omitempty"`
 	SwoId					`bson:",inline"`
 	Cookie		string			`bson:"cookie"`
+	Labels		[]string		`bson:"labels,omitempty"`
 	Table		[]*swyapi.RouterEntry	`bson:"table"`
 }
 
@@ -92,6 +93,7 @@ func (rt *RouterDesc)toInfo(ctx context.Context, details bool) *swyapi.RouterInf
 		Id:		rt.ObjID.Hex(),
 		Name:		rt.SwoId.Name,
 		Project:	rt.SwoId.Project,
+		Labels:		rt.Labels,
 		TLen:		len(rt.Table),
 	}
 
@@ -191,7 +193,7 @@ func (rt *RouterURL)Handle(ctx context.Context, w http.ResponseWriter, r *http.R
 			continue
 		}
 		path_match = true
-		if e.Method != r.Method {
+		if e.Method != "*" && e.Method != r.Method {
 			continue
 		}
 

@@ -2533,6 +2533,10 @@ definitions:
         type: string
       project:
         type: string
+      labels:
+        type: array
+        items:
+          type: string
       talbe_len:
         type: integer
         description: Number of entries in a table
