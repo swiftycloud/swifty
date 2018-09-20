@@ -168,6 +168,7 @@ type FunctionAdd struct {
 	Size		FunctionSize		`json:"size"`
 	Mware		[]string		`json:"mware,omitempty"`
 	S3Buckets	[]string		`json:"s3buckets,omitempty"`
+	Accounts	[]string		`json:"accounts,omitempty"`
 	UserData	string			`json:"userdata,omitempty"`
 	AuthCtx		string			`json:"authctx,omitempty"`
 

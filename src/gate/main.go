@@ -398,7 +398,14 @@ func handleFunctionAccount(ctx context.Context, w http.ResponseWriter, r *http.R
 
 	switch r.Method {
 	case "DELETE":
-		cerr = fn.delAccountId(ctx, aid)
+		var acc AccDesc
+
+		cerr := objFindId(ctx, aid, &acc, nil)
+		if cerr != nil {
+			return cerr
+		}
+
+		cerr = fn.delAccount(ctx, &acc)
 		if cerr != nil {
 			return cerr
 		}
