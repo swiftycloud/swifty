@@ -239,7 +239,7 @@ func (ad *AccDesc)getEnv() map[string]string {
 
 func (ad *AccDesc)Add(ctx context.Context, _ interface{}) *xrest.ReqErr {
 	ad.ObjID = bson.NewObjectId()
-	ad.Cookie = ad.SwoId.Cookie()
+	ad.Cookie = ad.SwoId.Cookie2(ad.Type)
 
 	err := dbInsert(ctx, ad)
 	if err != nil {
