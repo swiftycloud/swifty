@@ -238,7 +238,7 @@ func (_ Mwares)Iterate(ctx context.Context, q url.Values, cb func(context.Contex
 func (_ Mwares)Create(ctx context.Context, p interface{}) (xrest.Obj, *xrest.ReqErr) {
 	params := p.(*swyapi.MwareAdd)
 	id := ctxSwoId(ctx, params.Project, params.Name)
-	return getMwareDesc(id, params), nil
+	return getMwareDesc(id, params)
 }
 
 func (mw *MwareDesc)Info(ctx context.Context, q url.Values, details bool) (interface{}, *xrest.ReqErr) {
@@ -317,7 +317,11 @@ func getMwareStats(ctx context.Context, ten string) (map[string]*swyapi.TenantSt
 	return mst, nil
 }
 
-func getMwareDesc(id *SwoId, params *swyapi.MwareAdd) *MwareDesc {
+func getMwareDesc(id *SwoId, params *swyapi.MwareAdd) (*MwareDesc, *xrest.ReqErr) {
+	if !id.NameOK() {
+		return nil, GateErrM(swyapi.GateBadRequest, "Bad function name")
+	}
+
 	ret := &MwareDesc {
 		SwoId:		*id,
 		MwareType:	params.Type,
@@ -326,7 +330,7 @@ func getMwareDesc(id *SwoId, params *swyapi.MwareAdd) *MwareDesc {
 	}
 
 	ret.Cookie = ret.SwoId.Cookie()
-	return ret
+	return ret, nil
 }
 
 func (mwd *MwareDesc)Add(ctx context.Context, _ interface{}) *xrest.ReqErr {
