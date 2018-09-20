@@ -281,12 +281,28 @@ func (fn *FunctionDesc)toInfo(ctx context.Context, details bool, periods int) (*
 	return fi, nil
 }
 
+func guessLang(p *swyapi.FunctionAdd) bool {
+	if p.Sources.Type != "git" {
+		return false
+	}
+
+	lng := rtLangDetect(p.Sources.Repo)
+	if lng == "" {
+		return false
+	}
+
+	p.Code.Lang = lng
+	return true
+}
+
 func getFunctionDesc(id *SwoId, p_add *swyapi.FunctionAdd) (*FunctionDesc, *xrest.ReqErr) {
 	if p_add.Name == "" {
 		return nil, GateErrM(swyapi.GateBadRequest, "No function name")
 	}
 	if p_add.Code.Lang == "" {
-		return nil, GateErrM(swyapi.GateBadRequest, "No language specified")
+		if !guessLang(p_add) {
+			return nil, GateErrM(swyapi.GateBadRequest, "No language specified")
+		}
 	}
 	if !id.NameOK() {
 		return nil, GateErrM(swyapi.GateBadRequest, "Bad function name")
