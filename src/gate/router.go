@@ -35,6 +35,10 @@ func ckTable(tbl []*swyapi.RouterEntry) *xrest.ReqErr {
 }
 
 func getRouterDesc(id *SwoId, params *swyapi.RouterAdd) (*RouterDesc, *xrest.ReqErr) {
+	if !id.NameOK() {
+		return nil, GateErrM(swyapi.GateBadRequest, "Bad function name")
+	}
+
 	cerr := ckTable(params.Table)
 	if cerr != nil {
 		return nil, cerr

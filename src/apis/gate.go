@@ -72,6 +72,7 @@ type FunctionMdat struct {
 	Cookie		string			`json:"cookie"`
 	RL		[]uint			`json:"rl"`
 	BR		[]uint			`json:"br"`
+	Hosts		[]string		`json:"hosts,omitempty"`
 }
 
 //type RunCmd struct {

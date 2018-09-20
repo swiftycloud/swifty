@@ -24,6 +24,21 @@ func ctxSwoId(ctx context.Context, project, name string) *SwoId {
 	return makeSwoId(gctx(ctx).Tenant, project, name)
 }
 
+func (id *SwoId)NameOK() bool {
+	for _, c := range id.Name {
+		if (c >= 'a' && c <= 'z') ||
+			(c >= 'A' && c <= 'Z') ||
+			(c >= '0' && c <= '9') ||
+			c == '_' || c == '.' {
+				continue
+			}
+
+		return false
+	}
+
+	return true
+}
+
 func (id *SwoId) Str() string {
 	rv := id.Tennant
 	if id.Project != "" {

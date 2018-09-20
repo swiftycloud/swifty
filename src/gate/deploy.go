@@ -357,7 +357,11 @@ func (dep *DeployDesc)getItemsDesc(dd *swyapi.DeployDescription) *xrest.ReqErr {
 
 	for _, mw := range dd.Mwares {
 		id.Name = mw.Name
-		md := getMwareDesc(&id, mw)
+		md, cerr := getMwareDesc(&id, mw)
+		if cerr != nil {
+			return cerr
+		}
+
 		md.Labels = dep.Labels
 		dep.Mwares = append(dep.Mwares, &DeployMware{
 			Id: id, Mw: md,

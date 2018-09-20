@@ -152,6 +152,16 @@ func (fn *FunctionDesc)toMInfo(ctx context.Context) *swyapi.FunctionMdat {
 		fid.BR = []uint { uint(fdm.bd.rover[0]), uint(fdm.bd.rover[1]), uint(fdm.bd.goal) }
 	}
 	fid.Cookie = fn.Cookie
+
+	if gctx(ctx).Admin {
+		pods, err := listFnPods(fn)
+		if err == nil {
+			for _, pod := range pods.Items {
+				fid.Hosts = append(fid.Hosts, pod.Status.HostIP)
+			}
+		}
+	}
+
 	return &fid
 }
 
@@ -200,13 +210,6 @@ func (_ Functions)Iterate(ctx context.Context, q url.Values, cb func(context.Con
 
 func (_ Functions)Create(ctx context.Context, p interface{}) (xrest.Obj, *xrest.ReqErr) {
 	params := p.(*swyapi.FunctionAdd)
-	if params.Name == "" {
-		return nil, GateErrM(swyapi.GateBadRequest, "No function name")
-	}
-	if params.Code.Lang == "" {
-		return nil, GateErrM(swyapi.GateBadRequest, "No language specified")
-	}
-
 	id := ctxSwoId(ctx, params.Project, params.Name)
 	return getFunctionDesc(id, params)
 }
@@ -288,7 +291,33 @@ func (fn *FunctionDesc)toInfo(ctx context.Context, details bool, periods int) (*
 	return fi, nil
 }
 
+func guessLang(p *swyapi.FunctionAdd) bool {
+	if p.Sources.Type != "git" {
+		return false
+	}
+
+	lng := rtLangDetect(p.Sources.Repo)
+	if lng == "" {
+		return false
+	}
+
+	p.Code.Lang = lng
+	return true
+}
+
 func getFunctionDesc(id *SwoId, p_add *swyapi.FunctionAdd) (*FunctionDesc, *xrest.ReqErr) {
+	if p_add.Name == "" {
+		return nil, GateErrM(swyapi.GateBadRequest, "No function name")
+	}
+	if p_add.Code.Lang == "" {
+		if !guessLang(p_add) {
+			return nil, GateErrM(swyapi.GateBadRequest, "No language specified")
+		}
+	}
+	if !id.NameOK() {
+		return nil, GateErrM(swyapi.GateBadRequest, "Bad function name")
+	}
+
 	err := fnFixSize(&p_add.Size)
 	if err != nil {
 		return nil, GateErrE(swyapi.GateBadRequest, err)
