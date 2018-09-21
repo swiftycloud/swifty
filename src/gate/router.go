@@ -56,6 +56,28 @@ func (rt *RouterDesc)getURL() string {
 	return getURL(URLRouter, rt.Cookie)
 }
 
+func makeRouterURL(ctx context.Context, urlid string) (*RouterURL, error) {
+	var rt RouterDesc
+
+	err := dbFind(ctx, bson.M{"cookie": urlid}, &rt)
+	if err != nil {
+		if dbNF(err) {
+			err = nil
+		}
+		return nil, err
+	}
+
+	rurl := RouterURL{}
+	id := rt.SwoId
+	for _, e := range rt.Table {
+		id.Name = e.Call
+		re := RouterEntry{*e, id.Cookie()}
+		rurl.table = append(rurl.table, &re)
+	}
+
+	return &rurl, nil
+}
+
 func (_ Routers)Iterate(ctx context.Context, q url.Values, cb func(context.Context, xrest.Obj) *xrest.ReqErr) *xrest.ReqErr {
 	project := q.Get("project")
 	if project == "" {

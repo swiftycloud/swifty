@@ -43,45 +43,41 @@ func urlEvFind(ctx context.Context, urlid string) (*FnEventDesc, error) {
 	return &ed, err
 }
 
+func makeFnURL(ctx context.Context, urlid string) (*FnURL, error) {
+	ed, err := urlEvFind(ctx, urlid)
+	if err != nil {
+		if dbNF(err) {
+			err = nil
+		}
+		return nil, err
+	}
+
+	fdm, err := memdGet(ctx, ed.FnId)
+	if err != nil {
+		return nil, err
+	}
+
+	return &FnURL{fd: fdm}, nil
+}
+
+func urlCreate(ctx context.Context, urlid string) (URL, error) {
+	if urlid[0] == URLRouter[0] {
+		return makeRouterURL(ctx, urlid[1:])
+	} else {
+		return makeFnURL(ctx, urlid)
+	}
+}
+
 func urlFind(ctx context.Context, urlid string) (URL, error) {
 	res, ok := urls.Load(urlid)
 	if !ok {
-		if urlid[0] == URLRouter[0] {
-			var rt RouterDesc
-
-			err := dbFind(ctx, bson.M{"cookie": urlid[1:]}, &rt)
-			if err != nil {
-				if dbNF(err) {
-					err = nil
-				}
-				return nil, err
-			}
-
-			rurl := RouterURL{}
-			id := rt.SwoId
-			for _, e := range rt.Table {
-				id.Name = e.Call
-				re := RouterEntry{*e, id.Cookie()}
-				rurl.table = append(rurl.table, &re)
-			}
-
-			res, _ = urls.LoadOrStore(urlid, &rurl)
-		} else {
-			ed, err := urlEvFind(ctx, urlid)
-			if err != nil {
-				if dbNF(err) {
-					err = nil
-				}
-				return nil, err
-			}
-
-			fdm, err := memdGet(ctx, ed.FnId)
-			if err != nil {
-				return nil, err
-			}
-
-			res, _ = urls.LoadOrStore(urlid, &FnURL{ fd: fdm })
+		url, err := urlCreate(ctx, urlid)
+		if url == nil {
+			return nil, err
 		}
+
+		res, _ = urls.LoadOrStore(urlid, url)
+
 	}
 
 	return res.(URL), nil
