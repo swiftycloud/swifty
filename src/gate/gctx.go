@@ -1,7 +1,6 @@
 package main
 
 import (
-	"go.uber.org/zap"
 	"context"
 	"sync/atomic"
 	"gopkg.in/mgo.v2"
@@ -45,12 +44,4 @@ func (gx *gateContext)tpush(tenant string) string {
 
 func (gx *gateContext)tpop(tenant string) {
 	gx.Tenant = tenant
-}
-
-func ctxlog(ctx context.Context) *zap.SugaredLogger {
-	if gctx, ok := ctx.(*gateContext); ok {
-		return glog.With(zap.Int64("req", int64(gctx.ReqId)), zap.String("ten", gctx.Tenant))
-	}
-
-	return glog
 }

@@ -1,8 +1,6 @@
 package main
 
 import (
-	"go.uber.org/zap"
-
 	"github.com/gorilla/mux"
 
 	"encoding/hex"
@@ -42,7 +40,6 @@ const (
 	CloneDir				= "clone"
 )
 
-var glog *zap.SugaredLogger
 var gatesrv *http.Server
 
 var CORS_Headers = []string {
@@ -1070,40 +1067,6 @@ func genReqHandler(cb gateGenReq) http.Handler {
 			traceError(ctx, cerr)
 		}
 	})
-}
-
-func setupLogger(conf *YAMLConf) {
-	lvl := zap.WarnLevel
-
-	if conf != nil {
-		switch conf.Daemon.LogLevel {
-		case "debug":
-			lvl = zap.DebugLevel
-			break
-		case "info":
-			lvl = zap.InfoLevel
-			break
-		case "warn":
-			lvl = zap.WarnLevel
-			break
-		case "error":
-			lvl = zap.ErrorLevel
-			break
-		}
-	}
-
-	zcfg := zap.Config {
-		Level:            zap.NewAtomicLevelAt(lvl),
-		Development:      true,
-		DisableStacktrace:true,
-		Encoding:         "console",
-		EncoderConfig:    zap.NewDevelopmentEncoderConfig(),
-		OutputPaths:      []string{"stderr"},
-		ErrorOutputPaths: []string{"stderr"},
-	}
-
-	logger, _ := zcfg.Build()
-	glog = logger.Sugar()
 }
 
 func main() {
