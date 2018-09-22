@@ -166,6 +166,8 @@ func deployStartItems(dep *DeployDesc) {
 	fns := []*DeployFunction{}
 	rts := []*DeployRouter{}
 
+	gctx(ctx).tpush(dep.SwoId.Tennant)
+
 	for ms, mw = range dep.Mwares {
 		ctxlog(ctx).Debugf("Start mw.%s", mw.Id.Str())
 		cerr := mw.start(ctx)
