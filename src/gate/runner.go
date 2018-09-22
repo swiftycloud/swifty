@@ -11,6 +11,8 @@ import (
 
 	"../apis"
 	"../common/http"
+	"../common/xrest"
+	"../common/xratelimit"
 )
 
 func makeArgs(sopq *statsOpaque, r *http.Request, path, key string) *swyapi.SwdFunctionRun {
@@ -165,4 +167,36 @@ func runFunctionOnce(ctx context.Context, fn *FunctionDesc) {
 
 	swk8sRemove(ctx, &conf, fn)
 	fn.ToState(ctx, DBFuncStateStl, -1)
+}
+
+func prepareTempRun(ctx context.Context, fn *FunctionDesc, params *swyapi.FunctionSources, w http.ResponseWriter) (string, *xrest.ReqErr) {
+	td, err := tendatGet(ctx, gctx(ctx).Tenant)
+	if err != nil {
+		return "", GateErrD(err)
+	}
+
+	td.runlock.Lock()
+	defer td.runlock.Unlock()
+
+	if td.runrate == nil {
+		td.runrate = xratelimit.MakeRL(0, 1) /* FIXME -- configurable */
+	}
+
+	if !td.runrate.Get() {
+		http.Error(w, "Try-run is once per second", http.StatusTooManyRequests)
+		return "", nil
+	}
+
+	ctxlog(ctx).Debugf("Asked for custom sources... oh, well...")
+	suff, err := putTempSources(ctx, fn, params)
+	if err != nil {
+		return "", GateErrE(swyapi.GateGenErr, err)
+	}
+
+	err = tryBuildFunction(ctx, fn, suff)
+	if err != nil {
+		return "", GateErrM(swyapi.GateGenErr, "Error building function")
+	}
+
+	return suff, nil
 }

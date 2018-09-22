@@ -641,32 +641,9 @@ func handleFunctionRun(ctx context.Context, w http.ResponseWriter, r *http.Reque
 
 	suff := ""
 	if params.Src != nil {
-		td, err := tendatGet(ctx, gctx(ctx).Tenant)
-		if err != nil {
-			return GateErrD(err)
-		}
-
-		td.runlock.Lock()
-		defer td.runlock.Unlock()
-
-		if td.runrate == nil {
-			td.runrate = xratelimit.MakeRL(0, 1) /* FIXME -- configurable */
-		}
-
-		if !td.runrate.Get() {
-			http.Error(w, "Try-run is once per second", http.StatusTooManyRequests)
-			return nil
-		}
-
-		ctxlog(ctx).Debugf("Asked for custom sources... oh, well...")
-		suff, err = putTempSources(ctx, &fn, params.Src)
-		if err != nil {
-			return GateErrE(swyapi.GateGenErr, err)
-		}
-
-		err = tryBuildFunction(ctx, &fn, suff)
-		if err != nil {
-			return GateErrM(swyapi.GateGenErr, "Error building function")
+		suff, cerr = prepareTempRun(ctx, &fn, params.Src, w)
+		if suff == "" {
+			return cerr
 		}
 
 		params.Src = nil /* not to propagate to wdog */
