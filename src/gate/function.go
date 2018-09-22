@@ -520,11 +520,11 @@ func (fn *FunctionDesc)setAuthCtx(ctx context.Context, ac string) *xrest.ReqErr 
 	return nil
 }
 
-func (fn *FunctionDesc)setEnv(ctx context.Context, env []string) error {
+func (fn *FunctionDesc)setEnv(ctx context.Context, env []string) *xrest.ReqErr {
 	fn.Code.Env = env
 	err := dbUpdatePart(ctx, fn, bson.M{"code.env": env})
 	if err != nil {
-		return err
+		return GateErrE(swyapi.GateGenErr, err)
 	}
 
 	swk8sUpdate(ctx, &conf, fn)
@@ -1063,12 +1063,7 @@ func (_ *FnEnvProp)Info(ctx context.Context, o xrest.Obj, q url.Values) (interfa
 
 func (_ *FnEnvProp)Upd(ctx context.Context, o xrest.Obj, p interface{}) *xrest.ReqErr {
 	fn := o.(*FunctionDesc)
-	err := fn.setEnv(ctx, *p.(*[]string))
-	if err != nil {
-		return GateErrE(swyapi.GateGenErr, err)
-	}
-
-	return nil
+	return fn.setEnv(ctx, *p.(*[]string))
 }
 
 type FnSzProp struct { }
