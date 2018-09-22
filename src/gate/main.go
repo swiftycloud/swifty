@@ -40,8 +40,6 @@ const (
 	CloneDir				= "clone"
 )
 
-var gatesrv *http.Server
-
 var CORS_Headers = []string {
 	"Content-Type",
 	"Content-Length",
