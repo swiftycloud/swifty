@@ -71,7 +71,7 @@ type MwareOps struct {
 }
 
 func mkEnvName(typ, name, env string) string {
-	return "MWARE_" + strings.ToUpper(typ) + strings.ToUpper(name) + "_" + env
+	return "MWARE_" + strings.ToUpper(typ) + strings.Replace(strings.ToUpper(name), ".", "", -1) + "_" + env
 }
 
 func (mw *MwareDesc)envName(envName string) string {
