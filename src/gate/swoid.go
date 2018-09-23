@@ -57,6 +57,6 @@ func (id *SwoId) Cookie2(salt string) string {
 	return xh.Cookify(salt + ":" + id.Tennant + "/" + id.Project + "/" + id.Name)
 }
 
-func (id *SwoId) Namespace() string {
-	return xh.Cookify(id.Tennant + "/" + id.Project)
+func (id *SwoId) S3Namespace() string {
+	return xh.Cookify(id.Tennant + "/" + DefaultProject)
 }
