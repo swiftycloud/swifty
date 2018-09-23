@@ -190,7 +190,7 @@ func handleS3Event(ctx context.Context, user string, data []byte) {
 }
 
 func s3EventStart(ctx context.Context, fn *FunctionDesc, evt *FnEventDesc) error {
-	evt.S3.Ns = fn.SwoId.Namespace()
+	evt.S3.Ns = fn.SwoId.S3Namespace()
 	conf := &conf.Mware
 	err := mqStartListener(conf.S3.cn.User, conf.S3.cn.Pass,
 		conf.S3.cn.Addr() + "/" + conf.S3.cn.Domn,
@@ -223,7 +223,7 @@ func s3Endpoint(conf *YAMLConfS3, public bool) string {
 }
 
 func GenBucketKeysS3(ctx context.Context, conf *YAMLConfMw, fid *SwoId, bucket string) (map[string]string, error) {
-	k, err := s3KeyGen(&conf.S3, fid.Namespace(), bucket, 0)
+	k, err := s3KeyGen(&conf.S3, fid.S3Namespace(), bucket, 0)
 	if err != nil {
 		ctxlog(ctx).Errorf("Error generating key for %s/%s: %s", fid.Str(), bucket, err.Error())
 		return nil, fmt.Errorf("Key generation error")
@@ -256,7 +256,7 @@ func s3GetCreds(ctx context.Context, acc *swyapi.S3Access) (*swyapi.S3Creds, *xr
 	}
 
 	id := ctxSwoId(ctx, acc.Project, "")
-	k, err := s3KeyGen(&conf.Mware.S3, id.Namespace(), acc.Bucket, creds.Expires)
+	k, err := s3KeyGen(&conf.Mware.S3, id.S3Namespace(), acc.Bucket, creds.Expires)
 	if err != nil {
 		ctxlog(ctx).Errorf("Can't get S3 keys for %s.%s", id.Str(), acc.Bucket, err.Error())
 		return nil, GateErrM(swyapi.GateGenErr, "Error getting S3 keys")

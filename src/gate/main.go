@@ -1,8 +1,6 @@
 package main
 
 import (
-	"go.uber.org/zap"
-
 	"github.com/gorilla/mux"
 
 	"encoding/hex"
@@ -42,9 +40,6 @@ const (
 	CloneDir				= "clone"
 )
 
-var glog *zap.SugaredLogger
-var gatesrv *http.Server
-
 var CORS_Headers = []string {
 	"Content-Type",
 	"Content-Length",
@@ -76,12 +71,12 @@ var CORS_Clnt_Methods = []string {
 	http.MethodHead,
 }
 
-func ctxlog(ctx context.Context) *zap.SugaredLogger {
-	if gctx, ok := ctx.(*gateContext); ok {
-		return glog.With(zap.Int64("req", int64(gctx.ReqId)), zap.String("ten", gctx.Tenant))
-	}
+func objFindForReq2(ctx context.Context, r *http.Request, n string, out interface{}, q bson.M) *xrest.ReqErr {
+	return objFindId(ctx, mux.Vars(r)[n], out, q)
+}
 
-	return glog
+func objFindForReq(ctx context.Context, r *http.Request, n string, out interface{}) *xrest.ReqErr {
+	return objFindForReq2(ctx, r, n, out, nil)
 }
 
 func handleUserLogin(w http.ResponseWriter, r *http.Request) {
@@ -119,22 +114,6 @@ func handleUserLogin(w http.ResponseWriter, r *http.Request) {
 
 out:
 	http.Error(w, err.Error(), resp)
-}
-
-func listReq(ctx context.Context, project string, labels []string) bson.D {
-	q := bson.D{{"tennant", gctx(ctx).Tenant}, {"project", project}}
-	for _, l := range labels {
-		q = append(q, bson.DocElem{"labels", l})
-	}
-	return q
-}
-
-func (id *SwoId)dbReq() bson.M {
-	return bson.M{"cookie": id.Cookie()}
-}
-
-func cookieReq(ctx context.Context, project, name string) bson.M {
-	return ctxSwoId(ctx, project, name).dbReq()
 }
 
 func handleProjectDel(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
@@ -216,34 +195,6 @@ func handleProjectList(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	}
 
 	return xrest.Respond(ctx, w, &result)
-}
-
-func objFindId(ctx context.Context, id string, out interface{}, q bson.M) *xrest.ReqErr {
-	if !bson.IsObjectIdHex(id) {
-		return GateErrM(swyapi.GateBadRequest, "Bad ID value")
-	}
-
-	if q == nil {
-		q = bson.M{}
-	}
-
-	q["tennant"] = gctx(ctx).Tenant
-	q["_id"] = bson.ObjectIdHex(id)
-
-	err := dbFind(ctx, q, out)
-	if err != nil {
-		return GateErrD(err)
-	}
-
-	return nil
-}
-
-func objFindForReq2(ctx context.Context, r *http.Request, n string, out interface{}, q bson.M) *xrest.ReqErr {
-	return objFindId(ctx, mux.Vars(r)[n], out, q)
-}
-
-func objFindForReq(ctx context.Context, r *http.Request, n string, out interface{}) *xrest.ReqErr {
-	return objFindForReq2(ctx, r, n, out, nil)
 }
 
 func handleFunctionAuthCtx(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
@@ -550,45 +501,6 @@ func handleFunctionSources(ctx context.Context, w http.ResponseWriter, r *http.R
 	return xrest.HandleProp(ctx, w, r, &fn, &FnSrcProp{}, &src)
 }
 
-func getCallStats(ctx context.Context, ten string, periods int) ([]swyapi.TenantStats, *xrest.ReqErr) {
-	var cs []swyapi.TenantStats
-
-	td, err := tendatGet(ctx, ten)
-	if err != nil {
-		return nil, GateErrD(err)
-	}
-
-	prev := &td.stats
-
-	if periods > 0 {
-		atst, err := dbTenStatsGetArch(ctx, ten, periods)
-		if err != nil {
-			return nil, GateErrD(err)
-		}
-
-		for i := 0; i < periods && i < len(atst); i++ {
-			cur := &atst[i]
-			cs = append(cs, swyapi.TenantStats{
-				Called:		prev.Called - cur.Called,
-				GBS:		prev.GBS() - cur.GBS(),
-				BytesOut:	prev.BytesOut - cur.BytesOut,
-				Till:		prev.TillS(),
-				From:		cur.TillS(),
-			})
-			prev = cur
-		}
-	}
-
-	cs = append(cs, swyapi.TenantStats{
-		Called:		prev.Called,
-		GBS:		prev.GBS(),
-		BytesOut:	prev.BytesOut,
-		Till:		prev.TillS(),
-	})
-
-	return cs, nil
-}
-
 func handleTenantStats(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
 	ten := gctx(ctx).Tenant
 	ctxlog(ctx).Debugf("Get FN stats %s", ten)
@@ -727,32 +639,9 @@ func handleFunctionRun(ctx context.Context, w http.ResponseWriter, r *http.Reque
 
 	suff := ""
 	if params.Src != nil {
-		td, err := tendatGet(ctx, gctx(ctx).Tenant)
-		if err != nil {
-			return GateErrD(err)
-		}
-
-		td.runlock.Lock()
-		defer td.runlock.Unlock()
-
-		if td.runrate == nil {
-			td.runrate = xratelimit.MakeRL(0, 1) /* FIXME -- configurable */
-		}
-
-		if !td.runrate.Get() {
-			http.Error(w, "Try-run is once per second", http.StatusTooManyRequests)
-			return nil
-		}
-
-		ctxlog(ctx).Debugf("Asked for custom sources... oh, well...")
-		suff, err = putTempSources(ctx, &fn, params.Src)
-		if err != nil {
-			return GateErrE(swyapi.GateGenErr, err)
-		}
-
-		err = tryBuildFunction(ctx, &fn, suff)
-		if err != nil {
-			return GateErrM(swyapi.GateGenErr, "Error building function")
+		suff, cerr = prepareTempRun(ctx, &fn, params.Src, w)
+		if suff == "" {
+			return cerr
 		}
 
 		params.Src = nil /* not to propagate to wdog */
@@ -1153,60 +1042,6 @@ func genReqHandler(cb gateGenReq) http.Handler {
 			traceError(ctx, cerr)
 		}
 	})
-}
-
-func setupMwareAddr(conf *YAMLConf) {
-	conf.Mware.Maria.c = xh.ParseXCreds(conf.Mware.Maria.Creds)
-	conf.Mware.Maria.c.Resolve()
-
-	conf.Mware.Rabbit.c = xh.ParseXCreds(conf.Mware.Rabbit.Creds)
-	conf.Mware.Rabbit.c.Resolve()
-
-	conf.Mware.Mongo.c = xh.ParseXCreds(conf.Mware.Mongo.Creds)
-	conf.Mware.Mongo.c.Resolve()
-
-	conf.Mware.Postgres.c = xh.ParseXCreds(conf.Mware.Postgres.Creds)
-	conf.Mware.Postgres.c.Resolve()
-
-	conf.Mware.S3.c = xh.ParseXCreds(conf.Mware.S3.Creds)
-	conf.Mware.S3.c.Resolve()
-
-	conf.Mware.S3.cn = xh.ParseXCreds(conf.Mware.S3.Notify)
-	conf.Mware.S3.cn.Resolve()
-}
-
-func setupLogger(conf *YAMLConf) {
-	lvl := zap.WarnLevel
-
-	if conf != nil {
-		switch conf.Daemon.LogLevel {
-		case "debug":
-			lvl = zap.DebugLevel
-			break
-		case "info":
-			lvl = zap.InfoLevel
-			break
-		case "warn":
-			lvl = zap.WarnLevel
-			break
-		case "error":
-			lvl = zap.ErrorLevel
-			break
-		}
-	}
-
-	zcfg := zap.Config {
-		Level:            zap.NewAtomicLevelAt(lvl),
-		Development:      true,
-		DisableStacktrace:true,
-		Encoding:         "console",
-		EncoderConfig:    zap.NewDevelopmentEncoderConfig(),
-		OutputPaths:      []string{"stderr"},
-		ErrorOutputPaths: []string{"stderr"},
-	}
-
-	logger, _ := zcfg.Build()
-	glog = logger.Sugar()
 }
 
 func main() {

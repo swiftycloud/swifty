@@ -80,6 +80,45 @@ func (fs *FnStats)RunTimeUsec() uint64 {
 	return uint64(fs.RunTime/time.Microsecond)
 }
 
+func getCallStats(ctx context.Context, ten string, periods int) ([]swyapi.TenantStats, *xrest.ReqErr) {
+	var cs []swyapi.TenantStats
+
+	td, err := tendatGet(ctx, ten)
+	if err != nil {
+		return nil, GateErrD(err)
+	}
+
+	prev := &td.stats
+
+	if periods > 0 {
+		atst, err := dbTenStatsGetArch(ctx, ten, periods)
+		if err != nil {
+			return nil, GateErrD(err)
+		}
+
+		for i := 0; i < periods && i < len(atst); i++ {
+			cur := &atst[i]
+			cs = append(cs, swyapi.TenantStats{
+				Called:		prev.Called - cur.Called,
+				GBS:		prev.GBS() - cur.GBS(),
+				BytesOut:	prev.BytesOut - cur.BytesOut,
+				Till:		prev.TillS(),
+				From:		cur.TillS(),
+			})
+			prev = cur
+		}
+	}
+
+	cs = append(cs, swyapi.TenantStats{
+		Called:		prev.Called,
+		GBS:		prev.GBS(),
+		BytesOut:	prev.BytesOut,
+		Till:		prev.TillS(),
+	})
+
+	return cs, nil
+}
+
 type TenStats struct {
 	Tenant		string		`bson:"tenant"`
 	gmgo.TenStatValues			`bson:",inline"`

@@ -2,8 +2,7 @@ package main
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
+	"../common"
 )
 
 type SwoId struct {
@@ -50,28 +49,14 @@ func (id *SwoId) Str() string {
 	return rv
 }
 
-func cookify(val string) string {
-	h := sha256.New()
-	h.Write([]byte(val))
-	return hex.EncodeToString(h.Sum(nil))
-}
-
-func cookifyS(vals ...string) string {
-	h := sha256.New()
-	for _, v := range vals {
-		h.Write([]byte(v + "::"))
-	}
-	return hex.EncodeToString(h.Sum(nil))
-}
-
 func (id *SwoId) Cookie() string {
-	return cookify(id.Tennant + "/" + id.Project + "/" + id.Name)
+	return xh.Cookify(id.Tennant + "/" + id.Project + "/" + id.Name)
 }
 
 func (id *SwoId) Cookie2(salt string) string {
-	return cookify(salt + ":" + id.Tennant + "/" + id.Project + "/" + id.Name)
+	return xh.Cookify(salt + ":" + id.Tennant + "/" + id.Project + "/" + id.Name)
 }
 
-func (id *SwoId) Namespace() string {
-	return cookify(id.Tennant + "/" + id.Project)
+func (id *SwoId) S3Namespace() string {
+	return xh.Cookify(id.Tennant + "/" + DefaultProject)
 }

@@ -21,6 +21,20 @@ func Sha256sum(s []byte) string {
 	return hex.EncodeToString(h.Sum(nil))
 }
 
+func Cookify(val string) string {
+	h := sha256.New()
+	h.Write([]byte(val))
+	return hex.EncodeToString(h.Sum(nil))
+}
+
+func CookifyS(vals ...string) string {
+	h := sha256.New()
+	for _, v := range vals {
+		h.Write([]byte(v + "::"))
+	}
+	return hex.EncodeToString(h.Sum(nil))
+}
+
 var Letters = []byte("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789")
 
 func GenRandId(length int) (string, error) {

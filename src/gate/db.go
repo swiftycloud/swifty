@@ -12,6 +12,7 @@ import (
 	"./mgo"
 	"../common"
 	"../apis"
+	"../common/xrest"
 )
 
 const (
@@ -148,11 +149,47 @@ func dbUpdateAll(ctx context.Context, o interface{}) error {
 	return col.Update(q, o)
 }
 
+func listReq(ctx context.Context, project string, labels []string) bson.D {
+	q := bson.D{{"tennant", gctx(ctx).Tenant}, {"project", project}}
+	for _, l := range labels {
+		q = append(q, bson.DocElem{"labels", l})
+	}
+	return q
+}
+
+func (id *SwoId)dbReq() bson.M {
+	return bson.M{"cookie": id.Cookie()}
+}
+
+func cookieReq(ctx context.Context, project, name string) bson.M {
+	return ctxSwoId(ctx, project, name).dbReq()
+}
+
 type DBLogRec struct {
 	FnId		string		`bson:"fnid"`
 	Event		string		`bson:"event"`
 	Time		time.Time	`bson:"ts"`
 	Text		string		`bson:"text"`
+}
+
+func objFindId(ctx context.Context, id string, out interface{}, q bson.M) *xrest.ReqErr {
+	if !bson.IsObjectIdHex(id) {
+		return GateErrM(swyapi.GateBadRequest, "Bad ID value")
+	}
+
+	if q == nil {
+		q = bson.M{}
+	}
+
+	q["tennant"] = gctx(ctx).Tenant
+	q["_id"] = bson.ObjectIdHex(id)
+
+	err := dbFind(ctx, q, out)
+	if err != nil {
+		return GateErrD(err)
+	}
+
+	return nil
 }
 
 var session *mgo.Session

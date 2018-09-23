@@ -14,6 +14,26 @@ type YAMLConfSwd struct {
 	Namespace	string			`yaml:"k8s-namespace"`
 }
 
+func setupMwareAddr(conf *YAMLConf) {
+	conf.Mware.Maria.c = xh.ParseXCreds(conf.Mware.Maria.Creds)
+	conf.Mware.Maria.c.Resolve()
+
+	conf.Mware.Rabbit.c = xh.ParseXCreds(conf.Mware.Rabbit.Creds)
+	conf.Mware.Rabbit.c.Resolve()
+
+	conf.Mware.Mongo.c = xh.ParseXCreds(conf.Mware.Mongo.Creds)
+	conf.Mware.Mongo.c.Resolve()
+
+	conf.Mware.Postgres.c = xh.ParseXCreds(conf.Mware.Postgres.Creds)
+	conf.Mware.Postgres.c.Resolve()
+
+	conf.Mware.S3.c = xh.ParseXCreds(conf.Mware.S3.Creds)
+	conf.Mware.S3.c.Resolve()
+
+	conf.Mware.S3.cn = xh.ParseXCreds(conf.Mware.S3.Notify)
+	conf.Mware.S3.cn.Resolve()
+}
+
 func (cw *YAMLConfSwd)Validate() error {
 	if cw.Volume == "" {
 		return errors.New("'wdog.volume' not set")
