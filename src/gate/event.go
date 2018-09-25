@@ -1,9 +1,11 @@
 package main
 
 import (
+	"github.com/gorilla/mux"
 	"context"
 	"errors"
 	"net/url"
+	"net/http"
 	"gopkg.in/mgo.v2/bson"
 	"../common/xrest"
 	"../apis"
@@ -66,6 +68,29 @@ func (ts Triggers)Create(ctx context.Context, p interface{}) (xrest.Obj, *xrest.
 	}
 
 	return &Trigger{ed, ts.fn}, nil
+}
+
+func (ts Triggers)Get(ctx context.Context, r *http.Request) (xrest.Obj, *xrest.ReqErr) {
+	var fn FunctionDesc
+
+	cerr := objFindForReq(ctx, r, "fid", &fn)
+	if cerr != nil {
+		return nil, cerr
+	}
+
+	eid := mux.Vars(r)["eid"]
+	if !bson.IsObjectIdHex(eid) {
+		return nil, GateErrM(swyapi.GateBadRequest, "Bad event ID")
+	}
+
+	var ed FnEventDesc
+
+	err := dbFind(ctx, bson.M{"_id": bson.ObjectIdHex(eid), "fnid": fn.Cookie}, &ed)
+	if err != nil {
+		return nil, GateErrD(err)
+	}
+
+	return &Trigger{&ed, &fn}, nil
 }
 
 func (ts Triggers)Iterate(ctx context.Context, q url.Values, cb func(context.Context, xrest.Obj) *xrest.ReqErr) *xrest.ReqErr {

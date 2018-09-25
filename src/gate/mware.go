@@ -4,6 +4,7 @@ import (
 	"gopkg.in/mgo.v2/bson"
 	"strings"
 	"net/url"
+	"net/http"
 	"fmt"
 	"context"
 	"errors"
@@ -210,6 +211,17 @@ func (item *MwareDesc)toFnInfo(ctx context.Context) *swyapi.MwareInfo {
 }
 
 type Mwares struct {}
+
+func (_ Mwares)Get(ctx context.Context, r *http.Request) (xrest.Obj, *xrest.ReqErr) {
+	var mw MwareDesc
+
+	cerr := objFindForReq(ctx, r, "mid", &mw)
+	if cerr != nil {
+		return nil, cerr
+	}
+
+	return &mw, nil
+}
 
 func (_ Mwares)Iterate(ctx context.Context, q url.Values, cb func(context.Context, xrest.Obj) *xrest.ReqErr) *xrest.ReqErr {
 	project := q.Get("project")

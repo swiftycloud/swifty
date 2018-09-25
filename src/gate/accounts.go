@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"net/url"
+	"net/http"
 	"context"
 	"strings"
 	"gopkg.in/mgo.v2/bson"
@@ -149,6 +150,17 @@ func getAccDesc(id *SwoId, params map[string]string) (*AccDesc, *xrest.ReqErr) {
 	}
 
 	return ad, nil
+}
+
+func (_ Accounts)Get(ctx context.Context, r *http.Request) (xrest.Obj, *xrest.ReqErr) {
+	var ac AccDesc
+
+	cerr := objFindForReq(ctx, r, "aid", &ac)
+	if cerr != nil {
+		return nil, cerr
+	}
+
+	return &ac, nil
 }
 
 func (_ Accounts)Iterate(ctx context.Context, q url.Values, cb func(context.Context, xrest.Obj) *xrest.ReqErr) *xrest.ReqErr {

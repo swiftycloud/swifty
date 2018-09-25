@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"context"
 	"net/url"
+	"net/http"
 	"bytes"
 	"../common/xrest"
 	"../apis"
@@ -151,7 +152,9 @@ type DeployDesc struct {
 	_Items		[]*_DeployItemDesc	`bson:"items,omitempty"`
 }
 
-type Deployments struct {}
+type Deployments struct {
+	auth bool
+}
 
 func deployStartItems(dep *DeployDesc) {
 	ctx, done := mkContext("::deploy start")
@@ -396,6 +399,23 @@ func (dep *DeployDesc)Start(ctx context.Context) *xrest.ReqErr {
 	go deployStartItems(dep)
 
 	return nil
+}
+
+func (ds Deployments)Get(ctx context.Context, r *http.Request) (xrest.Obj, *xrest.ReqErr) {
+	var dd DeployDesc
+	var cerr *xrest.ReqErr
+
+	if ds.auth {
+		cerr = objFindForReq2(ctx, r, "aid", &dd, bson.M{"labels": "auth"})
+	} else {
+		cerr = objFindForReq(ctx, r, "did", &dd)
+	}
+
+	if cerr != nil {
+		return nil, cerr
+	}
+
+	return &dd, nil
 }
 
 func (_ Deployments)Iterate(ctx context.Context, q url.Values, cb func(context.Context, xrest.Obj) *xrest.ReqErr) *xrest.ReqErr {

@@ -3,6 +3,7 @@ package xrest
 import (
 	"context"
 	"net/url"
+	"net/http"
 )
 
 type Obj interface {
@@ -18,6 +19,7 @@ type Prop interface {
 }
 
 type Factory interface {
+	Get(context.Context, *http.Request) (Obj, *ReqErr)
 	Create(context.Context, interface{}) (Obj, *ReqErr)
 	Iterate(context.Context, url.Values, func(context.Context, Obj) *ReqErr) *ReqErr
 }

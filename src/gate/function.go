@@ -5,6 +5,7 @@ import (
 	"errors"
 	"strings"
 	"net/url"
+	"net/http"
 	"fmt"
 	"time"
 	"context"
@@ -163,6 +164,17 @@ func (fn *FunctionDesc)toMInfo(ctx context.Context) *swyapi.FunctionMdat {
 	}
 
 	return &fid
+}
+
+func (_ Functions)Get(ctx context.Context, r *http.Request) (xrest.Obj, *xrest.ReqErr) {
+	var fn FunctionDesc
+
+	cerr := objFindForReq(ctx, r, "fid", &fn)
+	if cerr != nil {
+		return nil, cerr
+	}
+
+	return &fn, nil
 }
 
 func (_ Functions)Iterate(ctx context.Context, q url.Values, cb func(context.Context, xrest.Obj) *xrest.ReqErr) *xrest.ReqErr {
