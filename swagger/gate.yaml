@@ -2438,6 +2438,22 @@ definitions:
         description: >-
           Identifier of a user, used in various s3 operations, e.g. webserver
           access
+  DeploySources:
+    type: object
+    description: Description of deployment source
+    required:
+      - name
+    properties:
+      type:
+        type: string
+        description: One of "desc" or "repo"
+      desc:
+        type: string
+        description: Base64 yaml file if type == desc
+      repo:
+        type: string
+        description: Path to yaml file in a repo for type == git
+        example: <repoId>/path/to/file.yaml
   DeployStart:
     type: object
     description: Description of deployment
@@ -2448,14 +2464,8 @@ definitions:
         type: string
       name:
         type: string
-      functions:
-        type: array
-        items:
-          $ref: '#/definitions/FunctionAdd'
-      mwares:
-        type: array
-        items:
-          $ref: '#/definitions/MwareAdd'
+      from:
+        $ref: '#/definitions/DeploySources'
   DeployItemInfo:
     type: object
     description: Info about a deploy item
