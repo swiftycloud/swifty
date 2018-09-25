@@ -2441,8 +2441,6 @@ definitions:
   DeploySources:
     type: object
     description: Description of deployment source
-    required:
-      - name
     properties:
       type:
         type: string
