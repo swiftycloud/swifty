@@ -198,39 +198,18 @@ func handleProjectList(ctx context.Context, w http.ResponseWriter, r *http.Reque
 }
 
 func handleFunctionAuthCtx(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
-	var fn FunctionDesc
-
-	cerr := objFindForReq(ctx, r, "fid", &fn)
-	if cerr != nil {
-		return cerr
-	}
-
 	var ac string
-	return xrest.HandleProp(ctx, w, r, &fn, &FnAuthProp{}, &ac)
+	return xrest.HandleProp(ctx, w, r, Functions{}, &FnAuthProp{}, &ac)
 }
 
 func handleFunctionEnv(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
-	var fn FunctionDesc
-
-	cerr := objFindForReq(ctx, r, "fid", &fn)
-	if cerr != nil {
-		return cerr
-	}
-
 	var env []string
-	return xrest.HandleProp(ctx, w, r, &fn, &FnEnvProp{}, &env)
+	return xrest.HandleProp(ctx, w, r, Functions{}, &FnEnvProp{}, &env)
 }
 
 func handleFunctionSize(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
-	var fn FunctionDesc
-
-	cerr := objFindForReq(ctx, r, "fid", &fn)
-	if cerr != nil {
-		return cerr
-	}
-
 	var sz swyapi.FunctionSize
-	return xrest.HandleProp(ctx, w, r, &fn, &FnSzProp{}, &sz)
+	return xrest.HandleProp(ctx, w, r, Functions{}, &FnSzProp{}, &sz)
 }
 
 func handleFunctionMwares(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
@@ -471,15 +450,8 @@ func handleFunctionWait(ctx context.Context, w http.ResponseWriter, r *http.Requ
 }
 
 func handleFunctionSources(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
-	var fn FunctionDesc
-
-	cerr := objFindForReq(ctx, r, "fid", &fn)
-	if cerr != nil {
-		return cerr
-	}
-
 	var src swyapi.FunctionSources
-	return xrest.HandleProp(ctx, w, r, &fn, &FnSrcProp{}, &src)
+	return xrest.HandleProp(ctx, w, r, Functions{}, &FnSrcProp{}, &src)
 }
 
 func handleTenantStats(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
@@ -505,25 +477,11 @@ func handleTenantStats(ctx context.Context, w http.ResponseWriter, r *http.Reque
 }
 
 func handleFunctionStats(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
-	var fn FunctionDesc
-
-	cerr := objFindForReq(ctx, r, "fid", &fn)
-	if cerr != nil {
-		return cerr
-	}
-
-	return xrest.HandleProp(ctx, w, r, &fn, &FnStatsProp{ }, nil)
+	return xrest.HandleProp(ctx, w, r, Functions{}, &FnStatsProp{ }, nil)
 }
 
 func handleFunctionLogs(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
-	var fn FunctionDesc
-
-	cerr := objFindForReq(ctx, r, "fid", &fn)
-	if cerr != nil {
-		return cerr
-	}
-
-	return xrest.HandleProp(ctx, w, r, &fn, &FnLogsProp{}, nil)
+	return xrest.HandleProp(ctx, w, r, Functions{}, &FnLogsProp{}, nil)
 }
 
 func reqPath(r *http.Request) string {
@@ -648,15 +606,8 @@ func handleRouter(ctx context.Context, w http.ResponseWriter, r *http.Request) *
 }
 
 func handleRouterTable(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
-	var rt RouterDesc
-
-	cerr := objFindForReq(ctx, r, "rid", &rt)
-	if cerr != nil {
-		return cerr
-	}
-
 	var tbl []*swyapi.RouterEntry
-	return xrest.HandleProp(ctx, w, r, &rt, &RtTblProp{}, &tbl)
+	return xrest.HandleProp(ctx, w, r, Routers{}, &RtTblProp{}, &tbl)
 }
 
 func handleAccounts(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
