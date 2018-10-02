@@ -281,6 +281,12 @@ func show_stats(args []string, opts [16]string) {
 			fmt.Printf("  Disk usage:   %s\n", formatBytes(*st.DU << 10))
 		}
 	}
+
+	if st.S3 != nil {
+		fmt.Printf("*********** S3 **************\n")
+		fmt.Printf("  Objects:        %d\n", st.S3.CntObjects)
+		fmt.Printf("    Space:        %s\n", formatBytes(uint64(st.S3.CntBytes)))
+	}
 }
 
 func list_projects(args []string, opts [16]string) {

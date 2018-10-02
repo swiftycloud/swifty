@@ -41,6 +41,11 @@ func (s3 *FnEventS3)matchPattern(oname string) bool {
 }
 
 func s3Call(rq *xhttp.RestReq, in interface{}, out interface{}) error {
+	err, _ := s3Call2(rq, in, out)
+	return err
+}
+
+func s3Call2(rq *xhttp.RestReq, in interface{}, out interface{}) (error, int) {
 	addr := conf.Mware.S3.c.Addr()
 	rq.Address = "http://" + addr + rq.Address
 	rq.Timeout = 120
@@ -48,7 +53,11 @@ func s3Call(rq *xhttp.RestReq, in interface{}, out interface{}) error {
 
 	resp, err := xhttp.MarshalAndPost(rq, in)
 	if err != nil {
-		return fmt.Errorf("Error talking to S3: %s", err.Error())
+		code := -1
+		if resp != nil {
+			code = resp.StatusCode
+		}
+		return fmt.Errorf("Error talking to S3: %s", err.Error()), code
 	}
 
 	defer resp.Body.Close()
@@ -56,11 +65,11 @@ func s3Call(rq *xhttp.RestReq, in interface{}, out interface{}) error {
 	if out != nil {
 		err = xhttp.ReadAndUnmarshalResp(resp, out)
 		if err != nil {
-			return fmt.Errorf("Error reading responce from S3: %s", err.Error())
+			return fmt.Errorf("Error reading responce from S3: %s", err.Error()), -1
 		}
 	}
 
-	return nil
+	return nil, 0
 }
 
 func s3KeyGen(conf *YAMLConfS3, namespace, bucket string, lifetime uint32) (*swys3api.KeyGenResult, error) {
@@ -272,12 +281,16 @@ func getS3Stats(ctx context.Context) (*swyapi.S3NsStats, *xrest.ReqErr) {
 	ns := ctxSwoId(ctx, "", "").S3Namespace()
 	var st swys3api.AcctStats
 
-	err := s3Call(
+	err, code := s3Call2(
 		&xhttp.RestReq{
 			Method:  "GET",
 			Address: "/v1/api/stats/" + ns,
 		}, nil, &st)
 	if err != nil {
+		if code == http.StatusNotFound {
+			return nil, nil
+		}
+
 		ctxlog(ctx).Errorf("Error talking to S3: %s", err.Error())
 		return nil, GateErrM(swyapi.GateGenErr, "Error talking to S3")
 	}
