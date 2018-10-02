@@ -40,7 +40,7 @@ func (s3 *FnEventS3)matchPattern(oname string) bool {
 	return err == nil && m
 }
 
-func s3KeyGen(conf *YAMLConfS3, namespace, bucket string, lifetime uint32) (*swys3api.S3CtlKeyGenResult, error) {
+func s3KeyGen(conf *YAMLConfS3, namespace, bucket string, lifetime uint32) (*swys3api.KeyGenResult, error) {
 	addr := conf.c.Addr()
 
 	resp, err := xhttp.MarshalAndPost(
@@ -50,7 +50,7 @@ func s3KeyGen(conf *YAMLConfS3, namespace, bucket string, lifetime uint32) (*swy
 			Timeout: 120,
 			Headers: map[string]string{"X-SwyS3-Token": gateSecrets[conf.c.Pass]},
 		},
-		&swys3api.S3CtlKeyGen{
+		&swys3api.KeyGen{
 			Namespace: namespace,
 			Bucket: bucket,
 			Lifetime: lifetime,
@@ -64,7 +64,7 @@ func s3KeyGen(conf *YAMLConfS3, namespace, bucket string, lifetime uint32) (*swy
 		return nil, fmt.Errorf("Bad responce from S3 gate: %s", string(resp.Status))
 	}
 
-	var out swys3api.S3CtlKeyGenResult
+	var out swys3api.KeyGenResult
 
 	err = xhttp.ReadAndUnmarshalResp(resp, &out)
 	if err != nil {
@@ -84,7 +84,7 @@ func s3KeyDel(conf *YAMLConfS3, key string) error {
 			Timeout: 120,
 			Headers: map[string]string{"X-SwyS3-Token": gateSecrets[conf.c.Pass]},
 		},
-		&swys3api.S3CtlKeyDel{
+		&swys3api.KeyDel{
 			AccessKeyID: key,
 		})
 	if err != nil {
@@ -108,7 +108,7 @@ func s3Subscribe(ctx context.Context, conf *YAMLConfMw, evt *FnEventS3) error {
 			Headers: map[string]string{"X-SwyS3-Token": gateSecrets[conf.S3.c.Pass]},
 			Success: http.StatusAccepted,
 		},
-		&swys3api.S3Subscribe{
+		&swys3api.Subscribe{
 			Namespace: evt.Ns,
 			Bucket: evt.Bucket,
 			Ops: evt.Ops,
@@ -131,7 +131,7 @@ func s3Unsubscribe(ctx context.Context, conf *YAMLConfMw, evt *FnEventS3) error 
 			Headers: map[string]string{"X-SwyS3-Token": gateSecrets[conf.S3.c.Pass]},
 			Success: http.StatusAccepted,
 		},
-		&swys3api.S3Subscribe{
+		&swys3api.Subscribe{
 			Namespace: evt.Ns,
 			Bucket: evt.Bucket,
 			Ops: evt.Ops,
@@ -143,7 +143,7 @@ func s3Unsubscribe(ctx context.Context, conf *YAMLConfMw, evt *FnEventS3) error 
 }
 
 func handleS3Event(ctx context.Context, user string, data []byte) {
-	var evt swys3api.S3Event
+	var evt swys3api.Event
 
 	err := json.Unmarshal(data, &evt)
 	if err != nil {

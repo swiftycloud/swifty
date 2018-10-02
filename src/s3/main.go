@@ -797,7 +797,7 @@ func handleS3API(cb func(ctx context.Context, w http.ResponseWriter, r *http.Req
 
 func handleKeygen(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	var akey *s3mgo.AccessKey
-	var kg swys3api.S3CtlKeyGen
+	var kg swys3api.KeyGen
 	var err error
 
 	err = xhttp.ReadAndUnmarshalReq(r, &kg)
@@ -816,7 +816,7 @@ func handleKeygen(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 		goto out
 	}
 
-	err = xhttp.MarshalAndWrite(w, &swys3api.S3CtlKeyGenResult{
+	err = xhttp.MarshalAndWrite(w, &swys3api.KeyGenResult{
 			AccessKeyID:	akey.AccessKeyID,
 			AccessKeySecret:s3DecryptAccessKeySecret(akey),
 			AccID:		akey.AccountObjID.Hex(),
@@ -832,7 +832,7 @@ out:
 }
 
 func handleKeydel(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-	var kd swys3api.S3CtlKeyDel
+	var kd swys3api.KeyDel
 	var err error
 
 	err = xhttp.ReadAndUnmarshalReq(r, &kd)
@@ -881,7 +881,7 @@ func handleStats(w http.ResponseWriter, r *http.Request) {
 		goto out
 	}
 
-	err = xhttp.MarshalAndWrite(w, &swys3api.S3AcctStats{
+	err = xhttp.MarshalAndWrite(w, &swys3api.AcctStats{
 		CntObjects:	st.CntObjects,
 		CntBytes:	st.CntBytes,
 		OutBytes:	st.OutBytes,
@@ -898,7 +898,7 @@ out:
 }
 
 func handleNotify(w http.ResponseWriter, r *http.Request) {
-	var params swys3api.S3Subscribe
+	var params swys3api.Subscribe
 
 	if xhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
 
