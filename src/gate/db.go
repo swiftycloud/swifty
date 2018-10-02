@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"context"
 	"reflect"
+	"net/http"
+	"github.com/gorilla/mux"
 
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
@@ -190,6 +192,14 @@ func objFindId(ctx context.Context, id string, out interface{}, q bson.M) *xrest
 	}
 
 	return nil
+}
+
+func objFindForReq2(ctx context.Context, r *http.Request, n string, out interface{}, q bson.M) *xrest.ReqErr {
+	return objFindId(ctx, mux.Vars(r)[n], out, q)
+}
+
+func objFindForReq(ctx context.Context, r *http.Request, n string, out interface{}) *xrest.ReqErr {
+	return objFindForReq2(ctx, r, n, out, nil)
 }
 
 var session *mgo.Session

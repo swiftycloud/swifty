@@ -71,14 +71,6 @@ var CORS_Clnt_Methods = []string {
 	http.MethodHead,
 }
 
-func objFindForReq2(ctx context.Context, r *http.Request, n string, out interface{}, q bson.M) *xrest.ReqErr {
-	return objFindId(ctx, mux.Vars(r)[n], out, q)
-}
-
-func objFindForReq(ctx context.Context, r *http.Request, n string, out interface{}) *xrest.ReqErr {
-	return objFindForReq2(ctx, r, n, out, nil)
-}
-
 func handleUserLogin(w http.ResponseWriter, r *http.Request) {
 	var params swyapi.UserLogin
 	var token string
