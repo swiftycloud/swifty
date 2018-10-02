@@ -894,11 +894,10 @@ out:
 	http.Error(w, err.Error(), http.StatusBadRequest)
 }
 
-func handleAdminOp(w http.ResponseWriter, r *http.Request) {
-	var op string = mux.Vars(r)["op"]
+func handleKeys(w http.ResponseWriter, r *http.Request) {
 	var err error
 
-	ctx, done := mkContext("adminreq")
+	ctx, done := mkContext("keysreq")
 	defer done(ctx)
 
 	if xhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
@@ -909,16 +908,12 @@ func handleAdminOp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	switch op {
-	case "keygen":
+	switch r.Method {
+	case "POST":
 		handleKeygen(ctx, w, r)
-		return
-	case "keydel":
+	case "DELETE":
 		handleKeydel(ctx, w, r)
-		return
 	}
-
-	http.Error(w, fmt.Sprintf("Unknown operation"), http.StatusBadRequest)
 }
 
 func makeAdminURL(clienturl, admport string) string {
@@ -998,7 +993,7 @@ func main() {
 
 	// Admin operations
 	radminsrv := mux.NewRouter()
-	radminsrv.HandleFunc("/v1/api/admin/{op:[a-zA-Z0-9-.]+}", handleAdminOp)
+	radminsrv.HandleFunc("/v1/api/keys", handleKeys).Methods("POST", "DELETE")
 	radminsrv.HandleFunc("/v1/api/notify", handleNotify).Methods("POST", "DELETE")
 
 	err = dbConnect(&conf)

@@ -45,7 +45,8 @@ func s3KeyGen(conf *YAMLConfS3, namespace, bucket string, lifetime uint32) (*swy
 
 	resp, err := xhttp.MarshalAndPost(
 		&xhttp.RestReq{
-			Address: "http://" + addr + "/v1/api/admin/keygen",
+			Method:  "POST",
+			Address: "http://" + addr + "/v1/api/keys",
 			Timeout: 120,
 			Headers: map[string]string{"X-SwyS3-Token": gateSecrets[conf.c.Pass]},
 		},
@@ -78,7 +79,8 @@ func s3KeyDel(conf *YAMLConfS3, key string) error {
 
 	_, err := xhttp.MarshalAndPost(
 		&xhttp.RestReq{
-			Address: "http://" + addr + "/v1/api/admin/keydel",
+			Method:  "DELETE",
+			Address: "http://" + addr + "/v1/api/keys",
 			Timeout: 120,
 			Headers: map[string]string{"X-SwyS3-Token": gateSecrets[conf.c.Pass]},
 		},
