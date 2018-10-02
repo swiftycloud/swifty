@@ -196,6 +196,77 @@ func (_ Accounts)Create(ctx context.Context, p interface{}) (xrest.Obj, *xrest.R
 	return getAccDesc(id, params)
 }
 
+type FnAccounts struct {
+	Fn	*FunctionDesc
+}
+
+func (fa FnAccounts)Get(ctx context.Context, r *http.Request) (xrest.Obj, *xrest.ReqErr) {
+	var acc AccDesc
+
+	cerr := objFindForReq(ctx, r, "aid", &acc)
+	if cerr != nil {
+		return nil, cerr
+	}
+
+	return &FnAccount{Fn:fa.Fn, Acc:&acc}, nil
+}
+
+func (fa FnAccounts)Create(ctx context.Context, p interface{}) (xrest.Obj, *xrest.ReqErr) {
+	var acc AccDesc
+
+	cerr := objFindId(ctx, *p.(*string), &acc, nil)
+	if cerr != nil {
+		return nil, cerr
+	}
+
+	return &FnAccount{Fn:fa.Fn, Acc:&acc}, nil
+}
+
+func (fa FnAccounts)Iterate(ctx context.Context, q url.Values, cb func(context.Context, xrest.Obj) *xrest.ReqErr) *xrest.ReqErr {
+	for _, aid := range fa.Fn.Accounts {
+		fa := FnAccount{Fn: fa.Fn}
+		ac, err := accFindByID(ctx, fa.Fn.SwoId, aid)
+		if err == nil {
+			fa.Acc = ac
+		} else {
+			fa.Id = aid
+		}
+
+		cerr := cb(ctx, &fa)
+		if cerr != nil {
+			return cerr
+		}
+	}
+
+	return nil
+}
+
+type FnAccount struct {
+	Fn	*FunctionDesc
+	Acc	*AccDesc
+	Id	string
+}
+
+func (fa *FnAccount)Add(ctx context.Context, _ interface{}) *xrest.ReqErr {
+	return fa.Fn.addAccount(ctx, fa.Acc)
+}
+
+func (fa *FnAccount)Del(ctx context.Context) *xrest.ReqErr {
+	return fa.Fn.delAccount(ctx, fa.Acc)
+}
+
+func (fa *FnAccount)Info(ctx context.Context, q url.Values, details bool) (interface{}, *xrest.ReqErr) {
+	if fa.Acc != nil {
+		return fa.Acc.toInfo(ctx, details), nil
+	} else {
+		return map[string]string{"id": fa.Id }, nil
+	}
+}
+
+func (fa *FnAccount)Upd(ctx context.Context, _ interface{}) *xrest.ReqErr {
+	return GateErrM(swyapi.GateGenErr, "Not updatable")
+}
+
 func (ad *AccDesc)Info(ctx context.Context, q url.Values, details bool) (interface{}, *xrest.ReqErr) {
 	return ad.toInfo(ctx, details), nil
 }

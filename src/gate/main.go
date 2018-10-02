@@ -243,34 +243,8 @@ func handleFunctionAccounts(ctx context.Context, w http.ResponseWriter, r *http.
 		return cerr
 	}
 
-	switch r.Method {
-	case "GET":
-		return xrest.Respond(ctx, w, fn.listAccounts(ctx))
-
-	case "POST":
-		var aid string
-
-		err := xhttp.ReadAndUnmarshalReq(r, &aid)
-		if err != nil {
-			return GateErrE(swyapi.GateBadRequest, err)
-		}
-
-		var acc AccDesc
-
-		cerr := objFindId(ctx, aid, &acc, nil)
-		if cerr != nil {
-			return cerr
-		}
-
-		cerr = fn.addAccount(ctx, &acc)
-		if cerr != nil {
-			return cerr
-		}
-
-		w.WriteHeader(http.StatusOK)
-	}
-
-	return nil
+	var aid string
+	return xrest.HandleMany(ctx, w, r, FnAccounts{Fn: &fn}, &aid)
 }
 
 func handleFunctionAccount(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
@@ -281,28 +255,8 @@ func handleFunctionAccount(ctx context.Context, w http.ResponseWriter, r *http.R
 		return cerr
 	}
 
-	aid := mux.Vars(r)["aid"]
-
-	switch r.Method {
-	case "DELETE":
-		var acc AccDesc
-
-		cerr := objFindId(ctx, aid, &acc, nil)
-		if cerr != nil {
-			return cerr
-		}
-
-		cerr = fn.delAccount(ctx, &acc)
-		if cerr != nil {
-			return cerr
-		}
-
-		w.WriteHeader(http.StatusOK)
-	}
-
-	return nil
+	return xrest.HandleOne(ctx, w, r, FnAccounts{Fn: &fn}, nil)
 }
-
 
 func handleFunctionS3Bs(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
 	var fn FunctionDesc

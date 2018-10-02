@@ -708,24 +708,6 @@ func (fn *FunctionDesc)delAccount(ctx context.Context, acc *AccDesc) *xrest.ReqE
 	return nil
 }
 
-func (fn *FunctionDesc)listAccounts(ctx context.Context) *[]map[string]string {
-	ret := []map[string]string{}
-	for _, aid := range fn.Accounts {
-		var ai map[string]string
-
-		ac, err := accFindByID(ctx, fn.SwoId, aid)
-		if err == nil {
-			ai = ac.toInfo(ctx, false)
-		} else {
-			ai = map[string]string{"id": aid }
-		}
-
-		ret = append(ret, ai)
-	}
-
-	return &ret
-}
-
 func (fn *FunctionDesc)addS3Bucket(ctx context.Context, b string) error {
 	err := dbFuncUpdate(ctx, bson.M{"_id": fn.ObjID, "s3buckets": bson.M{"$ne": b}},
 				bson.M{"$push": bson.M{"s3buckets":b}})
