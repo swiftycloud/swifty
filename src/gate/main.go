@@ -220,34 +220,8 @@ func handleFunctionMwares(ctx context.Context, w http.ResponseWriter, r *http.Re
 		return cerr
 	}
 
-	switch r.Method {
-	case "GET":
-		return xrest.Respond(ctx, w, fn.listMware(ctx))
-
-	case "POST":
-		var mid string
-
-		err := xhttp.ReadAndUnmarshalReq(r, &mid)
-		if err != nil {
-			return GateErrE(swyapi.GateBadRequest, err)
-		}
-
-		var mw MwareDesc
-
-		cerr := objFindId(ctx, mid, &mw, bson.M{"project": fn.SwoId.Project})
-		if cerr != nil {
-			return cerr
-		}
-
-		err = fn.addMware(ctx, &mw)
-		if err != nil {
-			return GateErrE(swyapi.GateGenErr, err)
-		}
-
-		w.WriteHeader(http.StatusOK)
-	}
-
-	return nil
+	var mid string
+	return xrest.HandleMany(ctx, w, r, FnMwares{Fn: &fn}, &mid)
 }
 
 func handleFunctionMware(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
@@ -258,24 +232,7 @@ func handleFunctionMware(ctx context.Context, w http.ResponseWriter, r *http.Req
 		return cerr
 	}
 
-	var mw MwareDesc
-
-	cerr = objFindForReq2(ctx, r, "mid", &mw, bson.M{"project": fn.SwoId.Project})
-	if cerr != nil {
-		return cerr
-	}
-
-	switch r.Method {
-	case "DELETE":
-		err := fn.delMware(ctx, &mw)
-		if err != nil {
-			return GateErrE(swyapi.GateGenErr, err)
-		}
-
-		w.WriteHeader(http.StatusOK)
-	}
-
-	return nil
+	return xrest.HandleOne(ctx, w, r, FnMwares{Fn: &fn}, nil)
 }
 
 func handleFunctionAccounts(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
