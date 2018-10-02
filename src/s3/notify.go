@@ -12,8 +12,8 @@ import (
 	"../apis/s3"
 )
 
-func notifyFindBucket(ctx context.Context, params *swys3api.S3Subscribe) (*s3mgo.S3Bucket, error) {
-	var bucket s3mgo.S3Bucket
+func notifyFindBucket(ctx context.Context, params *swys3api.Subscribe) (*s3mgo.Bucket, error) {
+	var bucket s3mgo.Bucket
 
 	cookie := s3mgo.BCookie(params.Namespace, params.Bucket)
 	err := dbS3FindOne(ctx, bson.M{ "bcookie": cookie, "state": S3StateActive }, &bucket)
@@ -24,7 +24,7 @@ func notifyFindBucket(ctx context.Context, params *swys3api.S3Subscribe) (*s3mgo
 	return &bucket, nil
 }
 
-func s3Subscribe(ctx context.Context, params *swys3api.S3Subscribe) error {
+func s3Subscribe(ctx context.Context, params *swys3api.Subscribe) error {
 	bucket, err := notifyFindBucket(ctx, params)
 	if err != nil {
 		return err
@@ -43,7 +43,7 @@ func s3Subscribe(ctx context.Context, params *swys3api.S3Subscribe) error {
 	return dbS3Update(ctx, query, update, false, bucket)
 }
 
-func s3Unsubscribe(ctx context.Context, params *swys3api.S3Subscribe) error {
+func s3Unsubscribe(ctx context.Context, params *swys3api.Subscribe) error {
 	bucket, err := notifyFindBucket(ctx, params)
 	if err != nil {
 		return err
@@ -61,11 +61,11 @@ func s3Unsubscribe(ctx context.Context, params *swys3api.S3Subscribe) error {
 
 var nChan *amqp.Channel
 
-func s3Notify(ctx context.Context, bucket *s3mgo.S3Bucket, object *s3mgo.S3Object, op string) {
+func s3Notify(ctx context.Context, bucket *s3mgo.Bucket, object *s3mgo.Object, op string) {
 	account, err := s3AccountLookup(ctx)
 	if err != nil { return }
 
-	data, err := json.Marshal(&swys3api.S3Event{
+	data, err := json.Marshal(&swys3api.Event{
 			Namespace: account.Namespace,
 			Bucket: bucket.Name,
 			Object: object.Key,

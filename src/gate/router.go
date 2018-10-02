@@ -78,6 +78,18 @@ func makeRouterURL(ctx context.Context, urlid string) (*RouterURL, error) {
 	return &rurl, nil
 }
 
+func (_ Routers)Get(ctx context.Context, r *http.Request) (xrest.Obj, *xrest.ReqErr) {
+	var rt RouterDesc
+
+	/* FIXME -- omit table here */
+	cerr := objFindForReq(ctx, r, "rid", &rt)
+	if cerr != nil {
+		return nil, cerr
+	}
+
+	return &rt, nil
+}
+
 func (_ Routers)Iterate(ctx context.Context, q url.Values, cb func(context.Context, xrest.Obj) *xrest.ReqErr) *xrest.ReqErr {
 	project := q.Get("project")
 	if project == "" {

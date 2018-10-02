@@ -2,17 +2,14 @@ package main
 
 import (
 	"context"
-	"github.com/gorilla/mux"
 	"gopkg.in/mgo.v2/bson"
 	"path/filepath"
 	"net/http"
 	"strings"
 	"io/ioutil"
 	"encoding/xml"
-	"fmt"
 	"errors"
 	"./mgo"
-	"../common/http"
 	"../apis/s3"
 )
 
@@ -122,7 +119,7 @@ func handleWebReq(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var account s3mgo.S3Account
+	var account s3mgo.Account
 	query := bson.M{ "_id": bson.ObjectIdHex(aux[1]), "state": S3StateActive }
 	err := dbS3FindOne(ctx, query, &account)
 	if err != nil {
@@ -138,7 +135,7 @@ func handleWebReq(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	iam := &s3mgo.S3Iam {
+	iam := &s3mgo.Iam {
 		State:		S3StateActive,
 		AccountObjID:	account.ObjID, /* FIXME -- cache account object here
 						* to speed-up the s3AccountLookup()
@@ -184,33 +181,6 @@ func handleWebReq(w http.ResponseWriter, r *http.Request) {
 
 		http.Error(w, "", http.StatusNotFound)
 	}
-}
-
-func handleAdminOp(w http.ResponseWriter, r *http.Request) {
-	var op string = mux.Vars(r)["op"]
-	var err error
-
-	ctx, done := mkContext("adminreq")
-	defer done(ctx)
-
-	if xhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
-
-	err = s3VerifyAdmin(r)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusUnauthorized)
-		return
-	}
-
-	switch op {
-	case "keygen":
-		handleKeygen(ctx, w, r)
-		return
-	case "keydel":
-		handleKeydel(ctx, w, r)
-		return
-	}
-
-	http.Error(w, fmt.Sprintf("Unknown operation"), http.StatusBadRequest)
 }
 
 var mimes map[string]string

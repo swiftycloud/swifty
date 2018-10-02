@@ -285,18 +285,36 @@ func ksGetProjectInfo(c *xh.XCreds, project string) (*xkst.KeystoneProject, erro
 	return &presp.Projects[0], nil
 }
 
-func ksChangeUserPass(c *xh.XCreds, uid string, up *swyapi.UserLogin) error {
-	log.Debugf("Change pass for %s", uid)
-	err := ksClient.MakeReq(
-		&xkst.KeystoneReq {
-			Type:	"PATCH",
-			URL:	"users/" + uid,
-			Succ:	http.StatusOK, },
-		&xkst.KeystonePassword {
-			User: xkst.KeystoneUser {
-				Password: up.Password,
-			},
-		}, nil)
+func ksChangeUserPass(c *xh.XCreds, uid string, up *swyapi.ChangePass) error {
+	var err error
+
+	log.Debugf("Change pass for %s (old %v)", uid, up.CPassword != "")
+
+	if up.CPassword == "" {
+		err = ksClient.MakeReq(
+			&xkst.KeystoneReq {
+				Type:	"PATCH",
+				URL:	"users/" + uid,
+				Succ:	http.StatusOK, },
+			&xkst.KeystonePassword {
+				User: xkst.KeystoneUser {
+					Password: up.Password,
+				},
+			}, nil)
+	} else {
+		err = ksClient.MakeReq(
+			&xkst.KeystoneReq {
+				Type:	"POST",
+				URL:	"users/" + uid + "/password",
+				Succ:	http.StatusNoContent,
+				NoTok:	true, },
+			&xkst.KeystonePassword {
+				User: xkst.KeystoneUser {
+					Password: up.Password,
+					OrigPassword: up.CPassword,
+				},
+			}, nil)
+	}
 	if err != nil {
 		return fmt.Errorf("Can't change password: %s", err.Error())
 	}

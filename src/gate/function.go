@@ -5,6 +5,7 @@ import (
 	"errors"
 	"strings"
 	"net/url"
+	"net/http"
 	"fmt"
 	"time"
 	"context"
@@ -163,6 +164,17 @@ func (fn *FunctionDesc)toMInfo(ctx context.Context) *swyapi.FunctionMdat {
 	}
 
 	return &fid
+}
+
+func (_ Functions)Get(ctx context.Context, r *http.Request) (xrest.Obj, *xrest.ReqErr) {
+	var fn FunctionDesc
+
+	cerr := objFindForReq(ctx, r, "fid", &fn)
+	if cerr != nil {
+		return nil, cerr
+	}
+
+	return &fn, nil
 }
 
 func (_ Functions)Iterate(ctx context.Context, q url.Values, cb func(context.Context, xrest.Obj) *xrest.ReqErr) *xrest.ReqErr {
@@ -610,14 +622,14 @@ func (fn *FunctionDesc)setSize(ctx context.Context, sz *swyapi.FunctionSize) *xr
 	return nil
 }
 
-func (fn *FunctionDesc)addMware(ctx context.Context, mw *MwareDesc) error {
+func (fn *FunctionDesc)addMware(ctx context.Context, mw *MwareDesc) *xrest.ReqErr {
 	err := dbFuncUpdate(ctx, bson.M{"_id": fn.ObjID, "mware": bson.M{"$ne": mw.SwoId.Name}},
 				bson.M{"$push": bson.M{"mware":mw.SwoId.Name}})
 	if err != nil {
 		if dbNF(err) {
-			return fmt.Errorf("Mware %s already there", mw.SwoId.Name)
+			return GateErrM(swyapi.GateDuplicate, "Mware %s already there")
 		} else {
-			return err
+			return GateErrD(err)
 		}
 	}
 
@@ -628,7 +640,7 @@ func (fn *FunctionDesc)addMware(ctx context.Context, mw *MwareDesc) error {
 	return nil
 }
 
-func (fn *FunctionDesc)delMware(ctx context.Context, mw *MwareDesc) error {
+func (fn *FunctionDesc)delMware(ctx context.Context, mw *MwareDesc) *xrest.ReqErr {
 	found := -1
 	for i, mwn := range fn.Mware {
 		if mwn == mw.SwoId.Name {
@@ -638,12 +650,12 @@ func (fn *FunctionDesc)delMware(ctx context.Context, mw *MwareDesc) error {
 	}
 
 	if found == -1 {
-		return errors.New("Mware not attached")
+		return GateErrM(swyapi.GateNotFound, "Mware not attached")
 	}
 
 	err := dbFuncUpdate(ctx, bson.M{"_id": fn.ObjID}, bson.M{"$pull": bson.M{"mware":fn.Mware[found]}})
 	if err != nil {
-		return err
+		return GateErrD(err)
 	}
 
 	fn.Mware = append(fn.Mware[:found], fn.Mware[found+1:]...)
@@ -651,28 +663,6 @@ func (fn *FunctionDesc)delMware(ctx context.Context, mw *MwareDesc) error {
 		swk8sUpdate(ctx, &conf, fn)
 	}
 	return nil
-}
-
-func (fn *FunctionDesc)listMware(ctx context.Context) []*swyapi.MwareInfo {
-	ret := []*swyapi.MwareInfo{}
-	for _, mwn := range fn.Mware {
-		id := fn.SwoId
-		id.Name = mwn
-
-		var mw MwareDesc
-		var mi *swyapi.MwareInfo
-
-		err := dbFind(ctx, id.dbReq(), &mw)
-
-		if err == nil {
-			mi = mw.toFnInfo(ctx)
-		} else {
-			mi = &swyapi.MwareInfo{Name: mwn}
-		}
-		ret = append(ret, mi)
-	}
-
-	return ret
 }
 
 func (fn *FunctionDesc)addAccount(ctx context.Context, ad *AccDesc) *xrest.ReqErr {
@@ -716,24 +706,6 @@ func (fn *FunctionDesc)delAccount(ctx context.Context, acc *AccDesc) *xrest.ReqE
 		swk8sUpdate(ctx, &conf, fn)
 	}
 	return nil
-}
-
-func (fn *FunctionDesc)listAccounts(ctx context.Context) *[]map[string]string {
-	ret := []map[string]string{}
-	for _, aid := range fn.Accounts {
-		var ai map[string]string
-
-		ac, err := accFindByID(ctx, fn.SwoId, aid)
-		if err == nil {
-			ai = ac.toInfo(ctx, false)
-		} else {
-			ai = map[string]string{"id": aid }
-		}
-
-		ret = append(ret, ai)
-	}
-
-	return &ret
 }
 
 func (fn *FunctionDesc)addS3Bucket(ctx context.Context, b string) error {

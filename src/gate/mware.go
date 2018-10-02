@@ -4,6 +4,7 @@ import (
 	"gopkg.in/mgo.v2/bson"
 	"strings"
 	"net/url"
+	"net/http"
 	"fmt"
 	"context"
 	"errors"
@@ -209,7 +210,18 @@ func (item *MwareDesc)toFnInfo(ctx context.Context) *swyapi.MwareInfo {
 	}
 }
 
-type Mwares struct {}
+type Mwares struct { }
+
+func (_ Mwares)Get(ctx context.Context, r *http.Request) (xrest.Obj, *xrest.ReqErr) {
+	var mw MwareDesc
+
+	cerr := objFindForReq(ctx, r, "mid", &mw)
+	if cerr != nil {
+		return nil, cerr
+	}
+
+	return &mw, nil
+}
 
 func (_ Mwares)Iterate(ctx context.Context, q url.Values, cb func(context.Context, xrest.Obj) *xrest.ReqErr) *xrest.ReqErr {
 	project := q.Get("project")
@@ -239,6 +251,83 @@ func (_ Mwares)Create(ctx context.Context, p interface{}) (xrest.Obj, *xrest.Req
 	params := p.(*swyapi.MwareAdd)
 	id := ctxSwoId(ctx, params.Project, params.Name)
 	return getMwareDesc(id, params)
+}
+
+type FnMwares struct {
+	Fn	*FunctionDesc
+}
+
+func (fm FnMwares)Get(ctx context.Context, r *http.Request) (xrest.Obj, *xrest.ReqErr) {
+	var mw MwareDesc
+
+	cerr := objFindForReq2(ctx, r, "mid", &mw, bson.M{"project": fm.Fn.SwoId.Project})
+	if cerr != nil {
+		return nil, cerr
+	}
+
+	return &FnMware{Fn:fm.Fn, Mw:&mw}, nil
+}
+
+func (fm FnMwares)Create(ctx context.Context, p interface{}) (xrest.Obj, *xrest.ReqErr) {
+	var mw MwareDesc
+
+	cerr := objFindId(ctx, *p.(*string), &mw, bson.M{"project": fm.Fn.SwoId.Project})
+	if cerr != nil {
+		return nil, cerr
+	}
+
+	return &FnMware{Fn:fm.Fn, Mw:&mw}, nil
+}
+
+func (fm FnMwares)Iterate(ctx context.Context, q url.Values, cb func(context.Context, xrest.Obj) *xrest.ReqErr) *xrest.ReqErr {
+	for _, mwn := range fm.Fn.Mware {
+		id := fm.Fn.SwoId
+		id.Name = mwn
+
+		var mw MwareDesc
+
+		fmw := FnMware{Fn: fm.Fn}
+
+		err := dbFind(ctx, id.dbReq(), &mw)
+		if err == nil {
+			fmw.Mw = &mw
+		} else {
+			fmw.Name = mwn
+		}
+
+		cerr := cb(ctx, &fmw)
+		if cerr != nil {
+			return cerr
+		}
+	}
+
+	return nil
+}
+
+type FnMware struct {
+	Fn	*FunctionDesc
+	Mw	*MwareDesc
+	Name	string
+}
+
+func (fmw *FnMware)Add(ctx context.Context, _ interface{}) *xrest.ReqErr {
+	return fmw.Fn.addMware(ctx, fmw.Mw)
+}
+
+func (fmw *FnMware)Del(ctx context.Context) *xrest.ReqErr {
+	return fmw.Fn.delMware(ctx, fmw.Mw)
+}
+
+func (fmw *FnMware)Upd(ctx context.Context, _ interface{}) *xrest.ReqErr {
+	return GateErrM(swyapi.GateGenErr, "Not updatable")
+}
+
+func (fmw *FnMware)Info(ctx context.Context, q url.Values, details bool) (interface{}, *xrest.ReqErr) {
+	if fmw.Mw != nil {
+		return fmw.Mw.toInfo(ctx, details)
+	} else {
+		return &swyapi.MwareInfo{Name: fmw.Name}, nil
+	}
 }
 
 func (mw *MwareDesc)Info(ctx context.Context, q url.Values, details bool) (interface{}, *xrest.ReqErr) {

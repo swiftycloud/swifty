@@ -60,6 +60,63 @@ paths:
           description: Need to authenticate
         '403':
           description: Bad authentication token
+  /stats/calls:
+    get:
+      summary: Show user statistics about FN calls
+      parameters:
+        - in: query
+          name: periods
+          type: integer
+          required: false
+          description: Number of stats periods to report
+        - in: header
+          name: X-Auth-Token
+          type: string
+          required: true
+      responses:
+        '200':
+          description: OK
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/UserCallStats'
+        '400':
+          description: Bad request
+          schema:
+            $ref: '#/definitions/GateError'
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad authentication token
+  /stats/mware:
+    get:
+      summary: Show user statistics about mwares
+      parameters:
+        - in: header
+          name: X-Auth-Token
+          type: string
+          required: true
+      responses:
+        '200':
+          description: OK
+          schema:
+            type: object
+            additionalProperties:
+              $ref: '#/definitions/UserMwareStats'
+            example:
+              mongo:
+                count: 1
+                du: 42
+              authjwt:
+                count: 1
+        '400':
+          description: Bad request
+          schema:
+            $ref: '#/definitions/GateError'
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad authentication token
   /project/list:
     post:
       summary: List projects
@@ -2026,7 +2083,7 @@ definitions:
           Per-period statistics, "till"-sorted descending. Each period is
           incremental to previous. The 0th one is "till now"
         items:
-          $ref: '#/definitions/UserStats'
+          $ref: '#/definitions/UserCallStats'
       mware:
         type: object
         description: 'Map ''type:stats'' with per-type cumulative statistics'
@@ -2086,7 +2143,7 @@ definitions:
         description: >-
           Time (RFC1123Z) from which stats are collected (if empty means "till
           tenant creation time")
-  UserStats:
+  UserCallStats:
     type: object
     description: Statistics about user
     properties:

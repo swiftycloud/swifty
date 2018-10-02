@@ -141,7 +141,12 @@ func HandleMany(ctx context.Context, w http.ResponseWriter, r *http.Request, f F
 	return nil
 }
 
-func HandleOne(ctx context.Context, w http.ResponseWriter, r *http.Request, o Obj, upd_param interface{}) *ReqErr {
+func HandleOne(ctx context.Context, w http.ResponseWriter, r *http.Request, f Factory, upd_param interface{}) *ReqErr {
+	o, cer := f.Get(ctx, r)
+	if cer != nil {
+		return cer
+	}
+
 	switch r.Method {
 	case "GET":
 		return HandleGetOne(ctx, w, r, o)
@@ -156,7 +161,12 @@ func HandleOne(ctx context.Context, w http.ResponseWriter, r *http.Request, o Ob
 	return nil
 }
 
-func HandleProp(ctx context.Context, w http.ResponseWriter, r *http.Request, o Obj, p Prop, upd_param interface{}) *ReqErr {
+func HandleProp(ctx context.Context, w http.ResponseWriter, r *http.Request, f Factory, p Prop, upd_param interface{}) *ReqErr {
+	o, cer := f.Get(ctx, r)
+	if cer != nil {
+		return cer
+	}
+
 	switch r.Method {
 	case "GET":
 		return HandleGetProp(ctx, w, r, o, p)

@@ -44,9 +44,9 @@ func dbConnect(user, pass, host string) error {
 	return nil
 }
 
-var stats map[string]*s3mgo.S3AcctStats
+var stats map[string]*s3mgo.AcctStats
 func checkStats() error {
-	var sts []*s3mgo.S3AcctStats
+	var sts []*s3mgo.AcctStats
 
 	err := session.DB(DBName).C(DBColS3Stats).Find(bson.M{}).All(&sts)
 	if err != nil {
@@ -54,7 +54,7 @@ func checkStats() error {
 		return err
 	}
 
-	stats = make(map[string]*s3mgo.S3AcctStats)
+	stats = make(map[string]*s3mgo.AcctStats)
 	fmt.Printf("   Stats:\n")
 	for _, st := range sts {
 		stats[st.NamespaceID] = st
@@ -64,11 +64,11 @@ func checkStats() error {
 	return nil
 }
 
-var accounts map[string]*s3mgo.S3Account
-var accnsid map[string]*s3mgo.S3Account
+var accounts map[string]*s3mgo.Account
+var accnsid map[string]*s3mgo.Account
 
 func checkAccounts() error {
-	var acs []*s3mgo.S3Account
+	var acs []*s3mgo.Account
 
 	err := session.DB(DBName).C(DBColS3Iams).Find(bson.M{"namespace":bson.M{"$exists":1}}).All(&acs)
 	if err != nil {
@@ -76,8 +76,8 @@ func checkAccounts() error {
 		return err
 	}
 
-	accounts = make(map[string]*s3mgo.S3Account)
-	accnsid = make(map[string]*s3mgo.S3Account)
+	accounts = make(map[string]*s3mgo.Account)
+	accnsid = make(map[string]*s3mgo.Account)
 	fmt.Printf("   Accounts:\n")
 	for _, ac := range acs {
 		accounts[ac.ObjID.Hex()] = ac
@@ -88,10 +88,10 @@ func checkAccounts() error {
 	return nil
 }
 
-var iams map[string]*s3mgo.S3Iam
+var iams map[string]*s3mgo.Iam
 
 func checkIams() error {
-	var is []*s3mgo.S3Iam
+	var is []*s3mgo.Iam
 
 	err := session.DB(DBName).C(DBColS3Iams).Find(bson.M{"namespace":bson.M{"$exists":0}}).All(&is)
 	if err != nil {
@@ -99,7 +99,7 @@ func checkIams() error {
 		return err
 	}
 
-	iams = make(map[string]*s3mgo.S3Iam)
+	iams = make(map[string]*s3mgo.Iam)
 	fmt.Printf("   IAMs:\n")
 	for _, iam := range is {
 		_, ok := accounts[iam.AccountObjID.Hex()]
@@ -120,7 +120,7 @@ func checkIams() error {
 }
 
 func checkKeys() error {
-	var keys []*s3mgo.S3AccessKey
+	var keys []*s3mgo.AccessKey
 
 	err := session.DB(DBName).C(DBColS3AccessKeys).Find(bson.M{}).All(&keys)
 	if err != nil {
@@ -145,7 +145,7 @@ func checkKeys() error {
 		var exp = ""
 		if key.Expired() {
 			exp = " (expired)"
-		} else if key.ExpirationTimestamp == s3mgo.S3TimeStampMax {
+		} else if key.ExpirationTimestamp == s3mgo.TimeStampMax {
 			exp = " (perpetual)"
 		}
 		fmt.Printf("\t%s: ac=..%s iam=..%s %s%s\n", key.ObjID.Hex(),
@@ -156,10 +156,10 @@ func checkKeys() error {
 	return nil
 }
 
-var buckets map[string]*s3mgo.S3Bucket
+var buckets map[string]*s3mgo.Bucket
 
 func checkBuckets() error {
-	var bks []*s3mgo.S3Bucket
+	var bks []*s3mgo.Bucket
 
 	err := session.DB(DBName).C(DBColS3Buckets).Find(bson.M{}).All(&bks)
 	if err != nil {
@@ -167,7 +167,7 @@ func checkBuckets() error {
 		return err
 	}
 
-	buckets = make(map[string]*s3mgo.S3Bucket)
+	buckets = make(map[string]*s3mgo.Bucket)
 	fmt.Printf("   Buckets:\n")
 	for _, b := range(bks) {
 		ac, ok := accnsid[b.NamespaceID]
@@ -192,10 +192,10 @@ func checkBuckets() error {
 	return nil
 }
 
-var objects map[string]*s3mgo.S3Object
+var objects map[string]*s3mgo.Object
 
 func checkObjects() error {
-	var objs []*s3mgo.S3Object
+	var objs []*s3mgo.Object
 
 	err := session.DB(DBName).C(DBColS3Objects).Find(bson.M{}).All(&objs)
 	if err != nil {
@@ -203,7 +203,7 @@ func checkObjects() error {
 		return err
 	}
 
-	objects = make(map[string]*s3mgo.S3Object)
+	objects = make(map[string]*s3mgo.Object)
 	fmt.Printf("   Objects:\n")
 	for _, o := range(objs) {
 		b, ok := buckets[o.BucketObjID.Hex()]
@@ -261,10 +261,10 @@ func checkObjects() error {
 	return nil
 }
 
-var pchunks map[string]*s3mgo.S3ObjectPart
+var pchunks map[string]*s3mgo.ObjectPart
 
 func checkParts() error {
-	var pts []*s3mgo.S3ObjectPart
+	var pts []*s3mgo.ObjectPart
 
 	err := session.DB(DBName).C(DBColS3ObjectData).Find(bson.M{}).All(&pts)
 	if err != nil {
@@ -272,7 +272,7 @@ func checkParts() error {
 		return err
 	}
 
-	pchunks = make(map[string]*s3mgo.S3ObjectPart)
+	pchunks = make(map[string]*s3mgo.ObjectPart)
 	fmt.Printf("   Parts:\n")
 	for _, p := range(pts) {
 		o, ok := objects[p.RefID.Hex()]
@@ -316,7 +316,7 @@ func checkParts() error {
 }
 
 func checkChunks() error {
-	var cks []*s3mgo.S3DataChunk
+	var cks []*s3mgo.DataChunk
 
 	err := session.DB(DBName).C(DBColS3DataChunks).Find(bson.M{}).Select(bson.M{"data":0}).All(&cks)
 	if err != nil {

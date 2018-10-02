@@ -1,37 +1,38 @@
 package swys3api
 
-type S3CtlKeyGen struct {
+type KeyGen struct {
 	Namespace		string		`json:"namespace,omitempty"`
 	Bucket			string		`json:"bucket,omitempty"`
 	Lifetime		uint32		`json:"lifetime,omitempty"`
 }
 
-type S3CtlKeyGenResult struct {
+type KeyGenResult struct {
 	AccessKeyID		string		`json:"access-key-id"`
 	AccessKeySecret		string		`json:"access-key-secret"`
 	AccID			string		`json:"accid"`
 }
 
-type S3CtlKeyDel struct {
+type KeyDel struct {
 	AccessKeyID		string		`json:"access-key-id"`
 }
 
-type S3CtlBucketReq struct {
-	Namespace		string		`json:"namespace,omitempty"`
-	Bucket			string		`json:"bucket,omitempty"`
-	Acl			string		`json:"acl,omitempty"`
-}
-
-type S3Subscribe struct {
+type Subscribe struct {
 	Namespace		string		`json:"namespace"`
 	Bucket			string		`json:"bucket"`
 	Ops			string		`json:"ops"`
 	Queue			string		`json:"queue"`
 }
 
-type S3Event struct {
+type Event struct {
 	Namespace		string		`json:"namespace"`
 	Bucket			string		`json:"bucket"`
 	Object			string		`json:"object,omitempty"`
 	Op			string		`json:"op"`
+}
+
+type AcctStats struct {
+	CntObjects		int64		`json:"cnt-objects"`
+	CntBytes		int64		`json:"cnt-bytes"`
+	OutBytes		int64		`json:"out-bytes"`
+	OutBytesWeb		int64		`json:"out-bytes-web"`
 }

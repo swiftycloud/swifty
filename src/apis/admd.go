@@ -13,6 +13,11 @@ type ModUser struct {
 	Enabled	*bool		`json:"enabled,omitempty"`
 }
 
+type ChangePass struct {
+	Password	string			`json:"password"`
+	CPassword	string			`json:"current"`
+}
+
 type AddUser struct {
 	UId	string		`json:"uid"`
 	Pass	string		`json:"pass"`

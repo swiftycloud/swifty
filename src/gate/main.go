@@ -198,39 +198,18 @@ func handleProjectList(ctx context.Context, w http.ResponseWriter, r *http.Reque
 }
 
 func handleFunctionAuthCtx(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
-	var fn FunctionDesc
-
-	cerr := objFindForReq(ctx, r, "fid", &fn)
-	if cerr != nil {
-		return cerr
-	}
-
 	var ac string
-	return xrest.HandleProp(ctx, w, r, &fn, &FnAuthProp{}, &ac)
+	return xrest.HandleProp(ctx, w, r, Functions{}, &FnAuthProp{}, &ac)
 }
 
 func handleFunctionEnv(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
-	var fn FunctionDesc
-
-	cerr := objFindForReq(ctx, r, "fid", &fn)
-	if cerr != nil {
-		return cerr
-	}
-
 	var env []string
-	return xrest.HandleProp(ctx, w, r, &fn, &FnEnvProp{}, &env)
+	return xrest.HandleProp(ctx, w, r, Functions{}, &FnEnvProp{}, &env)
 }
 
 func handleFunctionSize(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
-	var fn FunctionDesc
-
-	cerr := objFindForReq(ctx, r, "fid", &fn)
-	if cerr != nil {
-		return cerr
-	}
-
 	var sz swyapi.FunctionSize
-	return xrest.HandleProp(ctx, w, r, &fn, &FnSzProp{}, &sz)
+	return xrest.HandleProp(ctx, w, r, Functions{}, &FnSzProp{}, &sz)
 }
 
 func handleFunctionMwares(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
@@ -241,34 +220,8 @@ func handleFunctionMwares(ctx context.Context, w http.ResponseWriter, r *http.Re
 		return cerr
 	}
 
-	switch r.Method {
-	case "GET":
-		return xrest.Respond(ctx, w, fn.listMware(ctx))
-
-	case "POST":
-		var mid string
-
-		err := xhttp.ReadAndUnmarshalReq(r, &mid)
-		if err != nil {
-			return GateErrE(swyapi.GateBadRequest, err)
-		}
-
-		var mw MwareDesc
-
-		cerr := objFindId(ctx, mid, &mw, bson.M{"project": fn.SwoId.Project})
-		if cerr != nil {
-			return cerr
-		}
-
-		err = fn.addMware(ctx, &mw)
-		if err != nil {
-			return GateErrE(swyapi.GateGenErr, err)
-		}
-
-		w.WriteHeader(http.StatusOK)
-	}
-
-	return nil
+	var mid string
+	return xrest.HandleMany(ctx, w, r, FnMwares{Fn: &fn}, &mid)
 }
 
 func handleFunctionMware(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
@@ -279,24 +232,7 @@ func handleFunctionMware(ctx context.Context, w http.ResponseWriter, r *http.Req
 		return cerr
 	}
 
-	var mw MwareDesc
-
-	cerr = objFindForReq2(ctx, r, "mid", &mw, bson.M{"project": fn.SwoId.Project})
-	if cerr != nil {
-		return cerr
-	}
-
-	switch r.Method {
-	case "DELETE":
-		err := fn.delMware(ctx, &mw)
-		if err != nil {
-			return GateErrE(swyapi.GateGenErr, err)
-		}
-
-		w.WriteHeader(http.StatusOK)
-	}
-
-	return nil
+	return xrest.HandleOne(ctx, w, r, FnMwares{Fn: &fn}, nil)
 }
 
 func handleFunctionAccounts(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
@@ -307,34 +243,8 @@ func handleFunctionAccounts(ctx context.Context, w http.ResponseWriter, r *http.
 		return cerr
 	}
 
-	switch r.Method {
-	case "GET":
-		return xrest.Respond(ctx, w, fn.listAccounts(ctx))
-
-	case "POST":
-		var aid string
-
-		err := xhttp.ReadAndUnmarshalReq(r, &aid)
-		if err != nil {
-			return GateErrE(swyapi.GateBadRequest, err)
-		}
-
-		var acc AccDesc
-
-		cerr := objFindId(ctx, aid, &acc, nil)
-		if cerr != nil {
-			return cerr
-		}
-
-		cerr = fn.addAccount(ctx, &acc)
-		if cerr != nil {
-			return cerr
-		}
-
-		w.WriteHeader(http.StatusOK)
-	}
-
-	return nil
+	var aid string
+	return xrest.HandleMany(ctx, w, r, FnAccounts{Fn: &fn}, &aid)
 }
 
 func handleFunctionAccount(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
@@ -345,28 +255,8 @@ func handleFunctionAccount(ctx context.Context, w http.ResponseWriter, r *http.R
 		return cerr
 	}
 
-	aid := mux.Vars(r)["aid"]
-
-	switch r.Method {
-	case "DELETE":
-		var acc AccDesc
-
-		cerr := objFindId(ctx, aid, &acc, nil)
-		if cerr != nil {
-			return cerr
-		}
-
-		cerr = fn.delAccount(ctx, &acc)
-		if cerr != nil {
-			return cerr
-		}
-
-		w.WriteHeader(http.StatusOK)
-	}
-
-	return nil
+	return xrest.HandleOne(ctx, w, r, FnAccounts{Fn: &fn}, nil)
 }
-
 
 func handleFunctionS3Bs(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
 	var fn FunctionDesc
@@ -433,26 +323,7 @@ func handleFunctionTriggers(ctx context.Context, w http.ResponseWriter, r *http.
 }
 
 func handleFunctionTrigger(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
-	var fn FunctionDesc
-
-	cerr := objFindForReq(ctx, r, "fid", &fn)
-	if cerr != nil {
-		return cerr
-	}
-
-	eid := mux.Vars(r)["eid"]
-	if !bson.IsObjectIdHex(eid) {
-		return GateErrM(swyapi.GateBadRequest, "Bad event ID")
-	}
-
-	var ed FnEventDesc
-
-	err := dbFind(ctx, bson.M{"_id": bson.ObjectIdHex(eid), "fnid": fn.Cookie}, &ed)
-	if err != nil {
-		return GateErrD(err)
-	}
-
-	return xrest.HandleOne(ctx, w, r, &Trigger{&ed, &fn}, nil)
+	return xrest.HandleOne(ctx, w, r, Triggers{}, nil)
 }
 
 func handleFunctionWait(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
@@ -490,20 +361,13 @@ func handleFunctionWait(ctx context.Context, w http.ResponseWriter, r *http.Requ
 }
 
 func handleFunctionSources(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
-	var fn FunctionDesc
-
-	cerr := objFindForReq(ctx, r, "fid", &fn)
-	if cerr != nil {
-		return cerr
-	}
-
 	var src swyapi.FunctionSources
-	return xrest.HandleProp(ctx, w, r, &fn, &FnSrcProp{}, &src)
+	return xrest.HandleProp(ctx, w, r, Functions{}, &FnSrcProp{}, &src)
 }
 
-func handleTenantStats(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
+func handleTenantStatsAll(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
 	ten := gctx(ctx).Tenant
-	ctxlog(ctx).Debugf("Get FN stats %s", ten)
+	ctxlog(ctx).Debugf("Get stats %s", ten)
 
 	periods := reqPeriods(r.URL.Query())
 
@@ -520,29 +384,48 @@ func handleTenantStats(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		return cerr
 	}
 
+	resp.S3, cerr = getS3Stats(ctx)
+	if cerr != nil {
+		return cerr
+	}
+
+	return xrest.Respond(ctx, w, resp)
+}
+
+func handleTenantStats(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
+	sub := mux.Vars(r)["sub"]
+	ten := gctx(ctx).Tenant
+	ctxlog(ctx).Debugf("Get %s stats %s", sub, ten)
+
+	periods := reqPeriods(r.URL.Query())
+
+	var cerr *xrest.ReqErr
+	var resp interface{}
+
+	switch sub {
+	case "calls":
+		resp, cerr = getCallStats(ctx, ten, periods)
+	case "wmare":
+		resp, cerr = getMwareStats(ctx, ten)
+	case "s3":
+		resp, cerr = getS3Stats(ctx)
+	default:
+		cerr = GateErrM(swyapi.GateBadRequest, "Bad stats type")
+	}
+
+	if cerr != nil {
+		return cerr
+	}
+
 	return xrest.Respond(ctx, w, resp)
 }
 
 func handleFunctionStats(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
-	var fn FunctionDesc
-
-	cerr := objFindForReq(ctx, r, "fid", &fn)
-	if cerr != nil {
-		return cerr
-	}
-
-	return xrest.HandleProp(ctx, w, r, &fn, &FnStatsProp{ }, nil)
+	return xrest.HandleProp(ctx, w, r, Functions{}, &FnStatsProp{ }, nil)
 }
 
 func handleFunctionLogs(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
-	var fn FunctionDesc
-
-	cerr := objFindForReq(ctx, r, "fid", &fn)
-	if cerr != nil {
-		return cerr
-	}
-
-	return xrest.HandleProp(ctx, w, r, &fn, &FnLogsProp{}, nil)
+	return xrest.HandleProp(ctx, w, r, Functions{}, &FnLogsProp{}, nil)
 }
 
 func reqPath(r *http.Request) string {
@@ -595,15 +478,8 @@ func handleFunctions(ctx context.Context, w http.ResponseWriter, r *http.Request
 }
 
 func handleFunction(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
-	var fn FunctionDesc
-
-	cerr := objFindForReq(ctx, r, "fid", &fn)
-	if cerr != nil {
-		return cerr
-	}
-
 	var upd swyapi.FunctionUpdate
-	return xrest.HandleOne(ctx, w, r, &fn, &upd)
+	return xrest.HandleOne(ctx, w, r, Functions{}, &upd)
 }
 
 func handleFunctionMdat(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
@@ -670,27 +546,12 @@ func handleRouters(ctx context.Context, w http.ResponseWriter, r *http.Request) 
 }
 
 func handleRouter(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
-	var rt RouterDesc
-
-	/* FIXME -- omit table here */
-	cerr := objFindForReq(ctx, r, "rid", &rt)
-	if cerr != nil {
-		return cerr
-	}
-
-	return xrest.HandleOne(ctx, w, r, &rt, nil)
+	return xrest.HandleOne(ctx, w, r, Routers{}, nil)
 }
 
 func handleRouterTable(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
-	var rt RouterDesc
-
-	cerr := objFindForReq(ctx, r, "rid", &rt)
-	if cerr != nil {
-		return cerr
-	}
-
 	var tbl []*swyapi.RouterEntry
-	return xrest.HandleProp(ctx, w, r, &rt, &RtTblProp{}, &tbl)
+	return xrest.HandleProp(ctx, w, r, Routers{}, &RtTblProp{}, &tbl)
 }
 
 func handleAccounts(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
@@ -699,15 +560,8 @@ func handleAccounts(ctx context.Context, w http.ResponseWriter, r *http.Request)
 }
 
 func handleAccount(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
-	var ac AccDesc
-
-	cerr := objFindForReq(ctx, r, "aid", &ac)
-	if cerr != nil {
-		return cerr
-	}
-
 	var params map[string]string
-	return xrest.HandleOne(ctx, w, r, &ac, &params)
+	return xrest.HandleOne(ctx, w, r, Accounts{}, &params)
 }
 
 func repoFindForReq(ctx context.Context, r *http.Request, user_action bool) (*RepoDesc, *xrest.ReqErr) {
@@ -739,13 +593,8 @@ func handleRepos(ctx context.Context, w http.ResponseWriter, r *http.Request) *x
 }
 
 func handleRepo(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
-	rd, cerr := repoFindForReq(ctx, r, r.Method == "GET")
-	if cerr != nil {
-		return cerr
-	}
-
 	var ru swyapi.RepoUpdate
-	return xrest.HandleOne(ctx, w, r, rd, &ru)
+	return xrest.HandleOne(ctx, w, r, Repos{}, &ru)
 }
 
 func handleRepoFiles(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
@@ -868,18 +717,11 @@ func handleDeployments(ctx context.Context, w http.ResponseWriter, r *http.Reque
 }
 
 func handleDeployment(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
-	var dd DeployDesc
-
-	cerr := objFindForReq(ctx, r, "did", &dd)
-	if cerr != nil {
-		return cerr
-	}
-
-	return handleOneDeployment(ctx, w, r, &dd)
+	return handleOneDeployment(ctx, w, r, Deployments{})
 }
 
-func handleOneDeployment(ctx context.Context, w http.ResponseWriter, r *http.Request, dd *DeployDesc) *xrest.ReqErr {
-	return xrest.HandleOne(ctx, w, r, dd, nil)
+func handleOneDeployment(ctx context.Context, w http.ResponseWriter, r *http.Request, ds Deployments) *xrest.ReqErr {
+	return xrest.HandleOne(ctx, w, r, ds, nil)
 }
 
 func handleAuths(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
@@ -945,14 +787,7 @@ func handleAuths(ctx context.Context, w http.ResponseWriter, r *http.Request) *x
 }
 
 func handleAuth(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
-	var ad DeployDesc
-
-	cerr := objFindForReq2(ctx, r, "aid", &ad, bson.M{"labels": "auth"})
-	if cerr != nil {
-		return cerr
-	}
-
-	return handleOneDeployment(ctx, w, r, &ad)
+	return handleOneDeployment(ctx, w, r, Deployments{true})
 }
 
 func handleMwares(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
@@ -961,14 +796,7 @@ func handleMwares(ctx context.Context, w http.ResponseWriter, r *http.Request) *
 }
 
 func handleMware(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
-	var mw MwareDesc
-
-	cerr := objFindForReq(ctx, r, "mid", &mw)
-	if cerr != nil {
-		return cerr
-	}
-
-	return xrest.HandleOne(ctx, w, r, &mw, nil)
+	return xrest.HandleOne(ctx, w, r, Mwares{}, nil)
 }
 
 func getReqContext(w http.ResponseWriter, r *http.Request) (context.Context, func(context.Context)) {
@@ -1106,7 +934,8 @@ func main() {
 
 	r := mux.NewRouter()
 	r.HandleFunc("/v1/login",		handleUserLogin).Methods("POST", "OPTIONS")
-	r.Handle("/v1/stats",			genReqHandler(handleTenantStats)).Methods("GET", "POST", "OPTIONS")
+	r.Handle("/v1/stats",			genReqHandler(handleTenantStatsAll)).Methods("GET", "POST", "OPTIONS")
+	r.Handle("/v1/stats/{sub}",		genReqHandler(handleTenantStats)).Methods("GET", "POST", "OPTIONS")
 	r.Handle("/v1/project/list",		genReqHandler(handleProjectList)).Methods("POST", "OPTIONS")
 	r.Handle("/v1/project/del",		genReqHandler(handleProjectDel)).Methods("POST", "OPTIONS")
 

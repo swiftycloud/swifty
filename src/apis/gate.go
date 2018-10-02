@@ -34,7 +34,7 @@ type FunctionStatsResp struct {
 	Stats		[]FunctionStats		`json:"stats"`
 }
 
-type TenantStats struct {
+type TenantStatsFn struct {
 	Called		uint64			`json:"called"`
 	GBS		float64			`json:"gbs"`
 	BytesOut	uint64			`json:"bytesout"`
@@ -47,9 +47,17 @@ type TenantStatsMware struct {
 	DU		*uint64			`json:"disk_usage,omitempty"` /* in ... KB */
 }
 
+type S3NsStats struct {
+	CntObjects		int64		`json:"cnt-objects"`
+	CntBytes		int64		`json:"cnt-bytes"`
+	OutBytes		int64		`json:"out-bytes"`
+	OutBytesWeb		int64		`json:"out-bytes-web"`
+}
+
 type TenantStatsResp struct {
-	Stats		[]TenantStats			`json:"stats"`
+	Stats		[]TenantStatsFn			`json:"stats,omitempty"`
 	Mware		map[string]*TenantStatsMware	`json:"mware,omitempty"`
+	S3		*S3NsStats			`json:"s3,omitempty"`
 }
 
 type FunctionInfo struct {

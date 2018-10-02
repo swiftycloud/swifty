@@ -104,18 +104,18 @@ type s3Context struct {
 	S	*mgo.Session
 	errCode	int
 	mime	string
-	iam	*s3mgo.S3Iam
+	iam	*s3mgo.Iam
 }
 
 func Dbs(ctx context.Context) *mgo.Session {
 	return ctx.(*s3Context).S
 }
 
-func ctxAuthorize(ctx context.Context, iam *s3mgo.S3Iam) {
+func ctxAuthorize(ctx context.Context, iam *s3mgo.Iam) {
 	ctx.(*s3Context).iam = iam
 }
 
-func ctxIam(ctx context.Context) *s3mgo.S3Iam {
+func ctxIam(ctx context.Context) *s3mgo.Iam {
 	return ctx.(*s3Context).iam
 }
 
@@ -407,7 +407,7 @@ func handleBucket(ctx context.Context, w http.ResponseWriter, r *http.Request) *
 	return nil
 }
 
-func handleUploadFini(ctx context.Context, uploadId string, bucket *s3mgo.S3Bucket, w http.ResponseWriter, r *http.Request) *S3Error {
+func handleUploadFini(ctx context.Context, uploadId string, bucket *s3mgo.Bucket, w http.ResponseWriter, r *http.Request) *S3Error {
 	var complete swys3api.S3MpuFiniParts
 
 	if !ctxAllowed(ctx, S3P_PutObject) {
@@ -437,7 +437,7 @@ func handleUploadFini(ctx context.Context, uploadId string, bucket *s3mgo.S3Buck
 	return nil
 }
 
-func handleUploadInit(ctx context.Context, oname string, bucket *s3mgo.S3Bucket, w http.ResponseWriter, r *http.Request) *S3Error {
+func handleUploadInit(ctx context.Context, oname string, bucket *s3mgo.Bucket, w http.ResponseWriter, r *http.Request) *S3Error {
 	if !ctxAllowed(ctx, S3P_PutObject) {
 		return &S3Error{ ErrorCode: S3ErrMethodNotAllowed }
 	}
@@ -463,7 +463,7 @@ func handleUploadInit(ctx context.Context, oname string, bucket *s3mgo.S3Bucket,
 	return nil
 }
 
-func handleUploadListParts(ctx context.Context, uploadId, oname string, bucket *s3mgo.S3Bucket, w http.ResponseWriter, r *http.Request) *S3Error {
+func handleUploadListParts(ctx context.Context, uploadId, oname string, bucket *s3mgo.Bucket, w http.ResponseWriter, r *http.Request) *S3Error {
 	if !ctxAllowed(ctx, S3P_ListMultipartUploadParts) {
 		return &S3Error{ ErrorCode: S3ErrMethodNotAllowed }
 	}
@@ -477,7 +477,7 @@ func handleUploadListParts(ctx context.Context, uploadId, oname string, bucket *
 	return nil
 }
 
-func handleUploadPart(ctx context.Context, uploadId, oname string, bucket *s3mgo.S3Bucket, w http.ResponseWriter, r *http.Request) *S3Error {
+func handleUploadPart(ctx context.Context, uploadId, oname string, bucket *s3mgo.Bucket, w http.ResponseWriter, r *http.Request) *S3Error {
 	if !ctxAllowed(ctx, S3P_PutObject) {
 		return &S3Error{ ErrorCode: S3ErrMethodNotAllowed }
 	}
@@ -506,7 +506,7 @@ func handleUploadPart(ctx context.Context, uploadId, oname string, bucket *s3mgo
 	return nil
 }
 
-func handleUploadAbort(ctx context.Context, uploadId, oname string, bucket *s3mgo.S3Bucket, w http.ResponseWriter, r *http.Request) *S3Error {
+func handleUploadAbort(ctx context.Context, uploadId, oname string, bucket *s3mgo.Bucket, w http.ResponseWriter, r *http.Request) *S3Error {
 	if !ctxAllowed(ctx, S3P_AbortMultipartUpload) {
 		return &S3Error{ ErrorCode: S3ErrMethodNotAllowed }
 	}
@@ -520,7 +520,7 @@ func handleUploadAbort(ctx context.Context, uploadId, oname string, bucket *s3mg
 	return nil
 }
 
-func handleGetObject(ctx context.Context, oname string, bucket *s3mgo.S3Bucket, w http.ResponseWriter, r *http.Request) *S3Error {
+func handleGetObject(ctx context.Context, oname string, bucket *s3mgo.Bucket, w http.ResponseWriter, r *http.Request) *S3Error {
 	if !ctxAllowed(ctx, S3P_GetObject) {
 		return &S3Error{ ErrorCode: S3ErrMethodNotAllowed }
 	}
@@ -558,10 +558,10 @@ func handleGetObject(ctx context.Context, oname string, bucket *s3mgo.S3Bucket, 
 	return nil
 }
 
-func handleCopyObject(ctx context.Context, copy_source, oname string, bucket *s3mgo.S3Bucket, w http.ResponseWriter, r *http.Request) *S3Error {
+func handleCopyObject(ctx context.Context, copy_source, oname string, bucket *s3mgo.Bucket, w http.ResponseWriter, r *http.Request) *S3Error {
 	var bname_source, oname_source string
-	var bucket_source *s3mgo.S3Bucket
-	var object *s3mgo.S3Object
+	var bucket_source *s3mgo.Bucket
+	var object *s3mgo.Object
 	var err error
 
 	canned_acl := r.Header.Get("x-amz-acl")
@@ -607,7 +607,7 @@ func handleCopyObject(ctx context.Context, copy_source, oname string, bucket *s3
 	return nil
 }
 
-func handlePutObject(ctx context.Context, oname string, bucket *s3mgo.S3Bucket, w http.ResponseWriter, r *http.Request) *S3Error {
+func handlePutObject(ctx context.Context, oname string, bucket *s3mgo.Bucket, w http.ResponseWriter, r *http.Request) *S3Error {
 	if !ctxAllowed(ctx, S3P_PutObject) {
 		return &S3Error{ ErrorCode: S3ErrMethodNotAllowed }
 	}
@@ -641,7 +641,7 @@ func handlePutObject(ctx context.Context, oname string, bucket *s3mgo.S3Bucket, 
 	return nil
 }
 
-func handleDeleteObject(ctx context.Context, oname string, bucket *s3mgo.S3Bucket, w http.ResponseWriter, r *http.Request) *S3Error {
+func handleDeleteObject(ctx context.Context, oname string, bucket *s3mgo.Bucket, w http.ResponseWriter, r *http.Request) *S3Error {
 	if !ctxAllowed(ctx, S3P_DeleteObject) {
 		return &S3Error{ ErrorCode: S3ErrMethodNotAllowed }
 	}
@@ -676,7 +676,7 @@ func handleObjectReq(ctx context.Context, w http.ResponseWriter, r *http.Request
 }
 
 func handleObject(ctx context.Context, w http.ResponseWriter, r *http.Request, bname, oname string) *S3Error {
-	var bucket *s3mgo.S3Bucket
+	var bucket *s3mgo.Bucket
 	var err error
 
 	if bname == "" {
@@ -739,7 +739,7 @@ e_access:
 	return &S3Error{ ErrorCode: S3ErrAccessDenied }
 }
 
-func s3AuthorizeGetKey(ctx context.Context, r *http.Request) (*s3mgo.S3AccessKey, error) {
+func s3AuthorizeGetKey(ctx context.Context, r *http.Request) (*s3mgo.AccessKey, error) {
 	akey, err := s3AuthorizeUser(ctx, r)
 	if akey != nil || err != nil {
 		return akey, err
@@ -796,8 +796,8 @@ func handleS3API(cb func(ctx context.Context, w http.ResponseWriter, r *http.Req
 }
 
 func handleKeygen(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-	var akey *s3mgo.S3AccessKey
-	var kg swys3api.S3CtlKeyGen
+	var akey *s3mgo.AccessKey
+	var kg swys3api.KeyGen
 	var err error
 
 	err = xhttp.ReadAndUnmarshalReq(r, &kg)
@@ -816,7 +816,7 @@ func handleKeygen(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 		goto out
 	}
 
-	err = xhttp.MarshalAndWrite(w, &swys3api.S3CtlKeyGenResult{
+	err = xhttp.MarshalAndWrite(w, &swys3api.KeyGenResult{
 			AccessKeyID:	akey.AccessKeyID,
 			AccessKeySecret:s3DecryptAccessKeySecret(akey),
 			AccID:		akey.AccountObjID.Hex(),
@@ -832,7 +832,7 @@ out:
 }
 
 func handleKeydel(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-	var kd swys3api.S3CtlKeyDel
+	var kd swys3api.KeyDel
 	var err error
 
 	err = xhttp.ReadAndUnmarshalReq(r, &kd)
@@ -856,8 +856,46 @@ out:
 	http.Error(w, err.Error(), http.StatusBadRequest)
 }
 
-func handleNotify(w http.ResponseWriter, r *http.Request, subscribe bool) {
-	var params swys3api.S3Subscribe
+func handleStats(w http.ResponseWriter, r *http.Request) {
+	var st *s3mgo.AcctStats
+
+	if xhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
+
+	err := s3VerifyAdmin(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+
+	ctx, done := mkContext("statsreq")
+	defer done(ctx)
+	ns := mux.Vars(r)["ns"]
+
+	act, err := s3AccountFind(ctx, ns)
+	if err != nil {
+		http.Error(w, "No such namespace", http.StatusNotFound)
+		return
+	}
+
+	st, err = StatsFindFor(ctx, act)
+	if err != nil {
+		http.Error(w, "Error getting stats", http.StatusInternalServerError)
+		return
+	}
+
+	err = xhttp.MarshalAndWrite(w, &swys3api.AcctStats{
+		CntObjects:	st.CntObjects,
+		CntBytes:	st.CntBytes,
+		OutBytes:	st.OutBytes,
+		OutBytesWeb:	st.OutBytesWeb,
+	})
+	if err != nil {
+		http.Error(w, "Bad responce", http.StatusNoContent)
+	}
+}
+
+func handleNotify(w http.ResponseWriter, r *http.Request) {
+	var params swys3api.Subscribe
 
 	if xhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
 
@@ -876,9 +914,10 @@ func handleNotify(w http.ResponseWriter, r *http.Request, subscribe bool) {
 		goto out
 	}
 
-	if subscribe {
+	switch r.Method {
+	case "POST":
 		err = s3Subscribe(ctx, &params)
-	} else {
+	case "DELETE":
 		err = s3Unsubscribe(ctx, &params)
 	}
 
@@ -893,12 +932,26 @@ out:
 	http.Error(w, err.Error(), http.StatusBadRequest)
 }
 
-func handleNotifyAdd(w http.ResponseWriter, r *http.Request) {
-	handleNotify(w, r, true)
-}
+func handleKeys(w http.ResponseWriter, r *http.Request) {
+	var err error
 
-func handleNotifyDel(w http.ResponseWriter, r *http.Request) {
-	handleNotify(w, r, false)
+	ctx, done := mkContext("keysreq")
+	defer done(ctx)
+
+	if xhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
+
+	err = s3VerifyAdmin(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+
+	switch r.Method {
+	case "POST":
+		handleKeygen(ctx, w, r)
+	case "DELETE":
+		handleKeydel(ctx, w, r)
+	}
 }
 
 func makeAdminURL(clienturl, admport string) string {
@@ -978,9 +1031,9 @@ func main() {
 
 	// Admin operations
 	radminsrv := mux.NewRouter()
-	radminsrv.HandleFunc("/v1/api/admin/{op:[a-zA-Z0-9-.]+}", handleAdminOp)
-	radminsrv.HandleFunc("/v1/api/notify/subscribe", handleNotifyAdd)
-	radminsrv.HandleFunc("/v1/api/notify/unsubscribe", handleNotifyDel)
+	radminsrv.HandleFunc("/v1/api/keys", handleKeys).Methods("POST", "DELETE")
+	radminsrv.HandleFunc("/v1/api/notify", handleNotify).Methods("POST", "DELETE")
+	radminsrv.HandleFunc("/v1/api/stats/{ns}", handleStats).Methods("GET")
 
 	err = dbConnect(&conf)
 	if err != nil {

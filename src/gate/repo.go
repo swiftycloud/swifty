@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"errors"
 	"net/url"
+	"net/http"
 	"bufio"
 	"os"
 	"context"
@@ -617,6 +618,10 @@ func (rd *DetachedRepo)Info(ctx context.Context, q url.Values, details bool) (in
 func (rd *DetachedRepo)Del(context.Context) *xrest.ReqErr { return GateErrC(swyapi.GateNotAvail) }
 func (rd *DetachedRepo)Upd(context.Context, interface{}) *xrest.ReqErr { return GateErrC(swyapi.GateNotAvail) }
 func (rd *DetachedRepo)Add(context.Context, interface{}) *xrest.ReqErr { return GateErrC(swyapi.GateNotAvail) }
+
+func (_ Repos)Get(ctx context.Context, r *http.Request) (xrest.Obj, *xrest.ReqErr) {
+	return repoFindForReq(ctx, r, r.Method == "GET")
+}
 
 func (_ Repos)Iterate(ctx context.Context, q url.Values, cb func(context.Context, xrest.Obj) *xrest.ReqErr) *xrest.ReqErr {
 	accid := q.Get("aid")
