@@ -901,6 +901,33 @@ func handleNotifyDel(w http.ResponseWriter, r *http.Request) {
 	handleNotify(w, r, false)
 }
 
+func handleAdminOp(w http.ResponseWriter, r *http.Request) {
+	var op string = mux.Vars(r)["op"]
+	var err error
+
+	ctx, done := mkContext("adminreq")
+	defer done(ctx)
+
+	if xhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
+
+	err = s3VerifyAdmin(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+
+	switch op {
+	case "keygen":
+		handleKeygen(ctx, w, r)
+		return
+	case "keydel":
+		handleKeydel(ctx, w, r)
+		return
+	}
+
+	http.Error(w, fmt.Sprintf("Unknown operation"), http.StatusBadRequest)
+}
+
 func makeAdminURL(clienturl, admport string) string {
 	return strings.Split(clienturl, ":")[0] + ":" + admport
 }
