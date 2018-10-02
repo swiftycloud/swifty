@@ -213,58 +213,50 @@ func handleFunctionSize(ctx context.Context, w http.ResponseWriter, r *http.Requ
 }
 
 func handleFunctionMwares(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
-	var fn FunctionDesc
-
-	cerr := objFindForReq(ctx, r, "fid", &fn)
+	fn, cerr := Functions{}.Get(ctx, r)
 	if cerr != nil {
 		return cerr
 	}
 
 	var mid string
-	return xrest.HandleMany(ctx, w, r, FnMwares{Fn: &fn}, &mid)
+	return xrest.HandleMany(ctx, w, r, FnMwares{Fn: fn.(*FunctionDesc)}, &mid)
 }
 
 func handleFunctionMware(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
-	var fn FunctionDesc
-
-	cerr := objFindForReq(ctx, r, "fid", &fn)
+	fn, cerr := Functions{}.Get(ctx, r)
 	if cerr != nil {
 		return cerr
 	}
 
-	return xrest.HandleOne(ctx, w, r, FnMwares{Fn: &fn}, nil)
+	return xrest.HandleOne(ctx, w, r, FnMwares{Fn: fn.(*FunctionDesc)}, nil)
 }
 
 func handleFunctionAccounts(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
-	var fn FunctionDesc
-
-	cerr := objFindForReq(ctx, r, "fid", &fn)
+	fn, cerr := Functions{}.Get(ctx, r)
 	if cerr != nil {
 		return cerr
 	}
 
 	var aid string
-	return xrest.HandleMany(ctx, w, r, FnAccounts{Fn: &fn}, &aid)
+	return xrest.HandleMany(ctx, w, r, FnAccounts{Fn: fn.(*FunctionDesc)}, &aid)
 }
 
 func handleFunctionAccount(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
-	var fn FunctionDesc
-
-	cerr := objFindForReq(ctx, r, "fid", &fn)
+	fn, cerr := Functions{}.Get(ctx, r)
 	if cerr != nil {
 		return cerr
 	}
 
-	return xrest.HandleOne(ctx, w, r, FnAccounts{Fn: &fn}, nil)
+	return xrest.HandleOne(ctx, w, r, FnAccounts{Fn: fn.(*FunctionDesc)}, nil)
 }
 
 func handleFunctionS3Bs(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
-	var fn FunctionDesc
-
-	cerr := objFindForReq(ctx, r, "fid", &fn)
+	fo, cerr := Functions{}.Get(ctx, r)
 	if cerr != nil {
 		return cerr
 	}
+
+	fn := fo.(*FunctionDesc)
 
 	switch r.Method {
 	case "GET":
@@ -288,13 +280,12 @@ func handleFunctionS3Bs(ctx context.Context, w http.ResponseWriter, r *http.Requ
 }
 
 func handleFunctionS3B(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
-	var fn FunctionDesc
-
-	cerr := objFindForReq(ctx, r, "fid", &fn)
+	fo, cerr := Functions{}.Get(ctx, r)
 	if cerr != nil {
 		return cerr
 	}
 
+	fn := fo.(*FunctionDesc)
 	bname := mux.Vars(r)["bname"]
 
 	switch r.Method {
@@ -311,15 +302,13 @@ func handleFunctionS3B(ctx context.Context, w http.ResponseWriter, r *http.Reque
 }
 
 func handleFunctionTriggers(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
-	var fn FunctionDesc
-
-	cerr := objFindForReq(ctx, r, "fid", &fn)
+	fn, cerr := Functions{}.Get(ctx, r)
 	if cerr != nil {
 		return cerr
 	}
 
 	var evt swyapi.FunctionEvent
-	return xrest.HandleMany(ctx, w, r, Triggers{&fn}, &evt)
+	return xrest.HandleMany(ctx, w, r, Triggers{fn.(*FunctionDesc)}, &evt)
 }
 
 func handleFunctionTrigger(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
@@ -327,13 +316,12 @@ func handleFunctionTrigger(ctx context.Context, w http.ResponseWriter, r *http.R
 }
 
 func handleFunctionWait(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
-	var fn FunctionDesc
-
-	cerr := objFindForReq(ctx, r, "fid", &fn)
+	fo, cerr := Functions{}.Get(ctx, r)
 	if cerr != nil {
 		return cerr
 	}
 
+	fn := fo.(*FunctionDesc)
 	var wo swyapi.FunctionWait
 	err := xhttp.ReadAndUnmarshalReq(r, &wo)
 	if err != nil {
@@ -345,7 +333,7 @@ func handleFunctionWait(ctx context.Context, w http.ResponseWriter, r *http.Requ
 
 	if wo.Version != "" {
 		ctxlog(ctx).Debugf("function/wait %s -> version >= %s, tmo %d", fn.SwoId.Str(), wo.Version, int(timeout))
-		err, tmo = waitFunctionVersion(ctx, &fn, wo.Version, timeout)
+		err, tmo = waitFunctionVersion(ctx, fn, wo.Version, timeout)
 		if err != nil {
 			return GateErrE(swyapi.GateGenErr, err)
 		}
@@ -483,24 +471,21 @@ func handleFunction(ctx context.Context, w http.ResponseWriter, r *http.Request)
 }
 
 func handleFunctionMdat(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
-	var fn FunctionDesc
-
-	cerr := objFindForReq(ctx, r, "fid", &fn)
+	fn, cerr := Functions{}.Get(ctx, r)
 	if cerr != nil {
 		return cerr
 	}
 
-	return xrest.Respond(ctx, w, fn.toMInfo(ctx))
+	return xrest.Respond(ctx, w, fn.(*FunctionDesc).toMInfo(ctx))
 }
 
 func handleFunctionRun(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
-	var fn FunctionDesc
-
-	cerr := objFindForReq(ctx, r, "fid", &fn)
+	fo, cerr := Functions{}.Get(ctx, r)
 	if cerr != nil {
 		return cerr
 	}
 
+	fn := fo.(*FunctionDesc)
 	var params swyapi.SwdFunctionRun
 	var res *swyapi.SwdFunctionRunResult
 
@@ -515,7 +500,7 @@ func handleFunctionRun(ctx context.Context, w http.ResponseWriter, r *http.Reque
 
 	suff := ""
 	if params.Src != nil {
-		suff, cerr = prepareTempRun(ctx, &fn, params.Src, w)
+		suff, cerr = prepareTempRun(ctx, fn, params.Src, w)
 		if suff == "" {
 			return cerr
 		}
