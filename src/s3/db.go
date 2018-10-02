@@ -40,6 +40,10 @@ var s3StateTransition = map[uint32][]uint32 {
 	S3StateInactive:	[]uint32{ S3StateActive, },
 }
 
+func dbNF(err error) bool {
+	return err == mgo.ErrNotFound
+}
+
 func dbConnect(conf *YAMLConf) error {
 	var err error
 

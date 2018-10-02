@@ -23,7 +23,7 @@ func StatsFindFor(ctx context.Context, act *s3mgo.Account) (*s3mgo.AcctStats, er
 	var st s3mgo.AcctStats
 
 	err := dbS3FindOne(ctx, bson.M{"nsid": act.NamespaceID()}, &st)
-	if err != nil {
+	if err != nil && !dbNF(err) {
 		return nil, err
 	}
 

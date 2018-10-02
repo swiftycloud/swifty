@@ -284,3 +284,36 @@ var s3EOps = EventOps {
 	start:	s3EventStart,
 	stop:	s3EventStop,
 }
+
+func getS3Stats(ctx context.Context) (*swyapi.S3NsStats, *xrest.ReqErr) {
+	addr := conf.Mware.S3.c.Addr()
+	ns := ctxSwoId(ctx, "", "").S3Namespace()
+
+	resp, err := xhttp.MarshalAndPost(
+		&xhttp.RestReq{
+			Method:  "GET",
+			Address: "http://" + addr + "/v1/api/stats/" + ns,
+			Headers: map[string]string{"X-SwyS3-Token": gateSecrets[conf.Mware.S3.c.Pass]},
+		}, nil)
+	if err != nil {
+		ctxlog(ctx).Errorf("Error talking to S3: %s", err.Error())
+		return nil, GateErrM(swyapi.GateGenErr, "Error talking to S3")
+	}
+
+	defer resp.Body.Close()
+
+	var st swys3api.AcctStats
+
+	err = xhttp.ReadAndUnmarshalResp(resp, &st)
+	if err != nil {
+		ctxlog(ctx).Errorf("Error getting resp from S3: %s", err.Error())
+		return nil, GateErrM(swyapi.GateGenErr, "Error talking to S3")
+	}
+
+	return &swyapi.S3NsStats{
+		CntObjects:	st.CntObjects,
+		CntBytes:	st.CntBytes,
+		OutBytes:	st.OutBytes,
+		OutBytesWeb:	st.OutBytesWeb,
+	}, nil
+}

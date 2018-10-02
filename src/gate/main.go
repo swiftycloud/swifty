@@ -384,6 +384,11 @@ func handleTenantStatsAll(ctx context.Context, w http.ResponseWriter, r *http.Re
 		return cerr
 	}
 
+	resp.S3, cerr = getS3Stats(ctx)
+	if cerr != nil {
+		return cerr
+	}
+
 	return xrest.Respond(ctx, w, resp)
 }
 
@@ -402,6 +407,8 @@ func handleTenantStats(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		resp, cerr = getCallStats(ctx, ten, periods)
 	case "wmare":
 		resp, cerr = getMwareStats(ctx, ten)
+	case "s3":
+		resp, cerr = getS3Stats(ctx)
 	default:
 		cerr = GateErrM(swyapi.GateBadRequest, "Bad stats type")
 	}
