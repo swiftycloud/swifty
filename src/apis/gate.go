@@ -34,7 +34,7 @@ type FunctionStatsResp struct {
 	Stats		[]FunctionStats		`json:"stats"`
 }
 
-type TenantStats struct {
+type TenantStatsFn struct {
 	Called		uint64			`json:"called"`
 	GBS		float64			`json:"gbs"`
 	BytesOut	uint64			`json:"bytesout"`
@@ -48,7 +48,7 @@ type TenantStatsMware struct {
 }
 
 type TenantStatsResp struct {
-	Stats		[]TenantStats			`json:"stats"`
+	Stats		[]TenantStatsFn			`json:"stats"`
 	Mware		map[string]*TenantStatsMware	`json:"mware,omitempty"`
 }
 

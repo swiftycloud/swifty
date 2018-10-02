@@ -80,8 +80,8 @@ func (fs *FnStats)RunTimeUsec() uint64 {
 	return uint64(fs.RunTime/time.Microsecond)
 }
 
-func getCallStats(ctx context.Context, ten string, periods int) ([]swyapi.TenantStats, *xrest.ReqErr) {
-	var cs []swyapi.TenantStats
+func getCallStats(ctx context.Context, ten string, periods int) ([]swyapi.TenantStatsFn, *xrest.ReqErr) {
+	var cs []swyapi.TenantStatsFn
 
 	td, err := tendatGet(ctx, ten)
 	if err != nil {
@@ -98,7 +98,7 @@ func getCallStats(ctx context.Context, ten string, periods int) ([]swyapi.Tenant
 
 		for i := 0; i < periods && i < len(atst); i++ {
 			cur := &atst[i]
-			cs = append(cs, swyapi.TenantStats{
+			cs = append(cs, swyapi.TenantStatsFn{
 				Called:		prev.Called - cur.Called,
 				GBS:		prev.GBS() - cur.GBS(),
 				BytesOut:	prev.BytesOut - cur.BytesOut,
@@ -109,7 +109,7 @@ func getCallStats(ctx context.Context, ten string, periods int) ([]swyapi.Tenant
 		}
 	}
 
-	cs = append(cs, swyapi.TenantStats{
+	cs = append(cs, swyapi.TenantStatsFn{
 		Called:		prev.Called,
 		GBS:		prev.GBS(),
 		BytesOut:	prev.BytesOut,
