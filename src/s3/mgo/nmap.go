@@ -10,12 +10,12 @@ func AccountUser(namespace, user string) string {
 	return namespace + ":" + user
 }
 
-func (account *S3Account) IamUser(user string) string {
+func (account *Account) IamUser(user string) string {
 	return account.User + ":" + user
 }
 
 // Bucket grouping by namespace in DB for lookup
-func (account *S3Account) NamespaceID() string {
+func (account *Account) NamespaceID() string {
 	return xh.Sha256sum([]byte(account.Namespace))
 }
 
@@ -24,17 +24,17 @@ func BCookie(namespace, bucket string) string {
 	return xh.Sha256sum([]byte(namespace + bucket))
 }
 
-func (account *S3Account)BCookie(bname string) string {
+func (account *Account)BCookie(bname string) string {
 	return BCookie(account.Namespace, bname)
 }
 
 // UploadID for DB lookup
-func (bucket *S3Bucket)UploadUID(oname string) string {
+func (bucket *Bucket)UploadUID(oname string) string {
 	return xh.Sha256sum([]byte(bucket.BCookie + oname))
 }
 
 // Object key in backend and index in DB for lookup
-func (bucket *S3Bucket)OCookie(oname string, version int) string {
+func (bucket *Bucket)OCookie(oname string, version int) string {
 	if version != 1 {
 		version = 1
 	}

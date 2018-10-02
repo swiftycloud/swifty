@@ -10,8 +10,8 @@ import (
 	"./mgo"
 )
 
-func s3AccountInsert(ctx context.Context, namespace, user string) (*s3mgo.S3Account, error) {
-	var account s3mgo.S3Account
+func s3AccountInsert(ctx context.Context, namespace, user string) (*s3mgo.Account, error) {
+	var account s3mgo.Account
 	var err error
 
 	if namespace == "" {
@@ -44,8 +44,8 @@ func s3AccountInsert(ctx context.Context, namespace, user string) (*s3mgo.S3Acco
 	return &account, nil
 }
 
-func s3AccountLookup(ctx context.Context) (*s3mgo.S3Account, error) {
-	var account s3mgo.S3Account
+func s3AccountLookup(ctx context.Context) (*s3mgo.Account, error) {
+	var account s3mgo.Account
 	var err error
 
 	iam := ctxIam(ctx)
@@ -62,8 +62,8 @@ func s3AccountLookup(ctx context.Context) (*s3mgo.S3Account, error) {
 	return &account, nil
 }
 
-func s3AccountFind(ctx context.Context, namespace string) (*s3mgo.S3Account, error) {
-	var account s3mgo.S3Account
+func s3AccountFind(ctx context.Context, namespace string) (*s3mgo.Account, error) {
+	var account s3mgo.Account
 
 	query := bson.M{ "namespace": namespace, "state": S3StateActive }
 	err := dbS3FindOne(ctx, query, &account)
@@ -74,8 +74,8 @@ func s3AccountFind(ctx context.Context, namespace string) (*s3mgo.S3Account, err
 	return &account, nil
 }
 
-func s3FindFullAccessIam(ctx context.Context, namespace string) (*s3mgo.S3Iam, error) {
-	var iams []s3mgo.S3Iam
+func s3FindFullAccessIam(ctx context.Context, namespace string) (*s3mgo.Iam, error) {
+	var iams []s3mgo.Iam
 	var query bson.M
 	var err error
 
@@ -101,7 +101,7 @@ func s3FindFullAccessIam(ctx context.Context, namespace string) (*s3mgo.S3Iam, e
 	return nil, err
 }
 
-func s3AccountDelete(ctx context.Context, account *s3mgo.S3Account) (error) {
+func s3AccountDelete(ctx context.Context, account *s3mgo.Account) (error) {
 	err := dbS3SetState(ctx, account, S3StateInactive, nil)
 	if err != nil {
 		if err == mgo.ErrNotFound {
@@ -117,12 +117,12 @@ func s3AccountDelete(ctx context.Context, account *s3mgo.S3Account) (error) {
 	return nil
 }
 
-func s3IamNew(ctx context.Context, account *s3mgo.S3Account, policy *s3mgo.S3Policy) (*s3mgo.S3Iam, error) {
-	var iam *s3mgo.S3Iam
+func s3IamNew(ctx context.Context, account *s3mgo.Account, policy *s3mgo.Policy) (*s3mgo.Iam, error) {
+	var iam *s3mgo.Iam
 	var err error
 
 	id := bson.NewObjectId()
-	iam = &s3mgo.S3Iam {
+	iam = &s3mgo.Iam {
 		ObjID:		id,
 		MTime:		current_timestamp(),
 		State:		S3StateActive,
@@ -142,7 +142,7 @@ func s3IamNew(ctx context.Context, account *s3mgo.S3Account, policy *s3mgo.S3Pol
 	return iam, nil
 }
 
-func s3IamDelete(ctx context.Context, iam *s3mgo.S3Iam) (error) {
+func s3IamDelete(ctx context.Context, iam *s3mgo.Iam) (error) {
 	if err := dbS3SetState(ctx, iam, S3StateInactive, nil); err != nil {
 		if err == mgo.ErrNotFound {
 			return nil
@@ -155,8 +155,8 @@ func s3IamDelete(ctx context.Context, iam *s3mgo.S3Iam) (error) {
 	return nil
 }
 
-func s3LookupIam(ctx context.Context, id bson.ObjectId) (*s3mgo.S3Iam, error) {
-	var res s3mgo.S3Iam
+func s3LookupIam(ctx context.Context, id bson.ObjectId) (*s3mgo.Iam, error) {
+	var res s3mgo.Iam
 
 	err := dbS3FindOne(ctx, bson.M{"_id": id, "state": S3StateActive }, &res)
 	if err != nil {
@@ -166,6 +166,6 @@ func s3LookupIam(ctx context.Context, id bson.ObjectId) (*s3mgo.S3Iam, error) {
 	return &res, nil
 }
 
-func s3IamFind(ctx context.Context, akey *s3mgo.S3AccessKey) (*s3mgo.S3Iam, error) {
+func s3IamFind(ctx context.Context, akey *s3mgo.AccessKey) (*s3mgo.Iam, error) {
 	return s3LookupIam(ctx, akey.IamObjID)
 }

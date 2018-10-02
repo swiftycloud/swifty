@@ -4,7 +4,7 @@ import (
 	"gopkg.in/mgo.v2/bson"
 )
 
-type S3Account struct {
+type Account struct {
 	ObjID				bson.ObjectId	`bson:"_id,omitempty"`
 	MTime				int64		`bson:"mtime,omitempty"`
 	State				uint32		`bson:"state"`
@@ -17,7 +17,7 @@ type S3Account struct {
 	Email				string		`bson:"email,omitempty"`
 }
 
-type S3AcctStats struct {
+type AcctStats struct {
 	ObjID				bson.ObjectId	`bson:"_id,omitempty"`
 	NamespaceID			string		`bson:"nsid,omitempty"`
 
@@ -27,7 +27,7 @@ type S3AcctStats struct {
 	OutBytesWeb			int64		`bson:"out-bytes-web"`
 }
 
-type S3Iam struct {
+type Iam struct {
 	ObjID				bson.ObjectId	`bson:"_id,omitempty"`
 	MTime				int64		`bson:"mtime,omitempty"`
 	State				uint32		`bson:"state"`
@@ -35,7 +35,7 @@ type S3Iam struct {
 	AwsID				string		`bson:"aws-id,omitempty"`
 	AccountObjID			bson.ObjectId	`bson:"account-id,omitempty"`
 
-	Policy				S3Policy	`bson:"policy,omitempty"`
+	Policy				Policy		`bson:"policy,omitempty"`
 	CreationTime			string		`bson:"creation-time,omitempty"`
 	User				string		`bson:"user,omitempty"`
 }
@@ -48,15 +48,15 @@ const (
 	Resourse_Any				= "*"
 )
 
-type S3Policy struct {
+type Policy struct {
 	Effect		string		`bson:"effect,omitempty"`
 	Action		ActionBitsMgo	`bson:"action,omitempty"`
 	Resource	[]string	`bson:"resource,omitempty"`
 }
 
-const S3TimeStampMax = int64(0x7fffffffffffffff)
+const TimeStampMax = int64(0x7fffffffffffffff)
 
-type S3AccessKey struct {
+type AccessKey struct {
 	ObjID				bson.ObjectId	`bson:"_id,omitempty"`
 	MTime				int64		`bson:"mtime,omitempty"`
 	State				uint32		`bson:"state"`
@@ -71,23 +71,23 @@ type S3AccessKey struct {
 	AccessKeySecret			string		`bson:"access-key-secret"`
 }
 
-type S3BucketNotify struct {
+type BucketNotify struct {
 	Queue				string		`bson:"queue"`
 	Put				uint32		`bson:"put"`
 	Delete				uint32		`bson:"delete"`
 }
 
-type S3Tag struct {
+type Tag struct {
 	Key				string		`bson:"key"`
 	Value				string		`bson:"value,omitempty"`
 }
 
-type S3BucketEncrypt struct {
+type BucketEncrypt struct {
 	Algo				string		`bson:"algo"`
 	MasterKeyID			string		`bson:"algo,omitempty"`
 }
 
-type S3Bucket struct {
+type Bucket struct {
 	ObjID				bson.ObjectId	`bson:"_id,omitempty"`
 	BCookie				string		`bson:"bcookie,omitempty"`
 
@@ -99,8 +99,8 @@ type S3Bucket struct {
 
 	// Todo
 	Versioning			bool		`bson:"versioning,omitempty"`
-	TagSet				[]S3Tag		`bson:"tags,omitempty"`
-	Encrypt				S3BucketEncrypt	`bson:"encrypt,omitempty"`
+	TagSet				[]Tag		`bson:"tags,omitempty"`
+	Encrypt				BucketEncrypt	`bson:"encrypt,omitempty"`
 	Location			string		`bson:"location,omitempty"`
 	Policy				string		`bson:"policy,omitempty"`
 	Logging				bool		`bson:"logging,omitempty"`
@@ -123,20 +123,20 @@ type S3Bucket struct {
 	Rover				int64		`bson:"rover"`
 	Name				string		`bson:"name"`
 	CannedAcl			string		`bson:"canned-acl"`
-	BasicNotify			*S3BucketNotify	`bson:"notify,omitempty"`
+	BasicNotify			*BucketNotify	`bson:"notify,omitempty"`
 
 	MaxObjects			int64		`bson:"max-objects"`
 	MaxBytes			int64		`bson:"max-bytes"`
 }
 
-type S3ObjectProps struct {
+type ObjectProps struct {
 	CreationTime			string		`bson:"creation-time,omitempty"`
 	Acl				string		`bson:"acl,omitempty"`
 	Key				string		`bson:"key"`
 
 	// Todo
-	Meta				[]S3Tag		`bson:"meta,omitempty"`
-	TagSet				[]S3Tag		`bson:"tags,omitempty"`
+	Meta				[]Tag		`bson:"meta,omitempty"`
+	TagSet				[]Tag		`bson:"tags,omitempty"`
 	Policy				string		`bson:"policy,omitempty"`
 
 	// Not supported props
@@ -144,7 +144,7 @@ type S3ObjectProps struct {
 	// objects archiving
 }
 
-type S3Object struct {
+type Object struct {
 	ObjID				bson.ObjectId	`bson:"_id,omitempty"`
 	OCookie				string		`bson:"ocookie"`
 
@@ -157,10 +157,10 @@ type S3Object struct {
 	Size				int64		`bson:"size"`
 	ETag				string		`bson:"etag"`
 
-	S3ObjectProps					`bson:",inline"`
+	ObjectProps					`bson:",inline"`
 }
 
-type S3ObjectPart struct {
+type ObjectPart struct {
 	ObjID				bson.ObjectId	`bson:"_id,omitempty"`
 
 	MTime				int64		`bson:"mtime,omitempty"`
@@ -176,7 +176,7 @@ type S3ObjectPart struct {
 	Chunks				[]bson.ObjectId	`bson:"chunks"`
 }
 
-type S3DataChunk struct {
+type DataChunk struct {
 	ObjID		bson.ObjectId	`bson:"_id,omitempty"`
 	Bytes		[]byte		`bson:"bytes"`
 }

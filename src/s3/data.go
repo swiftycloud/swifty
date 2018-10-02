@@ -10,7 +10,7 @@ import (
 	"./mgo"
 )
 
-func s3ReadChunks(ctx context.Context, part *s3mgo.S3ObjectPart) ([]byte, error) {
+func s3ReadChunks(ctx context.Context, part *s3mgo.ObjectPart) ([]byte, error) {
 	var res []byte
 
 	if len(part.Chunks) == 0 {
@@ -18,7 +18,7 @@ func s3ReadChunks(ctx context.Context, part *s3mgo.S3ObjectPart) ([]byte, error)
 	}
 
 	for _, cid := range part.Chunks {
-		var ch s3mgo.S3DataChunk
+		var ch s3mgo.DataChunk
 
 		err := dbS3FindOne(ctx, bson.M{"_id": cid}, &ch)
 		if err != nil {
@@ -31,7 +31,7 @@ func s3ReadChunks(ctx context.Context, part *s3mgo.S3ObjectPart) ([]byte, error)
 	return res, nil
 }
 
-func s3WriteChunks(ctx context.Context, part *s3mgo.S3ObjectPart, data []byte) error {
+func s3WriteChunks(ctx context.Context, part *s3mgo.ObjectPart, data []byte) error {
 	var err error
 
 	if !radosDisabled && part.Size > S3StorageSizePerObj {
@@ -45,7 +45,7 @@ func s3WriteChunks(ctx context.Context, part *s3mgo.S3ObjectPart, data []byte) e
 			l = dlen - off /* Trailing chunk */
 		}
 
-		chunk := &s3mgo.S3DataChunk {
+		chunk := &s3mgo.DataChunk {
 			ObjID:	bson.NewObjectId(),
 			Bytes:	data[off:off+l],
 		}
@@ -60,7 +60,7 @@ func s3WriteChunks(ctx context.Context, part *s3mgo.S3ObjectPart, data []byte) e
 
 	err = dbS3Update(ctx, bson.M{"_id": part.ObjID},
 			bson.M{ "$set": bson.M{ "chunks": part.Chunks }},
-			false, &s3mgo.S3ObjectPart{})
+			false, &s3mgo.ObjectPart{})
 	if err != nil {
 		goto out
 	}
@@ -74,14 +74,14 @@ out:
 	return err
 }
 
-func s3DeleteChunks(ctx context.Context, part *s3mgo.S3ObjectPart) error {
+func s3DeleteChunks(ctx context.Context, part *s3mgo.ObjectPart) error {
 	var err error
 
 	if len(part.Chunks) == 0 {
 		err = radosDeleteObject(part.BCookie, part.OCookie)
 	} else {
 		for _, ch := range part.Chunks {
-			er := dbS3Remove(ctx, &s3mgo.S3DataChunk{ObjID: ch})
+			er := dbS3Remove(ctx, &s3mgo.DataChunk{ObjID: ch})
 			if err != nil {
 				err = er
 			}
@@ -96,7 +96,7 @@ func s3DeleteChunks(ctx context.Context, part *s3mgo.S3ObjectPart) error {
 }
 
 func s3RepairObjectData(ctx context.Context) error {
-	var objps []s3mgo.S3ObjectPart
+	var objps []s3mgo.ObjectPart
 	var err error
 
 	log.Debugf("s3: Running object data consistency test")
@@ -111,8 +111,8 @@ func s3RepairObjectData(ctx context.Context) error {
 	}
 
 	for _, objp := range objps {
-		var object s3mgo.S3Object
-		var bucket s3mgo.S3Bucket
+		var object s3mgo.Object
+		var bucket s3mgo.Bucket
 
 		log.Debugf("s3: Detected stale object data %s", infoLong(&objp))
 
@@ -175,11 +175,11 @@ func s3DeactivateObjectData(ctx context.Context, refID bson.ObjectId) error {
 	update := bson.M{ "$set": bson.M{ "state": S3StateInactive } }
 	query  := bson.M{ "ref-id": refID }
 
-	return dbS3Update(ctx, query, update, false, &s3mgo.S3ObjectPart{})
+	return dbS3Update(ctx, query, update, false, &s3mgo.ObjectPart{})
 }
 
-func s3ObjectPartFind(ctx context.Context, refID bson.ObjectId) ([]*s3mgo.S3ObjectPart, error) {
-	var res []*s3mgo.S3ObjectPart
+func s3ObjectPartFind(ctx context.Context, refID bson.ObjectId) ([]*s3mgo.ObjectPart, error) {
+	var res []*s3mgo.ObjectPart
 
 	err := dbS3FindAllFields(ctx, bson.M{"ref-id": refID, "state": S3StateActive}, bson.M{"data": 0}, &res)
 	if err != nil {
@@ -189,8 +189,8 @@ func s3ObjectPartFind(ctx context.Context, refID bson.ObjectId) ([]*s3mgo.S3Obje
 	return res, nil
 }
 
-func s3ObjectPartFindFull(ctx context.Context, refID bson.ObjectId) ([]*s3mgo.S3ObjectPart, error) {
-	var res []*s3mgo.S3ObjectPart
+func s3ObjectPartFindFull(ctx context.Context, refID bson.ObjectId) ([]*s3mgo.ObjectPart, error) {
+	var res []*s3mgo.ObjectPart
 
 	err := dbS3FindAllSorted(ctx, bson.M{"ref-id": refID, "state": S3StateActive}, "part",  &res)
 	if err != nil {
@@ -200,11 +200,11 @@ func s3ObjectPartFindFull(ctx context.Context, refID bson.ObjectId) ([]*s3mgo.S3
 	return res, nil
 }
 
-func s3ObjectPartAdd(ctx context.Context, refid bson.ObjectId, bucket_bid, object_bid string, part int, data []byte) (*s3mgo.S3ObjectPart, error) {
-	var objp *s3mgo.S3ObjectPart
+func s3ObjectPartAdd(ctx context.Context, refid bson.ObjectId, bucket_bid, object_bid string, part int, data []byte) (*s3mgo.ObjectPart, error) {
+	var objp *s3mgo.ObjectPart
 	var err error
 
-	objp = &s3mgo.S3ObjectPart {
+	objp = &s3mgo.ObjectPart {
 		ObjID:		bson.NewObjectId(),
 		State:		S3StateNone,
 
@@ -239,7 +239,7 @@ out:
 	return nil, err
 }
 
-func s3ObjectPartDel(ctx context.Context, bucket *s3mgo.S3Bucket, ocookie string, objp []*s3mgo.S3ObjectPart) (error) {
+func s3ObjectPartDel(ctx context.Context, bucket *s3mgo.Bucket, ocookie string, objp []*s3mgo.ObjectPart) (error) {
 	for _, od := range objp {
 		err := s3ObjectPartDelOne(ctx, bucket, ocookie, od)
 		if err != nil {
@@ -250,7 +250,7 @@ func s3ObjectPartDel(ctx context.Context, bucket *s3mgo.S3Bucket, ocookie string
 	return nil
 }
 
-func s3ObjectPartDelOne(ctx context.Context, bucket *s3mgo.S3Bucket, ocookie string, objp *s3mgo.S3ObjectPart) (error) {
+func s3ObjectPartDelOne(ctx context.Context, bucket *s3mgo.Bucket, ocookie string, objp *s3mgo.ObjectPart) (error) {
 	var err error
 
 	err = dbS3SetState(ctx, objp, S3StateInactive, nil)
@@ -271,7 +271,7 @@ func s3ObjectPartDelOne(ctx context.Context, bucket *s3mgo.S3Bucket, ocookie str
 	return nil
 }
 
-func s3ObjectPartRead(ctx context.Context, bucket *s3mgo.S3Bucket, ocookie string, objp []*s3mgo.S3ObjectPart) ([]byte, error) {
+func s3ObjectPartRead(ctx context.Context, bucket *s3mgo.Bucket, ocookie string, objp []*s3mgo.ObjectPart) ([]byte, error) {
 	var res []byte
 
 	for _, od := range objp {
@@ -287,7 +287,7 @@ func s3ObjectPartRead(ctx context.Context, bucket *s3mgo.S3Bucket, ocookie strin
 }
 
 func s3ObjectPartsResum(ctx context.Context, upload *S3Upload) (int64, string, error) {
-	var objp *s3mgo.S3ObjectPart
+	var objp *s3mgo.ObjectPart
 	var pipe *mgo.Pipe
 	var iter *mgo.Iter
 	var size int64
@@ -308,7 +308,7 @@ func s3ObjectPartsResum(ctx context.Context, upload *S3Upload) (int64, string, e
 		}
 
 		for _, cid := range objp.Chunks {
-			var ch s3mgo.S3DataChunk
+			var ch s3mgo.DataChunk
 
 			err := dbS3FindOne(ctx, bson.M{"_id": cid}, &ch)
 			if err != nil {

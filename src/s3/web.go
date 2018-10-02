@@ -119,7 +119,7 @@ func handleWebReq(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var account s3mgo.S3Account
+	var account s3mgo.Account
 	query := bson.M{ "_id": bson.ObjectIdHex(aux[1]), "state": S3StateActive }
 	err := dbS3FindOne(ctx, query, &account)
 	if err != nil {
@@ -135,7 +135,7 @@ func handleWebReq(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	iam := &s3mgo.S3Iam {
+	iam := &s3mgo.Iam {
 		State:		S3StateActive,
 		AccountObjID:	account.ObjID, /* FIXME -- cache account object here
 						* to speed-up the s3AccountLookup()

@@ -37,18 +37,18 @@ func genKey(length int, dict []byte) (string) {
 // for security reason.
 //
 
-func getEndlessKey(ctx context.Context, account *s3mgo.S3Account, policy *s3mgo.S3Policy) (*s3mgo.S3AccessKey, error) {
-	var res []*s3mgo.S3AccessKey
+func getEndlessKey(ctx context.Context, account *s3mgo.Account, policy *s3mgo.Policy) (*s3mgo.AccessKey, error) {
+	var res []*s3mgo.AccessKey
 
 	query := bson.M{"account-id": account.ObjID, "state": S3StateActive,
-			"expiration-timestamp": bson.M{"$eq": s3mgo.S3TimeStampMax }}
+			"expiration-timestamp": bson.M{"$eq": s3mgo.TimeStampMax }}
 	err := dbS3FindAll(ctx, query, &res)
 	if err != nil {
 		return nil, err
 	}
 
 	for _, key := range res {
-		var iam s3mgo.S3Iam
+		var iam s3mgo.Iam
 
 		err = dbS3FindOne(ctx, bson.M{"_id": key.IamObjID, "state": S3StateActive}, &iam)
 		if err != nil {
@@ -64,11 +64,11 @@ func getEndlessKey(ctx context.Context, account *s3mgo.S3Account, policy *s3mgo.
 	return nil, errors.New("Not found")
 }
 
-func genNewAccessKey(ctx context.Context, namespace, bname string, lifetime uint32) (*s3mgo.S3AccessKey, error) {
+func genNewAccessKey(ctx context.Context, namespace, bname string, lifetime uint32) (*s3mgo.AccessKey, error) {
 	var timestamp_now, expired_when int64
-	var akey *s3mgo.S3AccessKey
-	var policy *s3mgo.S3Policy
-	var iam *s3mgo.S3Iam
+	var akey *s3mgo.AccessKey
+	var policy *s3mgo.Policy
+	var iam *s3mgo.Iam
 	var err error
 
 	account, err := s3AccountInsert(ctx, namespace, "user")
@@ -86,7 +86,7 @@ func genNewAccessKey(ctx context.Context, namespace, bname string, lifetime uint
 	if lifetime != 0 {
 		expired_when = timestamp_now + int64(lifetime)
 	} else {
-		expired_when = s3mgo.S3TimeStampMax
+		expired_when = s3mgo.TimeStampMax
 
 		if akey, err = getEndlessKey(ctx, account, policy); err == nil {
 			log.Debugf("s3: Found active key %s", infoLong(akey))
@@ -99,7 +99,7 @@ func genNewAccessKey(ctx context.Context, namespace, bname string, lifetime uint
 		goto out_1
 	}
 
-	akey = &s3mgo.S3AccessKey {
+	akey = &s3mgo.AccessKey {
 		ObjID:			bson.NewObjectId(),
 		State:			S3StateActive,
 
@@ -137,8 +137,8 @@ out_1:
 	return nil, err
 }
 
-func FindBuckets(ctx context.Context) ([]s3mgo.S3Bucket, error) {
-	var res []s3mgo.S3Bucket
+func FindBuckets(ctx context.Context) ([]s3mgo.Bucket, error) {
+	var res []s3mgo.Bucket
 	var err error
 
 	account, err := s3AccountLookup(ctx)
@@ -152,7 +152,7 @@ func FindBuckets(ctx context.Context) ([]s3mgo.S3Bucket, error) {
 	return res, nil
 }
 
-func s3DecryptAccessKeySecret(akey *s3mgo.S3AccessKey) string {
+func s3DecryptAccessKeySecret(akey *s3mgo.AccessKey) string {
 	sec, err := xcrypt.DecryptString(s3SecKey, akey.AccessKeySecret)
 	if err != nil {
 		return ""
@@ -160,8 +160,8 @@ func s3DecryptAccessKeySecret(akey *s3mgo.S3AccessKey) string {
 	return sec
 }
 
-func LookupAccessKey(ctx context.Context, AccessKeyId string) (*s3mgo.S3AccessKey, error) {
-	var akey *s3mgo.S3AccessKey
+func LookupAccessKey(ctx context.Context, AccessKeyId string) (*s3mgo.AccessKey, error) {
+	var akey *s3mgo.AccessKey
 	var err error
 
 	if akey, err = dbLookupAccessKey(ctx, AccessKeyId); err == nil {
@@ -173,8 +173,8 @@ func LookupAccessKey(ctx context.Context, AccessKeyId string) (*s3mgo.S3AccessKe
 	return nil, err
 }
 
-func dbLookupAccessKey(ctx context.Context, AccessKeyId string) (*s3mgo.S3AccessKey, error) {
-	var akey s3mgo.S3AccessKey
+func dbLookupAccessKey(ctx context.Context, AccessKeyId string) (*s3mgo.AccessKey, error) {
+	var akey s3mgo.AccessKey
 	var err error
 
 	err = dbS3FindOne(ctx, bson.M{"access-key-id": AccessKeyId, "state": S3StateActive }, &akey)
@@ -210,7 +210,7 @@ func dbRemoveAccessKey(ctx context.Context, AccessKeyID string) (error) {
 }
 
 func gc_keys(ctx context.Context) {
-	var akey s3mgo.S3AccessKey
+	var akey s3mgo.AccessKey
 	var pipe *mgo.Pipe
 	var iter *mgo.Iter
 	var err error

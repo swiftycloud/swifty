@@ -195,36 +195,36 @@ var S3PolicyActions_Web = s3mgo.ActionBits{
 		0,
 }
 
-func getRootPolicy() *s3mgo.S3Policy {
+func getRootPolicy() *s3mgo.Policy {
 	// If changing modify isRoot as well
-	return &s3mgo.S3Policy {
+	return &s3mgo.Policy {
 		Effect: Policy_Allow,
 		Action: S3PolicyActions_AllSet.ToMgo(),
 		Resource: []string{ s3mgo.Resourse_Any },
 	}
 }
 
-func getBucketPolicy(bname string) *s3mgo.S3Policy {
-	return &s3mgo.S3Policy {
+func getBucketPolicy(bname string) *s3mgo.Policy {
+	return &s3mgo.Policy {
 		Effect: Policy_Allow,
 		Action: S3PolicyActions_PerBucket.ToMgo(),
 		Resource: []string{ bname },
 	}
 }
 
-func getWebPolicy(bname string) *s3mgo.S3Policy {
-	return &s3mgo.S3Policy {
+func getWebPolicy(bname string) *s3mgo.Policy {
+	return &s3mgo.Policy {
 		Effect: Policy_Allow,
 		Action: S3PolicyActions_Web.ToMgo(),
 		Resource: []string{ bname },
 	}
 }
 
-func isCanned(policy *s3mgo.S3Policy) bool {
+func isCanned(policy *s3mgo.Policy) bool {
 	return policy != nil && policy.Effect == Policy_Allow && len(policy.Resource) > 0
 }
 
-func isRoot(policy *s3mgo.S3Policy) bool {
+func isRoot(policy *s3mgo.Policy) bool {
 	if isCanned(policy) {
 		// Root key, can do everything
 		if policy.Action == S3PolicyActions_AllSet.ToMgo() {

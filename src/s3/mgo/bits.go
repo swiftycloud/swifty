@@ -25,7 +25,7 @@ func (v ActionBitsMgo) ToSwy() ActionBits {
 	return b
 }
 
-func (policy *S3Policy) InfoLong() string {
+func (policy *Policy) InfoLong() string {
 	if policy != nil {
 		if len(policy.Resource) > 0 {
 			return fmt.Sprintf("% x/%s",
@@ -36,11 +36,11 @@ func (policy *S3Policy) InfoLong() string {
 	return "nil"
 }
 
-func (policy *S3Policy) Equal(dst *S3Policy) bool {
+func (policy *Policy) Equal(dst *Policy) bool {
 	return reflect.DeepEqual(policy, dst)
 }
 
-func (policy *S3Policy) MayAccess(resource string) bool {
+func (policy *Policy) MayAccess(resource string) bool {
 	if len(policy.Resource) > 0 && policy.Resource[0] == Resourse_Any {
 		return true
 	}
@@ -54,7 +54,7 @@ func (policy *S3Policy) MayAccess(resource string) bool {
 	return false
 }
 
-func (policy *S3Policy) Allowed(action int) bool {
+func (policy *Policy) Allowed(action int) bool {
 	bits := policy.Action.ToSwy()
 	if action < 64 {
 		return bits[0] & (1 << uint(action)) != 0
@@ -67,8 +67,8 @@ func now() int64 {
 	return time.Now().Unix()
 }
 
-func (akey *S3AccessKey) Expired() bool {
-	if akey.ExpirationTimestamp < S3TimeStampMax {
+func (akey *AccessKey) Expired() bool {
+	if akey.ExpirationTimestamp < TimeStampMax {
 		return now() > akey.ExpirationTimestamp
 	}
 	return false
