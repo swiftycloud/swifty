@@ -365,9 +365,9 @@ func handleFunctionSources(ctx context.Context, w http.ResponseWriter, r *http.R
 	return xrest.HandleProp(ctx, w, r, Functions{}, &FnSrcProp{}, &src)
 }
 
-func handleTenantStats(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
+func handleTenantStatsAll(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
 	ten := gctx(ctx).Tenant
-	ctxlog(ctx).Debugf("Get FN stats %s", ten)
+	ctxlog(ctx).Debugf("Get stats %s", ten)
 
 	periods := reqPeriods(r.URL.Query())
 
@@ -380,6 +380,32 @@ func handleTenantStats(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	}
 
 	resp.Mware, cerr = getMwareStats(ctx, ten)
+	if cerr != nil {
+		return cerr
+	}
+
+	return xrest.Respond(ctx, w, resp)
+}
+
+func handleTenantStats(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
+	sub := mux.Vars(r)["sub"]
+	ten := gctx(ctx).Tenant
+	ctxlog(ctx).Debugf("Get %s stats %s", sub, ten)
+
+	periods := reqPeriods(r.URL.Query())
+
+	var cerr *xrest.ReqErr
+	var resp interface{}
+
+	switch sub {
+	case "calls":
+		resp, cerr = getCallStats(ctx, ten, periods)
+	case "wmare":
+		resp, cerr = getMwareStats(ctx, ten)
+	default:
+		cerr = GateErrM(swyapi.GateBadRequest, "Bad stats type")
+	}
+
 	if cerr != nil {
 		return cerr
 	}
@@ -901,7 +927,8 @@ func main() {
 
 	r := mux.NewRouter()
 	r.HandleFunc("/v1/login",		handleUserLogin).Methods("POST", "OPTIONS")
-	r.Handle("/v1/stats",			genReqHandler(handleTenantStats)).Methods("GET", "POST", "OPTIONS")
+	r.Handle("/v1/stats",			genReqHandler(handleTenantStatsAll)).Methods("GET", "POST", "OPTIONS")
+	r.Handle("/v1/stats/{sub}",		genReqHandler(handleTenantStats)).Methods("GET", "POST", "OPTIONS")
 	r.Handle("/v1/project/list",		genReqHandler(handleProjectList)).Methods("POST", "OPTIONS")
 	r.Handle("/v1/project/del",		genReqHandler(handleProjectDel)).Methods("POST", "OPTIONS")
 
