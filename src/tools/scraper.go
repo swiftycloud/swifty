@@ -220,7 +220,6 @@ func main() {
 	conf.gateDB.Resolve()
 
 	conf.admd = xh.ParseXCreds(conf.Admd)
-	conf.admd.Resolve()
 
 	info := mgo.DialInfo{
 		Addrs:		[]string{conf.gateDB.Addr()},
