@@ -856,7 +856,7 @@ out:
 	http.Error(w, err.Error(), http.StatusBadRequest)
 }
 
-func handleNotify(w http.ResponseWriter, r *http.Request, subscribe bool) {
+func handleNotify(w http.ResponseWriter, r *http.Request) {
 	var params swys3api.S3Subscribe
 
 	if xhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
@@ -876,9 +876,10 @@ func handleNotify(w http.ResponseWriter, r *http.Request, subscribe bool) {
 		goto out
 	}
 
-	if subscribe {
+	switch r.Method {
+	case "POST":
 		err = s3Subscribe(ctx, &params)
-	} else {
+	case "DELETE":
 		err = s3Unsubscribe(ctx, &params)
 	}
 
@@ -891,14 +892,6 @@ func handleNotify(w http.ResponseWriter, r *http.Request, subscribe bool) {
 
 out:
 	http.Error(w, err.Error(), http.StatusBadRequest)
-}
-
-func handleNotifyAdd(w http.ResponseWriter, r *http.Request) {
-	handleNotify(w, r, true)
-}
-
-func handleNotifyDel(w http.ResponseWriter, r *http.Request) {
-	handleNotify(w, r, false)
 }
 
 func handleAdminOp(w http.ResponseWriter, r *http.Request) {
@@ -1006,8 +999,7 @@ func main() {
 	// Admin operations
 	radminsrv := mux.NewRouter()
 	radminsrv.HandleFunc("/v1/api/admin/{op:[a-zA-Z0-9-.]+}", handleAdminOp)
-	radminsrv.HandleFunc("/v1/api/notify/subscribe", handleNotifyAdd)
-	radminsrv.HandleFunc("/v1/api/notify/unsubscribe", handleNotifyDel)
+	radminsrv.HandleFunc("/v1/api/notify", handleNotify).Methods("POST", "DELETE")
 
 	err = dbConnect(&conf)
 	if err != nil {

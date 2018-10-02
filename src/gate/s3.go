@@ -101,7 +101,8 @@ func s3Subscribe(ctx context.Context, conf *YAMLConfMw, evt *FnEventS3) error {
 
 	_, err := xhttp.MarshalAndPost(
 		&xhttp.RestReq{
-			Address: "http://" + addr + "/v1/api/notify/subscribe",
+			Method:  "POST",
+			Address: "http://" + addr + "/v1/api/notify",
 			Headers: map[string]string{"X-SwyS3-Token": gateSecrets[conf.S3.c.Pass]},
 			Success: http.StatusAccepted,
 		},
@@ -123,7 +124,8 @@ func s3Unsubscribe(ctx context.Context, conf *YAMLConfMw, evt *FnEventS3) error 
 
 	_, err := xhttp.MarshalAndPost(
 		&xhttp.RestReq{
-			Address: "http://" + addr + "/v1/api/notify/unsubscribe",
+			Method:  "DELETE",
+			Address: "http://" + addr + "/v1/api/notify",
 			Headers: map[string]string{"X-SwyS3-Token": gateSecrets[conf.S3.c.Pass]},
 			Success: http.StatusAccepted,
 		},
