@@ -741,7 +741,7 @@ out:
 }
 
 func handleSetPassword(w http.ResponseWriter, r *http.Request) {
-	var params swyapi.UserLogin
+	var params swyapi.ChangePass
 	var code = http.StatusBadRequest
 
 	if xhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
@@ -751,6 +751,10 @@ func handleSetPassword(w http.ResponseWriter, r *http.Request) {
 	td, code, err := handleAdmdReq(r)
 	if err != nil {
 		goto out
+	}
+
+	if uid == "me" {
+		uid = td.User.Id
 	}
 
 	code = http.StatusBadRequest
@@ -766,15 +770,21 @@ func handleSetPassword(w http.ResponseWriter, r *http.Request) {
 	}
 
 	code = http.StatusForbidden
-	if uid == "me" {
-		uid = td.User.Id
-	} else if uid == td.User.Id {
-		if !xkst.KeystoneRoleHas(td, xkst.SwyAdminRole) &&
-				!xkst.KeystoneRoleHas(td, xkst.SwyUserRole) {
-			goto out
+	if uid == td.User.Id {
+		if !xkst.KeystoneRoleHas(td, xkst.SwyAdminRole) {
+			if !xkst.KeystoneRoleHas(td, xkst.SwyUserRole) {
+				err = errors.New("Not a swifty user")
+				goto out
+			}
+
+			if params.CPassword == "" {
+				err = errors.New("Old password required")
+				goto out
+			}
 		}
 	} else {
 		if !xkst.KeystoneRoleHas(td, xkst.SwyAdminRole) {
+			err = errors.New("Not an admin")
 			goto out
 		}
 	}

@@ -24,6 +24,7 @@ type KeystoneUser struct {
 	Id		string			`json:"id,omitempty"`
 	Name		string			`json:"name,omitempty"`
 	Password	string			`json:"password,omitempty"`
+	OrigPassword	string			`json:"original_password,omitempty"`
 	Domain		*KeystoneDomain		`json:"domain,omitempty"`
 	DomainId	string			`json:"domain_id,omitempty"`
 	DefProject	string			`json:"default_project_id,omitempty"`
@@ -132,6 +133,7 @@ type KeystoneReq struct {
 	URL		string
 	Succ		int
 	Headers		map[string]string
+	NoTok		bool
 
 	outToken	string
 }
@@ -158,7 +160,7 @@ func (kc *KsClient)MakeReq(ksreq *KeystoneReq, in interface{}, out interface{}) 
 	var cToken string
 	headers := make(map[string]string)
 retry:
-	if kc.Token != "" {
+	if kc.Token != "" && !ksreq.NoTok {
 		cToken = kc.Token
 		headers["X-Auth-Token"] = cToken
 	}

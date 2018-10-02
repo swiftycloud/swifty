@@ -107,8 +107,13 @@ func user_enabled(args []string, opts [16]string) {
 }
 
 func user_pass(args []string, opts [16]string) {
-	make_faas_req1("PUT", "users/" + args[0] + "/pass", http.StatusCreated,
-			&swyapi.UserLogin{Password: opts[0]}, nil)
+	rq := &swyapi.ChangePass{}
+	rq.Password = opts[0]
+	if opts[1] != "" {
+		rq.CPassword = opts[1]
+	}
+
+	make_faas_req1("PUT", "users/" + args[0] + "/pass", http.StatusCreated, rq, nil)
 }
 
 func user_info(args []string, opts [16]string) {
@@ -1964,6 +1969,7 @@ func main() {
 	bindCmdUsage(CMD_UA,	[]string{"UID"}, "Add user", false)
 	bindCmdUsage(CMD_UD,	[]string{"UID"}, "Del user", false)
 	cmdMap[CMD_UPASS].opts.StringVar(&opts[0], "pass", "", "New password")
+	cmdMap[CMD_UPASS].opts.StringVar(&opts[1], "cur", "", "Current password")
 	bindCmdUsage(CMD_UPASS,	[]string{"UID"}, "Set password", false)
 	bindCmdUsage(CMD_UEN, []string{"UID", "ST"}, "Set enable status for user", false)
 	bindCmdUsage(CMD_UI,	[]string{"UID"}, "Get user info", false)
