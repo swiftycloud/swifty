@@ -873,12 +873,14 @@ func handleStats(w http.ResponseWriter, r *http.Request) {
 
 	act, err := s3AccountFind(ctx, ns)
 	if err != nil {
-		goto out
+		http.Error(w, "No such namespace", http.StatusNotFound)
+		return
 	}
 
 	st, err = StatsFindFor(ctx, act)
 	if err != nil {
-		goto out
+		http.Error(w, "Error getting stats", http.StatusInternalServerError)
+		return
 	}
 
 	err = xhttp.MarshalAndWrite(w, &swys3api.AcctStats{
@@ -888,13 +890,8 @@ func handleStats(w http.ResponseWriter, r *http.Request) {
 		OutBytesWeb:	st.OutBytesWeb,
 	})
 	if err != nil {
-		goto out
+		http.Error(w, "Bad responce", http.StatusNoContent)
 	}
-
-	return
-
-out:
-	http.Error(w, err.Error(), http.StatusBadRequest)
 }
 
 func handleNotify(w http.ResponseWriter, r *http.Request) {
