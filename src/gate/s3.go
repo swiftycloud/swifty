@@ -40,58 +40,57 @@ func (s3 *FnEventS3)matchPattern(oname string) bool {
 	return err == nil && m
 }
 
-func s3KeyGen(conf *YAMLConfS3, namespace, bucket string, lifetime uint32) (*swys3api.KeyGenResult, error) {
-	addr := conf.c.Addr()
+func s3Call(rq *xhttp.RestReq, in interface{}, out interface{}) error {
+	addr := conf.Mware.S3.c.Addr()
+	rq.Address = "http://" + addr + rq.Address
+	rq.Timeout = 120
+	rq.Headers = map[string]string{"X-SwyS3-Token": gateSecrets[conf.Mware.S3.c.Pass]}
 
-	resp, err := xhttp.MarshalAndPost(
-		&xhttp.RestReq{
-			Method:  "POST",
-			Address: "http://" + addr + "/v1/api/keys",
-			Timeout: 120,
-			Headers: map[string]string{"X-SwyS3-Token": gateSecrets[conf.c.Pass]},
-		},
-		&swys3api.KeyGen{
-			Namespace: namespace,
-			Bucket: bucket,
-			Lifetime: lifetime,
-		})
+	resp, err := xhttp.MarshalAndPost(rq, in)
 	if err != nil {
-		return nil, fmt.Errorf("Error requesting NS from S3: %s", err.Error())
+		return fmt.Errorf("Error talking to S3: %s", err.Error())
 	}
 
 	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("Bad responce from S3 gate: %s", string(resp.Status))
+
+	if out != nil {
+		err = xhttp.ReadAndUnmarshalResp(resp, out)
+		if err != nil {
+			return fmt.Errorf("Error reading responce from S3: %s", err.Error())
+		}
 	}
 
+	return nil
+}
+
+func s3KeyGen(conf *YAMLConfS3, namespace, bucket string, lifetime uint32) (*swys3api.KeyGenResult, error) {
 	var out swys3api.KeyGenResult
 
-	err = xhttp.ReadAndUnmarshalResp(resp, &out)
+	err := s3Call(
+		&xhttp.RestReq{
+			Method: "POST",
+			Address: "/v1/api/keys",
+		}, &swys3api.KeyGen {
+			Namespace: namespace,
+			Bucket: bucket,
+			Lifetime: lifetime,
+		}, &out)
 	if err != nil {
-		return nil, fmt.Errorf("Error reading responce from S3: %s", err.Error())
+		return nil, err
 	}
 
 	return &out, nil
 }
 
 func s3KeyDel(conf *YAMLConfS3, key string) error {
-	addr := conf.c.Addr()
-
-	_, err := xhttp.MarshalAndPost(
+	return s3Call(
 		&xhttp.RestReq{
 			Method:  "DELETE",
-			Address: "http://" + addr + "/v1/api/keys",
-			Timeout: 120,
-			Headers: map[string]string{"X-SwyS3-Token": gateSecrets[conf.c.Pass]},
+			Address: "/v1/api/keys",
 		},
 		&swys3api.KeyDel{
 			AccessKeyID: key,
-		})
-	if err != nil {
-		return fmt.Errorf("Error deleting key from S3: %s", err.Error())
-	}
-
-	return nil
+		}, nil)
 }
 
 const (
@@ -99,13 +98,10 @@ const (
 )
 
 func s3Subscribe(ctx context.Context, conf *YAMLConfMw, evt *FnEventS3) error {
-	addr := conf.S3.c.Addr()
-
-	_, err := xhttp.MarshalAndPost(
+	return s3Call(
 		&xhttp.RestReq{
 			Method:  "POST",
-			Address: "http://" + addr + "/v1/api/notify",
-			Headers: map[string]string{"X-SwyS3-Token": gateSecrets[conf.S3.c.Pass]},
+			Address: "/v1/api/notify",
 			Success: http.StatusAccepted,
 		},
 		&swys3api.Subscribe{
@@ -113,33 +109,20 @@ func s3Subscribe(ctx context.Context, conf *YAMLConfMw, evt *FnEventS3) error {
 			Bucket: evt.Bucket,
 			Ops: evt.Ops,
 			Queue: gates3queue,
-		})
-	if err != nil {
-		return fmt.Errorf("Error subscibing: %s", err.Error())
-	}
-
-	return nil
+		}, nil)
 }
 
 func s3Unsubscribe(ctx context.Context, conf *YAMLConfMw, evt *FnEventS3) error {
-	addr := conf.S3.c.Addr()
-
-	_, err := xhttp.MarshalAndPost(
+	return s3Call(
 		&xhttp.RestReq{
 			Method:  "DELETE",
-			Address: "http://" + addr + "/v1/api/notify",
-			Headers: map[string]string{"X-SwyS3-Token": gateSecrets[conf.S3.c.Pass]},
-			Success: http.StatusAccepted,
+			Address: "/v1/api/notify",
 		},
 		&swys3api.Subscribe{
 			Namespace: evt.Ns,
 			Bucket: evt.Bucket,
 			Ops: evt.Ops,
-		})
-	if err != nil {
-		ctxlog(ctx).Errorf("Error unsubscibing: %s", err.Error())
-	}
-	return err
+		}, nil)
 }
 
 func handleS3Event(ctx context.Context, user string, data []byte) {
@@ -286,27 +269,16 @@ var s3EOps = EventOps {
 }
 
 func getS3Stats(ctx context.Context) (*swyapi.S3NsStats, *xrest.ReqErr) {
-	addr := conf.Mware.S3.c.Addr()
 	ns := ctxSwoId(ctx, "", "").S3Namespace()
-
-	resp, err := xhttp.MarshalAndPost(
-		&xhttp.RestReq{
-			Method:  "GET",
-			Address: "http://" + addr + "/v1/api/stats/" + ns,
-			Headers: map[string]string{"X-SwyS3-Token": gateSecrets[conf.Mware.S3.c.Pass]},
-		}, nil)
-	if err != nil {
-		ctxlog(ctx).Errorf("Error talking to S3: %s", err.Error())
-		return nil, GateErrM(swyapi.GateGenErr, "Error talking to S3")
-	}
-
-	defer resp.Body.Close()
-
 	var st swys3api.AcctStats
 
-	err = xhttp.ReadAndUnmarshalResp(resp, &st)
+	err := s3Call(
+		&xhttp.RestReq{
+			Method:  "GET",
+			Address: "/v1/api/stats/" + ns,
+		}, nil, &st)
 	if err != nil {
-		ctxlog(ctx).Errorf("Error getting resp from S3: %s", err.Error())
+		ctxlog(ctx).Errorf("Error talking to S3: %s", err.Error())
 		return nil, GateErrM(swyapi.GateGenErr, "Error talking to S3")
 	}
 
