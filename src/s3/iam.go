@@ -62,8 +62,19 @@ func s3AccountLookup(ctx context.Context) (*s3mgo.S3Account, error) {
 	return &account, nil
 }
 
-func s3FindFullAccessIam(ctx context.Context, namespace string) (*s3mgo.S3Iam, error) {
+func s3AccountFind(ctx context.Context, namespace string) (*s3mgo.S3Account, error) {
 	var account s3mgo.S3Account
+
+	query := bson.M{ "namespace": namespace, "state": S3StateActive }
+	err := dbS3FindOne(ctx, query, &account)
+	if err != nil {
+		return nil, err
+	}
+
+	return &account, nil
+}
+
+func s3FindFullAccessIam(ctx context.Context, namespace string) (*s3mgo.S3Iam, error) {
 	var iams []s3mgo.S3Iam
 	var query bson.M
 	var err error
@@ -72,8 +83,7 @@ func s3FindFullAccessIam(ctx context.Context, namespace string) (*s3mgo.S3Iam, e
 		return nil, fmt.Errorf("s3: Empty namespace")
 	}
 
-	query = bson.M{ "namespace": namespace, "state": S3StateActive }
-	err = dbS3FindOne(ctx, query, &account)
+	account, err := s3AccountFind(ctx, namespace)
 	if err != nil {
 		return nil, err
 	}

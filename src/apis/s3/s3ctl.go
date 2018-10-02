@@ -35,3 +35,10 @@ type S3Event struct {
 	Object			string		`json:"object,omitempty"`
 	Op			string		`json:"op"`
 }
+
+type S3AcctStats struct {
+	CntObjects		int64		`json:"cnt-objects"`
+	CntBytes		int64		`json:"cnt-bytes"`
+	OutBytes		int64		`json:"out-bytes"`
+	OutBytesWeb		int64		`json:"out-bytes-web"`
+}

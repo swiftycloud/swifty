@@ -856,6 +856,47 @@ out:
 	http.Error(w, err.Error(), http.StatusBadRequest)
 }
 
+func handleStats(w http.ResponseWriter, r *http.Request) {
+	var st *s3mgo.S3AcctStats
+
+	if xhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
+
+	err := s3VerifyAdmin(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+
+	ctx, done := mkContext("statsreq")
+	defer done(ctx)
+	ns := mux.Vars(r)["ns"]
+
+	act, err := s3AccountFind(ctx, ns)
+	if err != nil {
+		goto out
+	}
+
+	st, err = StatsFindFor(ctx, act)
+	if err != nil {
+		goto out
+	}
+
+	err = xhttp.MarshalAndWrite(w, &swys3api.S3AcctStats{
+		CntObjects:	st.CntObjects,
+		CntBytes:	st.CntBytes,
+		OutBytes:	st.OutBytes,
+		OutBytesWeb:	st.OutBytesWeb,
+	})
+	if err != nil {
+		goto out
+	}
+
+	return
+
+out:
+	http.Error(w, err.Error(), http.StatusBadRequest)
+}
+
 func handleNotify(w http.ResponseWriter, r *http.Request) {
 	var params swys3api.S3Subscribe
 
@@ -995,6 +1036,7 @@ func main() {
 	radminsrv := mux.NewRouter()
 	radminsrv.HandleFunc("/v1/api/keys", handleKeys).Methods("POST", "DELETE")
 	radminsrv.HandleFunc("/v1/api/notify", handleNotify).Methods("POST", "DELETE")
+	radminsrv.HandleFunc("/v1/api/stats/{ns}", handleStats).Methods("GET")
 
 	err = dbConnect(&conf)
 	if err != nil {

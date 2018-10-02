@@ -18,3 +18,14 @@ func StatsAcct(ctx context.Context, nsid string, upd bson.M) error {
 func StatsAcctInt64(ctx context.Context, nsid string, metric string, value int64) error {
 	return StatsAcct(ctx, nsid, bson.M{ metric: value })
 }
+
+func StatsFindFor(ctx context.Context, act *s3mgo.S3Account) (*s3mgo.S3AcctStats, error) {
+	var st s3mgo.S3AcctStats
+
+	err := dbS3FindOne(ctx, bson.M{"nsid": act.NamespaceID()}, &st)
+	if err != nil {
+		return nil, err
+	}
+
+	return &st, nil
+}
