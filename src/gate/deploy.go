@@ -174,6 +174,14 @@ func deployRestartItems(dep *DeployDesc) {
 	}
 }
 
+func deployStopItems(dep *DeployDesc) {
+	ctx, done := mkContext("::deploy stop")
+	defer done(ctx)
+	gctx(ctx).tpush(dep.SwoId.Tennant)
+
+	dep.StopItems(ctx)
+}
+
 func (dep *DeployDesc)StartItems(ctx context.Context) {
 	var fs, ms, rs int
 	var fn *DeployFunction
@@ -531,16 +539,17 @@ func (dep *DeployDesc)StopItems(ctx context.Context) *xrest.ReqErr {
 }
 
 func (dep *DeployDesc)Del(ctx context.Context) (*xrest.ReqErr) {
-	/* FIXME -- change state to terminating, then stop. On
-	 * restart kill the terminating deployments further
-	 */
+	err := dbUpdatePart(ctx, dep, bson.M{"state": DBDepStateTrm})
+	if err != nil {
+		return GateErrD(err)
+	}
 
 	cerr := dep.StopItems(ctx)
 	if cerr != nil {
 		return cerr
 	}
 
-	err := dbRemove(ctx, dep)
+	err = dbRemove(ctx, dep)
 	if err != nil {
 		return GateErrD(err)
 	}
@@ -579,8 +588,12 @@ func DeployInit(ctx context.Context) error {
 		}
 
 		if dep.State == DBDepStateIni {
-			ctxlog(ctx).Debugf("Will restart deploy %s in state %d", dep.SwoId.Str(), dep.State)
+			ctxlog(ctx).Debugf("Will restart deploy %s", dep.SwoId.Str())
 			go deployRestartItems(dep)
+		}
+		if dep.State == DBDepStateTrm {
+			ctxlog(ctx).Debugf("Will finish deploy stop %s", dep.SwoId.Str())
+			go deployStopItems(dep)
 		}
 	}
 
