@@ -91,13 +91,10 @@ func mqEvent(ctx context.Context, mwid, queue, userid, data string) {
 		return
 	}
 
-	ctxlog(ctx).Debugf("mq: Resolved client to project %s", mware.Project)
-
 	var funcs []*FunctionDesc
 	/* FIXME -- list FNs with events here, now they are in separate DB */
 
 	for _, fn := range funcs {
-		ctxlog(ctx).Debugf("mq: `- [%s]", fn)
 		/* FIXME -- this is synchronous */
 		_, err := doRun(ctx, fn, "mq",
 				&swyapi.SwdFunctionRun{Body: data})

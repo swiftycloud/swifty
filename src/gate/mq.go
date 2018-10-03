@@ -94,19 +94,16 @@ func startListener(req *mq_listener_req) error {
 		return err
 	}
 
-	glog.Debugf("mq:\tchan")
 	cons.channel, err = cons.conn.Channel()
 	if err != nil {
 		return err
 	}
 
-	glog.Debugf("mq:\tqueue")
 	q, err := cons.channel.QueueDeclare(req.queue, false, false, false, false, nil)
 	if err != nil {
 		return err
 	}
 
-	glog.Debugf("mq:\tconsume")
 	msgs, err := cons.channel.Consume(q.Name, "", true, false, false, false, nil)
 	if err != nil {
 		return err
@@ -116,7 +113,6 @@ func startListener(req *mq_listener_req) error {
 		glog.Debugf("mq: Getting messages for %s", key)
 	loop:
 		for {
-			glog.Debugf("mq: >")
 			select {
 			case d := <-msgs:
 				ctx, done := mkContext("::mq")
@@ -127,7 +123,6 @@ func startListener(req *mq_listener_req) error {
 				glog.Debugf("mq: Done")
 				break loop
 			}
-			glog.Debugf("mq: <")
 		}
 		glog.Debugf("mq: Stop getting messages")
 	}()

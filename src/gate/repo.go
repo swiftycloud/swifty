@@ -197,8 +197,6 @@ func cloneGit(ctx context.Context, rd *RepoDesc, ac *AccDesc) (string, error) {
 		}
 	}
 
-	ctxlog(ctx).Debugf("Git clone %s -> %s", curl, clone_to)
-
 	cmd := exec.Command("git", "-C", clone_to, "clone", "--depth=1", curl, ".")
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
@@ -389,7 +387,6 @@ func (rd *RepoDesc)pull(ctx context.Context) *xrest.ReqErr {
 func (rd *RepoDesc)changedFiles(ctx context.Context, till string) ([]string, error) {
 	if rd.Commit == "" {
 		/* FIXME -- pre-configured repos might have this unset */
-		ctxlog(ctx).Debugf("Repo's %s commit not set\n", rd.ObjID.Hex())
 		return []string{}, nil
 	}
 
@@ -471,7 +468,6 @@ func (rd *RepoDesc)pullSync(ctx context.Context) *xrest.ReqErr {
 	var stderr bytes.Buffer
 
 	clone_to := rd.clonePath()
-	ctxlog(ctx).Debugf("Git pull %s", clone_to)
 
 	cmd := exec.Command("git", "-C", clone_to, "pull")
 	cmd.Stdout = &stdout
@@ -503,7 +499,7 @@ func pullRepos(ctx context.Context, ts time.Time) (int, error) {
 		}, &rds)
 	if err != nil {
 		if !dbNF(err) {
-			ctxlog(ctx).Debugf("Can't get repos to sync: %s", err.Error())
+			ctxlog(ctx).Errorf("Can't get repos to sync: %s", err.Error())
 		} else {
 			err = nil
 		}

@@ -169,7 +169,6 @@ func handleProjectList(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		return GateErrE(swyapi.GateBadRequest, err)
 	}
 
-	ctxlog(ctx).Debugf("List projects for %s", gctx(ctx).Tenant)
 	fns, mws, err = dbProjectListAll(ctx, gctx(ctx).Tenant)
 	if err != nil {
 		return GateErrD(err)
@@ -324,7 +323,6 @@ func handleFunctionWait(ctx context.Context, w http.ResponseWriter, r *http.Requ
 	var tmo bool
 
 	if wo.Version != "" {
-		ctxlog(ctx).Debugf("function/wait %s -> version >= %s, tmo %d", fn.SwoId.Str(), wo.Version, int(timeout))
 		err, tmo = waitFunctionVersion(ctx, fn, wo.Version, timeout)
 		if err != nil {
 			return GateErrE(swyapi.GateGenErr, err)
@@ -347,7 +345,6 @@ func handleFunctionSources(ctx context.Context, w http.ResponseWriter, r *http.R
 
 func handleTenantStatsAll(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
 	ten := gctx(ctx).Tenant
-	ctxlog(ctx).Debugf("Get stats %s", ten)
 
 	periods := reqPeriods(r.URL.Query())
 
@@ -375,7 +372,6 @@ func handleTenantStatsAll(ctx context.Context, w http.ResponseWriter, r *http.Re
 func handleTenantStats(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
 	sub := mux.Vars(r)["sub"]
 	ten := gctx(ctx).Tenant
-	ctxlog(ctx).Debugf("Get %s stats %s", sub, ten)
 
 	periods := reqPeriods(r.URL.Query())
 
@@ -908,7 +904,6 @@ func main() {
 	}
 
 	glog.Debugf("Flavor: %s", Flavor)
-	glog.Debugf("PROXY: %v", SwdProxyOK)
 
 	r := mux.NewRouter()
 	r.HandleFunc("/v1/login",		handleUserLogin).Methods("POST", "OPTIONS")

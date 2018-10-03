@@ -920,7 +920,7 @@ func waitFunctionVersion(ctx context.Context, fn *FunctionDesc, version string, 
 		}
 
 		if w.Wait(&tmo) {
-			ctxlog(ctx).Debugf(" `- Timeout %s", fn.SwoId.Str())
+			ctxlog(ctx).Debugf("Timeout waiting FN version %s", fn.SwoId.Str())
 			timeout = true
 			break
 		}

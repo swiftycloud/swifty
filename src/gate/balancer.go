@@ -70,7 +70,6 @@ func BalancerDelete(ctx context.Context, fnid string) (error) {
 		return fmt.Errorf("POD del all error: %s", err.Error())
 	}
 
-	ctxlog(ctx).Debugf("Removed balancer for %s", fnid)
 	return nil
 }
 

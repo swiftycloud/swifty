@@ -146,14 +146,14 @@ func tracerRun(cln *net.UnixConn) {
 	msg := make([]byte, 256)
 	l, err := cln.Read(msg)
 	if err != nil {
-		glog.Debugf("Error getting tracer hello: %s", err.Error())
+		glog.Errorf("Error getting tracer hello: %s", err.Error())
 		return
 	}
 
 	var hm swyapi.TracerHello
 	err = json.Unmarshal(msg[:l], &hm)
 	if err != nil {
-		glog.Debugf("Error parsing tracer hello: %s", err.Error())
+		glog.Errorf("Error parsing tracer hello: %s", err.Error())
 		return
 	}
 

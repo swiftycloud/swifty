@@ -161,9 +161,7 @@ out:
 }
 
 func runFunctionOnce(ctx context.Context, fn *FunctionDesc) {
-	ctxlog(ctx).Debugf("oneshot RUN for %s", fn.SwoId.Str())
 	doRun(ctx, fn, "oneshot", &swyapi.SwdFunctionRun{})
-	ctxlog(ctx).Debugf("oneshor %s finished", fn.SwoId.Str())
 
 	swk8sRemove(ctx, &conf, fn)
 	fn.ToState(ctx, DBFuncStateStl, -1)
@@ -187,7 +185,6 @@ func prepareTempRun(ctx context.Context, fn *FunctionDesc, params *swyapi.Functi
 		return "", nil
 	}
 
-	ctxlog(ctx).Debugf("Asked for custom sources... oh, well...")
 	suff, err := putTempSources(ctx, fn, params)
 	if err != nil {
 		return "", GateErrE(swyapi.GateGenErr, err)

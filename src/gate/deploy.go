@@ -172,7 +172,6 @@ func deployStartItems(dep *DeployDesc) {
 	gctx(ctx).tpush(dep.SwoId.Tennant)
 
 	for ms, mw = range dep.Mwares {
-		ctxlog(ctx).Debugf("Start mw.%s", mw.Id.Str())
 		cerr := mw.start(ctx)
 		if cerr == nil {
 			mws = append(mws, &DeployMware{Id: mw.Id})
@@ -183,7 +182,6 @@ func deployStartItems(dep *DeployDesc) {
 	}
 
 	for fs, fn = range dep.Functions {
-		ctxlog(ctx).Debugf("Start fn.%s", mw.Id.Str())
 		cerr := fn.start(ctx)
 		if cerr == nil {
 			fns = append(fns, &DeployFunction{Id: fn.Id})
@@ -194,7 +192,6 @@ func deployStartItems(dep *DeployDesc) {
 	}
 
 	for rs, rt = range dep.Routers {
-		ctxlog(ctx).Debugf("Start rt.%s", mw.Id.Str())
 		cerr := rt.start(ctx)
 		if cerr == nil {
 			rts = append(rts, &DeployRouter{Id: rt.Id})
@@ -204,7 +201,6 @@ func deployStartItems(dep *DeployDesc) {
 		}
 	}
 
-	ctxlog(ctx).Debugf("Started %s", dep.SwoId.Str())
 	dep.State = DBDepStateRdy
 	dep.Functions = fns
 	dep.Mwares = mws
@@ -305,7 +301,6 @@ func (dep *DeployDesc)getItemsParams(ctx context.Context, from *swyapi.DeploySou
 			return GateErrE(swyapi.GateGenErr, err)
 		}
 	case "repo":
-		ctxlog(ctx).Debugf("Read [%s] deploy desc", from.Repo)
 		desc, err = repoReadFile(ctx, from.Repo)
 		if err != nil {
 			return GateErrE(swyapi.GateGenErr, err)
@@ -316,7 +311,6 @@ func (dep *DeployDesc)getItemsParams(ctx context.Context, from *swyapi.DeploySou
 	}
 
 	for _, p := range params {
-		ctxlog(ctx).Debugf("`- Fix [%s:%s]", p.name, p.value)
 		desc = bytes.Replace(desc, []byte("%" + p.name + "%"), []byte(p.value), -1)
 	}
 
@@ -325,7 +319,6 @@ func (dep *DeployDesc)getItemsParams(ctx context.Context, from *swyapi.DeploySou
 		return GateErrE(swyapi.GateBadRequest, err)
 	}
 
-	ctxlog(ctx).Debugf("Initialize deploy from desc")
 	return dep.getItemsDesc(&dd)
 }
 
@@ -557,7 +550,7 @@ func DeployInit(ctx context.Context, conf *YAMLConf) error {
 			}
 			err = dbUpdateAll(ctx, dep)
 			if err != nil {
-				ctxlog(ctx).Debugf("Error updating mware: %s", err.Error())
+				ctxlog(ctx).Errorf("Error updating mware: %s", err.Error())
 				return err
 			}
 		}

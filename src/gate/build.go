@@ -20,8 +20,6 @@ func tryBuildFunction(ctx context.Context, fn *FunctionDesc, suf string) error {
 func buildFunction(ctx context.Context, addr string, fn *FunctionDesc, suf string) error {
 	var wd_result swyapi.SwdFunctionRunResult
 
-	ctxlog(ctx).Debugf("Building function in %s", fn.srcPath(""))
-
 	resp, err := xhttp.MarshalAndPost(
 			&xhttp.RestReq{
 				Address: "http://" + addr + ":" + strconv.Itoa(conf.Wdog.Port) + "/v1/run",
@@ -47,7 +45,6 @@ func buildFunction(ctx context.Context, addr string, fn *FunctionDesc, suf strin
 		return fmt.Errorf("Error building function")
 	}
 
-	ctxlog(ctx).Debugf("Function built OK")
 	return nil
 }
 
