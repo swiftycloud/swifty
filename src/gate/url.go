@@ -132,7 +132,7 @@ func (fmd *FnMemData)Handle(ctx context.Context, w http.ResponseWriter, r *http.
 		goto out
 	}
 
-	conn, err = balancerGetConnAny(ctx, fmd.fnid, fmd)
+	conn, err = balancerGetConnAny(ctx, fmd)
 	if err != nil {
 		code = http.StatusInternalServerError
 		err = errors.New("DB error")
@@ -150,7 +150,7 @@ func (fmd *FnMemData)Handle(ctx context.Context, w http.ResponseWriter, r *http.
 		}
 	}
 
-	res, err = doRunConn(ctx, conn, sopq, fmd.fnid, "", "call", args)
+	res, err = conn.Run(ctx, sopq, "", "call", args)
 	if err != nil {
 		code = http.StatusInternalServerError
 		goto out

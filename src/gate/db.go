@@ -463,6 +463,7 @@ func (be *balancerEntry)conn() *podConn {
 		Addr: be.WdogAddr,
 		Port: be.WdogPort,
 		Host: be.Host,
+		Cookie: be.FnId,
 	}
 }
 

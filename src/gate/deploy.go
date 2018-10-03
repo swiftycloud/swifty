@@ -433,7 +433,6 @@ func (ds Deployments)Get(ctx context.Context, r *http.Request) (xrest.Obj, *xres
 }
 
 func (_ Deployments)Iterate(ctx context.Context, q url.Values, cb func(context.Context, xrest.Obj) *xrest.ReqErr) *xrest.ReqErr {
-	var deps []*DeployDesc
 	var err error
 
 	project := q.Get("project")
@@ -442,26 +441,30 @@ func (_ Deployments)Iterate(ctx context.Context, q url.Values, cb func(context.C
 	}
 
 	dname := q.Get("name")
-	if dname == "" {
-		err = dbFindAll(ctx, listReq(ctx, project, q["label"]), &deps)
-		if err != nil {
-			return GateErrD(err)
-		}
-	} else {
-		var dep DeployDesc
+	var dep DeployDesc
 
+	if dname != "" {
 		err = dbFind(ctx, cookieReq(ctx, project, dname), &dep)
 		if err != nil {
 			return GateErrD(err)
 		}
-		deps = append(deps, &dep)
+
+		return cb(ctx, &dep)
 	}
 
-	for _, d := range deps {
-		cerr := cb(ctx, d)
+	iter := dbIterAll(ctx, listReq(ctx, project, q["label"]), &dep)
+	defer iter.Close()
+
+	for iter.Next(&dep) {
+		cerr := cb(ctx, &dep)
 		if cerr != nil {
 			return cerr
 		}
+	}
+
+	err = iter.Err()
+	if err != nil {
+		return GateErrD(err)
 	}
 
 	return nil
@@ -558,14 +561,12 @@ func (dep *DeployDesc)Del(ctx context.Context) (*xrest.ReqErr) {
 }
 
 func DeployInit(ctx context.Context) error {
-	var deps []*DeployDesc
+	var dep DeployDesc
 
-	err := dbFindAll(ctx, bson.M{}, &deps)
-	if err != nil {
-		return err
-	}
+	iter := dbIterAll(ctx, bson.M{}, &dep)
+	defer iter.Close()
 
-	for _, dep := range deps {
+	for iter.Next(&dep) {
 		if len(dep._Items) != 0 {
 			ctxlog(ctx).Debugf("Convert deploy %s", dep.ObjID.Hex())
 			for _, i := range dep._Items {
@@ -580,7 +581,7 @@ func DeployInit(ctx context.Context) error {
 					})
 				}
 			}
-			err = dbUpdateAll(ctx, dep)
+			err := dbUpdateAll(ctx, &dep)
 			if err != nil {
 				ctxlog(ctx).Errorf("Error updating mware: %s", err.Error())
 				return err
@@ -589,11 +590,11 @@ func DeployInit(ctx context.Context) error {
 
 		if dep.State == DBDepStateIni {
 			ctxlog(ctx).Debugf("Will restart deploy %s", dep.SwoId.Str())
-			go deployRestartItems(dep)
+			go deployRestartItems(&dep)
 		}
 		if dep.State == DBDepStateTrm {
 			ctxlog(ctx).Debugf("Will finish deploy stop %s", dep.SwoId.Str())
-			go deployStopItems(dep)
+			go deployStopItems(&dep)
 		}
 	}
 

@@ -70,28 +70,7 @@ type podConn struct {
 	Addr	string
 	Host	string
 	Port	string
-}
-
-func doRun(ctx context.Context, fn *FunctionDesc, event string, args *swyapi.SwdFunctionRun) (*swyapi.SwdFunctionRunResult, error) {
-	fmd, err := memdGetFn(ctx, fn)
-	if err != nil {
-		ctxlog(ctx).Errorf("Can't %s memdat: %s", fn.Cookie, err.Error())
-		return nil, err
-	}
-
-	conn, err := balancerGetConnAny(ctx, fn.Cookie, fmd)
-	if conn == nil {
-		ctxlog(ctx).Errorf("Can't find %s cookie balancer: %s", fn.Cookie, err.Error())
-		return nil, fmt.Errorf("Can't find balancer for %s", fn.Cookie)
-	}
-
-	sopq := statsStart()
-	res, err := doRunConn(ctx, conn, sopq, fn.Cookie, "", event, args)
-	if err == nil {
-		statsUpdate(fmd, sopq, res)
-	}
-
-	return res, err
+	Cookie	string
 }
 
 func talkHTTP(addr, port, url string, args *swyapi.SwdFunctionRun) (*swyapi.SwdFunctionRunResult, error) {
@@ -121,7 +100,7 @@ func talkHTTP(addr, port, url string, args *swyapi.SwdFunctionRun) (*swyapi.SwdF
 	return &res, nil
 }
 
-func doRunConn(ctx context.Context, conn *podConn, sopq *statsOpaque, cookie, suff, event string, args *swyapi.SwdFunctionRun) (*swyapi.SwdFunctionRunResult, error) {
+func (conn *podConn)Run(ctx context.Context, sopq *statsOpaque, suff, event string, args *swyapi.SwdFunctionRun) (*swyapi.SwdFunctionRunResult, error) {
 	var res *swyapi.SwdFunctionRunResult
 	var err error
 
@@ -130,11 +109,11 @@ func doRunConn(ctx context.Context, conn *podConn, sopq *statsOpaque, cookie, su
 
 	if proxy {
 		res, err = talkHTTP(conn.Host, strconv.Itoa(conf.Wdog.Port),
-				cookie + "/" + strings.Replace(conn.Addr, ".", "_", -1), args)
+				conn.Cookie + "/" + strings.Replace(conn.Addr, ".", "_", -1), args)
 	}
 
 	if !proxy || err != nil {
-		url := cookie
+		url := conn.Cookie
 		if suff != "" {
 			url += "/" + suff
 		}
@@ -151,7 +130,7 @@ func doRunConn(ctx context.Context, conn *podConn, sopq *statsOpaque, cookie, su
 	}
 
 	if res.Stdout != "" || res.Stderr != "" {
-		logSaveResult(ctx, cookie, event, res.Stdout, res.Stderr)
+		go logSaveResult(ctx, conn.Cookie, event, res.Stdout, res.Stderr)
 	}
 
 	return res, nil
@@ -160,18 +139,33 @@ out:
 	return nil, fmt.Errorf("RUN error %s", err.Error())
 }
 
+func doRun(ctx context.Context, fn *FunctionDesc, event string, args *swyapi.SwdFunctionRun) (*swyapi.SwdFunctionRunResult, error) {
+	fmd, err := memdGetFn(ctx, fn)
+	if err != nil {
+		ctxlog(ctx).Errorf("Can't %s memdat: %s", fn.Cookie, err.Error())
+		return nil, err
+	}
+
+	conn, err := balancerGetConnAny(ctx, fmd)
+	if conn == nil {
+		ctxlog(ctx).Errorf("Can't find %s cookie balancer: %s", fn.Cookie, err.Error())
+		return nil, fmt.Errorf("Can't find balancer for %s", fn.Cookie)
+	}
+
+	sopq := statsStart()
+	res, err := conn.Run(ctx, sopq, "", event, args)
+	if err == nil {
+		statsUpdate(fmd, sopq, res)
+	}
+
+	return res, err
+}
+
 func doRunBg(ctx context.Context, fn *FunctionDesc, event string, args *swyapi.SwdFunctionRun) {
 	_, err := doRun(ctx, fn, event, args)
 	if err != nil {
 		ctxlog(ctx).Errorf("bg.%s: error running fn: %s", event, err.Error())
 	}
-}
-
-func runFunctionOnce(ctx context.Context, fn *FunctionDesc) {
-	doRun(ctx, fn, "oneshot", &swyapi.SwdFunctionRun{})
-
-	swk8sRemove(ctx, &conf, fn)
-	fn.ToState(ctx, DBFuncStateStl, -1)
 }
 
 func prepareTempRun(ctx context.Context, fn *FunctionDesc, params *swyapi.FunctionSources, w http.ResponseWriter) (string, *xrest.ReqErr) {

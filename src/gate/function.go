@@ -118,10 +118,6 @@ type FunctionDesc struct {
 
 type Functions struct {}
 
-func (fn *FunctionDesc)isOneShot() bool {
-	return false
-}
-
 func (fn *FunctionDesc)ToState(ctx context.Context, st, from int) error {
 	q := bson.M{}
 	if from != -1 {
@@ -851,7 +847,7 @@ func (fn *FunctionDesc)Del(ctx context.Context) *xrest.ReqErr {
 		return GateErrM(swyapi.GateGenErr, "Cannot terminate fn")
 	}
 
-	if !fn.isOneShot() && !dea {
+	if !dea {
 		err = swk8sRemove(ctx, &conf, fn)
 		if err != nil {
 			ctxlog(ctx).Errorf("remove deploy error: %s", err.Error())
@@ -945,9 +941,6 @@ func notifyPodUp(ctx context.Context, pod *k8sPod) {
 
 	if fn.State != DBFuncStateRdy {
 		fn.ToState(ctx, DBFuncStateRdy, -1)
-		if fn.isOneShot() {
-			runFunctionOnce(ctx, &fn)
-		}
 	}
 
 	return

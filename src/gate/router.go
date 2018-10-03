@@ -97,16 +97,30 @@ func (_ Routers)Iterate(ctx context.Context, q url.Values, cb func(context.Conte
 	}
 	rname := q.Get("name")
 
-	rts, cerr := listRouters(ctx, project, rname)
-	if cerr != nil {
-		return cerr
+	var rt RouterDesc
+
+	if rname != "" {
+		err := dbFind(ctx, cookieReq(ctx, project, rname), &rt)
+		if err != nil {
+			return GateErrD(err)
+		}
+
+		return cb(ctx, &rt)
 	}
 
-	for _, rt := range rts {
-		cerr = cb(ctx, rt)
+	iter := dbIterAll(ctx, listReq(ctx, project, q["label"]), &rt)
+	defer iter.Close()
+
+	for iter.Next(&rt) {
+		cerr := cb(ctx, &rt)
 		if cerr != nil {
 			return cerr
 		}
+	}
+
+	err := iter.Err()
+	if err != nil {
+		return GateErrD(err)
 	}
 
 	return nil
@@ -200,27 +214,6 @@ type RouterEntry struct {
 type RouterURL struct {
 	URL
 	table	[]*RouterEntry
-}
-
-func listRouters(ctx context.Context, project, name string) ([]*RouterDesc, *xrest.ReqErr) {
-	var rts []*RouterDesc
-
-	if name == "" {
-		err := dbFindAll(ctx, listReq(ctx, project, []string{}), &rts)
-		if err != nil {
-			return nil, GateErrD(err)
-		}
-	} else {
-		var rt RouterDesc
-
-		err := dbFind(ctx, cookieReq(ctx, project, name), &rt)
-		if err != nil {
-			return nil, GateErrD(err)
-		}
-		rts = append(rts, &rt)
-	}
-
-	return rts, nil
 }
 
 func (rt *RouterURL)Handle(ctx context.Context, w http.ResponseWriter, r *http.Request, sopq *statsOpaque) {

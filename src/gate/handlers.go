@@ -420,7 +420,7 @@ func handleFunctionRun(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		return errc
 	}
 
-	res, err = doRunConn(ctx, conn, nil, fn.Cookie, suff, "run", &params)
+	res, err = conn.Run(ctx, nil, suff, "run", &params)
 	if err != nil {
 		return GateErrE(swyapi.GateGenErr, err)
 	}
@@ -562,16 +562,19 @@ func handleAuths(ctx context.Context, w http.ResponseWriter, r *http.Request) *x
 
 	switch r.Method {
 	case "GET":
-		var deps []*DeployDesc
+		var dep DeployDesc
 
-		err := dbFindAll(ctx, listReq(ctx, project, []string{"auth"}), &deps)
-		if err != nil {
-			return GateErrD(err)
-		}
+		iter := dbIterAll(ctx, listReq(ctx, project, []string{"auth"}), &dep)
+		defer iter.Close()
 
 		var auths []*swyapi.AuthInfo
-		for _, d := range deps {
-			auths = append(auths, &swyapi.AuthInfo{ Id: d.ObjID.Hex(), Name: d.SwoId.Name })
+		for iter.Next(&dep) {
+			auths = append(auths, &swyapi.AuthInfo{ Id: dep.ObjID.Hex(), Name: dep.SwoId.Name })
+		}
+
+		err := iter.Err()
+		if err != nil {
+			return GateErrD(err)
 		}
 
 		return xrest.Respond(ctx, w, auths)
