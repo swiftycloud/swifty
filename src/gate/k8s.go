@@ -778,7 +778,7 @@ func refreshDepsAndPods(ctx context.Context) error {
 		}
 
 		for _, pod := range pods.Items {
-			ctxlog(ctx).Debugf("Found pod %s %s\n", pod.Name, pod.Status.PodIP)
+			ctxlog(ctx).Debugf("Found pod %s %s", pod.Name, pod.Status.PodIP)
 			err = swk8sPodUp(ctx, genBalancerPod(&pod))
 			if err != nil {
 				ctxlog(ctx).Errorf("Can't refresh POD: %s", err.Error())
