@@ -402,6 +402,28 @@ func show_fn_tree(fns []*swyapi.FunctionInfo) {
 	show_names("", &root)
 }
 
+type FName struct {
+	Name	string
+	Kids	[]*FName
+}
+
+func (f *FName)show(pfx string) {
+	fmt.Printf("%s%s\n", pfx, f.Name)
+	for _, k := range f.Kids {
+		k.show(pfx + "  ")
+	}
+}
+
+func function_tree(args []string, opts [16]string) {
+	var root FName
+	ua := []string{}
+	if curCmd.project != "" {
+		ua = append(ua, "project=" + curCmd.project)
+	}
+	make_faas_req1("GET", url("functions/tree", ua), http.StatusOK, nil, &root)
+	root.show("")
+}
+
 func function_list(args []string, opts [16]string) {
 	ua := []string{}
 	if curCmd.project != "" {
@@ -1606,6 +1628,7 @@ const (
 	CMD_RUN string		= "run"
 
 	CMD_FL string		= "fl"
+	CMD_FT string		= "ft"
 	CMD_FI string		= "fi"
 	CMD_FIM string		= "fim"
 	CMD_FA string		= "fa"
@@ -1693,6 +1716,7 @@ var cmdOrder = []string {
 	CMD_FW,
 	CMD_FLOG,
 	CMD_FCOD,
+	CMD_FT,
 
 	CMD_EL,
 	CMD_EI,
@@ -1769,6 +1793,7 @@ var cmdMap = map[string]*cmdDesc {
 	CMD_STATS:	&cmdDesc{ call: show_stats,	  opts: flag.NewFlagSet(CMD_STATS, flag.ExitOnError) },
 	CMD_PS:		&cmdDesc{ call: list_projects,	  opts: flag.NewFlagSet(CMD_PS, flag.ExitOnError) },
 	CMD_FL:		&cmdDesc{ call: function_list,	  opts: flag.NewFlagSet(CMD_FL, flag.ExitOnError) },
+	CMD_FT:		&cmdDesc{ call: function_tree,	  opts: flag.NewFlagSet(CMD_FT, flag.ExitOnError) },
 	CMD_FI:		&cmdDesc{ call: function_info,	  opts: flag.NewFlagSet(CMD_FI, flag.ExitOnError) },
 	CMD_FIM:	&cmdDesc{ call: function_minfo,	  opts: flag.NewFlagSet(CMD_FIM, flag.ExitOnError) },
 	CMD_FA:		&cmdDesc{ call: function_add,	  opts: flag.NewFlagSet(CMD_FA, flag.ExitOnError) },
@@ -1872,6 +1897,7 @@ func main() {
 	cmdMap[CMD_FL].opts.StringVar(&opts[1], "label", "", "Labels, comma-separated")
 	cmdMap[CMD_FL].opts.StringVar(&opts[2], "pref", "", "Prefix")
 	bindCmdUsage(CMD_FL,	[]string{}, "List functions", true)
+	bindCmdUsage(CMD_FT,	[]string{}, "Shpw function tree", true)
 	bindCmdUsage(CMD_FI,	[]string{"NAME"}, "Function info", true)
 	bindCmdUsage(CMD_FIM,	[]string{"NAME"}, "Function memdat info", true)
 	cmdMap[CMD_FA].opts.StringVar(&opts[0], "lang", "auto", "Language")

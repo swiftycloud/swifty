@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/gorilla/mux"
+	"gopkg.in/mgo.v2/bson"
 
 	"net/http"
 	"strings"
@@ -326,6 +327,49 @@ func handleFunctionLogs(ctx context.Context, w http.ResponseWriter, r *http.Requ
 func handleFunctions(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
 	var params swyapi.FunctionAdd
 	return xrest.HandleMany(ctx, w, r, Functions{}, &params)
+}
+
+type FName struct {
+	Name	string
+	Kids	[]*FName
+}
+
+func handleFunctionsTree(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
+	q := r.URL.Query()
+	project := q.Get("project")
+	if project == "" {
+		project = DefaultProject
+	}
+
+	var fns []FName
+	err := dbCol(ctx, DBColFunc).Find(listReq(ctx, project, []string{})).Select(bson.M{"name": 1}).All(&fns)
+	if err != nil {
+		return GateErrD(err)
+	}
+
+	root := FName{Name: "/", Kids: []*FName{}}
+	for _, fn := range fns {
+		n := &root
+		path := strings.Split(fn.Name, ".")
+		for _, p := range path {
+			var tn *FName
+			for _, c := range n.Kids {
+				if c.Name == p {
+					tn = c
+					break
+				}
+			}
+
+			if tn == nil {
+				tn = &FName{Name: p, Kids: []*FName{}}
+				n.Kids = append(n.Kids, tn)
+			}
+
+			n = tn
+		}
+	}
+
+	return xrest.Respond(ctx, w, root)
 }
 
 func handleFunction(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
