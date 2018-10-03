@@ -64,7 +64,6 @@ func swk8sRemove(ctx context.Context, conf *YAMLConf, fn *FunctionDesc) error {
 	this, err := deploy.Get(depname, metav1.GetOptions{})
 	if err != nil {
 		if k8serr.IsNotFound(err) {
-			ctxlog(ctx).Debugf("Deployment %s/%s doesn't exist", fn.SwoId.Str(), depname)
 			return nil
 		}
 
@@ -94,7 +93,7 @@ func swk8sRemove(ctx context.Context, conf *YAMLConf, fn *FunctionDesc) error {
 		return err
 	}
 
-	ctxlog(ctx).Debugf("Deleted %s deployment %s", fn.SwoId.Str(), depname)
+	ctxlog(ctx).Debugf("Remove %s deploy %s", fn.SwoId.Str(), depname)
 	return nil
 }
 
@@ -257,7 +256,6 @@ func swk8sUpdate(ctx context.Context, conf *YAMLConf, fn *FunctionDesc) error {
 
 	if fn.Size.Replicas == 1 {
 		/* Don't let pods disappear at all */
-		ctxlog(ctx).Debugf("Tuning up update strategy")
 		one := intstr.FromInt(1)
 		zero := intstr.FromInt(0)
 
@@ -295,7 +293,7 @@ func swk8sRun(ctx context.Context, conf *YAMLConf, fn *FunctionDesc) error {
 	roRoot := true
 
 	depname := fn.DepName()
-	ctxlog(ctx).Debugf("Start %s deployment for %s (img: %s)", depname, fn.SwoId.Str(), "swifty/" + fn.Code.Lang)
+	ctxlog(ctx).Debugf("Start %s deploy for %s (img: %s)", fn.SwoId.Str(), depname, fn.Code.image())
 
 	envs := swk8sGenEnvVar(ctx, fn, conf.Wdog.Port)
 
@@ -541,8 +539,6 @@ func swk8sPodDown(ctx context.Context, pod *k8sPod) {
 		return
 	}
 
-	ctxlog(ctx).Debugf("POD %s down deploy %s", pod.UID, pod.DepName)
-
 	err := BalancerPodDel(ctx, pod)
 	if err != nil {
 		ctxlog(ctx).Errorf("Can't delete pod %s/%s/%s: %s",
@@ -595,9 +591,11 @@ func podEventLoop() {
 		ctx, done := mkContext("::podevent")
 		if evt.up {
 			ctxlog(ctx).Debugf("POD %s (%s) up deploy %s",
-					evt.pod.UID, evt.pod.WdogAddr, evt.pod.DepName)
+				evt.pod.UID, evt.pod.WdogAddr, evt.pod.DepName)
 			swk8sPodUp(ctx, evt.pod)
 		} else {
+			ctxlog(ctx).Debugf("POD %s (%s) down deploy %s",
+				evt.pod.UID, evt.pod.WdogAddr, evt.pod.DepName)
 			swk8sPodDown(ctx, evt.pod)
 		}
 		done(ctx)
@@ -696,7 +694,6 @@ func swk8sGetBuildPods(ctx context.Context) (map[string]string, error) {
 	for _, pod := range pods.Items {
 		build := pod.ObjectMeta.Labels["swybuild"]
 		rv[build] = pod.Status.PodIP
-		ctxlog(ctx).Debugf("Found building POD %s/%s\n", build, pod.Status.PodIP)
 	}
 
 	return rv, nil
@@ -767,7 +764,6 @@ func refreshDepsAndPods(ctx context.Context) error {
 
 		}
 
-		ctxlog(ctx).Debugf("Chk replicas for %s", fn.SwoId.Str())
 		if *dep.Spec.Replicas > 1 {
 			ctxlog(ctx).Debugf("Found grown-up (%d) deployment %s", *dep.Spec.Replicas, dep.Name)
 			err = scalerInit(ctx, fn, uint32(*dep.Spec.Replicas))
@@ -783,7 +779,6 @@ func refreshDepsAndPods(ctx context.Context) error {
 			return errors.New("Error listing PODs")
 		}
 
-		ctxlog(ctx).Debugf("Chk PODs for %s", fn.SwoId.Str())
 		for _, pod := range pods.Items {
 			ctxlog(ctx).Debugf("Found pod %s %s\n", pod.Name, pod.Status.PodIP)
 			err = swk8sPodUp(ctx, genBalancerPod(&pod))
@@ -797,7 +792,7 @@ func refreshDepsAndPods(ctx context.Context) error {
 	return nil
 }
 
-func swk8sInit(ctx context.Context, conf *YAMLConf, config_path string) error {
+func swk8sInit(ctx context.Context, config_path string) error {
 	config_path = filepath.Dir(config_path) + "/kubeconfig"
 	kubeconfig := flag.String("kubeconfig", config_path, "path to the kubeconfig file")
 	flag.Parse()

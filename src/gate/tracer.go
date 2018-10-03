@@ -14,7 +14,7 @@ import (
 	"../common/xrest"
 )
 
-const GateTracerPath = "/var/run/swifty/gate"
+const GateTracerPath = "tracer.sock"
 
 type Tracer struct {
 	id	string
@@ -146,14 +146,14 @@ func tracerRun(cln *net.UnixConn) {
 	msg := make([]byte, 256)
 	l, err := cln.Read(msg)
 	if err != nil {
-		glog.Debugf("Error getting tracer hello: %s", err.Error())
+		glog.Errorf("Error getting tracer hello: %s", err.Error())
 		return
 	}
 
 	var hm swyapi.TracerHello
 	err = json.Unmarshal(msg[:l], &hm)
 	if err != nil {
-		glog.Debugf("Error parsing tracer hello: %s", err.Error())
+		glog.Errorf("Error parsing tracer hello: %s", err.Error())
 		return
 	}
 
@@ -199,15 +199,16 @@ func tracerInit() error {
 	tracers = list.New()
 	xrest.TraceFn = traceResponce
 
-	os.Remove(GateTracerPath)
-	addr, err := net.ResolveUnixAddr("unixpacket", GateTracerPath)
+	tp := conf.Home + GateTracerPath
+	os.Remove(tp)
+	addr, err := net.ResolveUnixAddr("unixpacket", tp)
 	if err != nil {
 		return err
 	}
 
 	sk, err := net.ListenUnix("unixpacket", addr)
 	if err != nil {
-		glog.Errorf("Cannot bind unix socket to " + GateTracerPath)
+		glog.Errorf("Cannot bind unix socket to " + tp)
 		return err
 	}
 

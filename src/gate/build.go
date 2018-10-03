@@ -20,9 +20,7 @@ func tryBuildFunction(ctx context.Context, fn *FunctionDesc, suf string) error {
 func buildFunction(ctx context.Context, addr string, fn *FunctionDesc, suf string) error {
 	var wd_result swyapi.SwdFunctionRunResult
 
-	ctxlog(ctx).Debugf("Building function in %s", fn.srcPath(""))
-
-	resp, err := xhttp.MarshalAndPost(
+	resp, err := xhttp.Req(
 			&xhttp.RestReq{
 				Address: "http://" + addr + ":" + strconv.Itoa(conf.Wdog.Port) + "/v1/run",
 				Timeout: 120,
@@ -36,7 +34,7 @@ func buildFunction(ctx context.Context, addr string, fn *FunctionDesc, suf strin
 		return fmt.Errorf("Can't build function")
 	}
 
-	err = xhttp.ReadAndUnmarshalResp(resp, &wd_result)
+	err = xhttp.RResp(resp, &wd_result)
 	if err != nil {
 		ctxlog(ctx).Errorf("Can't get build result back: %s", err.Error())
 		return fmt.Errorf("Error building function")
@@ -47,11 +45,10 @@ func buildFunction(ctx context.Context, addr string, fn *FunctionDesc, suf strin
 		return fmt.Errorf("Error building function")
 	}
 
-	ctxlog(ctx).Debugf("Function built OK")
 	return nil
 }
 
-func BuilderInit(ctx context.Context, conf *YAMLConf) error {
+func BuilderInit(ctx context.Context) error {
 	buildIps, err := swk8sGetBuildPods(ctx)
 	if err != nil {
 		return err

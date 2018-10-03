@@ -394,13 +394,11 @@ func (fn *FunctionDesc)Add(ctx context.Context, p interface{}) *xrest.ReqErr {
 	var bAddr string
 
 	src := &p.(*swyapi.FunctionAdd).Sources
-	ctxlog(ctx).Debugf("function/add %s (cookie %s)", fn.SwoId.Str(), fn.Cookie[:32])
 
 	fn.ObjID = bson.NewObjectId()
 	fn.State = DBFuncStateIni
 	err = dbInsert(ctx, fn)
 	if err != nil {
-		ctxlog(ctx).Errorf("Can't add function %s: %s", fn.SwoId.Str(), err.Error())
 		return GateErrD(err)
 	}
 
@@ -555,14 +553,12 @@ func (fn *FunctionDesc)setSize(ctx context.Context, sz *swyapi.FunctionSize) *xr
 	}
 
 	if fn.Size.Tmo != sz.Timeout {
-		ctxlog(ctx).Debugf("Will update tmo for %s", fn.SwoId.Str())
 		fn.Size.Tmo = sz.Timeout
 		update["size.timeout"] = sz.Timeout
 		restart = true
 	}
 
 	if fn.Size.Mem != sz.Memory {
-		ctxlog(ctx).Debugf("Will update mem for %s", fn.SwoId.Str())
 		fn.Size.Mem = sz.Memory
 		update["size.mem"] = sz.Memory
 		mfix = true
@@ -570,7 +566,6 @@ func (fn *FunctionDesc)setSize(ctx context.Context, sz *swyapi.FunctionSize) *xr
 	}
 
 	if sz.Rate != fn.Size.Rate || sz.Burst != fn.Size.Burst {
-		ctxlog(ctx).Debugf("Will update ratelimit for %s", fn.SwoId.Str())
 		fn.Size.Burst = sz.Burst
 		fn.Size.Rate = sz.Rate
 		update["size.rate"] = sz.Rate
@@ -782,13 +777,11 @@ func (fn *FunctionDesc)updateSources(ctx context.Context, src *swyapi.FunctionSo
 		return GateErrM(swyapi.GateGenErr, "Function should be running or stalled")
 	}
 
-	ctxlog(ctx).Debugf("Will update sources for %s", fn.SwoId.Str())
 	err = updateSources(ctx, fn, src)
 	if err != nil {
 		return GateErrE(swyapi.GateGenErr, err)
 	}
 
-	ctxlog(ctx).Debugf("Try build sources")
 	err = tryBuildFunction(ctx, fn, "")
 	if err != nil {
 		return GateErrE(swyapi.GateGenErr, err)
@@ -807,10 +800,8 @@ func (fn *FunctionDesc)updateSources(ctx context.Context, src *swyapi.FunctionSo
 	}
 
 	if olds == DBFuncStateRdy {
-		ctxlog(ctx).Debugf("Updating deploy")
 		swk8sUpdate(ctx, &conf, fn)
 	} else {
-		ctxlog(ctx).Debugf("Starting deploy")
 		err = swk8sRun(ctx, &conf, fn)
 		if err != nil {
 			fn.ToState(ctx, DBFuncStateStl, -1)
@@ -861,7 +852,6 @@ func (fn *FunctionDesc)Del(ctx context.Context) *xrest.ReqErr {
 	}
 
 	if !fn.isOneShot() && !dea {
-		ctxlog(ctx).Debugf("`- delete deploy")
 		err = swk8sRemove(ctx, &conf, fn)
 		if err != nil {
 			ctxlog(ctx).Errorf("remove deploy error: %s", err.Error())
@@ -869,37 +859,35 @@ func (fn *FunctionDesc)Del(ctx context.Context) *xrest.ReqErr {
 		}
 	}
 
-	ctxlog(ctx).Debugf("`- setdown events")
 	err = clearAllEvents(ctx, fn)
 	if err != nil {
+		ctxlog(ctx).Errorf("events %s remove error: %s", fn.SwoId.Str(), err.Error())
 		goto later
 	}
 
-	ctxlog(ctx).Debugf("`- drop stats")
 	err = statsDrop(ctx, fn)
 	if err != nil {
+		ctxlog(ctx).Errorf("stats %s remove error: %s", fn.SwoId.Str(), err.Error())
 		goto later
 	}
 
-	ctxlog(ctx).Debugf("`- remove logs")
 	err = logRemove(ctx, fn)
 	if err != nil {
 		ctxlog(ctx).Errorf("logs %s remove error: %s", fn.SwoId.Str(), err.Error())
 		goto later
 	}
 
-	ctxlog(ctx).Debugf("`- clean sources")
 	err = removeSources(ctx, fn)
 	if err != nil {
+		ctxlog(ctx).Errorf("sources %s remove error: %s", fn.SwoId.Str(), err.Error())
 		goto later
 	}
 
-	ctxlog(ctx).Debugf("`- gone fdmd")
 	memdGone(fn)
 
-	ctxlog(ctx).Debugf("`- and ...")
 	err = dbRemove(ctx, fn)
 	if err != nil {
+		ctxlog(ctx).Errorf("db %s remove error: %s", fn.SwoId.Str(), err.Error())
 		goto later
 	}
 
@@ -921,21 +909,18 @@ func waitFunctionVersion(ctx context.Context, fn *FunctionDesc, version string, 
 		var vers []string
 		var ok bool
 
-		ctxlog(ctx).Debugf("Check %s for %s", fn.SwoId.Str(), version)
 		vers, err = dbBalancerListVersions(ctx, fn.Cookie)
 		if err != nil {
 			break
 		}
 
-		ctxlog(ctx).Debugf("Check %s for %s vs %v", fn.SwoId.Str(), version, vers)
 		ok, err = checkVersion(ctx, fn, version, vers)
 		if ok || err != nil {
 			break
 		}
 
-		ctxlog(ctx).Debugf("Wait %s %s (%v)", fn.SwoId.Str(), fn.Cookie, tmo)
 		if w.Wait(&tmo) {
-			ctxlog(ctx).Debugf(" `- Timeout %s", fn.SwoId.Str())
+			ctxlog(ctx).Debugf("Timeout waiting FN version %s", fn.SwoId.Str())
 			timeout = true
 			break
 		}

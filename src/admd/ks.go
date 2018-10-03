@@ -64,14 +64,14 @@ func keystoneGetRolesId(c *xh.XCreds) (string, string, error) {
 
 	var or, ar string
 
-	log.Debugf("Looking for roles %s, %s", xkst.SwyUserRole, xkst.SwyAdminRole)
+	log.Debugf("Looking for roles %s, %s", swyapi.UserRole, swyapi.AdminRole)
 	for _, role := range roles.Roles {
-		if role.Name == xkst.SwyUserRole {
+		if role.Name == swyapi.UserRole {
 			log.Debugf("Found user role: %s", role.Id)
 			or = role.Id
 			continue
 		}
-		if role.Name == xkst.SwyAdminRole {
+		if role.Name == swyapi.AdminRole {
 			log.Debugf("Found admin role: %s", role.Id)
 			ar = role.Id
 			continue

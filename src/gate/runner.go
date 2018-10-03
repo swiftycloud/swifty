@@ -99,7 +99,7 @@ func talkHTTP(addr, port, url string, args *swyapi.SwdFunctionRun) (*swyapi.SwdF
 	var res swyapi.SwdFunctionRunResult
 	var err error
 
-	resp, err = xhttp.MarshalAndPost(
+	resp, err = xhttp.Req(
 			&xhttp.RestReq{
 				Address: "http://" + addr + ":" + port + "/v1/run/" + url,
 				Timeout: uint(conf.Runtime.Timeout.Max),
@@ -113,7 +113,7 @@ func talkHTTP(addr, port, url string, args *swyapi.SwdFunctionRun) (*swyapi.SwdF
 		return nil, err
 	}
 
-	err = xhttp.ReadAndUnmarshalResp(resp, &res)
+	err = xhttp.RResp(resp, &res)
 	if err != nil {
 		return nil, err
 	}
@@ -160,10 +160,15 @@ out:
 	return nil, fmt.Errorf("RUN error %s", err.Error())
 }
 
+func doRunBg(ctx context.Context, fn *FunctionDesc, event string, args *swyapi.SwdFunctionRun) {
+	_, err := doRun(ctx, fn, event, args)
+	if err != nil {
+		ctxlog(ctx).Errorf("bg.%s: error running fn: %s", event, err.Error())
+	}
+}
+
 func runFunctionOnce(ctx context.Context, fn *FunctionDesc) {
-	ctxlog(ctx).Debugf("oneshot RUN for %s", fn.SwoId.Str())
 	doRun(ctx, fn, "oneshot", &swyapi.SwdFunctionRun{})
-	ctxlog(ctx).Debugf("oneshor %s finished", fn.SwoId.Str())
 
 	swk8sRemove(ctx, &conf, fn)
 	fn.ToState(ctx, DBFuncStateStl, -1)
@@ -179,7 +184,7 @@ func prepareTempRun(ctx context.Context, fn *FunctionDesc, params *swyapi.Functi
 	defer td.runlock.Unlock()
 
 	if td.runrate == nil {
-		td.runrate = xratelimit.MakeRL(0, 1) /* FIXME -- configurable */
+		td.runrate = xratelimit.MakeRL(0, uint(conf.RunRate))
 	}
 
 	if !td.runrate.Get() {
@@ -187,7 +192,6 @@ func prepareTempRun(ctx context.Context, fn *FunctionDesc, params *swyapi.Functi
 		return "", nil
 	}
 
-	ctxlog(ctx).Debugf("Asked for custom sources... oh, well...")
 	suff, err := putTempSources(ctx, fn, params)
 	if err != nil {
 		return "", GateErrE(swyapi.GateGenErr, err)

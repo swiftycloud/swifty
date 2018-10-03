@@ -46,27 +46,27 @@ func HandleCORS(w http.ResponseWriter, r *http.Request, methods []string, header
 	return false
 }
 
-func ReadAndUnmarshalReq(r *http.Request, data interface{}) error {
+func RReq(r *http.Request, data interface{}) error {
 	defer r.Body.Close()
 	return json.NewDecoder(r.Body).Decode(data)
 }
 
-func ReadAndUnmarshalResp(r *http.Response, data interface{}) error {
+func RResp(r *http.Response, data interface{}) error {
 	defer r.Body.Close()
 	return json.NewDecoder(r.Body).Decode(data)
 }
 
-func MarshalAndWrite(w http.ResponseWriter, data interface{}) error {
-	return MarshalAndWrite2(w, data, http.StatusOK)
+func Respond(w http.ResponseWriter, data interface{}) error {
+	return Respond2(w, data, http.StatusOK)
 }
 
-func MarshalAndWrite2(w http.ResponseWriter, data interface{}, status int) error {
+func Respond2(w http.ResponseWriter, data interface{}, status int) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(status)
 	return json.NewEncoder(w).Encode(data)
 }
 
-func MarshalAndPost(req *RestReq, data interface{}) (*http.Response, error) {
+func Req(req *RestReq, data interface{}) (*http.Response, error) {
 	if req.Timeout == 0 {
 		req.Timeout = 15
 	}

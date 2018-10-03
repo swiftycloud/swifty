@@ -52,8 +52,8 @@ func (t *Trigger)Info(ctx context.Context, q url.Values, details bool) (interfac
 
 func (t *Trigger)Upd(context.Context, interface{}) *xrest.ReqErr { return GateErrC(swyapi.GateNotAvail) }
 
-func eventsInit(ctx context.Context, conf *YAMLConf) error {
-	return cronInit(ctx, conf)
+func eventsInit(ctx context.Context) error {
+	return cronInit(ctx)
 }
 
 type Triggers struct {

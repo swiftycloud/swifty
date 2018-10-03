@@ -800,7 +800,7 @@ func handleKeygen(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	var kg swys3api.KeyGen
 	var err error
 
-	err = xhttp.ReadAndUnmarshalReq(r, &kg)
+	err = xhttp.RReq(r, &kg)
 	if err != nil {
 		goto out
 	}
@@ -816,7 +816,7 @@ func handleKeygen(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 		goto out
 	}
 
-	err = xhttp.MarshalAndWrite(w, &swys3api.KeyGenResult{
+	err = xhttp.Respond(w, &swys3api.KeyGenResult{
 			AccessKeyID:	akey.AccessKeyID,
 			AccessKeySecret:s3DecryptAccessKeySecret(akey),
 			AccID:		akey.AccountObjID.Hex(),
@@ -835,7 +835,7 @@ func handleKeydel(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	var kd swys3api.KeyDel
 	var err error
 
-	err = xhttp.ReadAndUnmarshalReq(r, &kd)
+	err = xhttp.RReq(r, &kd)
 	if err != nil {
 		goto out
 	}
@@ -883,7 +883,7 @@ func handleStats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = xhttp.MarshalAndWrite(w, &swys3api.AcctStats{
+	err = xhttp.Respond(w, &swys3api.AcctStats{
 		CntObjects:	st.CntObjects,
 		CntBytes:	st.CntBytes,
 		OutBytes:	st.OutBytes,
@@ -909,7 +909,7 @@ func handleNotify(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = xhttp.ReadAndUnmarshalReq(r, &params)
+	err = xhttp.RReq(r, &params)
 	if err != nil {
 		goto out
 	}

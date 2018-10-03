@@ -9,16 +9,15 @@ import (
 )
 
 const (
-	SwyAdminRole	string	= "swifty.admin"
-	SwyUserRole	string	= "swifty.owner"
-	SwyUIRole	string	= "swifty.ui"
 	KsTokenCacheExpires time.Duration = 60 * time.Second
 )
 
-func KeystoneRoleHas(td *KeystoneTokenData, wrole string) bool {
+func HasRole(td *KeystoneTokenData, wroles ...string) bool {
 	for _, role := range td.Roles {
-		if role.Name == wrole {
-			return true
+		for _, wrole := range wroles {
+			if role.Name == wrole {
+				return true
+			}
 		}
 	}
 
@@ -75,7 +74,7 @@ retry:
 		headers[h] = hv
 	}
 
-	resp, err := xhttp.MarshalAndPost(
+	resp, err := xhttp.Req(
 			&xhttp.RestReq{
 				Method:  ksreq.Type,
 				Address: "http://" + kc.addr + "/v3/" + ksreq.URL,
@@ -97,7 +96,7 @@ retry:
 	ksreq.outToken = resp.Header.Get("X-Subject-Token")
 
 	if out != nil {
-		err = xhttp.ReadAndUnmarshalResp(resp, out)
+		err = xhttp.RResp(resp, out)
 		if err != nil {
 			return err
 		}

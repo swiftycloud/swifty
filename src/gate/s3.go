@@ -51,7 +51,7 @@ func s3Call2(rq *xhttp.RestReq, in interface{}, out interface{}) (error, int) {
 	rq.Timeout = 120
 	rq.Headers = map[string]string{"X-SwyS3-Token": gateSecrets[conf.Mware.S3.c.Pass]}
 
-	resp, err := xhttp.MarshalAndPost(rq, in)
+	resp, err := xhttp.Req(rq, in)
 	if err != nil {
 		code := -1
 		if resp != nil {
@@ -63,7 +63,7 @@ func s3Call2(rq *xhttp.RestReq, in interface{}, out interface{}) (error, int) {
 	defer resp.Body.Close()
 
 	if out != nil {
-		err = xhttp.ReadAndUnmarshalResp(resp, out)
+		err = xhttp.RResp(resp, out)
 		if err != nil {
 			return fmt.Errorf("Error reading responce from S3: %s", err.Error()), -1
 		}
@@ -172,16 +172,12 @@ func handleS3Event(ctx context.Context, user string, data []byte) {
 			continue
 		}
 
-		/* FIXME -- this is synchronous */
-		_, err = doRun(ctx, &fn, "s3",
+		doRunBg(ctx, &fn, "s3",
 				&swyapi.SwdFunctionRun{Args: map[string]string {
 					"bucket": evt.Bucket,
 					"object": evt.Object,
 					"op": evt.Op,
 				}})
-		if err != nil {
-			ctxlog(ctx).Errorf("s3: Error running FN %s", err.Error())
-		}
 	}
 }
 

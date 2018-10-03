@@ -165,7 +165,6 @@ func GCOldSources(ctx context.Context, fn *FunctionDesc, ver string) {
 
 	w := xwait.Prepare(fn.Cookie)
 	cookie := fn.Cookie
-	ctxlog(ctx).Debugf("Will remove %s's sources after a while via %s", ver, np)
 
 	go func() {
 		tmo := 16 * 60 * time.Second
@@ -187,7 +186,6 @@ func GCOldSources(ctx context.Context, fn *FunctionDesc, ver string) {
 			}
 
 			if !found {
-				ctxlog(ctx).Debugf("Dropping %s.%s sources", cookie, ver)
 				xh.DropDirComplete(np)
 				break
 			}
@@ -205,22 +203,14 @@ func GCOldSources(ctx context.Context, fn *FunctionDesc, ver string) {
 func removeSources(ctx context.Context, fn *FunctionDesc) error {
 	sd := fn.srcRoot()
 
-	td, err := xh.DropDir(conf.Home + "/" + CloneDir, sd)
+	_, err := xh.DropDir(conf.Home + "/" + CloneDir, sd)
 	if err != nil {
 		return err
 	}
 
-	if td != "" {
-		ctxlog(ctx).Debugf("Will remove %s repo clone via %s", fn.SwoId.Str(), td)
-	}
-
-	td, err = xh.DropDir(conf.Wdog.Volume, sd)
+	_, err = xh.DropDir(conf.Wdog.Volume, sd)
 	if err != nil {
 		return err
-	}
-
-	if td != "" {
-		ctxlog(ctx).Debugf("Will remove %s sources via %s", fn.SwoId.Str(), td)
 	}
 
 	return nil
@@ -248,8 +238,6 @@ func update_deps(ctx context.Context, repo_path string) error {
 func update_git_submodules(ctx context.Context, repo_path string) error {
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
-
-	ctxlog(ctx).Debugf("Updating git submodules @%s", repo_path)
 
 	cmd := exec.Command("git", "-C", repo_path, "submodule", "init")
 	cmd.Stdout = &stdout

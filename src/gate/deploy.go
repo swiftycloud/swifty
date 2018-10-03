@@ -159,7 +159,30 @@ type Deployments struct {
 func deployStartItems(dep *DeployDesc) {
 	ctx, done := mkContext("::deploy start")
 	defer done(ctx)
+	gctx(ctx).tpush(dep.SwoId.Tennant)
 
+	dep.StartItems(ctx)
+}
+
+func deployRestartItems(dep *DeployDesc) {
+	ctx, done := mkContext("::deploy restart")
+	defer done(ctx)
+	gctx(ctx).tpush(dep.SwoId.Tennant)
+
+	if dep.StopItems(ctx) == nil {
+		dep.StartItems(ctx)
+	}
+}
+
+func deployStopItems(dep *DeployDesc) {
+	ctx, done := mkContext("::deploy stop")
+	defer done(ctx)
+	gctx(ctx).tpush(dep.SwoId.Tennant)
+
+	dep.StopItems(ctx)
+}
+
+func (dep *DeployDesc)StartItems(ctx context.Context) {
 	var fs, ms, rs int
 	var fn *DeployFunction
 	var mw *DeployMware
@@ -169,10 +192,7 @@ func deployStartItems(dep *DeployDesc) {
 	fns := []*DeployFunction{}
 	rts := []*DeployRouter{}
 
-	gctx(ctx).tpush(dep.SwoId.Tennant)
-
 	for ms, mw = range dep.Mwares {
-		ctxlog(ctx).Debugf("Start mw.%s", mw.Id.Str())
 		cerr := mw.start(ctx)
 		if cerr == nil {
 			mws = append(mws, &DeployMware{Id: mw.Id})
@@ -183,7 +203,6 @@ func deployStartItems(dep *DeployDesc) {
 	}
 
 	for fs, fn = range dep.Functions {
-		ctxlog(ctx).Debugf("Start fn.%s", mw.Id.Str())
 		cerr := fn.start(ctx)
 		if cerr == nil {
 			fns = append(fns, &DeployFunction{Id: fn.Id})
@@ -194,7 +213,6 @@ func deployStartItems(dep *DeployDesc) {
 	}
 
 	for rs, rt = range dep.Routers {
-		ctxlog(ctx).Debugf("Start rt.%s", mw.Id.Str())
 		cerr := rt.start(ctx)
 		if cerr == nil {
 			rts = append(rts, &DeployRouter{Id: rt.Id})
@@ -204,7 +222,6 @@ func deployStartItems(dep *DeployDesc) {
 		}
 	}
 
-	ctxlog(ctx).Debugf("Started %s", dep.SwoId.Str())
 	dep.State = DBDepStateRdy
 	dep.Functions = fns
 	dep.Mwares = mws
@@ -305,7 +322,6 @@ func (dep *DeployDesc)getItemsParams(ctx context.Context, from *swyapi.DeploySou
 			return GateErrE(swyapi.GateGenErr, err)
 		}
 	case "repo":
-		ctxlog(ctx).Debugf("Read [%s] deploy desc", from.Repo)
 		desc, err = repoReadFile(ctx, from.Repo)
 		if err != nil {
 			return GateErrE(swyapi.GateGenErr, err)
@@ -316,7 +332,6 @@ func (dep *DeployDesc)getItemsParams(ctx context.Context, from *swyapi.DeploySou
 	}
 
 	for _, p := range params {
-		ctxlog(ctx).Debugf("`- Fix [%s:%s]", p.name, p.value)
 		desc = bytes.Replace(desc, []byte("%" + p.name + "%"), []byte(p.value), -1)
 	}
 
@@ -325,7 +340,6 @@ func (dep *DeployDesc)getItemsParams(ctx context.Context, from *swyapi.DeploySou
 		return GateErrE(swyapi.GateBadRequest, err)
 	}
 
-	ctxlog(ctx).Debugf("Initialize deploy from desc")
 	return dep.getItemsDesc(&dd)
 }
 
@@ -505,10 +519,7 @@ func (dep *DeployDesc)toInfo(ctx context.Context, details bool) (*swyapi.DeployI
 	return ret, nil
 }
 
-func (dep *DeployDesc)Del(ctx context.Context) (*xrest.ReqErr) {
-	/* FIXME -- change state to terminating, then stop. On
-	 * restart kill the terminating deployments further
-	 */
+func (dep *DeployDesc)StopItems(ctx context.Context) *xrest.ReqErr {
 	cerr := deployStopRouters(ctx, dep, len(dep.Routers))
 	if cerr != nil {
 		return cerr
@@ -524,7 +535,21 @@ func (dep *DeployDesc)Del(ctx context.Context) (*xrest.ReqErr) {
 		return cerr
 	}
 
-	err := dbRemove(ctx, dep)
+	return nil
+}
+
+func (dep *DeployDesc)Del(ctx context.Context) (*xrest.ReqErr) {
+	err := dbUpdatePart(ctx, dep, bson.M{"state": DBDepStateTrm})
+	if err != nil {
+		return GateErrD(err)
+	}
+
+	cerr := dep.StopItems(ctx)
+	if cerr != nil {
+		return cerr
+	}
+
+	err = dbRemove(ctx, dep)
 	if err != nil {
 		return GateErrD(err)
 	}
@@ -532,7 +557,7 @@ func (dep *DeployDesc)Del(ctx context.Context) (*xrest.ReqErr) {
 	return nil
 }
 
-func DeployInit(ctx context.Context, conf *YAMLConf) error {
+func DeployInit(ctx context.Context) error {
 	var deps []*DeployDesc
 
 	err := dbFindAll(ctx, bson.M{}, &deps)
@@ -557,16 +582,18 @@ func DeployInit(ctx context.Context, conf *YAMLConf) error {
 			}
 			err = dbUpdateAll(ctx, dep)
 			if err != nil {
-				ctxlog(ctx).Debugf("Error updating mware: %s", err.Error())
+				ctxlog(ctx).Errorf("Error updating mware: %s", err.Error())
 				return err
 			}
 		}
 
 		if dep.State == DBDepStateIni {
-			ctxlog(ctx).Debugf("Will restart deploy %s in state %d", dep.SwoId.Str(), dep.State)
-			deployStopFunctions(ctx, dep, len(dep.Functions))
-			deployStopMwares(ctx, dep, len(dep.Mwares))
-			go deployStartItems(dep)
+			ctxlog(ctx).Debugf("Will restart deploy %s", dep.SwoId.Str())
+			go deployRestartItems(dep)
+		}
+		if dep.State == DBDepStateTrm {
+			ctxlog(ctx).Debugf("Will finish deploy stop %s", dep.SwoId.Str())
+			go deployStopItems(dep)
 		}
 	}
 

@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"context"
 	"reflect"
+	"net/http"
+	"github.com/gorilla/mux"
 
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
@@ -190,6 +192,37 @@ func objFindId(ctx context.Context, id string, out interface{}, q bson.M) *xrest
 	}
 
 	return nil
+}
+
+func objFindForReq2(ctx context.Context, r *http.Request, n string, out interface{}, q bson.M) *xrest.ReqErr {
+	return objFindId(ctx, mux.Vars(r)[n], out, q)
+}
+
+func objFindForReq(ctx context.Context, r *http.Request, n string, out interface{}) *xrest.ReqErr {
+	return objFindForReq2(ctx, r, n, out, nil)
+}
+
+func repoFindForReq(ctx context.Context, r *http.Request, user_action bool) (*RepoDesc, *xrest.ReqErr) {
+	rid := mux.Vars(r)["rid"]
+	if !bson.IsObjectIdHex(rid) {
+		return nil, GateErrM(swyapi.GateBadRequest, "Bad repo ID value")
+	}
+
+	var rd RepoDesc
+
+	err := dbFind(ctx, ctxRepoId(ctx, rid), &rd)
+	if err != nil {
+		return nil, GateErrD(err)
+	}
+
+	if !user_action {
+		gx := gctx(ctx)
+		if !gx.Admin && rd.SwoId.Tennant != gx.Tenant {
+			return nil, GateErrM(swyapi.GateNotAvail, "Shared repo")
+		}
+	}
+
+	return &rd, nil
 }
 
 var session *mgo.Session
@@ -485,7 +518,7 @@ func dbProjectListAll(ctx context.Context, ten string) (fn []string, mw []string
 	return
 }
 
-func dbConnect(conf *YAMLConf) error {
+func dbConnect() error {
 	var err error
 
 	dbc := xh.ParseXCreds(conf.DB)
