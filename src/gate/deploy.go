@@ -159,7 +159,22 @@ type Deployments struct {
 func deployStartItems(dep *DeployDesc) {
 	ctx, done := mkContext("::deploy start")
 	defer done(ctx)
+	gctx(ctx).tpush(dep.SwoId.Tennant)
 
+	dep.StartItems(ctx)
+}
+
+func deployRestartItems(dep *DeployDesc) {
+	ctx, done := mkContext("::deploy restart")
+	defer done(ctx)
+	gctx(ctx).tpush(dep.SwoId.Tennant)
+
+	if dep.StopItems(ctx) == nil {
+		dep.StartItems(ctx)
+	}
+}
+
+func (dep *DeployDesc)StartItems(ctx context.Context) {
 	var fs, ms, rs int
 	var fn *DeployFunction
 	var mw *DeployMware
@@ -168,8 +183,6 @@ func deployStartItems(dep *DeployDesc) {
 	mws := []*DeployMware{}
 	fns := []*DeployFunction{}
 	rts := []*DeployRouter{}
-
-	gctx(ctx).tpush(dep.SwoId.Tennant)
 
 	for ms, mw = range dep.Mwares {
 		cerr := mw.start(ctx)
@@ -498,10 +511,7 @@ func (dep *DeployDesc)toInfo(ctx context.Context, details bool) (*swyapi.DeployI
 	return ret, nil
 }
 
-func (dep *DeployDesc)Del(ctx context.Context) (*xrest.ReqErr) {
-	/* FIXME -- change state to terminating, then stop. On
-	 * restart kill the terminating deployments further
-	 */
+func (dep *DeployDesc)StopItems(ctx context.Context) *xrest.ReqErr {
 	cerr := deployStopRouters(ctx, dep, len(dep.Routers))
 	if cerr != nil {
 		return cerr
@@ -513,6 +523,19 @@ func (dep *DeployDesc)Del(ctx context.Context) (*xrest.ReqErr) {
 	}
 
 	cerr = deployStopMwares(ctx, dep, len(dep.Mwares))
+	if cerr != nil {
+		return cerr
+	}
+
+	return nil
+}
+
+func (dep *DeployDesc)Del(ctx context.Context) (*xrest.ReqErr) {
+	/* FIXME -- change state to terminating, then stop. On
+	 * restart kill the terminating deployments further
+	 */
+
+	cerr := dep.StopItems(ctx)
 	if cerr != nil {
 		return cerr
 	}
@@ -557,9 +580,7 @@ func DeployInit(ctx context.Context) error {
 
 		if dep.State == DBDepStateIni {
 			ctxlog(ctx).Debugf("Will restart deploy %s in state %d", dep.SwoId.Str(), dep.State)
-			deployStopFunctions(ctx, dep, len(dep.Functions))
-			deployStopMwares(ctx, dep, len(dep.Mwares))
-			go deployStartItems(dep)
+			go deployRestartItems(dep)
 		}
 	}
 
