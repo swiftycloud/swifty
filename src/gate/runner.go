@@ -160,6 +160,13 @@ out:
 	return nil, fmt.Errorf("RUN error %s", err.Error())
 }
 
+func doRunBg(ctx context.Context, fn *FunctionDesc, event string, args *swyapi.SwdFunctionRun) {
+	_, err := doRun(ctx, fn, event, args)
+	if err != nil {
+		ctxlog(ctx).Errorf("bg.%s: error running fn: %s", event, err.Error())
+	}
+}
+
 func runFunctionOnce(ctx context.Context, fn *FunctionDesc) {
 	doRun(ctx, fn, "oneshot", &swyapi.SwdFunctionRun{})
 

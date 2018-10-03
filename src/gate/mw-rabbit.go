@@ -95,12 +95,8 @@ func mqEvent(ctx context.Context, mwid, queue, userid, data string) {
 	/* FIXME -- list FNs with events here, now they are in separate DB */
 
 	for _, fn := range funcs {
-		/* FIXME -- this is synchronous */
-		_, err := doRun(ctx, fn, "mq",
+		doRunBg(ctx, fn, "mq",
 				&swyapi.SwdFunctionRun{Body: data})
-		if err != nil {
-			ctxlog(ctx).Errorf("mq: Error running FN %s", err.Error())
-		}
 	}
 }
 

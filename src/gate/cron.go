@@ -32,10 +32,7 @@ func cronEventStart(ctx context.Context, _ *FunctionDesc, evt *FnEventDesc) erro
 			return
 		}
 
-		_, err = doRun(cctx, &fn, "cron", &swyapi.SwdFunctionRun{Args: evt.Cron.Args})
-		if err != nil {
-			ctxlog(cctx).Errorf("cron: Error running FN %s", err.Error())
-		}
+		doRunBg(cctx, &fn, "cron", &swyapi.SwdFunctionRun{Args: evt.Cron.Args})
 	})
 
 	if err == nil {
