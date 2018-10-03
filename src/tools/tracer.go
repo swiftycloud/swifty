@@ -37,7 +37,7 @@ func main() {
 		fmt.Printf("  <id> can be\n")
 		fmt.Printf("       - 'ten:user-name' to watch events for a user\n")
 		fmt.Printf("  <socket-path> is where gate keeps the listener\n")
-		fmt.Printf("                likely this is /var/run/swifty/gate\n")
+		fmt.Printf("                likely this is /home/swifty/tracer.sock\n")
 		return
 	}
 
