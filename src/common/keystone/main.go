@@ -12,10 +12,11 @@ const (
 	SwyAdminRole	string	= "swifty.admin"
 	SwyUserRole	string	= "swifty.owner"
 	SwyUIRole	string	= "swifty.ui"
+	SwyMonitorRole	string	= "swifty.monitor"
 	KsTokenCacheExpires time.Duration = 60 * time.Second
 )
 
-func KeystoneRoleHas(td *KeystoneTokenData, wrole string) bool {
+func HasRole(td *KeystoneTokenData, wrole string) bool {
 	for _, role := range td.Roles {
 		if role.Name == wrole {
 			return true
