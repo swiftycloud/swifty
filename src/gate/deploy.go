@@ -561,14 +561,12 @@ func (dep *DeployDesc)Del(ctx context.Context) (*xrest.ReqErr) {
 }
 
 func DeployInit(ctx context.Context) error {
-	var deps []*DeployDesc
+	var dep DeployDesc
 
-	err := dbFindAll(ctx, bson.M{}, &deps)
-	if err != nil {
-		return err
-	}
+	iter := dbIterAll(ctx, bson.M{}, &dep)
+	defer iter.Close()
 
-	for _, dep := range deps {
+	for iter.Next(&dep) {
 		if len(dep._Items) != 0 {
 			ctxlog(ctx).Debugf("Convert deploy %s", dep.ObjID.Hex())
 			for _, i := range dep._Items {
@@ -583,7 +581,7 @@ func DeployInit(ctx context.Context) error {
 					})
 				}
 			}
-			err = dbUpdateAll(ctx, dep)
+			err := dbUpdateAll(ctx, &dep)
 			if err != nil {
 				ctxlog(ctx).Errorf("Error updating mware: %s", err.Error())
 				return err
@@ -592,11 +590,11 @@ func DeployInit(ctx context.Context) error {
 
 		if dep.State == DBDepStateIni {
 			ctxlog(ctx).Debugf("Will restart deploy %s", dep.SwoId.Str())
-			go deployRestartItems(dep)
+			go deployRestartItems(&dep)
 		}
 		if dep.State == DBDepStateTrm {
 			ctxlog(ctx).Debugf("Will finish deploy stop %s", dep.SwoId.Str())
-			go deployStopItems(dep)
+			go deployStopItems(&dep)
 		}
 	}
 
