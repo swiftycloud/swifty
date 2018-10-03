@@ -836,13 +836,14 @@ func genReqHandler(cb gateGenReq) http.Handler {
 			return
 		}
 
+		ctxlog(ctx).Debugf("REQ %s %s.%s", gctx(ctx).Tenant, r.Method, r.URL.Path)
 		defer done(ctx)
 
 		traceRequest(ctx, r)
 
 		cerr := cb(ctx, w, r)
 		if cerr != nil {
-			ctxlog(ctx).Errorf("Error in callback: %s", cerr.Message)
+			ctxlog(ctx).Errorf("Error: %s", cerr.Message)
 			http.Error(w, cerr.String(), http.StatusBadRequest)
 			traceError(ctx, cerr)
 		}

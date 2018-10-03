@@ -427,8 +427,6 @@ func (mwd *MwareDesc)Add(ctx context.Context, _ interface{}) *xrest.ReqErr {
 	var ok bool
 	var err, erc error
 
-	ctxlog(ctx).Debugf("set up wmare %s:%s", mwd.SwoId.Str(), mwd.MwareType)
-
 	mwd.ObjID = bson.NewObjectId()
 	err = dbInsert(ctx, mwd)
 	if err != nil {
