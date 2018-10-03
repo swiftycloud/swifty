@@ -20,7 +20,7 @@ func tryBuildFunction(ctx context.Context, fn *FunctionDesc, suf string) error {
 func buildFunction(ctx context.Context, addr string, fn *FunctionDesc, suf string) error {
 	var wd_result swyapi.SwdFunctionRunResult
 
-	resp, err := xhttp.MarshalAndPost(
+	resp, err := xhttp.Req(
 			&xhttp.RestReq{
 				Address: "http://" + addr + ":" + strconv.Itoa(conf.Wdog.Port) + "/v1/run",
 				Timeout: 120,

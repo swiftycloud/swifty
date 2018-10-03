@@ -365,7 +365,7 @@ out:
 }
 
 func makeGateReq(gate, tennant, addr string, in interface{}, out interface{}, authToken string) error {
-	resp, err := xhttp.MarshalAndPost(
+	resp, err := xhttp.Req(
 			&xhttp.RestReq{
 				Address: "http://" + gate + "/v1/" + addr,
 				Headers: map[string]string {

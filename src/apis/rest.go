@@ -101,7 +101,7 @@ func (cln *Client)Req3(method, url string, in interface{}, succ_code int, tmo ui
 		}
 	}
 
-	return xhttp.MarshalAndPost(
+	return xhttp.Req(
 			&xhttp.RestReq{
 				Method:		method,
 				Address:	address,

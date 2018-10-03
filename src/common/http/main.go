@@ -66,7 +66,7 @@ func MarshalAndWrite2(w http.ResponseWriter, data interface{}, status int) error
 	return json.NewEncoder(w).Encode(data)
 }
 
-func MarshalAndPost(req *RestReq, data interface{}) (*http.Response, error) {
+func Req(req *RestReq, data interface{}) (*http.Response, error) {
 	if req.Timeout == 0 {
 		req.Timeout = 15
 	}

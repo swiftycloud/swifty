@@ -74,7 +74,7 @@ retry:
 		headers[h] = hv
 	}
 
-	resp, err := xhttp.MarshalAndPost(
+	resp, err := xhttp.Req(
 			&xhttp.RestReq{
 				Method:  ksreq.Type,
 				Address: "http://" + kc.addr + "/v3/" + ksreq.URL,

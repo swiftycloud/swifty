@@ -582,7 +582,7 @@ func listReposGH(ac *AccDesc) ([]*GitHubRepo, error) {
 		}
 	}
 
-	rsp, err := xhttp.MarshalAndPost(rq, nil)
+	rsp, err := xhttp.Req(rq, nil)
 	if err != nil {
 		return nil, err
 	}

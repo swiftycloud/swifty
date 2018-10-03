@@ -99,7 +99,7 @@ func talkHTTP(addr, port, url string, args *swyapi.SwdFunctionRun) (*swyapi.SwdF
 	var res swyapi.SwdFunctionRunResult
 	var err error
 
-	resp, err = xhttp.MarshalAndPost(
+	resp, err = xhttp.Req(
 			&xhttp.RestReq{
 				Address: "http://" + addr + ":" + port + "/v1/run/" + url,
 				Timeout: uint(conf.Runtime.Timeout.Max),

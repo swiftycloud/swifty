@@ -67,7 +67,7 @@ var accHandlers = map[string]acHandler {
 }
 
 func githubResolveName(token string) (string, error) {
-	rsp, err := xhttp.MarshalAndPost(&xhttp.RestReq{
+	rsp, err := xhttp.Req(&xhttp.RestReq{
 			Method: "GET",
 			Address: "https://api.github.com/user?access_token=" + token,
 		}, nil)

@@ -51,7 +51,7 @@ func s3Call2(rq *xhttp.RestReq, in interface{}, out interface{}) (error, int) {
 	rq.Timeout = 120
 	rq.Headers = map[string]string{"X-SwyS3-Token": gateSecrets[conf.Mware.S3.c.Pass]}
 
-	resp, err := xhttp.MarshalAndPost(rq, in)
+	resp, err := xhttp.Req(rq, in)
 	if err != nil {
 		code := -1
 		if resp != nil {
