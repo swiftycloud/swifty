@@ -290,7 +290,7 @@ func main() {
 		glog.Fatalf("Can't set up tracer")
 	}
 
-	err = dbConnect(&conf)
+	err = dbConnect()
 	if err != nil {
 		glog.Fatalf("Can't setup mongo: %s",
 				err.Error())
@@ -298,43 +298,43 @@ func main() {
 
 	ctx, done := mkContext("::init")
 
-	err = eventsInit(ctx, &conf)
+	err = eventsInit(ctx)
 	if err != nil {
 		glog.Fatalf("Can't setup events: %s", err.Error())
 	}
 
-	err = statsInit(&conf)
+	err = statsInit()
 	if err != nil {
 		glog.Fatalf("Can't setup stats: %s", err.Error())
 	}
 
-	err = swk8sInit(ctx, &conf, config_path)
+	err = swk8sInit(ctx, config_path)
 	if err != nil {
 		glog.Fatalf("Can't setup connection to kubernetes: %s",
 				err.Error())
 	}
 
-	err = BalancerInit(&conf)
+	err = BalancerInit()
 	if err != nil {
 		glog.Fatalf("Can't setup: %s", err.Error())
 	}
 
-	err = BuilderInit(ctx, &conf)
+	err = BuilderInit(ctx)
 	if err != nil {
 		glog.Fatalf("Can't set up builder: %s", err.Error())
 	}
 
-	err = DeployInit(ctx, &conf)
+	err = DeployInit(ctx)
 	if err != nil {
 		glog.Fatalf("Can't set up deploys: %s", err.Error())
 	}
 
-	err = ReposInit(ctx, &conf)
+	err = ReposInit(ctx)
 	if err != nil {
 		glog.Fatalf("Can't start repo syncer: %s", err.Error())
 	}
 
-	err = PrometheusInit(ctx, &conf)
+	err = PrometheusInit(ctx)
 	if err != nil {
 		glog.Fatalf("Can't set up prometheus: %s", err.Error())
 	}

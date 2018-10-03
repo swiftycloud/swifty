@@ -518,7 +518,7 @@ func dbProjectListAll(ctx context.Context, ten string) (fn []string, mw []string
 	return
 }
 
-func dbConnect(conf *YAMLConf) error {
+func dbConnect() error {
 	var err error
 
 	dbc := xh.ParseXCreds(conf.DB)

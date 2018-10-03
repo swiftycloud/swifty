@@ -61,7 +61,7 @@ var cronOps = EventOps {
 	stop:	cronEventStop,
 }
 
-func cronInit(ctx context.Context, conf *YAMLConf) error {
+func cronInit(ctx context.Context) error {
 	cronRunner = cron.New()
 	cronRunner.Start()
 

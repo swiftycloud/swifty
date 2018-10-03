@@ -542,7 +542,7 @@ func periodicPullRepos(period time.Duration) {
 
 var demoRep RepoDesc
 
-func ReposInit(ctx context.Context, conf *YAMLConf) error {
+func ReposInit(ctx context.Context) error {
 	go periodicPullRepos(time.Duration(conf.RepoSyncPeriod) * time.Minute)
 
 	ctxlog(ctx).Debugf("Resolve %s repo", conf.DemoRepo.URL)

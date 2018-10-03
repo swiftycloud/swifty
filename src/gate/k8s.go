@@ -792,7 +792,7 @@ func refreshDepsAndPods(ctx context.Context) error {
 	return nil
 }
 
-func swk8sInit(ctx context.Context, conf *YAMLConf, config_path string) error {
+func swk8sInit(ctx context.Context, config_path string) error {
 	config_path = filepath.Dir(config_path) + "/kubeconfig"
 	kubeconfig := flag.String("kubeconfig", config_path, "path to the kubeconfig file")
 	flag.Parse()

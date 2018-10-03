@@ -77,7 +77,7 @@ func BalancerCreate(ctx context.Context, fnid string) (error) {
 	return nil
 }
 
-func BalancerInit(conf *YAMLConf) (error) {
+func BalancerInit() (error) {
 	return nil
 }
 

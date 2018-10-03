@@ -525,7 +525,7 @@ func (dep *DeployDesc)Del(ctx context.Context) (*xrest.ReqErr) {
 	return nil
 }
 
-func DeployInit(ctx context.Context, conf *YAMLConf) error {
+func DeployInit(ctx context.Context) error {
 	var deps []*DeployDesc
 
 	err := dbFindAll(ctx, bson.M{}, &deps)

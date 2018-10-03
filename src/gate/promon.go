@@ -58,7 +58,7 @@ var (
 	)
 )
 
-func PrometheusInit(ctx context.Context, conf *YAMLConf) error {
+func PrometheusInit(ctx context.Context) error {
 	nr, err := dbFuncCount(ctx)
 	if err != nil {
 		return err

@@ -248,7 +248,7 @@ func statsUpdate(fmd *FnMemData, op *statsOpaque, res *swyapi.SwdFunctionRunResu
 
 var statsFlushReqs chan *statsFlush
 
-func statsInit(conf *YAMLConf) error {
+func statsInit() error {
 	statsFlushReqs = make(chan *statsFlush)
 	go func() {
 		for {
