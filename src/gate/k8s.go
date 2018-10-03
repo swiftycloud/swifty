@@ -705,22 +705,20 @@ func listFnPods(fn *FunctionDesc) (*v1.PodList, error) {
 }
 
 func refreshDepsAndPods(ctx context.Context) error {
-	var fns []*FunctionDesc
+	var fn FunctionDesc
 
-	err := dbFindAll(ctx, bson.M{}, &fns)
-	if err != nil {
-		return errors.New("Error listing FNs")
-	}
-
-	err = dbBalancerPodDelStuck(ctx)
+	err := dbBalancerPodDelStuck(ctx)
 	if err != nil {
 		return fmt.Errorf("Can't drop stuck PODs: %s", err.Error)
 	}
 
+	iter := dbIterAll(ctx, bson.M{}, &fn)
+	defer iter.Close()
+
 	depiface := swk8sClientSet.Extensions().Deployments(conf.Wdog.Namespace)
 	podiface := swk8sClientSet.CoreV1().Pods(conf.Wdog.Namespace)
 
-	for _, fn := range(fns) {
+	for iter.Next(&fn) {
 		if fn.State != DBFuncStateRdy && fn.State != DBFuncStateStr {
 			continue
 		}
@@ -744,7 +742,7 @@ func refreshDepsAndPods(ctx context.Context) error {
 				 * no replicas to check, no PODs to revitalize.
 				 */
 
-				err = swk8sRun(ctx, &conf, fn)
+				err = swk8sRun(ctx, &conf, &fn)
 				if err != nil {
 					ctxlog(ctx).Errorf("Can't start back %s dep: %s", fn.SwoId.Str(), err.Error())
 					return err
@@ -766,7 +764,7 @@ func refreshDepsAndPods(ctx context.Context) error {
 
 		if *dep.Spec.Replicas > 1 {
 			ctxlog(ctx).Debugf("Found grown-up (%d) deployment %s", *dep.Spec.Replicas, dep.Name)
-			err = scalerInit(ctx, fn, uint32(*dep.Spec.Replicas))
+			err = scalerInit(ctx, &fn, uint32(*dep.Spec.Replicas))
 			if err != nil {
 				ctxlog(ctx).Errorf("Can't reinit scaler: %s", err.Error())
 				return err
@@ -787,6 +785,11 @@ func refreshDepsAndPods(ctx context.Context) error {
 				return err
 			}
 		}
+	}
+
+	err = iter.Err()
+	if err != nil {
+		return err
 	}
 
 	return nil
