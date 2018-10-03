@@ -9,10 +9,6 @@ import (
 )
 
 const (
-	SwyAdminRole	string	= "swifty.admin"
-	SwyUserRole	string	= "swifty.owner"
-	SwyUIRole	string	= "swifty.ui"
-	SwyMonitorRole	string	= "swifty.monitor"
 	KsTokenCacheExpires time.Duration = 60 * time.Second
 )
 

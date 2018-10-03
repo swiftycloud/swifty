@@ -1,5 +1,12 @@
 package swyapi
 
+const (
+	AdminRole	string	= "swifty.admin"
+	UserRole	string	= "swifty.owner"
+	UIRole		string	= "swifty.ui"
+	MonitorRole	string	= "swifty.monitor"
+)
+
 /*
  * This type is not seen by wdog itself, instead, it's described
  * by each wdog runner by smth like "Request"

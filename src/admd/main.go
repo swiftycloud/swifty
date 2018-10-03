@@ -162,11 +162,11 @@ func handleUserUpdate(w http.ResponseWriter, r *http.Request, uid string, td *xk
 	code := http.StatusForbidden
 
 	if uid == td.User.Id {
-		if !xkst.HasRole(td, xkst.SwyAdminRole, xkst.SwyUserRole) {
+		if !xkst.HasRole(td, swyapi.AdminRole, swyapi.UserRole) {
 			goto out
 		}
 	} else {
-		if !xkst.HasRole(td, xkst.SwyAdminRole) {
+		if !xkst.HasRole(td, swyapi.AdminRole) {
 			goto out
 		}
 	}
@@ -210,11 +210,11 @@ func handleUserInfo(w http.ResponseWriter, r *http.Request, uid string, td *xkst
 	code := http.StatusForbidden
 
 	if uid == td.User.Id {
-		if !xkst.HasRole(td, xkst.SwyAdminRole, xkst.SwyUserRole) {
+		if !xkst.HasRole(td, swyapi.AdminRole, swyapi.UserRole) {
 			goto out
 		}
 	} else {
-		if !xkst.HasRole(td, xkst.SwyAdminRole, xkst.SwyMonitorRole) {
+		if !xkst.HasRole(td, swyapi.AdminRole, swyapi.MonitorRole) {
 			goto out
 		}
 	}
@@ -300,12 +300,12 @@ func handleListUsers(w http.ResponseWriter, r *http.Request, td *xkst.KeystoneTo
 	var err error
 
 	code := http.StatusInternalServerError
-	if xkst.HasRole(td, xkst.SwyAdminRole, xkst.SwyMonitorRole) {
+	if xkst.HasRole(td, swyapi.AdminRole, swyapi.MonitorRole) {
 		result, err = listUsers(conf.kc)
 		if err != nil {
 			goto out
 		}
-	} else if xkst.HasRole(td, xkst.SwyUserRole) {
+	} else if xkst.HasRole(td, swyapi.UserRole) {
 		var ui *swyapi.UserInfo
 		ui, err = getUserInfo(conf.kc, td.User.Id, false)
 		if err != nil {
@@ -422,13 +422,13 @@ func handleDelUser(w http.ResponseWriter, r *http.Request, uid string, td *xkst.
 	 * cannot delete self */
 	code := http.StatusForbidden
 	if uid == td.User.Id {
-		if !xkst.HasRole(td, xkst.SwyUserRole) ||
-				xkst.HasRole(td, xkst.SwyAdminRole) {
+		if !xkst.HasRole(td, swyapi.UserRole) ||
+				xkst.HasRole(td, swyapi.AdminRole) {
 			err = errors.New("Not authorized")
 			goto out
 		}
 	} else {
-		if !xkst.HasRole(td, xkst.SwyAdminRole) {
+		if !xkst.HasRole(td, swyapi.AdminRole) {
 			err = errors.New("Not an admin")
 			goto out
 		}
@@ -475,7 +475,7 @@ func handleDelPlan(w http.ResponseWriter, r *http.Request, pid bson.ObjectId, td
 	/* User can be deleted by admin or self only. Admin
 	 * cannot delete self */
 	code := http.StatusForbidden
-	if !xkst.HasRole(td, xkst.SwyAdminRole) {
+	if !xkst.HasRole(td, swyapi.AdminRole) {
 		err = errors.New("Not an admin")
 		goto out
 	}
@@ -510,7 +510,7 @@ func handleAddUser(w http.ResponseWriter, r *http.Request, td *xkst.KeystoneToke
 
 	/* User can be added by admin or UI */
 	code = http.StatusForbidden
-	if !xkst.HasRole(td, xkst.SwyAdminRole, xkst.SwyUIRole) {
+	if !xkst.HasRole(td, swyapi.AdminRole, swyapi.UIRole) {
 		err = errors.New("Only admin or UI may add users")
 		goto out
 	}
@@ -555,7 +555,7 @@ func handleAddUser(w http.ResponseWriter, r *http.Request, td *xkst.KeystoneToke
 			ID:		kid,
 			UId:		params.UId,
 			Name:		params.Name,
-			Roles:		[]string{xkst.SwyUserRole},
+			Roles:		[]string{swyapi.UserRole},
 		}, http.StatusCreated)
 	if err != nil {
 		goto out
@@ -583,7 +583,7 @@ func handleAddPlan(w http.ResponseWriter, r *http.Request, td *xkst.KeystoneToke
 
 	/* User can be added by admin or UI */
 	code := http.StatusForbidden
-	if !xkst.HasRole(td, xkst.SwyAdminRole) {
+	if !xkst.HasRole(td, swyapi.AdminRole) {
 		err = errors.New("Only admin may add plans")
 		goto out
 	}
@@ -631,7 +631,7 @@ func handleSetLimits(w http.ResponseWriter, r *http.Request, uid string, td *xks
 	defer ses.Close()
 
 	code := http.StatusForbidden
-	if !xkst.HasRole(td, xkst.SwyAdminRole) {
+	if !xkst.HasRole(td, swyapi.AdminRole) {
 		err = errors.New("Only admin may change user limits")
 		goto out
 	}
@@ -708,11 +708,11 @@ func handleGetLimits(w http.ResponseWriter, uid string, td *xkst.KeystoneTokenDa
 
 	code := http.StatusForbidden
 	if uid == td.User.Id {
-		if !xkst.HasRole(td, xkst.SwyAdminRole, xkst.SwyUserRole) {
+		if !xkst.HasRole(td, swyapi.AdminRole, swyapi.UserRole) {
 			goto out
 		}
 	} else {
-		if !xkst.HasRole(td, xkst.SwyAdminRole, xkst.SwyMonitorRole) {
+		if !xkst.HasRole(td, swyapi.AdminRole, swyapi.MonitorRole) {
 			goto out
 		}
 	}
@@ -770,8 +770,8 @@ func handleSetPassword(w http.ResponseWriter, r *http.Request) {
 
 	code = http.StatusForbidden
 	if uid == td.User.Id {
-		if !xkst.HasRole(td, xkst.SwyAdminRole) {
-			if !xkst.HasRole(td, xkst.SwyUserRole) {
+		if !xkst.HasRole(td, swyapi.AdminRole) {
+			if !xkst.HasRole(td, swyapi.UserRole) {
 				err = errors.New("Not a swifty user")
 				goto out
 			}
@@ -782,7 +782,7 @@ func handleSetPassword(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	} else {
-		if !xkst.HasRole(td, xkst.SwyAdminRole) {
+		if !xkst.HasRole(td, swyapi.AdminRole) {
 			err = errors.New("Not an admin")
 			goto out
 		}

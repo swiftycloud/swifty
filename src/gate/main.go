@@ -799,10 +799,10 @@ func getReqContext(w http.ResponseWriter, r *http.Request) (context.Context, fun
 	admin := false
 	user := false
 	for _, role := range td.Roles {
-		if role.Name == xkst.SwyAdminRole {
+		if role.Name == swyapi.AdminRole {
 			admin = true
 		}
-		if role.Name == xkst.SwyUserRole {
+		if role.Name == swyapi.UserRole {
 			user = true
 		}
 	}
