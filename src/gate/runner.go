@@ -167,13 +167,6 @@ func doRunBg(ctx context.Context, fn *FunctionDesc, event string, args *swyapi.S
 	}
 }
 
-func runFunctionOnce(ctx context.Context, fn *FunctionDesc) {
-	doRun(ctx, fn, "oneshot", &swyapi.SwdFunctionRun{})
-
-	swk8sRemove(ctx, &conf, fn)
-	fn.ToState(ctx, DBFuncStateStl, -1)
-}
-
 func prepareTempRun(ctx context.Context, fn *FunctionDesc, params *swyapi.FunctionSources, w http.ResponseWriter) (string, *xrest.ReqErr) {
 	td, err := tendatGet(ctx, gctx(ctx).Tenant)
 	if err != nil {
