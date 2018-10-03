@@ -420,7 +420,7 @@ func handleFunctionRun(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		return errc
 	}
 
-	res, err = doRunConn(ctx, conn, nil, suff, "run", &params)
+	res, err = conn.Run(ctx, nil, suff, "run", &params)
 	if err != nil {
 		return GateErrE(swyapi.GateGenErr, err)
 	}

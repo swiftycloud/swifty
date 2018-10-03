@@ -87,7 +87,7 @@ func doRun(ctx context.Context, fn *FunctionDesc, event string, args *swyapi.Swd
 	}
 
 	sopq := statsStart()
-	res, err := doRunConn(ctx, conn, sopq, "", event, args)
+	res, err := conn.Run(ctx, sopq, "", event, args)
 	if err == nil {
 		statsUpdate(fmd, sopq, res)
 	}
@@ -122,7 +122,7 @@ func talkHTTP(addr, port, url string, args *swyapi.SwdFunctionRun) (*swyapi.SwdF
 	return &res, nil
 }
 
-func doRunConn(ctx context.Context, conn *podConn, sopq *statsOpaque, suff, event string, args *swyapi.SwdFunctionRun) (*swyapi.SwdFunctionRunResult, error) {
+func (conn *podConn)Run(ctx context.Context, sopq *statsOpaque, suff, event string, args *swyapi.SwdFunctionRun) (*swyapi.SwdFunctionRunResult, error) {
 	var res *swyapi.SwdFunctionRunResult
 	var err error
 
