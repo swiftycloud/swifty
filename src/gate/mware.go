@@ -362,15 +362,13 @@ func (item *MwareDesc)toInfo(ctx context.Context, details bool) (*swyapi.MwareIn
 }
 
 func getMwareStats(ctx context.Context, ten string) (map[string]*swyapi.TenantStatsMware, *xrest.ReqErr) {
-	var mws []*MwareDesc
+	var mw MwareDesc
 
-	err := dbFindAll(ctx, bson.M{"tennant": ten}, &mws)
-	if err != nil {
-		return nil, GateErrD(err)
-	}
+	iter := dbIterAll(ctx, bson.M{"tennant": ten}, &mw)
+	defer iter.Close()
 
 	mst := make(map[string]*swyapi.TenantStatsMware)
-	for _, mw := range mws {
+	for iter.Next(&mw) {
 		st, ok := mst[mw.MwareType]
 		if !ok {
 			st = &swyapi.TenantStatsMware{}
@@ -383,7 +381,7 @@ func getMwareStats(ctx context.Context, ten string) (map[string]*swyapi.TenantSt
 		if h.Info != nil {
 			var ifo swyapi.MwareInfo
 
-			err := h.Info(ctx, mw, &ifo)
+			err := h.Info(ctx, &mw, &ifo)
 			if err != nil {
 				return nil, GateErrE(swyapi.GateGenErr, err)
 			}
@@ -396,6 +394,11 @@ func getMwareStats(ctx context.Context, ten string) (map[string]*swyapi.TenantSt
 				*st.DU += *ifo.DU
 			}
 		}
+	}
+
+	err := iter.Err()
+	if err != nil {
+		return nil, GateErrD(err)
 	}
 
 	return mst, nil
