@@ -63,7 +63,7 @@ func handleUserLogin(w http.ResponseWriter, r *http.Request) {
 
 	if xhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
 
-	err := xhttp.ReadAndUnmarshalReq(r, &params)
+	err := xhttp.RReq(r, &params)
 	if err != nil {
 		goto out
 	}
@@ -172,7 +172,7 @@ func handleUserUpdate(w http.ResponseWriter, r *http.Request, uid string, td *xk
 	}
 
 	code = http.StatusBadRequest
-	err = xhttp.ReadAndUnmarshalReq(r, &params)
+	err = xhttp.RReq(r, &params)
 	if err != nil {
 		goto out
 	}
@@ -503,7 +503,7 @@ func handleAddUser(w http.ResponseWriter, r *http.Request, td *xkst.KeystoneToke
 	defer ses.Close()
 
 	code := http.StatusBadRequest
-	err = xhttp.ReadAndUnmarshalReq(r, &params)
+	err = xhttp.RReq(r, &params)
 	if err != nil {
 		goto out
 	}
@@ -589,7 +589,7 @@ func handleAddPlan(w http.ResponseWriter, r *http.Request, td *xkst.KeystoneToke
 	}
 
 	code = http.StatusBadRequest
-	err = xhttp.ReadAndUnmarshalReq(r, &params)
+	err = xhttp.RReq(r, &params)
 	if err != nil {
 		goto out
 	}
@@ -637,7 +637,7 @@ func handleSetLimits(w http.ResponseWriter, r *http.Request, uid string, td *xks
 	}
 
 	code = http.StatusBadRequest
-	err = xhttp.ReadAndUnmarshalReq(r, &params)
+	err = xhttp.RReq(r, &params)
 	if err != nil {
 		goto out
 	}
@@ -757,7 +757,7 @@ func handleSetPassword(w http.ResponseWriter, r *http.Request) {
 	}
 
 	code = http.StatusBadRequest
-	err = xhttp.ReadAndUnmarshalReq(r, &params)
+	err = xhttp.RReq(r, &params)
 	if err != nil {
 		goto out
 	}

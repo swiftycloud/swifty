@@ -800,7 +800,7 @@ func handleKeygen(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	var kg swys3api.KeyGen
 	var err error
 
-	err = xhttp.ReadAndUnmarshalReq(r, &kg)
+	err = xhttp.RReq(r, &kg)
 	if err != nil {
 		goto out
 	}
@@ -835,7 +835,7 @@ func handleKeydel(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	var kd swys3api.KeyDel
 	var err error
 
-	err = xhttp.ReadAndUnmarshalReq(r, &kd)
+	err = xhttp.RReq(r, &kd)
 	if err != nil {
 		goto out
 	}
@@ -909,7 +909,7 @@ func handleNotify(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = xhttp.ReadAndUnmarshalReq(r, &params)
+	err = xhttp.RReq(r, &params)
 	if err != nil {
 		goto out
 	}

@@ -423,7 +423,7 @@ func handleBuild(w http.ResponseWriter, r *http.Request, fn buildFn) {
 	var result *swyapi.SwdFunctionRunResult
 
 	code := http.StatusBadRequest
-	err := xhttp.ReadAndUnmarshalReq(r, &params)
+	err := xhttp.RReq(r, &params)
 	if err != nil {
 		goto out
 	}

@@ -46,7 +46,7 @@ func HandleCORS(w http.ResponseWriter, r *http.Request, methods []string, header
 	return false
 }
 
-func ReadAndUnmarshalReq(r *http.Request, data interface{}) error {
+func RReq(r *http.Request, data interface{}) error {
 	defer r.Body.Close()
 	return json.NewDecoder(r.Body).Decode(data)
 }

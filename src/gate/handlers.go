@@ -49,7 +49,7 @@ func handleUserLogin(w http.ResponseWriter, r *http.Request) {
 
 	if xhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
 
-	err := xhttp.ReadAndUnmarshalReq(r, &params)
+	err := xhttp.RReq(r, &params)
 	if err != nil {
 		goto out
 	}
@@ -86,7 +86,7 @@ func handleProjectDel(ctx context.Context, w http.ResponseWriter, r *http.Reques
 	var id *SwoId
 	var ferr *xrest.ReqErr
 
-	err := xhttp.ReadAndUnmarshalReq(r, &par)
+	err := xhttp.RReq(r, &par)
 	if err != nil {
 		return GateErrE(swyapi.GateBadRequest, err)
 	}
@@ -135,7 +135,7 @@ func handleProjectList(ctx context.Context, w http.ResponseWriter, r *http.Reque
 
 	projects := make(map[string]struct{})
 
-	err := xhttp.ReadAndUnmarshalReq(r, &params)
+	err := xhttp.RReq(r, &params)
 	if err != nil {
 		return GateErrE(swyapi.GateBadRequest, err)
 	}
@@ -227,7 +227,7 @@ func handleFunctionS3Bs(ctx context.Context, w http.ResponseWriter, r *http.Requ
 
 	case "POST":
 		var bname string
-		err := xhttp.ReadAndUnmarshalReq(r, &bname)
+		err := xhttp.RReq(r, &bname)
 		if err != nil {
 			return GateErrE(swyapi.GateBadRequest, err)
 		}
@@ -286,7 +286,7 @@ func handleFunctionWait(ctx context.Context, w http.ResponseWriter, r *http.Requ
 
 	fn := fo.(*FunctionDesc)
 	var wo swyapi.FunctionWait
-	err := xhttp.ReadAndUnmarshalReq(r, &wo)
+	err := xhttp.RReq(r, &wo)
 	if err != nil {
 		return GateErrE(swyapi.GateBadRequest, err)
 	}
@@ -352,7 +352,7 @@ func handleFunctionRun(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	var params swyapi.SwdFunctionRun
 	var res *swyapi.SwdFunctionRunResult
 
-	err := xhttp.ReadAndUnmarshalReq(r, &params)
+	err := xhttp.RReq(r, &params)
 	if err != nil {
 		return GateErrE(swyapi.GateBadRequest, err)
 	}
@@ -535,7 +535,7 @@ func handleAuths(ctx context.Context, w http.ResponseWriter, r *http.Request) *x
 	case "POST":
 		var aa swyapi.AuthAdd
 
-		err := xhttp.ReadAndUnmarshalReq(r, &aa)
+		err := xhttp.RReq(r, &aa)
 		if err != nil {
 			return GateErrE(swyapi.GateBadRequest, err)
 		}
@@ -617,7 +617,7 @@ func handleMwareTypes(ctx context.Context, w http.ResponseWriter, r *http.Reques
 func handleS3Access(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
 	var params swyapi.S3Access
 
-	err := xhttp.ReadAndUnmarshalReq(r, &params)
+	err := xhttp.RReq(r, &params)
 	if err != nil {
 		return GateErrE(swyapi.GateBadRequest, err)
 	}
