@@ -385,7 +385,7 @@ func makeGateReq(gate, tennant, addr string, in interface{}, out interface{}, au
 	}
 
 	if out != nil {
-		err = xhttp.ReadAndUnmarshalResp(resp, out)
+		err = xhttp.RResp(resp, out)
 		if err != nil {
 			return fmt.Errorf("Bad responce body: %s", err.Error())
 		}

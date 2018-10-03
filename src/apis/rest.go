@@ -131,7 +131,7 @@ func (cln *Client)Login() error {
 	}
 
 //	var td UserToken
-//	err = xhttp.ReadAndUnmarshalResp(resp, &td)
+//	err = xhttp.RResp(resp, &td)
 //	if err != nil {
 //		return fmt.Errorf("Can't unmarshal login resp: %s", err.Error())
 //	}
@@ -166,7 +166,7 @@ again:
 		if resp.StatusCode == http.StatusBadRequest {
 			var gerr xrest.ReqErr
 
-			err = xhttp.ReadAndUnmarshalResp(resp, &gerr)
+			err = xhttp.RResp(resp, &gerr)
 			resp.Body.Close()
 
 			if err == nil {
@@ -194,7 +194,7 @@ func (cln *Client)Req1(method, url string, succ int, in interface{}, out interfa
 	defer resp.Body.Close()
 
 	if out != nil {
-		err := xhttp.ReadAndUnmarshalResp(resp, out)
+		err := xhttp.RResp(resp, out)
 		if err != nil {
 			return err
 		}

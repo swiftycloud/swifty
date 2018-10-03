@@ -51,7 +51,7 @@ func RReq(r *http.Request, data interface{}) error {
 	return json.NewDecoder(r.Body).Decode(data)
 }
 
-func ReadAndUnmarshalResp(r *http.Response, data interface{}) error {
+func RResp(r *http.Response, data interface{}) error {
 	defer r.Body.Close()
 	return json.NewDecoder(r.Body).Decode(data)
 }

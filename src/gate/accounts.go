@@ -76,7 +76,7 @@ func githubResolveName(token string) (string, error) {
 	}
 
 	var u GitHubUser
-	err = xhttp.ReadAndUnmarshalResp(rsp, &u)
+	err = xhttp.RResp(rsp, &u)
 	if err != nil {
 		return "", err
 	}

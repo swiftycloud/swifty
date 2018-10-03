@@ -34,7 +34,7 @@ func buildFunction(ctx context.Context, addr string, fn *FunctionDesc, suf strin
 		return fmt.Errorf("Can't build function")
 	}
 
-	err = xhttp.ReadAndUnmarshalResp(resp, &wd_result)
+	err = xhttp.RResp(resp, &wd_result)
 	if err != nil {
 		ctxlog(ctx).Errorf("Can't get build result back: %s", err.Error())
 		return fmt.Errorf("Error building function")

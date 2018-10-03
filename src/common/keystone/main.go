@@ -96,7 +96,7 @@ retry:
 	ksreq.outToken = resp.Header.Get("X-Subject-Token")
 
 	if out != nil {
-		err = xhttp.ReadAndUnmarshalResp(resp, out)
+		err = xhttp.RResp(resp, out)
 		if err != nil {
 			return err
 		}

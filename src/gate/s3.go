@@ -63,7 +63,7 @@ func s3Call2(rq *xhttp.RestReq, in interface{}, out interface{}) (error, int) {
 	defer resp.Body.Close()
 
 	if out != nil {
-		err = xhttp.ReadAndUnmarshalResp(resp, out)
+		err = xhttp.RResp(resp, out)
 		if err != nil {
 			return fmt.Errorf("Error reading responce from S3: %s", err.Error()), -1
 		}

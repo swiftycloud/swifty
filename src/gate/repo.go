@@ -588,7 +588,7 @@ func listReposGH(ac *AccDesc) ([]*GitHubRepo, error) {
 	}
 
 	var grs []*GitHubRepo
-	err = xhttp.ReadAndUnmarshalResp(rsp, &grs)
+	err = xhttp.RResp(rsp, &grs)
 	if err != nil {
 		return nil, err
 	}

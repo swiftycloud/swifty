@@ -113,7 +113,7 @@ func talkHTTP(addr, port, url string, args *swyapi.SwdFunctionRun) (*swyapi.SwdF
 		return nil, err
 	}
 
-	err = xhttp.ReadAndUnmarshalResp(resp, &res)
+	err = xhttp.RResp(resp, &res)
 	if err != nil {
 		return nil, err
 	}
