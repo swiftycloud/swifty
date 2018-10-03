@@ -649,6 +649,50 @@ func iterAttached(ctx context.Context, accid string, cb func(context.Context, xr
 	return nil
 }
 
+func iterFromAccounts(ctx context.Context, accid string, cb func(context.Context, xrest.Obj) *xrest.ReqErr, urls map[string]bool) *xrest.ReqErr {
+	/* FIXME -- maybe cache repos in a DB? */
+	var acs []*AccDesc
+
+	q := bson.M{"type": "github", "tennant":  gctx(ctx).Tenant}
+	if accid != "" {
+		q["_id"] = bson.ObjectIdHex(accid)
+	}
+	err := dbFindAll(ctx, q, &acs)
+	if err != nil && !dbNF(err) {
+		return GateErrD(err)
+	}
+
+	for _, ac := range acs {
+		grs, err := listReposGH(ac)
+		if err != nil {
+			ctxlog(ctx).Errorf("Can't list GH repos: %s", err.Error())
+			continue
+		}
+
+		for _, gr := range grs {
+			if _, ok := urls[gr.URL]; ok {
+				continue
+			}
+
+			rd := &DetachedRepo{}
+			rd.typ = "github"
+			rd.URL = gr.URL
+			if gr.Private {
+				rd.accid = ac.ObjID.Hex()
+			}
+
+			cerr := cb(ctx, rd)
+			if cerr != nil {
+				return cerr
+			}
+
+			urls[gr.URL] = true
+		}
+	}
+
+	return nil
+}
+
 func (_ Repos)Iterate(ctx context.Context, q url.Values, cb func(context.Context, xrest.Obj) *xrest.ReqErr) *xrest.ReqErr {
 	accid := q.Get("aid")
 	if accid != "" && !bson.IsObjectIdHex(accid) {
@@ -662,49 +706,14 @@ func (_ Repos)Iterate(ctx context.Context, q url.Values, cb func(context.Context
 	if att == "" || att == "true" {
 		cerr := iterAttached(ctx, accid, cb, urls)
 		if cerr != nil {
-			return nil
+			return cerr
 		}
 	}
 
 	if att == "" || att == "false" {
-		/* FIXME -- maybe cache repos in a DB? */
-		var acs []*AccDesc
-
-		q := bson.M{"type": "github", "tennant":  gctx(ctx).Tenant}
-		if accid != "" {
-			q["_id"] = bson.ObjectIdHex(accid)
-		}
-		err := dbFindAll(ctx, q, &acs)
-		if err != nil && !dbNF(err) {
-			return GateErrD(err)
-		}
-
-		for _, ac := range acs {
-			grs, err := listReposGH(ac)
-			if err != nil {
-				ctxlog(ctx).Errorf("Can't list GH repos: %s", err.Error())
-				continue
-			}
-
-			for _, gr := range grs {
-				if _, ok := urls[gr.URL]; ok {
-					continue
-				}
-
-				rd := &DetachedRepo{}
-				rd.typ = "github"
-				rd.URL = gr.URL
-				if gr.Private {
-					rd.accid = ac.ObjID.Hex()
-				}
-
-				cerr := cb(ctx, rd)
-				if cerr != nil {
-					return cerr
-				}
-
-				urls[gr.URL] = true
-			}
+		cerr := iterFromAccounts(ctx, accid, cb, urls)
+		if cerr != nil {
+			return cerr
 		}
 	}
 
