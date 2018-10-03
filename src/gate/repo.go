@@ -423,6 +423,37 @@ func filesMatch(file string, files []string) bool {
 	return false
 }
 
+func listFunctionsToUpdate(ctx context.Context, rd *RepoDesc, to string) []*FunctionDesc {
+	var ret []*FunctionDesc
+
+	files, err := rd.changedFiles(ctx, to)
+	if err != nil || len(files) == 0 {
+		if err != nil {
+			ctxlog(ctx).Errorf("Can't list changed files: %s", err.Error())
+		}
+		return ret
+	}
+
+	var fn FunctionDesc
+
+	iter := dbIterAll(ctx, bson.M{"src.repo": rd.ObjID.Hex()}, &fn)
+	defer iter.Close()
+
+	for iter.Next(&fn) {
+		if filesMatch(fn.Src.File, files) {
+			aux := fn /* Do copy fn, next iter.Next() would overwrite it */
+			ret = append(ret, &aux)
+		}
+	}
+
+	err = iter.Err()
+	if err != nil {
+		ctxlog(ctx).Errorf("Can't query functions to update: %s", err.Error())
+	}
+
+	return ret
+}
+
 func tryToUpdateFunctions(ctx context.Context, rd *RepoDesc, to string) {
 	if rd.Commit == to {
 		/* Common "already up-to-date" case */
@@ -431,23 +462,8 @@ func tryToUpdateFunctions(ctx context.Context, rd *RepoDesc, to string) {
 
 	ctxlog(ctx).Debugf("Updated repo %s [%s -> %s]\n", rd.ObjID.Hex(), rd.Commit, to)
 
-	files, err := rd.changedFiles(ctx, to)
-	if err != nil || len(files) == 0 {
-		return
-	}
-
-	var fns []*FunctionDesc
-	err = dbFindAll(ctx, bson.M{"src.repo": rd.ObjID.Hex()}, &fns)
-	if err != nil {
-		ctxlog(ctx).Errorf("Error listing functions to update: %s", err.Error())
-		return
-	}
-
+	fns := listFunctionsToUpdate(ctx, rd, to)
 	for _, fn := range(fns) {
-		if !filesMatch(fn.Src.File, files) {
-			continue
-		}
-
 		ctxlog(ctx).Debugf("Update function %s from %s", fn.SwoId.Str(), fn.Src.File)
 		t := gctx(ctx).tpush(fn.SwoId.Tennant)
 		cerr := fn.updateSources(ctx, &swyapi.FunctionSources {
