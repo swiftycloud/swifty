@@ -146,7 +146,7 @@ func doRun(ctx context.Context, fn *FunctionDesc, event string, args *swyapi.Swd
 		return nil, err
 	}
 
-	conn, err := balancerGetConnAny(ctx, fn.Cookie, fmd)
+	conn, err := balancerGetConnAny(ctx, fmd)
 	if conn == nil {
 		ctxlog(ctx).Errorf("Can't find %s cookie balancer: %s", fn.Cookie, err.Error())
 		return nil, fmt.Errorf("Can't find balancer for %s", fn.Cookie)

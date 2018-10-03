@@ -107,13 +107,13 @@ func balancerGetConnExact(ctx context.Context, cookie, version string) (*podConn
 	return ap, nil
 }
 
-func balancerGetConnAny(ctx context.Context, cookie string, fdm *FnMemData) (*podConn, error) {
+func balancerGetConnAny(ctx context.Context, fdm *FnMemData) (*podConn, error) {
 	var aps []*podConn
 	var err error
 
 	aps = fdm.bd.pods
 	if len(aps) == 0 {
-		aps, err = dbBalancerGetConnsByCookie(ctx, cookie)
+		aps, err = dbBalancerGetConnsByCookie(ctx, fdm.fnid)
 		if aps == nil {
 			if err == nil {
 				return nil, errors.New("No available PODs")
