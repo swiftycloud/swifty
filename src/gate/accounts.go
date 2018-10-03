@@ -164,23 +164,26 @@ func (_ Accounts)Get(ctx context.Context, r *http.Request) (xrest.Obj, *xrest.Re
 }
 
 func (_ Accounts)Iterate(ctx context.Context, q url.Values, cb func(context.Context, xrest.Obj) *xrest.ReqErr) *xrest.ReqErr {
-	var acs []*AccDesc
+	var ac AccDesc
 
 	rq := listReq(ctx, NoProject, []string{})
 	if atype := q.Get("type"); atype != "" {
 		rq = append(rq, bson.DocElem{"type", atype})
 	}
 
-	err := dbFindAll(ctx, rq, &acs)
-	if err != nil {
-		return GateErrD(err)
-	}
+	iter := dbIterAll(ctx, rq, &ac)
+	defer iter.Close()
 
-	for _, ac := range acs {
-		cerr := cb(ctx, ac)
+	for iter.Next(&ac) {
+		cerr := cb(ctx, &ac)
 		if cerr != nil {
 			return cerr
 		}
+	}
+
+	err := iter.Err()
+	if err != nil {
+		return GateErrD(err)
 	}
 
 	return nil
