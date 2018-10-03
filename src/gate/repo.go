@@ -619,6 +619,36 @@ func (_ Repos)Get(ctx context.Context, r *http.Request) (xrest.Obj, *xrest.ReqEr
 	return repoFindForReq(ctx, r, r.Method == "GET")
 }
 
+func iterAttached(ctx context.Context, accid string, cb func(context.Context, xrest.Obj) *xrest.ReqErr, urls map[string]bool) *xrest.ReqErr {
+	var reps []*RepoDesc
+
+	q := bson.D{
+		{"tennant", bson.M {
+			"$in": []string{gctx(ctx).Tenant, "*" },
+		}},
+		{"project", NoProject},
+	}
+	err := dbFindAll(ctx, q, &reps)
+	if err != nil {
+		return GateErrD(err)
+	}
+
+	for _, rp := range reps {
+		if accid != "" && accid != rp.AccID.Hex() {
+			continue
+		}
+
+		cerr := cb(ctx, rp)
+		if cerr != nil {
+			return cerr
+		}
+
+		urls[rp.URL()] = true
+	}
+
+	return nil
+}
+
 func (_ Repos)Iterate(ctx context.Context, q url.Values, cb func(context.Context, xrest.Obj) *xrest.ReqErr) *xrest.ReqErr {
 	accid := q.Get("aid")
 	if accid != "" && !bson.IsObjectIdHex(accid) {
@@ -630,30 +660,9 @@ func (_ Repos)Iterate(ctx context.Context, q url.Values, cb func(context.Context
 	urls := make(map[string]bool)
 
 	if att == "" || att == "true" {
-		var reps []*RepoDesc
-
-		q := bson.D{
-			{"tennant", bson.M {
-				"$in": []string{gctx(ctx).Tenant, "*" },
-			}},
-			{"project", NoProject},
-		}
-		err := dbFindAll(ctx, q, &reps)
-		if err != nil {
-			return GateErrD(err)
-		}
-
-		for _, rp := range reps {
-			if accid != "" && accid != rp.AccID.Hex() {
-				continue
-			}
-
-			cerr := cb(ctx, rp)
-			if cerr != nil {
-				return cerr
-			}
-
-			urls[rp.URL()] = true
+		cerr := iterAttached(ctx, accid, cb, urls)
+		if cerr != nil {
+			return nil
 		}
 	}
 
