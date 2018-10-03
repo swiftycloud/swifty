@@ -12,7 +12,6 @@ import (
 	"time"
 	"fmt"
 	"os"
-	"gopkg.in/mgo.v2/bson"
 
 	"../apis"
 	"../common"
@@ -89,29 +88,6 @@ func reqPeriods(q url.Values) int {
 		periods = -1
 	}
 	return periods
-}
-
-func repoFindForReq(ctx context.Context, r *http.Request, user_action bool) (*RepoDesc, *xrest.ReqErr) {
-	rid := mux.Vars(r)["rid"]
-	if !bson.IsObjectIdHex(rid) {
-		return nil, GateErrM(swyapi.GateBadRequest, "Bad repo ID value")
-	}
-
-	var rd RepoDesc
-
-	err := dbFind(ctx, ctxRepoId(ctx, rid), &rd)
-	if err != nil {
-		return nil, GateErrD(err)
-	}
-
-	if !user_action {
-		gx := gctx(ctx)
-		if !gx.Admin && rd.SwoId.Tennant != gx.Tenant {
-			return nil, GateErrM(swyapi.GateNotAvail, "Shared repo")
-		}
-	}
-
-	return &rd, nil
 }
 
 func getReqContext(w http.ResponseWriter, r *http.Request) (context.Context, func(context.Context)) {

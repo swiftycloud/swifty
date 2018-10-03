@@ -202,6 +202,29 @@ func objFindForReq(ctx context.Context, r *http.Request, n string, out interface
 	return objFindForReq2(ctx, r, n, out, nil)
 }
 
+func repoFindForReq(ctx context.Context, r *http.Request, user_action bool) (*RepoDesc, *xrest.ReqErr) {
+	rid := mux.Vars(r)["rid"]
+	if !bson.IsObjectIdHex(rid) {
+		return nil, GateErrM(swyapi.GateBadRequest, "Bad repo ID value")
+	}
+
+	var rd RepoDesc
+
+	err := dbFind(ctx, ctxRepoId(ctx, rid), &rd)
+	if err != nil {
+		return nil, GateErrD(err)
+	}
+
+	if !user_action {
+		gx := gctx(ctx)
+		if !gx.Admin && rd.SwoId.Tennant != gx.Tenant {
+			return nil, GateErrM(swyapi.GateNotAvail, "Shared repo")
+		}
+	}
+
+	return &rd, nil
+}
+
 var session *mgo.Session
 
 func dbNF(err error) bool {
