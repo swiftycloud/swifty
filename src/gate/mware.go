@@ -120,31 +120,6 @@ func mwareGenerateUserPassClient(ctx context.Context, mwd *MwareDesc) (error) {
 	return nil
 }
 
-func listMwares(ctx context.Context, project, name, mtype string, labels []string) ([]*MwareDesc, *xrest.ReqErr) {
-	var mws []*MwareDesc
-
-	if name == "" {
-		q := listReq(ctx, project, labels)
-		if mtype != "" {
-			q = append(q, bson.DocElem{"mwaretype", mtype})
-		}
-		err := dbFindAll(ctx, q, &mws)
-		if err != nil {
-			return nil, GateErrD(err)
-		}
-	} else {
-		var mw MwareDesc
-
-		err := dbFind(ctx, cookieReq(ctx, project, name), &mw)
-		if err != nil {
-			return nil, GateErrD(err)
-		}
-		mws = append(mws, &mw)
-	}
-
-	return mws, nil
-}
-
 var mwareHandlers = map[string]*MwareOps {
 	"maria":	&MwareMariaDB,
 	"postgres":	&MwarePostgres,
@@ -229,19 +204,39 @@ func (_ Mwares)Iterate(ctx context.Context, q url.Values, cb func(context.Contex
 		project = DefaultProject
 	}
 
-	mwtype := q.Get("type")
-	mname := q.Get("name")
+	var mw MwareDesc
 
-	mws, cerr := listMwares(ctx, project, mname, mwtype, q["label"])
-	if cerr != nil {
-		return cerr
+	mname := q.Get("name")
+	if mname != "" {
+
+		err := dbFind(ctx, cookieReq(ctx, project, mname), &mw)
+		if err != nil {
+			return GateErrD(err)
+		}
+
+		return cb(ctx, &mw)
 	}
 
-	for _, mw := range mws {
-		cerr = cb(ctx, mw)
+	mwtype := q.Get("type")
+
+	dbq := listReq(ctx, project, q["label"])
+	if mwtype != "" {
+		dbq = append(dbq, bson.DocElem{"mwaretype", mwtype})
+	}
+
+	iter := dbIterAll(ctx, dbq, &mw)
+	defer iter.Close()
+
+	for iter.Next(&mw) {
+		cerr := cb(ctx, &mw)
 		if cerr != nil {
 			return cerr
 		}
+	}
+
+	err := iter.Err()
+	if err != nil {
+		return GateErrD(err)
 	}
 
 	return nil
