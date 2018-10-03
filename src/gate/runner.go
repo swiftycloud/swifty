@@ -177,7 +177,7 @@ func prepareTempRun(ctx context.Context, fn *FunctionDesc, params *swyapi.Functi
 	defer td.runlock.Unlock()
 
 	if td.runrate == nil {
-		td.runrate = xratelimit.MakeRL(0, 1) /* FIXME -- configurable */
+		td.runrate = xratelimit.MakeRL(0, uint(conf.RunRate))
 	}
 
 	if !td.runrate.Get() {

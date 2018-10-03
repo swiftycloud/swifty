@@ -202,6 +202,7 @@ type YAMLConf struct {
 	Wdog		YAMLConfSwd		`yaml:"wdog"`
 	RepoSyncRate	int			`yaml:"repo-sync-rate"`
 	RepoSyncPeriod	int			`yaml:"repo-sync-period"`
+	RunRate		int			`yaml:"tryrun-rate"`
 	DemoRepo	YAMLConfDemoRepo	`yaml:"demo-repo"`
 }
 
@@ -239,6 +240,10 @@ func (c *YAMLConf)Validate() error {
 	if c.RepoSyncPeriod == 0 {
 		fmt.Printf("'repo-sync-period' not set, using default 30min\n")
 		c.RepoSyncPeriod = 30
+	}
+	if c.RunRate == 0 {
+		fmt.Printf("'tryrun-rate' not set, using default 1/s\n")
+		c.RunRate = 1
 	}
 	return nil
 }
