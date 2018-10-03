@@ -816,7 +816,7 @@ func handleKeygen(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 		goto out
 	}
 
-	err = xhttp.MarshalAndWrite(w, &swys3api.KeyGenResult{
+	err = xhttp.Respond(w, &swys3api.KeyGenResult{
 			AccessKeyID:	akey.AccessKeyID,
 			AccessKeySecret:s3DecryptAccessKeySecret(akey),
 			AccID:		akey.AccountObjID.Hex(),
@@ -883,7 +883,7 @@ func handleStats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = xhttp.MarshalAndWrite(w, &swys3api.AcctStats{
+	err = xhttp.Respond(w, &swys3api.AcctStats{
 		CntObjects:	st.CntObjects,
 		CntBytes:	st.CntBytes,
 		OutBytes:	st.OutBytes,

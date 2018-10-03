@@ -66,7 +66,7 @@ func handleUserLogin(w http.ResponseWriter, r *http.Request) {
 	glog.Debugf("Login passed, token %s (exp %s)", token[:16], td.Expires)
 
 	w.Header().Set("X-Subject-Token", token)
-	err = xhttp.MarshalAndWrite(w, &td)
+	err = xhttp.Respond(w, &td)
 	if err != nil {
 		resp = http.StatusInternalServerError
 		goto out

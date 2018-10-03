@@ -9,7 +9,7 @@ import (
 var TraceFn func(context.Context, interface{})
 
 func Respond(ctx context.Context, w http.ResponseWriter, result interface{}) *ReqErr {
-	err := xhttp.MarshalAndWrite(w, result)
+	err := xhttp.Respond(w, result)
 	if err != nil {
 		return &ReqErr{3 /* XXX: GateBadResp */, err.Error()}
 	}

@@ -80,7 +80,7 @@ func handleUserLogin(w http.ResponseWriter, r *http.Request) {
 	log.Debugf("Login passed, token %s (exp %s)", token[:16], td.Expires)
 
 	w.Header().Set("X-Subject-Token", token)
-	err = xhttp.MarshalAndWrite(w, &td)
+	err = xhttp.Respond(w, &td)
 	if err != nil {
 		resp = http.StatusInternalServerError
 		goto out
@@ -192,7 +192,7 @@ func handleUserUpdate(w http.ResponseWriter, r *http.Request, uid string, td *xk
 		rui.Enabled = *params.Enabled
 	}
 
-	err = xhttp.MarshalAndWrite(w, rui)
+	err = xhttp.Respond(w, rui)
 	if err != nil {
 		goto out
 	}
@@ -226,7 +226,7 @@ func handleUserInfo(w http.ResponseWriter, r *http.Request, uid string, td *xkst
 		goto out
 	}
 
-	err = xhttp.MarshalAndWrite(w, rui)
+	err = xhttp.Respond(w, rui)
 	if err != nil {
 		goto out
 	}
@@ -250,7 +250,7 @@ func handlePlanInfo(w http.ResponseWriter, r *http.Request, pid bson.ObjectId, t
 		goto out
 	}
 
-	err = xhttp.MarshalAndWrite(w, pl.toInfo())
+	err = xhttp.Respond(w, pl.toInfo())
 	if err != nil {
 		goto out
 	}
@@ -318,7 +318,7 @@ func handleListUsers(w http.ResponseWriter, r *http.Request, td *xkst.KeystoneTo
 		goto out
 	}
 
-	err = xhttp.MarshalAndWrite(w, result)
+	err = xhttp.Respond(w, result)
 	if err != nil {
 		goto out
 	}
@@ -353,7 +353,7 @@ func handleListPlans(w http.ResponseWriter, r *http.Request, td *xkst.KeystoneTo
 		result = append(result, pl.toInfo())
 	}
 
-	err = xhttp.MarshalAndWrite(w, result)
+	err = xhttp.Respond(w, result)
 	if err != nil {
 		goto out
 	}
@@ -551,7 +551,7 @@ func handleAddUser(w http.ResponseWriter, r *http.Request, td *xkst.KeystoneToke
 		goto out
 	}
 
-	err = xhttp.MarshalAndWrite2(w, &swyapi.UserInfo{
+	err = xhttp.Respond2(w, &swyapi.UserInfo{
 			ID:		kid,
 			UId:		params.UId,
 			Name:		params.Name,
@@ -611,7 +611,7 @@ func handleAddPlan(w http.ResponseWriter, r *http.Request, td *xkst.KeystoneToke
 	}
 
 	params.Id = pl.ObjID.Hex()
-	err = xhttp.MarshalAndWrite2(w, &params, http.StatusCreated)
+	err = xhttp.Respond2(w, &params, http.StatusCreated)
 	if err != nil {
 		goto out
 	}
@@ -728,7 +728,7 @@ func handleGetLimits(w http.ResponseWriter, uid string, td *xkst.KeystoneTokenDa
 		goto out
 	}
 
-	err = xhttp.MarshalAndWrite(w, ulim)
+	err = xhttp.Respond(w, ulim)
 	if err != nil {
 		goto out
 	}

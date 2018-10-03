@@ -405,7 +405,7 @@ func handleRun(runner *Runner, w http.ResponseWriter, r *http.Request) {
 		goto out
 	}
 
-	err = xhttp.MarshalAndWrite(w, result)
+	err = xhttp.Respond(w, result)
 	if err != nil {
 		goto out
 	}
@@ -437,7 +437,7 @@ func handleBuild(w http.ResponseWriter, r *http.Request, fn buildFn) {
 		goto out
 	}
 
-	err = xhttp.MarshalAndWrite(w, result)
+	err = xhttp.Respond(w, result)
 	if err != nil {
 		goto out
 	}
