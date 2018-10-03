@@ -620,7 +620,7 @@ func (_ Repos)Get(ctx context.Context, r *http.Request) (xrest.Obj, *xrest.ReqEr
 }
 
 func iterAttached(ctx context.Context, accid string, cb func(context.Context, xrest.Obj) *xrest.ReqErr, urls map[string]bool) *xrest.ReqErr {
-	var reps []*RepoDesc
+	var rp RepoDesc
 
 	q := bson.D{
 		{"tennant", bson.M {
@@ -628,17 +628,16 @@ func iterAttached(ctx context.Context, accid string, cb func(context.Context, xr
 		}},
 		{"project", NoProject},
 	}
-	err := dbFindAll(ctx, q, &reps)
-	if err != nil {
-		return GateErrD(err)
-	}
 
-	for _, rp := range reps {
+	iter := dbIterAll(ctx, q, &rp)
+	defer iter.Close()
+
+	for iter.Next(&rp) {
 		if accid != "" && accid != rp.AccID.Hex() {
 			continue
 		}
 
-		cerr := cb(ctx, rp)
+		cerr := cb(ctx, &rp)
 		if cerr != nil {
 			return cerr
 		}
@@ -646,24 +645,28 @@ func iterAttached(ctx context.Context, accid string, cb func(context.Context, xr
 		urls[rp.URL()] = true
 	}
 
+	err := iter.Err()
+	if err != nil {
+		return GateErrD(err)
+	}
+
 	return nil
 }
 
 func iterFromAccounts(ctx context.Context, accid string, cb func(context.Context, xrest.Obj) *xrest.ReqErr, urls map[string]bool) *xrest.ReqErr {
 	/* FIXME -- maybe cache repos in a DB? */
-	var acs []*AccDesc
+	var ac AccDesc
 
 	q := bson.M{"type": "github", "tennant":  gctx(ctx).Tenant}
 	if accid != "" {
 		q["_id"] = bson.ObjectIdHex(accid)
 	}
-	err := dbFindAll(ctx, q, &acs)
-	if err != nil && !dbNF(err) {
-		return GateErrD(err)
-	}
 
-	for _, ac := range acs {
-		grs, err := listReposGH(ac)
+	iter := dbIterAll(ctx, q, &ac)
+	defer iter.Close()
+
+	for iter.Next(&ac) {
+		grs, err := listReposGH(&ac)
 		if err != nil {
 			ctxlog(ctx).Errorf("Can't list GH repos: %s", err.Error())
 			continue
@@ -688,6 +691,11 @@ func iterFromAccounts(ctx context.Context, accid string, cb func(context.Context
 
 			urls[gr.URL] = true
 		}
+	}
+
+	err := iter.Err()
+	if err != nil && !dbNF(err) {
+		return GateErrD(err)
 	}
 
 	return nil
