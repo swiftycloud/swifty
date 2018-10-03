@@ -249,6 +249,37 @@ paths:
           description: Need to authenticate
         '403':
           description: Bad authentication token
+  /functions/tree:
+    parameters:
+      - in: header
+        name: X-Auth-Token
+        type: string
+        required: true
+      - name: project
+        in: query
+        description: Project to work on
+        required: false
+        type: string
+    get:
+      tags:
+        - function
+      summary: Show tree of function names
+      
+      responses:
+        '200':
+          description: OK
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/FunctionNode'
+        '400':
+          description: Bad request
+          schema:
+            $ref: '#/definitions/GateError'
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad authentication token          
   '/functions/{fid}':
     parameters:
       - in: header
@@ -1288,7 +1319,6 @@ paths:
           description: Need to authenticate
         '403':
           description: Bad authentication token
-  
   /routers:
     parameters:
       - in: header
@@ -1446,7 +1476,6 @@ paths:
           description: Need to authenticate
         '403':
           description: Bad authentication token
-  
   /auths:
     parameters:
       - in: header
@@ -2351,6 +2380,16 @@ definitions:
           When a function version equals or (!) greater than this becomes
           available for execution, the event occurs. Note, that older versions
           may still be there when the event happens.
+  FunctionNode:
+    description: Function tree element
+    properties:
+      name:
+        type: string
+        description: node name (function name part between dots)
+      kids:
+        type: array
+        items:
+          $ref: '#/definitions/FunctionNode'
   FunctionRun:
     description: Function ID and arguments
     required:
