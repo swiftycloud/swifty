@@ -16,10 +16,12 @@ const (
 	KsTokenCacheExpires time.Duration = 60 * time.Second
 )
 
-func HasRole(td *KeystoneTokenData, wrole string) bool {
+func HasRole(td *KeystoneTokenData, wroles ...string) bool {
 	for _, role := range td.Roles {
-		if role.Name == wrole {
-			return true
+		for _, wrole := range wroles {
+			if role.Name == wrole {
+				return true
+			}
 		}
 	}
 

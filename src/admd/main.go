@@ -116,6 +116,10 @@ func handleUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	uid := mux.Vars(r)["uid"]
+	if uid == "me" {
+		uid = td.User.Id
+	}
+
 	switch r.Method {
 	case "GET":
 		handleUserInfo(w, r, uid, td)
@@ -156,11 +160,9 @@ func handleUserUpdate(w http.ResponseWriter, r *http.Request, uid string, td *xk
 	var err error
 
 	code := http.StatusForbidden
-	if uid == "me" {
-		uid = td.User.Id
-	} else if uid == td.User.Id {
-		if !xkst.HasRole(td, xkst.SwyAdminRole) &&
-				!xkst.HasRole(td, xkst.SwyUserRole) {
+
+	if uid == td.User.Id {
+		if !xkst.HasRole(td, xkst.SwyAdminRole, xkst.SwyUserRole) {
 			goto out
 		}
 	} else {
@@ -206,16 +208,13 @@ func handleUserInfo(w http.ResponseWriter, r *http.Request, uid string, td *xkst
 	var err error
 
 	code := http.StatusForbidden
-	if uid == "me" {
-		uid = td.User.Id
-	} else if uid == td.User.Id {
-		if !xkst.HasRole(td, xkst.SwyAdminRole) &&
-				!xkst.HasRole(td, xkst.SwyUserRole) {
+
+	if uid == td.User.Id {
+		if !xkst.HasRole(td, xkst.SwyAdminRole, xkst.SwyUserRole) {
 			goto out
 		}
 	} else {
-		if !xkst.HasRole(td, xkst.SwyAdminRole) &&
-				!xkst.HasRole(td, xkst.SwyMonitorRole) {
+		if !xkst.HasRole(td, xkst.SwyAdminRole, xkst.SwyMonitorRole) {
 			goto out
 		}
 	}
@@ -301,7 +300,7 @@ func handleListUsers(w http.ResponseWriter, r *http.Request, td *xkst.KeystoneTo
 	var err error
 
 	code := http.StatusInternalServerError
-	if xkst.HasRole(td, xkst.SwyAdminRole) || xkst.HasRole(td, xkst.SwyMonitorRole) {
+	if xkst.HasRole(td, xkst.SwyAdminRole, xkst.SwyMonitorRole) {
 		result, err = listUsers(conf.kc)
 		if err != nil {
 			goto out
@@ -511,7 +510,7 @@ func handleAddUser(w http.ResponseWriter, r *http.Request, td *xkst.KeystoneToke
 
 	/* User can be added by admin or UI */
 	code = http.StatusForbidden
-	if !xkst.HasRole(td, xkst.SwyAdminRole) && !xkst.HasRole(td, xkst.SwyUIRole) {
+	if !xkst.HasRole(td, xkst.SwyAdminRole, xkst.SwyUIRole) {
 		err = errors.New("Only admin or UI may add users")
 		goto out
 	}
@@ -709,13 +708,11 @@ func handleGetLimits(w http.ResponseWriter, uid string, td *xkst.KeystoneTokenDa
 
 	code := http.StatusForbidden
 	if uid == td.User.Id {
-		if !xkst.HasRole(td, xkst.SwyAdminRole) &&
-				!xkst.HasRole(td, xkst.SwyUserRole) {
+		if !xkst.HasRole(td, xkst.SwyAdminRole, xkst.SwyUserRole) {
 			goto out
 		}
 	} else {
-		if !xkst.HasRole(td, xkst.SwyAdminRole) &&
-				!xkst.HasRole(td, xkst.SwyMonitorRole) {
+		if !xkst.HasRole(td, xkst.SwyAdminRole, xkst.SwyMonitorRole) {
 			goto out
 		}
 	}
