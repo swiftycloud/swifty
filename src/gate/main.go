@@ -16,7 +16,6 @@ import (
 	"../apis"
 	"../common"
 	"../common/http"
-	"../common/xrest"
 	"../common/keystone"
 	"../common/secrets"
 	"../common/xratelimit"
@@ -136,8 +135,6 @@ func getReqContext(w http.ResponseWriter, r *http.Request) (context.Context, fun
 
 	return mkContext2(tenant, admin)
 }
-
-type gateGenReq func(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr
 
 func genReqHandler(cb gateGenReq) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

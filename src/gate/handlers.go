@@ -15,6 +15,8 @@ import (
 	"../common/keystone"
 )
 
+type gateGenReq func(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr
+
 func handleCall(w http.ResponseWriter, r *http.Request) {
 	if xhttp.HandleCORS(w, r, CORS_Clnt_Methods, CORS_Clnt_Headers) { return }
 
