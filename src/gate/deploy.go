@@ -433,7 +433,6 @@ func (ds Deployments)Get(ctx context.Context, r *http.Request) (xrest.Obj, *xres
 }
 
 func (_ Deployments)Iterate(ctx context.Context, q url.Values, cb func(context.Context, xrest.Obj) *xrest.ReqErr) *xrest.ReqErr {
-	var deps []*DeployDesc
 	var err error
 
 	project := q.Get("project")
@@ -442,26 +441,30 @@ func (_ Deployments)Iterate(ctx context.Context, q url.Values, cb func(context.C
 	}
 
 	dname := q.Get("name")
-	if dname == "" {
-		err = dbFindAll(ctx, listReq(ctx, project, q["label"]), &deps)
-		if err != nil {
-			return GateErrD(err)
-		}
-	} else {
-		var dep DeployDesc
+	var dep DeployDesc
 
+	if dname != "" {
 		err = dbFind(ctx, cookieReq(ctx, project, dname), &dep)
 		if err != nil {
 			return GateErrD(err)
 		}
-		deps = append(deps, &dep)
+
+		return cb(ctx, &dep)
 	}
 
-	for _, d := range deps {
-		cerr := cb(ctx, d)
+	iter := dbIterAll(ctx, listReq(ctx, project, q["label"]), &dep)
+	defer iter.Close()
+
+	for iter.Next(&dep) {
+		cerr := cb(ctx, &dep)
 		if cerr != nil {
 			return cerr
 		}
+	}
+
+	err = iter.Err()
+	if err != nil {
+		return GateErrD(err)
 	}
 
 	return nil
