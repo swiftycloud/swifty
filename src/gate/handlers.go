@@ -340,18 +340,19 @@ func handleFunctionsTree(ctx context.Context, w http.ResponseWriter, r *http.Req
 	if project == "" {
 		project = DefaultProject
 	}
+	leafs := (q.Get("leafs") != "")
 
-	var fns []FName
-	err := dbCol(ctx, DBColFunc).Find(listReq(ctx, project, []string{})).Select(bson.M{"name": 1}).All(&fns)
-	if err != nil {
-		return GateErrD(err)
-	}
-
+	iter := dbCol(ctx, DBColFunc).Find(listReq(ctx, project, []string{})).Select(bson.M{"name": 1}).Iter()
 	root := FName{Name: "/", Kids: []*FName{}}
-	for _, fn := range fns {
+
+	var fn FName
+	for iter.Next(&fn) {
 		n := &root
 		path := strings.Split(fn.Name, ".")
-		for _, p := range path[:len(path)-1] {
+		if !leafs {
+			path = path[:len(path)-1]
+		}
+		for _, p := range path {
 			var tn *FName
 			for _, c := range n.Kids {
 				if c.Name == p {
@@ -367,6 +368,11 @@ func handleFunctionsTree(ctx context.Context, w http.ResponseWriter, r *http.Req
 
 			n = tn
 		}
+	}
+
+	err := iter.Err()
+	if err != nil {
+		return GateErrD(err)
 	}
 
 	return xrest.Respond(ctx, w, root)
