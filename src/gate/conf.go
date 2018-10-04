@@ -7,7 +7,7 @@ import (
 	"../common/http"
 )
 
-type YAMLConfSwd struct {
+type YAMLConfWdog struct {
 	Volume		string			`yaml:"volume"`
 	Port		int			`yaml:"port"`
 	ImgPref		string			`yaml:"img-prefix"`
@@ -34,7 +34,7 @@ func setupMwareAddr(conf *YAMLConf) {
 	conf.Mware.S3.cn.Resolve()
 }
 
-func (cw *YAMLConfSwd)Validate() error {
+func (cw *YAMLConfWdog)Validate() error {
 	if cw.Volume == "" {
 		return errors.New("'wdog.volume' not set")
 	}
@@ -199,7 +199,7 @@ type YAMLConf struct {
 	Keystone	YAMLConfKeystone	`yaml:"keystone"`
 	Mware		YAMLConfMw		`yaml:"middleware"`
 	Runtime		YAMLConfRt		`yaml:"runtime"`
-	Wdog		YAMLConfSwd		`yaml:"wdog"`
+	Wdog		YAMLConfWdog		`yaml:"wdog"`
 	RepoSyncRate	int			`yaml:"repo-sync-rate"`
 	RepoSyncPeriod	int			`yaml:"repo-sync-period"`
 	RunRate		int			`yaml:"tryrun-rate"`
