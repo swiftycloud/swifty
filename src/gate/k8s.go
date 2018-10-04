@@ -184,15 +184,25 @@ func swk8sGenEnvVar(ctx context.Context, fn *FunctionDesc, wd_port int) []v1.Env
 	}
 
 	for _, aid := range fn.Accounts {
-		ac, err := accFindByID(ctx, fn.SwoId, aid)
+		secid, enames, err := accGetEnvData(ctx, fn.SwoId, aid)
 		if err != nil {
-			ctxlog(ctx).Errorf("No account for %s: %s", aid, err.Error())
+			ctxlog(ctx).Errorf("No account %s for %s", aid, fn.SwoId.Str())
 			continue
 		}
 
-		envs := ac.getEnv()
-		for en, ev := range(envs) {
-			s = append(s, v1.EnvVar{ Name:en, Value:ev })
+		for _, key := range enames {
+			s = append(s, v1.EnvVar{
+				Name:	key,
+				ValueFrom:
+					&v1.EnvVarSource{
+						SecretKeyRef: &v1.SecretKeySelector {
+							LocalObjectReference: v1.LocalObjectReference {
+								Name: secid,
+							},
+							Key: key,
+						},
+					},
+				})
 		}
 	}
 
@@ -613,7 +623,26 @@ func swk8sSecretAdd(ctx context.Context, id string, envs map[string][]byte) erro
 		})
 
 	if err != nil {
-		ctxlog(ctx).Errorf("mware secret add error: %s", err.Error())
+		ctxlog(ctx).Errorf("secret add error: %s", err.Error())
+		err = errors.New("K8S error")
+	}
+
+	return err
+}
+
+func swk8sSecretMod(ctx context.Context, id string, envs map[string][]byte) error {
+	secrets := swk8sClientSet.CoreV1().Secrets(conf.Wdog.Namespace)
+	_, err := secrets.Update(&v1.Secret{
+			ObjectMeta:	metav1.ObjectMeta {
+				Name:	id,
+				Labels:	map[string]string{},
+			},
+			Data:		envs,
+			Type:		v1.SecretTypeOpaque,
+		})
+
+	if err != nil {
+		ctxlog(ctx).Errorf("secret update error: %s", err.Error())
 		err = errors.New("K8S error")
 	}
 
@@ -632,9 +661,10 @@ func swk8sSecretRemove(ctx context.Context, id string) error {
 			OrphanDependents: &orphan,
 		})
 	if err != nil {
-		ctxlog(ctx).Errorf("Can't remove mw %s secret: %s", id, err.Error())
 		if k8serr.IsNotFound(err) {
 			err = nil
+		} else {
+			ctxlog(ctx).Errorf("secret remove error: %s", id, err.Error())
 		}
 	}
 

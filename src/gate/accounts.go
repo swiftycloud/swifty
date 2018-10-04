@@ -304,19 +304,19 @@ func (ad *AccDesc)toInfo(ctx context.Context, details bool) map[string]string {
 	return ai
 }
 
-func (ad *AccDesc)getEnv() map[string]string {
-	envs := make(map[string]string)
+func (ad *AccDesc)getEnv() map[string][]byte {
+	envs := make(map[string][]byte)
 
 	for k, v := range(ad.Values) {
 		en := mkAccEnvName(ad.Type, ad.SwoId.Name, k)
-		envs[en] = v
+		envs[en] = []byte(v)
 	}
 
 	for k, sv := range(ad.Secrets) {
 		v, err := sv.value()
 		if err == nil  {
 			en := mkAccEnvName(ad.Type, ad.SwoId.Name, k)
-			envs[en] = v
+			envs[en] = []byte(v)
 		}
 	}
 
@@ -341,16 +341,47 @@ func accFindByID(ctx context.Context, id SwoId, aid string) (*AccDesc, error) {
 	return &ac, err
 }
 
+func accGetEnvData(ctx context.Context, id SwoId, aid string) (string, []string, error) {
+	ad, err := accFindByID(ctx, id, aid)
+	if err != nil {
+		return "", nil, err
+	}
+
+	enames := []string{}
+	for k, _ := range ad.getEnv() {
+		enames = append(enames, k)
+	}
+
+	return "acc-" + ad.Cookie, enames, nil
+}
+
 func (ad *AccDesc)Add(ctx context.Context, _ interface{}) *xrest.ReqErr {
 	ad.ObjID = bson.NewObjectId()
 	ad.Cookie = ad.SwoId.Cookie2(ad.Type)
 
+	var cerr *xrest.ReqErr
+
 	err := dbInsert(ctx, ad)
 	if err != nil {
-		return GateErrD(err)
+		cerr = GateErrD(err)
+		goto out
+	}
+
+	err = swk8sSecretAdd(ctx, "acc-" + ad.Cookie, ad.getEnv())
+	if err != nil {
+		cerr = GateErrE(swyapi.GateGenErr, err)
+		goto outs
 	}
 
 	return nil
+
+outs:
+	err = dbRemove(ctx, ad)
+	if err != nil {
+		ctxlog(ctx).Errorf("Error cleaning up account: %s", err.Error())
+	}
+out:
+	return cerr
 }
 
 func (ad *AccDesc)Update(ctx context.Context, upd map[string]string) *xrest.ReqErr {
@@ -359,7 +390,12 @@ func (ad *AccDesc)Update(ctx context.Context, upd map[string]string) *xrest.ReqE
 		return cerr
 	}
 
-	err := dbUpdateAll(ctx, ad)
+	err := swk8sSecretMod(ctx, "acc-" + ad.Cookie, ad.getEnv())
+	if err != nil {
+		return GateErrE(swyapi.GateGenErr, err)
+	}
+
+	err = dbUpdateAll(ctx, ad)
 	if err != nil {
 		return GateErrD(err)
 	}
@@ -367,7 +403,12 @@ func (ad *AccDesc)Update(ctx context.Context, upd map[string]string) *xrest.ReqE
 }
 
 func (ad *AccDesc)Del(ctx context.Context) *xrest.ReqErr {
-	err := dbRemove(ctx, ad)
+	err := swk8sSecretRemove(ctx, "acc-" + ad.Cookie)
+	if err != nil {
+		return GateErrE(swyapi.GateGenErr, err)
+	}
+
+	err = dbRemove(ctx, ad)
 	if err != nil {
 		return GateErrD(err)
 	}
