@@ -607,16 +607,20 @@ func (se *secEnvs)appendTo(s []v1.EnvVar) []v1.EnvVar {
 	return s
 }
 
+func (se *secEnvs)toK8Secret() *v1.Secret {
+	return &v1.Secret{
+		ObjectMeta:	metav1.ObjectMeta {
+			Name:	se.id,
+			Labels:	map[string]string{},
+		},
+		Data:		se.envs,
+		Type:		v1.SecretTypeOpaque,
+	}
+}
+
 func swk8sSecretAdd(ctx context.Context, se *secEnvs) error {
 	secrets := swk8sClientSet.CoreV1().Secrets(conf.Wdog.Namespace)
-	_, err := secrets.Create(&v1.Secret{
-			ObjectMeta:	metav1.ObjectMeta {
-				Name:	se.id,
-				Labels:	map[string]string{},
-			},
-			Data:		se.envs,
-			Type:		v1.SecretTypeOpaque,
-		})
+	_, err := secrets.Create(se.toK8Secret())
 
 	if err != nil {
 		ctxlog(ctx).Errorf("secret add error: %s", err.Error())
@@ -628,14 +632,7 @@ func swk8sSecretAdd(ctx context.Context, se *secEnvs) error {
 
 func swk8sSecretMod(ctx context.Context, se *secEnvs) error {
 	secrets := swk8sClientSet.CoreV1().Secrets(conf.Wdog.Namespace)
-	_, err := secrets.Update(&v1.Secret{
-			ObjectMeta:	metav1.ObjectMeta {
-				Name:	se.id,
-				Labels:	map[string]string{},
-			},
-			Data:		se.envs,
-			Type:		v1.SecretTypeOpaque,
-		})
+	_, err := secrets.Update(se.toK8Secret())
 
 	if err != nil {
 		ctxlog(ctx).Errorf("secret update error: %s", err.Error())
