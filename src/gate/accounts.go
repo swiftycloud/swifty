@@ -304,23 +304,23 @@ func (ad *AccDesc)toInfo(ctx context.Context, details bool) map[string]string {
 	return ai
 }
 
-func (ad *AccDesc)getEnv() map[string][]byte {
-	envs := make(map[string][]byte)
+func (ad *AccDesc)getEnv() *secEnvs {
+	se := &secEnvs{id: "acc-" + ad.Cookie, envs: make(map[string][]byte)}
 
 	for k, v := range(ad.Values) {
 		en := mkAccEnvName(ad.Type, ad.SwoId.Name, k)
-		envs[en] = []byte(v)
+		se.envs[en] = []byte(v)
 	}
 
 	for k, sv := range(ad.Secrets) {
 		v, err := sv.value()
 		if err == nil  {
 			en := mkAccEnvName(ad.Type, ad.SwoId.Name, k)
-			envs[en] = []byte(v)
+			se.envs[en] = []byte(v)
 		}
 	}
 
-	return envs
+	return se
 }
 
 func (ad *AccDesc)ID() string {
@@ -341,18 +341,13 @@ func accFindByID(ctx context.Context, id SwoId, aid string) (*AccDesc, error) {
 	return &ac, err
 }
 
-func accGetEnvData(ctx context.Context, id SwoId, aid string) (string, []string, error) {
+func accGetEnvData(ctx context.Context, id SwoId, aid string) (*secEnvs, error) {
 	ad, err := accFindByID(ctx, id, aid)
 	if err != nil {
-		return "", nil, err
+		return nil, err
 	}
 
-	enames := []string{}
-	for k, _ := range ad.getEnv() {
-		enames = append(enames, k)
-	}
-
-	return "acc-" + ad.Cookie, enames, nil
+	return ad.getEnv(), nil
 }
 
 func (ad *AccDesc)Add(ctx context.Context, _ interface{}) *xrest.ReqErr {
@@ -367,7 +362,7 @@ func (ad *AccDesc)Add(ctx context.Context, _ interface{}) *xrest.ReqErr {
 		goto out
 	}
 
-	err = swk8sSecretAdd(ctx, "acc-" + ad.Cookie, ad.getEnv())
+	err = swk8sSecretAdd(ctx, ad.getEnv())
 	if err != nil {
 		cerr = GateErrE(swyapi.GateGenErr, err)
 		goto outs
@@ -390,7 +385,7 @@ func (ad *AccDesc)Update(ctx context.Context, upd map[string]string) *xrest.ReqE
 		return cerr
 	}
 
-	err := swk8sSecretMod(ctx, "acc-" + ad.Cookie, ad.getEnv())
+	err := swk8sSecretMod(ctx, ad.getEnv())
 	if err != nil {
 		return GateErrE(swyapi.GateGenErr, err)
 	}
