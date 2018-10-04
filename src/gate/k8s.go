@@ -198,7 +198,7 @@ func k8sGenEnvVar(ctx context.Context, fn *FunctionDesc, wd_port int) []v1.EnvVa
 func k8sGenLabels(fn *FunctionDesc, depname string) map[string]string {
 	labels := map[string]string {
 		"deployment":	depname,
-		"swyrun":	fn.Cookie[:32],
+		"fnid":		fn.Cookie[:32],
 	}
 	return labels
 }
@@ -719,7 +719,7 @@ func k8sGetBuildPods(ctx context.Context) (map[string]string, error) {
 
 func listFnPods(fn *FunctionDesc) (*v1.PodList, error) {
 	podiface := k8sClientSet.CoreV1().Pods(conf.Wdog.Namespace)
-	return podiface.List(metav1.ListOptions{ LabelSelector: "swyrun=" + fn.Cookie[:32] })
+	return podiface.List(metav1.ListOptions{ LabelSelector: "fnid=" + fn.Cookie[:32] })
 }
 
 func refreshDepsAndPods(ctx context.Context) error {
@@ -789,7 +789,7 @@ func refreshDepsAndPods(ctx context.Context) error {
 			}
 		}
 
-		pods, err := podiface.List(metav1.ListOptions{ LabelSelector: "swyrun=" + fn.Cookie[:32] })
+		pods, err := podiface.List(metav1.ListOptions{ LabelSelector: "fnid=" + fn.Cookie[:32] })
 		if err != nil {
 			ctxlog(ctx).Errorf("Error listing PODs: %s", err.Error())
 			return errors.New("Error listing PODs")
