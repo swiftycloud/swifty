@@ -567,6 +567,7 @@ func podEventLoop() {
 		evt := <-podEvents
 
 		ctx, done := mkContext("::podevent")
+		tracePodEvent(ctx, evt)
 		if evt.up {
 			ctxlog(ctx).Debugf("POD %s (%s) up deploy %s",
 				evt.pod.UID, evt.pod.WdogAddr, evt.pod.DepName)

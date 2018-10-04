@@ -34,7 +34,7 @@ func traceRequest(ctx context.Context, r *http.Request) {
 		return
 	}
 
-	traceEventSlow(ctx, "req", map[string]interface{} {
+	traceEventSlow(ctx, "", "req", map[string]interface{} {
 		"method": r.Method,
 		"path": r.URL.Path,
 	})
@@ -45,7 +45,7 @@ func traceError(ctx context.Context, ce *xrest.ReqErr) {
 		return
 	}
 
-	traceEventSlow(ctx, "error", map[string]interface{} {
+	traceEventSlow(ctx, "", "error", map[string]interface{} {
 		"code": ce.Code,
 		"message": ce.Message,
 	})
@@ -56,12 +56,23 @@ func traceResponce(ctx context.Context, r interface{}) {
 		return
 	}
 
-	traceEventSlow(ctx, "resp", map[string]interface{} {
+	traceEventSlow(ctx, "", "resp", map[string]interface{} {
 		"values": reflect.TypeOf(r).String(),
 	})
 }
 
-func traceEventSlow(ctx context.Context, typ string, values map[string]interface{}) {
+func tracePodEvent(ctx context.Context, e *podEvent) {
+	if !traceEnabled() {
+		return
+	}
+
+	traceEventSlow(ctx, e.pod.Tennant, "pod", map[string]interface{}{
+		"fn": e.pod.Project + "/" + e.pod.Name,
+		"up": e.up,
+	})
+}
+
+func traceEventSlow(ctx context.Context, ten, typ string, values map[string]interface{}) {
 	gct := gctx(ctx)
 
 	evt := &swyapi.TracerEvent {
@@ -71,10 +82,14 @@ func traceEventSlow(ctx context.Context, typ string, values map[string]interface
 		Data: values,
 	}
 
+	if ten == "" {
+		ten = gct.Tenant
+	}
+
 	tLock.RLock()
 	for e := tracers.Front(); e != nil; e = e.Next() {
 		t := e.Value.(*Tracer)
-		if t.id == "ten:" + gct.Tenant {
+		if t.id == "ten:" + ten {
 			t.evs <-evt
 		}
 	}
