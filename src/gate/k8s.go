@@ -161,26 +161,20 @@ func swk8sGenEnvVar(ctx context.Context, fn *FunctionDesc, wd_port int) []v1.Env
 			})
 
 	for _, mw := range fn.Mware {
-		mwc, err := mwareGetCookie(ctx, fn.SwoId, mw)
+		mwc, enames, err := mwareGetEnvData(ctx, fn.SwoId, mw)
 		if err != nil {
 			ctxlog(ctx).Errorf("No mware %s for %s", mw, fn.SwoId.Str())
 			continue
 		}
 
-		secret, err := swk8sClientSet.CoreV1().Secrets(conf.Wdog.Namespace).Get("mw-" + mwc, metav1.GetOptions{})
-		if err != nil {
-			ctxlog(ctx).Errorf("No mware secret for %s", mwc)
-			continue
-		}
-
-		for key, _ := range secret.Data {
+		for _, key := range enames {
 			s = append(s, v1.EnvVar{
 				Name:	key,
 				ValueFrom:
 					&v1.EnvVarSource{
 						SecretKeyRef: &v1.SecretKeySelector {
 							LocalObjectReference: v1.LocalObjectReference {
-								Name: secret.ObjectMeta.Name,
+								Name: "mw-" + mwc,
 							},
 							Key: key,
 						},
