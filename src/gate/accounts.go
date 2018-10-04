@@ -367,7 +367,7 @@ func (ad *AccDesc)Add(ctx context.Context, _ interface{}) *xrest.ReqErr {
 		goto out
 	}
 
-	err = swk8sSecretAdd(ctx, ad.getEnv(true))
+	err = k8sSecretAdd(ctx, ad.getEnv(true))
 	if err != nil {
 		cerr = GateErrE(swyapi.GateGenErr, err)
 		goto outs
@@ -390,7 +390,7 @@ func (ad *AccDesc)Update(ctx context.Context, upd map[string]string) *xrest.ReqE
 		return cerr
 	}
 
-	err := swk8sSecretMod(ctx, ad.getEnv(true))
+	err := k8sSecretMod(ctx, ad.getEnv(true))
 	if err != nil {
 		return GateErrE(swyapi.GateGenErr, err)
 	}
@@ -403,7 +403,7 @@ func (ad *AccDesc)Update(ctx context.Context, upd map[string]string) *xrest.ReqE
 }
 
 func (ad *AccDesc)Del(ctx context.Context) *xrest.ReqErr {
-	err := swk8sSecretRemove(ctx, "acc-" + ad.Cookie)
+	err := k8sSecretRemove(ctx, "acc-" + ad.Cookie)
 	if err != nil {
 		return GateErrE(swyapi.GateGenErr, err)
 	}

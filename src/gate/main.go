@@ -318,7 +318,7 @@ func main() {
 		glog.Fatalf("Can't setup stats: %s", err.Error())
 	}
 
-	err = swk8sInit(ctx, config_path)
+	err = k8sInit(ctx, config_path)
 	if err != nil {
 		glog.Fatalf("Can't setup connection to kubernetes: %s",
 				err.Error())

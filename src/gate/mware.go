@@ -165,7 +165,7 @@ func (item *MwareDesc)Del(ctx context.Context) *xrest.ReqErr {
 		goto stalled
 	}
 
-	err = swk8sSecretRemove(ctx, "mw-" + item.Cookie)
+	err = k8sSecretRemove(ctx, "mw-" + item.Cookie)
 	if err != nil {
 		ctxlog(ctx).Errorf("Failed secret cleanup for mware %s: %s", item.SwoId.Str(), err.Error())
 		goto stalled
@@ -464,7 +464,7 @@ func (mwd *MwareDesc)Add(ctx context.Context, _ interface{}) *xrest.ReqErr {
 		goto outdb
 	}
 
-	err = swk8sSecretAdd(ctx, mwSecEnv(ctx, handler, mwd))
+	err = k8sSecretAdd(ctx, mwSecEnv(ctx, handler, mwd))
 	if err != nil {
 		goto outh
 	}
@@ -491,7 +491,7 @@ func (mwd *MwareDesc)Add(ctx context.Context, _ interface{}) *xrest.ReqErr {
 	return nil
 
 outs:
-	erc = swk8sSecretRemove(ctx, "mw-" + mwd.Cookie)
+	erc = k8sSecretRemove(ctx, "mw-" + mwd.Cookie)
 	if erc != nil {
 		goto stalled
 	}

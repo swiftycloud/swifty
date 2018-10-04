@@ -24,7 +24,7 @@ func scalerLog(fdm *FnMemData, msg string) {
 func balancerFnScaler(fdm *FnMemData) {
 up:
 	scalerLog(fdm, "up")
-	goal := swk8sDepScaleUp(fdm.depname, fdm.bd.goal)
+	goal := k8sDepScaleUp(fdm.depname, fdm.bd.goal)
 
 	fdm.lock.Lock()
 	if fdm.bd.goal == 0 {
@@ -63,7 +63,7 @@ down:
 
 	fdm.lock.Unlock()
 	scalerLog(fdm, "down")
-	goal = swk8sDepScaleDown(fdm.depname, fdm.bd.goal)
+	goal = k8sDepScaleDown(fdm.depname, fdm.bd.goal)
 	fdm.lock.Lock()
 
 	goto down
