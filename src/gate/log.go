@@ -43,7 +43,11 @@ func setupLogger(conf *YAMLConf) {
 
 func ctxlog(ctx context.Context) *zap.SugaredLogger {
 	if gctx, ok := ctx.(*gateContext); ok {
-		return glog.With(zap.Int64("req", int64(gctx.ReqId)), zap.String("ten", gctx.Tenant))
+		lfor := gctx.Desc
+		if gctx.Tenant != "" {
+			lfor += ":" + gctx.Tenant
+		}
+		return glog.With(zap.Int64("r", int64(gctx.ReqId)), zap.String("f", lfor))
 	}
 
 	return glog

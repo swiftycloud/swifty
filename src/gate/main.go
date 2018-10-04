@@ -133,7 +133,7 @@ func getReqContext(w http.ResponseWriter, r *http.Request) (context.Context, fun
 		}
 	}
 
-	return mkContext2(tenant, admin)
+	return mkContext3("::r", tenant, admin)
 }
 
 func genReqHandler(cb gateGenReq) http.Handler {
