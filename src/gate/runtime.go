@@ -131,7 +131,7 @@ func rtLangDetect(fname string) string {
 
 func rtLangEnabled(lang string) bool {
 	h, ok := rt_handlers[lang]
-	return ok && (SwyModeDevel || !h.Devel)
+	return ok && (ModeDevel || !h.Devel)
 }
 
 func rtNeedToBuild(scr *FnCodeDesc) (bool, string) {

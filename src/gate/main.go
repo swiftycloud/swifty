@@ -21,8 +21,8 @@ import (
 	"../common/xratelimit"
 )
 
-var SwyModeDevel bool
-var SwdProxyOK bool
+var ModeDevel bool
+var WdogProxyOK bool
 var gateSecrets map[string]string
 var gateSecPas []byte
 
@@ -244,8 +244,8 @@ func main() {
 			"conf",
 				"/etc/swifty/conf/gate.yaml",
 				"path to a config file")
-	flag.BoolVar(&SwyModeDevel, "devel", false, "launch in development mode")
-	flag.BoolVar(&SwdProxyOK, "proxy", false, "use wdog proxy")
+	flag.BoolVar(&ModeDevel, "devel", false, "launch in development mode")
+	flag.BoolVar(&WdogProxyOK, "proxy", false, "use wdog proxy")
 	flag.BoolVar(&showVersion, "version", false, "show version and exit")
 	flag.Parse()
 
@@ -357,7 +357,7 @@ func main() {
 			Addr:         conf.Daemon.Addr,
 			WriteTimeout: 60 * time.Second,
 			ReadTimeout:  60 * time.Second,
-		}, conf.Daemon.HTTPS, SwyModeDevel || isLite(), func(s string) { glog.Debugf(s) })
+		}, conf.Daemon.HTTPS, ModeDevel || isLite(), func(s string) { glog.Debugf(s) })
 	if err != nil {
 		glog.Errorf("ListenAndServe: %s", err.Error())
 	}

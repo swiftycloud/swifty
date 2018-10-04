@@ -61,7 +61,7 @@ func BuilderInit(ctx context.Context) error {
 			continue
 		}
 
-		if !rt.Devel || SwyModeDevel {
+		if !rt.Devel || ModeDevel {
 			ip, ok := buildIps[l]
 			if !ok {
 				return fmt.Errorf("No builder for %s", l)

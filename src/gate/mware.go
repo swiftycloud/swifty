@@ -448,7 +448,7 @@ func (mwd *MwareDesc)Add(ctx context.Context, _ interface{}) *xrest.ReqErr {
 		goto outdb
 	}
 
-	if handler.Devel && !SwyModeDevel {
+	if handler.Devel && !ModeDevel {
 		err = fmt.Errorf("Bad mware type %s", mwd.MwareType)
 		goto outdb
 	}

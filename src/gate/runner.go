@@ -105,7 +105,7 @@ func (conn *podConn)Run(ctx context.Context, sopq *statsOpaque, suff, event stri
 	var err error
 
 	args.Event = event
-	proxy := SwdProxyOK && suff == ""
+	proxy := WdogProxyOK && suff == ""
 
 	if proxy {
 		res, err = talkHTTP(conn.Host, strconv.Itoa(conf.Wdog.Port),
