@@ -260,6 +260,13 @@ paths:
         description: Project to work on
         required: false
         type: string
+      - in: query
+        name: leafs
+        type: string
+        required: false
+        description: >-
+          Whether or not to show leaf nodes, i.e. function names (value itself is
+          ignored)
     get:
       tags:
         - function
