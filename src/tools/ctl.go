@@ -420,6 +420,9 @@ func function_tree(args []string, opts [16]string) {
 	if curCmd.project != "" {
 		ua = append(ua, "project=" + curCmd.project)
 	}
+	if opts[0] != "" {
+		ua = append(ua, "leafs=" + opts[0])
+	}
 	make_faas_req1("GET", url("functions/tree", ua), http.StatusOK, nil, &root)
 	root.show("")
 }
@@ -1897,6 +1900,7 @@ func main() {
 	cmdMap[CMD_FL].opts.StringVar(&opts[1], "label", "", "Labels, comma-separated")
 	cmdMap[CMD_FL].opts.StringVar(&opts[2], "pref", "", "Prefix")
 	bindCmdUsage(CMD_FL,	[]string{}, "List functions", true)
+	cmdMap[CMD_FT].opts.StringVar(&opts[0], "leafs", "", "Show leafs of the tree")
 	bindCmdUsage(CMD_FT,	[]string{}, "Shpw function tree", true)
 	bindCmdUsage(CMD_FI,	[]string{"NAME"}, "Function info", true)
 	bindCmdUsage(CMD_FIM,	[]string{"NAME"}, "Function memdat info", true)

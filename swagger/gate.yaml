@@ -204,7 +204,7 @@ paths:
           name: prefix
           type: string
           required: false
-          description: Filter functions by name prefix
+          description: Filter functions by name prefix. The dot, if needed, must be added explicitly!
         - in: query
           name: label
           type: string
@@ -260,6 +260,13 @@ paths:
         description: Project to work on
         required: false
         type: string
+      - in: query
+        name: leafs
+        type: string
+        required: false
+        description: >-
+          Whether or not to show leaf nodes, i.e. function names (value itself is
+          ignored)
     get:
       tags:
         - function
