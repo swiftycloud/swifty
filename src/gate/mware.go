@@ -107,7 +107,7 @@ func mwareGetEnvData(ctx context.Context, id SwoId, name string) (string, []stri
 		enames = append(enames, n)
 	}
 
-	return mw.Cookie, enames, nil
+	return "mw-" + mw.Cookie, enames, nil
 }
 
 func mwareGenerateUserPassClient(ctx context.Context, mwd *MwareDesc) (error) {
@@ -165,7 +165,7 @@ func (item *MwareDesc)Del(ctx context.Context) *xrest.ReqErr {
 		goto stalled
 	}
 
-	err = swk8sMwSecretRemove(ctx, item.Cookie)
+	err = swk8sSecretRemove(ctx, "mw-" + item.Cookie)
 	if err != nil {
 		ctxlog(ctx).Errorf("Failed secret cleanup for mware %s: %s", item.SwoId.Str(), err.Error())
 		goto stalled
@@ -464,7 +464,7 @@ func (mwd *MwareDesc)Add(ctx context.Context, _ interface{}) *xrest.ReqErr {
 		goto outdb
 	}
 
-	err = swk8sMwSecretAdd(ctx, mwd.Cookie, handler.GetEnv(ctx, mwd))
+	err = swk8sSecretAdd(ctx, "mw-" + mwd.Cookie, handler.GetEnv(ctx, mwd))
 	if err != nil {
 		goto outh
 	}
@@ -491,7 +491,7 @@ func (mwd *MwareDesc)Add(ctx context.Context, _ interface{}) *xrest.ReqErr {
 	return nil
 
 outs:
-	erc = swk8sMwSecretRemove(ctx, mwd.Cookie)
+	erc = swk8sSecretRemove(ctx, "mw-" + mwd.Cookie)
 	if erc != nil {
 		goto stalled
 	}

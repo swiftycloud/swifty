@@ -161,7 +161,7 @@ func swk8sGenEnvVar(ctx context.Context, fn *FunctionDesc, wd_port int) []v1.Env
 			})
 
 	for _, mw := range fn.Mware {
-		mwc, enames, err := mwareGetEnvData(ctx, fn.SwoId, mw)
+		secid, enames, err := mwareGetEnvData(ctx, fn.SwoId, mw)
 		if err != nil {
 			ctxlog(ctx).Errorf("No mware %s for %s", mw, fn.SwoId.Str())
 			continue
@@ -174,7 +174,7 @@ func swk8sGenEnvVar(ctx context.Context, fn *FunctionDesc, wd_port int) []v1.Env
 					&v1.EnvVarSource{
 						SecretKeyRef: &v1.SecretKeySelector {
 							LocalObjectReference: v1.LocalObjectReference {
-								Name: "mw-" + mwc,
+								Name: secid,
 							},
 							Key: key,
 						},
@@ -601,11 +601,11 @@ func init() {
 	go podEventLoop()
 }
 
-func swk8sMwSecretAdd(ctx context.Context, id string, envs map[string][]byte) error {
+func swk8sSecretAdd(ctx context.Context, id string, envs map[string][]byte) error {
 	secrets := swk8sClientSet.CoreV1().Secrets(conf.Wdog.Namespace)
 	_, err := secrets.Create(&v1.Secret{
 			ObjectMeta:	metav1.ObjectMeta {
-				Name:	"mw-" + id,
+				Name:	id,
 				Labels:	map[string]string{},
 			},
 			Data:		envs,
@@ -620,13 +620,13 @@ func swk8sMwSecretAdd(ctx context.Context, id string, envs map[string][]byte) er
 	return err
 }
 
-func swk8sMwSecretRemove(ctx context.Context, id string) error {
+func swk8sSecretRemove(ctx context.Context, id string) error {
 	var orphan bool = false
 	var grace int64 = 0
 	var err error
 
 	secrets := swk8sClientSet.CoreV1().Secrets(conf.Wdog.Namespace)
-	err = secrets.Delete("mw-" + id,
+	err = secrets.Delete(id,
 		&metav1.DeleteOptions{
 			GracePeriodSeconds: &grace,
 			OrphanDependents: &orphan,
