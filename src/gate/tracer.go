@@ -72,6 +72,17 @@ func tracePodEvent(ctx context.Context, e *podEvent) {
 	})
 }
 
+func traceFnEvent(ctx context.Context, what string, fn *FunctionDesc) {
+	if !traceEnabled() {
+		return
+	}
+
+	traceEventSlow(ctx, fn.SwoId.Tennant, "fn", map[string]interface{}{
+		"what": what,
+		"fn": fn.SwoId.Project + "/" + fn.SwoId.Name,
+	})
+}
+
 func traceEventSlow(ctx context.Context, ten, typ string, values map[string]interface{}) {
 	gct := gctx(ctx)
 

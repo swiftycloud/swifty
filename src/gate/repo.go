@@ -466,6 +466,7 @@ func tryToUpdateFunctions(ctx context.Context, rd *RepoDesc, to string) {
 	for _, fn := range(fns) {
 		ctxlog(ctx).Debugf("Update function %s from %s", fn.SwoId.Str(), fn.Src.File)
 		t := gctx(ctx).tpush(fn.SwoId.Tennant)
+		traceFnEvent(ctx, "update from repo", fn)
 		cerr := fn.updateSources(ctx, &swyapi.FunctionSources {
 			Type: "git",
 			Repo: fn.Src.Repo + "/" + fn.Src.File,
