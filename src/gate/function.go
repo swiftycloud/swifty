@@ -432,7 +432,7 @@ func (fn *FunctionDesc)Add(ctx context.Context, p interface{}) *xrest.ReqErr {
 				goto bstalled
 			}
 
-			err = swk8sRun(ctx, &conf, fn)
+			err = k8sRun(ctx, &conf, fn)
 			if err != nil {
 				goto bstalled
 			}
@@ -443,7 +443,7 @@ func (fn *FunctionDesc)Add(ctx context.Context, p interface{}) *xrest.ReqErr {
 			fn.ToState(ctx, DBFuncStateStl, -1)
 		}()
 	} else {
-		err = swk8sRun(ctx, &conf, fn)
+		err = k8sRun(ctx, &conf, fn)
 		if err != nil {
 			goto out_clean_repo
 		}
@@ -533,7 +533,7 @@ func (fn *FunctionDesc)setEnv(ctx context.Context, env []string) *xrest.ReqErr {
 		return GateErrE(swyapi.GateGenErr, err)
 	}
 
-	swk8sUpdate(ctx, &conf, fn)
+	k8sUpdate(ctx, &conf, fn)
 	return nil
 }
 
@@ -607,7 +607,7 @@ func (fn *FunctionDesc)setSize(ctx context.Context, sz *swyapi.FunctionSize) *xr
 	}
 
 	if restart && fn.State == DBFuncStateRdy {
-		swk8sUpdate(ctx, &conf, fn)
+		k8sUpdate(ctx, &conf, fn)
 	}
 
 	return nil
@@ -626,7 +626,7 @@ func (fn *FunctionDesc)addMware(ctx context.Context, mw *MwareDesc) *xrest.ReqEr
 
 	fn.Mware = append(fn.Mware, mw.SwoId.Name)
 	if fn.State == DBFuncStateRdy {
-		swk8sUpdate(ctx, &conf, fn)
+		k8sUpdate(ctx, &conf, fn)
 	}
 	return nil
 }
@@ -651,7 +651,7 @@ func (fn *FunctionDesc)delMware(ctx context.Context, mw *MwareDesc) *xrest.ReqEr
 
 	fn.Mware = append(fn.Mware[:found], fn.Mware[found+1:]...)
 	if fn.State == DBFuncStateRdy {
-		swk8sUpdate(ctx, &conf, fn)
+		k8sUpdate(ctx, &conf, fn)
 	}
 	return nil
 }
@@ -670,7 +670,7 @@ func (fn *FunctionDesc)addAccount(ctx context.Context, ad *AccDesc) *xrest.ReqEr
 
 	fn.Accounts = append(fn.Accounts, aid)
 	if fn.State == DBFuncStateRdy {
-		swk8sUpdate(ctx, &conf, fn)
+		k8sUpdate(ctx, &conf, fn)
 	}
 	return nil
 }
@@ -694,7 +694,7 @@ func (fn *FunctionDesc)delAccount(ctx context.Context, acc *AccDesc) *xrest.ReqE
 		}
 	}
 	if fn.State == DBFuncStateRdy {
-		swk8sUpdate(ctx, &conf, fn)
+		k8sUpdate(ctx, &conf, fn)
 	}
 	return nil
 }
@@ -712,7 +712,7 @@ func (fn *FunctionDesc)addS3Bucket(ctx context.Context, b string) error {
 
 	fn.S3Buckets = append(fn.S3Buckets, b)
 	if fn.State == DBFuncStateRdy {
-		swk8sUpdate(ctx, &conf, fn)
+		k8sUpdate(ctx, &conf, fn)
 	}
 	return nil
 }
@@ -737,7 +737,7 @@ func (fn *FunctionDesc)delS3Bucket(ctx context.Context, bn string) error {
 
 	fn.S3Buckets = append(fn.S3Buckets[:found], fn.S3Buckets[found+1:]...)
 	if fn.State == DBFuncStateRdy {
-		swk8sUpdate(ctx, &conf, fn)
+		k8sUpdate(ctx, &conf, fn)
 	}
 	return nil
 }
@@ -796,9 +796,9 @@ func (fn *FunctionDesc)updateSources(ctx context.Context, src *swyapi.FunctionSo
 	}
 
 	if olds == DBFuncStateRdy {
-		swk8sUpdate(ctx, &conf, fn)
+		k8sUpdate(ctx, &conf, fn)
 	} else {
-		err = swk8sRun(ctx, &conf, fn)
+		err = k8sRun(ctx, &conf, fn)
 		if err != nil {
 			fn.ToState(ctx, DBFuncStateStl, -1)
 			return GateErrE(swyapi.GateGenErr, err)
@@ -848,7 +848,7 @@ func (fn *FunctionDesc)Del(ctx context.Context) *xrest.ReqErr {
 	}
 
 	if !dea {
-		err = swk8sRemove(ctx, &conf, fn)
+		err = k8sRemove(ctx, &conf, fn)
 		if err != nil {
 			ctxlog(ctx).Errorf("remove deploy error: %s", err.Error())
 			goto later
@@ -961,7 +961,7 @@ func deactivateFunction(ctx context.Context, fn *FunctionDesc) *xrest.ReqErr {
 		return GateErrM(swyapi.GateGenErr, "Cannot deactivate function")
 	}
 
-	err = swk8sRemove(ctx, &conf, fn)
+	err = k8sRemove(ctx, &conf, fn)
 	if err != nil {
 		ctxlog(ctx).Errorf("Can't remove deployment: %s", err.Error())
 		fn.ToState(ctx, DBFuncStateRdy, -1)
@@ -983,7 +983,7 @@ func activateFunction(ctx context.Context, fn *FunctionDesc) *xrest.ReqErr {
 		return GateErrM(swyapi.GateGenErr, "Cannot activate function")
 	}
 
-	err = swk8sRun(ctx, &conf, fn)
+	err = k8sRun(ctx, &conf, fn)
 	if err != nil {
 		fn.ToState(ctx, DBFuncStateDea, -1)
 		ctxlog(ctx).Errorf("Can't start deployment: %s", err.Error())

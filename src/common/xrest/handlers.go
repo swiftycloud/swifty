@@ -11,7 +11,7 @@ var TraceFn func(context.Context, interface{})
 func Respond(ctx context.Context, w http.ResponseWriter, result interface{}) *ReqErr {
 	err := xhttp.Respond(w, result)
 	if err != nil {
-		return &ReqErr{3 /* XXX: GateBadResp */, err.Error()}
+		return &ReqErr{BadResp, err.Error()}
 	}
 
 	if TraceFn != nil {
@@ -56,7 +56,7 @@ func HandleUpdateOne(ctx context.Context, w http.ResponseWriter, r *http.Request
 
 	err := xhttp.RReq(r, upd)
 	if err != nil {
-		return &ReqErr{2 /* XXX: GateBadRequest */, err.Error()}
+		return &ReqErr{BadRequest, err.Error()}
 	}
 
 	cerr := desc.Upd(ctx, upd)
@@ -75,7 +75,7 @@ func HandleUpdateProp(ctx context.Context, w http.ResponseWriter, r *http.Reques
 
 	err := xhttp.RReq(r, upd)
 	if err != nil {
-		return &ReqErr{2 /* XXX: GateBadRequest */, err.Error()}
+		return &ReqErr{BadRequest, err.Error()}
 	}
 
 	cerr := desc.Upd(ctx, o, upd)
@@ -90,7 +90,7 @@ func HandleUpdateProp(ctx context.Context, w http.ResponseWriter, r *http.Reques
 func HandleCreateOne(ctx context.Context, w http.ResponseWriter, r *http.Request, fact Factory, add interface{}) *ReqErr {
 	err := xhttp.RReq(r, add)
 	if err != nil {
-		return &ReqErr{2 /* XXX: GateBadRequest */, err.Error()}
+		return &ReqErr{BadRequest, err.Error()}
 	}
 
 	desc, cerr := fact.Create(ctx, add)

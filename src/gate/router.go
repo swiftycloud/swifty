@@ -3,8 +3,10 @@ package main
 import (
 	"net/http"
 	"net/url"
-	"../apis"
+	"strings"
 	"context"
+	"../apis"
+	"../common"
 	"../common/http"
 	"../common/xrest"
 	"gopkg.in/mgo.v2/bson"
@@ -68,11 +70,21 @@ func makeRouterURL(ctx context.Context, urlid string) (*RouterURL, error) {
 	}
 
 	rurl := RouterURL{}
+	rurl.table = make(map[string]*RouterEntry)
 	id := rt.SwoId
 	for _, e := range rt.Table {
 		id.Name = e.Call
-		re := RouterEntry{*e, id.Cookie()}
-		rurl.table = append(rurl.table, &re)
+		re := RouterEntry{}
+		re.cookie = id.Cookie()
+		re.key = e.Key
+		if e.Method == "*" {
+			re.methods.Fill()
+		} else {
+			for _, m := range strings.Fields(e.Method) {
+				re.methods.Set(methodNr(m))
+			}
+		}
+		rurl.table[e.Path] = &re
 	}
 
 	return &rurl, nil
@@ -207,48 +219,43 @@ func (rd *RouterDesc)setTable(ctx context.Context, tbl []*swyapi.RouterEntry) *x
 }
 
 type RouterEntry struct {
-	swyapi.RouterEntry
 	cookie	string
+	methods	xh.Bitmask
+	key	string
 }
 
 type RouterURL struct {
 	URL
-	table	[]*RouterEntry
+	table	map[string]*RouterEntry
 }
 
 func (rt *RouterURL)Handle(ctx context.Context, w http.ResponseWriter, r *http.Request, sopq *statsOpaque) {
-	path_match := false
 	path := reqPath(r)
-	for _, e := range rt.table {
-		if e.Path != path {
-			continue
-		}
-		path_match = true
-		if e.Method != "*" && e.Method != r.Method {
-			continue
-		}
-
-		/* FIXME -- cache guy on e */
-		fmd, err := memdGet(ctx, e.cookie)
-		if err != nil {
-			http.Error(w, "Error getting FN handler", http.StatusInternalServerError)
-			return
-		}
-
-		if fmd == nil {
-			http.Error(w, "No such function", http.StatusServiceUnavailable)
-			return
-		}
-
-		fmd.Handle(ctx, w, r, sopq, path, e.Key)
+	e, ok := rt.table[path]
+	if !ok {
+		http.Error(w, "", http.StatusNotFound)
 		return
 	}
 
-	code := http.StatusNotFound
-	if path_match {
-		code = http.StatusMethodNotAllowed
+	mnr := methodNr(r.Method)
+	if !e.methods.Test(mnr) {
+		http.Error(w, "", http.StatusMethodNotAllowed)
+		return
 	}
-	http.Error(w, "", code)
+
+	/* FIXME -- cache guy on e */
+	fmd, err := memdGet(ctx, e.cookie)
+	if err != nil {
+		http.Error(w, "Error getting FN handler", http.StatusInternalServerError)
+		return
+	}
+
+	if fmd == nil {
+		http.Error(w, "No such function", http.StatusServiceUnavailable)
+		return
+	}
+
+	fmd.Handle(ctx, w, r, sopq, path, e.key)
 }
 
 type RtTblProp struct { }

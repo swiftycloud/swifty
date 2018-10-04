@@ -42,13 +42,12 @@ func BalancerPodUp(ctx context.Context, pod *k8sPod) error {
 func BalancerPodRdy(ctx context.Context, pod *k8sPod) error {
 	fnid := pod.SwoId.Cookie()
 
-	balancerPodsFlush(fnid)
-
 	err := dbBalancerPodUpd(ctx, fnid, pod)
 	if err != nil {
 		return fmt.Errorf("Add error: %s", err.Error())
 	}
 
+	balancerPodsFlush(fnid)
 	fnWaiterKick(fnid)
 	return nil
 }

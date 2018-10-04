@@ -51,7 +51,7 @@ func buildFunction(ctx context.Context, addr string, fn *FunctionDesc, suf strin
 }
 
 func BuilderInit(ctx context.Context) error {
-	buildIps, err := swk8sGetBuildPods(ctx)
+	buildIps, err := k8sGetBuildPods(ctx)
 	if err != nil {
 		return err
 	}
@@ -61,7 +61,7 @@ func BuilderInit(ctx context.Context) error {
 			continue
 		}
 
-		if !rt.Devel || SwyModeDevel {
+		if !rt.Devel || ModeDevel {
 			ip, ok := buildIps[l]
 			if !ok {
 				return fmt.Errorf("No builder for %s", l)

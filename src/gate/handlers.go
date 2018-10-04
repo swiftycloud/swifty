@@ -633,7 +633,7 @@ func handleLanguages(ctx context.Context, w http.ResponseWriter, r *http.Request
 	var ret []string
 
 	for l, lh := range rt_handlers {
-		if lh.Devel && !SwyModeDevel {
+		if lh.Devel && !ModeDevel {
 			continue
 		}
 
@@ -646,7 +646,7 @@ func handleLanguages(ctx context.Context, w http.ResponseWriter, r *http.Request
 func handleLanguage(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
 	lang := mux.Vars(r)["lang"]
 	lh, ok := rt_handlers[lang]
-	if !ok || (lh.Devel && !SwyModeDevel) {
+	if !ok || (lh.Devel && !ModeDevel) {
 		return GateErrM(swyapi.GateGenErr, "Language not supported")
 	}
 
@@ -657,7 +657,7 @@ func handleMwareTypes(ctx context.Context, w http.ResponseWriter, r *http.Reques
 	var ret []string
 
 	for mw, mt := range mwareHandlers {
-		if mt.Devel && !SwyModeDevel {
+		if mt.Devel && !ModeDevel {
 			continue
 		}
 

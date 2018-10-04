@@ -26,27 +26,27 @@ import (
 	"net"
 )
 
-var swk8sClientSet *kubernetes.Clientset
+var k8sClientSet *kubernetes.Clientset
 
-func swk8sPodDelete(podname string) error {
+func k8sPodDelete(podname string) error {
 	var orphan bool = false
 	var grace int64 = 0
 	var err error
 
-	podiface := swk8sClientSet.CoreV1().Pods(conf.Wdog.Namespace)
+	podiface := k8sClientSet.CoreV1().Pods(conf.Wdog.Namespace)
 	err = podiface.Delete(podname,
 				&metav1.DeleteOptions{
 					GracePeriodSeconds: &grace,
 					OrphanDependents: &orphan,
 				})
 	if err != nil {
-		return fmt.Errorf("swk8sPodDelete: Can't delete %s: %s",
+		return fmt.Errorf("k8sPodDelete: Can't delete %s: %s",
 					podname, err.Error())
 	}
 	return nil
 }
 
-func swk8sRemove(ctx context.Context, conf *YAMLConf, fn *FunctionDesc) error {
+func k8sRemove(ctx context.Context, conf *YAMLConf, fn *FunctionDesc) error {
 	var nr_replicas int32 = 0
 	var orphan bool = false
 	var grace int64 = 0
@@ -60,7 +60,7 @@ func swk8sRemove(ctx context.Context, conf *YAMLConf, fn *FunctionDesc) error {
 		return err
 	}
 
-	deploy := swk8sClientSet.Extensions().Deployments(conf.Wdog.Namespace)
+	deploy := k8sClientSet.Extensions().Deployments(conf.Wdog.Namespace)
 	this, err := deploy.Get(depname, metav1.GetOptions{})
 	if err != nil {
 		if k8serr.IsNotFound(err) {
@@ -97,7 +97,7 @@ func swk8sRemove(ctx context.Context, conf *YAMLConf, fn *FunctionDesc) error {
 	return nil
 }
 
-func swk8sGenEnvVar(ctx context.Context, fn *FunctionDesc, wd_port int) []v1.EnvVar {
+func k8sGenEnvVar(ctx context.Context, fn *FunctionDesc, wd_port int) []v1.EnvVar {
 	var s []v1.EnvVar
 
 	for _, v := range fn.Code.Env {
@@ -195,18 +195,18 @@ func swk8sGenEnvVar(ctx context.Context, fn *FunctionDesc, wd_port int) []v1.Env
 	return s
 }
 
-func swk8sGenLabels(fn *FunctionDesc, depname string) map[string]string {
+func k8sGenLabels(fn *FunctionDesc, depname string) map[string]string {
 	labels := map[string]string {
 		"deployment":	depname,
-		"swyrun":	fn.Cookie[:32],
+		"fnid":		fn.Cookie[:32],
 	}
 	return labels
 }
 
-func swk8sUpdate(ctx context.Context, conf *YAMLConf, fn *FunctionDesc) error {
+func k8sUpdate(ctx context.Context, conf *YAMLConf, fn *FunctionDesc) error {
 	depname := fn.DepName()
 
-	deploy := swk8sClientSet.Extensions().Deployments(conf.Wdog.Namespace)
+	deploy := k8sClientSet.Extensions().Deployments(conf.Wdog.Namespace)
 	this, err := deploy.Get(depname, metav1.GetOptions{})
 	if err != nil {
 		ctxlog(ctx).Errorf("Can't get deployment for %s", fn.SwoId.Str())
@@ -228,7 +228,7 @@ func swk8sUpdate(ctx context.Context, conf *YAMLConf, fn *FunctionDesc) error {
 	 * Tune up SWD_FUNCTION_DESC to make wdog keep up with
 	 * updated Tmo value and MWARE_* secrets
 	 */
-	this.Spec.Template.Spec.Containers[0].Env = swk8sGenEnvVar(ctx, fn, conf.Wdog.Port)
+	this.Spec.Template.Spec.Containers[0].Env = k8sGenEnvVar(ctx, fn, conf.Wdog.Port)
 
 	specSetRes(&this.Spec.Template.Spec.Containers[0].Resources, fn)
 
@@ -266,19 +266,19 @@ func specSetRes(res *v1.ResourceRequirements, fn *FunctionDesc) {
 	}
 }
 
-func swk8sRun(ctx context.Context, conf *YAMLConf, fn *FunctionDesc) error {
+func k8sRun(ctx context.Context, conf *YAMLConf, fn *FunctionDesc) error {
 	var err error
 	roRoot := true
 
 	depname := fn.DepName()
 	ctxlog(ctx).Debugf("Start %s deploy for %s (img: %s)", fn.SwoId.Str(), depname, fn.Code.image())
 
-	envs := swk8sGenEnvVar(ctx, fn, conf.Wdog.Port)
+	envs := k8sGenEnvVar(ctx, fn, conf.Wdog.Port)
 
 	podspec := v1.PodTemplateSpec{
 		ObjectMeta:	metav1.ObjectMeta {
 			Name:	depname,
-			Labels:	swk8sGenLabels(fn, depname),
+			Labels:	k8sGenLabels(fn, depname),
 		},
 		Spec:			v1.PodSpec {
 			Volumes:	[]v1.Volume{
@@ -357,7 +357,7 @@ func swk8sRun(ctx context.Context, conf *YAMLConf, fn *FunctionDesc) error {
 		},
 	}
 
-	deploy := swk8sClientSet.Extensions().Deployments(conf.Wdog.Namespace)
+	deploy := k8sClientSet.Extensions().Deployments(conf.Wdog.Namespace)
 	_, err = deploy.Create(&deployspec)
 	if err != nil {
 		BalancerDelete(ctx, fn.Cookie)
@@ -416,10 +416,10 @@ func genBalancerPod(pod *v1.Pod) (*k8sPod) {
 	return r
 }
 
-func swk8sPodAdd(obj interface{}) {
+func k8sPodAdd(obj interface{}) {
 }
 
-func swk8sPodDel(obj interface{}) {
+func k8sPodDel(obj interface{}) {
 	po := obj.(*v1.Pod)
 
 /*
@@ -473,7 +473,7 @@ func waitPodPort(ctx context.Context, addr, port string) error {
 	return nil
 }
 
-func swk8sPodUp(ctx context.Context, pod *k8sPod) error {
+func k8sPodUp(ctx context.Context, pod *k8sPod) error {
 	bld := pod.Build()
 	if bld != "" {
 		ctxlog(ctx).Debugf("Update %s builder to %s", bld, pod.WdogAddr)
@@ -512,7 +512,7 @@ func swk8sPodUp(ctx context.Context, pod *k8sPod) error {
 	return nil
 }
 
-func swk8sPodDown(ctx context.Context, pod *k8sPod) {
+func k8sPodDown(ctx context.Context, pod *k8sPod) {
 	if pod.Build() != "" {
 		return
 	}
@@ -525,7 +525,7 @@ func swk8sPodDown(ctx context.Context, pod *k8sPod) {
 	}
 }
 
-func swk8sPodUpd(obj_old, obj_new interface{}) {
+func k8sPodUpd(obj_old, obj_new interface{}) {
 	po := obj_old.(*v1.Pod)
 	pn := obj_new.(*v1.Pod)
 
@@ -571,11 +571,11 @@ func podEventLoop() {
 		if evt.up {
 			ctxlog(ctx).Debugf("POD %s (%s) up deploy %s",
 				evt.pod.UID, evt.pod.WdogAddr, evt.pod.DepName)
-			swk8sPodUp(ctx, evt.pod)
+			k8sPodUp(ctx, evt.pod)
 		} else {
 			ctxlog(ctx).Debugf("POD %s (%s) down deploy %s",
 				evt.pod.UID, evt.pod.WdogAddr, evt.pod.DepName)
-			swk8sPodDown(ctx, evt.pod)
+			k8sPodDown(ctx, evt.pod)
 		}
 		done(ctx)
 	}
@@ -619,8 +619,8 @@ func (se *secEnvs)toK8Secret() *v1.Secret {
 	}
 }
 
-func swk8sSecretAdd(ctx context.Context, se *secEnvs) error {
-	secrets := swk8sClientSet.CoreV1().Secrets(conf.Wdog.Namespace)
+func k8sSecretAdd(ctx context.Context, se *secEnvs) error {
+	secrets := k8sClientSet.CoreV1().Secrets(conf.Wdog.Namespace)
 	_, err := secrets.Create(se.toK8Secret())
 
 	if err != nil {
@@ -631,8 +631,8 @@ func swk8sSecretAdd(ctx context.Context, se *secEnvs) error {
 	return err
 }
 
-func swk8sSecretMod(ctx context.Context, se *secEnvs) error {
-	secrets := swk8sClientSet.CoreV1().Secrets(conf.Wdog.Namespace)
+func k8sSecretMod(ctx context.Context, se *secEnvs) error {
+	secrets := k8sClientSet.CoreV1().Secrets(conf.Wdog.Namespace)
 	_, err := secrets.Update(se.toK8Secret())
 
 	if err != nil {
@@ -643,12 +643,12 @@ func swk8sSecretMod(ctx context.Context, se *secEnvs) error {
 	return err
 }
 
-func swk8sSecretRemove(ctx context.Context, id string) error {
+func k8sSecretRemove(ctx context.Context, id string) error {
 	var orphan bool = false
 	var grace int64 = 0
 	var err error
 
-	secrets := swk8sClientSet.CoreV1().Secrets(conf.Wdog.Namespace)
+	secrets := k8sClientSet.CoreV1().Secrets(conf.Wdog.Namespace)
 	err = secrets.Delete(id,
 		&metav1.DeleteOptions{
 			GracePeriodSeconds: &grace,
@@ -665,8 +665,8 @@ func swk8sSecretRemove(ctx context.Context, id string) error {
 	return err
 }
 
-func swk8sDepScale(depname string, replicas int32, up bool) int32 {
-	deps := swk8sClientSet.Extensions().Deployments(conf.Wdog.Namespace)
+func k8sDepScale(depname string, replicas int32, up bool) int32 {
+	deps := k8sClientSet.Extensions().Deployments(conf.Wdog.Namespace)
 	dep, err := deps.Get(depname, metav1.GetOptions{})
 	if err != nil {
 		return replicas /* Huh? */
@@ -691,18 +691,18 @@ func swk8sDepScale(depname string, replicas int32, up bool) int32 {
 	return replicas
 }
 
-func swk8sDepScaleUp(depname string, replicas uint32) uint32 {
-	return uint32(swk8sDepScale(depname, int32(replicas), true))
+func k8sDepScaleUp(depname string, replicas uint32) uint32 {
+	return uint32(k8sDepScale(depname, int32(replicas), true))
 }
 
-func swk8sDepScaleDown(depname string, replicas uint32) uint32 {
-	return uint32(swk8sDepScale(depname, int32(replicas), false))
+func k8sDepScaleDown(depname string, replicas uint32) uint32 {
+	return uint32(k8sDepScale(depname, int32(replicas), false))
 }
 
-func swk8sGetBuildPods(ctx context.Context) (map[string]string, error) {
+func k8sGetBuildPods(ctx context.Context) (map[string]string, error) {
 	rv := make(map[string]string)
 
-	podiface := swk8sClientSet.CoreV1().Pods(conf.Wdog.Namespace)
+	podiface := k8sClientSet.CoreV1().Pods(conf.Wdog.Namespace)
 	pods, err := podiface.List(metav1.ListOptions{ LabelSelector: "swybuild" })
 	if err != nil {
 		ctxlog(ctx).Errorf("Error listing PODs: %s", err.Error())
@@ -718,8 +718,8 @@ func swk8sGetBuildPods(ctx context.Context) (map[string]string, error) {
 }
 
 func listFnPods(fn *FunctionDesc) (*v1.PodList, error) {
-	podiface := swk8sClientSet.CoreV1().Pods(conf.Wdog.Namespace)
-	return podiface.List(metav1.ListOptions{ LabelSelector: "swyrun=" + fn.Cookie[:32] })
+	podiface := k8sClientSet.CoreV1().Pods(conf.Wdog.Namespace)
+	return podiface.List(metav1.ListOptions{ LabelSelector: "fnid=" + fn.Cookie[:32] })
 }
 
 func refreshDepsAndPods(ctx context.Context) error {
@@ -733,8 +733,8 @@ func refreshDepsAndPods(ctx context.Context) error {
 	iter := dbIterAll(ctx, bson.M{}, &fn)
 	defer iter.Close()
 
-	depiface := swk8sClientSet.Extensions().Deployments(conf.Wdog.Namespace)
-	podiface := swk8sClientSet.CoreV1().Pods(conf.Wdog.Namespace)
+	depiface := k8sClientSet.Extensions().Deployments(conf.Wdog.Namespace)
+	podiface := k8sClientSet.CoreV1().Pods(conf.Wdog.Namespace)
 
 	for iter.Next(&fn) {
 		if fn.State != DBFuncStateRdy && fn.State != DBFuncStateStr {
@@ -760,7 +760,7 @@ func refreshDepsAndPods(ctx context.Context) error {
 				 * no replicas to check, no PODs to revitalize.
 				 */
 
-				err = swk8sRun(ctx, &conf, &fn)
+				err = k8sRun(ctx, &conf, &fn)
 				if err != nil {
 					ctxlog(ctx).Errorf("Can't start back %s dep: %s", fn.SwoId.Str(), err.Error())
 					return err
@@ -789,7 +789,7 @@ func refreshDepsAndPods(ctx context.Context) error {
 			}
 		}
 
-		pods, err := podiface.List(metav1.ListOptions{ LabelSelector: "swyrun=" + fn.Cookie[:32] })
+		pods, err := podiface.List(metav1.ListOptions{ LabelSelector: "fnid=" + fn.Cookie[:32] })
 		if err != nil {
 			ctxlog(ctx).Errorf("Error listing PODs: %s", err.Error())
 			return errors.New("Error listing PODs")
@@ -797,7 +797,7 @@ func refreshDepsAndPods(ctx context.Context) error {
 
 		for _, pod := range pods.Items {
 			ctxlog(ctx).Debugf("Found pod %s %s", pod.Name, pod.Status.PodIP)
-			err = swk8sPodUp(ctx, genBalancerPod(&pod))
+			err = k8sPodUp(ctx, genBalancerPod(&pod))
 			if err != nil {
 				ctxlog(ctx).Errorf("Can't refresh POD: %s", err.Error())
 				return err
@@ -813,7 +813,7 @@ func refreshDepsAndPods(ctx context.Context) error {
 	return nil
 }
 
-func swk8sInit(ctx context.Context, config_path string) error {
+func k8sInit(ctx context.Context, config_path string) error {
 	config_path = filepath.Dir(config_path) + "/kubeconfig"
 	kubeconfig := flag.String("kubeconfig", config_path, "path to the kubeconfig file")
 	flag.Parse()
@@ -829,21 +829,21 @@ func swk8sInit(ctx context.Context, config_path string) error {
 		return err
 	}
 
-	swk8sClientSet, err = kubernetes.NewForConfig(config)
+	k8sClientSet, err = kubernetes.NewForConfig(config)
 	if err != nil {
 		ctxlog(ctx).Errorf("NewForConfig: %s", err.Error())
 		return err
 	}
 
-	watchlist := cache.NewListWatchFromClient(swk8sClientSet.Core().RESTClient(),
+	watchlist := cache.NewListWatchFromClient(k8sClientSet.Core().RESTClient(),
 							"pods", conf.Wdog.Namespace,
 							fields.Everything())
 	_, controller := cache.NewInformer(watchlist, &v1.Pod{},
 						time.Second * 0,
 						cache.ResourceEventHandlerFuncs{
-							AddFunc:	swk8sPodAdd,
-							DeleteFunc:	swk8sPodDel,
-							UpdateFunc:	swk8sPodUpd,
+							AddFunc:	k8sPodAdd,
+							DeleteFunc:	k8sPodDel,
+							UpdateFunc:	k8sPodUpd,
 						})
 	stop := make(chan struct{})
 	go controller.Run(stop)

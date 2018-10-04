@@ -8,6 +8,7 @@ import (
 
 type gateContext struct {
 	context.Context
+	Desc	string
 	Tenant	string
 	Admin	bool
 	ReqId	uint64
@@ -16,9 +17,10 @@ type gateContext struct {
 
 var reqIds uint64
 
-func mkContext2(tenant string, admin bool) (context.Context, func(context.Context)) {
+func mkContext3(desc, tenant string, admin bool) (context.Context, func(context.Context)) {
 	gatectx := &gateContext{
 		context.Background(),
+		desc,
 		tenant,
 		admin,
 		atomic.AddUint64(&reqIds, 1),
@@ -28,8 +30,12 @@ func mkContext2(tenant string, admin bool) (context.Context, func(context.Contex
 	return gatectx, func(ctx context.Context) { gctx(ctx).S.Close() }
 }
 
-func mkContext(tenant string) (context.Context, func(context.Context)) {
-	return mkContext2(tenant, true) /* Internal contexts are admin always! */
+func mkContext2(desc string, admin bool) (context.Context, func(context.Context)) {
+	return mkContext3(desc, "", admin)
+}
+
+func mkContext(desc string) (context.Context, func(context.Context)) {
+	return mkContext2(desc, true) /* Internal contexts are admin always! */
 }
 
 func gctx(ctx context.Context) *gateContext {

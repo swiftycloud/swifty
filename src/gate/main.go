@@ -21,8 +21,8 @@ import (
 	"../common/xratelimit"
 )
 
-var SwyModeDevel bool
-var SwdProxyOK bool
+var ModeDevel bool
+var WdogProxyOK bool
 var gateSecrets map[string]string
 var gateSecPas []byte
 
@@ -133,7 +133,7 @@ func getReqContext(w http.ResponseWriter, r *http.Request) (context.Context, fun
 		}
 	}
 
-	return mkContext2(tenant, admin)
+	return mkContext3("::r", tenant, admin)
 }
 
 func genReqHandler(cb gateGenReq) http.Handler {
@@ -159,6 +159,18 @@ func genReqHandler(cb gateGenReq) http.Handler {
 			traceError(ctx, cerr)
 		}
 	})
+}
+
+var clientMethods = []string { "GET", "PUT", "POST", "DELETE", "PATCH", "HEAD", "OPTIONS" }
+
+func methodNr(m string) uint {
+	for i, cm := range clientMethods {
+		if m == cm {
+			return uint(i)
+		}
+	}
+
+	return 31
 }
 
 func getHandlers() http.Handler {
@@ -218,7 +230,7 @@ func getHandlers() http.Handler {
 	r.Handle("/v1/info/langs/{lang}",	genReqHandler(handleLanguage)).Methods("GET", "OPTIONS")
 	r.Handle("/v1/info/mwares",		genReqHandler(handleMwareTypes)).Methods("GET", "OPTIONS")
 
-	r.PathPrefix("/call/{urlid}").Methods("GET", "PUT", "POST", "DELETE", "PATCH", "HEAD", "OPTIONS").HandlerFunc(handleCall)
+	r.PathPrefix("/call/{urlid}").Methods(clientMethods...).HandlerFunc(handleCall)
 
 	return r
 }
@@ -232,8 +244,8 @@ func main() {
 			"conf",
 				"/etc/swifty/conf/gate.yaml",
 				"path to a config file")
-	flag.BoolVar(&SwyModeDevel, "devel", false, "launch in development mode")
-	flag.BoolVar(&SwdProxyOK, "proxy", false, "use wdog proxy")
+	flag.BoolVar(&ModeDevel, "devel", false, "launch in development mode")
+	flag.BoolVar(&WdogProxyOK, "proxy", false, "use wdog proxy")
 	flag.BoolVar(&showVersion, "version", false, "show version and exit")
 	flag.Parse()
 
@@ -306,7 +318,7 @@ func main() {
 		glog.Fatalf("Can't setup stats: %s", err.Error())
 	}
 
-	err = swk8sInit(ctx, config_path)
+	err = k8sInit(ctx, config_path)
 	if err != nil {
 		glog.Fatalf("Can't setup connection to kubernetes: %s",
 				err.Error())
@@ -345,7 +357,7 @@ func main() {
 			Addr:         conf.Daemon.Addr,
 			WriteTimeout: 60 * time.Second,
 			ReadTimeout:  60 * time.Second,
-		}, conf.Daemon.HTTPS, SwyModeDevel || isLite(), func(s string) { glog.Debugf(s) })
+		}, conf.Daemon.HTTPS, ModeDevel || isLite(), func(s string) { glog.Debugf(s) })
 	if err != nil {
 		glog.Errorf("ListenAndServe: %s", err.Error())
 	}
