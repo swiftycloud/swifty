@@ -1,9 +1,14 @@
 package swyapi
 
+import (
+	"../common/xrest"
+)
+
 const (
-	GateGenErr	uint = 1	// Unclassified error
-	GateBadRequest	uint = 2	// Error parsing request data
-	GateBadResp	uint = 3	// Error generating responce
+	GateGenErr	uint = xrest.GenErr
+	GateBadRequest	uint = xrest.BadRequest
+	GateBadResp	uint = xrest.BadResp
+
 	GateDbError	uint = 4	// Error requesting database (except NotFound)
 	GateDuplicate	uint = 5	// ID duplication
 	GateNotFound	uint = 6	// No resource found
