@@ -199,7 +199,7 @@ func tracerInit() error {
 	tracers = list.New()
 	xrest.TraceFn = traceResponce
 
-	tp := conf.Home + GateTracerPath
+	tp := conf.Home + "/" + GateTracerPath
 	os.Remove(tp)
 	addr, err := net.ResolveUnixAddr("unixpacket", tp)
 	if err != nil {
