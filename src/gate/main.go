@@ -161,6 +161,18 @@ func genReqHandler(cb gateGenReq) http.Handler {
 	})
 }
 
+var clientMethods = []string { "GET", "PUT", "POST", "DELETE", "PATCH", "HEAD", "OPTIONS" }
+
+func methodNr(m string) uint {
+	for i, cm := range clientMethods {
+		if m == cm {
+			return uint(i)
+		}
+	}
+
+	return 31
+}
+
 func getHandlers() http.Handler {
 	r := mux.NewRouter()
 	r.HandleFunc("/v1/login",		handleUserLogin).Methods("POST", "OPTIONS")
@@ -218,7 +230,7 @@ func getHandlers() http.Handler {
 	r.Handle("/v1/info/langs/{lang}",	genReqHandler(handleLanguage)).Methods("GET", "OPTIONS")
 	r.Handle("/v1/info/mwares",		genReqHandler(handleMwareTypes)).Methods("GET", "OPTIONS")
 
-	r.PathPrefix("/call/{urlid}").Methods("GET", "PUT", "POST", "DELETE", "PATCH", "HEAD", "OPTIONS").HandlerFunc(handleCall)
+	r.PathPrefix("/call/{urlid}").Methods(clientMethods...).HandlerFunc(handleCall)
 
 	return r
 }

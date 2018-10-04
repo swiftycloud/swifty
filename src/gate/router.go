@@ -3,8 +3,10 @@ package main
 import (
 	"net/http"
 	"net/url"
-	"../apis"
+	"strings"
 	"context"
+	"../apis"
+	"../common"
 	"../common/http"
 	"../common/xrest"
 	"gopkg.in/mgo.v2/bson"
@@ -71,7 +73,16 @@ func makeRouterURL(ctx context.Context, urlid string) (*RouterURL, error) {
 	id := rt.SwoId
 	for _, e := range rt.Table {
 		id.Name = e.Call
-		re := RouterEntry{*e, id.Cookie()}
+		re := RouterEntry{}
+		re.RouterEntry = *e
+		re.cookie = id.Cookie()
+		if e.Method == "*" {
+			re.methods.Fill()
+		} else {
+			for _, m := range strings.Fields(e.Method) {
+				re.methods.Set(methodNr(m))
+			}
+		}
 		rurl.table = append(rurl.table, &re)
 	}
 
@@ -209,6 +220,7 @@ func (rd *RouterDesc)setTable(ctx context.Context, tbl []*swyapi.RouterEntry) *x
 type RouterEntry struct {
 	swyapi.RouterEntry
 	cookie	string
+	methods	xh.Bitmask
 }
 
 type RouterURL struct {
@@ -219,12 +231,13 @@ type RouterURL struct {
 func (rt *RouterURL)Handle(ctx context.Context, w http.ResponseWriter, r *http.Request, sopq *statsOpaque) {
 	path_match := false
 	path := reqPath(r)
+	mnr := methodNr(r.Method)
 	for _, e := range rt.table {
 		if e.Path != path {
 			continue
 		}
 		path_match = true
-		if e.Method != "*" && e.Method != r.Method {
+		if !e.methods.Test(mnr) {
 			continue
 		}
 
