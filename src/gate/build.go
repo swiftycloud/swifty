@@ -20,6 +20,8 @@ func tryBuildFunction(ctx context.Context, fn *FunctionDesc, suf string) error {
 func buildFunction(ctx context.Context, addr string, fn *FunctionDesc, suf string) error {
 	var wd_result swyapi.SwdFunctionRunResult
 
+	traceFnEvent(ctx, "build", fn)
+
 	resp, err := xhttp.Req(
 			&xhttp.RestReq{
 				Address: "http://" + addr + ":" + strconv.Itoa(conf.Wdog.Port) + "/v1/run",

@@ -152,6 +152,8 @@ func doRun(ctx context.Context, fn *FunctionDesc, event string, args *swyapi.Swd
 		return nil, fmt.Errorf("Can't find balancer for %s", fn.Cookie)
 	}
 
+	traceFnEvent(ctx, "run (" + event + ")", fn)
+
 	sopq := statsStart()
 	res, err := conn.Run(ctx, sopq, "", event, args)
 	if err == nil {

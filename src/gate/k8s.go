@@ -161,49 +161,23 @@ func swk8sGenEnvVar(ctx context.Context, fn *FunctionDesc, wd_port int) []v1.Env
 			})
 
 	for _, mw := range fn.Mware {
-		secid, enames, err := mwareGetEnvData(ctx, fn.SwoId, mw)
+		se, err := mwareGetEnvData(ctx, fn.SwoId, mw)
 		if err != nil {
 			ctxlog(ctx).Errorf("No mware %s for %s", mw, fn.SwoId.Str())
 			continue
 		}
 
-		for _, key := range enames {
-			s = append(s, v1.EnvVar{
-				Name:	key,
-				ValueFrom:
-					&v1.EnvVarSource{
-						SecretKeyRef: &v1.SecretKeySelector {
-							LocalObjectReference: v1.LocalObjectReference {
-								Name: secid,
-							},
-							Key: key,
-						},
-					},
-				})
-		}
+		s = se.appendTo(s)
 	}
 
 	for _, aid := range fn.Accounts {
-		secid, enames, err := accGetEnvData(ctx, fn.SwoId, aid)
+		se, err := accGetEnvData(ctx, fn.SwoId, aid)
 		if err != nil {
 			ctxlog(ctx).Errorf("No account %s for %s", aid, fn.SwoId.Str())
 			continue
 		}
 
-		for _, key := range enames {
-			s = append(s, v1.EnvVar{
-				Name:	key,
-				ValueFrom:
-					&v1.EnvVarSource{
-						SecretKeyRef: &v1.SecretKeySelector {
-							LocalObjectReference: v1.LocalObjectReference {
-								Name: secid,
-							},
-							Key: key,
-						},
-					},
-				})
-		}
+		s = se.appendTo(s)
 	}
 
 	for _, s3b := range(fn.S3Buckets) {
@@ -593,6 +567,7 @@ func podEventLoop() {
 		evt := <-podEvents
 
 		ctx, done := mkContext("::podevent")
+		tracePodEvent(ctx, evt)
 		if evt.up {
 			ctxlog(ctx).Debugf("POD %s (%s) up deploy %s",
 				evt.pod.UID, evt.pod.WdogAddr, evt.pod.DepName)
@@ -611,16 +586,42 @@ func init() {
 	go podEventLoop()
 }
 
-func swk8sSecretAdd(ctx context.Context, id string, envs map[string][]byte) error {
-	secrets := swk8sClientSet.CoreV1().Secrets(conf.Wdog.Namespace)
-	_, err := secrets.Create(&v1.Secret{
-			ObjectMeta:	metav1.ObjectMeta {
-				Name:	id,
-				Labels:	map[string]string{},
-			},
-			Data:		envs,
-			Type:		v1.SecretTypeOpaque,
+type secEnvs struct {
+	id	string
+	envs	map[string][]byte
+}
+
+func (se *secEnvs)appendTo(s []v1.EnvVar) []v1.EnvVar {
+	for name, _ := range se.envs {
+		s = append(s, v1.EnvVar { Name:	name,
+			ValueFrom: &v1.EnvVarSource {
+					SecretKeyRef: &v1.SecretKeySelector {
+						LocalObjectReference: v1.LocalObjectReference {
+							Name: se.id,
+						},
+						Key: name,
+					},
+				},
 		})
+	}
+
+	return s
+}
+
+func (se *secEnvs)toK8Secret() *v1.Secret {
+	return &v1.Secret{
+		ObjectMeta:	metav1.ObjectMeta {
+			Name:	se.id,
+			Labels:	map[string]string{},
+		},
+		Data:		se.envs,
+		Type:		v1.SecretTypeOpaque,
+	}
+}
+
+func swk8sSecretAdd(ctx context.Context, se *secEnvs) error {
+	secrets := swk8sClientSet.CoreV1().Secrets(conf.Wdog.Namespace)
+	_, err := secrets.Create(se.toK8Secret())
 
 	if err != nil {
 		ctxlog(ctx).Errorf("secret add error: %s", err.Error())
@@ -630,16 +631,9 @@ func swk8sSecretAdd(ctx context.Context, id string, envs map[string][]byte) erro
 	return err
 }
 
-func swk8sSecretMod(ctx context.Context, id string, envs map[string][]byte) error {
+func swk8sSecretMod(ctx context.Context, se *secEnvs) error {
 	secrets := swk8sClientSet.CoreV1().Secrets(conf.Wdog.Namespace)
-	_, err := secrets.Update(&v1.Secret{
-			ObjectMeta:	metav1.ObjectMeta {
-				Name:	id,
-				Labels:	map[string]string{},
-			},
-			Data:		envs,
-			Type:		v1.SecretTypeOpaque,
-		})
+	_, err := secrets.Update(se.toK8Secret())
 
 	if err != nil {
 		ctxlog(ctx).Errorf("secret update error: %s", err.Error())

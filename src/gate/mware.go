@@ -87,27 +87,27 @@ func (mwd *MwareDesc)stdEnvs(mwaddr string) map[string][]byte {
 	}
 }
 
-func mwareGetEnvData(ctx context.Context, id SwoId, name string) (string, []string, error) {
+func mwSecEnv(ctx context.Context, h *MwareOps, mw *MwareDesc) *secEnvs {
+	return &secEnvs{
+		id: "mw-" + mw.Cookie,
+		envs: h.GetEnv(ctx, mw),
+	}
+}
+
+func mwareGetEnvData(ctx context.Context, id SwoId, name string) (*secEnvs, error) {
 	var mw MwareDesc
 
 	id.Name = name
 	err := dbFind(ctx, id.dbReq(), &mw)
 	if err != nil {
-		return "", nil, fmt.Errorf("No such mware: %s", id.Str())
+		return nil, fmt.Errorf("No such mware: %s", id.Str())
 	}
 	if mw.State != DBMwareStateRdy {
-		return "", nil, errors.New("Mware not ready")
+		return nil, errors.New("Mware not ready")
 	}
 
 	handler := mwareHandlers[mw.MwareType]
-	envs := handler.GetEnv(ctx, &mw)
-
-	enames := []string{}
-	for n, _ := range envs {
-		enames = append(enames, n)
-	}
-
-	return "mw-" + mw.Cookie, enames, nil
+	return mwSecEnv(ctx, handler, &mw), nil
 }
 
 func mwareGenerateUserPassClient(ctx context.Context, mwd *MwareDesc) (error) {
@@ -464,7 +464,7 @@ func (mwd *MwareDesc)Add(ctx context.Context, _ interface{}) *xrest.ReqErr {
 		goto outdb
 	}
 
-	err = swk8sSecretAdd(ctx, "mw-" + mwd.Cookie, handler.GetEnv(ctx, mwd))
+	err = swk8sSecretAdd(ctx, mwSecEnv(ctx, handler, mwd))
 	if err != nil {
 		goto outh
 	}
