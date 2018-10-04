@@ -151,6 +151,10 @@ func dbUpdateAll(ctx context.Context, o interface{}) error {
 	return col.Update(q, o)
 }
 
+func (id *SwoId)dbReq() bson.M {
+	return bson.M{"cookie": id.Cookie()}
+}
+
 func listReq(ctx context.Context, project string, labels []string) bson.D {
 	q := bson.D{{"tennant", gctx(ctx).Tenant}, {"project", project}}
 	for _, l := range labels {
@@ -159,12 +163,19 @@ func listReq(ctx context.Context, project string, labels []string) bson.D {
 	return q
 }
 
-func (id *SwoId)dbReq() bson.M {
-	return bson.M{"cookie": id.Cookie()}
-}
-
 func cookieReq(ctx context.Context, project, name string) bson.M {
 	return ctxSwoId(ctx, project, name).dbReq()
+}
+
+func idReq(ctx context.Context, id string, q bson.M) bson.M {
+	if q == nil {
+		q = bson.M{}
+	}
+
+	q["tennant"] = gctx(ctx).Tenant
+	q["_id"] = bson.ObjectIdHex(id)
+
+	return q
 }
 
 type DBLogRec struct {
@@ -179,14 +190,7 @@ func objFindId(ctx context.Context, id string, out interface{}, q bson.M) *xrest
 		return GateErrM(swyapi.GateBadRequest, "Bad ID value")
 	}
 
-	if q == nil {
-		q = bson.M{}
-	}
-
-	q["tennant"] = gctx(ctx).Tenant
-	q["_id"] = bson.ObjectIdHex(id)
-
-	err := dbFind(ctx, q, out)
+	err := dbFind(ctx, idReq(ctx, id, q), out)
 	if err != nil {
 		return GateErrD(err)
 	}
