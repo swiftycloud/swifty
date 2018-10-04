@@ -204,7 +204,7 @@ paths:
           name: prefix
           type: string
           required: false
-          description: Filter functions by name prefix
+          description: Filter functions by name prefix. The dot, if needed, must be added explicitly!
         - in: query
           name: label
           type: string
