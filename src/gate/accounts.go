@@ -304,7 +304,7 @@ func (ad *AccDesc)toInfo(ctx context.Context, details bool) map[string]string {
 	return ai
 }
 
-func (ad *AccDesc)getEnv() *secEnvs {
+func (ad *AccDesc)getEnv(need_real_values bool) *secEnvs {
 	se := &secEnvs{id: "acc-" + ad.Cookie, envs: make(map[string][]byte)}
 
 	for k, v := range(ad.Values) {
@@ -313,11 +313,16 @@ func (ad *AccDesc)getEnv() *secEnvs {
 	}
 
 	for k, sv := range(ad.Secrets) {
-		v, err := sv.value()
-		if err == nil  {
-			en := mkAccEnvName(ad.Type, ad.SwoId.Name, k)
-			se.envs[en] = []byte(v)
+		v := ""
+		if need_real_values {
+			var err error
+			v, err = sv.value()
+			if err != nil  {
+				continue
+			}
 		}
+		en := mkAccEnvName(ad.Type, ad.SwoId.Name, k)
+		se.envs[en] = []byte(v)
 	}
 
 	return se
@@ -347,7 +352,7 @@ func accGetEnvData(ctx context.Context, id SwoId, aid string) (*secEnvs, error) 
 		return nil, err
 	}
 
-	return ad.getEnv(), nil
+	return ad.getEnv(false), nil
 }
 
 func (ad *AccDesc)Add(ctx context.Context, _ interface{}) *xrest.ReqErr {
@@ -362,7 +367,7 @@ func (ad *AccDesc)Add(ctx context.Context, _ interface{}) *xrest.ReqErr {
 		goto out
 	}
 
-	err = swk8sSecretAdd(ctx, ad.getEnv())
+	err = swk8sSecretAdd(ctx, ad.getEnv(true))
 	if err != nil {
 		cerr = GateErrE(swyapi.GateGenErr, err)
 		goto outs
@@ -385,7 +390,7 @@ func (ad *AccDesc)Update(ctx context.Context, upd map[string]string) *xrest.ReqE
 		return cerr
 	}
 
-	err := swk8sSecretMod(ctx, ad.getEnv())
+	err := swk8sSecretMod(ctx, ad.getEnv(true))
 	if err != nil {
 		return GateErrE(swyapi.GateGenErr, err)
 	}
