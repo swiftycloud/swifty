@@ -351,7 +351,7 @@ func handleFunctionsTree(ctx context.Context, w http.ResponseWriter, r *http.Req
 	for _, fn := range fns {
 		n := &root
 		path := strings.Split(fn.Name, ".")
-		for _, p := range path {
+		for _, p := range path[:len(path)-1] {
 			var tn *FName
 			for _, c := range n.Kids {
 				if c.Name == p {
