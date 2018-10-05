@@ -289,7 +289,7 @@ func doRun(runner *Runner, body []byte) (*swyapi.SwdFunctionRunResult, error) {
 	return ret, nil
 }
 
-var buildlock sync.Mutex
+var glock sync.Mutex
 
 /*
  * All functions sit at /go/src/swycode/
@@ -370,6 +370,7 @@ func doBuildSwift(params *swyapi.SwdFunctionBuild) (*swyapi.SwdFunctionRunResult
 func handleTry(lang string, tmous int64, w http.ResponseWriter, r *http.Request) {
 	suff := mux.Vars(r)["suff"]
 
+	glock.Lock()
 	runner, err := makeLocalRunner(lang, tmous, suff)
 	if err == nil {
 		handleRun(runner, w, r)
@@ -378,6 +379,7 @@ func handleTry(lang string, tmous int64, w http.ResponseWriter, r *http.Request)
 		log.Errorf("%s", err.Error())
 	}
 	stopLocal(runner)
+	glock.Unlock()
 }
 
 func handleRun(runner *Runner, w http.ResponseWriter, r *http.Request) {
@@ -429,9 +431,9 @@ func handleBuild(w http.ResponseWriter, r *http.Request, fn buildFn) {
 	}
 
 	code = http.StatusInternalServerError
-	buildlock.Lock()
+	glock.Lock()
 	result, err = fn(&params)
-	buildlock.Unlock()
+	glock.Unlock()
 	if err != nil {
 		log.Errorf("Error building FN: %s", err.Error())
 		goto out

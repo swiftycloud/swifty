@@ -22,7 +22,6 @@ import (
 )
 
 var ModeDevel bool
-var WdogProxyOK bool
 var gateSecrets map[string]string
 var gateSecPas []byte
 
@@ -245,7 +244,6 @@ func main() {
 				"/etc/swifty/conf/gate.yaml",
 				"path to a config file")
 	flag.BoolVar(&ModeDevel, "devel", false, "launch in development mode")
-	flag.BoolVar(&WdogProxyOK, "proxy", false, "use wdog proxy")
 	flag.BoolVar(&showVersion, "version", false, "show version and exit")
 	flag.Parse()
 

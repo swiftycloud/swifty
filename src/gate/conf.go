@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"errors"
+	"strconv"
 	"../common"
 	"../common/http"
 )
@@ -12,6 +13,10 @@ type YAMLConfWdog struct {
 	Port		int			`yaml:"port"`
 	ImgPref		string			`yaml:"img-prefix"`
 	Namespace	string			`yaml:"k8s-namespace"`
+	Proxy		int			`yaml:"proxy"`
+
+
+	p_port		string
 }
 
 func setupMwareAddr(conf *YAMLConf) {
@@ -41,6 +46,7 @@ func (cw *YAMLConfWdog)Validate() error {
 	if cw.Port == 0 {
 		return errors.New("'wdog.port' not set")
 	}
+	cw.p_port = strconv.Itoa(cw.Proxy)
 	if cw.ImgPref == "" {
 		cw.ImgPref = "swifty"
 		fmt.Printf("'wdog.img-prefix' not set, using default\n")
