@@ -896,16 +896,6 @@ func function_update(args []string, opts [16]string) {
 		make_faas_req1("PUT", "functions/" + fid + "/env", http.StatusOK, envs, nil)
 	}
 
-
-	if opts[5] != "" {
-		fmt.Printf("Wait FN %s\n", opts[5])
-		function_wait([]string{args[0]}, [16]string{opts[5], "15000"})
-	}
-
-	if opts[6] != "" {
-		fmt.Printf("Run FN %s\n", opts[6])
-		run_function([]string{args[0], opts[6]}, [16]string{})
-	}
 }
 
 func function_del(args []string, opts [16]string) {
@@ -1928,8 +1918,6 @@ func main() {
 	cmdMap[CMD_FU].opts.StringVar(&opts[2], "rl", "", "Rate (rate[:burst])")
 	cmdMap[CMD_FU].opts.StringVar(&opts[3], "mw", "", "Mware to use, +/- to add/remove")
 	cmdMap[CMD_FU].opts.StringVar(&opts[4], "data", "", "Associated text")
-	cmdMap[CMD_FU].opts.StringVar(&opts[5], "ver", "", "Version")
-	cmdMap[CMD_FU].opts.StringVar(&opts[6], "arg", "", "Args")
 	cmdMap[CMD_FU].opts.StringVar(&opts[7], "auth", "", "Auth context (- for off)")
 	cmdMap[CMD_FU].opts.StringVar(&opts[8], "s3b", "", "Bucket to use, +/- to add/remove")
 	cmdMap[CMD_FU].opts.StringVar(&opts[9], "acc", "", "Accounts to use, +/- to add/remove")
