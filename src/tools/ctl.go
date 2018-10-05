@@ -1779,7 +1779,7 @@ var cmdOrder = []string {
 
 type cmdDesc struct {
 	opts	*flag.FlagSet
-	pargs	[]string
+	npa	int
 	adm	bool
 	wp	bool
 	call	func([]string, [16]string)
@@ -1876,7 +1876,7 @@ func setupCommonCmd(cmd string, args []string, help string) {
 	cd.opts.BoolVar(&verbose, "V", false, "Verbose: show the request sent and responce got")
 	cd.opts.StringVar(&curRelay, "for", "", "Act as another user (admin-only")
 
-	cd.pargs = args
+	cd.npa = len(args)
 	cd.opts.Usage = func() {
 		astr := cmd
 		if len(args) != 0 {
@@ -2060,7 +2060,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	npa := len(cd.pargs) + 2
+	npa := cd.npa + 2
 	if len(os.Args) >= npa {
 		cd.opts.Parse(os.Args[npa:])
 	}
