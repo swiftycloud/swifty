@@ -584,8 +584,8 @@ func handleProxy(w http.ResponseWriter, req *http.Request) {
 	handleRun(runner, w, req)
 }
 
-func startCResponder(runner *Runner, podip string) error {
-	spath := "/var/run/swifty/" + strings.Replace(podip, ".", "_", -1)
+func startCResponder(runner *Runner, dir, podip string) error {
+	spath := dir + "/" + strings.Replace(podip, ".", "_", -1)
 	os.Remove(spath)
 	addr, err := net.ResolveUnixAddr("unixpacket", spath)
 	if err != nil {
@@ -690,15 +690,20 @@ func main() {
 			log.Fatal("SWD_POD_TOKEN not set")
 		}
 
+		crespDir := xh.SafeEnv("SWD_CRESPONDER", "")
+
 		tmous := int64((time.Duration(tmo) * time.Millisecond) / time.Microsecond)
 		runner, err := makeLocalRunner(lang, tmous, "")
 		if err != nil {
 			log.Fatal("Can't start runner")
 		}
 
-		err = startCResponder(runner, podIP)
-		if err != nil {
-			log.Fatal("Can't start cresponder: %s", err.Error())
+		if crespDir != "" {
+			log.Debugf("Starting proxy responder @%s", crespDir)
+			err = startCResponder(runner, crespDir, podIP)
+			if err != nil {
+				log.Fatal("Can't start cresponder: %s", err.Error())
+			}
 		}
 
 		r.HandleFunc("/v1/run/" + podToken,
