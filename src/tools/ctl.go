@@ -87,6 +87,33 @@ func del(url string, succ int) {
 	make_faas_req1("DELETE", url, succ, nil, nil)
 }
 
+type collection struct {
+	pref	string
+}
+
+func (c collection)add(in, out interface{}) {
+	add(c.pref, http.StatusOK, in, out)
+}
+
+func (c collection)list(q []string, out interface{}) {
+	list(url(c.pref, q), http.StatusOK, out)
+}
+
+func (c collection)get(id string, out interface{}) {
+	get(c.pref + "/" + id, http.StatusOK, out)
+}
+
+func (c collection)del(id string) {
+	del(c.pref + "/" + id, http.StatusOK)
+}
+
+var functions	= collection{"functions"}
+var mwares	= collection{"middleware"}
+var deployments	= collection{"deployments"}
+var routers	= collection{"routers"}
+var accounts	= collection{"accounts"}
+var repos	= collection{"repos"}
+
 func user_list(args []string, opts [16]string) {
 	var uss []swyapi.UserInfo
 	list("users", http.StatusOK, &uss)
@@ -463,7 +490,7 @@ func function_list(args []string, opts [16]string) {
 	}
 
 	var fns []*swyapi.FunctionInfo
-	list(url("functions", ua), http.StatusOK, &fns)
+	functions.list(ua, &fns)
 
 	switch opts[0] {
 	case "tree":
@@ -518,7 +545,7 @@ func function_info(args []string, opts [16]string) {
 	var ifo swyapi.FunctionInfo
 	var r bool
 	args[0], r = resolve_fn(args[0])
-	get("functions/" + args[0], http.StatusOK, &ifo)
+	functions.get(args[0], &ifo)
 	ver := ifo.Version
 	if len(ver) > 8 {
 		ver = ver[:8]
@@ -795,7 +822,7 @@ func function_add(args []string, opts [16]string) {
 	}
 
 	var fi swyapi.FunctionInfo
-	add("functions", http.StatusOK, req, &fi)
+	functions.add(req, &fi)
 	fmt.Printf("Function %s created\n", fi.Id)
 }
 
@@ -920,7 +947,7 @@ func function_update(args []string, opts [16]string) {
 
 func function_del(args []string, opts [16]string) {
 	args[0], _ = resolve_fn(args[0])
-	del("functions/" + args[0], http.StatusOK)
+	functions.del(args[0])
 }
 
 func function_on(args []string, opts [16]string) {
@@ -1062,7 +1089,7 @@ func mware_list(args []string, opts [16]string) {
 		}
 	}
 
-	list(url("middleware", ua), http.StatusOK, &mws)
+	mwares.list(ua, &mws)
 	fmt.Printf("%-32s%-20s%-10s\n", "ID", "NAME", "TYPE")
 	for _, mw := range mws {
 		fmt.Printf("%-32s%-20s%-10s%s\n", mw.ID, mw.Name, mw.Type, strings.Join(mw.Labels, ","))
@@ -1074,7 +1101,7 @@ func mware_info(args []string, opts [16]string) {
 	var r bool
 
 	args[0], r = resolve_mw(args[0])
-	get("middleware/" + args[0], http.StatusOK, &resp)
+	mwares.get(args[0], &resp)
 	if !r {
 		fmt.Printf("Name:         %s\n", resp.Name)
 	}
@@ -1096,13 +1123,13 @@ func mware_add(args []string, opts [16]string) {
 	}
 
 	var mi swyapi.MwareInfo
-	add("middleware", http.StatusOK, &req, &mi)
+	mwares.add(&req, &mi)
 	fmt.Printf("Mware %s created\n", mi.ID)
 }
 
 func mware_del(args []string, opts [16]string) {
 	args[0], _ = resolve_mw(args[0])
-	del("middleware/" + args[0], http.StatusOK)
+	mwares.del(args[0])
 }
 
 func auth_cfg(args []string, opts [16]string) {
@@ -1139,13 +1166,13 @@ func auth_cfg(args []string, opts [16]string) {
 
 func deploy_del(args []string, opts [16]string) {
 	args[0], _ = resolve_dep(args[0])
-	del("deployments/" + args[0], http.StatusOK)
+	deployments.del(args[0])
 }
 
 func deploy_info(args []string, opts [16]string) {
 	var di swyapi.DeployInfo
 	args[0], _ = resolve_dep(args[0])
-	get("deployments/" + args[0], http.StatusOK, &di)
+	deployments.get(args[0], &di)
 	fmt.Printf("State:        %s\n", di.State)
 	fmt.Printf("Items:\n")
 	for _, i := range di.Items {
@@ -1161,7 +1188,7 @@ func deploy_list(args []string, opts [16]string) {
 			ua = append(ua, "label=" + l)
 		}
 	}
-	list(url("deployments", ua), http.StatusOK, &dis)
+	deployments.list(ua, &dis)
 	fmt.Printf("%-32s%-20s\n", "ID", "NAME")
 	for _, di := range dis {
 		fmt.Printf("%-32s%-20s (%d items) %s\n", di.Id, di.Name, len(di.Items), strings.Join(di.Labels, ","))
@@ -1190,13 +1217,13 @@ func deploy_add(args []string, opts [16]string) {
 	}
 
 	var di swyapi.DeployInfo
-	add("deployments", http.StatusOK, &da, &di)
+	deployments.add(&da, &di)
 	fmt.Printf("%s deployment started\n", di.Id)
 }
 
 func router_list(args []string, opts [16]string) {
 	var rts []swyapi.RouterInfo
-	list("routers", http.StatusOK, &rts)
+	routers.list([]string{}, &rts)
 	for _, rt := range rts {
 		fmt.Printf("%s %12s %s (%s)\n", rt.Id, rt.Name, rt.URL, strings.Join(rt.Labels, ","))
 	}
@@ -1226,14 +1253,14 @@ func router_add(args []string, opts [16]string) {
 		ra.Table = parse_route_table(opts[0])
 	}
 	var ri swyapi.RouterInfo
-	add("routers", http.StatusOK, &ra, &ri)
+	routers.add(&ra, &ri)
 	fmt.Printf("Router %s created\n", ri.Id)
 }
 
 func router_info(args []string, opts [16]string) {
 	args[0], _ = resolve_router(args[0])
 	var ri swyapi.RouterInfo
-	get("routers/" + args[0], http.StatusOK, &ri)
+	routers.get(args[0], &ri)
 	fmt.Printf("URL:      %s\n", ri.URL)
 	fmt.Printf("Table:    (%d ents)\n", ri.TLen)
 	var res []*swyapi.RouterEntry
@@ -1253,7 +1280,7 @@ func router_upd(args []string, opts [16]string) {
 
 func router_del(args []string, opts [16]string) {
 	args[0], _ = resolve_router(args[0])
-	del("routers/" + args[0], http.StatusOK)
+	routers.del(args[0])
 }
 
 func repo_list(args []string, opts [16]string) {
@@ -1265,7 +1292,7 @@ func repo_list(args []string, opts [16]string) {
 	if opts[1] != "" {
 		ua = append(ua, "attached=" + opts[1])
 	}
-	list(url("repos", ua), http.StatusOK, &ris)
+	repos.list(ua, &ris)
 	fmt.Printf("%-32s%-8s%-12s%s\n", "ID", "TYPE", "STATE", "URL")
 	for _, ri := range ris {
 		t := ri.Type
@@ -1336,7 +1363,7 @@ func repo_pull(args []string, opts [16]string) {
 
 func repo_info(args []string, opts [16]string) {
 	var ri swyapi.RepoInfo
-	get("repos/" + args[0], http.StatusOK, &ri)
+	repos.get(args[0], &ri)
 	fmt.Printf("State:     %s\n", ri.State)
 	fmt.Printf("Type:      %s\n", ri.Type)
 	fmt.Printf("URL:       %s\n", ri.URL)
@@ -1366,7 +1393,7 @@ func repo_add(args []string, opts [16]string) {
 	}
 
 	var ri swyapi.RepoInfo
-	add("repos", http.StatusOK, &ra, &ri)
+	repos.add(&ra, &ri)
 	fmt.Printf("%s repo attached\n", ri.ID)
 }
 
@@ -1383,7 +1410,7 @@ func repo_upd(args []string, opts [16]string) {
 }
 
 func repo_del(args []string, opts [16]string) {
-	del("repos/" + args[0], http.StatusOK)
+	repos.del(args[0])
 }
 
 func acc_list(args []string, opts [16]string) {
@@ -1392,7 +1419,7 @@ func acc_list(args []string, opts [16]string) {
 	if opts[0] != "" {
 		ua = append(ua, "type=" + opts[0])
 	}
-	list(url("accounts", ua), http.StatusOK, &ais)
+	accounts.list(ua, &ais)
 	fmt.Printf("%-32s%-12s\n", "ID", "TYPE")
 	for _, ai := range ais {
 		fmt.Printf("%-32s%-12s\n", ai["id"], ai["type"])
@@ -1431,7 +1458,7 @@ func acc_add(args []string, opts [16]string) {
 	}
 
 	var ai map[string]string
-	add("accounts", http.StatusOK, &aa, &ai)
+	accounts.add(&aa, &ai)
 	fmt.Printf("%s account created\n", ai["id"])
 }
 
@@ -1449,7 +1476,7 @@ func acc_upd(args []string, opts [16]string) {
 }
 
 func acc_del(args []string, opts [16]string) {
-	del("accounts/" + args[0], http.StatusOK)
+	accounts.del(args[0])
 }
 
 func s3_access(args []string, opts [16]string) {
