@@ -173,15 +173,7 @@ func doRunBg(ctx context.Context, fn *FunctionDesc, event string, args *swyapi.S
 	}
 }
 
-func prepareTempRun(ctx context.Context, fn *FunctionDesc, params *swyapi.FunctionSources, w http.ResponseWriter) (string, *xrest.ReqErr) {
-	td, err := tendatGet(ctx, gctx(ctx).Tenant)
-	if err != nil {
-		return "", GateErrD(err)
-	}
-
-	td.runlock.Lock()
-	defer td.runlock.Unlock()
-
+func prepareTempRun(ctx context.Context, fn *FunctionDesc, td *TenantMemData, params *swyapi.FunctionSources, w http.ResponseWriter) (string, *xrest.ReqErr) {
 	if td.runrate == nil {
 		td.runrate = xratelimit.MakeRL(0, uint(conf.RunRate))
 	}
