@@ -2576,6 +2576,8 @@ definitions:
         description: 'Item type, "function" or "middleware"'
       name:
         type: string
+      id:
+        type: string
       state:
         type: string
         description: >-
@@ -2668,6 +2670,8 @@ definitions:
     description: AaaS creation request
     properties:
       name:
+        type: string
+      project:
         type: string
       type:
         type: string

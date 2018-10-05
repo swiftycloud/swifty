@@ -247,7 +247,7 @@ func s3GetCreds(ctx context.Context, acc *swyapi.S3Access) (*swyapi.S3Creds, *xr
 		return nil, GateErrM(swyapi.GateBadRequest, "Perpetual keys not allowed")
 	}
 
-	id := ctxSwoId(ctx, acc.Project, "")
+	id := ctxSwoId(ctx, DefaultProject, "")
 	k, err := s3KeyGen(&conf.Mware.S3, id.S3Namespace(), acc.Bucket, creds.Expires)
 	if err != nil {
 		ctxlog(ctx).Errorf("Can't get S3 keys for %s.%s", id.Str(), acc.Bucket, err.Error())

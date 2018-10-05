@@ -160,7 +160,6 @@ func (i *MwareInfo)SetDU(bytes uint64) {
 }
 
 type S3Access struct {
-	Project		string			`json:"project"`
 	Bucket		string			`json:"bucket"`
 	Lifetime	uint32			`json:"lifetime"` /* seconds */
 	Access		[]string		`json:"access"`
@@ -226,6 +225,7 @@ type DeployItemInfo struct {
 	Type		string			`json:"type"`
 	Name		string			`json:"name"`
 	State		string			`json:"state,omitempty"`
+	Id		string			`json:"id,omitempty"`
 }
 
 type DeployInfo struct {
@@ -244,6 +244,7 @@ type AuthInfo struct {
 
 type AuthAdd struct {
 	Name		string			`json:"name"`
+	Project		string			`json:"project"`
 	Type		string			`json:"type"`
 }
 

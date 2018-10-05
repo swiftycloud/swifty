@@ -943,6 +943,7 @@ func notifyPodUp(ctx context.Context, pod *k8sPod) {
 		fn.ToState(ctx, DBFuncStateRdy, -1)
 	}
 
+	fnWaiterKick(fn.Cookie)
 	return
 
 out:

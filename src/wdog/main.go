@@ -455,7 +455,7 @@ var prox_lock sync.Mutex
 type runnerInfo struct {
 }
 
-func makeProxyRunner(rkey string) (*Runner, error) {
+func makeProxyRunner(dir, rkey string) (*Runner, error) {
 	var c *net.UnixConn
 	var rfds []int
 	var rinf runnerInfo
@@ -467,7 +467,7 @@ func makeProxyRunner(rkey string) (*Runner, error) {
 	msg := make([]byte, 1024)
 	cmsg := make([]byte, 1024)
 
-	wadd, err := net.ResolveUnixAddr("unixpacket", "/var/run/swifty/wdogconn/" + rkey)
+	wadd, err := net.ResolveUnixAddr("unixpacket", dir + "/" + rkey)
 	if err != nil {
 		log.Errorf("Can't resolve wdogconn addr: %s", err.Error())
 		goto er
@@ -539,7 +539,7 @@ func restartProxy(runner *Runner) {
 	runner.ready = false
 }
 
-func handleProxy(w http.ResponseWriter, req *http.Request) {
+func handleProxy(dir string, w http.ResponseWriter, req *http.Request) {
 	var runner *Runner
 
 	v := mux.Vars(req)
@@ -558,7 +558,7 @@ func handleProxy(w http.ResponseWriter, req *http.Request) {
 		} else {
 			var err error
 
-			runner, err = makeProxyRunner(rkey)
+			runner, err = makeProxyRunner(dir, rkey)
 			if err != nil {
 				prox_lock.Unlock()
 				http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -584,8 +584,8 @@ func handleProxy(w http.ResponseWriter, req *http.Request) {
 	handleRun(runner, w, req)
 }
 
-func startCResponder(runner *Runner, podip string) error {
-	spath := "/var/run/swifty/" + strings.Replace(podip, ".", "_", -1)
+func startCResponder(runner *Runner, dir, podip string) error {
+	spath := dir + "/" + strings.Replace(podip, ".", "_", -1)
 	os.Remove(spath)
 	addr, err := net.ResolveUnixAddr("unixpacket", spath)
 	if err != nil {
@@ -668,7 +668,15 @@ func main() {
 			handleBuild(w, r, ld.build)
 		})
 	} else if inst == "proxy" {
-		r.HandleFunc("/v1/run/{fnid}/{podip}", handleProxy)
+		crespDir := xh.SafeEnv("SWD_CRESPONDER", "")
+		if crespDir == "" {
+			log.Fatal("SWD_CRESPONDER not set")
+		}
+
+		r.HandleFunc("/v1/run/{fnid}/{podip}",
+				func(w http.ResponseWriter, r *http.Request) {
+					handleProxy(crespDir, w, r)
+				})
 	} else {
 		lang := xh.SafeEnv("SWD_LANG", "")
 		if lang == "" {
@@ -690,15 +698,20 @@ func main() {
 			log.Fatal("SWD_POD_TOKEN not set")
 		}
 
+		crespDir := xh.SafeEnv("SWD_CRESPONDER", "")
+
 		tmous := int64((time.Duration(tmo) * time.Millisecond) / time.Microsecond)
 		runner, err := makeLocalRunner(lang, tmous, "")
 		if err != nil {
 			log.Fatal("Can't start runner")
 		}
 
-		err = startCResponder(runner, podIP)
-		if err != nil {
-			log.Fatal("Can't start cresponder: %s", err.Error())
+		if crespDir != "" {
+			log.Debugf("Starting proxy responder @%s", crespDir)
+			err = startCResponder(runner, crespDir, podIP)
+			if err != nil {
+				log.Fatal("Can't start cresponder: %s", err.Error())
+			}
 		}
 
 		r.HandleFunc("/v1/run/" + podToken,

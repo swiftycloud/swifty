@@ -26,6 +26,8 @@ import (
 	"net"
 )
 
+const wdogCresponderDir = "/var/run/swifty"
+
 var k8sClientSet *kubernetes.Clientset
 
 func k8sPodDelete(podname string) error {
@@ -107,6 +109,9 @@ func k8sGenEnvVar(ctx context.Context, fn *FunctionDesc, wd_port int) []v1.EnvVa
 		}
 	}
 
+	s = append(s, v1.EnvVar{
+			Name:	"SWD_CRESPONDER",
+			Value:	wdogCresponderDir, })
 	s = append(s, v1.EnvVar{
 			Name:	"SWD_LANG",
 			Value:	fn.Code.Lang, })
@@ -321,7 +326,7 @@ func k8sRun(ctx context.Context, conf *YAMLConf, fn *FunctionDesc) error {
 						{
 							Name:		"conn",
 							ReadOnly:	false,
-							MountPath:	"/var/run/swifty",
+							MountPath:	wdogCresponderDir,
 						},
 					},
 					ImagePullPolicy: v1.PullNever,
