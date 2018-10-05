@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 	"context"
-	"strconv"
 	"strings"
 	"io/ioutil"
 
@@ -100,33 +99,36 @@ func talkHTTP(addr, port, url string, args *swyapi.SwdFunctionRun) (*swyapi.SwdF
 	return &res, nil
 }
 
+func traceTime(sopq *statsOpaque, w string) {
+	if sopq != nil && sopq.trace != nil {
+		sopq.trace[w] = time.Since(sopq.ts)
+	}
+}
+
 func (conn *podConn)Run(ctx context.Context, sopq *statsOpaque, suff, event string, args *swyapi.SwdFunctionRun) (*swyapi.SwdFunctionRunResult, error) {
 	var res *swyapi.SwdFunctionRunResult
 	var err error
 
 	args.Event = event
-	proxy := WdogProxyOK && suff == ""
+	proxy := (conf.Wdog.Proxy != 0) && suff == ""
+
+	traceTime(sopq, "wdog.req")
 
 	if proxy {
-		res, err = talkHTTP(conn.Host, strconv.Itoa(conf.Wdog.Port),
+		res, err = talkHTTP(conn.Host, conf.Wdog.p_port,
 				conn.Cookie + "/" + strings.Replace(conn.Addr, ".", "_", -1), args)
-	}
-
-	if !proxy || err != nil {
+	} else {
 		url := conn.Cookie
 		if suff != "" {
 			url += "/" + suff
 		}
-		if sopq != nil && sopq.trace != nil {
-			sopq.trace["wdog.req"] = time.Since(sopq.ts)
-		}
 		res, err = talkHTTP(conn.Addr, conn.Port, url, args)
-		if sopq != nil && sopq.trace != nil {
-			sopq.trace["wdog.resp"] = time.Since(sopq.ts)
-		}
-		if err != nil {
-			goto out
-		}
+	}
+
+	traceTime(sopq, "wdog.resp")
+
+	if err != nil {
+		return nil, fmt.Errorf("RUN error %s", err.Error())
 	}
 
 	if res.Stdout != "" || res.Stderr != "" {
@@ -138,9 +140,6 @@ func (conn *podConn)Run(ctx context.Context, sopq *statsOpaque, suff, event stri
 	}
 
 	return res, nil
-
-out:
-	return nil, fmt.Errorf("RUN error %s", err.Error())
 }
 
 func doRun(ctx context.Context, fn *FunctionDesc, event string, args *swyapi.SwdFunctionRun) (*swyapi.SwdFunctionRunResult, error) {
