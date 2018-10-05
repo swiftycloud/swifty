@@ -1444,7 +1444,6 @@ func acc_del(args []string, opts [16]string) {
 
 func s3_access(args []string, opts [16]string) {
 	acc := swyapi.S3Access {
-		Project: curCmd.project,
 		Lifetime: uint32(60),
 	}
 
@@ -1957,7 +1956,7 @@ func main() {
 	cmdMap[CMD_MA].opts.StringVar(&opts[0], "data", "", "Associated text")
 	setupCommonCmd(CMD_MD,	[]string{"NAME"}, "Delete middleware", true)
 
-	setupCommonCmd(CMD_S3ACC,	[]string{"BUCKET"}, "Get keys for S3", true)
+	setupCommonCmd(CMD_S3ACC,	[]string{"BUCKET"}, "Get keys for S3", false)
 	cmdMap[CMD_S3ACC].opts.StringVar(&opts[0], "life", "60", "Lifetime (default 1 min)")
 	setupCommonCmd(CMD_AUTH,	[]string{"ACTION"}, "Manage project auth", true)
 	cmdMap[CMD_AUTH].opts.StringVar(&opts[0], "name", "", "Name for auth")
