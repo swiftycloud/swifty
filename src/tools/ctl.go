@@ -111,6 +111,14 @@ func (c collection)prop(id string, pn string, out interface{}) {
 	get(c.pref + "/" + id + "/" + pn, http.StatusOK, out)
 }
 
+func (c collection)set(id string, pn string, in interface{}) {
+	sfx := "/" + id
+	if pn != "" {
+		sfx += "/" + pn
+	}
+	mod(c.pref + sfx, http.StatusOK, in)
+}
+
 var functions	= collection{"functions"}
 var mwares	= collection{"middleware"}
 var deployments	= collection{"deployments"}
@@ -877,7 +885,7 @@ func function_update(args []string, opts [16]string) {
 		var src swyapi.FunctionSources
 
 		getSrc(opts[0], &src)
-		mod("functions/" + fid + "/sources", http.StatusOK, &src)
+		functions.set(fid, "sources", &src)
 	}
 
 	if opts[3] != "" {
@@ -912,8 +920,7 @@ func function_update(args []string, opts [16]string) {
 	}
 
 	if opts[4] != "" {
-		mod("functions/" + fid, http.StatusOK,
-				&swyapi.FunctionUpdate{UserData: &opts[4]})
+		functions.set(fid, "", &swyapi.FunctionUpdate{UserData: &opts[4]})
 	}
 
 	if opts[7] != "" {
@@ -921,7 +928,7 @@ func function_update(args []string, opts [16]string) {
 		if opts[7] != "-" {
 			ac = opts[7]
 		}
-		mod("functions/" + fid + "/authctx", http.StatusOK, ac)
+		functions.set(fid, "authctx", ac)
 	}
 
 	if opts[1] != "" || opts[2] != "" {
@@ -939,12 +946,12 @@ func function_update(args []string, opts [16]string) {
 			sz.Rate, sz.Burst = parse_rate(opts[2])
 		}
 
-		mod("functions/" + fid + "/size", http.StatusOK, &sz)
+		functions.set(fid, "size", &sz)
 	}
 
 	if opts[10] != "" {
 		envs := strings.Split(opts[10], ":")
-		mod("functions/" + fid + "/env", http.StatusOK, envs)
+		functions.set(fid, "env", envs)
 	}
 
 }
@@ -956,14 +963,12 @@ func function_del(args []string, opts [16]string) {
 
 func function_on(args []string, opts [16]string) {
 	args[0], _ = resolve_fn(args[0])
-	mod("functions/" + args[0], http.StatusOK,
-			&swyapi.FunctionUpdate{State: "ready"})
+	functions.set(args[0], "", &swyapi.FunctionUpdate{State: "ready"})
 }
 
 func function_off(args []string, opts [16]string) {
 	args[0], _ = resolve_fn(args[0])
-	mod("functions/" + args[0], http.StatusOK,
-			&swyapi.FunctionUpdate{State: "deactivated"})
+	functions.set(args[0], "", &swyapi.FunctionUpdate{State: "deactivated"})
 }
 
 func event_list(args []string, opts [16]string) {
@@ -1278,7 +1283,7 @@ func router_upd(args []string, opts [16]string) {
 	args[0], _ = resolve_router(args[0])
 	if opts[0] != "" {
 		rt := parse_route_table
-		mod("routers/" + args[0] + "/table", http.StatusOK, rt)
+		routers.set(args[0], "table", rt)
 	}
 }
 
@@ -1410,7 +1415,7 @@ func repo_upd(args []string, opts [16]string) {
 		ra.Pull = &opts[0]
 	}
 
-	mod("repos/" + args[0], http.StatusOK, &ra)
+	repos.set(args[0], "", &ra)
 }
 
 func repo_del(args []string, opts [16]string) {
@@ -1476,7 +1481,7 @@ func acc_upd(args []string, opts [16]string) {
 		}
 	}
 
-	mod("accounts/" + args[0], http.StatusOK, &au)
+	accounts.set(args[0], "", &au)
 }
 
 func acc_del(args []string, opts [16]string) {
