@@ -111,6 +111,7 @@ func (i *DeployFunction)info(ctx context.Context, details bool) (*swyapi.DeployI
 		err := dbFind(ctx, i.Id.dbReq(), &fn)
 		if err == nil {
 			ret.State = fnStates[fn.State]
+			ret.Id = fn.ObjID.Hex()
 		} else {
 			ret.State = fnStates[DBFuncStateNo]
 		}
@@ -127,6 +128,7 @@ func (i *DeployMware)info(ctx context.Context, details bool) (*swyapi.DeployItem
 		err := dbFind(ctx, i.Id.dbReq(), &mw)
 		if err == nil {
 			ret.State = mwStates[mw.State]
+			ret.Id = mw.ObjID.Hex()
 		} else {
 			ret.State = mwStates[DBMwareStateNo]
 		}

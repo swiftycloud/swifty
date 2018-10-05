@@ -48,6 +48,13 @@ func doRun(cln *swyapi.Client, id string, src *swyapi.FunctionSources) (string, 
 	return resd["message"], nil
 }
 
+func doWait(cln *swyapi.Client, id, version string) error {
+	_, err := cln.Req2("POST", "functions/" + id + "/wait",
+			&swyapi.FunctionWait { Version: version, Timeout: 10000 },
+			http.StatusOK, 300)
+	return err
+}
+
 func runFunctions(cln *swyapi.Client, prj string) error {
 	var err error
 	var ifo swyapi.FunctionInfo
@@ -69,9 +76,7 @@ func runFunctions(cln *swyapi.Client, prj string) error {
 	}
 
 	fmt.Printf("Waiting FN to come up\n")
-	_, err = cln.Req2("POST", "functions/" + ifo.Id + "/wait",
-			&swyapi.FunctionWait { Version: "0", Timeout: 10000 },
-			http.StatusOK, 300)
+	err = doWait(cln, ifo.Id, "0")
 	if err != nil {
 		return err
 	}
@@ -98,9 +103,7 @@ func runFunctions(cln *swyapi.Client, prj string) error {
 	}
 
 	fmt.Printf("Waiting FN to update\n")
-	_, err = cln.Req2("POST", "functions/" + ifo.Id + "/wait",
-			&swyapi.FunctionWait { Version: "1", Timeout: 10000 },
-			http.StatusOK, 300)
+	err = doWait(cln, ifo.Id, "1")
 	if err != nil {
 		return err
 	}
@@ -119,8 +122,45 @@ func runFunctions(cln *swyapi.Client, prj string) error {
 	return nil
 }
 
+func runAaaS(cln *swyapi.Client, prj string) error {
+	var err error
+	var di swyapi.DeployInfo
+
+	fmt.Printf("Turning on AaaS\n")
+	err = cln.Req1("POST", "auths", http.StatusOK, &swyapi.AuthAdd { Name: "test", Project: prj }, &di)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("Getting deloy info\n")
+	err = cln.Req1("GET", "auths/" + di.Id + "?details=1", http.StatusOK, nil, &di)
+	if err != nil {
+		return err
+	}
+
+	for _, item := range di.Items {
+		if item.Type != "function" {
+			continue
+		}
+
+		fmt.Printf("Waiting fn %s (%s) to come up\n", item.Name, item.Id)
+		err = doWait(cln, item.Id, "0")
+		if err != nil {
+			return err
+		}
+	}
+
+	fmt.Printf("Removing AaaS\n")
+	err = cln.Req1("DELETE", "auths/" + di.Id, http.StatusOK, nil, nil)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func mkClient() (*swyapi.Client, string) {
-	login := xh.ParseXCreds(os.Args[1])
+	login := xh.ParseXCreds(os.Args[2])
 	fmt.Printf("Will test %s@%s:%s (project %s)\n", login.User, login.Host, login.Port, login.Domn)
 
 	swyclient := swyapi.MakeClient(login.User, login.Pass, login.Host, login.Port)
@@ -137,11 +177,17 @@ type test struct {
 
 var tests = []*test {
 	{ name: "functions",	run: runFunctions },
+	{ name: "aaas",		run: runAaaS },
 }
 
 func main() {
+	fmt.Printf("Run %s tests on %s\n", os.Args[1], os.Args[2])
 	cln, prj := mkClient()
 	for _, t := range tests {
+		if os.Args[1] != "*" && os.Args[1] != t.name {
+			continue
+		}
+
 		fmt.Printf("==========================[ %s ]========================\n", t.name)
 		err := t.run(cln, prj)
 		if err != nil {

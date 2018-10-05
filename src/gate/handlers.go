@@ -560,15 +560,15 @@ func handleOneDeployment(ctx context.Context, w http.ResponseWriter, r *http.Req
 }
 
 func handleAuths(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
-	q := r.URL.Query()
-	project := q.Get("project")
-	if project == "" {
-		project = DefaultProject
-	}
-
 	switch r.Method {
 	case "GET":
 		var dep DeployDesc
+
+		q := r.URL.Query()
+		project := q.Get("project")
+		if project == "" {
+			project = DefaultProject
+		}
 
 		iter := dbIterAll(ctx, listReq(ctx, project, []string{"auth"}), &dep)
 		defer iter.Close()
@@ -601,7 +601,7 @@ func handleAuths(ctx context.Context, w http.ResponseWriter, r *http.Request) *x
 			return GateErrM(swyapi.GateGenErr, "AaaS configuration error")
 		}
 
-		dd := getDeployDesc(ctxSwoId(ctx, project, aa.Name))
+		dd := getDeployDesc(ctxSwoId(ctx, aa.Project, aa.Name))
 		dd.Labels = []string{ "auth" }
 		cerr := dd.getItemsParams(ctx, &swyapi.DeploySource{
 			Type:	"repo",
