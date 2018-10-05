@@ -1547,12 +1547,12 @@ func mkClient() {
 		swyclient.Admd(conf.Login.AdmHost, conf.Login.AdmPort)
 		swyclient.ToAdmd(true)
 	}
-	if curCmd.relay != "" {
-		swyclient.Relay(curCmd.relay)
+	if curRelay != "" {
+		swyclient.Relay(curRelay)
 	} else if conf.Login.Relay != "" {
 		swyclient.Relay(conf.Login.Relay)
 	}
-	if curCmd.verb {
+	if verbose {
 		swyclient.Verbose()
 	}
 	if !conf.TLS {
@@ -1780,8 +1780,6 @@ var cmdOrder = []string {
 type cmdDesc struct {
 	opts	*flag.FlagSet
 	pargs	[]string
-	relay	string
-	verb	bool
 	adm	bool
 	wp	bool
 	call	func([]string, [16]string)
@@ -1789,6 +1787,8 @@ type cmdDesc struct {
 
 var curCmd *cmdDesc
 var curProj string
+var curRelay string
+var verbose bool
 
 var cmdMap = map[string]*cmdDesc {
 	CMD_LOGIN:	&cmdDesc{			  },
@@ -1873,8 +1873,8 @@ func setupCommonCmd(cmd string, args []string, help string) {
 	if cmd.wp {
 		cd.opts.StringVar(&curProj, "proj", "", "Project to work on")
 	}
-	cd.opts.BoolVar(&cd.verb, "V", false, "Verbose: show the request sent and responce got")
-	cd.opts.StringVar(&cd.relay, "for", "", "Act as another user (admin-only")
+	cd.opts.BoolVar(&verbose, "V", false, "Verbose: show the request sent and responce got")
+	cd.opts.StringVar(&curRelay, "for", "", "Act as another user (admin-only")
 
 	cd.pargs = args
 	cd.opts.Usage = func() {
