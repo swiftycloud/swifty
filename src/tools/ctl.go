@@ -1783,6 +1783,7 @@ type cmdDesc struct {
 	adm	bool
 	wp	bool
 	call	func([]string, [16]string)
+	help	string
 }
 
 var curCmd *cmdDesc
@@ -1791,86 +1792,86 @@ var curRelay string
 var verbose bool
 
 var cmdMap = map[string]*cmdDesc {
-	CMD_LOGIN:	&cmdDesc{			  },
-	CMD_ME:		&cmdDesc{ call: manage_login,	  },
-	CMD_STATS:	&cmdDesc{ call: show_stats,	  },
-	CMD_PS:		&cmdDesc{ call: list_projects,	  },
+	CMD_LOGIN:	&cmdDesc{ help: "Login to gate/admd" },
+	CMD_ME:		&cmdDesc{ help: "Manage login",		call: manage_login,	  },
+	CMD_STATS:	&cmdDesc{ help: "Show user stats",	call: show_stats,	  },
+	CMD_PS:		&cmdDesc{ help: "List projects",	call: list_projects,	  },
 
-	CMD_FL:		&cmdDesc{ call: function_list,	  wp: true },
-	CMD_FT:		&cmdDesc{ call: function_tree,	  wp: true },
-	CMD_FI:		&cmdDesc{ call: function_info,	  wp: true },
-	CMD_FIM:	&cmdDesc{ call: function_minfo,	  wp: true },
-	CMD_FA:		&cmdDesc{ call: function_add,	  wp: true },
-	CMD_FD:		&cmdDesc{ call: function_del,	  wp: true },
-	CMD_FU:		&cmdDesc{ call: function_update,  wp: true },
-	CMD_RUN:	&cmdDesc{ call: run_function,	  wp: true },
-	CMD_FLOG:	&cmdDesc{ call: function_logs,	  wp: true },
-	CMD_FCOD:	&cmdDesc{ call: function_code,	  wp: true },
-	CMD_FON:	&cmdDesc{ call: function_on,	  wp: true },
-	CMD_FOFF:	&cmdDesc{ call: function_off,	  wp: true },
-	CMD_FW:		&cmdDesc{ call: function_wait,	  wp: true },
+	CMD_FL:		&cmdDesc{ help: "List functions",	call: function_list,	wp: true },
+	CMD_FT:		&cmdDesc{ help: "Show fns tree",	call: function_tree,	wp: true },
+	CMD_FI:		&cmdDesc{ help: "Show fn info",		call: function_info,	wp: true },
+	CMD_FIM:	&cmdDesc{ help: "Show fn run state",	call: function_minfo,	wp: true },
+	CMD_FA:		&cmdDesc{ help: "Add function",		call: function_add,	wp: true },
+	CMD_FD:		&cmdDesc{ help: "Del function",		call: function_del,	wp: true },
+	CMD_FU:		&cmdDesc{ help: "Update function",	call: function_update,	wp: true },
+	CMD_RUN:	&cmdDesc{ help: "Run function code",	call: run_function,	wp: true },
+	CMD_FLOG:	&cmdDesc{ help: "Show fn logs",		call: function_logs,	wp: true },
+	CMD_FCOD:	&cmdDesc{ help: "Show fn code",		call: function_code,	wp: true },
+	CMD_FON:	&cmdDesc{ help: "Activate fn",		call: function_on,	wp: true },
+	CMD_FOFF:	&cmdDesc{ help: "Deactivate fn",	call: function_off,	wp: true },
+	CMD_FW:		&cmdDesc{ help: "Wait something on fn",	call: function_wait,	wp: true },
 
-	CMD_EL:		&cmdDesc{ call: event_list,	  wp: true },
-	CMD_EA:		&cmdDesc{ call: event_add,	  wp: true },
-	CMD_EI:		&cmdDesc{ call: event_info,	  wp: true },
-	CMD_ED:		&cmdDesc{ call: event_del,	  wp: true },
+	CMD_EL:		&cmdDesc{ help: "List fn triggers",	call: event_list,	wp: true },
+	CMD_EA:		&cmdDesc{ help: "Add fn trigger",	call: event_add,	wp: true },
+	CMD_EI:		&cmdDesc{ help: "Show fn trigger info",	call: event_info,	wp: true },
+	CMD_ED:		&cmdDesc{ help: "Del fn trigger",	call: event_del,	wp: true },
 
-	CMD_ML:		&cmdDesc{ call: mware_list,	  wp: true },
-	CMD_MI:		&cmdDesc{ call: mware_info,	  wp: true },
-	CMD_MA:		&cmdDesc{ call: mware_add,	  wp: true },
-	CMD_MD:		&cmdDesc{ call: mware_del,	  wp: true },
+	CMD_ML:		&cmdDesc{ help: "List middleware",	call: mware_list,	wp: true },
+	CMD_MI:		&cmdDesc{ help: "Show mware info",	call: mware_info,	wp: true },
+	CMD_MA:		&cmdDesc{ help: "Add mware",		call: mware_add,	wp: true },
+	CMD_MD:		&cmdDesc{ help: "Del mware",		call: mware_del,	wp: true },
 
-	CMD_DL:		&cmdDesc{ call: deploy_list,	  wp: true },
-	CMD_DI:		&cmdDesc{ call: deploy_info,	  wp: true },
-	CMD_DA:		&cmdDesc{ call: deploy_add,	  wp: true },
-	CMD_DD:		&cmdDesc{ call: deploy_del,	  wp: true },
-	CMD_AUTH:	&cmdDesc{ call: auth_cfg,	  wp: true },
+	CMD_DL:		&cmdDesc{ help: "List deployments",	call: deploy_list,	wp: true },
+	CMD_DI:		&cmdDesc{ help: "Show deploy info",	call: deploy_info,	wp: true },
+	CMD_DA:		&cmdDesc{ help: "Add deploy",		call: deploy_add,	wp: true },
+	CMD_DD:		&cmdDesc{ help: "Del deploy",		call: deploy_del,	wp: true },
+	CMD_AUTH:	&cmdDesc{ help: "Configure AaaS",	call: auth_cfg,		wp: true },
 
-	CMD_RTL:	&cmdDesc{ call: router_list,	  wp: true },
-	CMD_RTI:	&cmdDesc{ call: router_info,	  wp: true },
-	CMD_RTA:	&cmdDesc{ call: router_add,	  wp: true },
-	CMD_RTU:	&cmdDesc{ call: router_upd,	  wp: true },
-	CMD_RTD:	&cmdDesc{ call: router_del,	  wp: true },
+	CMD_RTL:	&cmdDesc{ help: "List routers",		call: router_list,	wp: true },
+	CMD_RTI:	&cmdDesc{ help: "Show router info",	call: router_info,	wp: true },
+	CMD_RTA:	&cmdDesc{ help: "Add router",		call: router_add,	wp: true },
+	CMD_RTU:	&cmdDesc{ help: "Update router",	call: router_upd,	wp: true },
+	CMD_RTD:	&cmdDesc{ help: "Del router",		call: router_del,	wp: true },
 
-	CMD_RL:		&cmdDesc{ call: repo_list,	  },
-	CMD_RI:		&cmdDesc{ call: repo_info,	  },
-	CMD_RA:		&cmdDesc{ call: repo_add,	  },
-	CMD_RU:		&cmdDesc{ call: repo_upd,	  },
-	CMD_RD:		&cmdDesc{ call: repo_del,	  },
-	CMD_RLS:	&cmdDesc{ call: repo_list_files,  },
-	CMD_RCAT:	&cmdDesc{ call: repo_cat_file,	  },
-	CMD_RP:		&cmdDesc{ call: repo_pull,	  },
+	CMD_RL:		&cmdDesc{ help: "List repositories",	call: repo_list		},
+	CMD_RI:		&cmdDesc{ help: "Show repo info",	call: repo_info		},
+	CMD_RA:		&cmdDesc{ help: "Add repo",		call: repo_add		},
+	CMD_RU:		&cmdDesc{ help: "Update repo",		call: repo_upd		},
+	CMD_RD:		&cmdDesc{ help: "Del repo",		call: repo_del		},
+	CMD_RLS:	&cmdDesc{ help: "List files in repo",	call: repo_list_files	},
+	CMD_RCAT:	&cmdDesc{ help: "Show file contents",	call: repo_cat_file	},
+	CMD_RP:		&cmdDesc{ help: "Pull repo",		call: repo_pull		},
 
-	CMD_AL:		&cmdDesc{ call: acc_list,	  },
-	CMD_AI:		&cmdDesc{ call: acc_info,	  },
-	CMD_AA:		&cmdDesc{ call: acc_add,	  },
-	CMD_AD:		&cmdDesc{ call: acc_del,	  },
-	CMD_AU:		&cmdDesc{ call: acc_upd,	  },
+	CMD_AL:		&cmdDesc{ help: "List accounts",	call: acc_list		},
+	CMD_AI:		&cmdDesc{ help: "Show accont info",	call: acc_info		},
+	CMD_AA:		&cmdDesc{ help: "Add account",		call: acc_add		},
+	CMD_AD:		&cmdDesc{ help: "Del account",		call: acc_del		},
+	CMD_AU:		&cmdDesc{ help: "Update account",	call: acc_upd		},
 
-	CMD_UL:		&cmdDesc{ call: user_list,	  adm: true },
-	CMD_UI:		&cmdDesc{ call: user_info,	  adm: true },
-	CMD_UA:		&cmdDesc{ call: user_add,	  adm: true },
-	CMD_UD:		&cmdDesc{ call: user_del,	  adm: true },
-	CMD_UPASS:	&cmdDesc{ call: user_pass,	  adm: true },
-	CMD_UEN:	&cmdDesc{ call: user_enabled,	  adm: true },
-	CMD_ULIM:	&cmdDesc{ call: user_limits,	  adm: true },
+	CMD_UL:		&cmdDesc{ help: "List users",		call: user_list,	adm: true },
+	CMD_UI:		&cmdDesc{ help: "Show user info",	call: user_info,	adm: true },
+	CMD_UA:		&cmdDesc{ help: "Add user",		call: user_add,		adm: true },
+	CMD_UD:		&cmdDesc{ help: "Del user",		call: user_del,		adm: true },
+	CMD_UPASS:	&cmdDesc{ help: "Change password",	call: user_pass,	adm: true },
+	CMD_UEN:	&cmdDesc{ help: "Enable/disable user",	call: user_enabled,	adm: true },
+	CMD_ULIM:	&cmdDesc{ help: "Configure user limits",call: user_limits,	adm: true },
 
-	CMD_TL:		&cmdDesc{ call: tplan_list,	  adm: true },
-	CMD_TA:		&cmdDesc{ call: tplan_add,	  adm: true },
-	CMD_TI:		&cmdDesc{ call: tplan_info,	  adm: true },
-	CMD_TD:		&cmdDesc{ call: tplan_del,	  adm: true },
+	CMD_TL:		&cmdDesc{ help: "List plans",		call: tplan_list,	adm: true },
+	CMD_TA:		&cmdDesc{ help: "Add plan",		call: tplan_add,	adm: true },
+	CMD_TI:		&cmdDesc{ help: "Show plan info",	call: tplan_info,	adm: true },
+	CMD_TD:		&cmdDesc{ help: "Del plan",		call: tplan_del,	adm: true },
 
-	CMD_S3ACC:	&cmdDesc{ call: s3_access,	  },
+	CMD_S3ACC:	&cmdDesc{ help: "Get S3 access",	call: s3_access		},
 
-	CMD_LANGS:	&cmdDesc{ call: languages,	  },
-	CMD_MTYPES:	&cmdDesc{ call: mware_types,	  },
-	CMD_LANG:	&cmdDesc{ call: check_lang,	  },
+	CMD_LANGS:	&cmdDesc{ help: "Show supported languages",	call: languages		},
+	CMD_MTYPES:	&cmdDesc{ help: "Show supported mwares",	call: mware_types	},
+	CMD_LANG:	&cmdDesc{ help: "Detect file language",		call: check_lang	},
 }
 
-func setupCommonCmd(cmd string, args []string, help string) {
+func setupCommonCmd(cmd string, args []string) {
 	cd := cmdMap[cmd]
 	cd.opts = flag.NewFlagSet(cmd, flag.ExitOnError)
-	if cmd.wp {
+	if cd.wp {
 		cd.opts.StringVar(&curProj, "proj", "", "Project to work on")
 	}
 	cd.opts.BoolVar(&verbose, "V", false, "Verbose: show the request sent and responce got")
@@ -1882,35 +1883,35 @@ func setupCommonCmd(cmd string, args []string, help string) {
 		if len(args) != 0 {
 			astr += " <" + strings.Join(args, "> <") + ">"
 		}
-		fmt.Fprintf(os.Stderr, "%-32s%s\n", astr, help)
+		fmt.Fprintf(os.Stderr, "%-32s%s\n", astr, cd.help)
 	}
 }
 
 func main() {
 	var opts [16]string
 
-	setupCommonCmd(CMD_LOGIN,	[]string{"USER:PASS@HOST:PORT"}, "Login into the system")
+	setupCommonCmd(CMD_LOGIN,	[]string{"USER:PASS@HOST:PORT"})
 	cmdMap[CMD_LOGIN].opts.StringVar(&opts[0], "tls", "no", "TLS mode")
 	cmdMap[CMD_LOGIN].opts.StringVar(&opts[1], "cert", "", "x509 cert file")
 	cmdMap[CMD_LOGIN].opts.StringVar(&opts[2], "admd", "", "Admd address:port")
 	cmdMap[CMD_LOGIN].opts.StringVar(&opts[3], "proxy", "", "Proxy mode")
 
-	setupCommonCmd(CMD_ME, []string{"ACTION"}, "Manage login")
+	setupCommonCmd(CMD_ME, []string{"ACTION"})
 
-	setupCommonCmd(CMD_STATS,	[]string{}, "Show stats")
+	setupCommonCmd(CMD_STATS,	[]string{})
 	cmdMap[CMD_STATS].opts.StringVar(&opts[0], "p", "0", "Periods to report")
 
-	setupCommonCmd(CMD_PS,	[]string{}, "List projects")
+	setupCommonCmd(CMD_PS,	[]string{})
 
-	setupCommonCmd(CMD_FL,	[]string{}, "List functions")
+	setupCommonCmd(CMD_FL,	[]string{})
 	cmdMap[CMD_FL].opts.StringVar(&opts[0], "pretty", "", "Format of output")
 	cmdMap[CMD_FL].opts.StringVar(&opts[1], "label", "", "Labels, comma-separated")
 	cmdMap[CMD_FL].opts.StringVar(&opts[2], "pref", "", "Prefix")
-	setupCommonCmd(CMD_FT,	[]string{}, "Shpw function tree")
+	setupCommonCmd(CMD_FT,	[]string{})
 	cmdMap[CMD_FT].opts.StringVar(&opts[0], "leafs", "", "Show leafs of the tree")
-	setupCommonCmd(CMD_FI,	[]string{"NAME"}, "Function info")
-	setupCommonCmd(CMD_FIM,	[]string{"NAME"}, "Function memdat info")
-	setupCommonCmd(CMD_FA,	[]string{"NAME"}, "Add a function")
+	setupCommonCmd(CMD_FI,	[]string{"NAME"})
+	setupCommonCmd(CMD_FIM,	[]string{"NAME"})
+	setupCommonCmd(CMD_FA,	[]string{"NAME"})
 	cmdMap[CMD_FA].opts.StringVar(&opts[0], "lang", "auto", "Language")
 	cmdMap[CMD_FA].opts.StringVar(&opts[1], "src", ".", "Source file")
 	cmdMap[CMD_FA].opts.StringVar(&opts[2], "mw", "", "Mware to use, comma-separated")
@@ -1919,9 +1920,9 @@ func main() {
 	cmdMap[CMD_FA].opts.StringVar(&opts[6], "data", "", "Any text associated with fn")
 	cmdMap[CMD_FA].opts.StringVar(&opts[7], "env", "", "Colon-separated list of env vars")
 	cmdMap[CMD_FA].opts.StringVar(&opts[8], "auth", "", "ID of auth mware to verify the call")
-	setupCommonCmd(CMD_RUN,	[]string{"NAME", "ARG=VAL,..."}, "Run a function")
+	setupCommonCmd(CMD_RUN,	[]string{"NAME", "ARG=VAL,..."})
 	cmdMap[CMD_RUN].opts.StringVar(&opts[0], "src", "", "Run a custom source in it")
-	setupCommonCmd(CMD_FU,	[]string{"NAME"}, "Update a function")
+	setupCommonCmd(CMD_FU,	[]string{"NAME"})
 	cmdMap[CMD_FU].opts.StringVar(&opts[0], "src", "", "Source file")
 	cmdMap[CMD_FU].opts.StringVar(&opts[1], "tmo", "", "Timeout")
 	cmdMap[CMD_FU].opts.StringVar(&opts[2], "rl", "", "Rate (rate[:burst])")
@@ -1933,108 +1934,108 @@ func main() {
 	cmdMap[CMD_FU].opts.StringVar(&opts[8], "s3b", "", "Bucket to use, +/- to add/remove")
 	cmdMap[CMD_FU].opts.StringVar(&opts[9], "acc", "", "Accounts to use, +/- to add/remove")
 	cmdMap[CMD_FU].opts.StringVar(&opts[10], "env", "", "Colon-separated list of env vars")
-	setupCommonCmd(CMD_FD,	[]string{"NAME"}, "Delete a function")
-	setupCommonCmd(CMD_FLOG,	[]string{"NAME"}, "Show function logs")
+	setupCommonCmd(CMD_FD,	[]string{"NAME"})
+	setupCommonCmd(CMD_FLOG,	[]string{"NAME"})
 	cmdMap[CMD_FLOG].opts.StringVar(&opts[0], "last", "", "Last N 'duration' period")
-	setupCommonCmd(CMD_FCOD,  []string{"NAME"}, "Show function code")
-	setupCommonCmd(CMD_FON,	[]string{"NAME"}, "Activate function")
-	setupCommonCmd(CMD_FOFF,	[]string{"NAME"}, "Deactivate function")
+	setupCommonCmd(CMD_FCOD,  []string{"NAME"})
+	setupCommonCmd(CMD_FON,	[]string{"NAME"})
+	setupCommonCmd(CMD_FOFF,	[]string{"NAME"})
 
-	setupCommonCmd(CMD_FW,	[]string{"NAME"}, "Wait function event")
+	setupCommonCmd(CMD_FW,	[]string{"NAME"})
 	cmdMap[CMD_FW].opts.StringVar(&opts[0], "version", "", "Version")
 	cmdMap[CMD_FW].opts.StringVar(&opts[1], "tmo", "", "Timeout")
 
-	setupCommonCmd(CMD_EL,	[]string{"NAME"}, "List events for a function")
-	setupCommonCmd(CMD_EA,	[]string{"NAME", "ENAME", "SRC"}, "Add event")
+	setupCommonCmd(CMD_EL,	[]string{"NAME"})
+	setupCommonCmd(CMD_EA,	[]string{"NAME", "ENAME", "SRC"})
 	cmdMap[CMD_EA].opts.StringVar(&opts[0], "tab", "", "Cron tab")
 	cmdMap[CMD_EA].opts.StringVar(&opts[1], "args", "", "Cron args")
 	cmdMap[CMD_EA].opts.StringVar(&opts[0], "buck", "", "S3 bucket")
 	cmdMap[CMD_EA].opts.StringVar(&opts[1], "ops", "", "S3 ops")
-	setupCommonCmd(CMD_EI,	[]string{"NAME", "ENAME"}, "Show event info")
-	setupCommonCmd(CMD_ED,	[]string{"NAME", "ENAME"}, "Remove event")
+	setupCommonCmd(CMD_EI,	[]string{"NAME", "ENAME"})
+	setupCommonCmd(CMD_ED,	[]string{"NAME", "ENAME"})
 
-	setupCommonCmd(CMD_ML,	[]string{}, "List middleware")
+	setupCommonCmd(CMD_ML,	[]string{})
 	cmdMap[CMD_ML].opts.StringVar(&opts[1], "type", "", "Filter mware by type")
 	cmdMap[CMD_ML].opts.StringVar(&opts[2], "label", "", "Labels, comma-separated")
-	setupCommonCmd(CMD_MI,	[]string{"NAME"}, "Middleware info")
-	setupCommonCmd(CMD_MA,	[]string{"NAME", "TYPE"}, "Add middleware")
+	setupCommonCmd(CMD_MI,	[]string{"NAME"})
+	setupCommonCmd(CMD_MA,	[]string{"NAME", "TYPE"})
 	cmdMap[CMD_MA].opts.StringVar(&opts[0], "data", "", "Associated text")
-	setupCommonCmd(CMD_MD,	[]string{"NAME"}, "Delete middleware")
+	setupCommonCmd(CMD_MD,	[]string{"NAME"})
 
-	setupCommonCmd(CMD_S3ACC,	[]string{"BUCKET"}, "Get keys for S3")
+	setupCommonCmd(CMD_S3ACC,	[]string{"BUCKET"})
 	cmdMap[CMD_S3ACC].opts.StringVar(&opts[0], "life", "60", "Lifetime (default 1 min)")
-	setupCommonCmd(CMD_AUTH,	[]string{"ACTION"}, "Manage project auth")
+	setupCommonCmd(CMD_AUTH,	[]string{"ACTION"})
 	cmdMap[CMD_AUTH].opts.StringVar(&opts[0], "name", "", "Name for auth")
 
-	setupCommonCmd(CMD_DL,	[]string{},	"List deployments")
+	setupCommonCmd(CMD_DL,	[]string{})
 	cmdMap[CMD_DL].opts.StringVar(&opts[0], "label", "", "Labels, comma-separated")
-	setupCommonCmd(CMD_DI,	[]string{"NAME"}, "Show info about deployment")
-	setupCommonCmd(CMD_DA,	[]string{"NAME"}, "Add (start) deployment")
+	setupCommonCmd(CMD_DI,	[]string{"NAME"})
+	setupCommonCmd(CMD_DA,	[]string{"NAME"})
 	cmdMap[CMD_DA].opts.StringVar(&opts[0], "from", "", "File from which to get info")
-	setupCommonCmd(CMD_DD,	[]string{"NAME"}, "Del (stop) deployment")
+	setupCommonCmd(CMD_DD,	[]string{"NAME"})
 
-	setupCommonCmd(CMD_RTL,	[]string{},	  "List routers")
-	setupCommonCmd(CMD_RTI,	[]string{"NAME"}, "Show info about router")
-	setupCommonCmd(CMD_RTA,	[]string{"NAME"}, "Create router")
+	setupCommonCmd(CMD_RTL,	[]string{})
+	setupCommonCmd(CMD_RTI,	[]string{"NAME"})
+	setupCommonCmd(CMD_RTA,	[]string{"NAME"})
 	cmdMap[CMD_RTA].opts.StringVar(&opts[0], "table", "", "Table entries [M:path:function:key];")
-	setupCommonCmd(CMD_RTU,	[]string{"NAME"}, "Edit router")
+	setupCommonCmd(CMD_RTU,	[]string{"NAME"})
 	cmdMap[CMD_RTU].opts.StringVar(&opts[0], "table", "", "New table to set")
-	setupCommonCmd(CMD_RTD,	[]string{"NAME"}, "Detach repo")
+	setupCommonCmd(CMD_RTD,	[]string{"NAME"})
 
-	setupCommonCmd(CMD_RL,	[]string{},	"List repos")
+	setupCommonCmd(CMD_RL,	[]string{})
 	cmdMap[CMD_RL].opts.StringVar(&opts[0], "acc", "", "Account ID")
 	cmdMap[CMD_RL].opts.StringVar(&opts[1], "at", "", "Attach status")
-	setupCommonCmd(CMD_RI,	[]string{"ID"}, "Show info about repo")
-	setupCommonCmd(CMD_RA,	[]string{"URL"}, "Attach repo")
+	setupCommonCmd(CMD_RI,	[]string{"ID"})
+	setupCommonCmd(CMD_RA,	[]string{"URL"})
 	cmdMap[CMD_RA].opts.StringVar(&opts[0], "acc", "", "Acc ID from which to pull")
 	cmdMap[CMD_RA].opts.StringVar(&opts[1], "pull", "", "Pull policy")
-	setupCommonCmd(CMD_RU,	[]string{"ID"}, "Update repo")
+	setupCommonCmd(CMD_RU,	[]string{"ID"})
 	cmdMap[CMD_RU].opts.StringVar(&opts[0], "pull", "", "Pull policy")
-	setupCommonCmd(CMD_RD,	[]string{"ID"}, "Detach repo")
-	setupCommonCmd(CMD_RLS,	[]string{"ID"}, "List files in repo")
+	setupCommonCmd(CMD_RD,	[]string{"ID"})
+	setupCommonCmd(CMD_RLS,	[]string{"ID"})
 	cmdMap[CMD_RLS].opts.StringVar(&opts[0], "pretty", "", "Prettiness of the output")
-	setupCommonCmd(CMD_RCAT,	[]string{"ID/NAME"}, "Show contents of a file")
-	setupCommonCmd(CMD_RP,	[]string{"ID"}, "Pull repo")
+	setupCommonCmd(CMD_RCAT,	[]string{"ID/NAME"})
+	setupCommonCmd(CMD_RP,	[]string{"ID"})
 
-	setupCommonCmd(CMD_AL,	[]string{},	"List accounts")
+	setupCommonCmd(CMD_AL,	[]string{})
 	cmdMap[CMD_AL].opts.StringVar(&opts[0], "type", "", "Type of account to list")
-	setupCommonCmd(CMD_AI,	[]string{"ID"}, "Show info about account")
-	setupCommonCmd(CMD_AA,	[]string{"TYPE", "NAME"}, "Add account")
+	setupCommonCmd(CMD_AI,	[]string{"ID"})
+	setupCommonCmd(CMD_AA,	[]string{"TYPE", "NAME"})
 	cmdMap[CMD_AA].opts.StringVar(&opts[0], "param", "", "List of key=value pairs, :-separated")
-	setupCommonCmd(CMD_AD,	[]string{"ID"}, "Delete account")
-	setupCommonCmd(CMD_AU,	[]string{"ID"}, "Add account")
+	setupCommonCmd(CMD_AD,	[]string{"ID"})
+	setupCommonCmd(CMD_AU,	[]string{"ID"})
 	cmdMap[CMD_AU].opts.StringVar(&opts[0], "param", "", "List of key=value pairs, :-separated")
 
-	setupCommonCmd(CMD_UL,	[]string{}, "List users")
-	setupCommonCmd(CMD_UA,	[]string{"UID"}, "Add user")
+	setupCommonCmd(CMD_UL,	[]string{})
+	setupCommonCmd(CMD_UA,	[]string{"UID"})
 	cmdMap[CMD_UA].opts.StringVar(&opts[0], "name", "", "User name")
 	cmdMap[CMD_UA].opts.StringVar(&opts[1], "pass", "", "User password")
-	setupCommonCmd(CMD_UD,	[]string{"UID"}, "Del user")
-	setupCommonCmd(CMD_UPASS,	[]string{"UID"}, "Set password")
+	setupCommonCmd(CMD_UD,	[]string{"UID"})
+	setupCommonCmd(CMD_UPASS,	[]string{"UID"})
 	cmdMap[CMD_UPASS].opts.StringVar(&opts[0], "pass", "", "New password")
 	cmdMap[CMD_UPASS].opts.StringVar(&opts[1], "cur", "", "Current password")
-	setupCommonCmd(CMD_UEN, []string{"UID", "ST"}, "Set enable status for user")
-	setupCommonCmd(CMD_UI,	[]string{"UID"}, "Get user info")
-	setupCommonCmd(CMD_ULIM, []string{"UID"}, "Get/Set limits for user")
+	setupCommonCmd(CMD_UEN, []string{"UID", "ST"})
+	setupCommonCmd(CMD_UI,	[]string{"UID"})
+	setupCommonCmd(CMD_ULIM, []string{"UID"})
 	cmdMap[CMD_ULIM].opts.StringVar(&opts[0], "plan", "", "Taroff plan ID")
 	cmdMap[CMD_ULIM].opts.StringVar(&opts[1], "rl", "", "Rate (rate[:burst])")
 	cmdMap[CMD_ULIM].opts.StringVar(&opts[2], "fnr", "", "Number of functions (in a project)")
 	cmdMap[CMD_ULIM].opts.StringVar(&opts[3], "gbs", "", "Maximum number of GBS to consume")
 	cmdMap[CMD_ULIM].opts.StringVar(&opts[4], "bo", "", "Maximum outgoing network bytes")
 
-	setupCommonCmd(CMD_TL, []string{}, "List tarif plans")
-	setupCommonCmd(CMD_TA, []string{"NAME"}, "Create tarif plan")
+	setupCommonCmd(CMD_TL, []string{})
+	setupCommonCmd(CMD_TA, []string{"NAME"})
 	cmdMap[CMD_TA].opts.StringVar(&opts[0], "rl", "", "Rate (rate[:burst])")
 	cmdMap[CMD_TA].opts.StringVar(&opts[1], "fnr", "", "Number of functions (in a project)")
 	cmdMap[CMD_TA].opts.StringVar(&opts[2], "gbs", "", "Maximum number of GBS to consume")
 	cmdMap[CMD_TA].opts.StringVar(&opts[3], "bo", "", "Maximum outgoing network bytes")
-	setupCommonCmd(CMD_TI, []string{"ID"}, "Info about tarif plan")
-	setupCommonCmd(CMD_TD, []string{"ID"}, "Info about tarif plan")
+	setupCommonCmd(CMD_TI, []string{"ID"})
+	setupCommonCmd(CMD_TD, []string{"ID"})
 
-	setupCommonCmd(CMD_MTYPES, []string{}, "List middleware types")
-	setupCommonCmd(CMD_LANGS, []string{}, "List of supported languages")
+	setupCommonCmd(CMD_MTYPES, []string{})
+	setupCommonCmd(CMD_LANGS, []string{})
 
-	setupCommonCmd(CMD_LANG, []string{}, "Check source language")
+	setupCommonCmd(CMD_LANG, []string{})
 	cmdMap[CMD_LANG].opts.StringVar(&opts[0], "src", "", "File")
 
 	flag.Usage = func() {
