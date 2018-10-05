@@ -107,6 +107,10 @@ func (c collection)del(id string) {
 	del(c.pref + "/" + id, http.StatusOK)
 }
 
+func (c collection)prop(id string, pn string, out interface{}) {
+	get(c.pref + "/" + id + "/" + pn, http.StatusOK, out)
+}
+
 var functions	= collection{"functions"}
 var mwares	= collection{"middleware"}
 var deployments	= collection{"deployments"}
@@ -597,13 +601,13 @@ func function_info(args []string, opts [16]string) {
 	}
 
 	var src swyapi.FunctionSources
-	get("functions/" + args[0] + "/sources", http.StatusOK, &src)
+	functions.prop(args[0], "sources", &src)
 	if src.Sync {
 		fmt.Printf("Sync with:   %s\n", src.Repo)
 	}
 
 	var minf []*swyapi.MwareInfo
-	get("functions/" + args[0] + "/middleware", http.StatusOK, &minf)
+	functions.prop(args[0], "middleware", &minf)
 	if len(minf) != 0 {
 		fmt.Printf("Mware:\n")
 		for _, mi := range minf {
@@ -612,7 +616,7 @@ func function_info(args []string, opts [16]string) {
 	}
 
 	var bkts []string
-	get("functions/" + args[0] + "/s3buckets", http.StatusOK, &bkts)
+	functions.prop(args[0], "s3buckets", &bkts)
 	if len(bkts) != 0 {
 		fmt.Printf("Buckets:\n")
 		for _, bkt := range bkts {
@@ -621,7 +625,7 @@ func function_info(args []string, opts [16]string) {
 	}
 
 	var acs []map[string]string
-	get("functions/" + args[0] + "/accounts", http.StatusOK, &acs)
+	functions.prop(args[0], "accounts", &acs)
 	if len(acs) != 0 {
 		fmt.Printf("Accounts:\n")
 		for _, ac := range acs {
@@ -630,7 +634,7 @@ func function_info(args []string, opts [16]string) {
 	}
 
 	var env []string
-	get("functions/" + args[0] + "/env", http.StatusOK, &env)
+	functions.prop(args[0], "env", &env)
 	if len(env) != 0 {
 		fmt.Printf("Environment:\n")
 		for _, ev := range env {
@@ -642,7 +646,7 @@ func function_info(args []string, opts [16]string) {
 func function_minfo(args []string, opts [16]string) {
 	var ifo swyapi.FunctionMdat
 	args[0], _ = resolve_fn(args[0])
-	get("functions/" + args[0] + "/mdat", http.StatusOK, &ifo)
+	functions.prop(args[0], "mdat", &ifo)
 	fmt.Printf("Cookie: %s\n", ifo.Cookie)
 	if len(ifo.RL) != 0 {
 		fmt.Printf("RL: %d/%d (%d left)\n", ifo.RL[1], ifo.RL[2], ifo.RL[0])
@@ -965,7 +969,7 @@ func function_off(args []string, opts [16]string) {
 func event_list(args []string, opts [16]string) {
 	args[0], _ = resolve_fn(args[0])
 	var eds []swyapi.FunctionEvent
-	list("functions/" + args[0] + "/triggers", http.StatusOK,  &eds)
+	functions.prop(args[0], "triggers", &eds)
 	for _, e := range eds {
 		fmt.Printf("%16s%20s%8s\n", e.Id, e.Name, e.Source)
 	}
@@ -999,7 +1003,7 @@ func event_info(args []string, opts [16]string) {
 	args[0], _ = resolve_fn(args[0])
 	args[1], r = resolve_evt(args[0], args[1])
 	var e swyapi.FunctionEvent
-	get("functions/" + args[0] + "/triggers/" + args[1], http.StatusOK,  &e)
+	functions.prop(args[0], "triggers/" + args[1], &e)
 	if !r {
 		fmt.Printf("Name:          %s\n", e.Name)
 	}
@@ -1043,7 +1047,7 @@ func function_wait(args []string, opts [16]string) {
 func function_code(args []string, opts [16]string) {
 	var res swyapi.FunctionSources
 	args[0], _ = resolve_fn(args[0])
-	get("functions/" + args[0] + "/sources", http.StatusOK, &res)
+	functions.prop(args[0], "sources", &res)
 	data, err := base64.StdEncoding.DecodeString(res.Code)
 	if err != nil {
 		fatal(err)
@@ -1264,7 +1268,7 @@ func router_info(args []string, opts [16]string) {
 	fmt.Printf("URL:      %s\n", ri.URL)
 	fmt.Printf("Table:    (%d ents)\n", ri.TLen)
 	var res []*swyapi.RouterEntry
-	get("routers/" + args[0] + "/table", http.StatusOK, &res)
+	routers.prop(args[0], "table", &res)
 	for _, re := range res {
 		fmt.Printf("   %8s /%-32s -> %s\n", re.Method, re.Path, re.Call)
 	}
@@ -1328,7 +1332,7 @@ func show_files(pref string, fl []*swyapi.RepoFile, pty string) {
 
 func repo_desc(args []string, opts [16]string) {
 	var d swyapi.RepoDesc
-	get("repos/" + args[0] + "/desc", http.StatusOK, &d)
+	repos.prop(args[0], "desc", &d)
 	fmt.Printf("%s\n", d.Description)
 	for _, e := range d.Entries {
 		fmt.Printf("%s: %s\n", e.Name, e.Description)
@@ -1343,7 +1347,7 @@ func repo_list_files(args []string, opts [16]string) {
 	}
 
 	var fl []*swyapi.RepoFile
-	get("repos/" + args[0] + "/files", http.StatusOK, &fl)
+	repos.prop(args[0], "files", &fl)
 	show_files("", fl, opts[0])
 }
 
@@ -1428,7 +1432,7 @@ func acc_list(args []string, opts [16]string) {
 
 func acc_info(args []string, opts [16]string) {
 	var ai map[string]string
-	get("accounts/" + args[0], http.StatusOK, &ai)
+	accounts.get(args[0], &ai)
 	fmt.Printf("Type:           %s\n", ai["type"])
 	fmt.Printf("Name:           %s\n", ai["name"])
 	for k, v := range(ai) {
