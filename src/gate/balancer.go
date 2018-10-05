@@ -48,7 +48,6 @@ func BalancerPodRdy(ctx context.Context, pod *k8sPod) error {
 	}
 
 	balancerPodsFlush(fnid)
-	fnWaiterKick(fnid)
 	return nil
 }
 
