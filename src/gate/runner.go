@@ -130,7 +130,11 @@ func (conn *podConn)Run(ctx context.Context, sopq *statsOpaque, suff, event stri
 	}
 
 	if res.Stdout != "" || res.Stderr != "" {
-		go logSaveResult(ctx, conn.Cookie, event, res.Stdout, res.Stderr)
+		go func() {
+			sctx, done := mkContext("::logsave")
+			defer done(sctx)
+			logSaveResult(sctx, conn.Cookie, event, res.Stdout, res.Stderr)
+		}()
 	}
 
 	return res, nil
