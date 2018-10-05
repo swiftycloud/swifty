@@ -304,8 +304,8 @@ func resolve_name(name string, path string, objs interface{}) (string, bool) {
 	}
 
 	ua := []string{}
-	if curCmd.project != "" {
-		ua = append(ua, "project=" + curCmd.project)
+	if curProj != "" {
+		ua = append(ua, "project=" + curProj)
 	}
 
 	ua = append(ua, "name=" + name)
@@ -417,8 +417,8 @@ func (f *FName)show(pfx string) {
 func function_tree(args []string, opts [16]string) {
 	var root FName
 	ua := []string{}
-	if curCmd.project != "" {
-		ua = append(ua, "project=" + curCmd.project)
+	if curProj != "" {
+		ua = append(ua, "project=" + curProj)
 	}
 	if opts[0] != "" {
 		ua = append(ua, "leafs=" + opts[0])
@@ -429,8 +429,8 @@ func function_tree(args []string, opts [16]string) {
 
 func function_list(args []string, opts [16]string) {
 	ua := []string{}
-	if curCmd.project != "" {
-		ua = append(ua, "project=" + curCmd.project)
+	if curProj != "" {
+		ua = append(ua, "project=" + curProj)
 	}
 
 	if opts[1] != "" {
@@ -749,7 +749,7 @@ func function_add(args []string, opts [16]string) {
 
 	req := swyapi.FunctionAdd{
 		Name: args[0],
-		Project: curCmd.project,
+		Project: curProj,
 		Sources: sources,
 		Code: code,
 		Mware: mw,
@@ -1040,8 +1040,8 @@ func url(url string, args []string) string {
 func mware_list(args []string, opts [16]string) {
 	var mws []swyapi.MwareInfo
 	ua := []string{}
-	if curCmd.project != "" {
-		ua = append(ua, "project=" + curCmd.project)
+	if curProj != "" {
+		ua = append(ua, "project=" + curProj)
 	}
 	if opts[1] != "" {
 		ua = append(ua, "type=" + opts[1])
@@ -1080,7 +1080,7 @@ func mware_info(args []string, opts [16]string) {
 func mware_add(args []string, opts [16]string) {
 	req := swyapi.MwareAdd {
 		Name: args[0],
-		Project: curCmd.project,
+		Project: curProj,
 		Type: args[1],
 		UserData: opts[0],
 	}
@@ -1163,7 +1163,7 @@ func deploy_add(args []string, opts [16]string) {
 
 	da := swyapi.DeployStart{
 		Name: args[0],
-		Project: curCmd.project,
+		Project: curProj,
 	}
 
 	if strings.HasPrefix(opts[0], "repo:") {
@@ -1210,7 +1210,7 @@ func parse_route_table(opt string) []*swyapi.RouterEntry {
 func router_add(args []string, opts [16]string) {
 	ra := swyapi.RouterAdd {
 		Name: args[0],
-		Project: curCmd.project,
+		Project: curProj,
 	}
 	if opts[0] != "" {
 		ra.Table = parse_route_table(opts[0])
@@ -1780,7 +1780,6 @@ var cmdOrder = []string {
 type cmdDesc struct {
 	opts	*flag.FlagSet
 	pargs	[]string
-	project	string
 	relay	string
 	verb	bool
 	adm	bool
@@ -1789,6 +1788,7 @@ type cmdDesc struct {
 }
 
 var curCmd *cmdDesc
+var curProj string
 
 var cmdMap = map[string]*cmdDesc {
 	CMD_LOGIN:	&cmdDesc{			  },
@@ -1871,7 +1871,7 @@ func setupCommonCmd(cmd string, args []string, help string) {
 	cd := cmdMap[cmd]
 	cd.opts = flag.NewFlagSet(cmd, flag.ExitOnError)
 	if cmd.wp {
-		cd.opts.StringVar(&cd.project, "proj", "", "Project to work on")
+		cd.opts.StringVar(&curProj, "proj", "", "Project to work on")
 	}
 	cd.opts.BoolVar(&cd.verb, "V", false, "Verbose: show the request sent and responce got")
 	cd.opts.StringVar(&cd.relay, "for", "", "Act as another user (admin-only")
