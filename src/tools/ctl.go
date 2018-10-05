@@ -67,9 +67,29 @@ func make_faas_req2(method, url string, in interface{}, succ_code int, tmo uint)
 	return resp
 }
 
+func add(url string, succ int, in interface{}, out interface{}) {
+	make_faas_req1("POST", url, succ, in, out)
+}
+
+func list(url string, succ int, out interface{}) {
+	make_faas_req1("GET", url, succ, nil, out)
+}
+
+func get(url string, succ int, out interface{}) {
+	make_faas_req1("GET", url, succ, nil, out)
+}
+
+func mod(url string, succ int, in interface{}) {
+	make_faas_req1("PUT", url, succ, in, nil)
+}
+
+func del(url string, succ int) {
+	make_faas_req1("DELETE", url, succ, nil, nil)
+}
+
 func user_list(args []string, opts [16]string) {
 	var uss []swyapi.UserInfo
-	make_faas_req1("GET", "users", http.StatusOK, nil, &uss)
+	list("users", http.StatusOK, &uss)
 
 	for _, u := range uss {
 		en := ""
@@ -85,12 +105,12 @@ func user_list(args []string, opts [16]string) {
 
 func user_add(args []string, opts [16]string) {
 	var ui swyapi.UserInfo
-	make_faas_req1("POST", "users", http.StatusCreated, &swyapi.AddUser{UId: args[0], Pass: opts[1], Name: opts[0]}, &ui)
+	add("users", http.StatusCreated, &swyapi.AddUser{UId: args[0], Pass: opts[1], Name: opts[0]}, &ui)
 	fmt.Printf("%s user created\n", ui.ID)
 }
 
 func user_del(args []string, opts [16]string) {
-	make_faas_req1("DELETE", "users/" + args[0], http.StatusNoContent, nil, nil)
+	del("users/" + args[0], http.StatusNoContent)
 }
 
 func user_enabled(args []string, opts [16]string) {
@@ -103,7 +123,7 @@ func user_enabled(args []string, opts [16]string) {
 		fatal(fmt.Errorf("Bad enable status"))
 	}
 
-	make_faas_req1("PUT", "users/" + args[0], http.StatusOK, &swyapi.ModUser{Enabled: &enabled}, nil)
+	mod("users/" + args[0], http.StatusOK, &swyapi.ModUser{Enabled: &enabled})
 }
 
 func user_pass(args []string, opts [16]string) {
@@ -113,12 +133,12 @@ func user_pass(args []string, opts [16]string) {
 		rq.CPassword = opts[1]
 	}
 
-	make_faas_req1("PUT", "users/" + args[0] + "/pass", http.StatusCreated, rq, nil)
+	mod("users/" + args[0] + "/pass", http.StatusCreated, rq)
 }
 
 func user_info(args []string, opts [16]string) {
 	var ui swyapi.UserInfo
-	make_faas_req1("GET", "users/" + args[0], http.StatusOK, nil, &ui)
+	get("users/" + args[0], http.StatusOK, &ui)
 	fmt.Printf("ID:      %s\n", ui.ID)
 	fmt.Printf("Name:    %s\n", ui.Name)
 	fmt.Printf("Roles:   %s\n", strings.Join(ui.Roles, ", "))
@@ -130,7 +150,7 @@ func user_info(args []string, opts [16]string) {
 
 func tplan_list(args []string, opts[16]string) {
 	var plans []*swyapi.PlanLimits
-	make_faas_req1("GET", "plans", http.StatusOK, nil, &plans)
+	list("plans", http.StatusOK, &plans)
 	for _, p := range(plans) {
 		fmt.Printf("%s/%s:\n", p.Id, p.Name)
 		show_fn_limits(p.Fn)
@@ -145,19 +165,19 @@ func tplan_add(args []string, opts[16]string) {
 	if l.Fn == nil {
 		fatal(fmt.Errorf("No limits"))
 	}
-	make_faas_req1("POST", "plans", http.StatusCreated, &l, &l)
+	add("plans", http.StatusCreated, &l, &l)
 	fmt.Printf("%s plan created\n", l.Id)
 }
 
 func tplan_info(args []string, opts[16]string) {
 	var p swyapi.PlanLimits
-	make_faas_req1("GET", "plans/" + args[0], http.StatusOK, nil, &p)
+	get("plans/" + args[0], http.StatusOK, &p)
 	fmt.Printf("%s/%s:\n", p.Id, p.Name)
 	show_fn_limits(p.Fn)
 }
 
 func tplan_del(args []string, opts[16]string) {
-	make_faas_req1("DELETE", "plans/" + args[0], http.StatusNoContent, nil, nil)
+	del("plans/" + args[0], http.StatusNoContent)
 }
 
 func user_limits(args []string, opts [16]string) {
@@ -171,9 +191,9 @@ func user_limits(args []string, opts [16]string) {
 
 	if l.Fn != nil || l.PlanId != "" {
 		l.UId = args[0]
-		make_faas_req1("PUT", "users/" + args[0] + "/limits", http.StatusOK, &l, nil)
+		mod("users/" + args[0] + "/limits", http.StatusOK, &l)
 	} else {
-		make_faas_req1("GET", "users/" + args[0] + "/limits", http.StatusOK, nil, &l)
+		get("users/" + args[0] + "/limits", http.StatusOK, &l)
 		if l.PlanId != "" {
 			fmt.Printf("Plan ID: %s\n", l.PlanId)
 		}
@@ -263,7 +283,7 @@ func show_stats(args []string, opts [16]string) {
 		ua = append(ua, "periods=" + opts[0])
 	}
 
-	make_faas_req1("GET", url("stats", ua), http.StatusOK, nil, &st)
+	get(url("stats", ua), http.StatusOK, &st)
 
 	fmt.Printf("*********** Calls ***********\n")
 	for _, s := range(st.Stats) {
@@ -443,7 +463,7 @@ func function_list(args []string, opts [16]string) {
 	}
 
 	var fns []*swyapi.FunctionInfo
-	make_faas_req1("GET", url("functions", ua), http.StatusOK, nil, &fns)
+	list(url("functions", ua), http.StatusOK, &fns)
 
 	switch opts[0] {
 	case "tree":
@@ -498,7 +518,7 @@ func function_info(args []string, opts [16]string) {
 	var ifo swyapi.FunctionInfo
 	var r bool
 	args[0], r = resolve_fn(args[0])
-	make_faas_req1("GET", "functions/" + args[0], http.StatusOK, nil, &ifo)
+	get("functions/" + args[0], http.StatusOK, &ifo)
 	ver := ifo.Version
 	if len(ver) > 8 {
 		ver = ver[:8]
@@ -550,13 +570,13 @@ func function_info(args []string, opts [16]string) {
 	}
 
 	var src swyapi.FunctionSources
-	make_faas_req1("GET", "functions/" + args[0] + "/sources", http.StatusOK, nil, &src)
+	get("functions/" + args[0] + "/sources", http.StatusOK, &src)
 	if src.Sync {
 		fmt.Printf("Sync with:   %s\n", src.Repo)
 	}
 
 	var minf []*swyapi.MwareInfo
-	make_faas_req1("GET", "functions/" + args[0] + "/middleware", http.StatusOK, nil, &minf)
+	get("functions/" + args[0] + "/middleware", http.StatusOK, &minf)
 	if len(minf) != 0 {
 		fmt.Printf("Mware:\n")
 		for _, mi := range minf {
@@ -565,7 +585,7 @@ func function_info(args []string, opts [16]string) {
 	}
 
 	var bkts []string
-	make_faas_req1("GET", "functions/" + args[0] + "/s3buckets", http.StatusOK, nil, &bkts)
+	get("functions/" + args[0] + "/s3buckets", http.StatusOK, &bkts)
 	if len(bkts) != 0 {
 		fmt.Printf("Buckets:\n")
 		for _, bkt := range bkts {
@@ -574,7 +594,7 @@ func function_info(args []string, opts [16]string) {
 	}
 
 	var acs []map[string]string
-	make_faas_req1("GET", "functions/" + args[0] + "/accounts", http.StatusOK, nil, &acs)
+	get("functions/" + args[0] + "/accounts", http.StatusOK, &acs)
 	if len(acs) != 0 {
 		fmt.Printf("Accounts:\n")
 		for _, ac := range acs {
@@ -583,7 +603,7 @@ func function_info(args []string, opts [16]string) {
 	}
 
 	var env []string
-	make_faas_req1("GET", "functions/" + args[0] + "/env", http.StatusOK, nil, &env)
+	get("functions/" + args[0] + "/env", http.StatusOK, &env)
 	if len(env) != 0 {
 		fmt.Printf("Environment:\n")
 		for _, ev := range env {
@@ -595,7 +615,7 @@ func function_info(args []string, opts [16]string) {
 func function_minfo(args []string, opts [16]string) {
 	var ifo swyapi.FunctionMdat
 	args[0], _ = resolve_fn(args[0])
-	make_faas_req1("GET", "functions/" + args[0] + "/mdat", http.StatusOK, nil, &ifo)
+	get("functions/" + args[0] + "/mdat", http.StatusOK, &ifo)
 	fmt.Printf("Cookie: %s\n", ifo.Cookie)
 	if len(ifo.RL) != 0 {
 		fmt.Printf("RL: %d/%d (%d left)\n", ifo.RL[1], ifo.RL[2], ifo.RL[0])
@@ -775,7 +795,7 @@ func function_add(args []string, opts [16]string) {
 	}
 
 	var fi swyapi.FunctionInfo
-	make_faas_req1("POST", "functions", http.StatusOK, req, &fi)
+	add("functions", http.StatusOK, req, &fi)
 	fmt.Printf("Function %s created\n", fi.Id)
 }
 
@@ -826,15 +846,15 @@ func function_update(args []string, opts [16]string) {
 		var src swyapi.FunctionSources
 
 		getSrc(opts[0], &src)
-		make_faas_req1("PUT", "functions/" + fid + "/sources", http.StatusOK, &src, nil)
+		mod("functions/" + fid + "/sources", http.StatusOK, &src)
 	}
 
 	if opts[3] != "" {
 		mid, _ := resolve_mw(opts[3][1:])
 		if opts[3][0] == '+' {
-			make_faas_req1("POST", "functions/" + fid + "/middleware", http.StatusOK, mid, nil)
+			add("functions/" + fid + "/middleware", http.StatusOK, mid, nil)
 		} else if opts[3][0] == '-' {
-			make_faas_req1("DELETE", "functions/" + fid + "/middleware/" + mid, http.StatusOK, nil, nil)
+			del("functions/" + fid + "/middleware/" + mid, http.StatusOK)
 		} else {
 			fatal(fmt.Errorf("+/- mware name"))
 		}
@@ -842,9 +862,9 @@ func function_update(args []string, opts [16]string) {
 
 	if opts[8] != "" {
 		if opts[8][0] == '+' {
-			make_faas_req1("POST", "functions/" + fid + "/s3buckets", http.StatusOK, opts[8][1:], nil)
+			add("functions/" + fid + "/s3buckets", http.StatusOK, opts[8][1:], nil)
 		} else if opts[8][0] == '-' {
-			make_faas_req1("DELETE", "functions/" + fid + "/s3buckets/" + opts[8][1:], http.StatusOK, nil, nil)
+			del("functions/" + fid + "/s3buckets/" + opts[8][1:], http.StatusOK)
 		} else {
 			fatal(fmt.Errorf("+/- bucket name"))
 		}
@@ -852,17 +872,17 @@ func function_update(args []string, opts [16]string) {
 
 	if opts[9] != "" {
 		if opts[9][0] == '+' {
-			make_faas_req1("POST", "functions/" + fid + "/accounts", http.StatusOK, opts[9][1:], nil)
+			add("functions/" + fid + "/accounts", http.StatusOK, opts[9][1:], nil)
 		} else if opts[9][0] == '-' {
-			make_faas_req1("DELETE", "functions/" + fid + "/accounts/" + opts[9][1:], http.StatusOK, nil, nil)
+			del("functions/" + fid + "/accounts/" + opts[9][1:], http.StatusOK)
 		} else {
 			fatal(fmt.Errorf("+/- bucket name"))
 		}
 	}
 
 	if opts[4] != "" {
-		make_faas_req1("PUT", "functions/" + fid, http.StatusOK,
-				&swyapi.FunctionUpdate{UserData: &opts[4]}, nil)
+		mod("functions/" + fid, http.StatusOK,
+				&swyapi.FunctionUpdate{UserData: &opts[4]})
 	}
 
 	if opts[7] != "" {
@@ -870,7 +890,7 @@ func function_update(args []string, opts [16]string) {
 		if opts[7] != "-" {
 			ac = opts[7]
 		}
-		make_faas_req1("PUT", "functions/" + fid + "/authctx", http.StatusOK, ac, nil)
+		mod("functions/" + fid + "/authctx", http.StatusOK, ac)
 	}
 
 	if opts[1] != "" || opts[2] != "" {
@@ -888,37 +908,37 @@ func function_update(args []string, opts [16]string) {
 			sz.Rate, sz.Burst = parse_rate(opts[2])
 		}
 
-		make_faas_req1("PUT", "functions/" + fid + "/size", http.StatusOK, &sz, nil)
+		mod("functions/" + fid + "/size", http.StatusOK, &sz)
 	}
 
 	if opts[10] != "" {
 		envs := strings.Split(opts[10], ":")
-		make_faas_req1("PUT", "functions/" + fid + "/env", http.StatusOK, envs, nil)
+		mod("functions/" + fid + "/env", http.StatusOK, envs)
 	}
 
 }
 
 func function_del(args []string, opts [16]string) {
 	args[0], _ = resolve_fn(args[0])
-	make_faas_req1("DELETE", "functions/" + args[0], http.StatusOK, nil, nil)
+	del("functions/" + args[0], http.StatusOK)
 }
 
 func function_on(args []string, opts [16]string) {
 	args[0], _ = resolve_fn(args[0])
-	make_faas_req1("PUT", "functions/" + args[0], http.StatusOK,
-			&swyapi.FunctionUpdate{State: "ready"}, nil)
+	mod("functions/" + args[0], http.StatusOK,
+			&swyapi.FunctionUpdate{State: "ready"})
 }
 
 func function_off(args []string, opts [16]string) {
 	args[0], _ = resolve_fn(args[0])
-	make_faas_req1("PUT", "functions/" + args[0], http.StatusOK,
-			&swyapi.FunctionUpdate{State: "deactivated"}, nil)
+	mod("functions/" + args[0], http.StatusOK,
+			&swyapi.FunctionUpdate{State: "deactivated"})
 }
 
 func event_list(args []string, opts [16]string) {
 	args[0], _ = resolve_fn(args[0])
 	var eds []swyapi.FunctionEvent
-	make_faas_req1("GET", "functions/" + args[0] + "/triggers", http.StatusOK,  nil, &eds)
+	list("functions/" + args[0] + "/triggers", http.StatusOK,  &eds)
 	for _, e := range eds {
 		fmt.Printf("%16s%20s%8s\n", e.Id, e.Name, e.Source)
 	}
@@ -943,7 +963,7 @@ func event_add(args []string, opts [16]string) {
 		}
 	}
 	var ei swyapi.FunctionEvent
-	make_faas_req1("POST", "functions/" + args[0] + "/triggers", http.StatusOK, &e, &ei)
+	add("functions/" + args[0] + "/triggers", http.StatusOK, &e, &ei)
 	fmt.Printf("Event %s created\n", ei.Id)
 }
 
@@ -952,7 +972,7 @@ func event_info(args []string, opts [16]string) {
 	args[0], _ = resolve_fn(args[0])
 	args[1], r = resolve_evt(args[0], args[1])
 	var e swyapi.FunctionEvent
-	make_faas_req1("GET", "functions/" + args[0] + "/triggers/" + args[1], http.StatusOK,  nil, &e)
+	get("functions/" + args[0] + "/triggers/" + args[1], http.StatusOK,  &e)
 	if !r {
 		fmt.Printf("Name:          %s\n", e.Name)
 	}
@@ -973,7 +993,7 @@ func event_info(args []string, opts [16]string) {
 func event_del(args []string, opts [16]string) {
 	args[0], _ = resolve_fn(args[0])
 	args[1], _ = resolve_evt(args[0], args[1])
-	make_faas_req1("DELETE", "functions/" + args[0] + "/triggers/" + args[1], http.StatusOK, nil, nil)
+	del("functions/" + args[0] + "/triggers/" + args[1], http.StatusOK)
 }
 
 func function_wait(args []string, opts [16]string) {
@@ -996,7 +1016,7 @@ func function_wait(args []string, opts [16]string) {
 func function_code(args []string, opts [16]string) {
 	var res swyapi.FunctionSources
 	args[0], _ = resolve_fn(args[0])
-	make_faas_req1("GET", "functions/" + args[0] + "/sources", http.StatusOK, nil, &res)
+	get("functions/" + args[0] + "/sources", http.StatusOK, &res)
 	data, err := base64.StdEncoding.DecodeString(res.Code)
 	if err != nil {
 		fatal(err)
@@ -1013,7 +1033,7 @@ func function_logs(args []string, opts [16]string) {
 		fa = append(fa, "last=" + opts[0])
 	}
 
-	make_faas_req1("GET", url("functions/" + args[0] + "/logs", fa), http.StatusOK, nil, &res)
+	get(url("functions/" + args[0] + "/logs", fa), http.StatusOK, &res)
 
 	for _, le := range res {
 		fmt.Printf("%36s%12s: %s\n", le.Ts, le.Event, le.Text)
@@ -1042,7 +1062,7 @@ func mware_list(args []string, opts [16]string) {
 		}
 	}
 
-	make_faas_req1("GET", url("middleware", ua), http.StatusOK, nil, &mws)
+	list(url("middleware", ua), http.StatusOK, &mws)
 	fmt.Printf("%-32s%-20s%-10s\n", "ID", "NAME", "TYPE")
 	for _, mw := range mws {
 		fmt.Printf("%-32s%-20s%-10s%s\n", mw.ID, mw.Name, mw.Type, strings.Join(mw.Labels, ","))
@@ -1054,7 +1074,7 @@ func mware_info(args []string, opts [16]string) {
 	var r bool
 
 	args[0], r = resolve_mw(args[0])
-	make_faas_req1("GET", "middleware/" + args[0], http.StatusOK, nil, &resp)
+	get("middleware/" + args[0], http.StatusOK, &resp)
 	if !r {
 		fmt.Printf("Name:         %s\n", resp.Name)
 	}
@@ -1076,20 +1096,20 @@ func mware_add(args []string, opts [16]string) {
 	}
 
 	var mi swyapi.MwareInfo
-	make_faas_req1("POST", "middleware", http.StatusOK, &req, &mi)
+	add("middleware", http.StatusOK, &req, &mi)
 	fmt.Printf("Mware %s created\n", mi.ID)
 }
 
 func mware_del(args []string, opts [16]string) {
 	args[0], _ = resolve_mw(args[0])
-	make_faas_req1("DELETE", "middleware/" + args[0], http.StatusOK, nil, nil)
+	del("middleware/" + args[0], http.StatusOK)
 }
 
 func auth_cfg(args []string, opts [16]string) {
 	switch args[0] {
 	case "get", "inf":
 		var auths []*swyapi.AuthInfo
-		make_faas_req1("GET", "auths", http.StatusOK, nil, &auths)
+		list("auths", http.StatusOK, &auths)
 		for _, a := range auths {
 			fmt.Printf("%s (%s)\n", a.Name, a.Id)
 		}
@@ -1100,32 +1120,32 @@ func auth_cfg(args []string, opts [16]string) {
 		if name == "" {
 			name = "simple_auth"
 		}
-		make_faas_req1("POST", "auths", http.StatusOK, &swyapi.AuthAdd { Name: name }, &di)
+		add("auths", http.StatusOK, &swyapi.AuthAdd { Name: name }, &di)
 		fmt.Printf("Created %s auth\n", di.Id)
 
 	case "off":
 		var auths []*swyapi.AuthInfo
-		make_faas_req1("GET", "auths", http.StatusOK, nil, &auths)
+		list("auths", http.StatusOK, &auths)
 		for _, a := range auths {
 			if opts[0] != "" && a.Name != opts[0] {
 				continue
 			}
 
 			fmt.Printf("Shutting down aut %s\n", a.Name)
-			make_faas_req1("DELETE", "auths/" + a.Id, http.StatusOK, nil, nil)
+			del("auths/" + a.Id, http.StatusOK)
 		}
 	}
 }
 
 func deploy_del(args []string, opts [16]string) {
 	args[0], _ = resolve_dep(args[0])
-	make_faas_req1("DELETE", "deployments/" + args[0], http.StatusOK, nil, nil)
+	del("deployments/" + args[0], http.StatusOK)
 }
 
 func deploy_info(args []string, opts [16]string) {
 	var di swyapi.DeployInfo
 	args[0], _ = resolve_dep(args[0])
-	make_faas_req1("GET", "deployments/" + args[0], http.StatusOK, nil, &di)
+	get("deployments/" + args[0], http.StatusOK, &di)
 	fmt.Printf("State:        %s\n", di.State)
 	fmt.Printf("Items:\n")
 	for _, i := range di.Items {
@@ -1141,7 +1161,7 @@ func deploy_list(args []string, opts [16]string) {
 			ua = append(ua, "label=" + l)
 		}
 	}
-	make_faas_req1("GET", url("deployments", ua), http.StatusOK, nil, &dis)
+	list(url("deployments", ua), http.StatusOK, &dis)
 	fmt.Printf("%-32s%-20s\n", "ID", "NAME")
 	for _, di := range dis {
 		fmt.Printf("%-32s%-20s (%d items) %s\n", di.Id, di.Name, len(di.Items), strings.Join(di.Labels, ","))
@@ -1170,13 +1190,13 @@ func deploy_add(args []string, opts [16]string) {
 	}
 
 	var di swyapi.DeployInfo
-	make_faas_req1("POST", "deployments", http.StatusOK, &da, &di)
+	add("deployments", http.StatusOK, &da, &di)
 	fmt.Printf("%s deployment started\n", di.Id)
 }
 
 func router_list(args []string, opts [16]string) {
 	var rts []swyapi.RouterInfo
-	make_faas_req1("GET", "routers", http.StatusOK, nil, &rts)
+	list("routers", http.StatusOK, &rts)
 	for _, rt := range rts {
 		fmt.Printf("%s %12s %s (%s)\n", rt.Id, rt.Name, rt.URL, strings.Join(rt.Labels, ","))
 	}
@@ -1206,18 +1226,18 @@ func router_add(args []string, opts [16]string) {
 		ra.Table = parse_route_table(opts[0])
 	}
 	var ri swyapi.RouterInfo
-	make_faas_req1("POST", "routers", http.StatusOK, &ra, &ri)
+	add("routers", http.StatusOK, &ra, &ri)
 	fmt.Printf("Router %s created\n", ri.Id)
 }
 
 func router_info(args []string, opts [16]string) {
 	args[0], _ = resolve_router(args[0])
 	var ri swyapi.RouterInfo
-	make_faas_req1("GET", "routers/" + args[0], http.StatusOK, nil, &ri)
+	get("routers/" + args[0], http.StatusOK, &ri)
 	fmt.Printf("URL:      %s\n", ri.URL)
 	fmt.Printf("Table:    (%d ents)\n", ri.TLen)
 	var res []*swyapi.RouterEntry
-	make_faas_req1("GET", "routers/" + args[0] + "/table", http.StatusOK, nil, &res)
+	get("routers/" + args[0] + "/table", http.StatusOK, &res)
 	for _, re := range res {
 		fmt.Printf("   %8s /%-32s -> %s\n", re.Method, re.Path, re.Call)
 	}
@@ -1227,13 +1247,13 @@ func router_upd(args []string, opts [16]string) {
 	args[0], _ = resolve_router(args[0])
 	if opts[0] != "" {
 		rt := parse_route_table
-		make_faas_req1("PUT", "routers/" + args[0] + "/table", http.StatusOK, rt, nil)
+		mod("routers/" + args[0] + "/table", http.StatusOK, rt)
 	}
 }
 
 func router_del(args []string, opts [16]string) {
 	args[0], _ = resolve_router(args[0])
-	make_faas_req1("DELETE", "routers/" + args[0], http.StatusOK, nil, nil)
+	del("routers/" + args[0], http.StatusOK)
 }
 
 func repo_list(args []string, opts [16]string) {
@@ -1245,7 +1265,7 @@ func repo_list(args []string, opts [16]string) {
 	if opts[1] != "" {
 		ua = append(ua, "attached=" + opts[1])
 	}
-	make_faas_req1("GET", url("repos", ua), http.StatusOK, nil, &ris)
+	list(url("repos", ua), http.StatusOK, &ris)
 	fmt.Printf("%-32s%-8s%-12s%s\n", "ID", "TYPE", "STATE", "URL")
 	for _, ri := range ris {
 		t := ri.Type
@@ -1281,7 +1301,7 @@ func show_files(pref string, fl []*swyapi.RepoFile, pty string) {
 
 func repo_desc(args []string, opts [16]string) {
 	var d swyapi.RepoDesc
-	make_faas_req1("GET", "repos/" + args[0] + "/desc", http.StatusOK, nil, &d)
+	get("repos/" + args[0] + "/desc", http.StatusOK, &d)
 	fmt.Printf("%s\n", d.Description)
 	for _, e := range d.Entries {
 		fmt.Printf("%s: %s\n", e.Name, e.Description)
@@ -1296,7 +1316,7 @@ func repo_list_files(args []string, opts [16]string) {
 	}
 
 	var fl []*swyapi.RepoFile
-	make_faas_req1("GET", "repos/" + args[0] + "/files", http.StatusOK, nil, &fl)
+	get("repos/" + args[0] + "/files", http.StatusOK, &fl)
 	show_files("", fl, opts[0])
 }
 
@@ -1316,7 +1336,7 @@ func repo_pull(args []string, opts [16]string) {
 
 func repo_info(args []string, opts [16]string) {
 	var ri swyapi.RepoInfo
-	make_faas_req1("GET", "repos/" + args[0], http.StatusOK, nil, &ri)
+	get("repos/" + args[0], http.StatusOK, &ri)
 	fmt.Printf("State:     %s\n", ri.State)
 	fmt.Printf("Type:      %s\n", ri.Type)
 	fmt.Printf("URL:       %s\n", ri.URL)
@@ -1346,7 +1366,7 @@ func repo_add(args []string, opts [16]string) {
 	}
 
 	var ri swyapi.RepoInfo
-	make_faas_req1("POST", "repos", http.StatusOK, &ra, &ri)
+	add("repos", http.StatusOK, &ra, &ri)
 	fmt.Printf("%s repo attached\n", ri.ID)
 }
 
@@ -1359,11 +1379,11 @@ func repo_upd(args []string, opts [16]string) {
 		ra.Pull = &opts[0]
 	}
 
-	make_faas_req1("PUT", "repos/" + args[0], http.StatusOK, &ra, nil)
+	mod("repos/" + args[0], http.StatusOK, &ra)
 }
 
 func repo_del(args []string, opts [16]string) {
-	make_faas_req1("DELETE", "repos/" + args[0], http.StatusOK, nil, nil)
+	del("repos/" + args[0], http.StatusOK)
 }
 
 func acc_list(args []string, opts [16]string) {
@@ -1372,7 +1392,7 @@ func acc_list(args []string, opts [16]string) {
 	if opts[0] != "" {
 		ua = append(ua, "type=" + opts[0])
 	}
-	make_faas_req1("GET", url("accounts", ua), http.StatusOK, nil, &ais)
+	list(url("accounts", ua), http.StatusOK, &ais)
 	fmt.Printf("%-32s%-12s\n", "ID", "TYPE")
 	for _, ai := range ais {
 		fmt.Printf("%-32s%-12s\n", ai["id"], ai["type"])
@@ -1381,7 +1401,7 @@ func acc_list(args []string, opts [16]string) {
 
 func acc_info(args []string, opts [16]string) {
 	var ai map[string]string
-	make_faas_req1("GET", "accounts/" + args[0], http.StatusOK, nil, &ai)
+	get("accounts/" + args[0], http.StatusOK, &ai)
 	fmt.Printf("Type:           %s\n", ai["type"])
 	fmt.Printf("Name:           %s\n", ai["name"])
 	for k, v := range(ai) {
@@ -1411,7 +1431,7 @@ func acc_add(args []string, opts [16]string) {
 	}
 
 	var ai map[string]string
-	make_faas_req1("POST", "accounts", http.StatusOK, &aa, &ai)
+	add("accounts", http.StatusOK, &aa, &ai)
 	fmt.Printf("%s account created\n", ai["id"])
 }
 
@@ -1425,11 +1445,11 @@ func acc_upd(args []string, opts [16]string) {
 		}
 	}
 
-	make_faas_req1("PUT", "accounts/" + args[0], http.StatusOK, &au, nil)
+	mod("accounts/" + args[0], http.StatusOK, &au)
 }
 
 func acc_del(args []string, opts [16]string) {
-	make_faas_req1("DELETE", "accounts/" + args[0], http.StatusOK, nil, nil)
+	del("accounts/" + args[0], http.StatusOK)
 }
 
 func s3_access(args []string, opts [16]string) {
