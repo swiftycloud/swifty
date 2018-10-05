@@ -413,7 +413,15 @@ func handleFunctionRun(ctx context.Context, w http.ResponseWriter, r *http.Reque
 
 	suff := ""
 	if params.Src != nil {
-		suff, cerr = prepareTempRun(ctx, fn, params.Src, w)
+		td, err := tendatGet(ctx, gctx(ctx).Tenant)
+		if err != nil {
+			return GateErrD(err)
+		}
+
+		td.runlock.Lock()
+		defer td.runlock.Unlock()
+
+		suff, cerr = prepareTempRun(ctx, fn, td, params.Src, w)
 		if suff == "" {
 			return cerr
 		}
