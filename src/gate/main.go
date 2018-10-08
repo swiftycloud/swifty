@@ -291,6 +291,7 @@ func main() {
 	}
 
 	glog.Debugf("Flavor: %s", Flavor)
+	glog.Debugf("Proxy: %v", conf.Wdog.Proxy != 0)
 	RtInit()
 
 	err = tracerInit()

@@ -80,8 +80,10 @@ func (fs *FnStats)RunTimeUsec() uint64 {
 	return uint64(fs.RunTime/time.Microsecond)
 }
 
-func getCallStats(ctx context.Context, ten string, periods int) ([]swyapi.TenantStatsFn, *xrest.ReqErr) {
+func getCallStats(ctx context.Context, periods int) ([]swyapi.TenantStatsFn, *xrest.ReqErr) {
 	var cs []swyapi.TenantStatsFn
+
+	ten := gctx(ctx).Tenant
 
 	td, err := tendatGet(ctx, ten)
 	if err != nil {
@@ -200,7 +202,7 @@ func statsStart() *statsOpaque {
 	return sopq
 }
 
-func statsUpdate(fmd *FnMemData, op *statsOpaque, res *swyapi.SwdFunctionRunResult) {
+func statsUpdate(fmd *FnMemData, op *statsOpaque, res *swyapi.WdogFunctionRunResult) {
 	lat := time.Since(op.ts)
 	if op.trace != nil {
 		op.trace["stop"] = lat

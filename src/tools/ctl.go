@@ -857,9 +857,9 @@ func make_args_string(args map[string]string) string {
 }
 
 func run_function(args []string, opts [16]string) {
-	var rres swyapi.SwdFunctionRunResult
+	var rres swyapi.WdogFunctionRunResult
 
-	rq := &swyapi.SwdFunctionRun{}
+	rq := &swyapi.WdogFunctionRun{}
 
 	args[0], _ = resolve_fn(args[0])
 	rq.Args = split_args_string(args[1])

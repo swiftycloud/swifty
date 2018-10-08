@@ -155,7 +155,7 @@ func makeLocalRunner(lang string, tmous int64, suff string) (*Runner, error) {
 	return runner, nil
 }
 
-type buildFn func(*swyapi.SwdFunctionBuild) (*swyapi.SwdFunctionRunResult, error)
+type buildFn func(*swyapi.WdogFunctionBuild) (*swyapi.WdogFunctionRunResult, error)
 
 type LangDesc struct {
 	runner		string
@@ -245,7 +245,7 @@ type RunnerRes struct {
 	Ret	string
 }
 
-func doRun(runner *Runner, body []byte) (*swyapi.SwdFunctionRunResult, error) {
+func doRun(runner *Runner, body []byte) (*swyapi.WdogFunctionRunResult, error) {
 	var err error
 
 	start := time.Now()
@@ -253,19 +253,21 @@ func doRun(runner *Runner, body []byte) (*swyapi.SwdFunctionRunResult, error) {
 	if err != nil {
 		return nil, fmt.Errorf("Can't send args: %s", err.Error())
 	}
+	log.Debugf(">   %d\n", time.Since(start))
 
 	var out RunnerRes
 	err = runner.q.Recv(&out)
+	log.Debugf(">>  %d\n", time.Since(start))
 
-	ret := &swyapi.SwdFunctionRunResult{
+	ret := &swyapi.WdogFunctionRunResult{
 		Stdout: readLines(runner.fin),
 		Stderr: readLines(runner.fine),
 		Time: uint(time.Since(start) / time.Microsecond),
 	}
+	log.Debugf(">>> %d\n", time.Since(start))
 
 	if err == nil {
 		if out.Res == 0 {
-			fmt.Printf("Will report %d\n", out.Status)
 			ret.Code = out.Status
 		} else {
 			ret.Code = -http.StatusInternalServerError
@@ -297,7 +299,7 @@ var glock sync.Mutex
  */
 const goScript = "/go/src/swyrunner/script.go"
 
-func doBuildGo(params *swyapi.SwdFunctionBuild) (*swyapi.SwdFunctionRunResult, error) {
+func doBuildGo(params *swyapi.WdogFunctionBuild) (*swyapi.WdogFunctionRunResult, error) {
 	os.Remove(goScript)
 	srcdir := params.Sources
 	err := os.Symlink("/go/src/swycode/" + srcdir + "/script" + params.Suff + ".go", goScript)
@@ -318,13 +320,13 @@ func doBuildGo(params *swyapi.SwdFunctionBuild) (*swyapi.SwdFunctionRunResult, e
 
 	if err != nil {
 		if exit, code := get_exit_code(err); exit {
-			return &swyapi.SwdFunctionRunResult{Code: code, Stdout: stdout.String(), Stderr: stderr.String()}, nil
+			return &swyapi.WdogFunctionRunResult{Code: code, Stdout: stdout.String(), Stderr: stderr.String()}, nil
 		}
 
 		return nil, fmt.Errorf("Can't build: %s", err.Error())
 	}
 
-	return &swyapi.SwdFunctionRunResult{Code: 0, Stdout: stdout.String(), Stderr: stderr.String()}, nil
+	return &swyapi.WdogFunctionRunResult{Code: 0, Stdout: stdout.String(), Stderr: stderr.String()}, nil
 }
 
 /*
@@ -333,7 +335,7 @@ func doBuildGo(params *swyapi.SwdFunctionBuild) (*swyapi.SwdFunctionRunResult, e
  */
 const swiftScript = "/swift/runner/Sources/script.swift"
 
-func doBuildSwift(params *swyapi.SwdFunctionBuild) (*swyapi.SwdFunctionRunResult, error) {
+func doBuildSwift(params *swyapi.WdogFunctionBuild) (*swyapi.WdogFunctionRunResult, error) {
 	os.Remove(swiftScript)
 	srcdir := params.Sources
 	err := os.Symlink("/swift/swycode/" + srcdir + "/script" + params.Suff + ".swift", swiftScript)
@@ -353,7 +355,7 @@ func doBuildSwift(params *swyapi.SwdFunctionBuild) (*swyapi.SwdFunctionRunResult
 	os.Remove(swiftScript)
 	if err != nil {
 		if exit, code := get_exit_code(err); exit {
-			return &swyapi.SwdFunctionRunResult{Code: code, Stdout: stdout.String(), Stderr: stderr.String()}, nil
+			return &swyapi.WdogFunctionRunResult{Code: code, Stdout: stdout.String(), Stderr: stderr.String()}, nil
 		}
 
 		return nil, fmt.Errorf("Can't build: %s", err.Error())
@@ -364,7 +366,7 @@ func doBuildSwift(params *swyapi.SwdFunctionBuild) (*swyapi.SwdFunctionRunResult
 		return nil, fmt.Errorf("Can't rename binary: %s", err.Error())
 	}
 
-	return &swyapi.SwdFunctionRunResult{Code: 0, Stdout: stdout.String(), Stderr: stderr.String()}, nil
+	return &swyapi.WdogFunctionRunResult{Code: 0, Stdout: stdout.String(), Stderr: stderr.String()}, nil
 }
 
 func handleTry(lang string, tmous int64, w http.ResponseWriter, r *http.Request) {
@@ -384,7 +386,7 @@ func handleTry(lang string, tmous int64, w http.ResponseWriter, r *http.Request)
 
 func handleRun(runner *Runner, w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
-	var result *swyapi.SwdFunctionRunResult
+	var result *swyapi.WdogFunctionRunResult
 
 	code := http.StatusBadRequest
 	body, err := ioutil.ReadAll(r.Body)
@@ -421,8 +423,8 @@ out:
 
 func handleBuild(w http.ResponseWriter, r *http.Request, fn buildFn) {
 	defer r.Body.Close()
-	var params swyapi.SwdFunctionBuild
-	var result *swyapi.SwdFunctionRunResult
+	var params swyapi.WdogFunctionBuild
+	var result *swyapi.WdogFunctionRunResult
 
 	code := http.StatusBadRequest
 	err := xhttp.RReq(r, &params)
@@ -531,6 +533,7 @@ er:
 }
 
 func restartProxy(runner *Runner) {
+	log.Debugf("Stopping %s", runner.p.rkey)
 	runner.q.Close()
 	runner.fin.Close()
 	runner.fine.Close()
@@ -560,6 +563,7 @@ func handleProxy(dir string, w http.ResponseWriter, req *http.Request) {
 		} else {
 			var err error
 
+			log.Debugf("Proxifying %s", rkey)
 			runner, err = makeProxyRunner(dir, rkey)
 			if err != nil {
 				prox_lock.Unlock()

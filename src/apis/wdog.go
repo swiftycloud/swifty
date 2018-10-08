@@ -4,11 +4,11 @@ import (
 	"time"
 )
 
-type SwdFunctionBuild struct {
+type WdogFunctionBuild struct {
 	Sources		string		`json:"sources"`
 	Suff		string		`json:"suff,omitempty"`
 }
 
-func (r *SwdFunctionRunResult)FnTime() time.Duration {
+func (r *WdogFunctionRunResult)FnTime() time.Duration {
 	return time.Duration(r.Time) * time.Microsecond
 }
