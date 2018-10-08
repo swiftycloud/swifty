@@ -26,11 +26,11 @@ func encodeFile(file string) string {
 }
 
 func doRun(cln *swyapi.Client, id string, src *swyapi.FunctionSources) (string, error) {
-	var res swyapi.SwdFunctionRunResult
+	var res swyapi.WdogFunctionRunResult
 
 	fmt.Printf("Running FN (custom code: %v)\n", src != nil)
 	err := cln.Req1("POST", "functions/" + id + "/run", http.StatusOK,
-			&swyapi.SwdFunctionRun {
+			&swyapi.WdogFunctionRun {
 				Args: map[string]string { "name": "xyz" },
 				Src: src,
 			}, &res)

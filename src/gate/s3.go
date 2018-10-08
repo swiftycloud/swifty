@@ -173,7 +173,7 @@ func handleS3Event(ctx context.Context, user string, data []byte) {
 		}
 
 		doRunBg(ctx, &fn, "s3",
-				&swyapi.SwdFunctionRun{Args: map[string]string {
+				&swyapi.WdogFunctionRun{Args: map[string]string {
 					"bucket": evt.Bucket,
 					"object": evt.Object,
 					"op": evt.Op,

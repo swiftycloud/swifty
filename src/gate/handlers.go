@@ -399,8 +399,8 @@ func handleFunctionRun(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	}
 
 	fn := fo.(*FunctionDesc)
-	var params swyapi.SwdFunctionRun
-	var res *swyapi.SwdFunctionRunResult
+	var params swyapi.WdogFunctionRun
+	var res *swyapi.WdogFunctionRunResult
 
 	err := xhttp.RReq(r, &params)
 	if err != nil {
@@ -692,19 +692,17 @@ func handleS3Access(ctx context.Context, w http.ResponseWriter, r *http.Request)
 }
 
 func handleTenantStatsAll(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
-	ten := gctx(ctx).Tenant
-
 	periods := reqPeriods(r.URL.Query())
 
 	var resp swyapi.TenantStatsResp
 	var cerr *xrest.ReqErr
 
-	resp.Stats, cerr = getCallStats(ctx, ten, periods)
+	resp.Stats, cerr = getCallStats(ctx, periods)
 	if cerr != nil {
 		return cerr
 	}
 
-	resp.Mware, cerr = getMwareStats(ctx, ten)
+	resp.Mware, cerr = getMwareStats(ctx)
 	if cerr != nil {
 		return cerr
 	}
@@ -719,7 +717,6 @@ func handleTenantStatsAll(ctx context.Context, w http.ResponseWriter, r *http.Re
 
 func handleTenantStats(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
 	sub := mux.Vars(r)["sub"]
-	ten := gctx(ctx).Tenant
 
 	periods := reqPeriods(r.URL.Query())
 
@@ -728,9 +725,9 @@ func handleTenantStats(ctx context.Context, w http.ResponseWriter, r *http.Reque
 
 	switch sub {
 	case "calls":
-		resp, cerr = getCallStats(ctx, ten, periods)
+		resp, cerr = getCallStats(ctx, periods)
 	case "wmare":
-		resp, cerr = getMwareStats(ctx, ten)
+		resp, cerr = getMwareStats(ctx)
 	case "s3":
 		resp, cerr = getS3Stats(ctx)
 	default:

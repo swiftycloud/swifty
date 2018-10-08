@@ -114,8 +114,8 @@ func (furl *FnURL)Handle(ctx context.Context, w http.ResponseWriter, r *http.Req
 
 func (fmd *FnMemData)Handle(ctx context.Context, w http.ResponseWriter, r *http.Request, sopq *statsOpaque,
 		path, key string) {
-	var args *swyapi.SwdFunctionRun
-	var res *swyapi.SwdFunctionRunResult
+	var args *swyapi.WdogFunctionRun
+	var res *swyapi.WdogFunctionRunResult
 	var err error
 	var code int
 	var conn *podConn

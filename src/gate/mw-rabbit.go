@@ -96,7 +96,7 @@ func mqEvent(ctx context.Context, mwid, queue, userid, data string) {
 
 	for _, fn := range funcs {
 		doRunBg(ctx, fn, "mq",
-				&swyapi.SwdFunctionRun{Body: data})
+				&swyapi.WdogFunctionRun{Body: data})
 	}
 }
 

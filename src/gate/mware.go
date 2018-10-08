@@ -369,8 +369,10 @@ func (item *MwareDesc)toInfo(ctx context.Context, details bool) (*swyapi.MwareIn
 	return resp, nil
 }
 
-func getMwareStats(ctx context.Context, ten string) (map[string]*swyapi.TenantStatsMware, *xrest.ReqErr) {
+func getMwareStats(ctx context.Context) (map[string]*swyapi.TenantStatsMware, *xrest.ReqErr) {
 	var mw MwareDesc
+
+	ten := gctx(ctx).Tenant
 
 	iter := dbIterAll(ctx, bson.M{"tennant": ten}, &mw)
 	defer iter.Close()

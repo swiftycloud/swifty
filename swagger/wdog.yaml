@@ -20,16 +20,16 @@ paths:
           description: An array of command line arguments
           required: false
           schema:
-            $ref: '#/definitions/SwdFunctionRun'
+            $ref: '#/definitions/WdogFunctionRun'
       responses:
         200:
           description: Function finished execution
           schema:
-            $ref: '#/definitions/SwdFunctionRunResult'
+            $ref: '#/definitions/WdogFunctionRunResult'
         400:
           description: Bad request
 definitions:
-  SwdFunctionRun:
+  WdogFunctionRun:
     required:
       - podtoken
     properties:
@@ -44,7 +44,7 @@ definitions:
           example:
             - 'arg1'
             - 'arg2'
-  SwdFunctionRunResult:
+  WdogFunctionRunResult:
     required:
       - code
       - stdout
