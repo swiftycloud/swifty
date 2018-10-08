@@ -1,37 +1,40 @@
 package main
 
 import (
-	"encoding/json"
 	"syscall"
-	"fmt"
 	"os"
+	"fmt"
+	"time"
 	"os/exec"
 	"strconv"
+	"../src/common/xqueue"
 )
 
-func readAndOut(f *os.File) {
+func readLines(f *os.File) string {
 	var ret string
 
 	buf := make([]byte, 512, 512)
 	for {
 		n, _ := f.Read(buf)
 		if n == 0 {
-			fmt.Printf(ret)
-			return
+			return ret
 		}
 		ret += string(buf[:n])
 	}
 }
 
+type RunnerRes struct { 
+	Res     int
+	Status  int
+	Ret     string
+}
+
 func main() {
-	skp, err := syscall.Socketpair(syscall.AF_LOCAL, syscall.SOCK_SEQPACKET, 0)
+	q, err := xqueue.MakeQueue()
 	if err != nil {
-		fmt.Printf("socketpair error: %s", err.Error())
+		fmt.Printf("xqueue error: %s", err.Error())
 		return
 	}
-
-	sk := os.NewFile(uintptr(skp[1]), "q")
-	syscall.CloseOnExec(skp[1])
 
 	oup := make([]int, 2)
 	err = syscall.Pipe(oup)
@@ -41,7 +44,7 @@ func main() {
 	}
 	syscall.SetNonblock(oup[0], true)
 	syscall.CloseOnExec(oup[0])
-	nout := os.NewFile(uintptr(oup[0]), "po")
+	outf := os.NewFile(uintptr(oup[0]), "runner.stdout")
 
 	erp := make([]int, 2)
 	err = syscall.Pipe(erp)
@@ -51,45 +54,55 @@ func main() {
 	}
 	syscall.SetNonblock(erp[0], true)
 	syscall.CloseOnExec(erp[0])
-	nerr := os.NewFile(uintptr(erp[0]), "pe")
+	errf := os.NewFile(uintptr(erp[0]), "runner.stdout")
 
-	njs := exec.Command("node", "runner.js", strconv.Itoa(skp[0]), strconv.Itoa(oup[1]), strconv.Itoa(erp[1]))
+	njs := exec.Command("./x", q.GetId(), strconv.Itoa(oup[1]), strconv.Itoa(erp[1]))
 
 	err = njs.Start()
 	if err != nil {
 		fmt.Printf("Error: %s\n", err.Error())
+		return
 	}
 
-	r := make([]byte, 12)
+	n := time.Now()
+	var d time.Duration
+	for i := 0; i < 1000; i++ {
+		data := map[string]interface{} {
+			"args": map[string]string {
+				"name": "foo",
+			},
+		}
+		var ret RunnerRes
 
-	d, _ := json.Marshal(map[string]string{"foo": "bar", "xxx": "1"})
+		err = q.Send(data)
+		if err != nil {
+			fmt.Printf("error sending: %s\n", err.Error())
+			goto out
+		}
 
-	fmt.Printf("1\n")
-	sk.Write(d)
-	fmt.Printf("1\n")
-	sk.Read(r)
-	fmt.Printf("1\n")
+		err = q.Recv(&ret)
+		if err != nil {
+			fmt.Printf("error recv: %s\n", err.Error())
+			goto out
+		}
 
-	fmt.Printf("Ret: [%s]\n", r)
-	fmt.Printf("Out:\n")
-	readAndOut(nout)
-	fmt.Printf("Err:\n")
-	readAndOut(nerr)
+		if i == 0 {
+			x := readLines(outf)
+			if x != "" {
+				fmt.Printf("[%s]\n", x)
+			}
+			x = readLines(errf)
+			if x != "" {
+				fmt.Printf("[%s]\n", x)
+			}
+			fmt.Printf("%v\n", ret)
+		}
+	}
+	d = time.Since(n)
+	fmt.Printf("%d nsec\n", d)
+	fmt.Printf("%d each\n", d/1000.)
 
-	d, _ = json.Marshal(map[string]string{"fooz": "baz"})
-
-	fmt.Printf("1\n")
-	sk.Write(d)
-	fmt.Printf("1\n")
-	sk.Read(r)
-	fmt.Printf("1\n")
-
-	fmt.Printf("Ret: [%s]\n", r)
-	fmt.Printf("Out:\n")
-	readAndOut(nout)
-	fmt.Printf("Err:\n")
-	readAndOut(nerr)
-
+out:
 	njs.Process.Kill()
 	njs.Wait()
 }
