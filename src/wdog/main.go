@@ -265,7 +265,6 @@ func doRun(runner *Runner, body []byte) (*swyapi.WdogFunctionRunResult, error) {
 
 	if err == nil {
 		if out.Res == 0 {
-			fmt.Printf("Will report %d\n", out.Status)
 			ret.Code = out.Status
 		} else {
 			ret.Code = -http.StatusInternalServerError
@@ -531,6 +530,7 @@ er:
 }
 
 func restartProxy(runner *Runner) {
+	log.Debugf("Stopping %s", runner.p.rkey)
 	runner.q.Close()
 	runner.fin.Close()
 	runner.fine.Close()
@@ -560,6 +560,7 @@ func handleProxy(dir string, w http.ResponseWriter, req *http.Request) {
 		} else {
 			var err error
 
+			log.Debugf("Proxifying %s", rkey)
 			runner, err = makeProxyRunner(dir, rkey)
 			if err != nil {
 				prox_lock.Unlock()
