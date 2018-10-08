@@ -23,7 +23,7 @@ func readLines(f *os.File) string {
 	}
 }
 
-type RunnerRes struct { 
+type RunnerRes struct {
 	Res     int
 	Status  int
 	Ret     string
@@ -66,7 +66,7 @@ func main() {
 
 	n := time.Now()
 	var d time.Duration
-	for i := 0; i < 1000; i++ {
+	for i := 0; i < 20; i++ {
 		data := map[string]interface{} {
 			"args": map[string]string {
 				"name": "foo",
@@ -74,6 +74,7 @@ func main() {
 		}
 		var ret RunnerRes
 
+		n2 := time.Now()
 		err = q.Send(data)
 		if err != nil {
 			fmt.Printf("error sending: %s\n", err.Error())
@@ -86,21 +87,19 @@ func main() {
 			goto out
 		}
 
-		if i == 0 {
-			x := readLines(outf)
-			if x != "" {
-				fmt.Printf("[%s]\n", x)
-			}
-			x = readLines(errf)
-			if x != "" {
-				fmt.Printf("[%s]\n", x)
-			}
-			fmt.Printf("%v\n", ret)
+		x := readLines(outf)
+		if x != "" {
+			fmt.Printf("[%s]\n", x)
 		}
+		x = readLines(errf)
+		if x != "" {
+			fmt.Printf("[%s]\n", x)
+		}
+		fmt.Printf("%v (%d)\n", ret, time.Since(n2))
 	}
 	d = time.Since(n)
 	fmt.Printf("%d nsec\n", d)
-	fmt.Printf("%d each\n", d/1000.)
+	fmt.Printf("%d each\n", d/20.)
 
 out:
 	njs.Process.Kill()

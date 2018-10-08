@@ -253,15 +253,18 @@ func doRun(runner *Runner, body []byte) (*swyapi.WdogFunctionRunResult, error) {
 	if err != nil {
 		return nil, fmt.Errorf("Can't send args: %s", err.Error())
 	}
+	log.Debugf(">   %d\n", time.Since(start))
 
 	var out RunnerRes
 	err = runner.q.Recv(&out)
+	log.Debugf(">>  %d\n", time.Since(start))
 
 	ret := &swyapi.WdogFunctionRunResult{
 		Stdout: readLines(runner.fin),
 		Stderr: readLines(runner.fine),
 		Time: uint(time.Since(start) / time.Microsecond),
 	}
+	log.Debugf(">>> %d\n", time.Since(start))
 
 	if err == nil {
 		if out.Res == 0 {
