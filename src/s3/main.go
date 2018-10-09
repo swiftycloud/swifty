@@ -19,11 +19,11 @@ import (
 	"fmt"
 	"os"
 
-	"./mgo"
-	"../common"
-	"../common/http"
-	"../common/secrets"
-	"../apis/s3"
+	"swifty/s3/mgo"
+	"swifty/common"
+	"swifty/common/http"
+	"swifty/common/secrets"
+	"swifty/apis/s3"
 )
 
 var s3Secrets map[string]string

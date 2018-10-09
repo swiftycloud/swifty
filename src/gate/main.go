@@ -13,12 +13,12 @@ import (
 	"fmt"
 	"os"
 
-	"../apis"
-	"../common"
-	"../common/http"
-	"../common/keystone"
-	"../common/secrets"
-	"../common/xratelimit"
+	"swifty/apis"
+	"swifty/common"
+	"swifty/common/http"
+	"swifty/common/keystone"
+	"swifty/common/secrets"
+	"swifty/common/xratelimit"
 )
 
 var ModeDevel bool

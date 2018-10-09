@@ -4,8 +4,8 @@ import (
 	"sync"
 	"time"
 	"net/http"
-	"../http"
-	"../../apis"
+	"swifty/common/http"
+	"swifty/apis"
 )
 
 const (

@@ -15,10 +15,10 @@ import (
 	"context"
 	"time"
 	"io/ioutil"
-	"../common/http"
-	"../common/xrest"
-	"../common"
-	"../apis"
+	"swifty/common/http"
+	"swifty/common/xrest"
+	"swifty/common"
+	"swifty/apis"
 )
 
 const (

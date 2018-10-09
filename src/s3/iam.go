@@ -6,8 +6,8 @@ import (
 	"context"
 	"time"
 	"fmt"
-	"../common"
-	"./mgo"
+	"swifty/common"
+	"swifty/s3/mgo"
 )
 
 func s3AccountInsert(ctx context.Context, namespace, user string) (*s3mgo.Account, error) {

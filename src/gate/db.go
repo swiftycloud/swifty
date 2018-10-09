@@ -11,10 +11,10 @@ import (
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 
-	"./mgo"
-	"../common"
-	"../apis"
-	"../common/xrest"
+	"swifty/gate/mgo"
+	"swifty/common"
+	"swifty/apis"
+	"swifty/common/xrest"
 )
 
 const (

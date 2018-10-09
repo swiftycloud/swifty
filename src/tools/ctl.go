@@ -12,8 +12,8 @@ import (
 	"fmt"
 	"os"
 
-	"../common"
-	"../apis"
+	"swifty/common"
+	"swifty/apis"
 )
 
 var swyclient *swyapi.Client

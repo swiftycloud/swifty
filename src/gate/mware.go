@@ -9,10 +9,10 @@ import (
 	"context"
 	"errors"
 
-	"../apis"
-	"../common"
-	"../common/crypto"
-	"../common/xrest"
+	"swifty/apis"
+	"swifty/common"
+	"swifty/common/crypto"
+	"swifty/common/xrest"
 )
 
 const (

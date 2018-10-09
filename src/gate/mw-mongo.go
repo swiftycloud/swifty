@@ -5,7 +5,7 @@ import (
 	"context"
 	"errors"
 	"time"
-	"../apis"
+	"swifty/apis"
 )
 
 func mgoDial() (*mgo.Session, error) {

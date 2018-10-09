@@ -4,8 +4,8 @@ import (
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 	"time"
-	"../common"
-	"../apis"
+	"swifty/common"
+	"swifty/apis"
 )
 
 const (

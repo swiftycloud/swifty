@@ -14,11 +14,11 @@ import (
 	"fmt"
 	"errors"
 
-	"../apis"
-	"../common"
-	"../common/http"
-	"../common/keystone"
-	"../common/secrets"
+	"swifty/apis"
+	"swifty/common"
+	"swifty/common/http"
+	"swifty/common/keystone"
+	"swifty/common/secrets"
 )
 
 var admdSecrets map[string]string

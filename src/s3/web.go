@@ -9,8 +9,8 @@ import (
 	"io/ioutil"
 	"encoding/xml"
 	"errors"
-	"./mgo"
-	"../apis/s3"
+	"swifty/s3/mgo"
+	"swifty/apis/s3"
 )
 
 func handleGetWebsite(ctx context.Context, bname string, w http.ResponseWriter, r *http.Request) *S3Error {

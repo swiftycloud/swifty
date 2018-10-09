@@ -9,8 +9,8 @@ import (
 	"net/url"
 	"net/http"
 	"bytes"
-	"../common/xrest"
-	"../apis"
+	"swifty/common/xrest"
+	"swifty/apis"
 )
 
 const (

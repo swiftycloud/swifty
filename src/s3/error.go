@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"fmt"
 
-	"../apis/s3"
+	"swifty/apis/s3"
 )
 
 // Internal type

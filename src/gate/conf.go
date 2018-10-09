@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"errors"
 	"strconv"
-	"../common"
-	"../common/http"
+	"swifty/common"
+	"swifty/common/http"
 )
 
 type YAMLConfWdog struct {

@@ -8,10 +8,10 @@ import (
 	"strings"
 	"io/ioutil"
 
-	"../apis"
-	"../common/http"
-	"../common/xrest"
-	"../common/xratelimit"
+	"swifty/apis"
+	"swifty/common/http"
+	"swifty/common/xrest"
+	"swifty/common/xratelimit"
 )
 
 func makeArgs(sopq *statsOpaque, r *http.Request, path, key string) *swyapi.WdogFunctionRun {

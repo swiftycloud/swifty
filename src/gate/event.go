@@ -7,8 +7,8 @@ import (
 	"net/url"
 	"net/http"
 	"gopkg.in/mgo.v2/bson"
-	"../common/xrest"
-	"../apis"
+	"swifty/common/xrest"
+	"swifty/apis"
 )
 
 type EventOps struct {

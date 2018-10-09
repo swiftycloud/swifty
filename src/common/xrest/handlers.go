@@ -3,7 +3,7 @@ package xrest
 import (
 	"net/http"
 	"context"
-	"../http"
+	"swifty/common/http"
 )
 
 var TraceFn func(context.Context, interface{})

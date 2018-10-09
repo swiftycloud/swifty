@@ -9,8 +9,8 @@ import (
 	"crypto/rand"
 	"fmt"
 
-	"../common/crypto"
-	"./mgo"
+	"swifty/common/crypto"
+	"swifty/s3/mgo"
 )
 
 var AccessKeyLetters = []byte("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")

@@ -5,10 +5,10 @@ import (
 	"net/url"
 	"strings"
 	"context"
-	"../apis"
-	"../common"
-	"../common/http"
-	"../common/xrest"
+	"swifty/apis"
+	"swifty/common"
+	"swifty/common/http"
+	"swifty/common/xrest"
 	"gopkg.in/mgo.v2/bson"
 )
 

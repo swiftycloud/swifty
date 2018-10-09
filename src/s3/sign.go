@@ -13,7 +13,7 @@ import (
 	"sort"
 	"bytes"
 	"fmt"
-	"./mgo"
+	"swifty/s3/mgo"
 )
 
 const (

@@ -10,8 +10,8 @@ import (
 	"net/http"
 	"sync"
 	"container/list"
-	"../apis"
-	"../common/xrest"
+	"swifty/apis"
+	"swifty/common/xrest"
 )
 
 const GateTracerPath = "tracer.sock"

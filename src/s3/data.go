@@ -7,7 +7,7 @@ import (
 	"context"
 	"time"
 	"fmt"
-	"./mgo"
+	"swifty/s3/mgo"
 )
 
 func s3ReadChunks(ctx context.Context, part *s3mgo.ObjectPart) ([]byte, error) {

@@ -1,8 +1,8 @@
 package main
 
 import (
-	"../src/apis"
-	"../src/common"
+	"swifty/apis"
+	"swifty/common"
 	"os"
 	"fmt"
 	"errors"
@@ -85,7 +85,7 @@ func runRepos(cln *swyapi.Client, prj string) error {
 			if stdrep != "" {
 				return errors.New("Duplicate std repo")
 			}
-			stdrep = rep.ID
+			stdrep = rep.Id
 		}
 	}
 

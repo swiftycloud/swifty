@@ -9,9 +9,9 @@ import (
 	"net/http"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
-	"../common"
-	"../apis"
-	"../gate/mgo"
+	"swifty/common"
+	"swifty/apis"
+	"swifty/gate/mgo"
 )
 
 const (

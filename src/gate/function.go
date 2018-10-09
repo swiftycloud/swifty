@@ -11,10 +11,10 @@ import (
 	"context"
 	"gopkg.in/mgo.v2/bson"
 
-	"../apis"
-	"../common/xratelimit"
-	"../common/xwait"
-	"../common/xrest"
+	"swifty/apis"
+	"swifty/common/xratelimit"
+	"swifty/common/xwait"
+	"swifty/common/xrest"
 )
 
 const (

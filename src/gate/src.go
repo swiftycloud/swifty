@@ -13,9 +13,9 @@ import (
 	"encoding/base64"
 	"strconv"
 	"errors"
-	"../common"
-	"../common/xwait"
-	"../apis"
+	"swifty/common"
+	"swifty/common/xwait"
+	"swifty/apis"
 )
 
 func (fn *FunctionDesc)srcRoot() string {

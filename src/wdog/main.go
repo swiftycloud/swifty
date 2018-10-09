@@ -19,10 +19,10 @@ import (
 	"net"
 	"os"
 
-	"../common"
-	"../common/http"
-	"../common/xqueue"
-	"../apis"
+	"swifty/common"
+	"swifty/common/http"
+	"swifty/common/xqueue"
+	"swifty/apis"
 )
 
 type Runner struct {

@@ -8,10 +8,10 @@ import (
 	"net/http"
 	"encoding/json"
 	"gopkg.in/mgo.v2/bson"
-	"../common/http"
-	"../apis"
-	"../apis/s3"
-	"../common/xrest"
+	"swifty/common/http"
+	"swifty/apis"
+	"swifty/apis/s3"
+	"swifty/common/xrest"
 )
 
 type FnEventS3 struct {
