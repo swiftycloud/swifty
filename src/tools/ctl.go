@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"strings"
 	"strconv"
-	"reflect"
 	"regexp"
 	"time"
 	"flag"
@@ -322,7 +321,7 @@ func list_projects(args []string, opts [16]string) {
 	}
 }
 
-func resolve_name(name string, path string, objs interface{}) (string, bool) {
+func resolve_name(name string, path string) (string, bool) {
 	if strings.HasPrefix(name, ":") {
 		return name[1:], false
 	}
@@ -332,48 +331,37 @@ func resolve_name(name string, path string, objs interface{}) (string, bool) {
 		ua = append(ua, "project=" + curProj)
 	}
 
+	var objs []map[string]interface{}
 	ua = append(ua, "name=" + name)
-	swyclient.Req1("GET", url(path, ua), http.StatusOK, nil, objs)
+	swyclient.Req1("GET", url(path, ua), http.StatusOK, nil, &objs)
 
-	items := reflect.ValueOf(objs).Elem()
-	for i := 0; i < items.Len(); i++ {
-		obj := reflect.Indirect(items.Index(i))
-		n := obj.FieldByName("Name").Interface().(string)
-		if n == name {
-			id := obj.FieldByName("Id")
-			if id.IsValid() {
-				return id.Interface().(string), true
-			}
+	for _, obj := range objs {
+		if obj["name"] == name {
+			return obj["id"].(string), true
 		}
 	}
-
 
 	fatal(fmt.Errorf("\tname %s not resolved", name))
 	return "", false
 }
 func resolve_fn(fname string) (string, bool) {
-	var ifo []swyapi.FunctionInfo
-	return resolve_name(fname, "functions", &ifo)
+	return resolve_name(fname, "functions")
 }
 
 func resolve_mw(mname string) (string, bool) {
-	var ifo []swyapi.MwareInfo
-	return resolve_name(mname, "middleware", &ifo)
+	return resolve_name(mname, "middleware")
 }
 
 func resolve_dep(dname string) (string, bool) {
-	var ifo []swyapi.DeployInfo
-	return resolve_name(dname, "deployments", &ifo)
+	return resolve_name(dname, "deployments")
 }
 
 func resolve_router(rname string) (string, bool) {
-	var ifo []swyapi.RouterInfo
-	return resolve_name(rname, "routers", &ifo)
+	return resolve_name(rname, "routers")
 }
 
 func resolve_evt(fnid, name string) (string, bool) {
-	var es []swyapi.FunctionEvent
-	return resolve_name(name, "functions/" + fnid + "/triggers", &es)
+	return resolve_name(name, "functions/" + fnid + "/triggers")
 }
 
 type node struct {
