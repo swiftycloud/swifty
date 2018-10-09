@@ -5,6 +5,7 @@ import (
 	"../src/common"
 	"os"
 	"fmt"
+	"errors"
 	"net/http"
 	"io/ioutil"
 	"encoding/json"
@@ -55,9 +56,59 @@ func doWait(cln *swyapi.Client, id, version string) error {
 	return err
 }
 
+var stdrep string
+
+func runRepos(cln *swyapi.Client, prj string) error {
+	fmt.Printf("Adding GH account\n")
+	var ai map[string]string
+	err := cln.Req1("POST", "accounts", http.StatusOK, map[string]string {
+				"name": "swiftycloud",
+				"type": "github",
+			}, &ai)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("Acc %s created\n", ai["id"])
+	fmt.Printf("Listing repos\n")
+
+	var reps []*swyapi.RepoInfo
+
+	err = cln.Req1("GET", "repos", http.StatusOK, nil, &reps)
+	if err != nil  {
+		return err
+	}
+
+	for _, rep := range reps {
+		fmt.Printf("%s\n", rep.URL)
+		if rep.URL == "https://github.com/swiftycloud/swifty.demo" {
+			if stdrep != "" {
+				return errors.New("Duplicate std repo")
+			}
+			stdrep = rep.ID
+		}
+	}
+
+	fmt.Printf("Found stdrepo %s\n", stdrep)
+	cln.Req1("DELETE", "accounts/" + ai["id"], http.StatusOK, nil, nil)
+
+	return nil
+}
+
 func runFunctions(cln *swyapi.Client, prj string) error {
 	var err error
 	var ifo swyapi.FunctionInfo
+
+	src1 := swyapi.FunctionSources{}
+	if stdrep == "" {
+		fmt.Printf("Using \"code\" source1\n")
+		src1.Type = "code"
+		src1.Code = encodeFile("test/functions/python/helloworld.py")
+	} else {
+		fmt.Printf("Using \"git\" source1\n")
+		src1.Type = "git"
+		src1.Repo = stdrep + "/functions/python/helloworld.py"
+	}
 
 	fmt.Printf("Adding echo FN\n")
 	err = cln.Req1("POST", "functions", http.StatusOK, &swyapi.FunctionAdd {
@@ -66,10 +117,7 @@ func runFunctions(cln *swyapi.Client, prj string) error {
 		Code:		swyapi.FunctionCode {
 			Lang:		"python",
 		},
-		Sources:	swyapi.FunctionSources {
-			Type:	"code",
-			Code:	encodeFile("functions/python/helloworld.py"),
-		},
+		Sources:	src1,
 	}, &ifo)
 	if err != nil {
 		return err
@@ -83,7 +131,7 @@ func runFunctions(cln *swyapi.Client, prj string) error {
 
 	src2 := &swyapi.FunctionSources {
 		Type:	"code",
-		Code:	encodeFile("functions/python/helloworld2.py"),
+		Code:	encodeFile("test/functions/python/helloworld2.py"),
 	}
 
 	_, err = doRun(cln, ifo.Id, src2)
@@ -166,6 +214,7 @@ func mkClient() (*swyapi.Client, string) {
 	swyclient := swyapi.MakeClient(login.User, login.Pass, login.Host, login.Port)
 	swyclient.NoTLS()
 	swyclient.Direct()
+	swyclient.Verbose()
 
 	return swyclient, login.Domn
 }
@@ -176,8 +225,9 @@ type test struct {
 }
 
 var tests = []*test {
+	{ name: "repos",	run: runRepos },
 	{ name: "functions",	run: runFunctions },
-	{ name: "aaas",		run: runAaaS },
+//	{ name: "aaas",		run: runAaaS },
 }
 
 func main() {
@@ -191,6 +241,7 @@ func main() {
 		fmt.Printf("==========================[ %s ]========================\n", t.name)
 		err := t.run(cln, prj)
 		if err != nil {
+			fmt.Printf("Error running test: %s\n", err.Error())
 			fmt.Printf("==================[ FAIL ]=====================\n")
 			break
 		}

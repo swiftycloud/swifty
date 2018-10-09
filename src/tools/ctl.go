@@ -52,63 +52,28 @@ func gateProto() string {
 	}
 }
 
-func make_faas_req1(method, url string, succ int, in interface{}, out interface{}) {
-	err := swyclient.Req1(method, url, succ, in, out)
-	if err != nil {
-		fatal(err)
-	}
-}
-
-func make_faas_req2(method, url string, in interface{}, succ_code int, tmo uint) *http.Response {
-	resp, err := swyclient.Req2(method, url, in, succ_code, tmo)
-	if err != nil {
-		fatal(err)
-	}
-	return resp
-}
-
-func add(url string, succ int, in interface{}, out interface{}) {
-	make_faas_req1("POST", url, succ, in, out)
-}
-
-func list(url string, succ int, out interface{}) {
-	make_faas_req1("GET", url, succ, nil, out)
-}
-
-func get(url string, succ int, out interface{}) {
-	make_faas_req1("GET", url, succ, nil, out)
-}
-
-func mod(url string, succ int, in interface{}) {
-	make_faas_req1("PUT", url, succ, in, nil)
-}
-
-func del(url string, succ int) {
-	make_faas_req1("DELETE", url, succ, nil, nil)
-}
-
 type collection struct {
 	pref	string
 }
 
 func (c collection)add(in, out interface{}) {
-	add(c.pref, http.StatusOK, in, out)
+	swyclient.Add(c.pref, http.StatusOK, in, out)
 }
 
 func (c collection)list(q []string, out interface{}) {
-	list(url(c.pref, q), http.StatusOK, out)
+	swyclient.List(url(c.pref, q), http.StatusOK, out)
 }
 
 func (c collection)get(id string, out interface{}) {
-	get(c.pref + "/" + id, http.StatusOK, out)
+	swyclient.Get(c.pref + "/" + id, http.StatusOK, out)
 }
 
 func (c collection)del(id string) {
-	del(c.pref + "/" + id, http.StatusOK)
+	swyclient.Del(c.pref + "/" + id, http.StatusOK)
 }
 
 func (c collection)prop(id string, pn string, out interface{}) {
-	get(c.pref + "/" + id + "/" + pn, http.StatusOK, out)
+	swyclient.Get(c.pref + "/" + id + "/" + pn, http.StatusOK, out)
 }
 
 func (c collection)set(id string, pn string, in interface{}) {
@@ -116,7 +81,7 @@ func (c collection)set(id string, pn string, in interface{}) {
 	if pn != "" {
 		sfx += "/" + pn
 	}
-	mod(c.pref + sfx, http.StatusOK, in)
+	swyclient.Mod(c.pref + sfx, http.StatusOK, in)
 }
 
 var functions	= collection{"functions"}
@@ -128,7 +93,7 @@ var repos	= collection{"repos"}
 
 func user_list(args []string, opts [16]string) {
 	var uss []swyapi.UserInfo
-	list("users", http.StatusOK, &uss)
+	swyclient.List("users", http.StatusOK, &uss)
 
 	for _, u := range uss {
 		en := ""
@@ -144,12 +109,12 @@ func user_list(args []string, opts [16]string) {
 
 func user_add(args []string, opts [16]string) {
 	var ui swyapi.UserInfo
-	add("users", http.StatusCreated, &swyapi.AddUser{UId: args[0], Pass: opts[1], Name: opts[0]}, &ui)
+	swyclient.Add("users", http.StatusCreated, &swyapi.AddUser{UId: args[0], Pass: opts[1], Name: opts[0]}, &ui)
 	fmt.Printf("%s user created\n", ui.ID)
 }
 
 func user_del(args []string, opts [16]string) {
-	del("users/" + args[0], http.StatusNoContent)
+	swyclient.Del("users/" + args[0], http.StatusNoContent)
 }
 
 func user_enabled(args []string, opts [16]string) {
@@ -162,7 +127,7 @@ func user_enabled(args []string, opts [16]string) {
 		fatal(fmt.Errorf("Bad enable status"))
 	}
 
-	mod("users/" + args[0], http.StatusOK, &swyapi.ModUser{Enabled: &enabled})
+	swyclient.Mod("users/" + args[0], http.StatusOK, &swyapi.ModUser{Enabled: &enabled})
 }
 
 func user_pass(args []string, opts [16]string) {
@@ -172,12 +137,12 @@ func user_pass(args []string, opts [16]string) {
 		rq.CPassword = opts[1]
 	}
 
-	mod("users/" + args[0] + "/pass", http.StatusCreated, rq)
+	swyclient.Mod("users/" + args[0] + "/pass", http.StatusCreated, rq)
 }
 
 func user_info(args []string, opts [16]string) {
 	var ui swyapi.UserInfo
-	get("users/" + args[0], http.StatusOK, &ui)
+	swyclient.Get("users/" + args[0], http.StatusOK, &ui)
 	fmt.Printf("ID:      %s\n", ui.ID)
 	fmt.Printf("Name:    %s\n", ui.Name)
 	fmt.Printf("Roles:   %s\n", strings.Join(ui.Roles, ", "))
@@ -189,7 +154,7 @@ func user_info(args []string, opts [16]string) {
 
 func tplan_list(args []string, opts[16]string) {
 	var plans []*swyapi.PlanLimits
-	list("plans", http.StatusOK, &plans)
+	swyclient.List("plans", http.StatusOK, &plans)
 	for _, p := range(plans) {
 		fmt.Printf("%s/%s:\n", p.Id, p.Name)
 		show_fn_limits(p.Fn)
@@ -204,19 +169,19 @@ func tplan_add(args []string, opts[16]string) {
 	if l.Fn == nil {
 		fatal(fmt.Errorf("No limits"))
 	}
-	add("plans", http.StatusCreated, &l, &l)
+	swyclient.Add("plans", http.StatusCreated, &l, &l)
 	fmt.Printf("%s plan created\n", l.Id)
 }
 
 func tplan_info(args []string, opts[16]string) {
 	var p swyapi.PlanLimits
-	get("plans/" + args[0], http.StatusOK, &p)
+	swyclient.Get("plans/" + args[0], http.StatusOK, &p)
 	fmt.Printf("%s/%s:\n", p.Id, p.Name)
 	show_fn_limits(p.Fn)
 }
 
 func tplan_del(args []string, opts[16]string) {
-	del("plans/" + args[0], http.StatusNoContent)
+	swyclient.Del("plans/" + args[0], http.StatusNoContent)
 }
 
 func user_limits(args []string, opts [16]string) {
@@ -230,9 +195,9 @@ func user_limits(args []string, opts [16]string) {
 
 	if l.Fn != nil || l.PlanId != "" {
 		l.UId = args[0]
-		mod("users/" + args[0] + "/limits", http.StatusOK, &l)
+		swyclient.Mod("users/" + args[0] + "/limits", http.StatusOK, &l)
 	} else {
-		get("users/" + args[0] + "/limits", http.StatusOK, &l)
+		swyclient.Get("users/" + args[0] + "/limits", http.StatusOK, &l)
 		if l.PlanId != "" {
 			fmt.Printf("Plan ID: %s\n", l.PlanId)
 		}
@@ -322,7 +287,7 @@ func show_stats(args []string, opts [16]string) {
 		ua = append(ua, "periods=" + opts[0])
 	}
 
-	get(url("stats", ua), http.StatusOK, &st)
+	swyclient.Get(url("stats", ua), http.StatusOK, &st)
 
 	fmt.Printf("*********** Calls ***********\n")
 	for _, s := range(st.Stats) {
@@ -350,7 +315,7 @@ func show_stats(args []string, opts [16]string) {
 
 func list_projects(args []string, opts [16]string) {
 	var ps []swyapi.ProjectItem
-	make_faas_req1("POST", "project/list", http.StatusOK, swyapi.ProjectList{}, &ps)
+	swyclient.Req1("POST", "project/list", http.StatusOK, swyapi.ProjectList{}, &ps)
 
 	for _, p := range ps {
 		fmt.Printf("%s\n", p.Project)
@@ -368,7 +333,7 @@ func resolve_name(name string, path string, objs interface{}) (string, bool) {
 	}
 
 	ua = append(ua, "name=" + name)
-	make_faas_req1("GET", url(path, ua), http.StatusOK, nil, objs)
+	swyclient.Req1("GET", url(path, ua), http.StatusOK, nil, objs)
 
 	items := reflect.ValueOf(objs).Elem()
 	for i := 0; i < items.Len(); i++ {
@@ -376,10 +341,6 @@ func resolve_name(name string, path string, objs interface{}) (string, bool) {
 		n := obj.FieldByName("Name").Interface().(string)
 		if n == name {
 			id := obj.FieldByName("Id")
-			if id.IsValid() {
-				return id.Interface().(string), true
-			}
-			id = obj.FieldByName("ID")
 			if id.IsValid() {
 				return id.Interface().(string), true
 			}
@@ -482,7 +443,7 @@ func function_tree(args []string, opts [16]string) {
 	if opts[0] != "" {
 		ua = append(ua, "leafs=" + opts[0])
 	}
-	make_faas_req1("GET", url("functions/tree", ua), http.StatusOK, nil, &root)
+	swyclient.Req1("GET", url("functions/tree", ua), http.StatusOK, nil, &root)
 	root.show("")
 }
 
@@ -619,7 +580,7 @@ func function_info(args []string, opts [16]string) {
 	if len(minf) != 0 {
 		fmt.Printf("Mware:\n")
 		for _, mi := range minf {
-			fmt.Printf("\t%20s %-10s(id:%s)\n", mi.Name, mi.Type, mi.ID)
+			fmt.Printf("\t%20s %-10s(id:%s)\n", mi.Name, mi.Type, mi.Id)
 		}
 	}
 
@@ -871,7 +832,7 @@ func run_function(args []string, opts [16]string) {
 		rq.Src = src
 	}
 
-	make_faas_req1("POST", "functions/" + args[0] + "/run", http.StatusOK, rq, &rres)
+	swyclient.Req1("POST", "functions/" + args[0] + "/run", http.StatusOK, rq, &rres)
 
 	fmt.Printf("returned: %s\n", rres.Return)
 	fmt.Printf("%s", rres.Stdout)
@@ -891,9 +852,9 @@ func function_update(args []string, opts [16]string) {
 	if opts[3] != "" {
 		mid, _ := resolve_mw(opts[3][1:])
 		if opts[3][0] == '+' {
-			add("functions/" + fid + "/middleware", http.StatusOK, mid, nil)
+			swyclient.Add("functions/" + fid + "/middleware", http.StatusOK, mid, nil)
 		} else if opts[3][0] == '-' {
-			del("functions/" + fid + "/middleware/" + mid, http.StatusOK)
+			swyclient.Del("functions/" + fid + "/middleware/" + mid, http.StatusOK)
 		} else {
 			fatal(fmt.Errorf("+/- mware name"))
 		}
@@ -901,9 +862,9 @@ func function_update(args []string, opts [16]string) {
 
 	if opts[8] != "" {
 		if opts[8][0] == '+' {
-			add("functions/" + fid + "/s3buckets", http.StatusOK, opts[8][1:], nil)
+			swyclient.Add("functions/" + fid + "/s3buckets", http.StatusOK, opts[8][1:], nil)
 		} else if opts[8][0] == '-' {
-			del("functions/" + fid + "/s3buckets/" + opts[8][1:], http.StatusOK)
+			swyclient.Del("functions/" + fid + "/s3buckets/" + opts[8][1:], http.StatusOK)
 		} else {
 			fatal(fmt.Errorf("+/- bucket name"))
 		}
@@ -911,9 +872,9 @@ func function_update(args []string, opts [16]string) {
 
 	if opts[9] != "" {
 		if opts[9][0] == '+' {
-			add("functions/" + fid + "/accounts", http.StatusOK, opts[9][1:], nil)
+			swyclient.Add("functions/" + fid + "/accounts", http.StatusOK, opts[9][1:], nil)
 		} else if opts[9][0] == '-' {
-			del("functions/" + fid + "/accounts/" + opts[9][1:], http.StatusOK)
+			swyclient.Del("functions/" + fid + "/accounts/" + opts[9][1:], http.StatusOK)
 		} else {
 			fatal(fmt.Errorf("+/- bucket name"))
 		}
@@ -999,7 +960,7 @@ func event_add(args []string, opts [16]string) {
 		}
 	}
 	var ei swyapi.FunctionEvent
-	add("functions/" + args[0] + "/triggers", http.StatusOK, &e, &ei)
+	swyclient.Add("functions/" + args[0] + "/triggers", http.StatusOK, &e, &ei)
 	fmt.Printf("Event %s created\n", ei.Id)
 }
 
@@ -1029,7 +990,7 @@ func event_info(args []string, opts [16]string) {
 func event_del(args []string, opts [16]string) {
 	args[0], _ = resolve_fn(args[0])
 	args[1], _ = resolve_evt(args[0], args[1])
-	del("functions/" + args[0] + "/triggers/" + args[1], http.StatusOK)
+	swyclient.Del("functions/" + args[0] + "/triggers/" + args[1], http.StatusOK)
 }
 
 func function_wait(args []string, opts [16]string) {
@@ -1046,7 +1007,7 @@ func function_wait(args []string, opts [16]string) {
 	}
 
 	args[0], _ = resolve_fn(args[0])
-	make_faas_req2("POST", "functions/" + args[0] + "/wait", &wo, http.StatusOK, 300)
+	swyclient.Req2("POST", "functions/" + args[0] + "/wait", &wo, http.StatusOK, 300)
 }
 
 func function_code(args []string, opts [16]string) {
@@ -1069,7 +1030,7 @@ func function_logs(args []string, opts [16]string) {
 		fa = append(fa, "last=" + opts[0])
 	}
 
-	get(url("functions/" + args[0] + "/logs", fa), http.StatusOK, &res)
+	swyclient.Get(url("functions/" + args[0] + "/logs", fa), http.StatusOK, &res)
 
 	for _, le := range res {
 		fmt.Printf("%36s%12s: %s\n", le.Ts, le.Event, le.Text)
@@ -1101,7 +1062,7 @@ func mware_list(args []string, opts [16]string) {
 	mwares.list(ua, &mws)
 	fmt.Printf("%-32s%-20s%-10s\n", "ID", "NAME", "TYPE")
 	for _, mw := range mws {
-		fmt.Printf("%-32s%-20s%-10s%s\n", mw.ID, mw.Name, mw.Type, strings.Join(mw.Labels, ","))
+		fmt.Printf("%-32s%-20s%-10s%s\n", mw.Id, mw.Name, mw.Type, strings.Join(mw.Labels, ","))
 	}
 }
 
@@ -1133,7 +1094,7 @@ func mware_add(args []string, opts [16]string) {
 
 	var mi swyapi.MwareInfo
 	mwares.add(&req, &mi)
-	fmt.Printf("Mware %s created\n", mi.ID)
+	fmt.Printf("Mware %s created\n", mi.Id)
 }
 
 func mware_del(args []string, opts [16]string) {
@@ -1145,7 +1106,7 @@ func auth_cfg(args []string, opts [16]string) {
 	switch args[0] {
 	case "get", "inf":
 		var auths []*swyapi.AuthInfo
-		list("auths", http.StatusOK, &auths)
+		swyclient.List("auths", http.StatusOK, &auths)
 		for _, a := range auths {
 			fmt.Printf("%s (%s)\n", a.Name, a.Id)
 		}
@@ -1156,19 +1117,19 @@ func auth_cfg(args []string, opts [16]string) {
 		if name == "" {
 			name = "simple_auth"
 		}
-		add("auths", http.StatusOK, &swyapi.AuthAdd { Name: name }, &di)
+		swyclient.Add("auths", http.StatusOK, &swyapi.AuthAdd { Name: name }, &di)
 		fmt.Printf("Created %s auth\n", di.Id)
 
 	case "off":
 		var auths []*swyapi.AuthInfo
-		list("auths", http.StatusOK, &auths)
+		swyclient.List("auths", http.StatusOK, &auths)
 		for _, a := range auths {
 			if opts[0] != "" && a.Name != opts[0] {
 				continue
 			}
 
 			fmt.Printf("Shutting down aut %s\n", a.Name)
-			del("auths/" + a.Id, http.StatusOK)
+			swyclient.Del("auths/" + a.Id, http.StatusOK)
 		}
 	}
 }
@@ -1310,11 +1271,11 @@ func repo_list(args []string, opts [16]string) {
 		}
 
 		url := ri.URL
-		if ri.ID == "" && ri.AccID != "" {
+		if ri.Id == "" && ri.AccID != "" {
 			url += "(" + ri.AccID + ")"
 		}
 
-		fmt.Printf("%-32s%-8s%-12s%s\n", ri.ID, t, ri.State, url)
+		fmt.Printf("%-32s%-8s%-12s%s\n", ri.Id, t, ri.State, url)
 	}
 }
 
@@ -1358,7 +1319,7 @@ func repo_list_files(args []string, opts [16]string) {
 
 func repo_cat_file(args []string, opts [16]string) {
 	p := strings.SplitN(args[0], "/", 2)
-	resp := make_faas_req2("GET", "repos/" + p[0] + "/files/" + p[1], nil, http.StatusOK, 0)
+	resp, _ := swyclient.Req2("GET", "repos/" + p[0] + "/files/" + p[1], nil, http.StatusOK, 0)
 	dat, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		fatal(fmt.Errorf("Can't read file: %s", err.Error()))
@@ -1367,7 +1328,7 @@ func repo_cat_file(args []string, opts [16]string) {
 }
 
 func repo_pull(args []string, opts [16]string) {
-	make_faas_req1("POST", "repos/" + args[0] + "/pull", http.StatusOK, nil, nil)
+	swyclient.Req1("POST", "repos/" + args[0] + "/pull", http.StatusOK, nil, nil)
 }
 
 func repo_info(args []string, opts [16]string) {
@@ -1403,7 +1364,7 @@ func repo_add(args []string, opts [16]string) {
 
 	var ri swyapi.RepoInfo
 	repos.add(&ra, &ri)
-	fmt.Printf("%s repo attached\n", ri.ID)
+	fmt.Printf("%s repo attached\n", ri.Id)
 }
 
 func repo_upd(args []string, opts [16]string) {
@@ -1507,7 +1468,7 @@ func s3_access(args []string, opts [16]string) {
 
 	var creds swyapi.S3Creds
 
-	make_faas_req1("POST", "s3/access", http.StatusOK, acc, &creds)
+	swyclient.Req1("POST", "s3/access", http.StatusOK, acc, &creds)
 
 	fmt.Printf("Endpoint %s\n", creds.Endpoint)
 	fmt.Printf("Key:     %s\n", creds.Key)
@@ -1518,11 +1479,11 @@ func s3_access(args []string, opts [16]string) {
 
 func languages(args []string, opts [16]string) {
 	var ls []string
-	make_faas_req1("GET", "info/langs", http.StatusOK, nil, &ls)
+	swyclient.Req1("GET", "info/langs", http.StatusOK, nil, &ls)
 	for _, l := range(ls) {
 		var li swyapi.LangInfo
 		fmt.Printf("%s\n", l)
-		make_faas_req1("GET", "info/langs/" + l, http.StatusOK, nil , &li)
+		swyclient.Req1("GET", "info/langs/" + l, http.StatusOK, nil , &li)
 		fmt.Printf("\tversion: %s\n", li.Version)
 		fmt.Printf("\tpackages:\n")
 		for _, p := range(li.Packages) {
@@ -1534,7 +1495,7 @@ func languages(args []string, opts [16]string) {
 func mware_types(args []string, opts [16]string) {
 	var r []string
 
-	make_faas_req1("GET", "info/mwares", http.StatusOK, nil, &r)
+	swyclient.Req1("GET", "info/mwares", http.StatusOK, nil, &r)
 	for _, v := range r {
 		fmt.Printf("%s\n", v)
 	}
@@ -1607,6 +1568,8 @@ func mkClient() {
 	if conf.Direct {
 		swyclient.Direct()
 	}
+
+	swyclient.OnError(func(err error) { fatal(err) })
 	swyclient.TokSaver(func(tok string) { conf.Login.Token = tok; save_config() })
 
 	/* Guy can be cached in config */

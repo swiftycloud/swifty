@@ -5,6 +5,7 @@ import (
 	"gopkg.in/mgo.v2/bson"
 
 	"net/http"
+	"net/url"
 	"strings"
 	"context"
 	"time"
@@ -80,49 +81,50 @@ out:
 }
 
 /******************************* PROJECTS *************************************/
+func delAll(ctx context.Context, q url.Values, f xrest.Factory) *xrest.ReqErr {
+	var os []xrest.Obj
+
+	xer := f.Iterate(ctx, q, func(c context.Context, o xrest.Obj) *xrest.ReqErr {
+					os = append(os, o)
+					return nil
+				})
+	if xer != nil {
+		return xer
+	}
+
+	for _, o := range os {
+		xer = o.Del(ctx)
+		if xer != nil {
+			return nil
+		}
+	}
+
+	return nil
+}
+
 func handleProjectDel(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
 	var par swyapi.ProjectDel
-	var fns []*FunctionDesc
-	var mws []*MwareDesc
-	var id *SwoId
-	var ferr *xrest.ReqErr
 
 	err := xhttp.RReq(r, &par)
 	if err != nil {
 		return GateErrE(swyapi.GateBadRequest, err)
 	}
 
-	id = ctxSwoId(ctx, par.Project, "")
+	q := url.Values{"project": []string{"par.Project"}}
 
-	err = dbFindAll(ctx, listReq(ctx, par.Project, []string{}), &fns)
-	if err != nil {
-		return GateErrD(err)
-	}
-	for _, fn := range fns {
-		id.Name = fn.SwoId.Name
-		xerr := removeFunctionId(ctx, id)
-		if xerr != nil {
-			ctxlog(ctx).Error("Funciton removal failed: %s", xerr.Message)
-			ferr = GateErrM(xerr.Code, "Cannot remove " + id.Name + " function: " + xerr.Message)
-		}
+	xer := delAll(ctx, q, Deployments{})
+	if xer != nil {
+		return xer
 	}
 
-	err = dbFindAll(ctx, listReq(ctx, par.Project, []string{}), &mws)
-	if err != nil {
-		return GateErrD(err)
+	xer = delAll(ctx, q, Functions{})
+	if xer != nil {
+		return xer
 	}
 
-	for _, mw := range mws {
-		id.Name = mw.SwoId.Name
-		xerr := mwareRemoveId(ctx, id)
-		if xerr != nil {
-			ctxlog(ctx).Error("Mware removal failed: %s", xerr.Message)
-			ferr = GateErrM(xerr.Code, "Cannot remove " + id.Name + " mware: " + xerr.Message)
-		}
-	}
-
-	if ferr != nil {
-		return ferr
+	xer = delAll(ctx, q, Mwares{})
+	if xer != nil {
+		return xer
 	}
 
 	w.WriteHeader(http.StatusOK)

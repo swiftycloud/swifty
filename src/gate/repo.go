@@ -127,7 +127,7 @@ func (rd *RepoDesc)Info(ctx context.Context, q url.Values, details bool) (interf
 
 func (rd *RepoDesc)toInfo(ctx context.Context, details bool) (*swyapi.RepoInfo, *xrest.ReqErr) {
 	r := &swyapi.RepoInfo {
-		ID:		rd.ObjID.Hex(),
+		Id:		rd.ObjID.Hex(),
 		Type:		rd.Type,
 		URL:		rd.URL(),
 		State:		repStates[rd.State],
