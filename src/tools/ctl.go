@@ -379,10 +379,6 @@ func resolve_name(name string, path string, objs interface{}) (string, bool) {
 			if id.IsValid() {
 				return id.Interface().(string), true
 			}
-			id = obj.FieldByName("ID")
-			if id.IsValid() {
-				return id.Interface().(string), true
-			}
 		}
 	}
 
@@ -619,7 +615,7 @@ func function_info(args []string, opts [16]string) {
 	if len(minf) != 0 {
 		fmt.Printf("Mware:\n")
 		for _, mi := range minf {
-			fmt.Printf("\t%20s %-10s(id:%s)\n", mi.Name, mi.Type, mi.ID)
+			fmt.Printf("\t%20s %-10s(id:%s)\n", mi.Name, mi.Type, mi.Id)
 		}
 	}
 
@@ -1101,7 +1097,7 @@ func mware_list(args []string, opts [16]string) {
 	mwares.list(ua, &mws)
 	fmt.Printf("%-32s%-20s%-10s\n", "ID", "NAME", "TYPE")
 	for _, mw := range mws {
-		fmt.Printf("%-32s%-20s%-10s%s\n", mw.ID, mw.Name, mw.Type, strings.Join(mw.Labels, ","))
+		fmt.Printf("%-32s%-20s%-10s%s\n", mw.Id, mw.Name, mw.Type, strings.Join(mw.Labels, ","))
 	}
 }
 
@@ -1133,7 +1129,7 @@ func mware_add(args []string, opts [16]string) {
 
 	var mi swyapi.MwareInfo
 	mwares.add(&req, &mi)
-	fmt.Printf("Mware %s created\n", mi.ID)
+	fmt.Printf("Mware %s created\n", mi.Id)
 }
 
 func mware_del(args []string, opts [16]string) {
@@ -1310,11 +1306,11 @@ func repo_list(args []string, opts [16]string) {
 		}
 
 		url := ri.URL
-		if ri.ID == "" && ri.AccID != "" {
+		if ri.Id == "" && ri.AccID != "" {
 			url += "(" + ri.AccID + ")"
 		}
 
-		fmt.Printf("%-32s%-8s%-12s%s\n", ri.ID, t, ri.State, url)
+		fmt.Printf("%-32s%-8s%-12s%s\n", ri.Id, t, ri.State, url)
 	}
 }
 
@@ -1403,7 +1399,7 @@ func repo_add(args []string, opts [16]string) {
 
 	var ri swyapi.RepoInfo
 	repos.add(&ra, &ri)
-	fmt.Printf("%s repo attached\n", ri.ID)
+	fmt.Printf("%s repo attached\n", ri.Id)
 }
 
 func repo_upd(args []string, opts [16]string) {

@@ -187,7 +187,7 @@ stalled:
 
 func (item *MwareDesc)toFnInfo(ctx context.Context) *swyapi.MwareInfo {
 	return &swyapi.MwareInfo {
-		ID: item.ObjID.Hex(),
+		Id: item.ObjID.Hex(),
 		Name: item.SwoId.Name,
 		Type: item.MwareType,
 	}
@@ -343,7 +343,7 @@ func (mw *MwareDesc)Upd(ctx context.Context, upd interface{}) *xrest.ReqErr {
 
 func (item *MwareDesc)toInfo(ctx context.Context, details bool) (*swyapi.MwareInfo, *xrest.ReqErr) {
 	resp := &swyapi.MwareInfo{
-		ID:		item.ObjID.Hex(),
+		Id:		item.ObjID.Hex(),
 		Name:		item.SwoId.Name,
 		Project:	item.SwoId.Project,
 		Type:		item.MwareType,

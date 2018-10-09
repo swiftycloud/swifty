@@ -145,7 +145,7 @@ type MwareAdd struct {
 }
 
 type MwareInfo struct {
-	ID		string			`json:"id"`
+	Id		string			`json:"id"`
 	Labels		[]string		`json:"labels,omitempty"`
 	Name		string			`json:"name"`
 	Project		string			`json:"project,omitempty"`
@@ -261,7 +261,7 @@ type RepoUpdate struct {
 }
 
 type RepoInfo struct {
-	ID		string			`json:"id"`
+	Id		string			`json:"id"`
 	Type		string			`json:"type"`
 	URL		string			`json:"url"`
 	State		string			`json:"state"`
