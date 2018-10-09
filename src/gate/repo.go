@@ -64,10 +64,46 @@ type GitHubRepo struct {
 	Private		bool		`json:"private"`
 }
 
+type GitHubPushEvent struct {
+	Repo		*GitHubRepo	`json:"repository"`
+}
+
 type GitHubUser struct {
 	Login		string		`json:"login"`
 }
 
+func githubRepoUpdated(ctx context.Context, r *http.Request) {
+	var params GitHubPushEvent
+
+	err := xhttp.RReq(r, &params)
+	if err != nil {
+		ctxlog(ctx).Errorf("Error decoding GH event: %s", err.Error())
+		return
+	}
+	if params.Repo == nil || params.Repo.URL == "" {
+		ctxlog(ctx).Errorf("Bad GH event: %v", params.Repo)
+		return
+	}
+
+	ctxlog(ctx).Debugf("Repo %s updated", params.Repo.URL)
+	var rds []*RepoDesc
+
+	err = dbFindAll(ctx, bson.M{ "name": params.Repo.URL, }, &rds)
+	if err != nil {
+		ctxlog(ctx).Errorf("Cannot get repos: %s", err.Error())
+		return
+	}
+
+	synced := 0
+
+	for _, rd := range rds {
+		if rd.pullSync(ctx) == nil {
+			synced++
+		}
+	}
+
+	ctxlog(ctx).Debugf("Synced %d repos", synced)
+}
 
 func (rd *RepoDesc)path() string {
 	if rd.Path != "" {

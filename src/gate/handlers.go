@@ -742,3 +742,17 @@ func handleTenantStats(ctx context.Context, w http.ResponseWriter, r *http.Reque
 
 	return xrest.Respond(ctx, w, resp)
 }
+
+func handleGithubEvent(w http.ResponseWriter, r *http.Request) {
+	ev := r.Header.Get("X-Github-Event")
+	switch ev {
+	case "push":
+		go func() {
+			ctx, done := mkContext("::gh-push")
+			githubRepoUpdated(ctx, r)
+			done(ctx)
+		}()
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
