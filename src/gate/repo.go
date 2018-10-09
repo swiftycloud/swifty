@@ -88,7 +88,10 @@ func githubRepoUpdated(ctx context.Context, r *http.Request) {
 	ctxlog(ctx).Debugf("Repo %s updated", params.Repo.URL)
 	var rds []*RepoDesc
 
-	err = dbFindAll(ctx, bson.M{ "name": params.Repo.URL, }, &rds)
+	err = dbFindAll(ctx, bson.M{
+		"name": params.Repo.URL,
+		"pulling": "event",
+	}, &rds)
 	if err != nil {
 		ctxlog(ctx).Errorf("Cannot get repos: %s", err.Error())
 		return
