@@ -329,7 +329,7 @@ func list_projects(args []string, opts [16]string) {
 	}
 }
 
-func resolve_name(name string, path string) (string, bool) {
+func (c collection)resolve(name string) (string, bool) {
 	if strings.HasPrefix(name, ":") {
 		return name[1:], false
 	}
@@ -341,7 +341,8 @@ func resolve_name(name string, path string) (string, bool) {
 
 	var objs []map[string]interface{}
 	ua = append(ua, "name=" + name)
-	swyclient.Req1("GET", url(path, ua), http.StatusOK, nil, &objs)
+
+	c.list(ua, &objs)
 
 	for _, obj := range objs {
 		if obj["name"] == name {
@@ -353,23 +354,23 @@ func resolve_name(name string, path string) (string, bool) {
 	return "", false
 }
 func resolve_fn(fname string) (string, bool) {
-	return resolve_name(fname, "functions")
+	return functions.resolve(fname)
 }
 
 func resolve_mw(mname string) (string, bool) {
-	return resolve_name(mname, "middleware")
+	return mwares.resolve(mname)
 }
 
 func resolve_dep(dname string) (string, bool) {
-	return resolve_name(dname, "deployments")
+	return deployments.resolve(dname)
 }
 
 func resolve_router(rname string) (string, bool) {
-	return resolve_name(rname, "routers")
+	return routers.resolve(rname)
 }
 
 func resolve_evt(fnid, name string) (string, bool) {
-	return resolve_name(name, "functions/" + fnid + "/triggers")
+	return triggers(fnid).resolve(name)
 }
 
 type node struct {
