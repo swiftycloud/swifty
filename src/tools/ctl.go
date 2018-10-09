@@ -52,66 +52,67 @@ func gateProto() string {
 }
 
 type collection struct {
+	cln	*swyapi.Client
 	pref	string
 }
 
-func (c collection)add(in, out interface{}) {
-	swyclient.Add(c.pref, http.StatusOK, in, out)
+func (c *collection)add(in, out interface{}) {
+	c.cln.Add(c.pref, http.StatusOK, in, out)
 }
 
-func (c collection)list(q []string, out interface{}) {
-	swyclient.List(url(c.pref, q), http.StatusOK, out)
+func (c *collection)list(q []string, out interface{}) {
+	c.cln.List(url(c.pref, q), http.StatusOK, out)
 }
 
-func (c collection)get(id string, out interface{}) {
-	swyclient.Get(c.pref + "/" + id, http.StatusOK, out)
+func (c *collection)get(id string, out interface{}) {
+	c.cln.Get(c.pref + "/" + id, http.StatusOK, out)
 }
 
-func (c collection)del(id string) {
-	swyclient.Del(c.pref + "/" + id, http.StatusOK)
+func (c *collection)del(id string) {
+	c.cln.Del(c.pref + "/" + id, http.StatusOK)
 }
 
-func (c collection)prop(id string, pn string, out interface{}) {
-	swyclient.Get(c.pref + "/" + id + "/" + pn, http.StatusOK, out)
+func (c *collection)prop(id string, pn string, out interface{}) {
+	c.cln.Get(c.pref + "/" + id + "/" + pn, http.StatusOK, out)
 }
 
-func (c collection)set(id string, pn string, in interface{}) {
+func (c *collection)set(id string, pn string, in interface{}) {
 	sfx := "/" + id
 	if pn != "" {
 		sfx += "/" + pn
 	}
-	swyclient.Mod(c.pref + sfx, http.StatusOK, in)
+	c.cln.Mod(c.pref + sfx, http.StatusOK, in)
 }
 
-func (c collection)sub(id, name string) collection {
-	return collection{c.pref + "/" + id + "/" + name}
+func (c *collection)sub(id, name string) *collection {
+	return &collection{c.cln, c.pref + "/" + id + "/" + name}
 }
 
-func functions() collection {
-	return collection{"functions"}
+func functions() *collection {
+	return &collection{swyclient, "functions"}
 }
 
-func mwares() collection {
-	return collection{"middleware"}
+func mwares() *collection {
+	return &collection{swyclient, "middleware"}
 }
 
-func deployments() collection {
-	return collection{"deployments"}
+func deployments() *collection {
+	return &collection{swyclient, "deployments"}
 }
 
-func routers() collection {
-	return collection{"routers"}
+func routers() *collection {
+	return &collection{swyclient, "routers"}
 }
 
-func accounts() collection {
-	return collection{"accounts"}
+func accounts() *collection {
+	return &collection{swyclient, "accounts"}
 }
 
-func repos() collection {
-	return collection{"repos"}
+func repos() *collection {
+	return &collection{swyclient, "repos"}
 }
 
-func triggers(fid string) collection {
+func triggers(fid string) *collection {
 	return functions().sub(fid, "triggers")
 }
 
@@ -346,7 +347,7 @@ func list_projects(args []string, opts [16]string) {
 	}
 }
 
-func (c collection)resolve(name string) (string, bool) {
+func (c *collection)resolve(name string) (string, bool) {
 	if strings.HasPrefix(name, ":") {
 		return name[1:], false
 	}
