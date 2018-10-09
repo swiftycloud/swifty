@@ -353,25 +353,6 @@ func (c collection)resolve(name string) (string, bool) {
 	fatal(fmt.Errorf("\tname %s not resolved", name))
 	return "", false
 }
-func resolve_fn(fname string) (string, bool) {
-	return functions.resolve(fname)
-}
-
-func resolve_mw(mname string) (string, bool) {
-	return mwares.resolve(mname)
-}
-
-func resolve_dep(dname string) (string, bool) {
-	return deployments.resolve(dname)
-}
-
-func resolve_router(rname string) (string, bool) {
-	return routers.resolve(rname)
-}
-
-func resolve_evt(fnid, name string) (string, bool) {
-	return triggers(fnid).resolve(name)
-}
 
 type node struct {
 	name	string
@@ -514,7 +495,7 @@ func formatBytes(b uint64) string {
 func function_info(args []string, opts [16]string) {
 	var ifo swyapi.FunctionInfo
 	var r bool
-	args[0], r = resolve_fn(args[0])
+	args[0], r = functions.resolve(args[0])
 	functions.get(args[0], &ifo)
 	ver := ifo.Version
 	if len(ver) > 8 {
@@ -611,7 +592,7 @@ func function_info(args []string, opts [16]string) {
 
 func function_minfo(args []string, opts [16]string) {
 	var ifo swyapi.FunctionMdat
-	args[0], _ = resolve_fn(args[0])
+	args[0], _ = functions.resolve(args[0])
 	functions.prop(args[0], "mdat", &ifo)
 	fmt.Printf("Cookie: %s\n", ifo.Cookie)
 	if len(ifo.RL) != 0 {
@@ -819,7 +800,7 @@ func run_function(args []string, opts [16]string) {
 
 	rq := &swyapi.WdogFunctionRun{}
 
-	args[0], _ = resolve_fn(args[0])
+	args[0], _ = functions.resolve(args[0])
 	rq.Args = split_args_string(args[1])
 
 	if opts[0] != "" {
@@ -837,7 +818,7 @@ func run_function(args []string, opts [16]string) {
 }
 
 func function_update(args []string, opts [16]string) {
-	fid, _ := resolve_fn(args[0])
+	fid, _ := functions.resolve(args[0])
 
 	if opts[0] != "" {
 		var src swyapi.FunctionSources
@@ -847,7 +828,7 @@ func function_update(args []string, opts [16]string) {
 	}
 
 	if opts[3] != "" {
-		mid, _ := resolve_mw(opts[3][1:])
+		mid, _ := mwares.resolve(opts[3][1:])
 		if opts[3][0] == '+' {
 			swyclient.Add("functions/" + fid + "/middleware", http.StatusOK, mid, nil)
 		} else if opts[3][0] == '-' {
@@ -915,22 +896,22 @@ func function_update(args []string, opts [16]string) {
 }
 
 func function_del(args []string, opts [16]string) {
-	args[0], _ = resolve_fn(args[0])
+	args[0], _ = functions.resolve(args[0])
 	functions.del(args[0])
 }
 
 func function_on(args []string, opts [16]string) {
-	args[0], _ = resolve_fn(args[0])
+	args[0], _ = functions.resolve(args[0])
 	functions.set(args[0], "", &swyapi.FunctionUpdate{State: "ready"})
 }
 
 func function_off(args []string, opts [16]string) {
-	args[0], _ = resolve_fn(args[0])
+	args[0], _ = functions.resolve(args[0])
 	functions.set(args[0], "", &swyapi.FunctionUpdate{State: "deactivated"})
 }
 
 func event_list(args []string, opts [16]string) {
-	args[0], _ = resolve_fn(args[0])
+	args[0], _ = functions.resolve(args[0])
 	var eds []swyapi.FunctionEvent
 	triggers(args[0]).list([]string{}, &eds)
 	for _, e := range eds {
@@ -939,7 +920,7 @@ func event_list(args []string, opts [16]string) {
 }
 
 func event_add(args []string, opts [16]string) {
-	args[0], _ = resolve_fn(args[0])
+	args[0], _ = functions.resolve(args[0])
 	e := swyapi.FunctionEvent {
 		Name: args[1],
 		Source: args[2],
@@ -963,8 +944,8 @@ func event_add(args []string, opts [16]string) {
 
 func event_info(args []string, opts [16]string) {
 	var r bool
-	args[0], _ = resolve_fn(args[0])
-	args[1], r = resolve_evt(args[0], args[1])
+	args[0], _ = functions.resolve(args[0])
+	args[1], r = triggers(args[0]).resolve(args[1])
 	var e swyapi.FunctionEvent
 	triggers(args[0]).get(args[1], &e)
 	if !r {
@@ -985,8 +966,8 @@ func event_info(args []string, opts [16]string) {
 }
 
 func event_del(args []string, opts [16]string) {
-	args[0], _ = resolve_fn(args[0])
-	args[1], _ = resolve_evt(args[0], args[1])
+	args[0], _ = functions.resolve(args[0])
+	args[1], _ = triggers(args[0]).resolve(args[1])
 	triggers(args[0]).del(args[1])
 }
 
@@ -1003,13 +984,13 @@ func function_wait(args []string, opts [16]string) {
 		wo.Timeout = uint(t)
 	}
 
-	args[0], _ = resolve_fn(args[0])
+	args[0], _ = functions.resolve(args[0])
 	swyclient.Req2("POST", "functions/" + args[0] + "/wait", &wo, http.StatusOK, 300)
 }
 
 func function_code(args []string, opts [16]string) {
 	var res swyapi.FunctionSources
-	args[0], _ = resolve_fn(args[0])
+	args[0], _ = functions.resolve(args[0])
 	functions.prop(args[0], "sources", &res)
 	data, err := base64.StdEncoding.DecodeString(res.Code)
 	if err != nil {
@@ -1020,7 +1001,7 @@ func function_code(args []string, opts [16]string) {
 
 func function_logs(args []string, opts [16]string) {
 	var res []swyapi.FunctionLogEntry
-	args[0], _ = resolve_fn(args[0])
+	args[0], _ = functions.resolve(args[0])
 
 	fa := []string{}
 	if opts[0] != "" {
@@ -1067,7 +1048,7 @@ func mware_info(args []string, opts [16]string) {
 	var resp swyapi.MwareInfo
 	var r bool
 
-	args[0], r = resolve_mw(args[0])
+	args[0], r = mwares.resolve(args[0])
 	mwares.get(args[0], &resp)
 	if !r {
 		fmt.Printf("Name:         %s\n", resp.Name)
@@ -1095,7 +1076,7 @@ func mware_add(args []string, opts [16]string) {
 }
 
 func mware_del(args []string, opts [16]string) {
-	args[0], _ = resolve_mw(args[0])
+	args[0], _ = mwares.resolve(args[0])
 	mwares.del(args[0])
 }
 
@@ -1132,13 +1113,13 @@ func auth_cfg(args []string, opts [16]string) {
 }
 
 func deploy_del(args []string, opts [16]string) {
-	args[0], _ = resolve_dep(args[0])
+	args[0], _ = deployments.resolve(args[0])
 	deployments.del(args[0])
 }
 
 func deploy_info(args []string, opts [16]string) {
 	var di swyapi.DeployInfo
-	args[0], _ = resolve_dep(args[0])
+	args[0], _ = deployments.resolve(args[0])
 	deployments.get(args[0], &di)
 	fmt.Printf("State:        %s\n", di.State)
 	fmt.Printf("Items:\n")
@@ -1225,7 +1206,7 @@ func router_add(args []string, opts [16]string) {
 }
 
 func router_info(args []string, opts [16]string) {
-	args[0], _ = resolve_router(args[0])
+	args[0], _ = routers.resolve(args[0])
 	var ri swyapi.RouterInfo
 	routers.get(args[0], &ri)
 	fmt.Printf("URL:      %s\n", ri.URL)
@@ -1238,7 +1219,7 @@ func router_info(args []string, opts [16]string) {
 }
 
 func router_upd(args []string, opts [16]string) {
-	args[0], _ = resolve_router(args[0])
+	args[0], _ = routers.resolve(args[0])
 	if opts[0] != "" {
 		rt := parse_route_table
 		routers.set(args[0], "table", rt)
@@ -1246,7 +1227,7 @@ func router_upd(args []string, opts [16]string) {
 }
 
 func router_del(args []string, opts [16]string) {
-	args[0], _ = resolve_router(args[0])
+	args[0], _ = routers.resolve(args[0])
 	routers.del(args[0])
 }
 
