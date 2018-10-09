@@ -90,6 +90,14 @@ var routers	= collection{"routers"}
 var accounts	= collection{"accounts"}
 var repos	= collection{"repos"}
 
+func (c collection)sub(id, name string) collection {
+	return collection{c.pref + "/" + id + "/" + name}
+}
+
+func triggers(fid string) collection {
+	return functions.sub(fid, "triggers")
+}
+
 func user_list(args []string, opts [16]string) {
 	var uss []swyapi.UserInfo
 	swyclient.List("users", http.StatusOK, &uss)
@@ -923,7 +931,7 @@ func function_off(args []string, opts [16]string) {
 func event_list(args []string, opts [16]string) {
 	args[0], _ = resolve_fn(args[0])
 	var eds []swyapi.FunctionEvent
-	functions.prop(args[0], "triggers", &eds)
+	triggers(args[0]).list([]string{}, &eds)
 	for _, e := range eds {
 		fmt.Printf("%16s%20s%8s\n", e.Id, e.Name, e.Source)
 	}
@@ -948,7 +956,7 @@ func event_add(args []string, opts [16]string) {
 		}
 	}
 	var ei swyapi.FunctionEvent
-	swyclient.Add("functions/" + args[0] + "/triggers", http.StatusOK, &e, &ei)
+	triggers(args[0]).add(&e, &ei)
 	fmt.Printf("Event %s created\n", ei.Id)
 }
 
@@ -957,7 +965,7 @@ func event_info(args []string, opts [16]string) {
 	args[0], _ = resolve_fn(args[0])
 	args[1], r = resolve_evt(args[0], args[1])
 	var e swyapi.FunctionEvent
-	functions.prop(args[0], "triggers/" + args[1], &e)
+	triggers(args[0]).get(args[1], &e)
 	if !r {
 		fmt.Printf("Name:          %s\n", e.Name)
 	}
@@ -978,7 +986,7 @@ func event_info(args []string, opts [16]string) {
 func event_del(args []string, opts [16]string) {
 	args[0], _ = resolve_fn(args[0])
 	args[1], _ = resolve_evt(args[0], args[1])
-	swyclient.Del("functions/" + args[0] + "/triggers/" + args[1], http.StatusOK)
+	triggers(args[0]).del(args[1])
 }
 
 func function_wait(args []string, opts [16]string) {
