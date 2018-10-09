@@ -22,6 +22,7 @@ type Client struct {
 	user	string
 	pass	string
 	stok	func(tok string)
+	onerr	func(err error)
 }
 
 func MakeClient(user, pass, addr, port string) *Client {
@@ -38,6 +39,7 @@ func (cln *Client)Token(tok string) { cln.token = tok }
 func (cln *Client)Relay(rly string) { cln.relay = rly }
 func (cln *Client)Verbose() { cln.verb = true }
 func (cln *Client)TokSaver(f func(tok string)) { cln.stok = f }
+func (cln *Client)OnError(f func(err error)) { cln.onerr = f }
 func (cln *Client)Admd(addr, port string) { cln.aaddr = addr; cln.aport = port }
 func (cln *Client)NoTLS() { cln.proto = "http" }
 func (cln *Client)Direct() { cln.direct = true }
@@ -70,7 +72,7 @@ func (cln *Client)endpoint() string {
 	return ep
 }
 
-func (cln *Client)Req3(method, url string, in interface{}, succ_code int, tmo uint) (*http.Response, error) {
+func (cln *Client)req(method, url string, in interface{}, succ_code int, tmo uint) (*http.Response, error) {
 	address := cln.proto + "://" + cln.endpoint() + "/v1/" + url
 
 	h := make(map[string]string)
@@ -113,7 +115,7 @@ func (cln *Client)Req3(method, url string, in interface{}, succ_code int, tmo ui
 }
 
 func (cln *Client)Login() error {
-	resp, err := cln.Req3("POST", "login", UserLogin {
+	resp, err := cln.req("POST", "login", UserLogin {
 			UserName: cln.user, Password: cln.pass,
 		}, http.StatusOK, 0)
 	if err != nil {
@@ -147,9 +149,12 @@ func (cln *Client)Login() error {
 func (cln *Client)Req2(method, url string, in interface{}, succ_code int, tmo uint) (*http.Response, error) {
 	first_attempt := true
 again:
-	resp, err := cln.Req3(method, url, in, succ_code, tmo)
+	resp, err := cln.req(method, url, in, succ_code, tmo)
 	if err != nil {
 		if resp == nil {
+			if cln.onerr != nil {
+				cln.onerr(err)
+			}
 			return nil, err
 		}
 
@@ -158,6 +163,9 @@ again:
 			first_attempt = false
 			err := cln.Login()
 			if err != nil {
+				if cln.onerr != nil {
+					cln.onerr(err)
+				}
 				return nil, err
 			}
 			goto again
@@ -178,6 +186,9 @@ again:
 			err = fmt.Errorf("Bad responce: %s", string(resp.Status))
 		}
 
+		if cln.onerr != nil {
+			cln.onerr(err)
+		}
 		return nil, err
 	}
 
@@ -196,6 +207,9 @@ func (cln *Client)Req1(method, url string, succ int, in interface{}, out interfa
 	if out != nil {
 		err := xhttp.RResp(resp, out)
 		if err != nil {
+			if cln.onerr != nil {
+				cln.onerr(err)
+			}
 			return err
 		}
 

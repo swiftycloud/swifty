@@ -52,39 +52,24 @@ func gateProto() string {
 	}
 }
 
-func make_faas_req1(method, url string, succ int, in interface{}, out interface{}) {
-	err := swyclient.Req1(method, url, succ, in, out)
-	if err != nil {
-		fatal(err)
-	}
-}
-
-func make_faas_req2(method, url string, in interface{}, succ_code int, tmo uint) *http.Response {
-	resp, err := swyclient.Req2(method, url, in, succ_code, tmo)
-	if err != nil {
-		fatal(err)
-	}
-	return resp
-}
-
 func add(url string, succ int, in interface{}, out interface{}) {
-	make_faas_req1("POST", url, succ, in, out)
+	swyclient.Req1("POST", url, succ, in, out)
 }
 
 func list(url string, succ int, out interface{}) {
-	make_faas_req1("GET", url, succ, nil, out)
+	swyclient.Req1("GET", url, succ, nil, out)
 }
 
 func get(url string, succ int, out interface{}) {
-	make_faas_req1("GET", url, succ, nil, out)
+	swyclient.Req1("GET", url, succ, nil, out)
 }
 
 func mod(url string, succ int, in interface{}) {
-	make_faas_req1("PUT", url, succ, in, nil)
+	swyclient.Req1("PUT", url, succ, in, nil)
 }
 
 func del(url string, succ int) {
-	make_faas_req1("DELETE", url, succ, nil, nil)
+	swyclient.Req1("DELETE", url, succ, nil, nil)
 }
 
 type collection struct {
@@ -350,7 +335,7 @@ func show_stats(args []string, opts [16]string) {
 
 func list_projects(args []string, opts [16]string) {
 	var ps []swyapi.ProjectItem
-	make_faas_req1("POST", "project/list", http.StatusOK, swyapi.ProjectList{}, &ps)
+	swyclient.Req1("POST", "project/list", http.StatusOK, swyapi.ProjectList{}, &ps)
 
 	for _, p := range ps {
 		fmt.Printf("%s\n", p.Project)
@@ -368,7 +353,7 @@ func resolve_name(name string, path string, objs interface{}) (string, bool) {
 	}
 
 	ua = append(ua, "name=" + name)
-	make_faas_req1("GET", url(path, ua), http.StatusOK, nil, objs)
+	swyclient.Req1("GET", url(path, ua), http.StatusOK, nil, objs)
 
 	items := reflect.ValueOf(objs).Elem()
 	for i := 0; i < items.Len(); i++ {
@@ -478,7 +463,7 @@ func function_tree(args []string, opts [16]string) {
 	if opts[0] != "" {
 		ua = append(ua, "leafs=" + opts[0])
 	}
-	make_faas_req1("GET", url("functions/tree", ua), http.StatusOK, nil, &root)
+	swyclient.Req1("GET", url("functions/tree", ua), http.StatusOK, nil, &root)
 	root.show("")
 }
 
@@ -867,7 +852,7 @@ func run_function(args []string, opts [16]string) {
 		rq.Src = src
 	}
 
-	make_faas_req1("POST", "functions/" + args[0] + "/run", http.StatusOK, rq, &rres)
+	swyclient.Req1("POST", "functions/" + args[0] + "/run", http.StatusOK, rq, &rres)
 
 	fmt.Printf("returned: %s\n", rres.Return)
 	fmt.Printf("%s", rres.Stdout)
@@ -1042,7 +1027,7 @@ func function_wait(args []string, opts [16]string) {
 	}
 
 	args[0], _ = resolve_fn(args[0])
-	make_faas_req2("POST", "functions/" + args[0] + "/wait", &wo, http.StatusOK, 300)
+	swyclient.Req2("POST", "functions/" + args[0] + "/wait", &wo, http.StatusOK, 300)
 }
 
 func function_code(args []string, opts [16]string) {
@@ -1354,7 +1339,7 @@ func repo_list_files(args []string, opts [16]string) {
 
 func repo_cat_file(args []string, opts [16]string) {
 	p := strings.SplitN(args[0], "/", 2)
-	resp := make_faas_req2("GET", "repos/" + p[0] + "/files/" + p[1], nil, http.StatusOK, 0)
+	resp, _ := swyclient.Req2("GET", "repos/" + p[0] + "/files/" + p[1], nil, http.StatusOK, 0)
 	dat, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		fatal(fmt.Errorf("Can't read file: %s", err.Error()))
@@ -1363,7 +1348,7 @@ func repo_cat_file(args []string, opts [16]string) {
 }
 
 func repo_pull(args []string, opts [16]string) {
-	make_faas_req1("POST", "repos/" + args[0] + "/pull", http.StatusOK, nil, nil)
+	swyclient.Req1("POST", "repos/" + args[0] + "/pull", http.StatusOK, nil, nil)
 }
 
 func repo_info(args []string, opts [16]string) {
@@ -1503,7 +1488,7 @@ func s3_access(args []string, opts [16]string) {
 
 	var creds swyapi.S3Creds
 
-	make_faas_req1("POST", "s3/access", http.StatusOK, acc, &creds)
+	swyclient.Req1("POST", "s3/access", http.StatusOK, acc, &creds)
 
 	fmt.Printf("Endpoint %s\n", creds.Endpoint)
 	fmt.Printf("Key:     %s\n", creds.Key)
@@ -1514,11 +1499,11 @@ func s3_access(args []string, opts [16]string) {
 
 func languages(args []string, opts [16]string) {
 	var ls []string
-	make_faas_req1("GET", "info/langs", http.StatusOK, nil, &ls)
+	swyclient.Req1("GET", "info/langs", http.StatusOK, nil, &ls)
 	for _, l := range(ls) {
 		var li swyapi.LangInfo
 		fmt.Printf("%s\n", l)
-		make_faas_req1("GET", "info/langs/" + l, http.StatusOK, nil , &li)
+		swyclient.Req1("GET", "info/langs/" + l, http.StatusOK, nil , &li)
 		fmt.Printf("\tversion: %s\n", li.Version)
 		fmt.Printf("\tpackages:\n")
 		for _, p := range(li.Packages) {
@@ -1530,7 +1515,7 @@ func languages(args []string, opts [16]string) {
 func mware_types(args []string, opts [16]string) {
 	var r []string
 
-	make_faas_req1("GET", "info/mwares", http.StatusOK, nil, &r)
+	swyclient.Req1("GET", "info/mwares", http.StatusOK, nil, &r)
 	for _, v := range r {
 		fmt.Printf("%s\n", v)
 	}
@@ -1603,6 +1588,8 @@ func mkClient() {
 	if conf.Direct {
 		swyclient.Direct()
 	}
+
+	swyclient.OnError(func(err error) { fatal(err) })
 	swyclient.TokSaver(func(tok string) { conf.Login.Token = tok; save_config() })
 
 	/* Guy can be cached in config */
