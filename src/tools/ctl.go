@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"strings"
 	"strconv"
-	"reflect"
 	"regexp"
 	"time"
 	"flag"
@@ -90,6 +89,14 @@ var deployments	= collection{"deployments"}
 var routers	= collection{"routers"}
 var accounts	= collection{"accounts"}
 var repos	= collection{"repos"}
+
+func (c collection)sub(id, name string) collection {
+	return collection{c.pref + "/" + id + "/" + name}
+}
+
+func triggers(fid string) collection {
+	return functions.sub(fid, "triggers")
+}
 
 func user_list(args []string, opts [16]string) {
 	var uss []swyapi.UserInfo
@@ -322,7 +329,7 @@ func list_projects(args []string, opts [16]string) {
 	}
 }
 
-func resolve_name(name string, path string, objs interface{}) (string, bool) {
+func (c collection)resolve(name string) (string, bool) {
 	if strings.HasPrefix(name, ":") {
 		return name[1:], false
 	}
@@ -332,48 +339,19 @@ func resolve_name(name string, path string, objs interface{}) (string, bool) {
 		ua = append(ua, "project=" + curProj)
 	}
 
+	var objs []map[string]interface{}
 	ua = append(ua, "name=" + name)
-	swyclient.Req1("GET", url(path, ua), http.StatusOK, nil, objs)
 
-	items := reflect.ValueOf(objs).Elem()
-	for i := 0; i < items.Len(); i++ {
-		obj := reflect.Indirect(items.Index(i))
-		n := obj.FieldByName("Name").Interface().(string)
-		if n == name {
-			id := obj.FieldByName("Id")
-			if id.IsValid() {
-				return id.Interface().(string), true
-			}
+	c.list(ua, &objs)
+
+	for _, obj := range objs {
+		if obj["name"] == name {
+			return obj["id"].(string), true
 		}
 	}
 
-
 	fatal(fmt.Errorf("\tname %s not resolved", name))
 	return "", false
-}
-func resolve_fn(fname string) (string, bool) {
-	var ifo []swyapi.FunctionInfo
-	return resolve_name(fname, "functions", &ifo)
-}
-
-func resolve_mw(mname string) (string, bool) {
-	var ifo []swyapi.MwareInfo
-	return resolve_name(mname, "middleware", &ifo)
-}
-
-func resolve_dep(dname string) (string, bool) {
-	var ifo []swyapi.DeployInfo
-	return resolve_name(dname, "deployments", &ifo)
-}
-
-func resolve_router(rname string) (string, bool) {
-	var ifo []swyapi.RouterInfo
-	return resolve_name(rname, "routers", &ifo)
-}
-
-func resolve_evt(fnid, name string) (string, bool) {
-	var es []swyapi.FunctionEvent
-	return resolve_name(name, "functions/" + fnid + "/triggers", &es)
 }
 
 type node struct {
@@ -517,7 +495,7 @@ func formatBytes(b uint64) string {
 func function_info(args []string, opts [16]string) {
 	var ifo swyapi.FunctionInfo
 	var r bool
-	args[0], r = resolve_fn(args[0])
+	args[0], r = functions.resolve(args[0])
 	functions.get(args[0], &ifo)
 	ver := ifo.Version
 	if len(ver) > 8 {
@@ -614,7 +592,7 @@ func function_info(args []string, opts [16]string) {
 
 func function_minfo(args []string, opts [16]string) {
 	var ifo swyapi.FunctionMdat
-	args[0], _ = resolve_fn(args[0])
+	args[0], _ = functions.resolve(args[0])
 	functions.prop(args[0], "mdat", &ifo)
 	fmt.Printf("Cookie: %s\n", ifo.Cookie)
 	if len(ifo.RL) != 0 {
@@ -822,7 +800,7 @@ func run_function(args []string, opts [16]string) {
 
 	rq := &swyapi.WdogFunctionRun{}
 
-	args[0], _ = resolve_fn(args[0])
+	args[0], _ = functions.resolve(args[0])
 	rq.Args = split_args_string(args[1])
 
 	if opts[0] != "" {
@@ -840,7 +818,7 @@ func run_function(args []string, opts [16]string) {
 }
 
 func function_update(args []string, opts [16]string) {
-	fid, _ := resolve_fn(args[0])
+	fid, _ := functions.resolve(args[0])
 
 	if opts[0] != "" {
 		var src swyapi.FunctionSources
@@ -850,7 +828,7 @@ func function_update(args []string, opts [16]string) {
 	}
 
 	if opts[3] != "" {
-		mid, _ := resolve_mw(opts[3][1:])
+		mid, _ := mwares.resolve(opts[3][1:])
 		if opts[3][0] == '+' {
 			swyclient.Add("functions/" + fid + "/middleware", http.StatusOK, mid, nil)
 		} else if opts[3][0] == '-' {
@@ -918,31 +896,31 @@ func function_update(args []string, opts [16]string) {
 }
 
 func function_del(args []string, opts [16]string) {
-	args[0], _ = resolve_fn(args[0])
+	args[0], _ = functions.resolve(args[0])
 	functions.del(args[0])
 }
 
 func function_on(args []string, opts [16]string) {
-	args[0], _ = resolve_fn(args[0])
+	args[0], _ = functions.resolve(args[0])
 	functions.set(args[0], "", &swyapi.FunctionUpdate{State: "ready"})
 }
 
 func function_off(args []string, opts [16]string) {
-	args[0], _ = resolve_fn(args[0])
+	args[0], _ = functions.resolve(args[0])
 	functions.set(args[0], "", &swyapi.FunctionUpdate{State: "deactivated"})
 }
 
 func event_list(args []string, opts [16]string) {
-	args[0], _ = resolve_fn(args[0])
+	args[0], _ = functions.resolve(args[0])
 	var eds []swyapi.FunctionEvent
-	functions.prop(args[0], "triggers", &eds)
+	triggers(args[0]).list([]string{}, &eds)
 	for _, e := range eds {
 		fmt.Printf("%16s%20s%8s\n", e.Id, e.Name, e.Source)
 	}
 }
 
 func event_add(args []string, opts [16]string) {
-	args[0], _ = resolve_fn(args[0])
+	args[0], _ = functions.resolve(args[0])
 	e := swyapi.FunctionEvent {
 		Name: args[1],
 		Source: args[2],
@@ -960,16 +938,16 @@ func event_add(args []string, opts [16]string) {
 		}
 	}
 	var ei swyapi.FunctionEvent
-	swyclient.Add("functions/" + args[0] + "/triggers", http.StatusOK, &e, &ei)
+	triggers(args[0]).add(&e, &ei)
 	fmt.Printf("Event %s created\n", ei.Id)
 }
 
 func event_info(args []string, opts [16]string) {
 	var r bool
-	args[0], _ = resolve_fn(args[0])
-	args[1], r = resolve_evt(args[0], args[1])
+	args[0], _ = functions.resolve(args[0])
+	args[1], r = triggers(args[0]).resolve(args[1])
 	var e swyapi.FunctionEvent
-	functions.prop(args[0], "triggers/" + args[1], &e)
+	triggers(args[0]).get(args[1], &e)
 	if !r {
 		fmt.Printf("Name:          %s\n", e.Name)
 	}
@@ -988,9 +966,9 @@ func event_info(args []string, opts [16]string) {
 }
 
 func event_del(args []string, opts [16]string) {
-	args[0], _ = resolve_fn(args[0])
-	args[1], _ = resolve_evt(args[0], args[1])
-	swyclient.Del("functions/" + args[0] + "/triggers/" + args[1], http.StatusOK)
+	args[0], _ = functions.resolve(args[0])
+	args[1], _ = triggers(args[0]).resolve(args[1])
+	triggers(args[0]).del(args[1])
 }
 
 func function_wait(args []string, opts [16]string) {
@@ -1006,13 +984,13 @@ func function_wait(args []string, opts [16]string) {
 		wo.Timeout = uint(t)
 	}
 
-	args[0], _ = resolve_fn(args[0])
+	args[0], _ = functions.resolve(args[0])
 	swyclient.Req2("POST", "functions/" + args[0] + "/wait", &wo, http.StatusOK, 300)
 }
 
 func function_code(args []string, opts [16]string) {
 	var res swyapi.FunctionSources
-	args[0], _ = resolve_fn(args[0])
+	args[0], _ = functions.resolve(args[0])
 	functions.prop(args[0], "sources", &res)
 	data, err := base64.StdEncoding.DecodeString(res.Code)
 	if err != nil {
@@ -1023,7 +1001,7 @@ func function_code(args []string, opts [16]string) {
 
 func function_logs(args []string, opts [16]string) {
 	var res []swyapi.FunctionLogEntry
-	args[0], _ = resolve_fn(args[0])
+	args[0], _ = functions.resolve(args[0])
 
 	fa := []string{}
 	if opts[0] != "" {
@@ -1070,7 +1048,7 @@ func mware_info(args []string, opts [16]string) {
 	var resp swyapi.MwareInfo
 	var r bool
 
-	args[0], r = resolve_mw(args[0])
+	args[0], r = mwares.resolve(args[0])
 	mwares.get(args[0], &resp)
 	if !r {
 		fmt.Printf("Name:         %s\n", resp.Name)
@@ -1098,7 +1076,7 @@ func mware_add(args []string, opts [16]string) {
 }
 
 func mware_del(args []string, opts [16]string) {
-	args[0], _ = resolve_mw(args[0])
+	args[0], _ = mwares.resolve(args[0])
 	mwares.del(args[0])
 }
 
@@ -1135,13 +1113,13 @@ func auth_cfg(args []string, opts [16]string) {
 }
 
 func deploy_del(args []string, opts [16]string) {
-	args[0], _ = resolve_dep(args[0])
+	args[0], _ = deployments.resolve(args[0])
 	deployments.del(args[0])
 }
 
 func deploy_info(args []string, opts [16]string) {
 	var di swyapi.DeployInfo
-	args[0], _ = resolve_dep(args[0])
+	args[0], _ = deployments.resolve(args[0])
 	deployments.get(args[0], &di)
 	fmt.Printf("State:        %s\n", di.State)
 	fmt.Printf("Items:\n")
@@ -1228,7 +1206,7 @@ func router_add(args []string, opts [16]string) {
 }
 
 func router_info(args []string, opts [16]string) {
-	args[0], _ = resolve_router(args[0])
+	args[0], _ = routers.resolve(args[0])
 	var ri swyapi.RouterInfo
 	routers.get(args[0], &ri)
 	fmt.Printf("URL:      %s\n", ri.URL)
@@ -1241,7 +1219,7 @@ func router_info(args []string, opts [16]string) {
 }
 
 func router_upd(args []string, opts [16]string) {
-	args[0], _ = resolve_router(args[0])
+	args[0], _ = routers.resolve(args[0])
 	if opts[0] != "" {
 		rt := parse_route_table
 		routers.set(args[0], "table", rt)
@@ -1249,7 +1227,7 @@ func router_upd(args []string, opts [16]string) {
 }
 
 func router_del(args []string, opts [16]string) {
-	args[0], _ = resolve_router(args[0])
+	args[0], _ = routers.resolve(args[0])
 	routers.del(args[0])
 }
 
