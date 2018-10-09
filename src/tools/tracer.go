@@ -6,7 +6,7 @@ import (
 	"sort"
 	"os"
 	"fmt"
-	"../apis"
+	"swifty/apis"
 )
 
 func tracerConnect(id, addr string) (*net.UnixConn, error) {

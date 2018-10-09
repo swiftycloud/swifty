@@ -1,7 +1,7 @@
 package s3mgo
 
 import (
-	"../../common"
+	"swifty/common"
 	"strconv"
 )
 

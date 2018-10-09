@@ -1,7 +1,7 @@
 package swyapi
 
 import (
-	"../common/xrest"
+	"swifty/common/xrest"
 )
 
 const (

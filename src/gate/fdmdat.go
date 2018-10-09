@@ -4,8 +4,8 @@ import (
 	"sync"
 	"time"
 	"context"
-	"../common/xratelimit"
-	"../apis"
+	"swifty/common/xratelimit"
+	"swifty/apis"
 	"gopkg.in/mgo.v2/bson"
 )
 

@@ -1,7 +1,7 @@
 package main
 
 import (
-	"./mgo"
+	"swifty/s3/mgo"
 )
 
 // Effect element

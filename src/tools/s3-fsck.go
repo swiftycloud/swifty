@@ -7,7 +7,7 @@ import (
 	"strings"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
-	"../s3/mgo"
+	"swifty/s3/mgo"
 )
 
 const (

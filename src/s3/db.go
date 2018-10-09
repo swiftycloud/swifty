@@ -8,8 +8,8 @@ import (
 	"reflect"
 	"time"
 	"fmt"
-	"../common"
-	"./mgo"
+	"swifty/common"
+	"swifty/s3/mgo"
 )
 
 var dbColMap map[reflect.Type]string

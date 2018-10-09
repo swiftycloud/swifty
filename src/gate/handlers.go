@@ -10,11 +10,11 @@ import (
 	"context"
 	"time"
 
-	"../apis"
-	"../common"
-	"../common/http"
-	"../common/xrest"
-	"../common/keystone"
+	"swifty/apis"
+	"swifty/common"
+	"swifty/common/http"
+	"swifty/common/xrest"
+	"swifty/common/keystone"
 )
 
 type gateGenReq func(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr

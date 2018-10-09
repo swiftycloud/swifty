@@ -3,8 +3,8 @@ package main
 import (
 	"strings"
 	"context"
-	"../common/http"
-	"../apis"
+	"swifty/common/http"
+	"swifty/apis"
 )
 
 func InitPostgres(ctx context.Context, mwd *MwareDesc) (error) {

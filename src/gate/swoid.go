@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"../common"
+	"swifty/common"
 )
 
 type SwoId struct {

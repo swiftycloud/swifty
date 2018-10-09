@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	"gopkg.in/mgo.v2/bson"
-	"./mgo"
+	"swifty/s3/mgo"
 )
 
 func StatsAcct(ctx context.Context, nsid string, upd bson.M) error {

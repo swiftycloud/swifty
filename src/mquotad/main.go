@@ -7,8 +7,8 @@ import (
 	"flag"
 	"time"
 	"os"
-	"../common"
-	"../common/secrets"
+	"swifty/common"
+	"swifty/common/secrets"
 )
 
 var zcfg zap.Config = zap.Config {

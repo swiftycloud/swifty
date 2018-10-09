@@ -4,9 +4,9 @@ import (
 	"net/http"
 	"fmt"
 	"encoding/json"
-	"../apis"
-	"../common"
-	"../common/keystone"
+	"swifty/apis"
+	"swifty/common"
+	"swifty/common/keystone"
 	"time"
 )
 

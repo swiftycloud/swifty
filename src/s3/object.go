@@ -6,8 +6,8 @@ import (
 	"context"
 	"time"
 
-	"../apis/s3"
-	"./mgo"
+	"swifty/apis/s3"
+	"swifty/s3/mgo"
 )
 
 var ObjectAcls = []string {

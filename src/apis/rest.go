@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"fmt"
 	"encoding/json"
-	"../common/http"
-	"../common/xrest"
+	"swifty/common/http"
+	"swifty/common/xrest"
 )
 
 type Client struct {

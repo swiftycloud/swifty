@@ -7,9 +7,9 @@ import (
 	"encoding/json"
 	"strings"
 	"fmt"
-	"./mgo"
-	"../common"
-	"../apis/s3"
+	"swifty/s3/mgo"
+	"swifty/common"
+	"swifty/apis/s3"
 )
 
 func notifyFindBucket(ctx context.Context, params *swys3api.Subscribe) (*s3mgo.Bucket, error) {

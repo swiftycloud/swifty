@@ -7,10 +7,10 @@ import (
 	"context"
 	"strings"
 	"gopkg.in/mgo.v2/bson"
-	"../common/http"
-	"../common/crypto"
-	"../common/xrest"
-	"../apis"
+	"swifty/common/http"
+	"swifty/common/crypto"
+	"swifty/common/xrest"
+	"swifty/apis"
 )
 
 type Secret string

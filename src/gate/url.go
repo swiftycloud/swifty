@@ -4,7 +4,7 @@ import (
 	"errors"
 	"context"
 	"gopkg.in/mgo.v2/bson"
-	"../apis"
+	"swifty/apis"
 	"sync"
 	"net/http"
 )

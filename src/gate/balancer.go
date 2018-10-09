@@ -7,8 +7,8 @@ import (
 	"context"
 	"fmt"
 
-	"../common/xrest"
-	"../apis"
+	"swifty/common/xrest"
+	"swifty/apis"
 )
 
 type BalancerDat struct {

@@ -1,9 +1,9 @@
 package main
 
 import (
-	"../common/xrest"
+	"swifty/common/xrest"
 	"gopkg.in/mgo.v2"
-	"../apis"
+	"swifty/apis"
 )
 
 var gateErrMsg = map[uint]string {

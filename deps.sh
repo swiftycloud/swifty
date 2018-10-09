@@ -1,5 +1,5 @@
 #!/bin/bash
-if [ "x${GOPATH}" != "x$(pwd)/vendor" ]; then
+if [ "x${GOPATH}" != "x$(pwd):$(pwd)/vendor" ]; then
 	echo "Set GOPATH to $(pwd)/vendor"
 	exit 1
 fi
@@ -12,6 +12,8 @@ fi
 set -x
 set -e
 
+VGOPATH="$(pwd)/vendor"
+
 # We need 6.0.0 version of the k8s client libs. When built, the lib
 # gets the protobuf library of some given version, which is SUDDENLY
 # incompatible with prometheus client lib. The latter need protobuf
@@ -22,13 +24,13 @@ set -e
 yum install -y golang patch librados2-devel glibc-headers glibc-static
 yum groupinstall -y "Development Libraries" 
 go get github.com/tools/godep
-cp ${GOPATH}/bin/godep /usr/bin
+cp ${VGOPATH}/bin/godep /usr/bin
 go get -d k8s.io/client-go/...
-cd ${GOPATH}/src/k8s.io/client-go
+cd ${VGOPATH}/src/k8s.io/client-go
 git checkout -b swy6.0.0 v6.0.0
 godep restore ./...
 cd -
-git -C ${GOPATH}/src/github.com/golang/protobuf checkout -b swy1.1.0 v1.1.0
+git -C ${VGOPATH}/src/github.com/golang/protobuf checkout -b swy1.1.0 v1.1.0
 go install k8s.io/client-go/...
 go get github.com/prometheus/client_golang/prometheus
 go get github.com/go-sql-driver/mysql
@@ -39,6 +41,6 @@ go get github.com/streadway/amqp
 go get go.uber.org/zap
 go get gopkg.in/mgo.v2
 go get -d gopkg.in/robfig/cron.v2;
-patch -d${GOPATH}/src/gopkg.in/robfig/cron.v2 -p1 < $(pwd)/contrib/robfig-cron.patch;
+patch -d${VGOPATH}/src/gopkg.in/robfig/cron.v2 -p1 < $(pwd)/contrib/robfig-cron.patch;
 go install gopkg.in/robfig/cron.v2
 go get github.com/ceph/go-ceph/rados

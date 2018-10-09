@@ -6,7 +6,7 @@ import (
 	"gopkg.in/mgo.v2/bson"
 	"github.com/michaelklishin/rabbit-hole"
 	"fmt"
-	"../apis"
+	"swifty/apis"
 )
 
 func rabbitConn() (*rabbithole.Client, error) {

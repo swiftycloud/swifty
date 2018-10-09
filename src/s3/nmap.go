@@ -2,7 +2,7 @@ package main
 
 import (
 	"strconv"
-	"../common"
+	"swifty/common"
 )
 
 //

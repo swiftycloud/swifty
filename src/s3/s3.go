@@ -6,8 +6,8 @@ import (
 	"context"
 	"errors"
 
-	"./mgo"
-	"../apis/s3"
+	"swifty/s3/mgo"
+	"swifty/apis/s3"
 )
 
 

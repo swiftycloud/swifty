@@ -3,10 +3,10 @@ package main
 import (
 	"time"
 	"context"
-	"./mgo"
-	"../apis"
-	"../common/http"
-	"../common/xrest"
+	"swifty/gate/mgo"
+	"swifty/apis"
+	"swifty/common/http"
+	"swifty/common/xrest"
 )
 
 const (

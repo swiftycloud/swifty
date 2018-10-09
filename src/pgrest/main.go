@@ -10,10 +10,10 @@ import (
 	"flag"
 	"syscall"
 	"os"
-	"../apis"
-	"../common"
-	"../common/http"
-	"../common/secrets"
+	"swifty/apis"
+	"swifty/common"
+	"swifty/common/http"
+	"swifty/common/secrets"
 )
 
 var pgrTokens []string

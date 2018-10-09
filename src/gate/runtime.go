@@ -4,7 +4,7 @@ import (
 	"path/filepath"
 	"os/exec"
 	"strings"
-	"../apis"
+	"swifty/apis"
 )
 
 type rt_info struct {

@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"context"
 	"strconv"
-	"../apis"
-	"../common/http"
+	"swifty/apis"
+	"swifty/common/http"
 )
 
 func tryBuildFunction(ctx context.Context, fn *FunctionDesc, suf string) error {

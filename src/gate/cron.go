@@ -4,7 +4,7 @@ import (
 	"context"
 	"gopkg.in/robfig/cron.v2"
 	"gopkg.in/mgo.v2/bson"
-	"../apis"
+	"swifty/apis"
 )
 
 type FnEventCron struct {
