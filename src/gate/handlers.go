@@ -536,7 +536,7 @@ func handleRepoPull(ctx context.Context, w http.ResponseWriter, r *http.Request)
 		return cerr
 	}
 
-	cerr = rd.pull(ctx)
+	cerr = rd.pullManual(ctx)
 	if cerr != nil {
 		return cerr
 	}

@@ -100,7 +100,7 @@ func githubRepoUpdated(ctx context.Context, r *http.Request) {
 	synced := 0
 
 	for _, rd := range rds {
-		if rd.pullSync(ctx) == nil {
+		if rd.pullSync() == nil {
 			synced++
 		}
 	}
@@ -409,17 +409,12 @@ func (rd *RepoDesc)listFiles(ctx context.Context) ([]*swyapi.RepoFile, *xrest.Re
 	return *root.Children, nil
 }
 
-func (rd *RepoDesc)pull(ctx context.Context) *xrest.ReqErr {
+func (rd *RepoDesc)pullManual(ctx context.Context) *xrest.ReqErr {
 	if rd.LastPull != nil && time.Now().Before( rd.LastPull.Add(time.Duration(conf.RepoSyncRate) * time.Minute)) {
 		return GateErrM(swyapi.GateNotAvail, "To frequent sync")
 	}
 
-	go func() {
-		pctx, done := mkContext("::repo-pull")
-		rd.pullSync(pctx)
-		done(pctx)
-	}()
-
+	rd.pullAsync()
 	return nil
 }
 
@@ -519,7 +514,45 @@ func tryToUpdateFunctions(ctx context.Context, rd *RepoDesc, to string) {
 	}
 }
 
-func (rd *RepoDesc)pullSync(ctx context.Context) *xrest.ReqErr {
+type pullReq struct {
+	r	*RepoDesc
+	done	chan error
+}
+
+var pulls chan *pullReq
+
+func init() {
+	pulls = make(chan *pullReq)
+	go func() {
+		for rq := range pulls {
+			ctx, done := mkContext("::repo-pull")
+			err := rq.r.pull(ctx)
+			if rq.done != nil {
+				rq.done <-err
+			}
+			done(ctx)
+		}
+	}()
+}
+
+func (rd *RepoDesc)pullSync() *xrest.ReqErr {
+	rq := pullReq{rd, make(chan error)}
+	pulls <-&rq
+
+	err := <-rq.done
+	if err != nil {
+		return GateErrE(swyapi.GateGenErr, err)
+	}
+
+	return nil
+}
+
+func (rd *RepoDesc)pullAsync() {
+	rq := pullReq{rd, nil}
+	pulls <-&rq
+}
+
+func (rd *RepoDesc)pull(ctx context.Context) error {
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 
@@ -533,7 +566,7 @@ func (rd *RepoDesc)pullSync(ctx context.Context) *xrest.ReqErr {
 		ctxlog(ctx).Errorf("can't pull %s -> %s: %s (%s:%s)",
 			rd.URL(), clone_to, err.Error(),
 			stdout.String(), stderr.String())
-		return GateErrE(swyapi.GateGenErr, err)
+		return err
 	}
 
 	cmt, err := gitCommit(clone_to)
@@ -566,7 +599,7 @@ func pullRepos(ctx context.Context, ts time.Time) (int, error) {
 	synced := 0
 
 	for _, rd := range rds {
-		if rd.pullSync(ctx) == nil {
+		if rd.pullSync() == nil {
 			synced++
 		}
 	}
