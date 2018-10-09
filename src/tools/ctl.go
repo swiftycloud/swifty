@@ -51,53 +51,6 @@ func gateProto() string {
 	}
 }
 
-type collection struct {
-	pref	string
-}
-
-func (c collection)add(in, out interface{}) {
-	swyclient.Add(c.pref, http.StatusOK, in, out)
-}
-
-func (c collection)list(q []string, out interface{}) {
-	swyclient.List(url(c.pref, q), http.StatusOK, out)
-}
-
-func (c collection)get(id string, out interface{}) {
-	swyclient.Get(c.pref + "/" + id, http.StatusOK, out)
-}
-
-func (c collection)del(id string) {
-	swyclient.Del(c.pref + "/" + id, http.StatusOK)
-}
-
-func (c collection)prop(id string, pn string, out interface{}) {
-	swyclient.Get(c.pref + "/" + id + "/" + pn, http.StatusOK, out)
-}
-
-func (c collection)set(id string, pn string, in interface{}) {
-	sfx := "/" + id
-	if pn != "" {
-		sfx += "/" + pn
-	}
-	swyclient.Mod(c.pref + sfx, http.StatusOK, in)
-}
-
-var functions	= collection{"functions"}
-var mwares	= collection{"middleware"}
-var deployments	= collection{"deployments"}
-var routers	= collection{"routers"}
-var accounts	= collection{"accounts"}
-var repos	= collection{"repos"}
-
-func (c collection)sub(id, name string) collection {
-	return collection{c.pref + "/" + id + "/" + name}
-}
-
-func triggers(fid string) collection {
-	return functions.sub(fid, "triggers")
-}
-
 func user_list(args []string, opts [16]string) {
 	var uss []swyapi.UserInfo
 	swyclient.List("users", http.StatusOK, &uss)
@@ -329,31 +282,6 @@ func list_projects(args []string, opts [16]string) {
 	}
 }
 
-func (c collection)resolve(name string) (string, bool) {
-	if strings.HasPrefix(name, ":") {
-		return name[1:], false
-	}
-
-	ua := []string{}
-	if curProj != "" {
-		ua = append(ua, "project=" + curProj)
-	}
-
-	var objs []map[string]interface{}
-	ua = append(ua, "name=" + name)
-
-	c.list(ua, &objs)
-
-	for _, obj := range objs {
-		if obj["name"] == name {
-			return obj["id"].(string), true
-		}
-	}
-
-	fatal(fmt.Errorf("\tname %s not resolved", name))
-	return "", false
-}
-
 type node struct {
 	name	string
 	id	string
@@ -441,7 +369,7 @@ func function_list(args []string, opts [16]string) {
 	}
 
 	var fns []*swyapi.FunctionInfo
-	functions.list(ua, &fns)
+	swyclient.Functions().List(ua, &fns)
 
 	switch opts[0] {
 	case "tree":
@@ -495,8 +423,8 @@ func formatBytes(b uint64) string {
 func function_info(args []string, opts [16]string) {
 	var ifo swyapi.FunctionInfo
 	var r bool
-	args[0], r = functions.resolve(args[0])
-	functions.get(args[0], &ifo)
+	args[0], r = swyclient.Functions().Resolve(curProj, args[0])
+	swyclient.Functions().Get(args[0], &ifo)
 	ver := ifo.Version
 	if len(ver) > 8 {
 		ver = ver[:8]
@@ -548,13 +476,13 @@ func function_info(args []string, opts [16]string) {
 	}
 
 	var src swyapi.FunctionSources
-	functions.prop(args[0], "sources", &src)
+	swyclient.Functions().Prop(args[0], "sources", &src)
 	if src.Sync {
 		fmt.Printf("Sync with:   %s\n", src.Repo)
 	}
 
 	var minf []*swyapi.MwareInfo
-	functions.prop(args[0], "middleware", &minf)
+	swyclient.Functions().Prop(args[0], "middleware", &minf)
 	if len(minf) != 0 {
 		fmt.Printf("Mware:\n")
 		for _, mi := range minf {
@@ -563,7 +491,7 @@ func function_info(args []string, opts [16]string) {
 	}
 
 	var bkts []string
-	functions.prop(args[0], "s3buckets", &bkts)
+	swyclient.Functions().Prop(args[0], "s3buckets", &bkts)
 	if len(bkts) != 0 {
 		fmt.Printf("Buckets:\n")
 		for _, bkt := range bkts {
@@ -572,7 +500,7 @@ func function_info(args []string, opts [16]string) {
 	}
 
 	var acs []map[string]string
-	functions.prop(args[0], "accounts", &acs)
+	swyclient.Functions().Prop(args[0], "accounts", &acs)
 	if len(acs) != 0 {
 		fmt.Printf("Accounts:\n")
 		for _, ac := range acs {
@@ -581,7 +509,7 @@ func function_info(args []string, opts [16]string) {
 	}
 
 	var env []string
-	functions.prop(args[0], "env", &env)
+	swyclient.Functions().Prop(args[0], "env", &env)
 	if len(env) != 0 {
 		fmt.Printf("Environment:\n")
 		for _, ev := range env {
@@ -592,8 +520,8 @@ func function_info(args []string, opts [16]string) {
 
 func function_minfo(args []string, opts [16]string) {
 	var ifo swyapi.FunctionMdat
-	args[0], _ = functions.resolve(args[0])
-	functions.prop(args[0], "mdat", &ifo)
+	args[0], _ = swyclient.Functions().Resolve(curProj, args[0])
+	swyclient.Functions().Prop(args[0], "mdat", &ifo)
 	fmt.Printf("Cookie: %s\n", ifo.Cookie)
 	if len(ifo.RL) != 0 {
 		fmt.Printf("RL: %d/%d (%d left)\n", ifo.RL[1], ifo.RL[2], ifo.RL[0])
@@ -773,7 +701,7 @@ func function_add(args []string, opts [16]string) {
 	}
 
 	var fi swyapi.FunctionInfo
-	functions.add(req, &fi)
+	swyclient.Functions().Add(req, &fi)
 	fmt.Printf("Function %s created\n", fi.Id)
 }
 
@@ -800,7 +728,7 @@ func run_function(args []string, opts [16]string) {
 
 	rq := &swyapi.WdogFunctionRun{}
 
-	args[0], _ = functions.resolve(args[0])
+	args[0], _ = swyclient.Functions().Resolve(curProj, args[0])
 	rq.Args = split_args_string(args[1])
 
 	if opts[0] != "" {
@@ -818,17 +746,17 @@ func run_function(args []string, opts [16]string) {
 }
 
 func function_update(args []string, opts [16]string) {
-	fid, _ := functions.resolve(args[0])
+	fid, _ := swyclient.Functions().Resolve(curProj, args[0])
 
 	if opts[0] != "" {
 		var src swyapi.FunctionSources
 
 		getSrc(opts[0], &src)
-		functions.set(fid, "sources", &src)
+		swyclient.Functions().Set(fid, "sources", &src)
 	}
 
 	if opts[3] != "" {
-		mid, _ := mwares.resolve(opts[3][1:])
+		mid, _ := swyclient.Mwares().Resolve(curProj, opts[3][1:])
 		if opts[3][0] == '+' {
 			swyclient.Add("functions/" + fid + "/middleware", http.StatusOK, mid, nil)
 		} else if opts[3][0] == '-' {
@@ -859,7 +787,7 @@ func function_update(args []string, opts [16]string) {
 	}
 
 	if opts[4] != "" {
-		functions.set(fid, "", &swyapi.FunctionUpdate{UserData: &opts[4]})
+		swyclient.Functions().Set(fid, "", &swyapi.FunctionUpdate{UserData: &opts[4]})
 	}
 
 	if opts[7] != "" {
@@ -867,7 +795,7 @@ func function_update(args []string, opts [16]string) {
 		if opts[7] != "-" {
 			ac = opts[7]
 		}
-		functions.set(fid, "authctx", ac)
+		swyclient.Functions().Set(fid, "authctx", ac)
 	}
 
 	if opts[1] != "" || opts[2] != "" {
@@ -885,42 +813,42 @@ func function_update(args []string, opts [16]string) {
 			sz.Rate, sz.Burst = parse_rate(opts[2])
 		}
 
-		functions.set(fid, "size", &sz)
+		swyclient.Functions().Set(fid, "size", &sz)
 	}
 
 	if opts[10] != "" {
 		envs := strings.Split(opts[10], ":")
-		functions.set(fid, "env", envs)
+		swyclient.Functions().Set(fid, "env", envs)
 	}
 
 }
 
 func function_del(args []string, opts [16]string) {
-	args[0], _ = functions.resolve(args[0])
-	functions.del(args[0])
+	args[0], _ = swyclient.Functions().Resolve(curProj, args[0])
+	swyclient.Functions().Del(args[0])
 }
 
 func function_on(args []string, opts [16]string) {
-	args[0], _ = functions.resolve(args[0])
-	functions.set(args[0], "", &swyapi.FunctionUpdate{State: "ready"})
+	args[0], _ = swyclient.Functions().Resolve(curProj, args[0])
+	swyclient.Functions().Set(args[0], "", &swyapi.FunctionUpdate{State: "ready"})
 }
 
 func function_off(args []string, opts [16]string) {
-	args[0], _ = functions.resolve(args[0])
-	functions.set(args[0], "", &swyapi.FunctionUpdate{State: "deactivated"})
+	args[0], _ = swyclient.Functions().Resolve(curProj, args[0])
+	swyclient.Functions().Set(args[0], "", &swyapi.FunctionUpdate{State: "deactivated"})
 }
 
 func event_list(args []string, opts [16]string) {
-	args[0], _ = functions.resolve(args[0])
+	args[0], _ = swyclient.Functions().Resolve(curProj, args[0])
 	var eds []swyapi.FunctionEvent
-	triggers(args[0]).list([]string{}, &eds)
+	swyclient.Triggers(args[0]).List([]string{}, &eds)
 	for _, e := range eds {
 		fmt.Printf("%16s%20s%8s\n", e.Id, e.Name, e.Source)
 	}
 }
 
 func event_add(args []string, opts [16]string) {
-	args[0], _ = functions.resolve(args[0])
+	args[0], _ = swyclient.Functions().Resolve(curProj, args[0])
 	e := swyapi.FunctionEvent {
 		Name: args[1],
 		Source: args[2],
@@ -938,16 +866,16 @@ func event_add(args []string, opts [16]string) {
 		}
 	}
 	var ei swyapi.FunctionEvent
-	triggers(args[0]).add(&e, &ei)
+	swyclient.Triggers(args[0]).Add(&e, &ei)
 	fmt.Printf("Event %s created\n", ei.Id)
 }
 
 func event_info(args []string, opts [16]string) {
 	var r bool
-	args[0], _ = functions.resolve(args[0])
-	args[1], r = triggers(args[0]).resolve(args[1])
+	args[0], _ = swyclient.Functions().Resolve(curProj, args[0])
+	args[1], r = swyclient.Triggers(args[0]).Resolve(curProj, args[1])
 	var e swyapi.FunctionEvent
-	triggers(args[0]).get(args[1], &e)
+	swyclient.Triggers(args[0]).Get(args[1], &e)
 	if !r {
 		fmt.Printf("Name:          %s\n", e.Name)
 	}
@@ -966,9 +894,9 @@ func event_info(args []string, opts [16]string) {
 }
 
 func event_del(args []string, opts [16]string) {
-	args[0], _ = functions.resolve(args[0])
-	args[1], _ = triggers(args[0]).resolve(args[1])
-	triggers(args[0]).del(args[1])
+	args[0], _ = swyclient.Functions().Resolve(curProj, args[0])
+	args[1], _ = swyclient.Triggers(args[0]).Resolve(curProj, args[1])
+	swyclient.Triggers(args[0]).Del(args[1])
 }
 
 func function_wait(args []string, opts [16]string) {
@@ -984,14 +912,14 @@ func function_wait(args []string, opts [16]string) {
 		wo.Timeout = uint(t)
 	}
 
-	args[0], _ = functions.resolve(args[0])
+	args[0], _ = swyclient.Functions().Resolve(curProj, args[0])
 	swyclient.Req2("POST", "functions/" + args[0] + "/wait", &wo, http.StatusOK, 300)
 }
 
 func function_code(args []string, opts [16]string) {
 	var res swyapi.FunctionSources
-	args[0], _ = functions.resolve(args[0])
-	functions.prop(args[0], "sources", &res)
+	args[0], _ = swyclient.Functions().Resolve(curProj, args[0])
+	swyclient.Functions().Prop(args[0], "sources", &res)
 	data, err := base64.StdEncoding.DecodeString(res.Code)
 	if err != nil {
 		fatal(err)
@@ -1001,7 +929,7 @@ func function_code(args []string, opts [16]string) {
 
 func function_logs(args []string, opts [16]string) {
 	var res []swyapi.FunctionLogEntry
-	args[0], _ = functions.resolve(args[0])
+	args[0], _ = swyclient.Functions().Resolve(curProj, args[0])
 
 	fa := []string{}
 	if opts[0] != "" {
@@ -1037,7 +965,7 @@ func mware_list(args []string, opts [16]string) {
 		}
 	}
 
-	mwares.list(ua, &mws)
+	swyclient.Mwares().List(ua, &mws)
 	fmt.Printf("%-32s%-20s%-10s\n", "ID", "NAME", "TYPE")
 	for _, mw := range mws {
 		fmt.Printf("%-32s%-20s%-10s%s\n", mw.Id, mw.Name, mw.Type, strings.Join(mw.Labels, ","))
@@ -1048,8 +976,8 @@ func mware_info(args []string, opts [16]string) {
 	var resp swyapi.MwareInfo
 	var r bool
 
-	args[0], r = mwares.resolve(args[0])
-	mwares.get(args[0], &resp)
+	args[0], r = swyclient.Mwares().Resolve(curProj, args[0])
+	swyclient.Mwares().Get(args[0], &resp)
 	if !r {
 		fmt.Printf("Name:         %s\n", resp.Name)
 	}
@@ -1071,13 +999,13 @@ func mware_add(args []string, opts [16]string) {
 	}
 
 	var mi swyapi.MwareInfo
-	mwares.add(&req, &mi)
+	swyclient.Mwares().Add(&req, &mi)
 	fmt.Printf("Mware %s created\n", mi.Id)
 }
 
 func mware_del(args []string, opts [16]string) {
-	args[0], _ = mwares.resolve(args[0])
-	mwares.del(args[0])
+	args[0], _ = swyclient.Mwares().Resolve(curProj, args[0])
+	swyclient.Mwares().Del(args[0])
 }
 
 func auth_cfg(args []string, opts [16]string) {
@@ -1113,14 +1041,14 @@ func auth_cfg(args []string, opts [16]string) {
 }
 
 func deploy_del(args []string, opts [16]string) {
-	args[0], _ = deployments.resolve(args[0])
-	deployments.del(args[0])
+	args[0], _ = swyclient.Deployments().Resolve(curProj, args[0])
+	swyclient.Deployments().Del(args[0])
 }
 
 func deploy_info(args []string, opts [16]string) {
 	var di swyapi.DeployInfo
-	args[0], _ = deployments.resolve(args[0])
-	deployments.get(args[0], &di)
+	args[0], _ = swyclient.Deployments().Resolve(curProj, args[0])
+	swyclient.Deployments().Get(args[0], &di)
 	fmt.Printf("State:        %s\n", di.State)
 	fmt.Printf("Items:\n")
 	for _, i := range di.Items {
@@ -1136,7 +1064,7 @@ func deploy_list(args []string, opts [16]string) {
 			ua = append(ua, "label=" + l)
 		}
 	}
-	deployments.list(ua, &dis)
+	swyclient.Deployments().List(ua, &dis)
 	fmt.Printf("%-32s%-20s\n", "ID", "NAME")
 	for _, di := range dis {
 		fmt.Printf("%-32s%-20s (%d items) %s\n", di.Id, di.Name, len(di.Items), strings.Join(di.Labels, ","))
@@ -1165,13 +1093,13 @@ func deploy_add(args []string, opts [16]string) {
 	}
 
 	var di swyapi.DeployInfo
-	deployments.add(&da, &di)
+	swyclient.Deployments().Add(&da, &di)
 	fmt.Printf("%s deployment started\n", di.Id)
 }
 
 func router_list(args []string, opts [16]string) {
 	var rts []swyapi.RouterInfo
-	routers.list([]string{}, &rts)
+	swyclient.Routers().List([]string{}, &rts)
 	for _, rt := range rts {
 		fmt.Printf("%s %12s %s (%s)\n", rt.Id, rt.Name, rt.URL, strings.Join(rt.Labels, ","))
 	}
@@ -1201,34 +1129,34 @@ func router_add(args []string, opts [16]string) {
 		ra.Table = parse_route_table(opts[0])
 	}
 	var ri swyapi.RouterInfo
-	routers.add(&ra, &ri)
+	swyclient.Routers().Add(&ra, &ri)
 	fmt.Printf("Router %s created\n", ri.Id)
 }
 
 func router_info(args []string, opts [16]string) {
-	args[0], _ = routers.resolve(args[0])
+	args[0], _ = swyclient.Routers().Resolve(curProj, args[0])
 	var ri swyapi.RouterInfo
-	routers.get(args[0], &ri)
+	swyclient.Routers().Get(args[0], &ri)
 	fmt.Printf("URL:      %s\n", ri.URL)
 	fmt.Printf("Table:    (%d ents)\n", ri.TLen)
 	var res []*swyapi.RouterEntry
-	routers.prop(args[0], "table", &res)
+	swyclient.Routers().Prop(args[0], "table", &res)
 	for _, re := range res {
 		fmt.Printf("   %8s /%-32s -> %s\n", re.Method, re.Path, re.Call)
 	}
 }
 
 func router_upd(args []string, opts [16]string) {
-	args[0], _ = routers.resolve(args[0])
+	args[0], _ = swyclient.Routers().Resolve(curProj, args[0])
 	if opts[0] != "" {
 		rt := parse_route_table
-		routers.set(args[0], "table", rt)
+		swyclient.Routers().Set(args[0], "table", rt)
 	}
 }
 
 func router_del(args []string, opts [16]string) {
-	args[0], _ = routers.resolve(args[0])
-	routers.del(args[0])
+	args[0], _ = swyclient.Routers().Resolve(curProj, args[0])
+	swyclient.Routers().Del(args[0])
 }
 
 func repo_list(args []string, opts [16]string) {
@@ -1240,7 +1168,7 @@ func repo_list(args []string, opts [16]string) {
 	if opts[1] != "" {
 		ua = append(ua, "attached=" + opts[1])
 	}
-	repos.list(ua, &ris)
+	swyclient.Repos().List(ua, &ris)
 	fmt.Printf("%-32s%-8s%-12s%s\n", "ID", "TYPE", "STATE", "URL")
 	for _, ri := range ris {
 		t := ri.Type
@@ -1276,7 +1204,7 @@ func show_files(pref string, fl []*swyapi.RepoFile, pty string) {
 
 func repo_desc(args []string, opts [16]string) {
 	var d swyapi.RepoDesc
-	repos.prop(args[0], "desc", &d)
+	swyclient.Repos().Prop(args[0], "desc", &d)
 	fmt.Printf("%s\n", d.Description)
 	for _, e := range d.Entries {
 		fmt.Printf("%s: %s\n", e.Name, e.Description)
@@ -1291,7 +1219,7 @@ func repo_list_files(args []string, opts [16]string) {
 	}
 
 	var fl []*swyapi.RepoFile
-	repos.prop(args[0], "files", &fl)
+	swyclient.Repos().Prop(args[0], "files", &fl)
 	show_files("", fl, opts[0])
 }
 
@@ -1311,7 +1239,7 @@ func repo_pull(args []string, opts [16]string) {
 
 func repo_info(args []string, opts [16]string) {
 	var ri swyapi.RepoInfo
-	repos.get(args[0], &ri)
+	swyclient.Repos().Get(args[0], &ri)
 	fmt.Printf("State:     %s\n", ri.State)
 	fmt.Printf("Type:      %s\n", ri.Type)
 	fmt.Printf("URL:       %s\n", ri.URL)
@@ -1341,7 +1269,7 @@ func repo_add(args []string, opts [16]string) {
 	}
 
 	var ri swyapi.RepoInfo
-	repos.add(&ra, &ri)
+	swyclient.Repos().Add(&ra, &ri)
 	fmt.Printf("%s repo attached\n", ri.Id)
 }
 
@@ -1354,11 +1282,11 @@ func repo_upd(args []string, opts [16]string) {
 		ra.Pull = &opts[0]
 	}
 
-	repos.set(args[0], "", &ra)
+	swyclient.Repos().Set(args[0], "", &ra)
 }
 
 func repo_del(args []string, opts [16]string) {
-	repos.del(args[0])
+	swyclient.Repos().Del(args[0])
 }
 
 func acc_list(args []string, opts [16]string) {
@@ -1367,7 +1295,7 @@ func acc_list(args []string, opts [16]string) {
 	if opts[0] != "" {
 		ua = append(ua, "type=" + opts[0])
 	}
-	accounts.list(ua, &ais)
+	swyclient.Accounts().List(ua, &ais)
 	fmt.Printf("%-32s%-12s\n", "ID", "TYPE")
 	for _, ai := range ais {
 		fmt.Printf("%-32s%-12s\n", ai["id"], ai["type"])
@@ -1376,7 +1304,7 @@ func acc_list(args []string, opts [16]string) {
 
 func acc_info(args []string, opts [16]string) {
 	var ai map[string]string
-	accounts.get(args[0], &ai)
+	swyclient.Accounts().Get(args[0], &ai)
 	fmt.Printf("Type:           %s\n", ai["type"])
 	fmt.Printf("Name:           %s\n", ai["name"])
 	for k, v := range(ai) {
@@ -1406,7 +1334,7 @@ func acc_add(args []string, opts [16]string) {
 	}
 
 	var ai map[string]string
-	accounts.add(&aa, &ai)
+	swyclient.Accounts().Add(&aa, &ai)
 	fmt.Printf("%s account created\n", ai["id"])
 }
 
@@ -1420,11 +1348,11 @@ func acc_upd(args []string, opts [16]string) {
 		}
 	}
 
-	accounts.set(args[0], "", &au)
+	swyclient.Accounts().Set(args[0], "", &au)
 }
 
 func acc_del(args []string, opts [16]string) {
-	accounts.del(args[0])
+	swyclient.Accounts().Del(args[0])
 }
 
 func s3_access(args []string, opts [16]string) {
