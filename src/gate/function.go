@@ -157,6 +157,8 @@ func (fn *FunctionDesc)toMInfo(ctx context.Context) *swyapi.FunctionMdat {
 				fid.Hosts = append(fid.Hosts, pod.Status.HostIP)
 			}
 		}
+
+		fid.Dep = fn.DepName()
 	}
 
 	return &fid

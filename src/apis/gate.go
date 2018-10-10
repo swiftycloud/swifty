@@ -86,6 +86,7 @@ type FunctionMdat struct {
 	RL		[]uint			`json:"rl"`
 	BR		[]uint			`json:"br"`
 	Hosts		[]string		`json:"hosts,omitempty"`
+	Dep		string			`json:"depname,omitempty"`
 }
 
 //type RunCmd struct {

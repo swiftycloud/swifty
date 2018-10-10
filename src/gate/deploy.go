@@ -569,9 +569,9 @@ func DeployInit(ctx context.Context) error {
 	defer iter.Close()
 
 	for iter.Next(&dep) {
-		if len(dep.OldItems != 0 {
+		if len(dep.OldItems) != 0 {
 			ctxlog(ctx).Debugf("Convert deploy %s", dep.ObjID.Hex())
-			for _, i := range dep.OldItems{
+			for _, i := range dep.OldItems {
 				if i.Fn != nil {
 					dep.Functions = append(dep.Functions, &DeployFunction{
 						Fn: i.Fn, FnSrc: i.FnSrc,
