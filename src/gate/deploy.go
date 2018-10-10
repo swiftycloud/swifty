@@ -583,6 +583,7 @@ func DeployInit(ctx context.Context) error {
 					})
 				}
 			}
+			dep.OldItems = []*_DeployItemDesc{}
 			err := dbUpdateAll(ctx, &dep)
 			if err != nil {
 				ctxlog(ctx).Errorf("Error updating mware: %s", err.Error())
