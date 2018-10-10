@@ -151,7 +151,7 @@ type DeployDesc struct {
 	Mwares		[]*DeployMware		`bson:"mwares"`
 	Routers		[]*DeployRouter		`bson:"routers"`
 
-	_Items		[]*_DeployItemDesc	`bson:"items,omitempty"`
+	OldItems	[]*_DeployItemDesc	`bson:"items,omitempty"`
 }
 
 type Deployments struct {
@@ -569,9 +569,9 @@ func DeployInit(ctx context.Context) error {
 	defer iter.Close()
 
 	for iter.Next(&dep) {
-		if len(dep._Items) != 0 {
+		if len(dep.OldItems) != 0 {
 			ctxlog(ctx).Debugf("Convert deploy %s", dep.ObjID.Hex())
-			for _, i := range dep._Items {
+			for _, i := range dep.OldItems {
 				if i.Fn != nil {
 					dep.Functions = append(dep.Functions, &DeployFunction{
 						Fn: i.Fn, FnSrc: i.FnSrc,
@@ -583,6 +583,7 @@ func DeployInit(ctx context.Context) error {
 					})
 				}
 			}
+			dep.OldItems = []*_DeployItemDesc{}
 			err := dbUpdateAll(ctx, &dep)
 			if err != nil {
 				ctxlog(ctx).Errorf("Error updating mware: %s", err.Error())

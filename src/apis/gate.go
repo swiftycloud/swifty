@@ -86,6 +86,7 @@ type FunctionMdat struct {
 	RL		[]uint			`json:"rl"`
 	BR		[]uint			`json:"br"`
 	Hosts		[]string		`json:"hosts,omitempty"`
+	Dep		string			`json:"depname,omitempty"`
 }
 
 //type RunCmd struct {
@@ -152,6 +153,7 @@ type MwareInfo struct {
 	Type		string			`json:"type"`
 	UserData	string			`json:"userdata,omitempty"`
 	DU		*uint64			`json:"disk_usage,omitempty"` /* in ... KB */
+	URL		*string			`json:"url,omitempty"`
 }
 
 func (i *MwareInfo)SetDU(bytes uint64) {

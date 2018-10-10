@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/gorilla/websocket"
 	"github.com/gorilla/mux"
 	"gopkg.in/mgo.v2/bson"
 
@@ -755,4 +756,45 @@ func handleGithubEvent(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
+}
+
+var wsupgrader = websocket.Upgrader{}
+
+func handleWebSocket(w http.ResponseWriter, r *http.Request) {
+	ws := mux.Vars(r)["ws"]
+	var wsmw MwareDesc
+
+	ctx, done := mkContext2("::ws", false)
+	err := dbFind(ctx, bson.M{"cookie": ws, "mwaretype": "websocket", "state": DBMwareStateRdy}, &wsmw)
+	if err != nil {
+		done(ctx)
+		http.Error(w, "No such websocket", http.StatusNotFound)
+		return
+	}
+
+	sec := r.Header.Get("X-WS-Token")
+	if sec != "" {
+		defer done(ctx)
+
+		/* This must be a connection from FN */
+		if sec != wsmw.Secret {
+			http.Error(w, "Not authorized", http.StatusUnauthorized)
+			return
+		}
+
+		cerr := wsFunctionReq(ctx, &wsmw, w, r)
+		if cerr != nil {
+			http.Error(w, cerr.String(), http.StatusBadRequest)
+		}
+	} else {
+		/* Otherwise we treat this as client connection */
+		done(ctx)
+
+		c, err := wsupgrader.Upgrade(w, r, nil)
+		if err != nil {
+			return
+		}
+
+		wsClientReq(&wsmw, c)
+	}
 }

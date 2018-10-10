@@ -532,6 +532,9 @@ func function_minfo(args []string, opts [16]string) {
 	if len(ifo.Hosts) != 0 {
 		fmt.Printf("PODs at %s\n", strings.Join(ifo.Hosts, " "))
 	}
+	if ifo.Dep != "" {
+		fmt.Printf("Deployments: %s\n", ifo.Dep)
+	}
 }
 
 func check_lang(args []string, opts [16]string) {
@@ -984,6 +987,9 @@ func mware_info(args []string, opts [16]string) {
 	fmt.Printf("Type:         %s\n", resp.Type)
 	if resp.DU != nil {
 		fmt.Printf("Disk usage:   %s\n", formatBytes(*resp.DU << 10))
+	}
+	if resp.URL != nil {
+		fmt.Printf("URL:          %s\n", *resp.URL)
 	}
 	if resp.UserData != "" {
 		fmt.Printf("Data:         %s\n", resp.UserData)

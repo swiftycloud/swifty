@@ -134,6 +134,7 @@ var mwareHandlers = map[string]*MwareOps {
 	"rabbit":	&MwareRabbitMQ,
 	"mongo":	&MwareMongo,
 	"authjwt":	&MwareAuthJWT,
+	"websocket":	&MwareWebSocket,
 }
 
 func mwareRemoveId(ctx context.Context, id *SwoId) *xrest.ReqErr {
