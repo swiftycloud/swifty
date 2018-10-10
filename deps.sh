@@ -35,6 +35,7 @@ go install k8s.io/client-go/...
 go get github.com/prometheus/client_golang/prometheus
 go get github.com/go-sql-driver/mysql
 go get github.com/gorilla/mux
+go get github.com/gorilla/websocket
 go get gopkg.in/yaml.v2
 go get github.com/michaelklishin/rabbit-hole
 go get github.com/streadway/amqp

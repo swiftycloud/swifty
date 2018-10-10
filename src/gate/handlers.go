@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/gorilla/websocket"
 	"github.com/gorilla/mux"
 	"gopkg.in/mgo.v2/bson"
 
@@ -755,4 +756,42 @@ func handleGithubEvent(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
+}
+
+var wsupgrader = websocket.Upgrader{}
+
+func handleWebSocket(w http.ResponseWriter, r *http.Request) {
+	ws := mux.Vars(r)["ws"]
+	var wsmw MwareDesc
+
+	ctx, done := mkContext2("::ws", false)
+	err := dbFind(ctx, bson.M{"cookie": ws, "mwaretype": "websocket", "state": DBMwareStateRdy}, &wsmw)
+	if err != nil {
+		done(ctx)
+		http.Error(w, "No such websocket", http.StatusNotFound)
+		return
+	}
+
+	done(ctx)
+
+	c, err := wsupgrader.Upgrade(w, r, nil)
+	if err != nil {
+		return
+	}
+
+	defer c.Close()
+	for {
+		mt, message, err := c.ReadMessage()
+		if err != nil {
+			glog.Errorf("WS read: %s", err.Error())
+			break
+		}
+
+		glog.Debugf("WS message for %s", wsmw.SwoId.Str())
+		err = c.WriteMessage(mt, message)
+		if err != nil {
+			glog.Errorf("WS write:", err.Error())
+			break
+		}
+	}
 }

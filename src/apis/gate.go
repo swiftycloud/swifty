@@ -152,6 +152,7 @@ type MwareInfo struct {
 	Type		string			`json:"type"`
 	UserData	string			`json:"userdata,omitempty"`
 	DU		*uint64			`json:"disk_usage,omitempty"` /* in ... KB */
+	URL		*string			`json:"url,omitempty"`
 }
 
 func (i *MwareInfo)SetDU(bytes uint64) {

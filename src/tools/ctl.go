@@ -985,6 +985,9 @@ func mware_info(args []string, opts [16]string) {
 	if resp.DU != nil {
 		fmt.Printf("Disk usage:   %s\n", formatBytes(*resp.DU << 10))
 	}
+	if resp.URL != nil {
+		fmt.Printf("URL:          %s\n", *resp.URL)
+	}
 	if resp.UserData != "" {
 		fmt.Printf("Data:         %s\n", resp.UserData)
 	}
