@@ -730,6 +730,7 @@ func listFnPods(fn *FunctionDesc) (*v1.PodList, error) {
 func refreshDepsAndPods(ctx context.Context) error {
 	var fn FunctionDesc
 
+	ctxlog(ctx).Debugf("Refreshing deps and pods")
 	err := dbBalancerPodDelStuck(ctx)
 	if err != nil {
 		return fmt.Errorf("Can't drop stuck PODs: %s", err.Error)
