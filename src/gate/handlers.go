@@ -772,26 +772,29 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	done(ctx)
+	sec := r.Header.Get("X-WS-Token")
+	if sec != "" {
+		defer done(ctx)
 
-	c, err := wsupgrader.Upgrade(w, r, nil)
-	if err != nil {
-		return
-	}
-
-	defer c.Close()
-	for {
-		mt, message, err := c.ReadMessage()
-		if err != nil {
-			glog.Errorf("WS read: %s", err.Error())
-			break
+		/* This must be a connection from FN */
+		if sec != wsmw.Secret {
+			http.Error(w, "Not authorized", http.StatusUnauthorized)
+			return
 		}
 
-		glog.Debugf("WS message for %s", wsmw.SwoId.Str())
-		err = c.WriteMessage(mt, message)
-		if err != nil {
-			glog.Errorf("WS write:", err.Error())
-			break
+		cerr := wsFunctionReq(ctx, &wsmw, w, r)
+		if cerr != nil {
+			http.Error(w, cerr.String(), http.StatusBadRequest)
 		}
+	} else {
+		/* Otherwise we treat this as client connection */
+		done(ctx)
+
+		c, err := wsupgrader.Upgrade(w, r, nil)
+		if err != nil {
+			return
+		}
+
+		wsClientReq(&wsmw, c)
 	}
 }
