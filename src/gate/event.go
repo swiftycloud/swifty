@@ -22,6 +22,7 @@ var evtHandlers = map[string]*EventOps {
 	"cron":	&cronOps,
 	"s3":	&s3EOps,
 	"url":	&urlEOps,
+	"websocket": &wsEOps,
 }
 
 type FnEventDesc struct {
@@ -31,6 +32,7 @@ type FnEventDesc struct {
 	Source		string		`bson:"source"`
 	Cron		*FnEventCron	`bson:"cron,omitempty"`
 	S3		*FnEventS3	`bson:"s3,omitempty"`
+	WS		*FnEventWebsock	`bson:"ws,omitempty"`
 }
 
 type Trigger struct {

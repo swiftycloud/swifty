@@ -2,6 +2,8 @@ package main
 
 import (
 	"github.com/gorilla/websocket"
+	"encoding/base64"
+	"gopkg.in/mgo.v2/bson"
 	"context"
 	"net/http"
 	"strconv"
@@ -177,6 +179,49 @@ func wsFunctionReq(ctx context.Context, mwd *MwareDesc, cid string, w http.Respo
 	return nil
 }
 
+type FnEventWebsock struct {
+	MwName	string	`bson:"mware"`
+	Cookie	string	`bson:"mw_cookie"`
+	MType	*int	`bson:"mtype,omitempty"`
+}
+
+func wsTrigger(mwd *MwareDesc, cid string, mtype int, message []byte) {
+	ctx, done := mkContext("::ws-message")
+	defer done(ctx)
+
+	var evs []*FnEventDesc
+
+	err := dbFindAll(ctx, bson.M{"source":"websocket", "ws.mw_cookie": mwd.Cookie}, &evs)
+	if err != nil {
+		ctxlog(ctx).Errorf("websocket: Can't list triggers for event: %s", err.Error())
+		return
+	}
+
+	args := swyapi.WdogFunctionRun {
+		Args: map[string]string {
+			"mwid":	 mwd.Cookie,
+			"cid":	 cid,
+			"mtype": strconv.Itoa(mtype),
+		},
+		Body: base64.StdEncoding.EncodeToString(message),
+	}
+
+	for _, ed := range evs {
+		if ed.WS.MType != nil && *ed.WS.MType != mtype {
+			continue
+		}
+
+		var fn FunctionDesc
+
+		err := dbFind(ctx, bson.M{"cookie": ed.FnId, "state": DBFuncStateRdy}, &fn)
+		if err == nil {
+			continue
+		}
+
+		doRunBg(ctx, &fn, "websocket", &args)
+	}
+}
+
 func wsClientReq(mwd *MwareDesc, c *websocket.Conn) {
 	defer c.Close() /* XXX -- will it race OK with wsCloseConns()? */
 
@@ -184,12 +229,33 @@ func wsClientReq(mwd *MwareDesc, c *websocket.Conn) {
 	defer wsDelConn(mwd.Cookie, cid)
 
 	for {
-		_, _, err := c.ReadMessage()
+		mtype, message, err := c.ReadMessage()
 		if err != nil {
 			glog.Errorf("WS read: %s", err.Error())
 			break
 		}
 
-		/* XXX -- trigger FN here */
+		wsTrigger(mwd, cid, mtype, message)
 	}
+}
+
+func wsEventStart(ctx context.Context, fn *FunctionDesc, ed *FnEventDesc) error {
+	var id SwoId
+
+	id = fn.SwoId
+	id.Name = ed.WS.MwName
+	ed.WS.Cookie = id.Cookie()
+
+	return nil
+}
+
+var wsEOps = EventOps {
+	setup: func(ed *FnEventDesc, evt *swyapi.FunctionEvent) {
+		ed.WS = &FnEventWebsock{
+			MwName: evt.WS.MwName,
+			MType: evt.WS.MType,
+		}
+	},
+	start:	wsEventStart,
+	stop:	func (ctx context.Context, evt *FnEventDesc) error { return nil },
 }

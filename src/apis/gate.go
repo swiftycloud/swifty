@@ -130,6 +130,11 @@ type FunctionEventS3 struct {
 	Pattern		string			`json:"pattern,omitempty"`
 }
 
+type FunctionEventWebsock struct {
+	MwName		string			`json:"name"`
+	MType		*int			`json:"mtype,omitempty"`
+}
+
 type FunctionEvent struct {
 	Id		string			`json:"id,omitempty"`
 	Name		string			`json:"name"`
@@ -137,6 +142,7 @@ type FunctionEvent struct {
 	Cron		*FunctionEventCron	`json:"cron,omitempty"`
 	S3		*FunctionEventS3	`json:"s3,omitempty"`
 	URL		string			`json:"url,omitempty"`
+	WS		*FunctionEventWebsock	`json:"websocket,omitempty"`
 }
 
 type MwareAdd struct {
