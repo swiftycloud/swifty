@@ -24,7 +24,11 @@ type RouterDesc struct {
 
 type Routers struct {}
 
-const TableKeyLenMax = 64
+var TableKeyLenMax = 64
+
+func init() {
+	addIntSysctl("router_table_key_len_max", &TableKeyLenMax)
+}
 
 func ckTable(tbl []*swyapi.RouterEntry) *xrest.ReqErr {
 	for _, t := range tbl {

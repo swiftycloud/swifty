@@ -236,7 +236,7 @@ func s3GetCreds(ctx context.Context, acc *swyapi.S3Access) (*swyapi.S3Creds, *xr
 
 	for _, acc := range(acc.Access) {
 		if acc == "hidden" {
-			creds.Expires = conf.Mware.S3.HiddenKeyTmo
+			creds.Expires = uint32(conf.Mware.S3.HiddenKeyTmo)
 			continue
 		}
 

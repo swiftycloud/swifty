@@ -607,14 +607,16 @@ func pullRepos(ctx context.Context, ts time.Time) (int, error) {
 	return synced, nil
 }
 
-func periodicPullRepos(period time.Duration) {
+var repoSyncPeriod time.Duration
+
+func periodicPullRepos() {
 	for {
 		ctx, done := mkContext("::reposync")
 
 		t := time.Now()
-		nxt := period
+		nxt := repoSyncPeriod
 
-		synced, err := pullRepos(ctx, t.Add(-period))
+		synced, err := pullRepos(ctx, t.Add(-nxt))
 		if err != nil {
 			nxt = 5 * time.Minute /* Will try in 5 minutes */
 		}
@@ -632,7 +634,7 @@ func periodicPullRepos(period time.Duration) {
 var demoRep RepoDesc
 
 func ReposInit(ctx context.Context) error {
-	go periodicPullRepos(time.Duration(conf.RepoSyncPeriod) * time.Minute)
+	go periodicPullRepos()
 
 	ctxlog(ctx).Debugf("Resolve %s repo", conf.DemoRepo.URL)
 	q := bson.M{

@@ -9,9 +9,11 @@ import (
 	"swifty/common/xrest"
 )
 
-const (
-	statsFlushPeriod	= 8
-)
+var statsFlushPeriod = 8 * time.Second
+
+func init() {
+	addTimeSysctl("stats_fush_period", &statsFlushPeriod)
+}
 
 type statsWriter interface {
 	Write(ctx context.Context)
@@ -229,7 +231,7 @@ func statsUpdate(fmd *FnMemData, op *statsOpaque, res *swyapi.WdogFunctionRunRes
 
 	fmd.stats.RunTime += rt
 
-	rc := uint64(rt) * fmd.mem
+	rc := uint64(rt) * uint64(fmd.mem)
 	fmd.stats.RunCost += rc
 	fmd.stats.BytesIn += uint64(op.argsSz + op.bodySz)
 	fmd.stats.BytesOut += uint64(len(res.Return))
@@ -351,7 +353,7 @@ func (fc *statsFlush)Start() {
 				fc.closed = true
 				close(done)
 				return
-			case <-time.After(statsFlushPeriod * time.Second):
+			case <-time.After(statsFlushPeriod):
 				if fc.dirty {
 					fc.dirty = false
 					statsFlushReqs <-fc

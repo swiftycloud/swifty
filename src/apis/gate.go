@@ -85,6 +85,7 @@ type FunctionMdat struct {
 	Cookie		string			`json:"cookie"`
 	RL		[]uint			`json:"rl"`
 	BR		[]uint			`json:"br"`
+	IPs		[]string		`json:"ips,omitempty"`
 	Hosts		[]string		`json:"hosts,omitempty"`
 	Dep		string			`json:"depname,omitempty"`
 }
@@ -107,8 +108,8 @@ type FunctionSources struct {
 }
 
 type FunctionSize struct {
-	Memory		uint64			`json:"memory"`
-	Timeout		uint64			`json:"timeout"` /* msec */
+	Memory		uint			`json:"memory"`
+	Timeout		uint			`json:"timeout"` /* msec */
 	Rate		uint			`json:"rate,omitempty"`
 	Burst		uint			`json:"burst,omitempty"`
 }

@@ -13,7 +13,7 @@ var fdmd sync.Map
 var tdat sync.Map
 
 type FnMemData struct {
-	mem	uint64
+	mem	uint
 	depname	string
 	fnid	string
 	ac	*AuthCtx

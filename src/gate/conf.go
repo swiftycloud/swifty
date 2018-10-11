@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"time"
 	"errors"
 	"strconv"
 	"swifty/common"
@@ -51,8 +52,9 @@ func (cw *YAMLConfWdog)Validate() error {
 		cw.ImgPref = "swifty"
 		fmt.Printf("'wdog.img-prefix' not set, using default\n")
 	}
+	addStringSysctl("wdog_image_prefix", &cw.ImgPref)
 	if cw.Namespace == "" {
-		fmt.Printf("'wdog.k8s-namespace' not set, will us default\n")
+		fmt.Printf("'wdog.k8s-namespace' not set, will use default\n")
 	}
 	return nil
 }
@@ -130,7 +132,7 @@ type YAMLConfS3 struct {
 	Creds		string			`yaml:"creds"`
 	API		string			`yaml:"api"`
 	Notify		string			`yaml:"notify"`
-	HiddenKeyTmo	uint32			`yaml:"hidden-key-timeout"`
+	HiddenKeyTmo	int			`yaml:"hidden-key-timeout"`
 	c		*xh.XCreds
 	cn		*xh.XCreds
 }
@@ -148,46 +150,59 @@ func (cm *YAMLConfMw)Validate() error {
 	if cm.SecKey == "" {
 		return errors.New("'middleware.mwseckey' not set")
 	}
+
+	if cm.S3.HiddenKeyTmo == 0 {
+		cm.S3.HiddenKeyTmo = 120
+		fmt.Printf("'middleware.s3.hidden-key-timeout' not set, using default 120sec\n")
+	}
+	addIntSysctl("s3_hidden_key_timeout_sec", &cm.S3.HiddenKeyTmo)
+
 	return nil
 }
 
 type YAMLConfRange struct {
-	Min		uint64			`yaml:"min"`
-	Max		uint64			`yaml:"max"`
-	Def		uint64			`yaml:"def"`
+	Min		int			`yaml:"min"`
+	Max		int			`yaml:"max"`
+	Def		int			`yaml:"def"`
 }
 
 type YAMLConfRt struct {
 	Timeout		YAMLConfRange		`yaml:"timeout"`
 	Memory		YAMLConfRange		`yaml:"memory"`
-	MaxReplicas	uint32			`yaml:"max-replicas"`
+	MaxReplicas	int			`yaml:"max-replicas"`
 }
 
 func (cr *YAMLConfRt)Validate() error {
 	if cr.MaxReplicas == 0 {
-		cr.MaxReplicas = 8
-		fmt.Printf("'runtime.max-replicas' not set, using default 8\n")
+		cr.MaxReplicas = 32
+		fmt.Printf("'runtime.max-replicas' not set, using default 32\n")
 	}
+	addIntSysctl("fn_replicas_limit", &cr.MaxReplicas)
 	if cr.Timeout.Max == 0 {
-		cr.Timeout.Max = 10
-		fmt.Printf("'runtime.timeout.max' not set, using default 10sec\n")
+		cr.Timeout.Max = 60
+		fmt.Printf("'runtime.timeout.max' not set, using default 1min\n")
 	}
+	addIntSysctl("fn_timeout_max_sec", &cr.Timeout.Max)
 	if cr.Timeout.Def == 0 {
-		cr.Timeout.Def = 2
+		cr.Timeout.Def = 1
 		fmt.Printf("'runtime.timeout.def' not set, using default 1sec\n")
 	}
+	addIntSysctl("fn_timeout_def_sec", &cr.Timeout.Def)
 	if cr.Memory.Min == 0 {
-		cr.Memory.Min = 32
-		fmt.Printf("'runtime.memory.min' not set, using default 32m\n")
+		cr.Memory.Min = 64
+		fmt.Printf("'runtime.memory.min' not set, using default 64m\n")
 	}
+	addIntSysctl("fn_memory_min_mb", &cr.Memory.Min)
 	if cr.Memory.Max == 0 {
-		cr.Memory.Min = 256
-		fmt.Printf("'runtime.memory.max' not set, using default 256m\n")
+		cr.Memory.Max = 1024
+		fmt.Printf("'runtime.memory.max' not set, using default 1g\n")
 	}
+	addIntSysctl("fn_memory_max_mb", &cr.Memory.Max)
 	if cr.Memory.Def == 0 {
-		cr.Memory.Def = 64
-		fmt.Printf("'runtime.memory.def' not set, using default 64m\n")
+		cr.Memory.Def = 128
+		fmt.Printf("'runtime.memory.def' not set, using default 128m\n")
 	}
+	addIntSysctl("fn_memory_def_mb", &cr.Memory.Def)
 	return nil
 }
 
@@ -247,10 +262,13 @@ func (c *YAMLConf)Validate() error {
 	if c.RepoSyncRate == 0 {
 		fmt.Printf("'repo-sync-rate' not set, pulls will be unlimited\n")
 	}
+	addIntSysctl("repo_sync_per_sec_max", &c.RepoSyncRate)
 	if c.RepoSyncPeriod == 0 {
 		fmt.Printf("'repo-sync-period' not set, using default 30min\n")
 		c.RepoSyncPeriod = 30
 	}
+	repoSyncPeriod = time.Duration(c.RepoSyncPeriod) * time.Minute
+	addTimeSysctl("repo_sync_period", &repoSyncPeriod)
 	if c.RunRate == 0 {
 		fmt.Printf("'tryrun-rate' not set, using default 1/s\n")
 		c.RunRate = 1

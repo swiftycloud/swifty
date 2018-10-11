@@ -128,11 +128,11 @@ func (conn *podConn)Run(ctx context.Context, sopq *statsOpaque, suff, event stri
 		res, err = talkHTTP(conn.Addr, conn.Port, url, args)
 	}
 
-	traceTime(sopq, "wdog.resp", &res.Time)
-
 	if err != nil {
 		return nil, fmt.Errorf("RUN error %s", err.Error())
 	}
+
+	traceTime(sopq, "wdog.resp", &res.Time)
 
 	if res.Stdout != "" || res.Stderr != "" {
 		go func() {

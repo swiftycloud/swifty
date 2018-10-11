@@ -829,6 +829,8 @@ func k8sInit(ctx context.Context, config_path string) error {
 		conf.Wdog.Namespace = v1.NamespaceDefault
 	}
 
+	addStringSysctl("k8s_namespace", &conf.Wdog.Namespace)
+
 	config, err := clientcmd.BuildConfigFromFlags("", *kubeconfig)
 	if err != nil {
 		ctxlog(ctx).Errorf("BuildConfigFromFlags: %s", err.Error())

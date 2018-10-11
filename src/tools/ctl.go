@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"time"
 	"flag"
+	"sort"
 	"fmt"
 	"os"
 
@@ -532,6 +533,9 @@ func function_minfo(args []string, opts [16]string) {
 	if len(ifo.Hosts) != 0 {
 		fmt.Printf("PODs at %s\n", strings.Join(ifo.Hosts, " "))
 	}
+	if len(ifo.Hosts) != 0 {
+		fmt.Printf("PODs IPs %s\n", strings.Join(ifo.IPs, " "))
+	}
 	if ifo.Dep != "" {
 		fmt.Printf("Deployments: %s\n", ifo.Dep)
 	}
@@ -540,6 +544,31 @@ func function_minfo(args []string, opts [16]string) {
 func check_lang(args []string, opts [16]string) {
 	l := detect_language(opts[0], "code")
 	fmt.Printf("%s\n", l)
+}
+
+func sysctl(args []string, opts [16]string) {
+	if len(args) == 0 {
+		var ctls []map[string]string
+		swyclient.List("sysctl", http.StatusOK, &ctls)
+		sort.Slice(ctls, func(i, j int) bool { return ctls[i]["name"] < ctls[j]["name"] })
+		for _, ctl := range(ctls) {
+			fmt.Printf("%-32s = %s\n", ctl["name"], ctl["value"])
+		}
+
+		return
+	}
+
+	if len(args) == 1 {
+		var ctl map[string]string
+		swyclient.Get("sysctl/" + args[0], http.StatusOK, &ctl)
+		fmt.Printf("%-32s = %s\n", ctl["name"], ctl["value"])
+		return
+	}
+
+	if len(args) == 2 {
+		swyclient.Mod("sysctl/" + args[0], http.StatusOK, &args[1])
+		return
+	}
 }
 
 func check_ext(path, ext, typ string) string {
@@ -654,8 +683,6 @@ func getSrc(opt string, src *swyapi.FunctionSources) {
 }
 
 func function_add(args []string, opts [16]string) {
-	var err error
-
 	sources := swyapi.FunctionSources{}
 	code := swyapi.FunctionCode{}
 
@@ -685,10 +712,11 @@ func function_add(args []string, opts [16]string) {
 	}
 
 	if opts[4] != "" {
-		req.Size.Timeout, err = strconv.ParseUint(opts[4], 10, 64)
+		x, err := strconv.ParseUint(opts[4], 10, 32)
 		if err != nil {
 			fatal(fmt.Errorf("Bad tmo value %s: %s", opts[4], err.Error()))
 		}
+		req.Size.Timeout = uint(x)
 	}
 
 	if opts[5] != "" {
@@ -805,12 +833,11 @@ func function_update(args []string, opts [16]string) {
 		sz := swyapi.FunctionSize{}
 
 		if opts[1] != "" {
-			var err error
-
-			sz.Timeout, err = strconv.ParseUint(opts[1], 10, 64)
+			x, err := strconv.ParseUint(opts[1], 10, 32)
 			if err != nil {
 				fatal(fmt.Errorf("Bad tmo value %s: %s", opts[4], err.Error()))
 			}
+			sz.Timeout = uint(x)
 		}
 		if opts[2] != "" {
 			sz.Rate, sz.Burst = parse_rate(opts[2])
@@ -1618,6 +1645,7 @@ const (
 	CMD_MTYPES string	= "mt"
 	CMD_LANGS string	= "lng"
 	CMD_LANG string		= "ld"
+	CMD_SYSCTL string	= "sc"
 )
 
 var cmdOrder = []string {
@@ -1696,6 +1724,7 @@ var cmdOrder = []string {
 	CMD_LANGS,
 	CMD_MTYPES,
 	CMD_LANG,
+	CMD_SYSCTL,
 }
 
 type cmdDesc struct {
@@ -1787,6 +1816,7 @@ var cmdMap = map[string]*cmdDesc {
 	CMD_LANGS:	&cmdDesc{ help: "Show supported languages",	call: languages		},
 	CMD_MTYPES:	&cmdDesc{ help: "Show supported mwares",	call: mware_types	},
 	CMD_LANG:	&cmdDesc{ help: "Detect file language",		call: check_lang	},
+	CMD_SYSCTL:	&cmdDesc{ help: "Work with gate variables",	call: sysctl		},
 }
 
 func setupCommonCmd(cmd string, args ...string) {
@@ -1956,6 +1986,8 @@ func main() {
 
 	setupCommonCmd(CMD_LANG)
 	cmdMap[CMD_LANG].opts.StringVar(&opts[0], "src", "", "File")
+
+	setupCommonCmd(CMD_SYSCTL)
 
 	flag.Usage = func() {
 		for _, v := range cmdOrder {
