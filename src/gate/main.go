@@ -245,7 +245,9 @@ func getHandlers() http.Handler {
 	r.Handle("/v1/info/mwares",		genReqHandler(handleMwareTypes)).Methods("GET", "OPTIONS")
 
 	r.PathPrefix("/call/{urlid}").Methods(clientMethods...).HandlerFunc(handleCall)
-	r.HandleFunc("/websockets/{ws}", handleWebSocket)
+
+	r.HandleFunc("/websockets/{ws}", handleWebSocketClient)
+	r.PathPrefix("/websockets/{ws}/conns").Methods("POST").HandlerFunc(handleWebSocketsMw)
 
 	return r
 }

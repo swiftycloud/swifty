@@ -114,30 +114,15 @@ func wsCloseConns(lid string) {
 	wcs.lock.Unlock()
 }
 
-func wsUnicastMessage(ctx context.Context, mwd *MwareDesc, rq *swyapi.WsMwReq) *xrest.ReqErr {
-	if rq.CId == "" {
-		return GateErrM(swyapi.GateBadRequest, "No target")
-	}
-	if rq.MType == nil || rq.Msg == nil {
-		return GateErrM(swyapi.GateBadRequest, "No message")
-	}
+func wsUnicastMessage(ctx context.Context, cid string, wcs *wsConnMap, rq *swyapi.WsMwReq) *xrest.ReqErr {
 
-	aux, ok := wsConns.Load(mwd.Cookie)
-	if !ok {
-		return GateErrM(swyapi.GateNotFound, "Target not found")
-	}
-
-	wcs := aux.(*wsConnMap)
-
-	wcs.lock.RLock()
-	c, ok := wcs.cons[rq.CId]
+	c, ok := wcs.cons[cid]
 	if ok {
-		err := c.WriteMessage(*rq.MType, rq.Msg)
+		err := c.WriteMessage(rq.MType, rq.Msg)
 		if err != nil {
 			; /* XXX What? */
 		}
 	}
-	wcs.lock.RUnlock()
 
 	if !ok {
 		return GateErrM(swyapi.GateNotFound, "Target not found")
@@ -146,31 +131,19 @@ func wsUnicastMessage(ctx context.Context, mwd *MwareDesc, rq *swyapi.WsMwReq) *
 	return nil
 }
 
-func wsBroadcastMessage(ctx context.Context, mwd *MwareDesc, rq *swyapi.WsMwReq) *xrest.ReqErr {
-	if rq.MType == nil || rq.Msg == nil {
-		return GateErrM(swyapi.GateBadRequest, "No message")
-	}
+func wsBroadcastMessage(ctx context.Context, wcs *wsConnMap, rq *swyapi.WsMwReq) *xrest.ReqErr {
 
-	aux, ok := wsConns.Load(mwd.Cookie)
-	if !ok {
-		return nil
-	}
-
-	wcs := aux.(*wsConnMap)
-
-	wcs.lock.RLock()
 	for _, c := range wcs.cons {
-		err := c.WriteMessage(*rq.MType, rq.Msg)
+		err := c.WriteMessage(rq.MType, rq.Msg)
 		if err != nil {
 			; /* XXX What? */
 		}
 	}
-	wcs.lock.RUnlock()
 
 	return nil
 }
 
-func wsFunctionReq(ctx context.Context, mwd *MwareDesc, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
+func wsFunctionReq(ctx context.Context, mwd *MwareDesc, cid string, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
 	var rq swyapi.WsMwReq
 
 	err := xhttp.RReq(r, &rq)
@@ -178,15 +151,22 @@ func wsFunctionReq(ctx context.Context, mwd *MwareDesc, w http.ResponseWriter, r
 		return GateErrE(swyapi.GateBadRequest, err)
 	}
 
+	aux, ok := wsConns.Load(mwd.Cookie)
+	if !ok {
+		return GateErrM(swyapi.GateNotFound, "Target not found")
+	}
+
+	wcs := aux.(*wsConnMap)
+
 	var cerr *xrest.ReqErr
 
-	switch rq.Action {
-	case "send":
-		cerr = wsUnicastMessage(ctx, mwd, &rq)
-	case "broadcast":
-		cerr = wsBroadcastMessage(ctx, mwd, &rq)
-	default:
-		cerr = GateErrM(swyapi.GateBadRequest, "Invalid action")
+	wcs.lock.RLock()
+	defer wcs.lock.RUnlock()
+
+	if cid != "" {
+		cerr = wsUnicastMessage(ctx, cid, wcs, &rq)
+	} else {
+		cerr = wsBroadcastMessage(ctx, wcs, &rq)
 	}
 
 	if cerr != nil {

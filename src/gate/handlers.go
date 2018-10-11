@@ -760,7 +760,7 @@ func handleGithubEvent(w http.ResponseWriter, r *http.Request) {
 
 var wsupgrader = websocket.Upgrader{}
 
-func handleWebSocket(w http.ResponseWriter, r *http.Request) {
+func handleWebSocketClient(w http.ResponseWriter, r *http.Request) {
 	ws := mux.Vars(r)["ws"]
 	var wsmw MwareDesc
 
@@ -772,30 +772,45 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sec := r.Header.Get("X-WS-Token")
-	if sec != "" {
-		defer done(ctx)
+	done(ctx)
 
-		/* This must be a connection from FN */
-		if sec != wsmw.Secret {
-			http.Error(w, "Not authorized", http.StatusUnauthorized)
-			return
-		}
+	c, err := wsupgrader.Upgrade(w, r, nil)
+	if err != nil {
+		return
+	}
 
-		cerr := wsFunctionReq(ctx, &wsmw, w, r)
-		if cerr != nil {
-			http.Error(w, cerr.String(), http.StatusBadRequest)
-		}
-	} else {
-		/* Otherwise we treat this as client connection */
+	wsClientReq(&wsmw, c)
+}
+
+func handleWebSocketsMw(w http.ResponseWriter, r *http.Request) {
+	ctx, done := mkContext2("::ws", false)
+	defer done(ctx)
+
+	var wsmw MwareDesc
+	ws := mux.Vars(r)["ws"]
+
+	err := dbFind(ctx, bson.M{"cookie": ws, "mwaretype": "websocket", "state": DBMwareStateRdy}, &wsmw)
+	if err != nil {
 		done(ctx)
+		http.Error(w, "No such websocket", http.StatusNotFound)
+		return
+	}
 
-		c, err := wsupgrader.Upgrade(w, r, nil)
-		if err != nil {
-			return
-		}
+	//sec := r.Header.Get("X-WS-Token")
+	//if sec != wsmw.Secret {
+	//	http.Error(w, "Not authorized", http.StatusUnauthorized)
+	//	return
+	//}
 
-		wsClientReq(&wsmw, c)
+	path := strings.SplitN(r.URL.Path, "/", 5)
+	cid := ""
+	if len(path) > 4 {
+		cid = path[4]
+	}
+
+	cerr := wsFunctionReq(ctx, &wsmw, cid, w, r)
+	if cerr != nil {
+		http.Error(w, cerr.String(), http.StatusBadRequest)
 	}
 }
 
