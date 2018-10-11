@@ -240,6 +240,25 @@ again:
 		}
 
 		fmt.Printf("-> [%v]\n", rsp)
+
+		fmt.Printf("Calling via auth (%) URL [%s]\n", "test_jwt", tif.URL)
+		cln.Functions().Set(ifo.Id, "authctx", "test_jwt")
+		resp, err = xhttp.Req(&xhttp.RestReq{ Address: tif.URL + "?name=foobar" }, nil)
+		if err == nil {
+			fmt.Printf("Getting URL resp\n")
+			var rsp map[string]interface{}
+			err = xhttp.RResp(resp, &rsp)
+			if err != nil {
+				return err
+			}
+
+			fmt.Printf("-> [%v]\n", rsp)
+			return errors.New("Authorized call succeeded")
+		}
+
+		if resp.StatusCode != 401 {
+			return fmt.Errorf("Unexpectedly failed with %d", resp.StatusCode)
+		}
 	}
 
 	fmt.Printf("Removing echo FN\n")
