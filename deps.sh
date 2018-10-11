@@ -1,18 +1,18 @@
 #!/bin/bash
-if [ "x${GOPATH}" != "x$(pwd):$(pwd)/vendor" ]; then
-	echo "Set GOPATH to $(pwd)/vendor"
+if [ "x${GOPATH}" != "x$(pwd)/vendor:$(pwd)" ]; then
+	echo "Set GOPATH to $(pwd)/vendor:$(pwd)"
 	exit 1
 fi
 
-if [ -d "${GOPATH}/src" ]; then
+VGOPATH="$(pwd)/vendor"
+
+if [ -d "${VGOPATH}/src" ]; then
 	echo "Vendor is populated"
 	exit 0
 fi
 
 set -x
 set -e
-
-VGOPATH="$(pwd)/vendor"
 
 # We need 6.0.0 version of the k8s client libs. When built, the lib
 # gets the protobuf library of some given version, which is SUDDENLY
