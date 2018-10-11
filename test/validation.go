@@ -10,7 +10,6 @@ import (
 	"errors"
 	"net/http"
 	"io/ioutil"
-	"encoding/json"
 	"encoding/base64"
 )
 
@@ -28,34 +27,32 @@ func encodeFile(file string) string {
 	return base64.StdEncoding.EncodeToString(data)
 }
 
-func doRun(cln *swyapi.Client, id string, src *swyapi.FunctionSources) (string, error) {
+func doRun(cln *swyapi.Client, id string, src *swyapi.FunctionSources) {
 	var res swyapi.WdogFunctionRunResult
 
 	fmt.Printf("Running FN (custom code: %v)\n", src != nil)
-	err := cln.Req1("POST", "functions/" + id + "/run", http.StatusOK,
+	cln.Req1("POST", "functions/" + id + "/run", http.StatusOK,
 			&swyapi.WdogFunctionRun {
 				Args: map[string]string { "name": "xyz" },
 				Src: src,
 			}, &res)
-	if err != nil {
-		return "", err
-	}
 
 	fmt.Printf("\tRun result: [%s]\n", res.Return)
-	var resd map[string]string
-	err = json.Unmarshal([]byte(res.Return), &resd)
-	if err != nil {
-		return "", err
-	}
 
-	return resd["message"], nil
+//	var resd map[string]string
+//	err = json.Unmarshal([]byte(res.Return), &resd)
+//	if err != nil {
+//		return "", err
+//	}
+//
+//	return resd["message"], nil
 }
 
-func doWait(cln *swyapi.Client, id, version string) error {
-	_, err := cln.Req2("POST", "functions/" + id + "/wait",
+func doWait(cln *swyapi.Client, id, version string) {
+	fmt.Printf("Waiting FN to come up\n")
+	cln.Req2("POST", "functions/" + id + "/wait",
 			&swyapi.FunctionWait { Version: version, Timeout: 10000 },
 			http.StatusOK, 300)
-	return err
 }
 
 var stdrep string
@@ -63,24 +60,16 @@ var stdrep string
 func runRepos(cln *swyapi.Client, prj string) error {
 	fmt.Printf("Adding GH account\n")
 	var ai map[string]string
-	err := cln.Req1("POST", "accounts", http.StatusOK, map[string]string {
+	cln.Accounts().Add(map[string]string {
 				"name": "swiftycloud",
 				"type": "github",
 			}, &ai)
-	if err != nil {
-		return err
-	}
 
 	fmt.Printf("Acc %s created\n", ai["id"])
+
 	fmt.Printf("Listing repos\n")
-
 	var reps []*swyapi.RepoInfo
-
-	err = cln.Req1("GET", "repos", http.StatusOK, nil, &reps)
-	if err != nil  {
-		return err
-	}
-
+	cln.Repos().List([]string{}, &reps)
 	for _, rep := range reps {
 		fmt.Printf("%s\n", rep.URL)
 		if rep.URL == "https://github.com/swiftycloud/swifty.demo" {
@@ -92,13 +81,13 @@ func runRepos(cln *swyapi.Client, prj string) error {
 	}
 
 	fmt.Printf("Found stdrepo %s\n", stdrep)
-	cln.Req1("DELETE", "accounts/" + ai["id"], http.StatusOK, nil, nil)
+
+	cln.Accounts().Del(ai["id"])
 
 	return nil
 }
 
 func runFunctions(cln *swyapi.Client, prj string) error {
-	var err error
 	var ifo swyapi.FunctionInfo
 
 	src1 := swyapi.FunctionSources{}
@@ -116,46 +105,26 @@ func runFunctions(cln *swyapi.Client, prj string) error {
 	cln.Functions().Add(&swyapi.FunctionAdd {
 		Name:		"test.echo",
 		Project:	prj,
-		Code:		swyapi.FunctionCode {
-			Lang:		"python",
-		},
+		Code:		swyapi.FunctionCode { Lang: "python", },
 		Sources:	src1,
 	}, &ifo)
 
-	fmt.Printf("Waiting FN to come up\n")
-	err = doWait(cln, ifo.Id, "0")
-	if err != nil {
-		return err
-	}
+	doWait(cln, ifo.Id, "0")
 
 	src2 := &swyapi.FunctionSources {
 		Type:	"code",
 		Code:	encodeFile("test/functions/python/helloworld2.py"),
 	}
 
-	_, err = doRun(cln, ifo.Id, src2)
-	if err != nil {
-		return err
-	}
-
-	_, err = doRun(cln, ifo.Id, nil)
-	if err != nil {
-		return err
-	}
+	doRun(cln, ifo.Id, src2)
+	doRun(cln, ifo.Id, nil)
 
 	fmt.Printf("Updating FN src\n")
 	cln.Functions().Set(ifo.Id, "/sources", src2)
 
-	fmt.Printf("Waiting FN to update\n")
-	err = doWait(cln, ifo.Id, "1")
-	if err != nil {
-		return err
-	}
+	doWait(cln, ifo.Id, "1")
 
-	_, err = doRun(cln, ifo.Id, nil)
-	if err != nil {
-		return err
-	}
+	doRun(cln, ifo.Id, nil)
 
 	fmt.Printf("Removing echo FN\n")
 	/* XXX -- k8s sometimes refuses to */
@@ -194,11 +163,7 @@ again:
 			goto again
 		}
 
-		fmt.Printf("Waiting fn %s (%s) to come up\n", item.Name, item.Id)
-		err = doWait(cln, item.Id, "0")
-		if err != nil {
-			return err
-		}
+		doWait(cln, item.Id, "0")
 	}
 
 	var ifo swyapi.FunctionInfo
@@ -206,20 +171,14 @@ again:
 	cln.Functions().Add(&swyapi.FunctionAdd {
 		Name:		"test.echo",
 		Project:	prj,
-		Code:		swyapi.FunctionCode {
-			Lang:		"python",
-		},
+		Code:		swyapi.FunctionCode { Lang: "python", },
 		Sources:	swyapi.FunctionSources {
 			Type:		"code",
 			Code:		encodeFile("test/functions/python/helloworld.py"),
 		},
 	}, &ifo)
 
-	fmt.Printf("Waiting FN to come up\n")
-	err = doWait(cln, ifo.Id, "0")
-	if err != nil {
-		return err
-	}
+	doWait(cln, ifo.Id, "0")
 
 	fmt.Printf("Add URL trigger for it\n")
 	var tif swyapi.FunctionEvent
