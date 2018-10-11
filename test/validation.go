@@ -5,6 +5,7 @@ import (
 	"swifty/common"
 	"os"
 	"fmt"
+	"time"
 	"errors"
 	"net/http"
 	"io/ioutil"
@@ -180,6 +181,7 @@ func runAaaS(cln *swyapi.Client, prj string) error {
 		return err
 	}
 
+again:
 	fmt.Printf("Getting deloy info\n")
 	err = cln.Req1("GET", "auths/" + di.Id + "?details=1", http.StatusOK, nil, &di)
 	if err != nil {
@@ -189,6 +191,13 @@ func runAaaS(cln *swyapi.Client, prj string) error {
 	for _, item := range di.Items {
 		if item.Type != "function" {
 			continue
+		}
+		if item.State == "dead" {
+			/* FIXME -- deploy starts item after some time, not
+			 * immediately and till that it appears as "dead"
+			 */
+			time.Sleep(10 * time.Millisecond)
+			goto again
 		}
 
 		fmt.Printf("Waiting fn %s (%s) to come up\n", item.Name, item.Id)
