@@ -30,12 +30,22 @@ func isLite() bool { return Flavor == "lite" }
 const (
 	DefaultProject string			= "default"
 	NoProject string			= "*"
+	CloneDir				= "clone"
+)
+
+var (
 	PodStartTmo time.Duration		= 120 * time.Second
 	DepScaleupRelax time.Duration		= 16 * time.Second
 	DepScaledownStep time.Duration		= 8 * time.Second
 	TenantLimitsUpdPeriod time.Duration	= 120 * time.Second
-	CloneDir				= "clone"
 )
+
+func init() {
+	addTimeSysctl("pod_start_tmo",		&PodStartTmo)
+	addTimeSysctl("dep_scaleup_relax",	&DepScaleupRelax)
+	addTimeSysctl("dep_scaledown_step",	&DepScaledownStep)
+	addTimeSysctl("limits_update_period",	&TenantLimitsUpdPeriod)
+}
 
 var CORS_Headers = []string {
 	"Content-Type",
@@ -177,8 +187,8 @@ func getHandlers() http.Handler {
 	r.HandleFunc("/v1/login",		handleUserLogin).Methods("POST", "OPTIONS")
 	r.HandleFunc("/github",			handleGithubEvent).Methods("POST").Headers("X-Github-Event")
 
-	r.Handle("/sysctl",			genReqHandler(handleSysctls)).Methods("GET", "OPTIONS")
-	r.Handle("/sysctl/{name}",		genReqHandler(handleSysctl)).Methods("GET", "PUT", "OPTIONS")
+	r.Handle("/v1/sysctl",			genReqHandler(handleSysctls)).Methods("GET", "OPTIONS")
+	r.Handle("/v1/sysctl/{name}",		genReqHandler(handleSysctl)).Methods("GET", "PUT", "OPTIONS")
 
 	r.Handle("/v1/stats",			genReqHandler(handleTenantStatsAll)).Methods("GET", "POST", "OPTIONS")
 	r.Handle("/v1/stats/{sub}",		genReqHandler(handleTenantStats)).Methods("GET", "POST", "OPTIONS")

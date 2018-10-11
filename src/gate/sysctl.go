@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/gorilla/mux"
 	"context"
+	"time"
 	"net/http"
 	"net/url"
 	"swifty/apis"
@@ -10,8 +11,8 @@ import (
 )
 
 type Sysctl struct {
-	Get	func(*Sysctl) string
-	Set	func(*Sysctl, string) error
+	Get	func() string
+	Set	func(string) error
 	Name	string
 }
 
@@ -21,12 +22,12 @@ func (_ *Sysctl)Del(ctx context.Context) *xrest.ReqErr { return GateErrC(swyapi.
 func (ctl *Sysctl)Info(ctx context.Context, q url.Values, details bool) (interface{}, *xrest.ReqErr) {
 	return map[string]string {
 		"name": ctl.Name,
-		"value": ctl.Get(ctl),
+		"value": ctl.Get(),
 	}, nil
 }
 
 func (ctl *Sysctl)Upd(ctx context.Context, upd interface{}) *xrest.ReqErr {
-	err := ctl.Set(ctl, *upd.(*string))
+	err := ctl.Set(*upd.(*string))
 	if err != nil {
 		return GateErrE(swyapi.GateBadRequest, err)
 	}
@@ -34,9 +35,23 @@ func (ctl *Sysctl)Upd(ctx context.Context, upd interface{}) *xrest.ReqErr {
 	return nil
 }
 
-var sysctls map[string]*Sysctl
+var sysctls = map[string]*Sysctl {}
 
-func init() { sysctls = make(map[string]*Sysctl) }
+func addTimeSysctl(name string, d *time.Duration) {
+	sysctls[name] = &Sysctl{
+		Name: name,
+		Get: func() string { return (*d).String() },
+		Set: func(v string) error {
+			nd, er := time.ParseDuration(v)
+			if er != nil {
+				return er
+			}
+
+			*d = nd
+			return nil
+		},
+	}
+}
 
 type Sysctls struct{}
 

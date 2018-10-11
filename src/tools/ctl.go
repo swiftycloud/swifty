@@ -542,6 +542,30 @@ func check_lang(args []string, opts [16]string) {
 	fmt.Printf("%s\n", l)
 }
 
+func sysctl(args []string, opts [16]string) {
+	if len(args) == 0 {
+		var ctls []map[string]string
+		swyclient.List("sysctl", http.StatusOK, &ctls)
+		for _, ctl := range(ctls) {
+			fmt.Printf("%-32s = %s\n", ctl["name"], ctl["value"])
+		}
+
+		return
+	}
+
+	if len(args) == 1 {
+		var ctl map[string]string
+		swyclient.Get("sysctl/" + args[0], http.StatusOK, &ctl)
+		fmt.Printf("%-32s = %s\n", ctl["name"], ctl["value"])
+		return
+	}
+
+	if len(args) == 2 {
+		swyclient.Mod("sysctl/" + args[0], http.StatusOK, &args[1])
+		return
+	}
+}
+
 func check_ext(path, ext, typ string) string {
 	if strings.HasSuffix(path, ext) {
 		return typ
@@ -1618,6 +1642,7 @@ const (
 	CMD_MTYPES string	= "mt"
 	CMD_LANGS string	= "lng"
 	CMD_LANG string		= "ld"
+	CMD_SYSCTL string	= "sc"
 )
 
 var cmdOrder = []string {
@@ -1696,6 +1721,7 @@ var cmdOrder = []string {
 	CMD_LANGS,
 	CMD_MTYPES,
 	CMD_LANG,
+	CMD_SYSCTL,
 }
 
 type cmdDesc struct {
@@ -1787,6 +1813,7 @@ var cmdMap = map[string]*cmdDesc {
 	CMD_LANGS:	&cmdDesc{ help: "Show supported languages",	call: languages		},
 	CMD_MTYPES:	&cmdDesc{ help: "Show supported mwares",	call: mware_types	},
 	CMD_LANG:	&cmdDesc{ help: "Detect file language",		call: check_lang	},
+	CMD_SYSCTL:	&cmdDesc{ help: "Work with gate variables",	call: sysctl		},
 }
 
 func setupCommonCmd(cmd string, args ...string) {
@@ -1956,6 +1983,8 @@ func main() {
 
 	setupCommonCmd(CMD_LANG)
 	cmdMap[CMD_LANG].opts.StringVar(&opts[0], "src", "", "File")
+
+	setupCommonCmd(CMD_SYSCTL)
 
 	flag.Usage = func() {
 		for _, v := range cmdOrder {
