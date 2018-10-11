@@ -132,7 +132,7 @@ type YAMLConfS3 struct {
 	Creds		string			`yaml:"creds"`
 	API		string			`yaml:"api"`
 	Notify		string			`yaml:"notify"`
-	HiddenKeyTmo	uint32			`yaml:"hidden-key-timeout"`
+	HiddenKeyTmo	int			`yaml:"hidden-key-timeout"`
 	c		*xh.XCreds
 	cn		*xh.XCreds
 }
@@ -150,6 +150,13 @@ func (cm *YAMLConfMw)Validate() error {
 	if cm.SecKey == "" {
 		return errors.New("'middleware.mwseckey' not set")
 	}
+
+	if cm.S3.HiddenKeyTmo == 0 {
+		cm.S3.HiddenKeyTmo = 120
+		fmt.Printf("'middleware.s3.hidden-key-timeout' not set, using default 120sec\n")
+	}
+	addIntSysctl("s3_hidden_key_timeout_sec", &cm.S3.HiddenKeyTmo)
+
 	return nil
 }
 
