@@ -227,7 +227,7 @@ type test struct {
 var tests = []*test {
 	{ name: "repos",	run: runRepos },
 	{ name: "functions",	run: runFunctions },
-//	{ name: "aaas",		run: runAaaS },
+	{ name: "aaas",		run: runAaaS },
 }
 
 func main() {
