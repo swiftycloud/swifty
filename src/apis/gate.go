@@ -85,6 +85,7 @@ type FunctionMdat struct {
 	Cookie		string			`json:"cookie"`
 	RL		[]uint			`json:"rl"`
 	BR		[]uint			`json:"br"`
+	IPs		[]string		`json:"ips,omitempty"`
 	Hosts		[]string		`json:"hosts,omitempty"`
 	Dep		string			`json:"depname,omitempty"`
 }

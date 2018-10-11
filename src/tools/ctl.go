@@ -533,6 +533,9 @@ func function_minfo(args []string, opts [16]string) {
 	if len(ifo.Hosts) != 0 {
 		fmt.Printf("PODs at %s\n", strings.Join(ifo.Hosts, " "))
 	}
+	if len(ifo.Hosts) != 0 {
+		fmt.Printf("PODs IPs %s\n", strings.Join(ifo.IPs, " "))
+	}
 	if ifo.Dep != "" {
 		fmt.Printf("Deployments: %s\n", ifo.Dep)
 	}

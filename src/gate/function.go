@@ -155,6 +155,7 @@ func (fn *FunctionDesc)toMInfo(ctx context.Context) *swyapi.FunctionMdat {
 		if err == nil {
 			for _, pod := range pods.Items {
 				fid.Hosts = append(fid.Hosts, pod.Status.HostIP)
+				fid.IPs = append(fid.IPs, pod.Status.PodIP)
 			}
 		}
 
