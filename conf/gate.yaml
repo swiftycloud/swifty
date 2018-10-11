@@ -29,16 +29,6 @@ middleware:
                 creds: "-:S3TOKEN@swy1:8789"
                 api: "swy1:8787"
                 notify: "swifty:S3IFYPASS@swy0:5672/s3"
-                hidden-key-timeout: 120
-runtime:
-        timeout:
-                max: 60
-                def: 1
-        memory:
-                max: 1024
-                min: 64
-                def: 128
-        max-replicas: 32
 wdog:
         img-prefix: "swifty"
         volume: "/home/swifty-volume"

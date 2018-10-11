@@ -174,35 +174,35 @@ type YAMLConfRt struct {
 
 func (cr *YAMLConfRt)Validate() error {
 	if cr.MaxReplicas == 0 {
-		cr.MaxReplicas = 8
-		fmt.Printf("'runtime.max-replicas' not set, using default 8\n")
+		cr.MaxReplicas = 32
+		fmt.Printf("'runtime.max-replicas' not set, using default 32\n")
 	}
 	addIntSysctl("fn_replicas_limit", &cr.MaxReplicas)
 	if cr.Timeout.Max == 0 {
-		cr.Timeout.Max = 10
-		fmt.Printf("'runtime.timeout.max' not set, using default 10sec\n")
+		cr.Timeout.Max = 60
+		fmt.Printf("'runtime.timeout.max' not set, using default 1min\n")
 	}
 	addIntSysctl("fn_timeout_max_sec", &cr.Timeout.Max)
 	if cr.Timeout.Def == 0 {
-		cr.Timeout.Def = 2
+		cr.Timeout.Def = 1
 		fmt.Printf("'runtime.timeout.def' not set, using default 1sec\n")
 	}
-	addIntSysctl("fn_timeout_def_sec", &cr.Timeout.Max)
+	addIntSysctl("fn_timeout_def_sec", &cr.Timeout.Def)
 	if cr.Memory.Min == 0 {
-		cr.Memory.Min = 32
-		fmt.Printf("'runtime.memory.min' not set, using default 32m\n")
+		cr.Memory.Min = 64
+		fmt.Printf("'runtime.memory.min' not set, using default 64m\n")
 	}
 	addIntSysctl("fn_memory_min_mb", &cr.Memory.Min)
 	if cr.Memory.Max == 0 {
-		cr.Memory.Min = 256
-		fmt.Printf("'runtime.memory.max' not set, using default 256m\n")
+		cr.Memory.Max = 1024
+		fmt.Printf("'runtime.memory.max' not set, using default 1g\n")
 	}
-	addIntSysctl("fn_memory_max_mb", &cr.Memory.Min)
+	addIntSysctl("fn_memory_max_mb", &cr.Memory.Max)
 	if cr.Memory.Def == 0 {
-		cr.Memory.Def = 64
-		fmt.Printf("'runtime.memory.def' not set, using default 64m\n")
+		cr.Memory.Def = 128
+		fmt.Printf("'runtime.memory.def' not set, using default 128m\n")
 	}
-	addIntSysctl("fn_memory_def_mb", &cr.Memory.Min)
+	addIntSysctl("fn_memory_def_mb", &cr.Memory.Def)
 	return nil
 }
 
