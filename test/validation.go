@@ -3,6 +3,7 @@ package main
 import (
 	"swifty/apis"
 	"swifty/common"
+	"swifty/common/http"
 	"os"
 	"fmt"
 	"time"
@@ -207,11 +208,67 @@ again:
 		}
 	}
 
+	var ifo swyapi.FunctionInfo
+	fmt.Printf("Adding echo FN\n")
+	err = cln.Req1("POST", "functions", http.StatusOK, &swyapi.FunctionAdd {
+		Name:		"test.echo",
+		Project:	prj,
+		Code:		swyapi.FunctionCode {
+			Lang:		"python",
+		},
+		Sources:	swyapi.FunctionSources {
+			Type:		"code",
+			Code:		encodeFile("test/functions/python/helloworld.py"),
+		},
+	}, &ifo)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("Waiting FN to come up\n")
+	err = doWait(cln, ifo.Id, "0")
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("Add URL trigger for it\n")
+	var tif swyapi.FunctionEvent
+	err = cln.Req1("POST", "functions/" + ifo.Id + "/triggers", http.StatusOK,
+			&swyapi.FunctionEvent { Name: "api", Source: "url", }, &tif)
+	if err != nil {
+		return err
+	}
+
+	if tif.URL != "" {
+		fmt.Printf("Calling via URL [%s]\n", tif.URL)
+		resp, err := xhttp.Req(&xhttp.RestReq{ Address: tif.URL + "?name=foobar" }, nil)
+		if err != nil {
+			return err
+		}
+
+		fmt.Printf("Getting URL resp\n")
+		var rsp map[string]interface{}
+		err = xhttp.RResp(resp, &rsp)
+		if err != nil {
+			return err
+		}
+
+		fmt.Printf("-> [%v]\n", rsp)
+	}
+
+	fmt.Printf("Removing echo FN\n")
+	err = cln.Req1("DELETE", "functions/" + ifo.Id, http.StatusOK, nil, nil)
+	if err != nil {
+		return err
+	}
+
+
 	fmt.Printf("Removing AaaS\n")
 	err = cln.Req1("DELETE", "auths/" + di.Id, http.StatusOK, nil, nil)
 	if err != nil {
 		return err
 	}
+
 
 	return nil
 }
