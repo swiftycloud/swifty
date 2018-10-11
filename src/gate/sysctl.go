@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/gorilla/mux"
 	"context"
+	"errors"
 	"strconv"
 	"time"
 	"net/http"
@@ -62,6 +63,9 @@ func addIntSysctl(name string, i *int) {
 			ni, er := strconv.Atoi(v)
 			if er != nil {
 				return er
+			}
+			if ni < 0 {
+				return errors.New("Negative value not allowed")
 			}
 
 			*i = ni
