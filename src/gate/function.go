@@ -87,8 +87,8 @@ type FnSrcDesc struct {
 
 type FnSizeDesc struct {
 	Replicas	int		`bson:"replicas"`
-	Mem		uint64		`bson:"mem"`
-	Tmo		uint64		`bson:"timeout"`
+	Mem		uint		`bson:"mem"`
+	Tmo		uint		`bson:"timeout"`
 	Burst		uint		`bson:"burst"`
 	Rate		uint		`bson:"rate"`
 }
@@ -476,8 +476,8 @@ stalled:
 
 func fnFixSize(sz *swyapi.FunctionSize) error {
 	if sz.Timeout == 0 {
-		sz.Timeout = conf.Runtime.Timeout.Def * 1000
-	} else if sz.Timeout > conf.Runtime.Timeout.Max * 1000 {
+		sz.Timeout = uint(conf.Runtime.Timeout.Def * 1000)
+	} else if sz.Timeout > uint(conf.Runtime.Timeout.Max * 1000) {
 		return errors.New("Too big timeout")
 	}
 
@@ -486,9 +486,9 @@ func fnFixSize(sz *swyapi.FunctionSize) error {
 	}
 
 	if sz.Memory == 0 {
-		sz.Memory = conf.Runtime.Memory.Def
-	} else if sz.Memory > conf.Runtime.Memory.Max ||
-			sz.Memory < conf.Runtime.Memory.Min {
+		sz.Memory = uint(conf.Runtime.Memory.Def)
+	} else if sz.Memory > uint(conf.Runtime.Memory.Max) ||
+			sz.Memory < uint(conf.Runtime.Memory.Min) {
 		return errors.New("Too small/big memory size")
 	}
 
@@ -1025,7 +1025,7 @@ func (_ *FnSzProp)Info(ctx context.Context, o xrest.Obj, q url.Values) (interfac
 	fn := o.(*FunctionDesc)
 	return &swyapi.FunctionSize{
 		Memory:		fn.Size.Mem,
-		Timeout:	fn.Size.Tmo,
+		Timeout:	uint(fn.Size.Tmo),
 		Rate:		fn.Size.Rate,
 		Burst:		fn.Size.Burst,
 	}, nil

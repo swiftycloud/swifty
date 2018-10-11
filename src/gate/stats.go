@@ -231,7 +231,7 @@ func statsUpdate(fmd *FnMemData, op *statsOpaque, res *swyapi.WdogFunctionRunRes
 
 	fmd.stats.RunTime += rt
 
-	rc := uint64(rt) * fmd.mem
+	rc := uint64(rt) * uint64(fmd.mem)
 	fmd.stats.RunCost += rc
 	fmd.stats.BytesIn += uint64(op.argsSz + op.bodySz)
 	fmd.stats.BytesOut += uint64(len(res.Return))

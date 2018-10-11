@@ -84,7 +84,7 @@ func balancerFnDepGrow(ctx context.Context, fdm *FnMemData, goal uint32) {
 		return
 	}
 
-	if goal > conf.Runtime.MaxReplicas {
+	if goal > uint32(conf.Runtime.MaxReplicas) {
 		fdm.lock.Unlock()
 		ctxlog(ctx).Debugf("Too many replicas (%d) needed for %s", goal, fdm.depname)
 		return
