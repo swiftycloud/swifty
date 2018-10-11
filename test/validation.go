@@ -113,7 +113,7 @@ func runFunctions(cln *swyapi.Client, prj string) error {
 	}
 
 	fmt.Printf("Adding echo FN\n")
-	err = cln.Req1("POST", "functions", http.StatusOK, &swyapi.FunctionAdd {
+	cln.Functions().Add(&swyapi.FunctionAdd {
 		Name:		"test.echo",
 		Project:	prj,
 		Code:		swyapi.FunctionCode {
@@ -121,9 +121,6 @@ func runFunctions(cln *swyapi.Client, prj string) error {
 		},
 		Sources:	src1,
 	}, &ifo)
-	if err != nil {
-		return err
-	}
 
 	fmt.Printf("Waiting FN to come up\n")
 	err = doWait(cln, ifo.Id, "0")
@@ -147,10 +144,7 @@ func runFunctions(cln *swyapi.Client, prj string) error {
 	}
 
 	fmt.Printf("Updating FN src\n")
-	err = cln.Req1("PUT", "functions/" + ifo.Id + "/sources", http.StatusOK, src2, nil)
-	if err != nil {
-		return err
-	}
+	cln.Functions().Set(ifo.Id, "/sources", src2)
 
 	fmt.Printf("Waiting FN to update\n")
 	err = doWait(cln, ifo.Id, "1")
@@ -164,10 +158,9 @@ func runFunctions(cln *swyapi.Client, prj string) error {
 	}
 
 	fmt.Printf("Removing echo FN\n")
-	err = cln.Req1("DELETE", "functions/" + ifo.Id, http.StatusOK, nil, nil)
-	if err != nil {
-		return err
-	}
+	/* XXX -- k8s sometimes refuses to */
+	time.Sleep(50 * time.Millisecond)
+	cln.Functions().Del(ifo.Id)
 
 	return nil
 }
@@ -210,7 +203,7 @@ again:
 
 	var ifo swyapi.FunctionInfo
 	fmt.Printf("Adding echo FN\n")
-	err = cln.Req1("POST", "functions", http.StatusOK, &swyapi.FunctionAdd {
+	cln.Functions().Add(&swyapi.FunctionAdd {
 		Name:		"test.echo",
 		Project:	prj,
 		Code:		swyapi.FunctionCode {
@@ -221,9 +214,6 @@ again:
 			Code:		encodeFile("test/functions/python/helloworld.py"),
 		},
 	}, &ifo)
-	if err != nil {
-		return err
-	}
 
 	fmt.Printf("Waiting FN to come up\n")
 	err = doWait(cln, ifo.Id, "0")
@@ -233,11 +223,7 @@ again:
 
 	fmt.Printf("Add URL trigger for it\n")
 	var tif swyapi.FunctionEvent
-	err = cln.Req1("POST", "functions/" + ifo.Id + "/triggers", http.StatusOK,
-			&swyapi.FunctionEvent { Name: "api", Source: "url", }, &tif)
-	if err != nil {
-		return err
-	}
+	cln.Triggers(ifo.Id).Add(&swyapi.FunctionEvent { Name: "api", Source: "url", }, &tif)
 
 	if tif.URL != "" {
 		fmt.Printf("Calling via URL [%s]\n", tif.URL)
@@ -257,11 +243,7 @@ again:
 	}
 
 	fmt.Printf("Removing echo FN\n")
-	err = cln.Req1("DELETE", "functions/" + ifo.Id, http.StatusOK, nil, nil)
-	if err != nil {
-		return err
-	}
-
+	cln.Functions().Del(ifo.Id)
 
 	fmt.Printf("Removing AaaS\n")
 	err = cln.Req1("DELETE", "auths/" + di.Id, http.StatusOK, nil, nil)
@@ -281,6 +263,10 @@ func mkClient() (*swyapi.Client, string) {
 	swyclient.NoTLS()
 	swyclient.Direct()
 	swyclient.Verbose()
+	swyclient.OnError(func(err error) {
+		fmt.Printf("==================[ FAIL ]=====================\n")
+		panic(err.Error())
+	})
 
 	return swyclient, login.Domn
 }
