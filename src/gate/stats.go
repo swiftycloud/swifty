@@ -9,9 +9,11 @@ import (
 	"swifty/common/xrest"
 )
 
-const (
-	statsFlushPeriod	= 8
-)
+var statsFlushPeriod = 8 * time.Second
+
+func init() {
+	addTimeSysctl("stats_fush_period", &statsFlushPeriod)
+}
 
 type statsWriter interface {
 	Write(ctx context.Context)
@@ -351,7 +353,7 @@ func (fc *statsFlush)Start() {
 				fc.closed = true
 				close(done)
 				return
-			case <-time.After(statsFlushPeriod * time.Second):
+			case <-time.After(statsFlushPeriod):
 				if fc.dirty {
 					fc.dirty = false
 					statsFlushReqs <-fc

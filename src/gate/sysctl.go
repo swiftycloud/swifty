@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/gorilla/mux"
 	"context"
+	"strconv"
 	"time"
 	"net/http"
 	"net/url"
@@ -48,6 +49,22 @@ func addTimeSysctl(name string, d *time.Duration) {
 			}
 
 			*d = nd
+			return nil
+		},
+	}
+}
+
+func addIntSysctl(name string, i *int) {
+	sysctls[name] = &Sysctl{
+		Name: name,
+		Get: func() string { return strconv.Itoa(*i) },
+		Set: func(v string) error {
+			ni, er := strconv.Atoi(v)
+			if er != nil {
+				return er
+			}
+
+			*i = ni
 			return nil
 		},
 	}
