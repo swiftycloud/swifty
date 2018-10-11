@@ -185,7 +185,7 @@ func methodNr(m string) uint {
 func getHandlers() http.Handler {
 	r := mux.NewRouter()
 	r.HandleFunc("/v1/login",		handleUserLogin).Methods("POST", "OPTIONS")
-	r.HandleFunc("/github",			handleGithubEvent).Methods("POST").Headers("X-Github-Event")
+	r.HandleFunc("/github",			handleGithubEvent).Methods("POST")
 
 	r.Handle("/v1/sysctl",			genReqHandler(handleSysctls)).Methods("GET", "OPTIONS")
 	r.Handle("/v1/sysctl/{name}",		genReqHandler(handleSysctl)).Methods("GET", "PUT", "OPTIONS")
@@ -245,7 +245,9 @@ func getHandlers() http.Handler {
 	r.Handle("/v1/info/mwares",		genReqHandler(handleMwareTypes)).Methods("GET", "OPTIONS")
 
 	r.PathPrefix("/call/{urlid}").Methods(clientMethods...).HandlerFunc(handleCall)
-	r.HandleFunc("/websockets/{ws}", handleWebSocket)
+
+	r.HandleFunc("/websockets/{ws}", handleWebSocketClient)
+	r.PathPrefix("/websockets/{ws}/conns").Methods("POST").HandlerFunc(handleWebSocketsMw)
 
 	return r
 }

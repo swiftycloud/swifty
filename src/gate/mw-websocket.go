@@ -2,6 +2,8 @@ package main
 
 import (
 	"github.com/gorilla/websocket"
+	"encoding/base64"
+	"gopkg.in/mgo.v2/bson"
 	"context"
 	"net/http"
 	"strconv"
@@ -114,30 +116,15 @@ func wsCloseConns(lid string) {
 	wcs.lock.Unlock()
 }
 
-func wsUnicastMessage(ctx context.Context, mwd *MwareDesc, rq *swyapi.WsMwReq) *xrest.ReqErr {
-	if rq.CId == "" {
-		return GateErrM(swyapi.GateBadRequest, "No target")
-	}
-	if rq.MType == nil || rq.Msg == nil {
-		return GateErrM(swyapi.GateBadRequest, "No message")
-	}
+func wsUnicastMessage(ctx context.Context, cid string, wcs *wsConnMap, rq *swyapi.WsMwReq) *xrest.ReqErr {
 
-	aux, ok := wsConns.Load(mwd.Cookie)
-	if !ok {
-		return GateErrM(swyapi.GateNotFound, "Target not found")
-	}
-
-	wcs := aux.(*wsConnMap)
-
-	wcs.lock.RLock()
-	c, ok := wcs.cons[rq.CId]
+	c, ok := wcs.cons[cid]
 	if ok {
-		err := c.WriteMessage(*rq.MType, rq.Msg)
+		err := c.WriteMessage(rq.MType, rq.Msg)
 		if err != nil {
 			; /* XXX What? */
 		}
 	}
-	wcs.lock.RUnlock()
 
 	if !ok {
 		return GateErrM(swyapi.GateNotFound, "Target not found")
@@ -146,31 +133,19 @@ func wsUnicastMessage(ctx context.Context, mwd *MwareDesc, rq *swyapi.WsMwReq) *
 	return nil
 }
 
-func wsBroadcastMessage(ctx context.Context, mwd *MwareDesc, rq *swyapi.WsMwReq) *xrest.ReqErr {
-	if rq.MType == nil || rq.Msg == nil {
-		return GateErrM(swyapi.GateBadRequest, "No message")
-	}
+func wsBroadcastMessage(ctx context.Context, wcs *wsConnMap, rq *swyapi.WsMwReq) *xrest.ReqErr {
 
-	aux, ok := wsConns.Load(mwd.Cookie)
-	if !ok {
-		return nil
-	}
-
-	wcs := aux.(*wsConnMap)
-
-	wcs.lock.RLock()
 	for _, c := range wcs.cons {
-		err := c.WriteMessage(*rq.MType, rq.Msg)
+		err := c.WriteMessage(rq.MType, rq.Msg)
 		if err != nil {
 			; /* XXX What? */
 		}
 	}
-	wcs.lock.RUnlock()
 
 	return nil
 }
 
-func wsFunctionReq(ctx context.Context, mwd *MwareDesc, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
+func wsFunctionReq(ctx context.Context, mwd *MwareDesc, cid string, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
 	var rq swyapi.WsMwReq
 
 	err := xhttp.RReq(r, &rq)
@@ -178,15 +153,22 @@ func wsFunctionReq(ctx context.Context, mwd *MwareDesc, w http.ResponseWriter, r
 		return GateErrE(swyapi.GateBadRequest, err)
 	}
 
+	aux, ok := wsConns.Load(mwd.Cookie)
+	if !ok {
+		return GateErrM(swyapi.GateNotFound, "Target not found")
+	}
+
+	wcs := aux.(*wsConnMap)
+
 	var cerr *xrest.ReqErr
 
-	switch rq.Action {
-	case "send":
-		cerr = wsUnicastMessage(ctx, mwd, &rq)
-	case "broadcast":
-		cerr = wsBroadcastMessage(ctx, mwd, &rq)
-	default:
-		cerr = GateErrM(swyapi.GateBadRequest, "Invalid action")
+	wcs.lock.RLock()
+	defer wcs.lock.RUnlock()
+
+	if cid != "" {
+		cerr = wsUnicastMessage(ctx, cid, wcs, &rq)
+	} else {
+		cerr = wsBroadcastMessage(ctx, wcs, &rq)
 	}
 
 	if cerr != nil {
@@ -197,6 +179,49 @@ func wsFunctionReq(ctx context.Context, mwd *MwareDesc, w http.ResponseWriter, r
 	return nil
 }
 
+type FnEventWebsock struct {
+	MwName	string	`bson:"mware"`
+	Cookie	string	`bson:"mw_cookie"`
+	MType	*int	`bson:"mtype,omitempty"`
+}
+
+func wsTrigger(mwd *MwareDesc, cid string, mtype int, message []byte) {
+	ctx, done := mkContext("::ws-message")
+	defer done(ctx)
+
+	var evs []*FnEventDesc
+
+	err := dbFindAll(ctx, bson.M{"source":"websocket", "ws.mw_cookie": mwd.Cookie}, &evs)
+	if err != nil {
+		ctxlog(ctx).Errorf("websocket: Can't list triggers for event: %s", err.Error())
+		return
+	}
+
+	args := swyapi.WdogFunctionRun {
+		Args: map[string]string {
+			"mwid":	 mwd.Cookie,
+			"cid":	 cid,
+			"mtype": strconv.Itoa(mtype),
+		},
+		Body: base64.StdEncoding.EncodeToString(message),
+	}
+
+	for _, ed := range evs {
+		if ed.WS.MType != nil && *ed.WS.MType != mtype {
+			continue
+		}
+
+		var fn FunctionDesc
+
+		err := dbFind(ctx, bson.M{"cookie": ed.FnId, "state": DBFuncStateRdy}, &fn)
+		if err == nil {
+			continue
+		}
+
+		doRunBg(ctx, &fn, "websocket", &args)
+	}
+}
+
 func wsClientReq(mwd *MwareDesc, c *websocket.Conn) {
 	defer c.Close() /* XXX -- will it race OK with wsCloseConns()? */
 
@@ -204,12 +229,33 @@ func wsClientReq(mwd *MwareDesc, c *websocket.Conn) {
 	defer wsDelConn(mwd.Cookie, cid)
 
 	for {
-		_, _, err := c.ReadMessage()
+		mtype, message, err := c.ReadMessage()
 		if err != nil {
 			glog.Errorf("WS read: %s", err.Error())
 			break
 		}
 
-		/* XXX -- trigger FN here */
+		wsTrigger(mwd, cid, mtype, message)
 	}
+}
+
+func wsEventStart(ctx context.Context, fn *FunctionDesc, ed *FnEventDesc) error {
+	var id SwoId
+
+	id = fn.SwoId
+	id.Name = ed.WS.MwName
+	ed.WS.Cookie = id.Cookie()
+
+	return nil
+}
+
+var wsEOps = EventOps {
+	setup: func(ed *FnEventDesc, evt *swyapi.FunctionEvent) {
+		ed.WS = &FnEventWebsock{
+			MwName: evt.WS.MwName,
+			MType: evt.WS.MType,
+		}
+	},
+	start:	wsEventStart,
+	stop:	func (ctx context.Context, evt *FnEventDesc) error { return nil },
 }

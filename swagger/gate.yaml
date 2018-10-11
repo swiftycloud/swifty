@@ -2221,6 +2221,18 @@ definitions:
           type: string
         example:
           - arg: value
+  FunctionEventWebsock:
+    type: object
+    description: Websocket event descriptor
+    required:
+      - name
+    properties:
+      name:
+        type: string
+        description: Websocket mware name
+      mtype:
+        type: int
+        description: Message type to match
   FunctionEventS3:
     type: object
     description: Bucket to receive envets from
@@ -2259,6 +2271,8 @@ definitions:
         $ref: '#/definitions/FunctionEventCron'
       s3:
         $ref: '#/definitions/FunctionEventS3'
+      websocket:
+        $ref: '#/definitions/FunctionEventWebsock'
       url:
         type: string
         description: Function callable URL if the source is "url"
