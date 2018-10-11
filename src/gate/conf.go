@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"time"
 	"errors"
 	"strconv"
 	"swifty/common"
@@ -254,10 +255,13 @@ func (c *YAMLConf)Validate() error {
 	if c.RepoSyncRate == 0 {
 		fmt.Printf("'repo-sync-rate' not set, pulls will be unlimited\n")
 	}
+	addIntSysctl("repo_sync_per_sec_max", &c.RepoSyncRate)
 	if c.RepoSyncPeriod == 0 {
 		fmt.Printf("'repo-sync-period' not set, using default 30min\n")
 		c.RepoSyncPeriod = 30
 	}
+	repoSyncPeriod = time.Duration(c.RepoSyncPeriod) * time.Minute
+	addTimeSysctl("repo_sync_period", &repoSyncPeriod)
 	if c.RunRate == 0 {
 		fmt.Printf("'tryrun-rate' not set, using default 1/s\n")
 		c.RunRate = 1
