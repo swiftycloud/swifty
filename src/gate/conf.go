@@ -51,8 +51,9 @@ func (cw *YAMLConfWdog)Validate() error {
 		cw.ImgPref = "swifty"
 		fmt.Printf("'wdog.img-prefix' not set, using default\n")
 	}
+	addStringSysctl("wdog_image_prefix", &cw.ImgPref)
 	if cw.Namespace == "" {
-		fmt.Printf("'wdog.k8s-namespace' not set, will us default\n")
+		fmt.Printf("'wdog.k8s-namespace' not set, will use default\n")
 	}
 	return nil
 }

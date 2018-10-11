@@ -70,6 +70,17 @@ func addIntSysctl(name string, i *int) {
 	}
 }
 
+func addStringSysctl(name string, s *string) {
+	sysctls[name] = &Sysctl{
+		Name: name,
+		Get: func() string { return *s },
+		Set: func(v string) error {
+			*s = v
+			return nil
+		},
+	}
+}
+
 type Sysctls struct{}
 
 func (_ Sysctls)Get(ctx context.Context, r *http.Request) (xrest.Obj, *xrest.ReqErr) {
