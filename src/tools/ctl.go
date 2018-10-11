@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"time"
 	"flag"
+	"sort"
 	"fmt"
 	"os"
 
@@ -546,6 +547,7 @@ func sysctl(args []string, opts [16]string) {
 	if len(args) == 0 {
 		var ctls []map[string]string
 		swyclient.List("sysctl", http.StatusOK, &ctls)
+		sort.Slice(ctls, func(i, j int) bool { return ctls[i]["name"] < ctls[j]["name"] })
 		for _, ctl := range(ctls) {
 			fmt.Printf("%-32s = %s\n", ctl["name"], ctl["value"])
 		}
@@ -678,8 +680,6 @@ func getSrc(opt string, src *swyapi.FunctionSources) {
 }
 
 func function_add(args []string, opts [16]string) {
-	var err error
-
 	sources := swyapi.FunctionSources{}
 	code := swyapi.FunctionCode{}
 
@@ -709,10 +709,11 @@ func function_add(args []string, opts [16]string) {
 	}
 
 	if opts[4] != "" {
-		req.Size.Timeout, err = strconv.ParseUint(opts[4], 10, 64)
+		x, err := strconv.ParseUint(opts[4], 10, 32)
 		if err != nil {
 			fatal(fmt.Errorf("Bad tmo value %s: %s", opts[4], err.Error()))
 		}
+		req.Size.Timeout = uint(x)
 	}
 
 	if opts[5] != "" {
@@ -829,12 +830,11 @@ func function_update(args []string, opts [16]string) {
 		sz := swyapi.FunctionSize{}
 
 		if opts[1] != "" {
-			var err error
-
-			sz.Timeout, err = strconv.ParseUint(opts[1], 10, 64)
+			x, err := strconv.ParseUint(opts[1], 10, 32)
 			if err != nil {
 				fatal(fmt.Errorf("Bad tmo value %s: %s", opts[4], err.Error()))
 			}
+			sz.Timeout = uint(x)
 		}
 		if opts[2] != "" {
 			sz.Rate, sz.Burst = parse_rate(opts[2])
