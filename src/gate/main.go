@@ -176,6 +176,10 @@ func getHandlers() http.Handler {
 	r := mux.NewRouter()
 	r.HandleFunc("/v1/login",		handleUserLogin).Methods("POST", "OPTIONS")
 	r.HandleFunc("/github",			handleGithubEvent).Methods("POST").Headers("X-Github-Event")
+
+	r.Handle("/sysctl",			genReqHandler(handleSysctls)).Methods("GET", "OPTIONS")
+	r.Handle("/sysctl/{name}",		genReqHandler(handleSysctl)).Methods("GET", "PUT", "OPTIONS")
+
 	r.Handle("/v1/stats",			genReqHandler(handleTenantStatsAll)).Methods("GET", "POST", "OPTIONS")
 	r.Handle("/v1/stats/{sub}",		genReqHandler(handleTenantStats)).Methods("GET", "POST", "OPTIONS")
 	r.Handle("/v1/project/list",		genReqHandler(handleProjectList)).Methods("POST", "OPTIONS")

@@ -798,3 +798,18 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		wsClientReq(&wsmw, c)
 	}
 }
+
+func handleSysctls(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
+	if !gctx(ctx).Admin {
+		return GateErrC(swyapi.GateNotAvail)
+	}
+	return xrest.HandleMany(ctx, w, r, Sysctls{}, nil)
+}
+
+func handleSysctl(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
+	if !gctx(ctx).Admin {
+		return GateErrC(swyapi.GateNotAvail)
+	}
+	var upd string
+	return xrest.HandleOne(ctx, w, r, Sysctls{}, &upd)
+}
