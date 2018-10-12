@@ -215,7 +215,7 @@ func wsTrigger(mwd *MwareDesc, cid string, mtype int, message []byte) {
 		var fn FunctionDesc
 
 		err := dbFind(ctx, bson.M{"cookie": ed.FnId, "state": DBFuncStateRdy}, &fn)
-		if err == nil {
+		if err != nil {
 			continue
 		}
 
