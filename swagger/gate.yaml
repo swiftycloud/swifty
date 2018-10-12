@@ -2407,6 +2407,9 @@ definitions:
       name:
         type: string
         description: node name (function name part between dots)
+      path:
+        type: string
+        description: node path (name prefix from the beginning, including the final dot)
       kids:
         type: array
         items:
