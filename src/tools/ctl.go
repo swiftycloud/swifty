@@ -331,11 +331,12 @@ func show_fn_tree(fns []*swyapi.FunctionInfo) {
 
 type FName struct {
 	Name	string
+	Path	string
 	Kids	[]*FName
 }
 
 func (f *FName)show(pfx string) {
-	fmt.Printf("%s%s\n", pfx, f.Name)
+	fmt.Printf("%s%s (%s)\n", pfx, f.Path, f.Name)
 	for _, k := range f.Kids {
 		k.show(pfx + "  ")
 	}

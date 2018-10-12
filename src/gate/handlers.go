@@ -334,6 +334,7 @@ func handleFunctions(ctx context.Context, w http.ResponseWriter, r *http.Request
 
 type FName struct {
 	Name	string
+	Path	string
 	Kids	[]*FName
 }
 
@@ -365,7 +366,7 @@ func handleFunctionsTree(ctx context.Context, w http.ResponseWriter, r *http.Req
 			}
 
 			if tn == nil {
-				tn = &FName{Name: p, Kids: []*FName{}}
+				tn = &FName{Name: p, Path: n.Path + p + ".", Kids: []*FName{}}
 				n.Kids = append(n.Kids, tn)
 			}
 
