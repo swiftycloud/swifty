@@ -134,6 +134,8 @@ func s3Unsubscribe(ctx context.Context, conf *YAMLConfMw, evt *FnEventS3) error 
 		}, nil)
 }
 
+func s3Key(ns, bkt string) string { return "s3:" + ns + "/" + bkt }
+
 func handleS3Event(ctx context.Context, user string, data []byte) {
 	var evt swys3api.Event
 
@@ -145,7 +147,7 @@ func handleS3Event(ctx context.Context, user string, data []byte) {
 
 	var evs []*FnEventDesc
 
-	err = dbFindAll(ctx, bson.M{"source":"s3", "s3.ns": evt.Namespace, "s3.bucket": evt.Bucket}, &evs)
+	err = dbFindAll(ctx, bson.M{"key": s3Key(evt.Namespace, evt.Bucket)}, &evs)
 	if err != nil {
 		/* FIXME -- this should be notified? Or what? */
 		ctxlog(ctx).Errorf("mq: Can't list triggers for s3 event")
@@ -183,6 +185,8 @@ func handleS3Event(ctx context.Context, user string, data []byte) {
 
 func s3EventStart(ctx context.Context, fn *FunctionDesc, evt *FnEventDesc) error {
 	evt.S3.Ns = fn.SwoId.S3Namespace()
+	evt.Key = s3Key(evt.S3.Ns, evt.S3.Bucket)
+
 	conf := &conf.Mware
 	err := mqStartListener(conf.S3.cn.User, conf.S3.cn.Pass,
 		conf.S3.cn.Addr() + "/" + conf.S3.cn.Domn,

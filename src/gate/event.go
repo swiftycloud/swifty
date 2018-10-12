@@ -27,6 +27,7 @@ var evtHandlers = map[string]*EventOps {
 
 type FnEventDesc struct {
 	ObjID		bson.ObjectId	`bson:"_id,omitempty"`
+	Key		string		`bson:"key"`
 	FnId		string		`bson:"fnid"`
 	Name		string		`bson:"name"`
 	Source		string		`bson:"source"`
@@ -55,6 +56,35 @@ func (t *Trigger)Info(ctx context.Context, q url.Values, details bool) (interfac
 func (t *Trigger)Upd(context.Context, interface{}) *xrest.ReqErr { return GateErrC(swyapi.GateNotAvail) }
 
 func eventsInit(ctx context.Context) error {
+	var evs []*FnEventDesc
+	err := dbFindAll(ctx, bson.M{}, &evs)
+	if err != nil {
+		return err
+	}
+
+	for _, e := range evs {
+		if e.Key != "" {
+			continue
+		}
+
+		switch e.Source {
+		case "url":
+			e.Key = urlKey(e.FnId)
+		case "websocket":
+			/* Shouldn't happen */
+		case "s3":
+			e.Key = s3Key(e.S3.Ns, e.S3.Bucket)
+		default:
+			continue
+		}
+
+		ctxlog(ctx).Debugf("Setting event key for %s", e.Key)
+		err = dbUpdatePart(ctx, e, bson.M{"key": e.Key})
+		if err != nil {
+			return err
+		}
+	}
+
 	return cronInit(ctx)
 }
 

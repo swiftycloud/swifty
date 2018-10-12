@@ -580,6 +580,7 @@ func dbConnect() error {
 
 	index.Unique = false
 	index.DropDups = false
+
 	index.Key = []string{"src.repo"}
 	err = dbs.DB(DBStateDB).C(DBColFunc).EnsureIndex(index)
 	if err != nil {
@@ -588,6 +589,12 @@ func dbConnect() error {
 
 	index.Key = []string{"name"}
 	err = dbs.DB(DBStateDB).C(DBColRepos).EnsureIndex(index)
+	if err != nil {
+		return fmt.Errorf("No name index for repos: %s", err.Error())
+	}
+
+	index.Key = []string{"key"}
+	err = dbs.DB(DBStateDB).C(DBColEvents).EnsureIndex(index)
 	if err != nil {
 		return fmt.Errorf("No name index for repos: %s", err.Error())
 	}

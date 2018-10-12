@@ -181,9 +181,10 @@ func wsFunctionReq(ctx context.Context, mwd *MwareDesc, cid string, w http.Respo
 
 type FnEventWebsock struct {
 	MwName	string	`bson:"mware"`
-	Cookie	string	`bson:"mw_cookie"`
 	MType	*int	`bson:"mtype,omitempty"`
 }
+
+func wsKey(mwid string) string { return "ws:" + mwid }
 
 func wsTrigger(mwd *MwareDesc, cid string, mtype int, message []byte) {
 	ctx, done := mkContext("::ws-message")
@@ -191,7 +192,7 @@ func wsTrigger(mwd *MwareDesc, cid string, mtype int, message []byte) {
 
 	var evs []*FnEventDesc
 
-	err := dbFindAll(ctx, bson.M{"source":"websocket", "ws.mw_cookie": mwd.Cookie}, &evs)
+	err := dbFindAll(ctx, bson.M{"key": wsKey(mwd.Cookie) }, &evs)
 	if err != nil {
 		ctxlog(ctx).Errorf("websocket: Can't list triggers for event: %s", err.Error())
 		return
@@ -244,7 +245,7 @@ func wsEventStart(ctx context.Context, fn *FunctionDesc, ed *FnEventDesc) error 
 
 	id = fn.SwoId
 	id.Name = ed.WS.MwName
-	ed.WS.Cookie = id.Cookie()
+	ed.Key = wsKey(id.Cookie())
 
 	return nil
 }
