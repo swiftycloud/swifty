@@ -30,6 +30,7 @@ func main() {
 	}
 	defer c.Close()
 
+	log.Printf("connected")
 	done := make(chan struct{})
 
 	go func() {
@@ -44,7 +45,7 @@ func main() {
 		}
 	}()
 
-	ticker := time.NewTicker(time.Second)
+	ticker := time.NewTicker(5 * time.Second)
 	defer ticker.Stop()
 
 	for {
