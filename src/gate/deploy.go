@@ -150,8 +150,6 @@ type DeployDesc struct {
 	Functions	[]*DeployFunction	`bson:"functions"`
 	Mwares		[]*DeployMware		`bson:"mwares"`
 	Routers		[]*DeployRouter		`bson:"routers"`
-
-	OldItems	[]*_DeployItemDesc	`bson:"items,omitempty"`
 }
 
 type Deployments struct {
@@ -569,28 +567,6 @@ func DeployInit(ctx context.Context) error {
 	defer iter.Close()
 
 	for iter.Next(&dep) {
-		if len(dep.OldItems) != 0 {
-			ctxlog(ctx).Debugf("Convert deploy %s", dep.ObjID.Hex())
-			for _, i := range dep.OldItems {
-				if i.Fn != nil {
-					dep.Functions = append(dep.Functions, &DeployFunction{
-						Fn: i.Fn, FnSrc: i.FnSrc,
-					})
-				}
-				if i.Mw != nil {
-					dep.Mwares = append(dep.Mwares, &DeployMware {
-						Mw: i.Mw,
-					})
-				}
-			}
-			dep.OldItems = []*_DeployItemDesc{}
-			err := dbUpdateAll(ctx, &dep)
-			if err != nil {
-				ctxlog(ctx).Errorf("Error updating mware: %s", err.Error())
-				return err
-			}
-		}
-
 		if dep.State == DBDepStateIni {
 			ctxlog(ctx).Debugf("Will restart deploy %s", dep.SwoId.Str())
 			go deployRestartItems(&dep)
