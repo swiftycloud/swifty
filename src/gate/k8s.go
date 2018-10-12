@@ -743,7 +743,12 @@ func refreshDepsAndPods(ctx context.Context, hard bool) error {
 	podiface := k8sClientSet.CoreV1().Pods(conf.Wdog.Namespace)
 
 	for iter.Next(&fn) {
-		if fn.State != DBFuncStateRdy && fn.State != DBFuncStateStr {
+		/* Try to restatr deps for starting fns and pick up the
+		 * pods for ready ones. For hard-refresh, also restart
+		 * the stalled ones
+		 */
+		if !(fn.State == DBFuncStateRdy || fn.State == DBFuncStateStr ||
+				(fn.State == DBFuncStateStl && hard)) {
 			continue
 		}
 
@@ -764,6 +769,9 @@ func refreshDepsAndPods(ctx context.Context, hard bool) error {
 				/* That's OK, the deployment just didn't have time to
 				 * to get created. Just create one and ... go agead,
 				 * no replicas to check, no PODs to revitalize.
+				 * For hard case, the function might have been marked
+				 * as stalled for any reason, e.g. on restart due to dead
+				 * k8s cluster. Anyway -- try to revitalize it.
 				 */
 
 				err = k8sRun(ctx, &conf, &fn)
