@@ -727,10 +727,10 @@ func listFnPods(fn *FunctionDesc) (*v1.PodList, error) {
 	return podiface.List(metav1.ListOptions{ LabelSelector: "fnid=" + fn.Cookie[:32] })
 }
 
-func refreshDepsAndPods(ctx context.Context) error {
+func refreshDepsAndPods(ctx context.Context, hard bool) error {
 	var fn FunctionDesc
 
-	ctxlog(ctx).Debugf("Refreshing deps and pods")
+	ctxlog(ctx).Debugf("Refreshing deps and pods (hard: %v)", hard)
 	err := dbBalancerPodDelStuck(ctx)
 	if err != nil {
 		return fmt.Errorf("Can't drop stuck PODs: %s", err.Error)
@@ -760,7 +760,7 @@ func refreshDepsAndPods(ctx context.Context) error {
 				return errors.New("Error getting dep")
 			}
 
-			if fn.State == DBFuncStateStr {
+			if fn.State == DBFuncStateStr || hard {
 				/* That's OK, the deployment just didn't have time to
 				 * to get created. Just create one and ... go agead,
 				 * no replicas to check, no PODs to revitalize.
@@ -856,11 +856,26 @@ func k8sInit(ctx context.Context, config_path string) error {
 	stop := make(chan struct{})
 	go controller.Run(stop)
 
-	err = refreshDepsAndPods(ctx)
+	err = refreshDepsAndPods(ctx, false)
 	if err != nil {
 		ctxlog(ctx).Errorf("Can't sart scaler: %s", err.Error())
 		return err
 	}
+
+	addSysctl("k8s_refresh", func() string { return "set soft/hard here" },
+		func(v string) error {
+			rctx, done := mkContext("::k8s-refresh")
+			defer done(rctx)
+
+			if v == "soft" {
+				refreshDepsAndPods(rctx, false)
+			}
+			if v == "hard" {
+				refreshDepsAndPods(rctx, true)
+			}
+			return nil
+		},
+	)
 
 	return nil
 }
