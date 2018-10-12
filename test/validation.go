@@ -120,7 +120,7 @@ func runFunctions(cln *swyapi.Client, prj string) error {
 	doRun(cln, ifo.Id, nil)
 
 	fmt.Printf("Updating FN src\n")
-	cln.Functions().Set(ifo.Id, "/sources", src2)
+	cln.Functions().Set(ifo.Id, "sources", src2)
 
 	doWait(cln, ifo.Id, "1")
 
