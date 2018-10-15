@@ -218,7 +218,7 @@ func wsTrigger(mwd *MwareDesc, cid string, mtype int, message []byte, claims map
 
 	args := swyapi.WdogFunctionRun {
 		Args: map[string]string {
-			"mwid":	 mwd.Cookie,
+			"mwid":	 mwd.SwoId.Name,
 			"cid":	 cid,
 			"mtype": strconv.Itoa(mtype),
 		},
