@@ -142,7 +142,7 @@ type FunctionEvent struct {
 	Cron		*FunctionEventCron	`json:"cron,omitempty"`
 	S3		*FunctionEventS3	`json:"s3,omitempty"`
 	URL		string			`json:"url,omitempty"`
-	WS		*FunctionEventWebsock	`json:"websocket,omitempty"`
+	WS		*FunctionEventWebsock	`json:"websocket,omitempty" yaml:"websocket,omitempty"`
 }
 
 type MwareAdd struct {

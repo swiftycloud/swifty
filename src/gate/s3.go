@@ -4,6 +4,7 @@ import (
 	"strings"
 	"path/filepath"
 	"fmt"
+	"errors"
 	"context"
 	"net/http"
 	"encoding/json"
@@ -266,12 +267,16 @@ func s3GetCreds(ctx context.Context, acc *swyapi.S3Access) (*swyapi.S3Creds, *xr
 }
 
 var s3EOps = EventOps {
-	setup: func(ed *FnEventDesc, evt *swyapi.FunctionEvent) {
+	setup: func(ed *FnEventDesc, evt *swyapi.FunctionEvent) error {
+		if evt.S3 == nil {
+			return errors.New("Field \"s3\" missing")
+		}
 		ed.S3 = &FnEventS3{
 			Bucket: evt.S3.Bucket,
 			Ops: evt.S3.Ops,
 			Pattern: evt.S3.Pattern,
 		}
+		return nil
 	},
 	start:	s3EventStart,
 	stop:	s3EventStop,

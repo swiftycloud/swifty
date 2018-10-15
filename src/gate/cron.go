@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"gopkg.in/robfig/cron.v2"
 	"gopkg.in/mgo.v2/bson"
 	"swifty/apis"
@@ -48,11 +49,17 @@ func cronEventStop(ctx context.Context, evt *FnEventDesc) error {
 }
 
 var cronOps = EventOps {
-	setup: func(ed *FnEventDesc, evt *swyapi.FunctionEvent) {
+	setup: func(ed *FnEventDesc, evt *swyapi.FunctionEvent) error {
+		if evt.Cron == nil {
+			return errors.New("No \"cron\" field")
+		}
+
 		ed.Cron = &FnEventCron{
 			Tab: evt.Cron.Tab,
 			Args: evt.Cron.Args,
 		}
+
+		return nil
 	},
 	start:	cronEventStart,
 	stop:	cronEventStop,

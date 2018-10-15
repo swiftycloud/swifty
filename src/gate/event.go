@@ -12,7 +12,7 @@ import (
 )
 
 type EventOps struct {
-	setup	func(*FnEventDesc, *swyapi.FunctionEvent)
+	setup	func(*FnEventDesc, *swyapi.FunctionEvent) error
 	start	func(context.Context, *FunctionDesc, *FnEventDesc) error
 	stop	func(context.Context, *FnEventDesc) error
 	cleanup	func(context.Context, *FnEventDesc)
@@ -199,7 +199,11 @@ func getEventDesc(evt *swyapi.FunctionEvent) (*FnEventDesc, *xrest.ReqErr) {
 		return nil, GateErrM(swyapi.GateBadRequest, "Unsupported event type")
 	}
 
-	h.setup(ed, evt)
+	err := h.setup(ed, evt)
+	if err != nil {
+		return nil, GateErrE(swyapi.GateBadRequest, err)
+	}
+
 	return ed, nil
 }
 

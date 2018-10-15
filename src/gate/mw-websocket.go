@@ -7,6 +7,7 @@ import (
 	"context"
 	"net/http"
 	"strconv"
+	"errors"
 	"sync"
 	"swifty/apis"
 	"swifty/common"
@@ -270,11 +271,17 @@ func wsEventStart(ctx context.Context, fn *FunctionDesc, ed *FnEventDesc) error 
 }
 
 var wsEOps = EventOps {
-	setup: func(ed *FnEventDesc, evt *swyapi.FunctionEvent) {
+	setup: func(ed *FnEventDesc, evt *swyapi.FunctionEvent) error {
+		if evt.WS == nil {
+			return errors.New("Field \"websocket\" missing")
+		}
+
 		ed.WS = &FnEventWebsock{
 			MwName: evt.WS.MwName,
 			MType: evt.WS.MType,
 		}
+
+		return nil
 	},
 	start:	wsEventStart,
 	stop:	func (ctx context.Context, evt *FnEventDesc) error { return nil },

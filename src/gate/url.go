@@ -105,7 +105,7 @@ func urlClean(ctx context.Context, typ, urlid string) {
 }
 
 var urlEOps = EventOps {
-	setup:	func(ed *FnEventDesc, evt *swyapi.FunctionEvent) { /* nothing to do */ },
+	setup:	func(ed *FnEventDesc, evt *swyapi.FunctionEvent) error { return nil },
 	start:	urlEventStart,
 	stop:	urlEventStop,
 	cleanup:urlEventClean,

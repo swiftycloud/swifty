@@ -5,12 +5,14 @@ import (
 	"os"
 	"bytes"
 	"net/http"
+	"strings"
 	"encoding/json"
 )
 
 func Main(rq *Request) (interface{}, *Responce) {
-	url := os.Getenv("MWARE_WEBSOCKETCHAT_URL")
-	tok := os.Getenv("MWARE_WEBSOCKETCHAT_TOKEN")
+	chname := strings.ToUpper(os.Getenv("CHAT_NAME"))
+	url := os.Getenv("MWARE_WEBSOCKET" + chname + "_URL")
+	tok := os.Getenv("MWARE_WEBSOCKET" + chname + "_TOKEN")
 
 	msg := rq.Claims["userid"].(string) + ":" + rq.Body
 
