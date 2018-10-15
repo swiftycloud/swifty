@@ -22,6 +22,12 @@ func InitWebSocket(ctx context.Context, mwd *MwareDesc) (error) {
 		return err
 	}
 
+	if p.AuthCtx != "" {
+		mwd.HDat = map[string]string {
+			"authctx": p.AuthCtx,
+		}
+	}
+
 	return nil
 }
 
@@ -186,7 +192,7 @@ type FnEventWebsock struct {
 
 func wsKey(mwid string) string { return "ws:" + mwid }
 
-func wsTrigger(mwd *MwareDesc, cid string, mtype int, message []byte) {
+func wsTrigger(mwd *MwareDesc, cid string, mtype int, message []byte, claims map[string]interface{}) {
 	ctx, done := mkContext("::ws-message")
 	defer done(ctx)
 
@@ -214,6 +220,7 @@ func wsTrigger(mwd *MwareDesc, cid string, mtype int, message []byte) {
 			"mtype": strconv.Itoa(mtype),
 		},
 		Body: body,
+		Claims: claims,
 	}
 
 	for _, ed := range evs {
@@ -232,7 +239,7 @@ func wsTrigger(mwd *MwareDesc, cid string, mtype int, message []byte) {
 	}
 }
 
-func wsClientReq(mwd *MwareDesc, c *websocket.Conn) {
+func wsClientReq(mwd *MwareDesc, c *websocket.Conn, claims map[string]interface{}) {
 	defer c.Close() /* XXX -- will it race OK with wsCloseConns()? */
 
 	cid := wsAddConn(mwd.Cookie, c)
@@ -245,7 +252,7 @@ func wsClientReq(mwd *MwareDesc, c *websocket.Conn) {
 			break
 		}
 
-		wsTrigger(mwd, cid, mtype, message)
+		wsTrigger(mwd, cid, mtype, message, claims)
 	}
 }
 

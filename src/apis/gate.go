@@ -150,6 +150,7 @@ type MwareAdd struct {
 	Project		string			`json:"project,omitempty"`
 	Type		string			`json:"type"`
 	UserData	string			`json:"userdata,omitempty"`
+	AuthCtx		string			`json:"authctx,omitempty"`
 }
 
 type MwareInfo struct {
