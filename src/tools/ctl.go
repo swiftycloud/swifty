@@ -896,6 +896,11 @@ func event_add(args []string, opts [16]string) {
 			Ops: opts[1],
 		}
 	}
+	if e.Source == "websocket" {
+		e.WS = &swyapi.FunctionEventWebsock {
+			MwName: opts[0],
+		}
+	}
 	var ei swyapi.FunctionEvent
 	swyclient.Triggers(args[0]).Add(&e, &ei)
 	fmt.Printf("Event %s created\n", ei.Id)
@@ -1901,6 +1906,7 @@ func main() {
 	cmdMap[CMD_EA].opts.StringVar(&opts[1], "args", "", "Cron args")
 	cmdMap[CMD_EA].opts.StringVar(&opts[0], "buck", "", "S3 bucket")
 	cmdMap[CMD_EA].opts.StringVar(&opts[1], "ops", "", "S3 ops")
+	cmdMap[CMD_EA].opts.StringVar(&opts[0], "wsid", "", "Websock mware id")
 	setupCommonCmd(CMD_EI, "NAME", "ENAME")
 	setupCommonCmd(CMD_ED, "NAME", "ENAME")
 

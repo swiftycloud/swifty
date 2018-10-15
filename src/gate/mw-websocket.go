@@ -7,12 +7,21 @@ import (
 	"context"
 	"net/http"
 	"strconv"
+	"errors"
 	"sync"
 	"swifty/apis"
 	"swifty/common"
 	"swifty/common/http"
 	"swifty/common/xrest"
 )
+
+func SetupWebSocket(mwd *MwareDesc, p *swyapi.MwareAdd) {
+	if p.AuthCtx != "" {
+		mwd.HDat = map[string]string {
+			"authctx": p.AuthCtx,
+		}
+	}
+}
 
 func InitWebSocket(ctx context.Context, mwd *MwareDesc) (error) {
 	var err error
@@ -52,6 +61,7 @@ func InfoWebSocket(ctx context.Context, mwd *MwareDesc, ifo *swyapi.MwareInfo) e
 }
 
 var MwareWebSocket = MwareOps {
+	Setup:	SetupWebSocket,
 	Init:	InitWebSocket,
 	Fini:	FiniWebSocket,
 	GetEnv:	GetEnvWebSocket,
@@ -181,29 +191,40 @@ func wsFunctionReq(ctx context.Context, mwd *MwareDesc, cid string, w http.Respo
 
 type FnEventWebsock struct {
 	MwName	string	`bson:"mware"`
-	Cookie	string	`bson:"mw_cookie"`
 	MType	*int	`bson:"mtype,omitempty"`
 }
 
-func wsTrigger(mwd *MwareDesc, cid string, mtype int, message []byte) {
+func wsKey(mwid string) string { return "ws:" + mwid }
+
+func wsTrigger(mwd *MwareDesc, cid string, mtype int, message []byte, claims map[string]interface{}) {
 	ctx, done := mkContext("::ws-message")
 	defer done(ctx)
 
 	var evs []*FnEventDesc
 
-	err := dbFindAll(ctx, bson.M{"source":"websocket", "ws.mw_cookie": mwd.Cookie}, &evs)
+	err := dbFindAll(ctx, bson.M{"key": wsKey(mwd.Cookie) }, &evs)
 	if err != nil {
 		ctxlog(ctx).Errorf("websocket: Can't list triggers for event: %s", err.Error())
 		return
 	}
 
+	var body string
+	if message != nil && len(message) > 0 {
+		if mtype == websocket.TextMessage {
+			body = string(message)
+		} else {
+			body = base64.StdEncoding.EncodeToString(message)
+		}
+	}
+
 	args := swyapi.WdogFunctionRun {
 		Args: map[string]string {
-			"mwid":	 mwd.Cookie,
+			"mwid":	 mwd.SwoId.Name,
 			"cid":	 cid,
 			"mtype": strconv.Itoa(mtype),
 		},
-		Body: base64.StdEncoding.EncodeToString(message),
+		Body: body,
+		Claims: claims,
 	}
 
 	for _, ed := range evs {
@@ -214,7 +235,7 @@ func wsTrigger(mwd *MwareDesc, cid string, mtype int, message []byte) {
 		var fn FunctionDesc
 
 		err := dbFind(ctx, bson.M{"cookie": ed.FnId, "state": DBFuncStateRdy}, &fn)
-		if err == nil {
+		if err != nil {
 			continue
 		}
 
@@ -222,7 +243,7 @@ func wsTrigger(mwd *MwareDesc, cid string, mtype int, message []byte) {
 	}
 }
 
-func wsClientReq(mwd *MwareDesc, c *websocket.Conn) {
+func wsClientReq(mwd *MwareDesc, c *websocket.Conn, claims map[string]interface{}) {
 	defer c.Close() /* XXX -- will it race OK with wsCloseConns()? */
 
 	cid := wsAddConn(mwd.Cookie, c)
@@ -235,7 +256,7 @@ func wsClientReq(mwd *MwareDesc, c *websocket.Conn) {
 			break
 		}
 
-		wsTrigger(mwd, cid, mtype, message)
+		wsTrigger(mwd, cid, mtype, message, claims)
 	}
 }
 
@@ -244,17 +265,23 @@ func wsEventStart(ctx context.Context, fn *FunctionDesc, ed *FnEventDesc) error 
 
 	id = fn.SwoId
 	id.Name = ed.WS.MwName
-	ed.WS.Cookie = id.Cookie()
+	ed.Key = wsKey(id.Cookie())
 
 	return nil
 }
 
 var wsEOps = EventOps {
-	setup: func(ed *FnEventDesc, evt *swyapi.FunctionEvent) {
+	setup: func(ed *FnEventDesc, evt *swyapi.FunctionEvent) error {
+		if evt.WS == nil {
+			return errors.New("Field \"websocket\" missing")
+		}
+
 		ed.WS = &FnEventWebsock{
 			MwName: evt.WS.MwName,
 			MType: evt.WS.MType,
 		}
+
+		return nil
 	},
 	start:	wsEventStart,
 	stop:	func (ctx context.Context, evt *FnEventDesc) error { return nil },

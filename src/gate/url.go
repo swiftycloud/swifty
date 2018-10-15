@@ -33,10 +33,12 @@ func getURL(typ, urlid string) string {
 	return cg + "/call/" + typ + urlid
 }
 
+func urlKey(fnid string) string { return "url:" + fnid }
+
 func urlEvFind(ctx context.Context, urlid string) (*FnEventDesc, error) {
 	var ed FnEventDesc
 	/* URLid is FN cookie now, but we may allocate random value for it */
-	err := dbFind(ctx, bson.M{"fnid": urlid, "source": "url"}, &ed)
+	err := dbFind(ctx, bson.M{"key": urlKey(urlid) }, &ed)
 	if err != nil {
 		return nil, err
 	}
@@ -85,7 +87,8 @@ func urlFind(ctx context.Context, urlid string) (URL, error) {
 
 /* FIXME -- set up public IP address/port for this FN */
 
-func urlEventStart(ctx context.Context, _ *FunctionDesc, ed *FnEventDesc) error {
+func urlEventStart(ctx context.Context, fn *FunctionDesc, ed *FnEventDesc) error {
+	ed.Key = urlKey(fn.Cookie)
 	return nil /* XXX -- pre-populate urls? */
 }
 
@@ -102,7 +105,7 @@ func urlClean(ctx context.Context, typ, urlid string) {
 }
 
 var urlEOps = EventOps {
-	setup:	func(ed *FnEventDesc, evt *swyapi.FunctionEvent) { /* nothing to do */ },
+	setup:	func(ed *FnEventDesc, evt *swyapi.FunctionEvent) error { return nil },
 	start:	urlEventStart,
 	stop:	urlEventStop,
 	cleanup:urlEventClean,

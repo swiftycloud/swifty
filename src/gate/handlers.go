@@ -773,14 +773,41 @@ func handleWebSocketClient(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var claims map[string]interface{}
+
+	if wsmw.HDat != nil {
+		aid, ok := wsmw.HDat["authctx"]
+		if !ok {
+			done(ctx)
+			http.Error(w, "Authorization error", http.StatusInternalServerError)
+			return
+		}
+
+		/* FIXME -- makes sence to cache the guy on wsConnMap */
+		ac, err := authCtxGet(ctx, wsmw.SwoId, aid)
+		if err != nil {
+			done(ctx)
+			http.Error(w, "Authorization error", http.StatusInternalServerError)
+			return
+		}
+
+		claims, err = ac.Verify(r)
+		if err != nil {
+			done(ctx)
+			http.Error(w, "Not authorized", http.StatusUnauthorized)
+			return
+		}
+	}
+
 	done(ctx)
+
 
 	c, err := wsupgrader.Upgrade(w, r, nil)
 	if err != nil {
 		return
 	}
 
-	wsClientReq(&wsmw, c)
+	wsClientReq(&wsmw, c, claims)
 }
 
 func handleWebSocketsMw(w http.ResponseWriter, r *http.Request) {

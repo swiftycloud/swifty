@@ -38,6 +38,7 @@ type MwareDesc struct {
 	Namespace	string		`bson:"namespace,omitempty"`	// Client namespace (e.g. dbname, mq domain)
 	State		int		`bson:"state"`		// Mware state
 	UserData	string		`bson:"userdata,omitempty"`
+	HDat		map[string]string	`bson:"hdat",omitempty"`
 }
 
 var mwStates = map[int]string {
@@ -63,6 +64,7 @@ func (mw *MwareDesc)ToState(ctx context.Context, st, from int) error {
 }
 
 type MwareOps struct {
+	Setup	func(mwd *MwareDesc, p *swyapi.MwareAdd)
 	Init	func(ctx context.Context, mwd *MwareDesc) (error)
 	Fini	func(ctx context.Context, mwd *MwareDesc) (error)
 	GetEnv	func(ctx context.Context, mwd *MwareDesc) (map[string][]byte)
@@ -427,13 +429,21 @@ func getMwareDesc(id *SwoId, params *swyapi.MwareAdd) (*MwareDesc, *xrest.ReqErr
 		UserData:	params.UserData,
 	}
 
+	handler, ok := mwareHandlers[params.Type]
+	if !ok {
+		return nil, GateErrM(swyapi.GateBadRequest, "Not such type")
+	}
+
+	if handler.Setup != nil {
+		handler.Setup(ret, params)
+	}
+
 	ret.Cookie = ret.SwoId.Cookie()
 	return ret, nil
 }
 
 func (mwd *MwareDesc)Add(ctx context.Context, _ interface{}) *xrest.ReqErr {
 	var handler *MwareOps
-	var ok bool
 	var err, erc error
 
 	mwd.ObjID = bson.NewObjectId()
@@ -445,11 +455,7 @@ func (mwd *MwareDesc)Add(ctx context.Context, _ interface{}) *xrest.ReqErr {
 
 	gateMwares.WithLabelValues(mwd.MwareType).Inc()
 
-	handler, ok = mwareHandlers[mwd.MwareType]
-	if !ok {
-		err = fmt.Errorf("Bad mware type %s", mwd.MwareType)
-		goto outdb
-	}
+	handler, _ = mwareHandlers[mwd.MwareType]
 
 	if handler.Devel && !ModeDevel {
 		err = fmt.Errorf("Bad mware type %s", mwd.MwareType)
