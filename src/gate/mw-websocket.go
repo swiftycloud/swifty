@@ -198,13 +198,22 @@ func wsTrigger(mwd *MwareDesc, cid string, mtype int, message []byte) {
 		return
 	}
 
+	var body string
+	if message != nil && len(message) > 0 {
+		if mtype == websocket.TextMessage {
+			body = string(message)
+		} else {
+			body = base64.StdEncoding.EncodeToString(message)
+		}
+	}
+
 	args := swyapi.WdogFunctionRun {
 		Args: map[string]string {
 			"mwid":	 mwd.Cookie,
 			"cid":	 cid,
 			"mtype": strconv.Itoa(mtype),
 		},
-		Body: base64.StdEncoding.EncodeToString(message),
+		Body: body,
 	}
 
 	for _, ed := range evs {
