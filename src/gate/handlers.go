@@ -819,16 +819,15 @@ func handleWebSocketsMw(w http.ResponseWriter, r *http.Request) {
 
 	err := dbFind(ctx, bson.M{"cookie": ws, "mwaretype": "websocket", "state": DBMwareStateRdy}, &wsmw)
 	if err != nil {
-		done(ctx)
 		http.Error(w, "No such websocket", http.StatusNotFound)
 		return
 	}
 
-	//sec := r.Header.Get("X-WS-Token")
-	//if sec != wsmw.Secret {
-	//	http.Error(w, "Not authorized", http.StatusUnauthorized)
-	//	return
-	//}
+	sec := r.Header.Get("X-WS-Token")
+	if sec != wsmw.Secret {
+		http.Error(w, "Not authorized", http.StatusUnauthorized)
+		return
+	}
 
 	path := strings.SplitN(r.URL.Path, "/", 5)
 	cid := ""
