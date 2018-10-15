@@ -2425,8 +2425,8 @@ definitions:
         additionalProperties:
           type: string
         example:
-          - foo: bar
-            baz: fuz
+          foo: bar
+          baz: fuz
       content:
         type: string
         description: Type of the body (either "text/plain" or "application/json")
