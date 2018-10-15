@@ -14,18 +14,20 @@ import (
 	"swifty/common/xrest"
 )
 
+func SetupWebSocket(mwd *MwareDesc, p *swyapi.MwareAdd) {
+	if p.AuthCtx != "" {
+		mwd.HDat = map[string]string {
+			"authctx": p.AuthCtx,
+		}
+	}
+}
+
 func InitWebSocket(ctx context.Context, mwd *MwareDesc) (error) {
 	var err error
 
 	mwd.Secret, err = xh.GenRandId(32)
 	if err != nil {
 		return err
-	}
-
-	if p.AuthCtx != "" {
-		mwd.HDat = map[string]string {
-			"authctx": p.AuthCtx,
-		}
 	}
 
 	return nil
@@ -58,6 +60,7 @@ func InfoWebSocket(ctx context.Context, mwd *MwareDesc, ifo *swyapi.MwareInfo) e
 }
 
 var MwareWebSocket = MwareOps {
+	Setup:	SetupWebSocket,
 	Init:	InitWebSocket,
 	Fini:	FiniWebSocket,
 	GetEnv:	GetEnvWebSocket,
