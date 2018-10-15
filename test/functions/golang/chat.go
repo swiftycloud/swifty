@@ -12,9 +12,11 @@ func Main(rq *Request) (interface{}, *Responce) {
 	url := os.Getenv("MWARE_WEBSOCKETCHAT_URL")
 	tok := os.Getenv("MWARE_WEBSOCKETCHAT_TOKEN")
 
+	msg := rq.Claims["userid"].(string) + ":" + rq.Body
+
 	body, _ := json.Marshal(map[string]interface{} {
 		"msg_type": 1,
-		"msg_payload": []byte(rq.Body),
+		"msg_payload": []byte(msg),
 	})
 
 	req, err := http.NewRequest("POST", url + "/conns", bytes.NewBuffer(body))

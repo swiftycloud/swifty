@@ -7,12 +7,14 @@ import (
 	"os"
 	"fmt"
 	"bufio"
+	"net/http"
 
 	"github.com/gorilla/websocket"
 )
 
 var addr = flag.String("addr", "localhost:8080", "http service address")
 var path = flag.String("path", "", "ws path")
+var token = flag.String("token", "", "JWT value")
 
 func main() {
 	flag.Parse()
@@ -21,7 +23,9 @@ func main() {
 	u := url.URL{Scheme: "ws", Host: *addr, Path: *path}
 	log.Printf("connecting to %s", u.String())
 
-	c, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
+	h := http.Header{}
+	h.Set("Authorization", "Bearer " + token)
+	c, _, err := websocket.DefaultDialer.Dial(u.String(), h)
 	if err != nil {
 		log.Fatal("dial:", err)
 	}
