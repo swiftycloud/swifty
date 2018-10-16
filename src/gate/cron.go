@@ -33,7 +33,7 @@ func cronEventStart(ctx context.Context, _ *FunctionDesc, evt *FnEventDesc) erro
 			return
 		}
 
-		doRunBg(cctx, &fn, "cron", &swyapi.WdogFunctionRun{Args: evt.Cron.Args})
+		doRunBg(cctx, &fn, "cron", &swyapi.FunctionRun{Args: evt.Cron.Args})
 	})
 
 	if err == nil {

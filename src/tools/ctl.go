@@ -758,7 +758,7 @@ func make_args_string(args map[string]string) string {
 func run_function(args []string, opts [16]string) {
 	var rres swyapi.WdogFunctionRunResult
 
-	rq := &swyapi.WdogFunctionRun{}
+	rq := &swyapi.FunctionRun{}
 
 	args[0], _ = swyclient.Functions().Resolve(curProj, args[0])
 	rq.Args = split_args_string(args[1])

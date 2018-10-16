@@ -403,7 +403,7 @@ func handleFunctionRun(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	}
 
 	fn := fo.(*FunctionDesc)
-	var params swyapi.WdogFunctionRun
+	var params swyapi.FunctionRun
 	var res *swyapi.WdogFunctionRunResult
 
 	err := xhttp.RReq(r, &params)
