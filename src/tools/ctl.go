@@ -770,6 +770,13 @@ func run_function(args []string, opts [16]string) {
 		rq.Src = src
 	}
 
+	if opts[1] != "" {
+		if opts[1] == "-" {
+			opts[1] = ""
+		}
+		rq.Method = &opts[1]
+	}
+
 	swyclient.Req1("POST", "functions/" + args[0] + "/run", http.StatusOK, rq, &rres)
 
 	fmt.Printf("returned: %s\n", rres.Return)
@@ -1879,6 +1886,7 @@ func main() {
 	cmdMap[CMD_FA].opts.StringVar(&opts[8], "auth", "", "ID of auth mware to verify the call")
 	setupCommonCmd(CMD_RUN, "NAME", "ARG=VAL,...")
 	cmdMap[CMD_RUN].opts.StringVar(&opts[0], "src", "", "Run a custom source in it")
+	cmdMap[CMD_RUN].opts.StringVar(&opts[1], "method", "", "Run method")
 	setupCommonCmd(CMD_FU, "NAME")
 	cmdMap[CMD_FU].opts.StringVar(&opts[0], "src", "", "Source file")
 	cmdMap[CMD_FU].opts.StringVar(&opts[1], "tmo", "", "Timeout")
