@@ -14,7 +14,7 @@ import (
 	"swifty/common/xrest"
 )
 
-const GateTracerPath = "tracer.sock"
+const GateTracerPath = "/var/run/swifty/tracer.sock"
 
 type Tracer struct {
 	id	string
@@ -225,7 +225,7 @@ func tracerInit() error {
 	tracers = list.New()
 	xrest.TraceFn = traceResponce
 
-	tp := conf.Home + "/" + GateTracerPath
+	tp := GateTracerPath
 	os.Remove(tp)
 	addr, err := net.ResolveUnixAddr("unixpacket", tp)
 	if err != nil {
