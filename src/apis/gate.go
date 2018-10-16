@@ -229,6 +229,7 @@ type DeployStart struct {
 	Name		string			`json:"name"`
 	Project		string			`json:"project,omitempty"`
 	From		DeploySource		`json:"from"`
+	Params		map[string]string	`json:"parameters"`
 }
 
 type DeployItemInfo struct {

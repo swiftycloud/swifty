@@ -1125,6 +1125,10 @@ func deploy_add(args []string, opts [16]string) {
 		Project: curProj,
 	}
 
+	if opts[1] != "" {
+		da.Params = split_args_string(opts[1])
+	}
+
 	if strings.HasPrefix(opts[0], "repo:") {
 		da.From = swyapi.DeploySource {
 			Type: "repo",
@@ -1936,6 +1940,7 @@ func main() {
 	setupCommonCmd(CMD_DI, "NAME")
 	setupCommonCmd(CMD_DA, "NAME")
 	cmdMap[CMD_DA].opts.StringVar(&opts[0], "from", "", "File from which to get info")
+	cmdMap[CMD_DA].opts.StringVar(&opts[1], "params", "", "Parameters, ,-separated")
 	setupCommonCmd(CMD_DD, "NAME")
 
 	setupCommonCmd(CMD_RTL)
