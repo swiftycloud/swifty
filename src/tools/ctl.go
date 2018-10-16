@@ -758,7 +758,7 @@ func make_args_string(args map[string]string) string {
 func run_function(args []string, opts [16]string) {
 	var rres swyapi.WdogFunctionRunResult
 
-	rq := &swyapi.WdogFunctionRun{}
+	rq := &swyapi.FunctionRun{}
 
 	args[0], _ = swyclient.Functions().Resolve(curProj, args[0])
 	rq.Args = split_args_string(args[1])
@@ -768,6 +768,13 @@ func run_function(args []string, opts [16]string) {
 		src.Type = "code"
 		src.Code = encodeFile(opts[0])
 		rq.Src = src
+	}
+
+	if opts[1] != "" {
+		if opts[1] == "-" {
+			opts[1] = ""
+		}
+		rq.Method = &opts[1]
 	}
 
 	swyclient.Req1("POST", "functions/" + args[0] + "/run", http.StatusOK, rq, &rres)
@@ -1116,6 +1123,10 @@ func deploy_add(args []string, opts [16]string) {
 	da := swyapi.DeployStart{
 		Name: args[0],
 		Project: curProj,
+	}
+
+	if opts[1] != "" {
+		da.Params = split_args_string(opts[1])
 	}
 
 	if strings.HasPrefix(opts[0], "repo:") {
@@ -1879,6 +1890,7 @@ func main() {
 	cmdMap[CMD_FA].opts.StringVar(&opts[8], "auth", "", "ID of auth mware to verify the call")
 	setupCommonCmd(CMD_RUN, "NAME", "ARG=VAL,...")
 	cmdMap[CMD_RUN].opts.StringVar(&opts[0], "src", "", "Run a custom source in it")
+	cmdMap[CMD_RUN].opts.StringVar(&opts[1], "method", "", "Run method")
 	setupCommonCmd(CMD_FU, "NAME")
 	cmdMap[CMD_FU].opts.StringVar(&opts[0], "src", "", "Source file")
 	cmdMap[CMD_FU].opts.StringVar(&opts[1], "tmo", "", "Timeout")
@@ -1928,6 +1940,7 @@ func main() {
 	setupCommonCmd(CMD_DI, "NAME")
 	setupCommonCmd(CMD_DA, "NAME")
 	cmdMap[CMD_DA].opts.StringVar(&opts[0], "from", "", "File from which to get info")
+	cmdMap[CMD_DA].opts.StringVar(&opts[1], "params", "", "Parameters, ,-separated")
 	setupCommonCmd(CMD_DD, "NAME")
 
 	setupCommonCmd(CMD_RTL)

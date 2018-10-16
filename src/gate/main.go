@@ -31,6 +31,7 @@ const (
 	DefaultProject string			= "default"
 	NoProject string			= "*"
 	CloneDir				= "clone"
+	RunDir string				= "/var/run/swifty"
 )
 
 var (
@@ -98,17 +99,21 @@ func reqPeriods(q url.Values) int {
 	return periods
 }
 
-func getReqContext(w http.ResponseWriter, r *http.Request) (context.Context, func(context.Context)) {
-	token := r.Header.Get("X-Auth-Token")
-	if token == "" {
-		http.Error(w, "Auth token not provided", http.StatusUnauthorized)
-		return nil, nil
+func makeContextFor(r *http.Request, tenant string, admin bool) (context.Context, func(context.Context)) {
+	if admin {
+		rten := r.Header.Get("X-Relay-Tennant")
+		if rten != "" {
+			tenant = rten
+		}
 	}
 
+	return mkContext3("::r", tenant, admin)
+}
+
+func tryKeystoneAuth(token string) (string, bool, int) {
 	td, code := xkst.KeystoneGetTokenData(conf.Keystone.Addr, token)
 	if code != 0 {
-		http.Error(w, "Keystone authentication error", code)
-		return nil, nil
+		return "", false, code
 	}
 
 	/*
@@ -130,19 +135,26 @@ func getReqContext(w http.ResponseWriter, r *http.Request) (context.Context, fun
 	}
 
 	if !admin && !user {
-		http.Error(w, "Keystone authentication error", http.StatusForbidden)
+		return "", false, http.StatusForbidden
+	}
+
+	return td.Project.Name, admin, 0
+}
+
+func getReqContext(w http.ResponseWriter, r *http.Request) (context.Context, func(context.Context)) {
+	token := r.Header.Get("X-Auth-Token")
+	if token == "" {
+		http.Error(w, "Auth token not provided", http.StatusUnauthorized)
 		return nil, nil
 	}
 
-	tenant := td.Project.Name
-	if admin {
-		rten := r.Header.Get("X-Relay-Tennant")
-		if rten != "" {
-			tenant = rten
-		}
+	tenant, admin, code := tryKeystoneAuth(token)
+	if tenant == "" {
+		http.Error(w, "Keystone authentication error", code)
+		return nil, nil
 	}
 
-	return mkContext3("::r", tenant, admin)
+	return makeContextFor(r, tenant, admin)
 }
 
 func genReqHandler(cb gateGenReq) http.Handler {

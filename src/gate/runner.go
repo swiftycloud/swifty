@@ -14,10 +14,10 @@ import (
 	"swifty/common/xratelimit"
 )
 
-func makeArgs(sopq *statsOpaque, r *http.Request, path, key string) *swyapi.WdogFunctionRun {
+func makeArgs(sopq *statsOpaque, r *http.Request, path, key string) *swyapi.FunctionRun {
 	defer r.Body.Close()
 
-	args := &swyapi.WdogFunctionRun{}
+	args := &swyapi.FunctionRun{}
 	args.Args = make(map[string]string)
 
 	for k, v := range r.URL.Query() {
@@ -59,7 +59,7 @@ func makeArgs(sopq *statsOpaque, r *http.Request, path, key string) *swyapi.Wdog
 		path = reqPath(r)
 	}
 	args.Path = &path
-	args.Method = r.Method
+	args.Method = &r.Method
 	args.Key = key
 
 	return args
@@ -72,7 +72,7 @@ type podConn struct {
 	Cookie	string
 }
 
-func talkHTTP(addr, port, url string, args *swyapi.WdogFunctionRun) (*swyapi.WdogFunctionRunResult, error) {
+func talkHTTP(addr, port, url string, args *swyapi.FunctionRun) (*swyapi.WdogFunctionRunResult, error) {
 	var resp *http.Response
 	var res swyapi.WdogFunctionRunResult
 	var err error
@@ -108,7 +108,7 @@ func traceTime(sopq *statsOpaque, w string, wt *uint) {
 	}
 }
 
-func (conn *podConn)Run(ctx context.Context, sopq *statsOpaque, suff, event string, args *swyapi.WdogFunctionRun) (*swyapi.WdogFunctionRunResult, error) {
+func (conn *podConn)Run(ctx context.Context, sopq *statsOpaque, suff, event string, args *swyapi.FunctionRun) (*swyapi.WdogFunctionRunResult, error) {
 	var res *swyapi.WdogFunctionRunResult
 	var err error
 
@@ -145,7 +145,7 @@ func (conn *podConn)Run(ctx context.Context, sopq *statsOpaque, suff, event stri
 	return res, nil
 }
 
-func doRun(ctx context.Context, fn *FunctionDesc, event string, args *swyapi.WdogFunctionRun) (*swyapi.WdogFunctionRunResult, error) {
+func doRun(ctx context.Context, fn *FunctionDesc, event string, args *swyapi.FunctionRun) (*swyapi.WdogFunctionRunResult, error) {
 	fmd, err := memdGetFn(ctx, fn)
 	if err != nil {
 		ctxlog(ctx).Errorf("Can't %s memdat: %s", fn.Cookie, err.Error())
@@ -170,7 +170,7 @@ func doRun(ctx context.Context, fn *FunctionDesc, event string, args *swyapi.Wdo
 	return res, err
 }
 
-func doRunBg(ctx context.Context, fn *FunctionDesc, event string, args *swyapi.WdogFunctionRun) {
+func doRunBg(ctx context.Context, fn *FunctionDesc, event string, args *swyapi.FunctionRun) {
 	_, err := doRun(ctx, fn, event, args)
 	if err != nil {
 		ctxlog(ctx).Errorf("bg.%s: error running fn: %s", event, err.Error())

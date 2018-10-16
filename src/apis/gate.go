@@ -229,6 +229,7 @@ type DeployStart struct {
 	Name		string			`json:"name"`
 	Project		string			`json:"project,omitempty"`
 	From		DeploySource		`json:"from"`
+	Params		map[string]string	`json:"parameters"`
 }
 
 type DeployItemInfo struct {
@@ -327,4 +328,20 @@ type RouterInfo struct {
 	Labels		[]string	`json:"labels,omitempty"`
 	TLen		int		`json:"table_len"`
 	URL		string		`json:"url"`
+}
+
+/*
+ * This type is not seen by wdog itself, instead, it's described
+ * by each wdog runner by smth like "Request"
+ */
+type FunctionRun struct {
+	Event		string			`json:"event"`
+	Args		map[string]string	`json:"args"`
+	ContentType	string			`json:"content,omitempty"`
+	Body		string			`json:"body,omitempty"`
+	Claims		map[string]interface{}	`json:"claims,omitempty"` // JWT
+	Method		*string			`json:"method,omitempty"`
+	Path		*string			`json:"path,omitempty"`
+	Key		string			`json:"key,omitempty"`
+	Src		*FunctionSources	`json:"src,omitempty"`
 }

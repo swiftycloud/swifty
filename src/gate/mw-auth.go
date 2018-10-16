@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"time"
 	"errors"
 	"strings"
 	"encoding/json"
@@ -104,6 +105,26 @@ func (ac *AuthCtx)Verify(r *http.Request) (map[string]interface{}, error) {
 	err = json.Unmarshal(cb, &claims)
 	if err != nil {
 		return nil, errors.New("Bad JWT claims: " + err.Error())
+	}
+
+	expf, ok := claims["exp"]
+	if ok {
+		now := time.Now().Unix()
+		var exp int64
+
+		switch expt := expf.(type) {
+		case float64:
+			exp = int64(expt)
+		case json.Number:
+			exp, _ = expt.Int64()
+		default:
+			now = 0
+			exp = 1 /* XXX valid? why not? */
+		}
+
+		if exp <= now {
+			return nil, errors.New("Token expired")
+		}
 	}
 
 	return claims, nil

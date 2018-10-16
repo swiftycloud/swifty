@@ -306,11 +306,16 @@ type DepParam struct {
 }
 
 func (dep *DeployDesc)getItems(ctx context.Context, ds *swyapi.DeployStart) *xrest.ReqErr {
-	return dep.getItemsParams(ctx, &ds.From,
-			[]*DepParam { &DepParam{ name: "name", value: dep.SwoId.Name } })
+	if ds.Params == nil {
+		ds.Params = map[string]string { "name": dep.SwoId.Name }
+	} else if _, ok := ds.Params["name"]; !ok {
+		ds.Params["name"] = dep.SwoId.Name
+	}
+
+	return dep.getItemsParams(ctx, &ds.From, ds.Params)
 }
 
-func (dep *DeployDesc)getItemsParams(ctx context.Context, from *swyapi.DeploySource, params []*DepParam) *xrest.ReqErr {
+func (dep *DeployDesc)getItemsParams(ctx context.Context, from *swyapi.DeploySource, params map[string]string) *xrest.ReqErr {
 	var dd swyapi.DeployDescription
 	var desc []byte
 	var err error
@@ -331,8 +336,8 @@ func (dep *DeployDesc)getItemsParams(ctx context.Context, from *swyapi.DeploySou
 		return GateErrM(swyapi.GateBadRequest, "Unsupported type")
 	}
 
-	for _, p := range params {
-		desc = bytes.Replace(desc, []byte("%" + p.name + "%"), []byte(p.value), -1)
+	for name, value := range params {
+		desc = bytes.Replace(desc, []byte("%" + name + "%"), []byte(value), -1)
 	}
 
 	err = yaml.Unmarshal(desc, &dd)

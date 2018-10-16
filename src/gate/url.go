@@ -117,7 +117,7 @@ func (furl *FnURL)Handle(ctx context.Context, w http.ResponseWriter, r *http.Req
 
 func (fmd *FnMemData)Handle(ctx context.Context, w http.ResponseWriter, r *http.Request, sopq *statsOpaque,
 		path, key string) {
-	var args *swyapi.WdogFunctionRun
+	var args *swyapi.FunctionRun
 	var res *swyapi.WdogFunctionRunResult
 	var err error
 	var code int

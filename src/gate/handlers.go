@@ -403,7 +403,7 @@ func handleFunctionRun(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	}
 
 	fn := fo.(*FunctionDesc)
-	var params swyapi.WdogFunctionRun
+	var params swyapi.FunctionRun
 	var res *swyapi.WdogFunctionRunResult
 
 	err := xhttp.RReq(r, &params)
@@ -431,6 +431,10 @@ func handleFunctionRun(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		}
 
 		params.Src = nil /* not to propagate to wdog */
+	}
+
+	if params.Method == nil {
+		params.Method = &r.Method /* POST */
 	}
 
 	conn, errc := balancerGetConnExact(ctx, fn.Cookie, fn.Src.Version)
@@ -618,7 +622,7 @@ func handleAuths(ctx context.Context, w http.ResponseWriter, r *http.Request) *x
 		cerr := dd.getItemsParams(ctx, &swyapi.DeploySource{
 			Type:	"repo",
 			Repo:	demoRep.ObjID.Hex() + "/swy-aaas.yaml",
-		}, []*DepParam { &DepParam{ name: "name", value: aa.Name } })
+		}, map[string]string { "name": aa.Name })
 		if cerr != nil {
 			ctxlog(ctx).Errorf("Error getting swy-aaas.yaml file")
 			return cerr

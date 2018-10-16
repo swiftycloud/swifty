@@ -217,7 +217,7 @@ func wsTrigger(mwd *MwareDesc, cid string, mtype int, message []byte, claims map
 		}
 	}
 
-	args := swyapi.WdogFunctionRun {
+	args := swyapi.FunctionRun {
 		Args: map[string]string {
 			"mwid":	 mwd.SwoId.Name,
 			"cid":	 cid,
