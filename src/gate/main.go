@@ -99,6 +99,17 @@ func reqPeriods(q url.Values) int {
 	return periods
 }
 
+func makeContextFor(r *http.Request, tenant string, admin bool) (context.Context, func(context.Context)) {
+	if admin {
+		rten := r.Header.Get("X-Relay-Tennant")
+		if rten != "" {
+			tenant = rten
+		}
+	}
+
+	return mkContext3("::r", tenant, admin)
+}
+
 func getReqContext(w http.ResponseWriter, r *http.Request) (context.Context, func(context.Context)) {
 	token := r.Header.Get("X-Auth-Token")
 	if token == "" {
@@ -135,15 +146,7 @@ func getReqContext(w http.ResponseWriter, r *http.Request) (context.Context, fun
 		return nil, nil
 	}
 
-	tenant := td.Project.Name
-	if admin {
-		rten := r.Header.Get("X-Relay-Tennant")
-		if rten != "" {
-			tenant = rten
-		}
-	}
-
-	return mkContext3("::r", tenant, admin)
+	return makeContextFor(r, td.Project.Name, admin)
 }
 
 func genReqHandler(cb gateGenReq) http.Handler {
