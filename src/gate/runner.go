@@ -59,7 +59,7 @@ func makeArgs(sopq *statsOpaque, r *http.Request, path, key string) *swyapi.Func
 		path = reqPath(r)
 	}
 	args.Path = &path
-	args.Method = r.Method
+	args.Method = &r.Method
 	args.Key = key
 
 	return args

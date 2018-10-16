@@ -339,7 +339,7 @@ type FunctionRun struct {
 	ContentType	string			`json:"content,omitempty"`
 	Body		string			`json:"body,omitempty"`
 	Claims		map[string]interface{}	`json:"claims,omitempty"` // JWT
-	Method		string			`json:"method,omitempty"`
+	Method		*string			`json:"method,omitempty"`
 	Path		*string			`json:"path,omitempty"`
 	Key		string			`json:"key,omitempty"`
 	Src		*FunctionSources	`json:"src,omitempty"`

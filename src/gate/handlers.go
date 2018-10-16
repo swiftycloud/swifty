@@ -433,6 +433,10 @@ func handleFunctionRun(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		params.Src = nil /* not to propagate to wdog */
 	}
 
+	if params.Method == nil {
+		params.Method = &r.Method /* POST */
+	}
+
 	conn, errc := balancerGetConnExact(ctx, fn.Cookie, fn.Src.Version)
 	if errc != nil {
 		return errc
