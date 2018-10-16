@@ -14,7 +14,7 @@ import (
 	"swifty/common/xrest"
 )
 
-const GateTracerPath = "/var/run/swifty/tracer.sock"
+const GateTracerPath = RunDir + "/tracer.sock"
 
 type Tracer struct {
 	id	string
