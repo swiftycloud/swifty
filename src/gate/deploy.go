@@ -20,6 +20,12 @@ const (
 	DBDepStateTrm	int = 4
 )
 
+var maxIncludeDepth = 4 /* FIXME -- properly detect recursion */
+
+func init() {
+	addIntSysctl("deploy_include_depth_max", &maxIncludeDepth)
+}
+
 var depStates = map[int]string {
 	DBDepStateIni: "initializing",
 	DBDepStateRdy: "ready",
@@ -312,10 +318,10 @@ func (dep *DeployDesc)getItems(ctx context.Context, ds *swyapi.DeployStart) *xre
 		ds.Params["name"] = dep.SwoId.Name
 	}
 
-	return dep.getItemsParams(ctx, &ds.From, ds.Params)
+	return dep.getItemsParams(ctx, &ds.From, ds.Params, 0)
 }
 
-func (dep *DeployDesc)getItemsParams(ctx context.Context, from *swyapi.DeploySource, params map[string]string) *xrest.ReqErr {
+func (dep *DeployDesc)getItemsParams(ctx context.Context, from *swyapi.DeploySource, params map[string]string, depth int) *xrest.ReqErr {
 	var dd swyapi.DeployDescription
 	var desc []byte
 	var err error
@@ -345,11 +351,22 @@ func (dep *DeployDesc)getItemsParams(ctx context.Context, from *swyapi.DeploySou
 		return GateErrE(swyapi.GateBadRequest, err)
 	}
 
-	return dep.getItemsDesc(&dd)
+	return dep.getItemsDesc(ctx, &dd, params, depth)
 }
 
-func (dep *DeployDesc)getItemsDesc(dd *swyapi.DeployDescription) *xrest.ReqErr {
+func (dep *DeployDesc)getItemsDesc(ctx context.Context, dd *swyapi.DeployDescription, params map[string]string, depth int) *xrest.ReqErr {
 	id := dep.SwoId
+
+	for _, inc := range dd.Include {
+		if depth >= maxIncludeDepth {
+			return GateErrM(swyapi.GateBadRequest, "Too many includes")
+		}
+
+		cer := dep.getItemsParams(ctx, &inc.DeploySource, params, depth + 1)
+		if cer != nil {
+			return cer
+		}
+	}
 
 	for _, fn := range dd.Functions {
 		srcd, er := json.Marshal(fn.Sources)
