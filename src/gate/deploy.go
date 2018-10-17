@@ -323,18 +323,18 @@ func (dep *DeployDesc)getItemsParams(ctx context.Context, from *swyapi.DeploySou
 	var desc []byte
 	var err error
 
-	switch from.Type {
-	case "desc":
+	switch {
+	case from.Descr != "":
 		desc, err = base64.StdEncoding.DecodeString(from.Descr)
 		if err != nil {
 			return GateErrE(swyapi.GateGenErr, err)
 		}
-	case "repo":
+	case from.Repo != "":
 		desc, err = repoReadFile(ctx, from.Repo)
 		if err != nil {
 			return GateErrE(swyapi.GateGenErr, err)
 		}
-	case "url":
+	case from.URL != "":
 		desc, err = xhttp.ReadFromURL(from.URL)
 		if err != nil {
 			return GateErrE(swyapi.GateGenErr, err)

@@ -2562,9 +2562,6 @@ definitions:
     type: object
     description: Description of deployment source
     properties:
-      type:
-        type: string
-        description: One of "desc" or "repo"
       desc:
         type: string
         description: Base64 yaml file if type == desc
@@ -2572,6 +2569,10 @@ definitions:
         type: string
         description: Path to yaml file in a repo for type == git
         example: <repoId>/path/to/file.yaml
+      url:
+        type: string
+        description: URL where to GET the data from
+        example: https://foo.bar/file.yaml
   DeployStart:
     type: object
     description: Description of deployment

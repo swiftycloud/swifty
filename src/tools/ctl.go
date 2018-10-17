@@ -1138,18 +1138,15 @@ func deploy_add(args []string, opts [16]string) {
 
 	if strings.HasPrefix(opts[0], "repo:") {
 		da.From = swyapi.DeploySource {
-			Type: "repo",
 			Repo: opts[0][5:],
 		}
 	} else if isURL(opts[0]) {
 		da.From = swyapi.DeploySource {
-			Type: "url",
 			URL: opts[0],
 		}
 	} else {
 		fmt.Printf("Adding deploy from %s\n", opts[0])
 		da.From = swyapi.DeploySource {
-			Type: "desc",
 			Descr: encodeFile(opts[0]),
 		}
 	}
