@@ -307,10 +307,6 @@ func getDeployDesc(id *SwoId) *DeployDesc {
 	return dd
 }
 
-type DepParam struct {
-	name, value string
-}
-
 func (dep *DeployDesc)getItems(ctx context.Context, ds *swyapi.DeployStart) *xrest.ReqErr {
 	if ds.Params == nil {
 		ds.Params = map[string]string { "name": dep.SwoId.Name }
