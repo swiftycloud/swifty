@@ -213,16 +213,21 @@ type FunctionLogEntry struct {
 	Text		string			`json:"text"`
 }
 
+type DeployInclude struct {
+	DeploySource				`yaml:",inline"`
+}
+
 type DeployDescription struct {
+	Include		[]*DeployInclude	`yaml:"include"`
 	Functions	[]*FunctionAdd		`yaml:"functions"`
 	Mwares		[]*MwareAdd		`yaml:"mwares"`
 	Routers		[]*RouterAdd		`yaml:"routers"`
 }
 
 type DeploySource struct {
-	Type		string			`json:"type"`
-	Descr		string			`json:"desc,omitempty"`
-	Repo		string			`json:"repo,omitempty"`
+	Type		string			`json:"type" yaml:"type"`
+	Descr		string			`json:"desc,omitempty" yaml:"desc,omitempty"`
+	Repo		string			`json:"repo,omitempty" yaml:"repo,omitempty"`
 }
 
 type DeployStart struct {
