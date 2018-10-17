@@ -104,6 +104,7 @@ type FunctionSources struct {
 	Type		string			`json:"type"`
 	Repo		string			`json:"repo,omitempty"`
 	Code		string			`json:"code,omitempty"`
+	URL		string			`json:"url,omitempty"`
 	Sync		bool			`json:"sync"`
 }
 

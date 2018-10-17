@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"os"
 	"context"
+	"net/http"
 	"io"
 	"time"
 	"io/ioutil"
@@ -57,6 +58,7 @@ var srcHandlers = map[string] struct {
 } {
 	"git":		{ put: putFileFromRepo, },
 	"code":		{ put: putFileFromReq, },
+	"url":		{ put: putFileFromUrl, },
 }
 
 func checkVersion(ctx context.Context, fn *FunctionDesc, version string, versions []string) (bool, error) {
@@ -146,6 +148,8 @@ func putFileFromRepo(ctx context.Context, src *swyapi.FunctionSources, to, scrip
 		return err
 	}
 
+	defer f.Close()
+
 	return writeSourceFile(ctx, to, script, f)
 }
 
@@ -156,6 +160,17 @@ func putFileFromReq(ctx context.Context, src *swyapi.FunctionSources, to, script
 	}
 
 	return writeSourceFile(ctx, to, script, bytes.NewReader(data))
+}
+
+func putFileFromUrl(ctx context.Context, src *swyapi.FunctionSources, to, script string) error {
+	resp, err := http.DefaultClient.Get(src.URL)
+	if err != nil {
+		return fmt.Errorf("Error GET-ing file")
+	}
+
+	defer resp.Body.Close()
+
+	return writeSourceFile(ctx, to, script, resp.Body)
 }
 
 func GCOldSources(ctx context.Context, fn *FunctionDesc, ver string) {

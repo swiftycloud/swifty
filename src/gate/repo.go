@@ -843,7 +843,7 @@ func repoReadFile(ctx context.Context, rf string) ([]byte, error) {
 	return ioutil.ReadFile(fname)
 }
 
-func repoOpenFile(ctx context.Context, rf string) (io.Reader, error) {
+func repoOpenFile(ctx context.Context, rf string) (io.ReadCloser, error) {
 	fname, err := repoFilePath(ctx, rf)
 	if err != nil {
 		return nil, err

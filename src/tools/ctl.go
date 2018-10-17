@@ -667,6 +667,9 @@ func getSrc(opt string, src *swyapi.FunctionSources) {
 		src.Type = "git"
 		src.Repo = repo
 		src.Sync = sync
+	} else if strings.HasPrefix(opt, "http://") || strings.HasPrefix(opt, "https://") {
+		src.Type = "url"
+		src.URL = opt
 	} else {
 		st, err := os.Stat(opt)
 		if err != nil {
