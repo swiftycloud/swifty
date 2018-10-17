@@ -229,6 +229,7 @@ type DeploySource struct {
 	Type		string			`json:"type" yaml:"type"`
 	Descr		string			`json:"desc,omitempty" yaml:"desc,omitempty"`
 	Repo		string			`json:"repo,omitempty" yaml:"repo,omitempty"`
+	URL		string			`json:"url,omitempty" yaml:"url,omitempty"`
 }
 
 type DeployStart struct {

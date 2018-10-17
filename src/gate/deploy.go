@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"bytes"
 	"swifty/common/xrest"
+	"swifty/common/http"
 	"swifty/apis"
 )
 
@@ -330,6 +331,11 @@ func (dep *DeployDesc)getItemsParams(ctx context.Context, from *swyapi.DeploySou
 		}
 	case "repo":
 		desc, err = repoReadFile(ctx, from.Repo)
+		if err != nil {
+			return GateErrE(swyapi.GateGenErr, err)
+		}
+	case "url":
+		desc, err = xhttp.ReadFromURL(from.URL)
 		if err != nil {
 			return GateErrE(swyapi.GateGenErr, err)
 		}

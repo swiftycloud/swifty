@@ -445,7 +445,7 @@ func function_info(args []string, opts [16]string) {
 	fmt.Printf("State:       %s\n", ifo.State)
 	if ifo.URL != "" {
 		pfx := ""
-		if !(strings.HasPrefix(ifo.URL, "http://") || strings.HasPrefix(ifo.URL, "https://")) {
+		if !isURL(ifo.URL) {
 			pfx = gateProto() + "://"
 		}
 		fmt.Printf("URL:         %s%s\n", pfx, ifo.URL)
@@ -653,6 +653,10 @@ func parse_rate(val string) (uint, uint) {
 	return uint(rate), uint(burst)
 }
 
+func isURL(s string) bool {
+	return strings.HasPrefix(s, "http://") || strings.HasPrefix(s, "https://")
+}
+
 func getSrc(opt string, src *swyapi.FunctionSources) {
 	if strings.HasPrefix(opt, "repo:") {
 		sync := false
@@ -667,7 +671,7 @@ func getSrc(opt string, src *swyapi.FunctionSources) {
 		src.Type = "git"
 		src.Repo = repo
 		src.Sync = sync
-	} else if strings.HasPrefix(opt, "http://") || strings.HasPrefix(opt, "https://") {
+	} else if isURL(opt) {
 		src.Type = "url"
 		src.URL = opt
 	} else {
@@ -1136,6 +1140,11 @@ func deploy_add(args []string, opts [16]string) {
 		da.From = swyapi.DeploySource {
 			Type: "repo",
 			Repo: opts[0][5:],
+		}
+	} else if isURL(opts[0]) {
+		da.From = swyapi.DeploySource {
+			Type: "url",
+			URL: opts[0],
 		}
 	} else {
 		fmt.Printf("Adding deploy from %s\n", opts[0])
