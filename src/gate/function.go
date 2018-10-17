@@ -303,11 +303,18 @@ func (fn *FunctionDesc)toInfo(ctx context.Context, details bool, periods int) (*
 }
 
 func guessLang(p *swyapi.FunctionAdd) bool {
-	if p.Sources.Repo == "" {
+	var fn string
+
+	switch {
+	case p.Sources.Repo != "":
+		fn = p.Sources.Repo
+	case p.Sources.URL != "":
+		fn = p.Sources.URL
+	default:
 		return false
 	}
 
-	lng := rtLangDetect(p.Sources.Repo)
+	lng := rtLangDetect(fn)
 	if lng == "" {
 		return false
 	}
