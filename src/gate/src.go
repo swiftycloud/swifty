@@ -117,14 +117,20 @@ func putSourceFile(ctx context.Context, fn *FunctionDesc, src *swyapi.FunctionSo
 	return srch.put(ctx, src, fn.srcPath(""), rtScriptName(&fn.Code, suff))
 }
 
-func writeSourceFile(ctx context.Context, to, script string, data []byte) error {
+func writeSourceFile(ctx context.Context, to, script string, data io.Reader) error {
 	err := os.MkdirAll(to, 0750)
 	if err != nil {
 		ctxlog(ctx).Error("Can't mkdir sources: %s", err.Error())
 		return errors.New("FS error")
 	}
 
-	err = ioutil.WriteFile(to + "/" + script, data, 0600)
+	f, err := os.OpenFile(to + "/" + script, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
+	if err != nil {
+		ctxlog(ctx).Error("Can't create sources: %s", err.Error())
+		return errors.New("FS error")
+	}
+
+	_, err = io.Copy(f, data)
 	if err != nil {
 		ctxlog(ctx).Error("Can't write sources: %s", err.Error())
 		return errors.New("FS error")
@@ -134,13 +140,13 @@ func writeSourceFile(ctx context.Context, to, script string, data []byte) error 
 }
 
 func putFileFromRepo(ctx context.Context, src *swyapi.FunctionSources, to, script string) error {
-	fnCode, err := repoReadFile(ctx, src.Repo)
+	f, err := repoOpenFile(ctx, src.Repo)
 	if err != nil {
 		ctxlog(ctx).Errorf("Can't read file %s: %s", src.Repo, err.Error())
 		return err
 	}
 
-	return writeSourceFile(ctx, to, script, fnCode)
+	return writeSourceFile(ctx, to, script, f)
 }
 
 func putFileFromReq(ctx context.Context, src *swyapi.FunctionSources, to, script string) error {
@@ -149,7 +155,7 @@ func putFileFromReq(ctx context.Context, src *swyapi.FunctionSources, to, script
 		return fmt.Errorf("Error decoding sources")
 	}
 
-	return writeSourceFile(ctx, to, script, data)
+	return writeSourceFile(ctx, to, script, bytes.NewReader(data))
 }
 
 func GCOldSources(ctx context.Context, fn *FunctionDesc, ver string) {

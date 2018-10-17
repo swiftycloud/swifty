@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"bufio"
 	"os"
+	"io"
 	"context"
 	"time"
 	"io/ioutil"
@@ -834,18 +835,34 @@ func ctxRepoName(ctx context.Context, name string) bson.M {
 }
 
 func repoReadFile(ctx context.Context, rf string) ([]byte, error) {
+	fname, err := repoFilePath(ctx, rf)
+	if err != nil {
+		return nil, err
+	}
+
+	return ioutil.ReadFile(fname)
+}
+
+func repoOpenFile(ctx context.Context, rf string) (io.Reader, error) {
+	fname, err := repoFilePath(ctx, rf)
+	if err != nil {
+		return nil, err
+	}
+
+	return os.Open(fname)
+}
+
+func repoFilePath(ctx context.Context, rf string) (string, error) {
 	var rd RepoDesc
-	var fname string
 
 	ids := strings.SplitN(rf, "/", 2)
 	if len(ids) == 2 && bson.IsObjectIdHex(ids[0]) {
 		err := dbFind(ctx, ctxRepoId(ctx, ids[0]), &rd)
 		if err != nil {
-			return nil, err
+			return "", err
 		}
 
-		fname = ids[1]
-		goto got_rd
+		return rd.clonePath() + "/" + ids[1], nil
 
 	}
 
@@ -853,15 +870,11 @@ func repoReadFile(ctx context.Context, rf string) ([]byte, error) {
 	if len(ids) == 3 {
 		err := dbFind(ctx, ctxRepoName(ctx, ids[0] + "//" + ids[1]), &rd)
 		if err != nil {
-			return nil, err
+			return "", err
 		}
 
-		fname = ids[2]
-		goto got_rd
+		return rd.clonePath() + "/" + ids[2], nil
 	}
 
-	return nil, errors.New("Bad repo file ID")
-
-got_rd:
-	return ioutil.ReadFile(rd.clonePath() + "/" + fname)
+	return "", errors.New("Bad repo file ID")
 }
