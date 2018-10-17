@@ -2279,13 +2279,7 @@ definitions:
   FunctionSources:
     type: object
     description: Sources description
-    required:
-      - type
     properties:
-      type:
-        type: string
-        description: Sources type ("code")
-        example: 'code, git'
       code:
         type: string
         description: Base64 encoded source file for type == code
@@ -2297,8 +2291,12 @@ definitions:
       sync:
         type: boolean
         description: >-
-          When set and type is "git" the function will be auto-updates once the
+          When set and type is "repo" the function will be auto-updates once the
           repo file changes
+      url:
+        type: string
+        description: URL where to GET the sources from
+        example: https://foo.bar/functions/file.py
   FunctionCode:
     type: object
     description: Code description

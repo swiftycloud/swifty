@@ -543,7 +543,7 @@ func function_minfo(args []string, opts [16]string) {
 }
 
 func check_lang(args []string, opts [16]string) {
-	l := detect_language(opts[0], "code")
+	l := detect_language(opts[0])
 	fmt.Printf("%s\n", l)
 }
 
@@ -581,12 +581,7 @@ func check_ext(path, ext, typ string) string {
 	return ""
 }
 
-func detect_language(path string, typ string) string {
-	if typ != "code" {
-		fatal(fmt.Errorf("can't detect repo language"))
-		return ""
-	}
-
+func detect_language(path string) string {
 	cont, err := ioutil.ReadFile(path)
 	if err != nil {
 		fatal(fmt.Errorf("Can't read sources: %s", err.Error()))
@@ -668,11 +663,9 @@ func getSrc(opt string, src *swyapi.FunctionSources) {
 			repo = repo[1:]
 		}
 		fmt.Printf("Will add file from repo %s (sync %v)\n", repo, sync)
-		src.Type = "git"
 		src.Repo = repo
 		src.Sync = sync
 	} else if isURL(opt) {
-		src.Type = "url"
 		src.URL = opt
 	} else {
 		st, err := os.Stat(opt)
@@ -685,7 +678,6 @@ func getSrc(opt string, src *swyapi.FunctionSources) {
 		}
 
 		fmt.Printf("Will add file %s\n", opt)
-		src.Type = "code"
 		src.Code = encodeFile(opt)
 	}
 }
@@ -697,7 +689,7 @@ func function_add(args []string, opts [16]string) {
 	getSrc(opts[1], &sources)
 
 	if opts[0] == "" {
-		opts[0] = detect_language(opts[1], sources.Type)
+		opts[0] = detect_language(opts[1])
 		fmt.Printf("Detected lang to %s\n", opts[0])
 	}
 
@@ -772,7 +764,6 @@ func run_function(args []string, opts [16]string) {
 
 	if opts[0] != "" {
 		src := &swyapi.FunctionSources{}
-		src.Type = "code"
 		src.Code = encodeFile(opts[0])
 		rq.Src = src
 	}

@@ -303,7 +303,7 @@ func (fn *FunctionDesc)toInfo(ctx context.Context, details bool, periods int) (*
 }
 
 func guessLang(p *swyapi.FunctionAdd) bool {
-	if p.Sources.Type != "git" {
+	if p.Sources.Repo == "" {
 		return false
 	}
 
@@ -752,7 +752,6 @@ func (fn *FunctionDesc)getSources(ctx context.Context) (*swyapi.FunctionSources,
 	}
 
 	fs := &swyapi.FunctionSources {
-		Type: "code",
 		Code: base64.StdEncoding.EncodeToString(fnCode),
 	}
 

@@ -503,7 +503,6 @@ func tryToUpdateFunctions(ctx context.Context, rd *RepoDesc, to string) {
 		t := gctx(ctx).tpush(fn.SwoId.Tennant)
 		traceFnEvent(ctx, "update from repo", fn)
 		cerr := fn.updateSources(ctx, &swyapi.FunctionSources {
-			Type: "git",
 			Repo: fn.Src.Repo + "/" + fn.Src.File,
 			Sync: true,
 		})

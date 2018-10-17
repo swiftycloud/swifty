@@ -53,14 +53,6 @@ func gitCommit(dir string) (string, error) {
 	return stdout.String(), nil
 }
 
-var srcHandlers = map[string] struct {
-	put func (context.Context, *swyapi.FunctionSources, string, string) error
-} {
-	"git":		{ put: putFileFromRepo, },
-	"code":		{ put: putFileFromReq, },
-	"url":		{ put: putFileFromUrl, },
-}
-
 func checkVersion(ctx context.Context, fn *FunctionDesc, version string, versions []string) (bool, error) {
 	cver, _ := strconv.Atoi(version)
 	for _, v := range versions {
@@ -96,7 +88,7 @@ func putStdSources(ctx context.Context, fn *FunctionDesc, src *swyapi.FunctionSo
 		return err
 	}
 
-	if src.Type == "git" && src.Sync {
+	if src.Repo != "" && src.Sync {
 		ids := strings.SplitN(src.Repo, "/", 2)
 		fn.Src.Repo = ids[0]
 		fn.Src.File = ids[1]
@@ -111,12 +103,20 @@ func putTempSources(ctx context.Context, fn *FunctionDesc, src *swyapi.FunctionS
 }
 
 func putSourceFile(ctx context.Context, fn *FunctionDesc, src *swyapi.FunctionSources, suff string) error {
-	srch, ok := srcHandlers[src.Type]
-	if !ok {
-		return fmt.Errorf("Unknown sources type %s", src.Type)
+	var put func (context.Context, *swyapi.FunctionSources, string, string) error
+
+	switch {
+	case src.Repo != "":
+		put = putFileFromRepo
+	case src.Code != "":
+		put = putFileFromReq
+	case src.URL != "":
+		put = putFileFromUrl
+	default:
+		return fmt.Errorf("Unknown sources type")
 	}
 
-	return srch.put(ctx, src, fn.srcPath(""), rtScriptName(&fn.Code, suff))
+	return put(ctx, src, fn.srcPath(""), rtScriptName(&fn.Code, suff))
 }
 
 func writeSourceFile(ctx context.Context, to, script string, data io.Reader) error {
