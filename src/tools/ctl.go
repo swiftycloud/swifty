@@ -1280,7 +1280,7 @@ func repo_cat_file(args []string, opts [16]string) {
 	if err != nil {
 		fatal(fmt.Errorf("Can't read file: %s", err.Error()))
 	}
-	fmt.Printf(string(dat))
+	fmt.Printf("%s\n", string(dat))
 }
 
 func repo_pull(args []string, opts [16]string) {
