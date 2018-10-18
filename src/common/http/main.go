@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"crypto/tls"
 	"crypto/x509"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strings"
@@ -161,4 +162,16 @@ func ReqAtoi(q url.Values, n string, def int) (int, error) {
 	}
 
 	return val, nil
+}
+
+func ReadFromURL(url string) ([]byte, error) {
+	resp, err := http.DefaultClient.Get(url)
+	if err != nil {
+		return nil, err
+	}
+
+	defer resp.Body.Close()
+
+	return ioutil.ReadAll(resp.Body)
+
 }

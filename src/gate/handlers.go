@@ -620,7 +620,6 @@ func handleAuths(ctx context.Context, w http.ResponseWriter, r *http.Request) *x
 		dd := getDeployDesc(ctxSwoId(ctx, aa.Project, aa.Name))
 		dd.Labels = []string{ "auth" }
 		cerr := dd.getItemsParams(ctx, &swyapi.DeploySource{
-			Type:	"repo",
 			Repo:	demoRep.ObjID.Hex() + "/swy-aaas.yaml",
 		}, map[string]string { "name": aa.Name }, 0)
 		if cerr != nil {

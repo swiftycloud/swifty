@@ -108,7 +108,10 @@ func HandleCreateOne(ctx context.Context, w http.ResponseWriter, r *http.Request
 }
 
 func HandleGetList(ctx context.Context, w http.ResponseWriter, r *http.Request, fact Factory) *ReqErr {
-	var ifos []interface{}
+	/* When no objects get into it we need to marshal [], not null,
+	 * so explicitly create and empty array
+	 */
+	ifos := make([]interface{}, 0)
 
 	q := r.URL.Query()
 	details := (q.Get("details") != "")

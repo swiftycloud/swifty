@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"os"
 	"context"
+	"net/http"
 	"io"
 	"time"
 	"io/ioutil"
@@ -52,13 +53,6 @@ func gitCommit(dir string) (string, error) {
 	return stdout.String(), nil
 }
 
-var srcHandlers = map[string] struct {
-	put func (context.Context, *swyapi.FunctionSources, string, string) error
-} {
-	"git":		{ put: putFileFromRepo, },
-	"code":		{ put: putFileFromReq, },
-}
-
 func checkVersion(ctx context.Context, fn *FunctionDesc, version string, versions []string) (bool, error) {
 	cver, _ := strconv.Atoi(version)
 	for _, v := range versions {
@@ -94,7 +88,7 @@ func putStdSources(ctx context.Context, fn *FunctionDesc, src *swyapi.FunctionSo
 		return err
 	}
 
-	if src.Type == "git" && src.Sync {
+	if src.Repo != "" && src.Sync {
 		ids := strings.SplitN(src.Repo, "/", 2)
 		fn.Src.Repo = ids[0]
 		fn.Src.File = ids[1]
@@ -109,22 +103,36 @@ func putTempSources(ctx context.Context, fn *FunctionDesc, src *swyapi.FunctionS
 }
 
 func putSourceFile(ctx context.Context, fn *FunctionDesc, src *swyapi.FunctionSources, suff string) error {
-	srch, ok := srcHandlers[src.Type]
-	if !ok {
-		return fmt.Errorf("Unknown sources type %s", src.Type)
+	var put func (context.Context, *swyapi.FunctionSources, string, string) error
+
+	switch {
+	case src.Repo != "":
+		put = putFileFromRepo
+	case src.Code != "":
+		put = putFileFromReq
+	case src.URL != "":
+		put = putFileFromUrl
+	default:
+		return fmt.Errorf("Unknown sources type")
 	}
 
-	return srch.put(ctx, src, fn.srcPath(""), rtScriptName(&fn.Code, suff))
+	return put(ctx, src, fn.srcPath(""), rtScriptName(&fn.Code, suff))
 }
 
-func writeSourceFile(ctx context.Context, to, script string, data []byte) error {
+func writeSourceFile(ctx context.Context, to, script string, data io.Reader) error {
 	err := os.MkdirAll(to, 0750)
 	if err != nil {
 		ctxlog(ctx).Error("Can't mkdir sources: %s", err.Error())
 		return errors.New("FS error")
 	}
 
-	err = ioutil.WriteFile(to + "/" + script, data, 0600)
+	f, err := os.OpenFile(to + "/" + script, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
+	if err != nil {
+		ctxlog(ctx).Error("Can't create sources: %s", err.Error())
+		return errors.New("FS error")
+	}
+
+	_, err = io.Copy(f, data)
 	if err != nil {
 		ctxlog(ctx).Error("Can't write sources: %s", err.Error())
 		return errors.New("FS error")
@@ -134,13 +142,15 @@ func writeSourceFile(ctx context.Context, to, script string, data []byte) error 
 }
 
 func putFileFromRepo(ctx context.Context, src *swyapi.FunctionSources, to, script string) error {
-	fnCode, err := repoReadFile(ctx, src.Repo)
+	f, err := repoOpenFile(ctx, src.Repo)
 	if err != nil {
 		ctxlog(ctx).Errorf("Can't read file %s: %s", src.Repo, err.Error())
 		return err
 	}
 
-	return writeSourceFile(ctx, to, script, fnCode)
+	defer f.Close()
+
+	return writeSourceFile(ctx, to, script, f)
 }
 
 func putFileFromReq(ctx context.Context, src *swyapi.FunctionSources, to, script string) error {
@@ -149,7 +159,18 @@ func putFileFromReq(ctx context.Context, src *swyapi.FunctionSources, to, script
 		return fmt.Errorf("Error decoding sources")
 	}
 
-	return writeSourceFile(ctx, to, script, data)
+	return writeSourceFile(ctx, to, script, bytes.NewReader(data))
+}
+
+func putFileFromUrl(ctx context.Context, src *swyapi.FunctionSources, to, script string) error {
+	resp, err := http.DefaultClient.Get(src.URL)
+	if err != nil {
+		return fmt.Errorf("Error GET-ing file")
+	}
+
+	defer resp.Body.Close()
+
+	return writeSourceFile(ctx, to, script, resp.Body)
 }
 
 func GCOldSources(ctx context.Context, fn *FunctionDesc, ver string) {
