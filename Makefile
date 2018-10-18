@@ -96,7 +96,6 @@ endef
 
 go-pgrest-y	+= src/pgrest/main.go
 go-mquotad-y	+= src/mquotad/main.go
-go-wdog-go-y += src/wdog/main.go
 go-ctl-y	+= src/tools/ctl.go
 go-trace-y	+= src/tools/tracer.go
 go-s3fsck-y	+= src/tools/s3-fsck.go
@@ -113,57 +112,57 @@ $(eval $(call gen-gobuild-t,trace))
 $(eval $(call gen-gobuild-t,s3fsck))
 $(eval $(call gen-gobuild-t,sg))
 $(eval $(call gen-gobuild-t,dbscr))
-$(eval $(call gen-gobuild,wdog-go))
+$(eval $(call gen-gobuild-n,wdog))
 
 # Default target
 all: $(all-y)
 
-swy-runner: src/wdog/runner.c
+swy-runner: src/wdog/runner/runner.c
 	$(call msg-gen,$@)
 	$(Q) $(CC) -Wall -Werror -O2 -static -o $@ $<
 
 #
 # Docker images
-swifty/python: swy-wdog-go swy-runner src/wdog/runner.py kubectl/docker/wdog/python/Dockerfile
+swifty/python: swy-wdog swy-runner src/wdog/runner/runner.py kubectl/docker/wdog/python/Dockerfile
 	$(call msg-gen,$@)
-	$(Q) $(CP) swy-wdog-go  kubectl/docker/wdog/python/swy-wdog
+	$(Q) $(CP) swy-wdog  kubectl/docker/wdog/python/swy-wdog
 	$(Q) $(CP) swy-runner  kubectl/docker/wdog/python/
-	$(Q) $(CP) src/wdog/runner.py  kubectl/docker/wdog/python/swy-runner.py
-	$(Q) $(CP) src/wdog/lib.py kubectl/docker/wdog/python/swifty.py
+	$(Q) $(CP) src/wdog/runner/runner.py  kubectl/docker/wdog/python/swy-runner.py
+	$(Q) $(CP) src/wdog/lib/lib.py kubectl/docker/wdog/python/swifty.py
 	$(Q) $(MAKE) -C kubectl/docker/wdog/python all
 .PHONY: swifty/python
 
-swifty/golang: swy-wdog-go swy-runner src/wdog/runner.go kubectl/docker/wdog/golang/Dockerfile
+swifty/golang: swy-wdog swy-runner src/wdog/runner/runner.go kubectl/docker/wdog/golang/Dockerfile
 	$(call msg-gen,$@)
-	$(Q) $(CP) swy-wdog-go  kubectl/docker/wdog/golang/swy-wdog
+	$(Q) $(CP) swy-wdog  kubectl/docker/wdog/golang/swy-wdog
 	$(Q) $(CP) swy-runner  kubectl/docker/wdog/golang/
-	$(Q) $(CP) src/wdog/runner.go kubectl/docker/wdog/golang/
-	$(Q) $(CP) src/wdog/lib.go kubectl/docker/wdog/golang/
+	$(Q) $(CP) src/wdog/runner/runner.go kubectl/docker/wdog/golang/
+	$(Q) $(CP) src/wdog/lib/lib.go kubectl/docker/wdog/golang/
 	$(Q) $(CP) src/common/xqueue/queue.go kubectl/docker/wdog/golang/
 	$(Q) $(MAKE) -C kubectl/docker/wdog/golang all
 .PHONY: swifty/golang
 
-swifty/swift: swy-wdog-go swy-runner src/wdog/runner.swift kubectl/docker/wdog/swift/Dockerfile
+swifty/swift: swy-wdog swy-runner src/wdog/runner/runner.swift kubectl/docker/wdog/swift/Dockerfile
 	$(call msg-gen,$@)
-	$(Q) $(CP) swy-wdog-go  kubectl/docker/wdog/swift/swy-wdog
+	$(Q) $(CP) swy-wdog  kubectl/docker/wdog/swift/swy-wdog
 	$(Q) $(CP) swy-runner  kubectl/docker/wdog/swift/
-	$(Q) $(CP) src/wdog/runner.swift kubectl/docker/wdog/swift/
+	$(Q) $(CP) src/wdog/runner/runner.swift kubectl/docker/wdog/swift/
 	$(Q) $(MAKE) -C kubectl/docker/wdog/swift all
 .PHONY: swifty/swift
 
-swifty/nodejs: swy-wdog-go swy-runner src/wdog/runner.js kubectl/docker/wdog/nodejs/Dockerfile
+swifty/nodejs: swy-wdog swy-runner src/wdog/runner/runner.js kubectl/docker/wdog/nodejs/Dockerfile
 	$(call msg-gen,$@)
-	$(Q) $(CP) swy-wdog-go  kubectl/docker/wdog/nodejs/swy-wdog
+	$(Q) $(CP) swy-wdog  kubectl/docker/wdog/nodejs/swy-wdog
 	$(Q) $(CP) swy-runner  kubectl/docker/wdog/nodejs/
-	$(Q) $(CP) src/wdog/runner.js kubectl/docker/wdog/nodejs/
+	$(Q) $(CP) src/wdog/runner/runner.js kubectl/docker/wdog/nodejs/
 	$(Q) $(MAKE) -C kubectl/docker/wdog/nodejs all
 .PHONY: swifty/nodejs
 
-swifty/ruby: swy-wdog-go swy-runner src/wdog/runner.js kubectl/docker/wdog/ruby/Dockerfile
+swifty/ruby: swy-wdog swy-runner src/wdog/runner/runner.js kubectl/docker/wdog/ruby/Dockerfile
 	$(call msg-gen,$@)
-	$(Q) $(CP) swy-wdog-go kubectl/docker/wdog/ruby/swy-wdog
+	$(Q) $(CP) swy-wdog kubectl/docker/wdog/ruby/swy-wdog
 	$(Q) $(CP) swy-runner  kubectl/docker/wdog/ruby/
-	$(Q) $(CP) src/wdog/runner.rb kubectl/docker/wdog/ruby/
+	$(Q) $(CP) src/wdog/runner/runner.rb kubectl/docker/wdog/ruby/
 	$(Q) $(MAKE) -C kubectl/docker/wdog/ruby all
 .PHONY: swifty/ruby
 
@@ -179,9 +178,9 @@ swifty/admd: swy-admd kubectl/docker/admd/Dockerfile
 	$(Q) $(MAKE) -C kubectl/docker/admd all
 .PHONY: swifty/admd
 
-swifty/proxy: swy-wdog-go kubectl/docker/proxy/Dockerfile
+swifty/proxy: swy-wdog kubectl/docker/proxy/Dockerfile
 	$(call msg-gen,$@)
-	$(Q) $(CP) swy-wdog-go kubectl/docker/proxy/swy-wdog
+	$(Q) $(CP) swy-wdog kubectl/docker/proxy/swy-wdog
 	$(Q) $(MAKE) -C kubectl/docker/proxy all
 .PHONY: swifty/proxy
 
@@ -204,7 +203,7 @@ help:
 	@echo '    * swy-admd        - Build adm daemon'
 	@echo '    * swy-pgrest      - Build pgrest daemon'
 	@echo '    * swy-mquotad     - Build mquotad daemon'
-	@echo '    * swy-wdog-go     - Build golang daemon'
+	@echo '    * swy-wdog        - Build golang daemon'
 	@echo '    * swy-s3          - Build s3 daemon'
 	@echo '    * swyctl          - Build gate cli'
 	@echo '    * swytrace        - Build gate eq tracing tool'
@@ -338,8 +337,8 @@ clean:
 	$(Q) $(RM) swy-pgrest
 	$(call msg-clean,swy-mquotad)
 	$(Q) $(RM) swy-mquotad
-	$(call msg-clean,swy-wdog-go)
-	$(Q) $(RM) swy-wdog-go
+	$(call msg-clean,swy-wdog)
+	$(Q) $(RM) swy-wdog
 	$(call msg-clean,swy-s3)
 	$(Q) $(RM) swy-s3
 	$(call msg-clean,swyctl)
