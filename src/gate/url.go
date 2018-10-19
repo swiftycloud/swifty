@@ -93,11 +93,8 @@ func urlEventStart(ctx context.Context, fn *FunctionDesc, ed *FnEventDesc) error
 }
 
 func urlEventStop(ctx context.Context, ed *FnEventDesc) error {
-	return nil
-}
-
-func urlEventClean(ctx context.Context, ed *FnEventDesc) {
 	urlClean(ctx, URLFunction, ed.FnId)
+	return nil
 }
 
 func urlClean(ctx context.Context, typ, urlid string) {
@@ -108,7 +105,6 @@ var urlEOps = EventOps {
 	setup:	func(ed *FnEventDesc, evt *swyapi.FunctionEvent) error { return nil },
 	start:	urlEventStart,
 	stop:	urlEventStop,
-	cleanup:urlEventClean,
 }
 
 func (furl *FnURL)Handle(ctx context.Context, w http.ResponseWriter, r *http.Request, sopq *statsOpaque) {
