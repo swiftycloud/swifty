@@ -9,7 +9,7 @@ TAGS
 .gitid
 version.go
 swy-gate
-swy-wdog-*
+swy-wdog
 swy-runner
 swy-admd
 swy-pgrest

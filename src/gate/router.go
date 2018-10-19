@@ -67,9 +67,6 @@ func makeRouterURL(ctx context.Context, urlid string) (*RouterURL, error) {
 
 	err := dbFind(ctx, bson.M{"cookie": urlid}, &rt)
 	if err != nil {
-		if dbNF(err) {
-			err = nil
-		}
 		return nil, err
 	}
 

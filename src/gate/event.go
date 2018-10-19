@@ -15,7 +15,6 @@ type EventOps struct {
 	setup	func(*FnEventDesc, *swyapi.FunctionEvent) error
 	start	func(context.Context, *FunctionDesc, *FnEventDesc) error
 	stop	func(context.Context, *FnEventDesc) error
-	cleanup	func(context.Context, *FnEventDesc)
 }
 
 var evtHandlers = map[string]*EventOps {
@@ -229,9 +228,6 @@ func (ed *FnEventDesc)Add(ctx context.Context, fn *FunctionDesc) *xrest.ReqErr {
 	if err != nil {
 		h.stop(ctx, ed)
 		dbRemove(ctx, ed)
-		if h.cleanup != nil {
-			h.cleanup(ctx, ed)
-		}
 		return GateErrD(err)
 	}
 
@@ -239,8 +235,18 @@ func (ed *FnEventDesc)Add(ctx context.Context, fn *FunctionDesc) *xrest.ReqErr {
 }
 
 func (ed *FnEventDesc)Delete(ctx context.Context, fn *FunctionDesc) *xrest.ReqErr {
+	/* Drop the key, so that find-ers do not get it while
+	 * we .stop the event, then do the .stop, cleaning anyone
+	 * who might have found it before this key update, then
+	 * remove from the DB
+	 */
+	err := dbUpdatePart(ctx, ed, bson.M{"key": ""})
+	if err != nil {
+		return GateErrD(err)
+	}
+
 	h := evtHandlers[ed.Source]
-	err := h.stop(ctx, ed)
+	err = h.stop(ctx, ed)
 	if err != nil {
 		return GateErrM(swyapi.GateGenErr, "Can't stop event")
 	}
@@ -250,9 +256,6 @@ func (ed *FnEventDesc)Delete(ctx context.Context, fn *FunctionDesc) *xrest.ReqEr
 		return GateErrD(err)
 	}
 
-	if h.cleanup != nil {
-		h.cleanup(ctx, ed)
-	}
 	return nil
 }
 

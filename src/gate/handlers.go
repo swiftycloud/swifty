@@ -32,12 +32,11 @@ func handleCall(w http.ResponseWriter, r *http.Request) {
 
 	url, err := urlFind(ctx, uid)
 	if err != nil {
-		http.Error(w, "Error getting URL handler", http.StatusInternalServerError)
-		return
-	}
-
-	if url == nil {
-		http.Error(w, "No such URL", http.StatusServiceUnavailable)
+		if dbNF(err) {
+			http.Error(w, "No such URL", http.StatusServiceUnavailable)
+		} else {
+			http.Error(w, "Error getting URL handler", http.StatusInternalServerError)
+		}
 		return
 	}
 

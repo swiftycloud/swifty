@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"os/exec"
 	"strconv"
-	"bytes"
 	"time"
 	"sync"
 	"syscall"
@@ -24,32 +23,6 @@ import (
 	"swifty/common/xqueue"
 	"swifty/apis"
 )
-
-type Runner struct {
-	lock	sync.Mutex
-	q	*xqueue.Queue
-	fin	*os.File
-	fine	*os.File
-
-	ready	bool
-	restart	func(*Runner)
-	l	*localRunner
-	p	*proxyRunner
-}
-
-type localRunner struct {
-	cmd	*exec.Cmd
-	lang	*LangDesc
-	suff	string
-	tmous	int64
-	fout	string
-	ferr	string
-}
-
-type proxyRunner struct {
-	wc	*net.UnixConn
-	rkey	string
-}
 
 var zcfg zap.Config = zap.Config {
 	Level:            zap.NewAtomicLevelAt(zap.DebugLevel),
@@ -70,23 +43,6 @@ func get_exit_code(err error) (bool, int) {
 	} else {
 		return false, -1 // XXX -- what else?
 	}
-}
-
-func stopLocal(runner *Runner) {
-	if runner.l.cmd.Process.Kill() != nil {
-		/* Nothing else, but kill outselves, the pod will exit
-		* and k8s will restart us
-		*/
-		os.Exit(1)
-	}
-
-	runner.l.cmd.Wait()
-	runner.q.Close()
-}
-
-func restartLocal(runner *Runner) {
-	stopLocal(runner)
-	startQnR(runner)
 }
 
 func makeExecutablePath(path string) {
@@ -115,44 +71,6 @@ func mkExecPath(ld *LangDesc, suff string) {
 
 func mkExecRunner(ld *LangDesc, suff string) {
 	makeExecutablePath(ld.runner + suff)
-}
-
-func makeLocalRunner(lang string, tmous int64, suff string) (*Runner, error) {
-	var err error
-	p := make([]int, 2)
-
-	ld := ldescs[lang]
-	lr := &localRunner{lang: &ld, tmous: tmous, suff: suff}
-	runner := &Runner {l: lr, restart: restartLocal, ready: true}
-
-	err = syscall.Pipe(p)
-	if err != nil {
-		return nil, fmt.Errorf("Can't make out pipe: %s", err.Error())
-	}
-
-	lr.fout = strconv.Itoa(p[1])
-	syscall.SetNonblock(p[0], true)
-	syscall.CloseOnExec(p[0])
-	runner.fin = os.NewFile(uintptr(p[0]), "runner.stdout")
-
-	err = syscall.Pipe(p)
-	if err != nil {
-		return nil, fmt.Errorf("Can't make err pipe: %s", err.Error())
-	}
-
-	lr.ferr = strconv.Itoa(p[1])
-	syscall.SetNonblock(p[0], true)
-	syscall.CloseOnExec(p[0])
-	runner.fine = os.NewFile(uintptr(p[0]), "runner.stderr")
-
-	ld.prep(&ld, suff)
-
-	err = startQnR(runner)
-	if err != nil {
-		return nil, err
-	}
-
-	return runner, nil
 }
 
 type buildFn func(*swyapi.WdogFunctionBuild) (*swyapi.WdogFunctionRunResult, error)
@@ -186,44 +104,6 @@ var ldescs = map[string]LangDesc {
 		runner:	"/home/swifty/runner.rb",
 		prep:	mkExecPath,
 	},
-}
-
-func startQnR(runner *Runner) error {
-	var err error
-
-	runner.q, err = xqueue.MakeQueue()
-	if err != nil {
-		return fmt.Errorf("Can't make queue: %s", err.Error())
-	}
-
-	err = runner.q.RcvTimeout(runner.l.tmous)
-	if err != nil {
-		return fmt.Errorf("Can't set receive timeout: %s", err.Error())
-	}
-
-	var bin, scr string
-
-	if runner.l.lang.build == nil {
-		/* /bin/interpreter script${suff}.ext */
-		bin = runner.l.lang.runner
-		scr = "script" + runner.l.suff
-	} else {
-		/* /function${suff} - */
-		bin = runner.l.lang.runner + runner.l.suff
-		scr = "-"
-	}
-
-	runner.l.cmd = exec.Command("/usr/bin/swy-runner",
-					runner.l.fout, runner.l.ferr,
-					runner.q.GetId(), bin, scr)
-	err = runner.l.cmd.Start()
-	if err != nil {
-		return fmt.Errorf("Can't start runner: %s", err.Error())
-	}
-
-	log.Debugf("Started runner (queue %s)", runner.q.FDS())
-	runner.q.Started()
-	return nil
 }
 
 func readLines(f *os.File) string {
@@ -290,82 +170,6 @@ func doRun(runner *Runner, body []byte) (*swyapi.WdogFunctionRunResult, error) {
 
 var glock sync.Mutex
 
-/*
- * All functions sit at /go/src/swycode/
- * Runner sits at /go/src/swyrunner/
- */
-const goScript = "/go/src/swyrunner/script.go"
-
-func doBuildGo(params *swyapi.WdogFunctionBuild) (*swyapi.WdogFunctionRunResult, error) {
-	os.Remove(goScript)
-	srcdir := params.Sources
-	err := os.Symlink("/go/src/swycode/" + srcdir + "/script" + params.Suff + ".go", goScript)
-	if err != nil {
-		return nil, fmt.Errorf("Can't symlink code: %s", err.Error())
-	}
-
-	var stdout bytes.Buffer
-	var stderr bytes.Buffer
-
-	log.Debugf("Run go build on %s", srcdir)
-	cmd := exec.Command("go", "build", "-o", "../swycode/" + srcdir + "/runner" + params.Suff)
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-	cmd.Dir = "/go/src/swyrunner"
-	err = cmd.Run()
-	os.Remove(goScript)
-
-	if err != nil {
-		if exit, code := get_exit_code(err); exit {
-			return &swyapi.WdogFunctionRunResult{Code: code, Stdout: stdout.String(), Stderr: stderr.String()}, nil
-		}
-
-		return nil, fmt.Errorf("Can't build: %s", err.Error())
-	}
-
-	return &swyapi.WdogFunctionRunResult{Code: 0, Stdout: stdout.String(), Stderr: stderr.String()}, nil
-}
-
-/*
- * All functions sit at /swift/swycode/
- * Runner sits at /swift/runner/
- */
-const swiftScript = "/swift/runner/Sources/script.swift"
-
-func doBuildSwift(params *swyapi.WdogFunctionBuild) (*swyapi.WdogFunctionRunResult, error) {
-	os.Remove(swiftScript)
-	srcdir := params.Sources
-	err := os.Symlink("/swift/swycode/" + srcdir + "/script" + params.Suff + ".swift", swiftScript)
-	if err != nil {
-		return nil, fmt.Errorf("Can't symlink code: %s", err.Error())
-	}
-
-	var stdout bytes.Buffer
-	var stderr bytes.Buffer
-
-	log.Debugf("Run swift build on %s", srcdir)
-	cmd := exec.Command("swift", "build", "--build-path", "../swycode/" + srcdir)
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-	cmd.Dir = "/swift/runner"
-	err = cmd.Run()
-	os.Remove(swiftScript)
-	if err != nil {
-		if exit, code := get_exit_code(err); exit {
-			return &swyapi.WdogFunctionRunResult{Code: code, Stdout: stdout.String(), Stderr: stderr.String()}, nil
-		}
-
-		return nil, fmt.Errorf("Can't build: %s", err.Error())
-	}
-
-	err = os.Rename("/swift/swycode/debug/function", "/swift/swycode/debug/runner" + params.Suff)
-	if err != nil {
-		return nil, fmt.Errorf("Can't rename binary: %s", err.Error())
-	}
-
-	return &swyapi.WdogFunctionRunResult{Code: 0, Stdout: stdout.String(), Stderr: stderr.String()}, nil
-}
-
 func handleTry(lang string, tmous int64, w http.ResponseWriter, r *http.Request) {
 	suff := mux.Vars(r)["suff"]
 
@@ -395,7 +199,7 @@ func handleRun(runner *Runner, w http.ResponseWriter, r *http.Request) {
 	runner.lock.Lock()
 	if runner.ready {
 		result, err = doRun(runner, body)
-		if err != nil || result.Code != 0 {
+		if err != nil || result.Code < 0 {
 			runner.restart(runner)
 		}
 	} else {

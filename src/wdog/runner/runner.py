@@ -45,6 +45,14 @@ while True:
     if swycode != None:
         req = type('request', (object,), json.loads(data))
         try:
+            if req.content == "application/json":
+                try:
+                    b = json.loads(req.body)
+                except:
+                    pass
+                else:
+                    req.b = type('body', (object,), b)
+
             res, resb = swycode.Main(req)
             res = { "res": 0, "ret": json.dumps(res) }
             if resb != None:
