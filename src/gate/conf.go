@@ -78,9 +78,11 @@ func (cd *YAMLConfDaemon)Validate() error {
 	if cd.CallGate == "" {
 		fmt.Printf("'daemon.callgate' not set, gate is callgate\n")
 	}
+	addStringSysctl("gate.call", &cd.CallGate)
 	if cd.WSGate == "" {
 		fmt.Printf("'daemon.wsgate' not set, gate is wsgate\n")
 	}
+	addStringSysctl("gate.ws", &cd.WSGate)
 	if cd.LogLevel == "" {
 		fmt.Printf("'daemon.loglevel' not set, using \"warn\" one\n")
 	}
@@ -156,6 +158,7 @@ func (cm *YAMLConfMw)Validate() error {
 		fmt.Printf("'middleware.s3.hidden-key-timeout' not set, using default 120sec\n")
 	}
 	addIntSysctl("s3_hidden_key_timeout_sec", &cm.S3.HiddenKeyTmo)
+	addStringSysctl("gate.s3api", &cm.S3.API)
 
 	return nil
 }
