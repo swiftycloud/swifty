@@ -199,7 +199,7 @@ func handleRun(runner *Runner, w http.ResponseWriter, r *http.Request) {
 	runner.lock.Lock()
 	if runner.ready {
 		result, err = doRun(runner, body)
-		if err != nil || result.Code != 0 {
+		if err != nil || result.Code < 0 {
 			runner.restart(runner)
 		}
 	} else {
