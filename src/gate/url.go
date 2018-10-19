@@ -48,9 +48,6 @@ func urlEvFind(ctx context.Context, urlid string) (*FnEventDesc, error) {
 func makeFnURL(ctx context.Context, urlid string) (*FnURL, error) {
 	ed, err := urlEvFind(ctx, urlid)
 	if err != nil {
-		if dbNF(err) {
-			err = nil
-		}
 		return nil, err
 	}
 
@@ -74,7 +71,7 @@ func urlFind(ctx context.Context, urlid string) (URL, error) {
 	res, ok := urls.Load(urlid)
 	if !ok {
 		url, err := urlCreate(ctx, urlid)
-		if url == nil {
+		if err != nil {
 			return nil, err
 		}
 
