@@ -14,6 +14,8 @@ type Request struct {
 	Claims		map[string]interface{}	`json:"claims,omitempty"` // JWT
 	Method		string			`json:"method,omitempty"`
 	Path		string			`json:"path,omitempty"`
+
+	B		*Body			`json:"-"`
 }
 
 type Responce struct {
@@ -43,6 +45,15 @@ func main() {
 		if err != nil {
 			fmt.Printf("Can't receive message: %s", err.Error())
 			return
+		}
+
+		if req.ContentType == "application/json" {
+			var b Body
+
+			err = json.Unmarshal([]byte(req.Body), &b)
+			if err == nil {
+				req.B = &b
+			}
 		}
 
 		res, resp := Main(&req)

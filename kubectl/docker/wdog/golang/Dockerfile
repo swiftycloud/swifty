@@ -9,6 +9,7 @@ COPY swy-wdog /usr/bin/
 COPY swy-runner /usr/bin/
 RUN chmod +x /usr/bin/swy-wdog
 COPY runner.go /go/src/swyrunner/
+COPY body.go /go/src/swyrunner/body
 COPY lib.go /go/src/swifty/
 COPY queue.go /go/src/xqueue/
 

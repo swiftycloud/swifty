@@ -137,6 +137,7 @@ swifty/golang: swy-wdog swy-runner src/wdog/runner/runner.go kubectl/docker/wdog
 	$(Q) $(CP) swy-wdog  kubectl/docker/wdog/golang/swy-wdog
 	$(Q) $(CP) swy-runner  kubectl/docker/wdog/golang/
 	$(Q) $(CP) src/wdog/runner/runner.go kubectl/docker/wdog/golang/
+	$(Q) $(CP) src/wdog/runner/body.go kubectl/docker/wdog/golang/
 	$(Q) $(CP) src/wdog/lib/lib.go kubectl/docker/wdog/golang/
 	$(Q) $(CP) src/common/xqueue/queue.go kubectl/docker/wdog/golang/
 	$(Q) $(MAKE) -C kubectl/docker/wdog/golang all

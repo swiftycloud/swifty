@@ -17,3 +17,4 @@ Lib				+  +
    Auth				+
 Responce			+  +  +
    Code				+  +  +
+Auto-unmarshal body		+
