@@ -105,12 +105,13 @@ var urlEOps = EventOps {
 }
 
 func (furl *FnURL)Handle(ctx context.Context, w http.ResponseWriter, r *http.Request, sopq *statsOpaque) {
-	furl.fd.Handle(ctx, w, r, sopq, "", "", nil)
+	path := reqPath(r)
+	args := &swyapi.FunctionRun{Path: &path}
+	furl.fd.Handle(ctx, w, r, sopq, args)
 }
 
 func (fmd *FnMemData)Handle(ctx context.Context, w http.ResponseWriter, r *http.Request, sopq *statsOpaque,
-		path, key string, claims map[string]interface{}) {
-	var args *swyapi.FunctionRun
+		args *swyapi.FunctionRun) {
 	var res *swyapi.WdogFunctionRunResult
 	var err error
 	var code int
@@ -136,11 +137,8 @@ func (fmd *FnMemData)Handle(ctx context.Context, w http.ResponseWriter, r *http.
 	}
 
 	defer balancerPutConn(fmd)
-	args = makeArgs(sopq, r, path, key)
 
-	if claims != nil {
-		args.Claims = claims
-	} else if fmd.ac != nil {
+	if args.Claims == nil && fmd.ac != nil {
 		args.Claims, err = fmd.ac.Verify(r)
 		if err != nil {
 			code = http.StatusUnauthorized
@@ -148,6 +146,7 @@ func (fmd *FnMemData)Handle(ctx context.Context, w http.ResponseWriter, r *http.
 		}
 	}
 
+	makeArgs(args, sopq, r)
 	res, err = conn.Run(ctx, sopq, "", "call", args)
 	if err != nil {
 		code = http.StatusInternalServerError

@@ -254,11 +254,15 @@ func (rt *RouterURL)Handle(ctx context.Context, w http.ResponseWriter, r *http.R
 		return
 	}
 
-	var claims map[string]interface{}
+	args := &swyapi.FunctionRun{
+		Path:	&path,
+		Key:	e.key,
+	}
+
 	if e.ac != nil {
 		var err error
 
-		claims, err = e.ac.Verify(r)
+		args.Claims, err = e.ac.Verify(r)
 		if err != nil {
 			http.Error(w, "", http.StatusUnauthorized)
 			return
@@ -277,7 +281,7 @@ func (rt *RouterURL)Handle(ctx context.Context, w http.ResponseWriter, r *http.R
 		return
 	}
 
-	fmd.Handle(ctx, w, r, sopq, path, e.key, claims)
+	fmd.Handle(ctx, w, r, sopq, args)
 }
 
 type RtTblProp struct { }
