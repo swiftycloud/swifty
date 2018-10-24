@@ -317,7 +317,8 @@ type RouterEntry struct {
 	Method		string		`json:"method"`
 	Path		string		`json:"path"`
 	Call		string		`json:"call"`
-	Key		string		`json:"key"`
+	AuthCtx		string		`json:"authctx,omitempty"`
+	Key		string		`json:"key,omitempty"`
 }
 
 type RouterAdd struct {

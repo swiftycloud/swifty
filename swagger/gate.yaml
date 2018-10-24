@@ -2673,6 +2673,9 @@ definitions:
       key:
         type: string
         description: Random value (up to 64 bytes long) passed into functions
+      authctx:
+        type: string
+        description: Auth context this entry will enforce
   RouterAdd:
     type: object
     description: Router creation info

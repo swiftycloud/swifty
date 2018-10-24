@@ -85,6 +85,15 @@ func makeRouterURL(ctx context.Context, urlid string) (*RouterURL, error) {
 				re.methods.Set(methodNr(m))
 			}
 		}
+		if e.AuthCtx != "" {
+			ac, err := authCtxGet(ctx, id, e.AuthCtx)
+			if err != nil {
+				return nil, err
+			}
+
+			re.ac = ac
+		}
+
 		rurl.table[e.Path] = &re
 	}
 
@@ -221,6 +230,7 @@ func (rd *RouterDesc)setTable(ctx context.Context, tbl []*swyapi.RouterEntry) *x
 
 type RouterEntry struct {
 	cookie	string
+	ac	*AuthCtx
 	methods	xh.Bitmask
 	key	string
 }
@@ -244,6 +254,17 @@ func (rt *RouterURL)Handle(ctx context.Context, w http.ResponseWriter, r *http.R
 		return
 	}
 
+	var claims map[string]interface{}
+	if e.ac != nil {
+		var err error
+
+		claims, err = e.ac.Verify(r)
+		if err != nil {
+			http.Error(w, "", http.StatusUnauthorized)
+			return
+		}
+	}
+
 	/* FIXME -- cache guy on e */
 	fmd, err := memdGet(ctx, e.cookie)
 	if err != nil {
@@ -256,7 +277,7 @@ func (rt *RouterURL)Handle(ctx context.Context, w http.ResponseWriter, r *http.R
 		return
 	}
 
-	fmd.Handle(ctx, w, r, sopq, path, e.key)
+	fmd.Handle(ctx, w, r, sopq, path, e.key, claims)
 }
 
 type RtTblProp struct { }

@@ -105,11 +105,11 @@ var urlEOps = EventOps {
 }
 
 func (furl *FnURL)Handle(ctx context.Context, w http.ResponseWriter, r *http.Request, sopq *statsOpaque) {
-	furl.fd.Handle(ctx, w, r, sopq, "", "")
+	furl.fd.Handle(ctx, w, r, sopq, "", "", nil)
 }
 
 func (fmd *FnMemData)Handle(ctx context.Context, w http.ResponseWriter, r *http.Request, sopq *statsOpaque,
-		path, key string) {
+		path, key string, claims map[string]interface{}) {
 	var args *swyapi.FunctionRun
 	var res *swyapi.WdogFunctionRunResult
 	var err error
@@ -138,7 +138,9 @@ func (fmd *FnMemData)Handle(ctx context.Context, w http.ResponseWriter, r *http.
 	defer balancerPutConn(fmd)
 	args = makeArgs(sopq, r, path, key)
 
-	if fmd.ac != nil {
+	if claims != nil {
+		args.Claims = claims
+	} else if fmd.ac != nil {
 		args.Claims, err = fmd.ac.Verify(r)
 		if err != nil {
 			code = http.StatusUnauthorized
