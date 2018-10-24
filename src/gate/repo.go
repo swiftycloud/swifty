@@ -421,7 +421,7 @@ func (rd *RepoDesc)pullManual(ctx context.Context) *xrest.ReqErr {
 
 func (rd *RepoDesc)changedFiles(ctx context.Context, till string) ([]string, error) {
 	if rd.Commit == "" {
-		/* FIXME -- pre-configured repos might have this unset */
+		/* Pre-configured repos might have this unset */
 		return []string{}, nil
 	}
 
@@ -746,7 +746,7 @@ func iterAttached(ctx context.Context, accid string, cb func(context.Context, xr
 }
 
 func iterFromAccounts(ctx context.Context, accid string, cb func(context.Context, xrest.Obj) *xrest.ReqErr, urls map[string]bool) *xrest.ReqErr {
-	/* FIXME -- maybe cache repos in a DB? */
+	/* XXX -- maybe cache repos in a DB? */
 	var ac AccDesc
 
 	q := bson.M{"type": "github", "tennant":  gctx(ctx).Tenant}
