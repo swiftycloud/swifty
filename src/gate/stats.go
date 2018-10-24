@@ -40,14 +40,9 @@ type FnStats struct {
 	onDisk		*gmgo.FnStatValues	`bson:"-"`
 }
 
-func (fs *FnStats)GBS() float64 {
+func GBS(runcost uint64) float64 {
 	/* RunCost is in fn.mem * Duration, i.e. -- MB * nanoseconds */
-	return float64(fs.RunCost) / float64(1024 * time.Second)
-}
-
-func (fs *TenStats)GBS() float64 {
-	/* RunCost is in fn.mem * Duration, i.e. -- MB * nanoseconds */
-	return float64(fs.RunCost) / float64(1024 * time.Second)
+	return float64(runcost) / float64(1024 * time.Second)
 }
 
 func (fs *TenStats)TillS() string {
@@ -104,7 +99,7 @@ func getCallStats(ctx context.Context, periods int) ([]swyapi.TenantStatsFn, *xr
 			cur := &atst[i]
 			cs = append(cs, swyapi.TenantStatsFn{
 				Called:		prev.Called - cur.Called,
-				GBS:		prev.GBS() - cur.GBS(),
+				GBS:		GBS(prev.RunCost - cur.RunCost),
 				BytesOut:	prev.BytesOut - cur.BytesOut,
 				Till:		prev.TillS(),
 				From:		cur.TillS(),
@@ -115,7 +110,7 @@ func getCallStats(ctx context.Context, periods int) ([]swyapi.TenantStatsFn, *xr
 
 	cs = append(cs, swyapi.TenantStatsFn{
 		Called:		prev.Called,
-		GBS:		prev.GBS(),
+		GBS:		GBS(prev.RunCost),
 		BytesOut:	prev.BytesOut,
 		Till:		prev.TillS(),
 	})
@@ -156,7 +151,7 @@ func (fn *FunctionDesc)getStats(ctx context.Context, periods int) ([]swyapi.Func
 				Errors:		prev.Errors - cur.Errors,
 				LastCall:	prev.LastCallS(),
 				Time:		prev.RunTimeUsec() - cur.RunTimeUsec(),
-				GBS:		prev.GBS() - cur.GBS(),
+				GBS:		GBS(prev.RunCost - cur.RunCost),
 				BytesOut:	prev.BytesOut - cur.BytesOut,
 				Till:		prev.TillS(),
 				From:		cur.TillS(),
@@ -171,7 +166,7 @@ func (fn *FunctionDesc)getStats(ctx context.Context, periods int) ([]swyapi.Func
 		Errors:		prev.Errors,
 		LastCall:	prev.LastCallS(),
 		Time:		prev.RunTimeUsec(),
-		GBS:		prev.GBS(),
+		GBS:		GBS(prev.RunCost),
 		BytesOut:	prev.BytesOut,
 		Till:		prev.TillS(),
 	})
