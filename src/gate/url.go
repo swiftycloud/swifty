@@ -82,7 +82,7 @@ func urlFind(ctx context.Context, urlid string) (URL, error) {
 	return res.(URL), nil
 }
 
-/* FIXME -- set up public IP address/port for this FN */
+/* XXX -- set up public IP address/port for this FN */
 
 func urlEventStart(ctx context.Context, fn *FunctionDesc, ed *FnEventDesc) error {
 	ed.Key = urlKey(fn.Cookie)
