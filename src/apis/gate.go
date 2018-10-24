@@ -336,6 +336,16 @@ type RouterInfo struct {
 	URL		string		`json:"url"`
 }
 
+type PkgAdd struct {
+	Name		string		`json:"name"`
+}
+
+type PkgInfo struct {
+	Id		string		`json:"id"`
+	Name		string		`json:"name"`
+}
+
+
 /*
  * This type is not seen by wdog itself, instead, it's described
  * by each wdog runner by smth like "Request"

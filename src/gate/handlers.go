@@ -555,6 +555,18 @@ func handleRepoPull(ctx context.Context, w http.ResponseWriter, r *http.Request)
 	return nil
 }
 
+/******************************* PACKAGES *************************************/
+func handlePackages(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
+	var params swyapi.PkgAdd
+	lng := mux.Vars(r)["lang"]
+	return xrest.HandleMany(ctx, w, r, Packages{lng}, &params)
+}
+
+func handlePackage(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
+	lng := mux.Vars(r)["lang"]
+	return xrest.HandleOne(ctx, w, r, Packages{lng}, nil)
+}
+
 /******************************* MWARES ***************************************/
 func handleMwares(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
 	var params swyapi.MwareAdd
