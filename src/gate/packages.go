@@ -9,13 +9,20 @@ import (
 	"context"
 )
 
+const (
+	DBPkgStateIns	string = "installing"
+	DBPkgStateRem	string = "removing"
+	DBPkgStateBrk	string = "broken"
+	DBPkgStateRdy	string = "ready"
+)
+
 type Packages struct {
 }
 
 func (ps Packages)Create(ctx context.Context, p interface{}) (xrest.Obj, *xrest.ReqErr) {
 	params := p.(*swyapi.PkgAdd)
-	_, ok := rt_handlers[params.Lang]
-	if !ok {
+	h, ok := rt_handlers[params.Lang]
+	if !ok || h.Install == nil {
 		return nil, GateErrM(swyapi.GateNotFound, "Language not supported")
 	}
 
@@ -68,6 +75,7 @@ func (ps Packages)Iterate(ctx context.Context, q url.Values, cb func(context.Con
 type PackageDesc struct {
 	ObjID		bson.ObjectId		`bson:"_id,omitempty"`
 	SwoId					`bson:",inline"`
+	State		string			`bson:"state"`
 	Cookie		string			`bson:"cookie"`
 	Lang		string			`bson:"lang"`
 }
@@ -75,17 +83,49 @@ type PackageDesc struct {
 func (pkg *PackageDesc)Add(ctx context.Context, _ interface{}) *xrest.ReqErr {
 	pkg.ObjID = bson.NewObjectId()
 	pkg.Cookie = pkg.SwoId.Cookie()
+	pkg.State = DBPkgStateIns
 
 	err := dbInsert(ctx, pkg)
 	if err != nil {
 		return GateErrD(err)
 	}
 
+	go installPackage(pkg)
+
 	return nil
 }
 
+func installPackage(pkg *PackageDesc) {
+	ctx, done := mkContext("::pkg install")
+	defer done(ctx)
+
+	h := rt_handlers[pkg.Lang]
+	err := h.Install(pkg.Name)
+
+	if err != nil {
+		pkg.State = DBPkgStateBrk
+	} else {
+		pkg.State = DBPkgStateRdy
+	}
+
+	dbUpdatePart(ctx, pkg, bson.M{ "state": pkg.State })
+}
+
 func (pkg *PackageDesc)Del(ctx context.Context) *xrest.ReqErr {
-	err := dbRemove(ctx, pkg)
+	err := dbUpdatePart(ctx, pkg, bson.M{"state": DBPkgStateRem})
+	if err != nil {
+		return GateErrD(err)
+	}
+
+	pkg.State = DBPkgStateRem
+
+	h := rt_handlers[pkg.Lang]
+	err = h.Remove(pkg.Name)
+	if err != nil {
+		return GateErrE(swyapi.GateFsError, err)
+	}
+
+	err = dbRemove(ctx, pkg)
 	if err != nil {
 		return GateErrD(err)
 	}
@@ -98,6 +138,7 @@ func (pkg *PackageDesc)Info(ctx context.Context, q url.Values, details bool) (in
 		Id:	pkg.ObjID.Hex(),
 		Name:	pkg.SwoId.Name,
 		Lang:	pkg.Lang,
+		State:	pkg.State,
 	}, nil
 }
 

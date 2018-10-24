@@ -17,6 +17,9 @@ type rt_info struct {
 	VArgs		[]string
 	Packages	[]string
 	PList		func() []string
+
+	Install		func(string) error
+	Remove		func(string) error
 }
 
 func GetLines(lng string, args ...string) []string {

@@ -345,6 +345,7 @@ type PkgInfo struct {
 	Id		string		`json:"id"`
 	Lang		string		`json:"lang"`
 	Name		string		`json:"name"`
+	State		string		`json:"state"`
 }
 
 
