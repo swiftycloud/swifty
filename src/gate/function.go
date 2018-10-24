@@ -396,8 +396,6 @@ func checkCount(ctx context.Context, id *SwoId) error {
 
 func (fn *FunctionDesc)Add(ctx context.Context, p interface{}) *xrest.ReqErr {
 	var err, erc error
-	var build bool
-	var bAddr string
 
 	src := &p.(*swyapi.FunctionAdd).Sources
 
@@ -431,33 +429,16 @@ func (fn *FunctionDesc)Add(ctx context.Context, p interface{}) *xrest.ReqErr {
 		goto out_clean_repo
 	}
 
-	build, bAddr = rtNeedToBuild(&fn.Code)
-	if build {
-		go func() {
-			ctx, done := mkContext("::build")
-			defer done(ctx)
-
-			err = buildFunction(ctx, bAddr, fn, "")
-			if err != nil {
-				goto bstalled
-			}
-
-			err = k8sRun(ctx, &conf, fn)
-			if err != nil {
-				goto bstalled
-			}
-
-			return
-
-		bstalled:
-			fn.ToState(ctx, DBFuncStateStl, -1)
-		}()
-	} else {
-		err = k8sRun(ctx, &conf, fn)
+	go func() {
+		ctx, done := mkContext("::start")
+		defer done(ctx)
+		gctx(ctx).tpush(fn.SwoId.Tennant)
+		err := fn.Start(ctx)
 		if err != nil {
-			goto out_clean_repo
+			ctxlog(ctx).Errorf("Cannot start fn %s: %s", fn.SwoId.Str(), err.Error())
+			fn.ToState(ctx, DBFuncStateStl, -1)
 		}
-	}
+	}()
 
 	logSaveEvent(ctx, fn.Cookie, "registered")
 	return nil
@@ -480,6 +461,26 @@ out:
 stalled:
 	fn.ToState(ctx, DBFuncStateStl, -1)
 	goto out
+}
+
+func (fn *FunctionDesc)Start(ctx context.Context) error {
+	var err error
+
+	build, bAddr := rtNeedToBuild(&fn.Code)
+	if build {
+
+		err = buildFunction(ctx, bAddr, fn, "")
+		if err != nil {
+			return err
+		}
+	}
+
+	err = k8sRun(ctx, &conf, fn)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func fnFixSize(sz *swyapi.FunctionSize) error {

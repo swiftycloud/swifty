@@ -774,7 +774,7 @@ func refreshDepsAndPods(ctx context.Context, hard bool) error {
 				 * k8s cluster. Anyway -- try to revitalize it.
 				 */
 
-				err = k8sRun(ctx, &conf, &fn)
+				err = fn.Start(ctx)
 				if err != nil {
 					ctxlog(ctx).Errorf("Can't start back %s dep: %s", fn.SwoId.Str(), err.Error())
 					return err
