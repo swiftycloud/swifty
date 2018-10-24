@@ -743,6 +743,25 @@ func refreshDepsAndPods(ctx context.Context, hard bool) error {
 	podiface := k8sClientSet.CoreV1().Pods(conf.Wdog.Namespace)
 
 	for iter.Next(&fn) {
+		if fn.State == DBFuncStateIni {
+			/* Record reft from the early fn.Add stage. Just clean
+			 * one out and forget the sources.
+			 */
+			err = removeSources(ctx, &fn)
+			if err != nil {
+				ctxlog(ctx).Errorf("Can't remove sources for %s: %s", fn.SwoId.Str(), err.Error())
+				return err
+			}
+
+			err = dbRemove(ctx, fn)
+			if err != nil {
+				ctxlog(ctx).Errorf("db %s remove error: %s", fn.SwoId.Str(), err.Error())
+				return err
+			}
+
+			continue
+		}
+
 		/* Try to restatr deps for starting fns and pick up the
 		 * pods for ready ones. For hard-refresh, also restart
 		 * the stalled ones
