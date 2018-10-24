@@ -697,22 +697,15 @@ func handleS3Access(ctx context.Context, w http.ResponseWriter, r *http.Request)
 	return xrest.Respond(ctx, w, creds)
 }
 
-func handleLogs(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
-	q := r.URL.Query()
-	project := q.Get("project")
-	if project == "" {
-		project = DefaultProject
-	}
-
+func handleLogsFor(ctx context.Context, cookie string, q url.Values) ([]*swyapi.LogEntry, *xrest.ReqErr) {
 	since, cerr := getSince(q)
 	if cerr != nil {
-		return cerr
+		return nil, cerr
 	}
 
-	id := ctxSwoId(ctx, NoProject, "")
-	logs, err := logGetFor(ctx, id.PCookie(), since)
+	logs, err := logGetFor(ctx, cookie, since)
 	if err != nil {
-		return GateErrD(err)
+		return nil, GateErrD(err)
 	}
 
 	var resp []*swyapi.LogEntry
@@ -722,6 +715,22 @@ func handleLogs(ctx context.Context, w http.ResponseWriter, r *http.Request) *xr
 			Ts:	loge.Time.Format(time.RFC1123Z),
 			Text:	loge.Text,
 		})
+	}
+
+	return resp, nil
+}
+
+func handleLogs(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
+	q := r.URL.Query()
+	project := q.Get("project")
+	if project == "" {
+		project = DefaultProject
+	}
+
+	id := ctxSwoId(ctx, NoProject, "")
+	resp, cer := handleLogsFor(ctx, id.PCookie(), q)
+	if cer != nil {
+		return cer
 	}
 
 	return xrest.Respond(ctx, w, resp)

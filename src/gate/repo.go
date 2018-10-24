@@ -258,7 +258,6 @@ func bgClone(rd *RepoDesc, ac *AccDesc, rh *repoHandler) {
 
 	commit, err := rh.clone(ctx, rd, ac)
 	if err != nil {
-		/* FIXME -- keep logs and show them user */
 		dbUpdatePart(ctx, rd, bson.M{ "state": DBRepoStateStl })
 		return
 	}
@@ -567,6 +566,7 @@ func (rd *RepoDesc)pull(ctx context.Context) error {
 		ctxlog(ctx).Errorf("can't pull %s -> %s: %s (%s:%s)",
 			rd.URL(), clone_to, err.Error(),
 			stdout.String(), stderr.String())
+		logSaveResult(ctx, rd.SwoId.PCookie(), "repo_pull", stdout.String(), stderr.String())
 		return err
 	}
 

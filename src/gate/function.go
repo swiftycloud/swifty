@@ -1101,27 +1101,8 @@ func getSince(q url.Values) (*time.Time, *xrest.ReqErr) {
 }
 
 func (_ *FnLogsProp)Info(ctx context.Context, o xrest.Obj, q url.Values) (interface{}, *xrest.ReqErr) {
-	since, cerr := getSince(q)
-	if cerr != nil {
-		return nil, cerr
-	}
-
 	fn := o.(*FunctionDesc)
-	logs, err := logGetFor(ctx, fn.SwoId.Cookie(), since)
-	if err != nil {
-		return nil, GateErrD(err)
-	}
-
-	var resp []*swyapi.LogEntry
-	for _, loge := range logs {
-		resp = append(resp, &swyapi.LogEntry{
-			Event:	loge.Event,
-			Ts:	loge.Time.Format(time.RFC1123Z),
-			Text:	loge.Text,
-		})
-	}
-
-	return resp, nil
+	return handleLogsFor(ctx, fn.SwoId.Cookie(), q)
 }
 
 func (_ *FnLogsProp)Upd(ctx context.Context, o xrest.Obj, p interface{}) *xrest.ReqErr {
