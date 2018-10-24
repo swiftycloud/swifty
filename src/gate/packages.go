@@ -10,15 +10,19 @@ import (
 )
 
 type Packages struct {
-	Lang	string
 }
 
 func (ps Packages)Create(ctx context.Context, p interface{}) (xrest.Obj, *xrest.ReqErr) {
 	params := p.(*swyapi.PkgAdd)
+	_, ok := rt_handlers[params.Lang]
+	if !ok {
+		return nil, GateErrM(swyapi.GateNotFound, "Language not supported")
+	}
+
 	id := ctxSwoId(ctx, NoProject, params.Name)
 	return &PackageDesc {
 		SwoId:	*id,
-		Lang:	ps.Lang,
+		Lang:	params.Lang,
 	}, nil
 }
 
@@ -36,7 +40,14 @@ func (ps Packages)Get(ctx context.Context, r *http.Request) (xrest.Obj, *xrest.R
 func (ps Packages)Iterate(ctx context.Context, q url.Values, cb func(context.Context, xrest.Obj) *xrest.ReqErr) *xrest.ReqErr {
 	var pkg PackageDesc
 
-	iter := dbIterAll(ctx, listReq(ctx, NoProject, []string{}), &pkg)
+	lng := q.Get("lang")
+
+	dbq := listReq(ctx, NoProject, []string{})
+	if lng != "" {
+		dbq = append(dbq, bson.DocElem{"lang", lng})
+	}
+
+	iter := dbIterAll(ctx, dbq, &pkg)
 	defer iter.Close()
 
 	for iter.Next(&pkg) {
@@ -86,6 +97,7 @@ func (pkg *PackageDesc)Info(ctx context.Context, q url.Values, details bool) (in
 	return &swyapi.PkgInfo{
 		Id:	pkg.ObjID.Hex(),
 		Name:	pkg.SwoId.Name,
+		Lang:	pkg.Lang,
 	}, nil
 }
 

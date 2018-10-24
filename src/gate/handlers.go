@@ -558,13 +558,11 @@ func handleRepoPull(ctx context.Context, w http.ResponseWriter, r *http.Request)
 /******************************* PACKAGES *************************************/
 func handlePackages(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
 	var params swyapi.PkgAdd
-	lng := mux.Vars(r)["lang"]
-	return xrest.HandleMany(ctx, w, r, Packages{lng}, &params)
+	return xrest.HandleMany(ctx, w, r, Packages{}, &params)
 }
 
 func handlePackage(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
-	lng := mux.Vars(r)["lang"]
-	return xrest.HandleOne(ctx, w, r, Packages{lng}, nil)
+	return xrest.HandleOne(ctx, w, r, Packages{}, nil)
 }
 
 /******************************* MWARES ***************************************/

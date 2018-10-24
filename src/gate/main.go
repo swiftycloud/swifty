@@ -229,8 +229,8 @@ func getHandlers() http.Handler {
 	r.Handle("/v1/functions/{fid}/wait",	genReqHandler(handleFunctionWait)).Methods("POST", "OPTIONS")
 	r.Handle("/v1/functions/{fid}/mdat",	genReqHandler(handleFunctionMdat)).Methods("GET")
 
-	r.Handle("/v1/packages/{lang}",		genReqHandler(handlePackages)).Methods("GET", "POST", "OPTIONS")
-	r.Handle("/v1/packages/{lang}/{pkgid}",	genReqHandler(handlePackage)).Methods("GET", "POST", "OPTIONS")
+	r.Handle("/v1/packages",		genReqHandler(handlePackages)).Methods("GET", "POST", "OPTIONS")
+	r.Handle("/v1/packages/{pkgid}",	genReqHandler(handlePackage)).Methods("GET", "POST", "OPTIONS")
 
 	r.Handle("/v1/middleware",		genReqHandler(handleMwares)).Methods("GET", "POST", "OPTIONS")
 	r.Handle("/v1/middleware/{mid}",	genReqHandler(handleMware)).Methods("GET", "DELETE", "OPTIONS")
