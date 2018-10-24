@@ -35,6 +35,10 @@ func (id *SwoId)NameOK() bool {
 		return false
 	}
 
+	if id.Name[0] == '_' || id.Name[0] == '.' {
+		return false
+	}
+
 	return true
 }
 
