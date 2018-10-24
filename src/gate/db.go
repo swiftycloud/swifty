@@ -392,9 +392,9 @@ func logSaveEvent(ctx context.Context, cookie, text string) {
 	})
 }
 
-func logGetFor(ctx context.Context, id *SwoId, since *time.Time) ([]DBLogRec, error) {
+func logGetFor(ctx context.Context, cookie string, since *time.Time) ([]DBLogRec, error) {
 	var logs []DBLogRec
-	q := bson.M{"cookie": id.Cookie()}
+	q := bson.M{"cookie": cookie}
 	if since != nil {
 		q["ts"] = bson.M{"$gt": since}
 	}

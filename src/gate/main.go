@@ -204,6 +204,7 @@ func getHandlers() http.Handler {
 
 	r.Handle("/v1/stats",			genReqHandler(handleTenantStatsAll)).Methods("GET", "POST", "OPTIONS")
 	r.Handle("/v1/stats/{sub}",		genReqHandler(handleTenantStats)).Methods("GET", "POST", "OPTIONS")
+	r.Handle("/v1/logs",			genReqHandler(handleLogs)).Methods("GET", "OPTIONS")
 	r.Handle("/v1/project/list",		genReqHandler(handleProjectList)).Methods("POST", "OPTIONS")
 	r.Handle("/v1/project/del",		genReqHandler(handleProjectDel)).Methods("POST", "OPTIONS")
 

@@ -207,7 +207,7 @@ type ProjectItem struct {
 	Project		string			`json:"project"`
 }
 
-type FunctionLogEntry struct {
+type LogEntry struct {
 	Event		string			`json:"event"`
 	Ts		string			`json:"ts"`
 	Text		string			`json:"text"`

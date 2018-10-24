@@ -245,6 +245,7 @@ func cloneGit(ctx context.Context, rd *RepoDesc, ac *AccDesc) (string, error) {
 		ctxlog(ctx).Errorf("can't clone %s -> %s: %s (%s:%s)",
 				rd.URL(), clone_to, err.Error(),
 				stdout.String(), stderr.String())
+		logSaveResult(ctx, rd.SwoId.PCookie(), "repo_clone", stdout.String(), stderr.String())
 		return "", err
 	}
 

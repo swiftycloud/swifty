@@ -53,6 +53,10 @@ func (id *SwoId) Cookie() string {
 	return xh.Cookify(id.Tennant + "/" + id.Project + "/" + id.Name)
 }
 
+func (id *SwoId) PCookie() string {
+	return xh.Cookify(id.Tennant + "/" + id.Project)
+}
+
 func (id *SwoId) Cookie2(salt string) string {
 	return xh.Cookify(salt + ":" + id.Tennant + "/" + id.Project + "/" + id.Name)
 }

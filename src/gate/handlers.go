@@ -697,6 +697,36 @@ func handleS3Access(ctx context.Context, w http.ResponseWriter, r *http.Request)
 	return xrest.Respond(ctx, w, creds)
 }
 
+func handleLogs(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
+	q := r.URL.Query()
+	project := q.Get("project")
+	if project == "" {
+		project = DefaultProject
+	}
+
+	since, cerr := getSince(q)
+	if cerr != nil {
+		return cerr
+	}
+
+	id := ctxSwoId(ctx, NoProject, "")
+	logs, err := logGetFor(ctx, id.PCookie(), since)
+	if err != nil {
+		return GateErrD(err)
+	}
+
+	var resp []*swyapi.LogEntry
+	for _, loge := range logs {
+		resp = append(resp, &swyapi.LogEntry{
+			Event:	loge.Event,
+			Ts:	loge.Time.Format(time.RFC1123Z),
+			Text:	loge.Text,
+		})
+	}
+
+	return xrest.Respond(ctx, w, resp)
+}
+
 func handleTenantStatsAll(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
 	periods := reqPeriods(r.URL.Query())
 

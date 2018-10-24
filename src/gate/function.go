@@ -1107,14 +1107,14 @@ func (_ *FnLogsProp)Info(ctx context.Context, o xrest.Obj, q url.Values) (interf
 	}
 
 	fn := o.(*FunctionDesc)
-	logs, err := logGetFor(ctx, &fn.SwoId, since)
+	logs, err := logGetFor(ctx, fn.SwoId.Cookie(), since)
 	if err != nil {
 		return nil, GateErrD(err)
 	}
 
-	var resp []*swyapi.FunctionLogEntry
+	var resp []*swyapi.LogEntry
 	for _, loge := range logs {
-		resp = append(resp, &swyapi.FunctionLogEntry{
+		resp = append(resp, &swyapi.LogEntry{
 			Event:	loge.Event,
 			Ts:	loge.Time.Format(time.RFC1123Z),
 			Text:	loge.Text,
