@@ -110,7 +110,7 @@ func handleProjectDel(ctx context.Context, w http.ResponseWriter, r *http.Reques
 		return GateErrE(swyapi.GateBadRequest, err)
 	}
 
-	q := url.Values{"project": []string{"par.Project"}}
+	q := url.Values{"project": []string{par.Project}}
 
 	xer := delAll(ctx, q, Deployments{})
 	if xer != nil {
@@ -123,6 +123,11 @@ func handleProjectDel(ctx context.Context, w http.ResponseWriter, r *http.Reques
 	}
 
 	xer = delAll(ctx, q, Mwares{})
+	if xer != nil {
+		return xer
+	}
+
+	xer = delAll(ctx, q, Routers{})
 	if xer != nil {
 		return xer
 	}
