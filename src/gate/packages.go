@@ -121,7 +121,7 @@ func (pkg *PackageDesc)Del(ctx context.Context) *xrest.ReqErr {
 
 	h := rt_handlers[pkg.Lang]
 	if h.Remove != nil {
-		err = h.Remove(pkg.SwoId)
+		err = h.Remove(ctx, pkg.SwoId)
 		if err != nil {
 			return GateErrE(swyapi.GateFsError, err)
 		}

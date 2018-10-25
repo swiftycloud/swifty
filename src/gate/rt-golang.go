@@ -4,7 +4,13 @@ import (
 	"os/exec"
 	"os"
 	"bytes"
+	"errors"
 	"context"
+	"swifty/common"
+)
+
+const (
+	goOsArch string = "linux_amd64" /* FIXME -- run go env and parse */
 )
 
 var golang_info = langInfo {
@@ -22,7 +28,7 @@ func goInstall(ctx context.Context, id SwoId) error {
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 
-	tgt_dir := conf.Wdog.Volume + "/packages/" + id.Tennant + "/golang"
+	tgt_dir := packagesDir() + "/" + id.Tennant + "/golang"
 	os.MkdirAll(tgt_dir, 0755)
 	args := []string{"run", "--rm", "-v", tgt_dir + ":/go", rtLangImage("golang"), "go", "get", id.Name}
 	ctxlog(ctx).Debugf("Running docker %v", args)
@@ -38,7 +44,20 @@ func goInstall(ctx context.Context, id SwoId) error {
 	return nil
 }
 
-func goRemove(id SwoId) error {
+func goRemove(ctx context.Context, id SwoId) error {
+	d := packagesDir() + "/" + id.Tennant + "/golang"
+	err := os.Remove(d + "/pkg/" + goOsArch + "/" + id.Name + ".a")
+	if err != nil {
+		ctxlog(ctx).Errorf("Can't remove %s' package: %s", id.Str(), err.Error())
+		return errors.New("Error removing package")
+	}
+
+	x, err := xh.DropDir(d, "src/" + id.Name)
+	if err != nil {
+		ctxlog(ctx).Errorf("Can't remove %s' sources (%s): %s", id.Str(), x, err.Error())
+		return errors.New("Error removing package sources")
+	}
+
 	return nil
 }
 

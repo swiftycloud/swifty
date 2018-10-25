@@ -20,7 +20,7 @@ type langInfo struct {
 	PList		func() []string
 
 	Install		func(context.Context, SwoId) error
-	Remove		func(SwoId) error
+	Remove		func(context.Context, SwoId) error
 	PkgPath		func(SwoId) string
 }
 
@@ -114,4 +114,8 @@ func (lh *langInfo)info() *swyapi.LangInfo {
 		Version:	lh.Version,
 		Packages:	lh.Packages,
 	}
+}
+
+func packagesDir() string {
+	return conf.Wdog.Volume + "/" + PackagesSubdir
 }
