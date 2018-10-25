@@ -40,6 +40,10 @@ var repStates = map[int]string {
 	DBRepoStateRdy:	"ready",
 }
 
+func cloneDir() string {
+	return conf.Home + "/" + CloneDir
+}
+
 type RepoDesc struct {
 	// These objects are kept in Mongo, which requires the below
 	// field to be present...
