@@ -21,7 +21,7 @@ type langInfo struct {
 
 	Install		func(context.Context, SwoId) error
 	Remove		func(context.Context, SwoId) error
-	PkgPath		func(SwoId) string
+	BuildPkgPath	func(SwoId) string
 }
 
 func GetLines(lng string, args ...string) []string {

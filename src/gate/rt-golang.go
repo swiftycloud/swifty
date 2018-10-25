@@ -22,7 +22,7 @@ var golang_info = langInfo {
 
 	Install:	goInstall,
 	Remove:		goRemove,
-	PkgPath	:	goPkgPath,
+	BuildPkgPath:	goPkgPath,
 }
 
 func goInstall(ctx context.Context, id SwoId) error {

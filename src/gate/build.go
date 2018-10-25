@@ -27,8 +27,8 @@ func buildFunction(ctx context.Context, rh *langInfo, fn *FunctionDesc, suf stri
 		Suff:		suf,
 	}
 
-	if rh.PkgPath != nil {
-		breq.Packages = rh.PkgPath(fn.SwoId)
+	if rh.BuildPkgPath != nil {
+		breq.Packages = rh.BuildPkgPath(fn.SwoId)
 	}
 
 	resp, err := xhttp.Req(
