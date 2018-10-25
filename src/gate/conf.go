@@ -1,6 +1,7 @@
 package main
 
 import (
+	"os"
 	"fmt"
 	"time"
 	"errors"
@@ -44,6 +45,15 @@ func (cw *YAMLConfWdog)Validate() error {
 	if cw.Volume == "" {
 		return errors.New("'wdog.volume' not set")
 	}
+	fi, err := os.Stat(functionsDir())
+	if err != nil || !fi.IsDir() {
+		return errors.New("'wdog.volume'/functions should be dir")
+	}
+	fi, err = os.Stat(packagesDir())
+	if err != nil || !fi.IsDir() {
+		return errors.New("'wdog.volume'/packages should be dir")
+	}
+
 	if cw.Port == 0 {
 		return errors.New("'wdog.port' not set")
 	}
