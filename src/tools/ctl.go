@@ -1348,9 +1348,18 @@ func pkg_list(args []string, opts [16]string) {
 	}
 
 	swyclient.Packages().List(ua, &pkgs)
-	fmt.Printf("%-32s%-10s%-12s\n", "ID", "LANG", "NAME")
+	fmt.Printf("%-32s%-10s%s\n", "ID", "LANG", "  NAME")
 	for _, pkg := range pkgs {
-		fmt.Printf("%-32s%-10s%-12s\n", pkg.Id, pkg.Lang, pkg.Name)
+		pfx := "  "
+		switch pkg.State {
+		case "installing":
+			pfx = "+ "
+		case "broken":
+			pfx = "x "
+		case "removing":
+			pfx = "- "
+		}
+		fmt.Printf("%-32s%-10s%s\n", pkg.Id, pkg.Lang, pfx + pkg.Name)
 	}
 }
 
