@@ -31,7 +31,7 @@ func (fn *FunctionDesc)srcDir(version string) string {
 }
 
 func (fn *FunctionDesc)srcPath(version string) string {
-	return conf.Wdog.Volume + "/" + fn.srcDir(version)
+	return conf.Wdog.Volume + "/" + FunctionsSubdir + "/" + fn.srcDir(version)
 }
 
 func cloneDir() string {

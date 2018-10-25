@@ -31,6 +31,7 @@ const (
 	DefaultProject string			= "default"
 	NoProject string			= "*"
 	CloneDir				= "clone"
+	FunctionsSubdir				= "functions"
 	RunDir string				= "/var/run/swifty"
 )
 

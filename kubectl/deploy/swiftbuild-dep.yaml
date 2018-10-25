@@ -40,5 +40,5 @@ spec:
           name: code
       volumes:
       - hostPath:
-          path: /home/swifty-volume
+          path: /home/swifty-volume/functions
         name: code
