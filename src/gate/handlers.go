@@ -557,11 +557,19 @@ func handleRepoPull(ctx context.Context, w http.ResponseWriter, r *http.Request)
 
 /******************************* PACKAGES *************************************/
 func handlePackages(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
+	if !ModeDevel {
+		return GateErrC(swyapi.GateNotAvail)
+	}
+
 	var params swyapi.PkgAdd
 	return xrest.HandleMany(ctx, w, r, Packages{}, &params)
 }
 
 func handlePackage(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
+	if !ModeDevel {
+		return GateErrC(swyapi.GateNotAvail)
+	}
+
 	return xrest.HandleOne(ctx, w, r, Packages{}, nil)
 }
 
