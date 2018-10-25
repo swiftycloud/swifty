@@ -466,10 +466,10 @@ stalled:
 func (fn *FunctionDesc)Start(ctx context.Context) error {
 	var err error
 
-	build, bAddr := rtNeedToBuild(&fn.Code)
+	build, rh := rtNeedToBuild(&fn.Code)
 	if build {
 
-		err = buildFunction(ctx, bAddr, fn, "")
+		err = buildFunction(ctx, rh, fn, "")
 		if err != nil {
 			return err
 		}

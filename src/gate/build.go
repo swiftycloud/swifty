@@ -17,7 +17,7 @@ func tryBuildFunction(ctx context.Context, fn *FunctionDesc, suf string) error {
 	return buildFunction(ctx, rh, fn, suf)
 }
 
-func buildFunction(ctx context.Context, rh *rt_info, fn *FunctionDesc, suf string) error {
+func buildFunction(ctx context.Context, rh *langInfo, fn *FunctionDesc, suf string) error {
 	var wd_result swyapi.WdogFunctionRunResult
 
 	traceFnEvent(ctx, "build", fn)

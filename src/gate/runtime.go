@@ -3,14 +3,12 @@ package main
 import (
 	"path/filepath"
 	"os/exec"
-	"os"
-	"bytes"
 	"strings"
 	"swifty/apis"
 	"context"
 )
 
-type rt_info struct {
+type langInfo struct {
 	CodePath	string
 	Ext		string
 	Build		bool
@@ -37,60 +35,7 @@ func GetLines(lng string, args ...string) []string {
 	return strings.Split(sout, "\n")
 }
 
-var py_info = rt_info {
-	Ext:		"py",
-	CodePath:	"/function",
-	VArgs:		[]string{"python3", "--version"},
-	PList:		func() []string {
-		return GetLines("python", "pip3", "list", "--format", "freeze")
-	},
-}
-
-var golang_info = rt_info {
-	Ext:		"go",
-	CodePath:	"/go/src/swycode",
-	Build:		true,
-	VArgs:		[]string{"go", "version"},
-
-	Install:	goInstall,
-	Remove:		goRemove,
-	PkgPath	:	goPkgPath,
-}
-
-var swift_info = rt_info {
-	Ext:		"swift",
-	CodePath:	"/swift/swycode",
-	Build:		true,
-	VArgs:		[]string{"swift", "--version"},
-}
-
-var nodejs_info = rt_info {
-	Ext:		"js",
-	CodePath:	"/function",
-	VArgs:		[]string{"node", "--version"},
-	PList:		func() []string {
-		o := GetLines("nodejs", "npm", "list")
-		ret := []string{}
-		if len(o) > 0 {
-			for _, p := range(o[1:]) {
-				ps := strings.Fields(p)
-				ret = append(ret, ps[len(ps)-1])
-			}
-		}
-		return ret
-	},
-}
-
-var ruby_info = rt_info {
-	Ext:		"rb",
-	CodePath:	"/function",
-	VArgs:		[]string{"ruby", "--version"},
-	PList:		func() []string {
-		return GetLines("ruby", "gem", "list")
-	},
-}
-
-var rt_handlers = map[string]*rt_info {
+var rt_handlers = map[string]*langInfo {
 	"python":	&py_info,
 	"golang":	&golang_info,
 	"swift":	&swift_info,
@@ -145,7 +90,7 @@ func rtLangEnabled(lang string) bool {
 	return ok && (ModeDevel || !h.Devel)
 }
 
-func rtNeedToBuild(scr *FnCodeDesc) (bool, *rt_info) {
+func rtNeedToBuild(scr *FnCodeDesc) (bool, *langInfo) {
 	rh := rt_handlers[scr.Lang]
 	return rh.Build, rh
 }
@@ -164,37 +109,9 @@ func rtScriptName(scr *FnCodeDesc, suff string) string {
 	return "script" + suff + "." + rt_handlers[scr.Lang].Ext
 }
 
-func (lh *rt_info)info() *swyapi.LangInfo {
+func (lh *langInfo)info() *swyapi.LangInfo {
 	return &swyapi.LangInfo{
 		Version:	lh.Version,
 		Packages:	lh.Packages,
 	}
-}
-
-func goInstall(ctx context.Context, id SwoId) error {
-	var stdout bytes.Buffer
-	var stderr bytes.Buffer
-
-	tgt_dir := conf.Wdog.Volume + "/packages/" + id.Tennant + "/golang"
-	os.MkdirAll(tgt_dir, 0755)
-	args := []string{"run", "--rm", "-v", tgt_dir + ":/go", rtLangImage("golang"), "go", "get", id.Name}
-	ctxlog(ctx).Debugf("Running docker %v", args)
-	cmd := exec.Command("docker", args...)
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-	err := cmd.Run()
-	if err != nil {
-		logSaveResult(ctx, id.PCookie(), "pkg_install", stdout.String(), stderr.String())
-		return err
-	}
-
-	return nil
-}
-
-func goRemove(id SwoId) error {
-	return nil
-}
-
-func goPkgPath(id SwoId) string {
-	return "/go-pkg/" + id.Tennant + "/golang"
 }
