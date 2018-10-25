@@ -22,6 +22,7 @@ type langInfo struct {
 	Install		func(context.Context, SwoId) error
 	Remove		func(context.Context, SwoId) error
 	BuildPkgPath	func(SwoId) string
+	RunPkgPath	func(SwoId) (string, string)
 }
 
 func GetLines(lng string, args ...string) []string {
@@ -107,6 +108,16 @@ func rtCodePath(scr *FnCodeDesc) string {
 func rtScriptName(scr *FnCodeDesc, suff string) string {
 	/* This should be in sync with wdog's startQnR and builders */
 	return "script" + suff + "." + rt_handlers[scr.Lang].Ext
+}
+
+func rtPackages(id SwoId, lang string)  (string, string, bool) {
+	h := rt_handlers[lang]
+	if h.RunPkgPath != nil {
+		h, m := h.RunPkgPath(id)
+		return h, m, true
+	} else {
+		return "", "", false
+	}
 }
 
 func (lh *langInfo)info() *swyapi.LangInfo {

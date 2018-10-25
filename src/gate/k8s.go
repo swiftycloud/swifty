@@ -312,6 +312,24 @@ func k8sRun(ctx context.Context, conf *YAMLConf, fn *FunctionDesc) error {
 		},
 	}
 
+	h, m, ok := rtPackages(fn.SwoId, fn.Code.Lang)
+	if ok {
+		vols = append(vols, v1.Volume {
+			Name:		"pkg",
+			VolumeSource:	v1.VolumeSource {
+				HostPath: &v1.HostPathVolumeSource {
+					Path: h,
+				},
+			},
+		})
+
+		vols_m = append(vols_m, v1.VolumeMount {
+			Name:		"pkg",
+			ReadOnly:	false,
+			MountPath:	m,
+		})
+	}
+
 	podspec := v1.PodTemplateSpec{
 		ObjectMeta:	metav1.ObjectMeta {
 			Name:	depname,
