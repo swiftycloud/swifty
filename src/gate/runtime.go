@@ -5,7 +5,6 @@ import (
 	"os/exec"
 	"os"
 	"bytes"
-	"errors"
 	"strings"
 	"swifty/apis"
 	"context"
@@ -24,6 +23,7 @@ type rt_info struct {
 
 	Install		func(context.Context, SwoId) error
 	Remove		func(SwoId) error
+	PkgPath		func(SwoId) string
 }
 
 func GetLines(lng string, args ...string) []string {
@@ -54,6 +54,7 @@ var golang_info = rt_info {
 
 	Install:	goInstall,
 	Remove:		goRemove,
+	PkgPath	:	goPkgPath,
 }
 
 var swift_info = rt_info {
@@ -144,9 +145,9 @@ func rtLangEnabled(lang string) bool {
 	return ok && (ModeDevel || !h.Devel)
 }
 
-func rtNeedToBuild(scr *FnCodeDesc) (bool, string) {
+func rtNeedToBuild(scr *FnCodeDesc) (bool, *rt_info) {
 	rh := rt_handlers[scr.Lang]
-	return rh.Build, rh.BuildIP
+	return rh.Build, rh
 }
 
 func rtSetBuilder(lang, ip string) {
@@ -192,4 +193,8 @@ func goInstall(ctx context.Context, id SwoId) error {
 
 func goRemove(id SwoId) error {
 	return nil
+}
+
+func goPkgPath(id SwoId) string {
+	return "/go-pkg/" + id.Tennant + "/golang"
 }

@@ -9,28 +9,33 @@ import (
 )
 
 func tryBuildFunction(ctx context.Context, fn *FunctionDesc, suf string) error {
-	b, addr := rtNeedToBuild(&fn.Code)
+	b, rh := rtNeedToBuild(&fn.Code)
 	if !b {
 		return nil
 	}
 
-	return buildFunction(ctx, addr, fn, suf)
+	return buildFunction(ctx, rh, fn, suf)
 }
 
-func buildFunction(ctx context.Context, addr string, fn *FunctionDesc, suf string) error {
+func buildFunction(ctx context.Context, rh *rt_info, fn *FunctionDesc, suf string) error {
 	var wd_result swyapi.WdogFunctionRunResult
 
 	traceFnEvent(ctx, "build", fn)
 
+	breq := &swyapi.WdogFunctionBuild {
+		Sources:	fn.srcDir(""),
+		Suff:		suf,
+	}
+
+	if rh.PkgPath != nil {
+		breq.Packages = rh.PkgPath(fn.SwoId)
+	}
+
 	resp, err := xhttp.Req(
 			&xhttp.RestReq{
-				Address: "http://" + addr + ":" + strconv.Itoa(conf.Wdog.Port) + "/v1/run",
+				Address: "http://" + rh.BuildIP + ":" + strconv.Itoa(conf.Wdog.Port) + "/v1/run",
 				Timeout: 120,
-			},
-			&swyapi.WdogFunctionBuild{
-				Sources: fn.srcDir(""),
-				Suff: suf,
-			})
+			}, breq)
 	if err != nil {
 		ctxlog(ctx).Errorf("Error building function: %s", err.Error())
 		return fmt.Errorf("Can't build function")
