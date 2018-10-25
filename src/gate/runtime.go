@@ -3,8 +3,12 @@ package main
 import (
 	"path/filepath"
 	"os/exec"
+	"os"
+	"bytes"
+	"errors"
 	"strings"
 	"swifty/apis"
+	"context"
 )
 
 type rt_info struct {
@@ -18,8 +22,8 @@ type rt_info struct {
 	Packages	[]string
 	PList		func() []string
 
-	Install		func(string) error
-	Remove		func(string) error
+	Install		func(context.Context, SwoId) error
+	Remove		func(SwoId) error
 }
 
 func GetLines(lng string, args ...string) []string {
@@ -47,6 +51,9 @@ var golang_info = rt_info {
 	CodePath:	"/go/src/swycode",
 	Build:		true,
 	VArgs:		[]string{"go", "version"},
+
+	Install:	goInstall,
+	Remove:		goRemove,
 }
 
 var swift_info = rt_info {
@@ -161,4 +168,28 @@ func (lh *rt_info)info() *swyapi.LangInfo {
 		Version:	lh.Version,
 		Packages:	lh.Packages,
 	}
+}
+
+func goInstall(ctx context.Context, id SwoId) error {
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+
+	tgt_dir := conf.Wdog.Volume + "/packages/" + id.Tennant + "/golang"
+	os.MkdirAll(tgt_dir, 0755)
+	args := []string{"run", "--rm", "-v", tgt_dir + ":/go", rtLangImage("golang"), "go", "get", id.Name}
+	ctxlog(ctx).Debugf("Running docker %v", args)
+	cmd := exec.Command("docker", args...)
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	err := cmd.Run()
+	if err != nil {
+		logSaveResult(ctx, id.PCookie(), "pkg_install", stdout.String(), stderr.String())
+		return err
+	}
+
+	return nil
+}
+
+func goRemove(id SwoId) error {
+	return nil
 }

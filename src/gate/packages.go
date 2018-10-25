@@ -100,7 +100,7 @@ func installPackage(pkg *PackageDesc) {
 	defer done(ctx)
 
 	h := rt_handlers[pkg.Lang]
-	err := h.Install(pkg.Name)
+	err := h.Install(ctx, pkg.SwoId)
 
 	if err != nil {
 		pkg.State = DBPkgStateBrk
@@ -120,9 +120,11 @@ func (pkg *PackageDesc)Del(ctx context.Context) *xrest.ReqErr {
 	pkg.State = DBPkgStateRem
 
 	h := rt_handlers[pkg.Lang]
-	err = h.Remove(pkg.Name)
-	if err != nil {
-		return GateErrE(swyapi.GateFsError, err)
+	if h.Remove != nil {
+		err = h.Remove(pkg.SwoId)
+		if err != nil {
+			return GateErrE(swyapi.GateFsError, err)
+		}
 	}
 
 	err = dbRemove(ctx, pkg)

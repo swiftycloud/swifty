@@ -38,7 +38,12 @@ spec:
         volumeMounts:
         - mountPath: /go/src/swycode
           name: code
+        - mountPath: /go-pkg
+          name: packages
       volumes:
       - hostPath:
           path: /home/swifty-volume/functions
         name: code
+      - hostPath:
+          path: /home/swifty-volume/packages
+        name: packages

@@ -1360,6 +1360,7 @@ func pkg_info(args []string, opts [16]string) {
 	swyclient.Packages().Get(args[0], &pkg)
 	fmt.Printf("Lang:           %s\n", pkg.Lang)
 	fmt.Printf("Name:           %s\n", pkg.Name)
+	fmt.Printf("State:          %s\n", pkg.State)
 }
 
 func pkg_add(args []string, opts [16]string) {
