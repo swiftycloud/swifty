@@ -5,6 +5,7 @@ import (
 	"os"
 	"bytes"
 	"errors"
+	"strings"
 	"context"
 	"swifty/common"
 )
@@ -27,6 +28,10 @@ var golang_info = langInfo {
 func goInstall(ctx context.Context, id SwoId) error {
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
+
+	if strings.Contains(id.Name, "...") {
+		return errors.New("No wildcards (at least yet)")
+	}
 
 	tgt_dir := packagesDir() + "/" + id.Tennant + "/golang"
 	os.MkdirAll(tgt_dir, 0755)
