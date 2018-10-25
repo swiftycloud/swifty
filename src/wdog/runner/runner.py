@@ -12,6 +12,7 @@ swytb = ""
 swycode = None
 
 try:
+    sys.path += [ "/packages" + p for p in sys.path ]
     spec = importlib.util.spec_from_file_location('code', '/function/' + sys.argv[1] + '.py')
     swycode = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(swycode)
@@ -43,7 +44,10 @@ while True:
     data = readmsg(q)
 
     if swycode != None:
-        req = type('request', (object,), json.loads(data))
+        rq = json.loads(data)
+        if not "content" in rq:
+            rq["content"] = "text/plain"
+        req = type('request', (object,), rq)
         try:
             if req.content == "application/json":
                 try:
