@@ -280,30 +280,45 @@ func k8sRun(ctx context.Context, conf *YAMLConf, fn *FunctionDesc) error {
 
 	envs := k8sGenEnvVar(ctx, fn, conf.Wdog.Port)
 
+	vols := []v1.Volume {
+		{
+			Name:		"code",
+			VolumeSource:	v1.VolumeSource {
+				HostPath: &v1.HostPathVolumeSource{
+					Path: fn.srcPath(""),
+				},
+			},
+		},
+		{
+			Name:		"conn",
+			VolumeSource:	v1.VolumeSource {
+				HostPath: &v1.HostPathVolumeSource{
+					Path: "/var/run/swifty/wdogconn/" + fn.Cookie,
+				},
+			},
+		},
+	}
+
+	vols_m := []v1.VolumeMount {
+		{
+			Name:		"code",
+			ReadOnly:	false,
+			MountPath:	rtCodePath(&fn.Code),
+		},
+		{
+			Name:		"conn",
+			ReadOnly:	false,
+			MountPath:	wdogCresponderDir,
+		},
+	}
+
 	podspec := v1.PodTemplateSpec{
 		ObjectMeta:	metav1.ObjectMeta {
 			Name:	depname,
 			Labels:	k8sGenLabels(fn, depname),
 		},
 		Spec:			v1.PodSpec {
-			Volumes:	[]v1.Volume{
-				{
-					Name:		"code",
-					VolumeSource:	v1.VolumeSource {
-						HostPath: &v1.HostPathVolumeSource{
-								Path: fn.srcPath(""),
-							},
-					},
-				},
-				{
-					Name:		"conn",
-					VolumeSource:	v1.VolumeSource {
-						HostPath: &v1.HostPathVolumeSource{
-								Path: "/var/run/swifty/wdogconn/" + fn.Cookie,
-							},
-					},
-				},
-			},
+			Volumes:	vols,
 			HostNetwork:	false,
 //			HostAliases:	[]v1.HostAlias {
 //				FIXME -- resolve and add s3 API endpoint here
@@ -317,18 +332,7 @@ func k8sRun(ctx context.Context, conf *YAMLConf, fn *FunctionDesc) error {
 					Name:		"wdog",
 					Image:		fn.Code.image(),
 					Env:		envs,
-					VolumeMounts:	[]v1.VolumeMount{
-						{
-							Name:		"code",
-							ReadOnly:	false,
-							MountPath:	rtCodePath(&fn.Code),
-						},
-						{
-							Name:		"conn",
-							ReadOnly:	false,
-							MountPath:	wdogCresponderDir,
-						},
-					},
+					VolumeMounts:	vols_m,
 					ImagePullPolicy: v1.PullNever,
 					SecurityContext: &v1.SecurityContext {
 						ReadOnlyRootFilesystem: &roRoot,
