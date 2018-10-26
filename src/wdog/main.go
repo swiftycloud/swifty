@@ -131,6 +131,8 @@ func doRun(runner *Runner, body []byte) (*swyapi.WdogFunctionRunResult, error) {
 	start := time.Now()
 	err = runner.q.SendBytes(body)
 	if err != nil {
+		log.Debugf("%s", readLines(runner.fin))
+		log.Debugf("%s", readLines(runner.fine))
 		return nil, fmt.Errorf("Can't send args: %s", err.Error())
 	}
 
