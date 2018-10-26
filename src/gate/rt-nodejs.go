@@ -26,6 +26,11 @@ var nodejs_info = langInfo {
 		return ret
 	},
 
+	/*
+	 * Install -- use npm install
+	 * List    -- list top-level dirs with package.json inside
+	 * Remove  -- manualy remove the dir
+	 */
 	Install:	npmInstall,
 	Remove:		nodeRemove,
 	List:		nodeList,

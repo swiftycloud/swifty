@@ -17,6 +17,11 @@ var py_info = langInfo {
 		return GetLines("python", "pip3", "list", "--format", "freeze")
 	},
 
+	/*
+	 * Install -- call pip install
+	 * List    -- use pkg_resources, but narrow down it to the /packages
+	 * Remove  -- use pip remove, but pre-check that the package is in /packages
+	 */
 	Install:	pipInstall,
 	Remove:		xpipRemove,
 	List:		xpipList,
@@ -24,6 +29,7 @@ var py_info = langInfo {
 }
 
 func pyPackages(id SwoId) (string, string) {
+	/* Python runner adds /packages/* to sys.path for every dir met in there */
 	return packagesDir() + "/" + id.Tennant + "/python", "/packages"
 }
 

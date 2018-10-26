@@ -21,6 +21,11 @@ var golang_info = langInfo {
 	Build:		true,
 	VArgs:		[]string{"go", "version"},
 
+	/*
+	 * Install -- call go get <name>
+	 * List    -- check for .git subdirs in a tree
+	 * Remove  -- manually remove the whole dir (and .a from pkg)
+	 */
 	Install:	goInstall,
 	Remove:		goRemove,
 	List:		goList,
@@ -104,5 +109,9 @@ func goList(ctx context.Context, tenant string) ([]string, error) {
 }
 
 func goPkgPath(id SwoId) string {
+	/*
+	 * Build dep mounts volume's packages subdir to /go-pkg
+	 * Wdog builder sets GOPATH to /go:/<this-string>
+	 */
 	return "/go-pkg/" + id.Tennant + "/golang"
 }
