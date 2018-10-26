@@ -4,8 +4,8 @@ import (
 	"os/exec"
 	"os"
 	"bytes"
-	"errors"
 	"strings"
+	"errors"
 	"context"
 	"swifty/common"
 )
@@ -43,7 +43,7 @@ func goInstall(ctx context.Context, id SwoId) error {
 	err := cmd.Run()
 	if err != nil {
 		logSaveResult(ctx, id.PCookie(), "pkg_install", stdout.String(), stderr.String())
-		return err
+		return errors.New("Error installing pkg")
 	}
 
 	return nil
@@ -54,13 +54,13 @@ func goRemove(ctx context.Context, id SwoId) error {
 	err := os.Remove(d + "/pkg/" + goOsArch + "/" + id.Name + ".a")
 	if err != nil {
 		ctxlog(ctx).Errorf("Can't remove %s' package: %s", id.Str(), err.Error())
-		return errors.New("Error removing package")
+		return errors.New("Error removing pkg")
 	}
 
 	x, err := xh.DropDir(d, "src/" + id.Name)
 	if err != nil {
 		ctxlog(ctx).Errorf("Can't remove %s' sources (%s): %s", id.Str(), x, err.Error())
-		return errors.New("Error removing package sources")
+		return errors.New("Error removing pkg")
 	}
 
 	return nil

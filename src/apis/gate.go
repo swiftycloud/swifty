@@ -337,15 +337,11 @@ type RouterInfo struct {
 }
 
 type PkgAdd struct {
-	Lang		string		`jaon:"lang"`
 	Name		string		`json:"name"`
 }
 
 type PkgInfo struct {
-	Id		string		`json:"id"`
-	Lang		string		`json:"lang"`
-	Name		string		`json:"name"`
-	State		string		`json:"state"`
+	Id		string		`json:"id"`	// name
 }
 
 

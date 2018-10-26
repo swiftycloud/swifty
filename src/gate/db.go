@@ -34,7 +34,6 @@ const (
 	DBColRepos	= "Repos"
 	DBColAccounts	= "Accounts"
 	DBColRouters	= "Routers"
-	DBColPackages	= "Packages"
 )
 
 var dbColMap map[reflect.Type]string
@@ -69,7 +68,6 @@ func init() {
 	dbColMap[reflect.TypeOf(&RouterDesc{})] = DBColRouters
 	dbColMap[reflect.TypeOf([]*RouterDesc{})] = DBColRouters
 	dbColMap[reflect.TypeOf(&[]*RouterDesc{})] = DBColRouters
-	dbColMap[reflect.TypeOf(&PackageDesc{})] = DBColPackages
 }
 
 func dbCol(ctx context.Context, col string) *mgo.Collection {
@@ -101,8 +99,6 @@ func objcni(o interface{}) (string, bson.ObjectId) {
 		return DBColEvents, o.ObjID
 	case *RouterDesc:
 		return DBColRouters, o.ObjID
-	case *PackageDesc:
-		return DBColPackages, o.ObjID
 	default:
 		glog.Fatalf("Unmapped object %s", reflect.TypeOf(o).String())
 		return "", ""

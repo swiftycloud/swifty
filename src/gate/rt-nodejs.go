@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"os"
 	"os/exec"
+	"errors"
 )
 
 var nodejs_info = langInfo {
@@ -54,7 +55,7 @@ func npmInstall(ctx context.Context, id SwoId) error {
 	err := cmd.Run()
 	if err != nil {
 		logSaveResult(ctx, id.PCookie(), "pkg_install", stdout.String(), stderr.String())
-		return err
+		return errors.New("Error installing pkg")
 	}
 
 	return nil

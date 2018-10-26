@@ -1,7 +1,7 @@
 package main
 
 import (
-	"gopkg.in/mgo.v2/bson"
+	"github.com/gorilla/mux"
 	"swifty/common/xrest"
 	"swifty/apis"
 	"net/http"
@@ -9,19 +9,18 @@ import (
 	"context"
 )
 
-const (
-	DBPkgStateIns	string = "installing"
-	DBPkgStateRem	string = "removing"
-	DBPkgStateBrk	string = "broken"
-	DBPkgStateRdy	string = "ready"
-)
-
 type Packages struct {
+	Lang	string
+}
+
+type PackageDesc struct {
+	SwoId
+	Lang	string
 }
 
 func (ps Packages)Create(ctx context.Context, p interface{}) (xrest.Obj, *xrest.ReqErr) {
 	params := p.(*swyapi.PkgAdd)
-	h, ok := rt_handlers[params.Lang]
+	h, ok := rt_handlers[ps.Lang]
 	if !ok || h.Install == nil {
 		return nil, GateErrM(swyapi.GateNotFound, "Language not supported")
 	}
@@ -29,107 +28,64 @@ func (ps Packages)Create(ctx context.Context, p interface{}) (xrest.Obj, *xrest.
 	id := ctxSwoId(ctx, NoProject, params.Name)
 	return &PackageDesc {
 		SwoId:	*id,
-		Lang:	params.Lang,
+		Lang:	ps.Lang,
 	}, nil
 }
 
 func (ps Packages)Get(ctx context.Context, r *http.Request) (xrest.Obj, *xrest.ReqErr) {
-	var pkg PackageDesc
-
-	cerr := objFindForReq(ctx, r, "pkgid", &pkg)
-	if cerr != nil {
-		return nil, cerr
-	}
-
-	return &pkg, nil
+	id := ctxSwoId(ctx, NoProject, mux.Vars(r)["pkgid"])
+	return &PackageDesc {
+		SwoId:	*id,
+		Lang:	ps.Lang,
+	}, nil
 }
 
 func (ps Packages)Iterate(ctx context.Context, q url.Values, cb func(context.Context, xrest.Obj) *xrest.ReqErr) *xrest.ReqErr {
-	var pkg PackageDesc
-
-	lng := q.Get("lang")
-
-	dbq := listReq(ctx, NoProject, []string{})
-	if lng != "" {
-		dbq = append(dbq, bson.DocElem{"lang", lng})
+	h := rt_handlers[ps.Lang]
+	if h.List == nil {
+		return GateErrC(swyapi.GateNotAvail)
 	}
 
-	iter := dbIterAll(ctx, dbq, &pkg)
-	defer iter.Close()
+	packages, err := h.List(ctx, gctx(ctx).Tenant)
+	if err != nil {
+		return GateErrE(swyapi.GateGenErr, err)
+	}
 
-	for iter.Next(&pkg) {
-		cerr := cb(ctx, &pkg)
+	id := ctxSwoId(ctx, NoProject, "")
+
+	for _, pkg := range packages {
+		id.Name = pkg
+		cerr := cb(ctx, &PackageDesc {
+			SwoId: *id,
+			Lang:	ps.Lang,
+		})
 		if cerr != nil {
 			return cerr
 		}
 	}
 
-	err := iter.Err()
-	if err != nil {
-		return GateErrD(err)
-	}
-
 	return nil
-}
-
-type PackageDesc struct {
-	ObjID		bson.ObjectId		`bson:"_id,omitempty"`
-	SwoId					`bson:",inline"`
-	State		string			`bson:"state"`
-	Cookie		string			`bson:"cookie"`
-	Lang		string			`bson:"lang"`
 }
 
 func (pkg *PackageDesc)Add(ctx context.Context, _ interface{}) *xrest.ReqErr {
-	pkg.ObjID = bson.NewObjectId()
-	pkg.Cookie = pkg.SwoId.Cookie()
-	pkg.State = DBPkgStateIns
-
-	err := dbInsert(ctx, pkg)
+	h := rt_handlers[pkg.Lang]
+	err := h.Install(ctx, pkg.SwoId)
 	if err != nil {
-		return GateErrD(err)
+		return GateErrE(swyapi.GateGenErr, err)
 	}
-
-	go installPackage(pkg)
 
 	return nil
 }
 
-func installPackage(pkg *PackageDesc) {
-	ctx, done := mkContext("::pkg install")
-	defer done(ctx)
-
-	h := rt_handlers[pkg.Lang]
-	err := h.Install(ctx, pkg.SwoId)
-
-	if err != nil {
-		pkg.State = DBPkgStateBrk
-	} else {
-		pkg.State = DBPkgStateRdy
-	}
-
-	dbUpdatePart(ctx, pkg, bson.M{ "state": pkg.State })
-}
-
 func (pkg *PackageDesc)Del(ctx context.Context) *xrest.ReqErr {
-	err := dbUpdatePart(ctx, pkg, bson.M{"state": DBPkgStateRem})
-	if err != nil {
-		return GateErrD(err)
-	}
-
-	pkg.State = DBPkgStateRem
-
 	h := rt_handlers[pkg.Lang]
-	if h.Remove != nil {
-		err = h.Remove(ctx, pkg.SwoId)
-		if err != nil {
-			return GateErrE(swyapi.GateFsError, err)
-		}
+	if h.Remove == nil {
+		return GateErrC(swyapi.GateNotAvail)
 	}
 
-	err = dbRemove(ctx, pkg)
+	err := h.Remove(ctx, pkg.SwoId)
 	if err != nil {
-		return GateErrD(err)
+		return GateErrE(swyapi.GateGenErr, err)
 	}
 
 	return nil
@@ -137,10 +93,7 @@ func (pkg *PackageDesc)Del(ctx context.Context) *xrest.ReqErr {
 
 func (pkg *PackageDesc)Info(ctx context.Context, q url.Values, details bool) (interface{}, *xrest.ReqErr) {
 	return &swyapi.PkgInfo{
-		Id:	pkg.ObjID.Hex(),
-		Name:	pkg.SwoId.Name,
-		Lang:	pkg.Lang,
-		State:	pkg.State,
+		Id:	pkg.SwoId.Name,
 	}, nil
 }
 

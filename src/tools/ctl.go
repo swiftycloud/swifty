@@ -1347,43 +1347,27 @@ func pkg_list(args []string, opts [16]string) {
 		ua = append(ua, "lang=" + opts[0])
 	}
 
-	swyclient.Packages().List(ua, &pkgs)
-	fmt.Printf("%-32s%-10s%s\n", "ID", "LANG", "  NAME")
+	swyclient.Packages(args[0]).List(ua, &pkgs)
 	for _, pkg := range pkgs {
-		pfx := "  "
-		switch pkg.State {
-		case "installing":
-			pfx = "+ "
-		case "broken":
-			pfx = "x "
-		case "removing":
-			pfx = "- "
-		}
-		fmt.Printf("%-32s%-10s%s\n", pkg.Id, pkg.Lang, pfx + pkg.Name)
+		fmt.Printf(pkg.Id)
 	}
 }
 
 func pkg_info(args []string, opts [16]string) {
-	var pkg swyapi.PkgInfo
-
-	swyclient.Packages().Get(args[0], &pkg)
-	fmt.Printf("Lang:           %s\n", pkg.Lang)
-	fmt.Printf("Name:           %s\n", pkg.Name)
-	fmt.Printf("State:          %s\n", pkg.State)
+	fmt.Printf("---\n")
 }
 
 func pkg_add(args []string, opts [16]string) {
 	var pkg swyapi.PkgInfo
 
-	swyclient.Packages().Add(&swyapi.PkgAdd{
-		Lang: args[0],
+	swyclient.Packages(args[0]).Add(&swyapi.PkgAdd{
 		Name: args[1],
 	}, &pkg)
 	fmt.Printf("%s package created\n", pkg.Id)
 }
 
 func pkg_del(args []string, opts [16]string) {
-	swyclient.Packages().Del(args[0])
+	swyclient.Packages(args[0]).Del(args[1])
 }
 
 func acc_list(args []string, opts [16]string) {
@@ -2037,11 +2021,10 @@ func main() {
 	setupCommonCmd(CMD_AU, "ID")
 	cmdMap[CMD_AU].opts.StringVar(&opts[0], "param", "", "List of key=value pairs, :-separated")
 
-	setupCommonCmd(CMD_PKL)
-	cmdMap[CMD_PKL].opts.StringVar(&opts[0], "lang", "", "Language to list pkgs for")
+	setupCommonCmd(CMD_PKL, "LANG")
 	setupCommonCmd(CMD_PKA, "LANG", "NAME")
-	setupCommonCmd(CMD_PKI, "ID")
-	setupCommonCmd(CMD_PKD, "ID")
+	setupCommonCmd(CMD_PKI, "LANG", "NAME")
+	setupCommonCmd(CMD_PKD, "LANG", "NAME")
 
 	setupCommonCmd(CMD_UL)
 	setupCommonCmd(CMD_UA, "UID")

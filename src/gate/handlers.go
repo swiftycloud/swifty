@@ -562,7 +562,7 @@ func handlePackages(ctx context.Context, w http.ResponseWriter, r *http.Request)
 	}
 
 	var params swyapi.PkgAdd
-	return xrest.HandleMany(ctx, w, r, Packages{}, &params)
+	return xrest.HandleMany(ctx, w, r, Packages{mux.Vars(r)["lang"]}, &params)
 }
 
 func handlePackage(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
@@ -570,7 +570,7 @@ func handlePackage(ctx context.Context, w http.ResponseWriter, r *http.Request) 
 		return GateErrC(swyapi.GateNotAvail)
 	}
 
-	return xrest.HandleOne(ctx, w, r, Packages{}, nil)
+	return xrest.HandleOne(ctx, w, r, Packages{mux.Vars(r)["lang"]}, nil)
 }
 
 /******************************* MWARES ***************************************/
