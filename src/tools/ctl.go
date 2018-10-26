@@ -1349,12 +1349,14 @@ func pkg_list(args []string, opts [16]string) {
 
 	swyclient.Packages(args[0]).List(ua, &pkgs)
 	for _, pkg := range pkgs {
-		fmt.Printf(pkg.Id)
+		fmt.Printf("%s\n", pkg.Id)
 	}
 }
 
 func pkg_info(args []string, opts [16]string) {
-	fmt.Printf("---\n")
+	var pkg swyapi.PkgInfo
+	swyclient.Packages(args[0]).Get(args[1], &pkg)
+	fmt.Printf("%s\n", pkg.Id)
 }
 
 func pkg_add(args []string, opts [16]string) {

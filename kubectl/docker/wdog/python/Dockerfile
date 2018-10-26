@@ -8,8 +8,8 @@ COPY swy-wdog /usr/bin/
 COPY swy-runner /usr/bin/
 COPY swifty.py /swifty/
 COPY swy-runner.py /usr/bin/
-COPY pip_autoremove.py /usr/bin
-RUN chmod +x /usr/bin/swy-wdog /usr/bin/swy-runner.py /usr/bin/pip_autoremove.py
+COPY xpip.py /usr/bin
+RUN chmod +x /usr/bin/swy-wdog /usr/bin/swy-runner.py /usr/bin/xpip.py
 
 EXPOSE 8687
 ENV PYTHONPATH=/swifty

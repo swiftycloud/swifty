@@ -4,10 +4,11 @@ import (
 	"os/exec"
 	"os"
 	"bytes"
-	"strings"
 	"errors"
+	"strings"
 	"context"
 	"swifty/common"
+	"path/filepath"
 )
 
 const (
@@ -22,6 +23,7 @@ var golang_info = langInfo {
 
 	Install:	goInstall,
 	Remove:		goRemove,
+	List:		goList,
 	BuildPkgPath:	goPkgPath,
 }
 
@@ -50,8 +52,17 @@ func goInstall(ctx context.Context, id SwoId) error {
 }
 
 func goRemove(ctx context.Context, id SwoId) error {
+	if strings.Contains(id.Name, "..") {
+		return errors.New("Bad package name")
+	}
+
 	d := packagesDir() + "/" + id.Tennant + "/golang"
-	err := os.Remove(d + "/pkg/" + goOsArch + "/" + id.Name + ".a")
+	st, err := os.Stat(d + "src/" + id.Name + "/.git")
+	if err != nil || !st.IsDir() {
+		return errors.New("Package not installed")
+	}
+
+	err = os.Remove(d + "/pkg/" + goOsArch + "/" + id.Name + ".a")
 	if err != nil {
 		ctxlog(ctx).Errorf("Can't remove %s' package: %s", id.Str(), err.Error())
 		return errors.New("Error removing pkg")
@@ -64,6 +75,32 @@ func goRemove(ctx context.Context, id SwoId) error {
 	}
 
 	return nil
+}
+
+func goList(ctx context.Context, tenant string) ([]string, error) {
+	stuff := []string{}
+
+	d := packagesDir() + "/" + tenant + "/golang/src"
+	err := filepath.Walk(d, func(path string, info os.FileInfo, err error) error {
+		if !info.IsDir() {
+			return nil
+		}
+
+		if strings.HasSuffix(path, "/.git") {
+			path, _ = filepath.Rel(d, path)	// Cut the packages folder
+			path = filepath.Dir(path)	// Cut the .git one
+			stuff = append(stuff, path)
+			return filepath.SkipDir
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return nil, errors.New("Error listing packages")
+	}
+
+	return stuff, nil
 }
 
 func goPkgPath(id SwoId) string {
