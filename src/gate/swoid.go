@@ -35,6 +35,10 @@ func (id *SwoId)NameOK() bool {
 		return false
 	}
 
+	if id.Name[0] == '_' || id.Name[0] == '.' {
+		return false
+	}
+
 	return true
 }
 
@@ -51,6 +55,10 @@ func (id *SwoId) Str() string {
 
 func (id *SwoId) Cookie() string {
 	return xh.Cookify(id.Tennant + "/" + id.Project + "/" + id.Name)
+}
+
+func (id *SwoId) PCookie() string {
+	return xh.Cookify(id.Tennant + "/" + id.Project)
 }
 
 func (id *SwoId) Cookie2(salt string) string {

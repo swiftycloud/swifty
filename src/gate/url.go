@@ -82,7 +82,7 @@ func urlFind(ctx context.Context, urlid string) (URL, error) {
 	return res.(URL), nil
 }
 
-/* FIXME -- set up public IP address/port for this FN */
+/* XXX -- set up public IP address/port for this FN */
 
 func urlEventStart(ctx context.Context, fn *FunctionDesc, ed *FnEventDesc) error {
 	ed.Key = urlKey(fn.Cookie)
@@ -105,12 +105,13 @@ var urlEOps = EventOps {
 }
 
 func (furl *FnURL)Handle(ctx context.Context, w http.ResponseWriter, r *http.Request, sopq *statsOpaque) {
-	furl.fd.Handle(ctx, w, r, sopq, "", "")
+	path := reqPath(r)
+	args := &swyapi.FunctionRun{Path: &path}
+	furl.fd.Handle(ctx, w, r, sopq, args)
 }
 
 func (fmd *FnMemData)Handle(ctx context.Context, w http.ResponseWriter, r *http.Request, sopq *statsOpaque,
-		path, key string) {
-	var args *swyapi.FunctionRun
+		args *swyapi.FunctionRun) {
 	var res *swyapi.WdogFunctionRunResult
 	var err error
 	var code int
@@ -136,9 +137,8 @@ func (fmd *FnMemData)Handle(ctx context.Context, w http.ResponseWriter, r *http.
 	}
 
 	defer balancerPutConn(fmd)
-	args = makeArgs(sopq, r, path, key)
 
-	if fmd.ac != nil {
+	if args.Claims == nil && fmd.ac != nil {
 		args.Claims, err = fmd.ac.Verify(r)
 		if err != nil {
 			code = http.StatusUnauthorized
@@ -146,6 +146,7 @@ func (fmd *FnMemData)Handle(ctx context.Context, w http.ResponseWriter, r *http.
 		}
 	}
 
+	makeArgs(args, sopq, r)
 	res, err = conn.Run(ctx, sopq, "", "call", args)
 	if err != nil {
 		code = http.StatusInternalServerError

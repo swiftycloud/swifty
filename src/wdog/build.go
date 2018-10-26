@@ -64,11 +64,14 @@ func doBuildGo(params *swyapi.WdogFunctionBuild) (*swyapi.WdogFunctionRunResult,
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 
-	log.Debugf("Run go build on %s", srcdir)
+	log.Debugf("Run go build on %s (+%s)", srcdir, params.Packages)
 	cmd := exec.Command("go", "build", "-o", "../swycode/" + srcdir + "/runner" + params.Suff)
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	cmd.Dir = "/go/src/swyrunner"
+	if params.Packages != "" {
+		cmd.Env = append(os.Environ(), "GOPATH=/go:" + params.Packages)
+	}
 	err = cmd.Run()
 	os.Remove(goScript)
 	os.Remove(goBody)

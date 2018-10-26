@@ -110,7 +110,7 @@ func handleProjectDel(ctx context.Context, w http.ResponseWriter, r *http.Reques
 		return GateErrE(swyapi.GateBadRequest, err)
 	}
 
-	q := url.Values{"project": []string{"par.Project"}}
+	q := url.Values{"project": []string{par.Project}}
 
 	xer := delAll(ctx, q, Deployments{})
 	if xer != nil {
@@ -123,6 +123,11 @@ func handleProjectDel(ctx context.Context, w http.ResponseWriter, r *http.Reques
 	}
 
 	xer = delAll(ctx, q, Mwares{})
+	if xer != nil {
+		return xer
+	}
+
+	xer = delAll(ctx, q, Routers{})
 	if xer != nil {
 		return xer
 	}
@@ -550,6 +555,24 @@ func handleRepoPull(ctx context.Context, w http.ResponseWriter, r *http.Request)
 	return nil
 }
 
+/******************************* PACKAGES *************************************/
+func handlePackages(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
+	if !ModeDevel {
+		return GateErrC(swyapi.GateNotAvail)
+	}
+
+	var params swyapi.PkgAdd
+	return xrest.HandleMany(ctx, w, r, Packages{mux.Vars(r)["lang"]}, &params)
+}
+
+func handlePackage(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
+	if !ModeDevel {
+		return GateErrC(swyapi.GateNotAvail)
+	}
+
+	return xrest.HandleOne(ctx, w, r, Packages{mux.Vars(r)["lang"]}, nil)
+}
+
 /******************************* MWARES ***************************************/
 func handleMwares(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
 	var params swyapi.MwareAdd
@@ -695,6 +718,45 @@ func handleS3Access(ctx context.Context, w http.ResponseWriter, r *http.Request)
 	}
 
 	return xrest.Respond(ctx, w, creds)
+}
+
+func handleLogsFor(ctx context.Context, cookie string, q url.Values) ([]*swyapi.LogEntry, *xrest.ReqErr) {
+	since, cerr := getSince(q)
+	if cerr != nil {
+		return nil, cerr
+	}
+
+	logs, err := logGetFor(ctx, cookie, since)
+	if err != nil {
+		return nil, GateErrD(err)
+	}
+
+	var resp []*swyapi.LogEntry
+	for _, loge := range logs {
+		resp = append(resp, &swyapi.LogEntry{
+			Event:	loge.Event,
+			Ts:	loge.Time.Format(time.RFC1123Z),
+			Text:	loge.Text,
+		})
+	}
+
+	return resp, nil
+}
+
+func handleLogs(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
+	q := r.URL.Query()
+	project := q.Get("project")
+	if project == "" {
+		project = DefaultProject
+	}
+
+	id := ctxSwoId(ctx, NoProject, "")
+	resp, cer := handleLogsFor(ctx, id.PCookie(), q)
+	if cer != nil {
+		return cer
+	}
+
+	return xrest.Respond(ctx, w, resp)
 }
 
 func handleTenantStatsAll(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {

@@ -14,10 +14,9 @@ import (
 	"swifty/common/xratelimit"
 )
 
-func makeArgs(sopq *statsOpaque, r *http.Request, path, key string) *swyapi.FunctionRun {
+func makeArgs(args *swyapi.FunctionRun, sopq *statsOpaque, r *http.Request) {
 	defer r.Body.Close()
 
-	args := &swyapi.FunctionRun{}
 	args.Args = make(map[string]string)
 
 	for k, v := range r.URL.Query() {
@@ -55,14 +54,7 @@ func makeArgs(sopq *statsOpaque, r *http.Request, path, key string) *swyapi.Func
 		}
 	}
 
-	if path == "" {
-		path = reqPath(r)
-	}
-	args.Path = &path
 	args.Method = &r.Method
-	args.Key = key
-
-	return args
 }
 
 type podConn struct {

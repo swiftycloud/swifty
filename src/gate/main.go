@@ -31,6 +31,8 @@ const (
 	DefaultProject string			= "default"
 	NoProject string			= "*"
 	CloneDir				= "clone"
+	FunctionsSubdir				= "functions"
+	PackagesSubdir				= "packages"
 	RunDir string				= "/var/run/swifty"
 )
 
@@ -204,6 +206,7 @@ func getHandlers() http.Handler {
 
 	r.Handle("/v1/stats",			genReqHandler(handleTenantStatsAll)).Methods("GET", "POST", "OPTIONS")
 	r.Handle("/v1/stats/{sub}",		genReqHandler(handleTenantStats)).Methods("GET", "POST", "OPTIONS")
+	r.Handle("/v1/logs",			genReqHandler(handleLogs)).Methods("GET", "OPTIONS")
 	r.Handle("/v1/project/list",		genReqHandler(handleProjectList)).Methods("POST", "OPTIONS")
 	r.Handle("/v1/project/del",		genReqHandler(handleProjectDel)).Methods("POST", "OPTIONS")
 
@@ -227,6 +230,10 @@ func getHandlers() http.Handler {
 	r.Handle("/v1/functions/{fid}/s3buckets/{bname}",  genReqHandler(handleFunctionS3B)).Methods("DELETE", "OPTIONS")
 	r.Handle("/v1/functions/{fid}/wait",	genReqHandler(handleFunctionWait)).Methods("POST", "OPTIONS")
 	r.Handle("/v1/functions/{fid}/mdat",	genReqHandler(handleFunctionMdat)).Methods("GET")
+
+	r.Handle("/v1/packages/{lang}",		genReqHandler(handlePackages)).Methods("GET", "POST", "OPTIONS")
+	r.Handle("/v1/packages/{lang}/{pkgid:[a-zA-Z0-9./_-]+}",
+						genReqHandler(handlePackage)).Methods("GET", "DELETE", "OPTIONS")
 
 	r.Handle("/v1/middleware",		genReqHandler(handleMwares)).Methods("GET", "POST", "OPTIONS")
 	r.Handle("/v1/middleware/{mid}",	genReqHandler(handleMware)).Methods("GET", "DELETE", "OPTIONS")

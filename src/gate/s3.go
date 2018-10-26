@@ -150,7 +150,6 @@ func handleS3Event(ctx context.Context, user string, data []byte) {
 
 	err = dbFindAll(ctx, bson.M{"key": s3Key(evt.Namespace, evt.Bucket)}, &evs)
 	if err != nil {
-		/* FIXME -- this should be notified? Or what? */
 		ctxlog(ctx).Errorf("mq: Can't list triggers for s3 event")
 		return
 	}

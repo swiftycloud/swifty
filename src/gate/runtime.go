@@ -5,9 +5,10 @@ import (
 	"os/exec"
 	"strings"
 	"swifty/apis"
+	"context"
 )
 
-type rt_info struct {
+type langInfo struct {
 	CodePath	string
 	Ext		string
 	Build		bool
@@ -17,6 +18,13 @@ type rt_info struct {
 	VArgs		[]string
 	Packages	[]string
 	PList		func() []string
+
+	Install		func(context.Context, SwoId) error
+	Remove		func(context.Context, SwoId) error
+	List		func(context.Context, string) ([]string, error)
+
+	BuildPkgPath	func(SwoId) string
+	RunPkgPath	func(SwoId) (string, string)
 }
 
 func GetLines(lng string, args ...string) []string {
@@ -30,56 +38,7 @@ func GetLines(lng string, args ...string) []string {
 	return strings.Split(sout, "\n")
 }
 
-var py_info = rt_info {
-	Ext:		"py",
-	CodePath:	"/function",
-	VArgs:		[]string{"python3", "--version"},
-	PList:		func() []string {
-		return GetLines("python", "pip3", "list", "--format", "freeze")
-	},
-}
-
-var golang_info = rt_info {
-	Ext:		"go",
-	CodePath:	"/go/src/swycode",
-	Build:		true,
-	VArgs:		[]string{"go", "version"},
-}
-
-var swift_info = rt_info {
-	Ext:		"swift",
-	CodePath:	"/swift/swycode",
-	Build:		true,
-	VArgs:		[]string{"swift", "--version"},
-}
-
-var nodejs_info = rt_info {
-	Ext:		"js",
-	CodePath:	"/function",
-	VArgs:		[]string{"node", "--version"},
-	PList:		func() []string {
-		o := GetLines("nodejs", "npm", "list")
-		ret := []string{}
-		if len(o) > 0 {
-			for _, p := range(o[1:]) {
-				ps := strings.Fields(p)
-				ret = append(ret, ps[len(ps)-1])
-			}
-		}
-		return ret
-	},
-}
-
-var ruby_info = rt_info {
-	Ext:		"rb",
-	CodePath:	"/function",
-	VArgs:		[]string{"ruby", "--version"},
-	PList:		func() []string {
-		return GetLines("ruby", "gem", "list")
-	},
-}
-
-var rt_handlers = map[string]*rt_info {
+var rt_handlers = map[string]*langInfo {
 	"python":	&py_info,
 	"golang":	&golang_info,
 	"swift":	&swift_info,
@@ -134,9 +93,9 @@ func rtLangEnabled(lang string) bool {
 	return ok && (ModeDevel || !h.Devel)
 }
 
-func rtNeedToBuild(scr *FnCodeDesc) (bool, string) {
+func rtNeedToBuild(scr *FnCodeDesc) (bool, *langInfo) {
 	rh := rt_handlers[scr.Lang]
-	return rh.Build, rh.BuildIP
+	return rh.Build, rh
 }
 
 func rtSetBuilder(lang, ip string) {
@@ -153,9 +112,23 @@ func rtScriptName(scr *FnCodeDesc, suff string) string {
 	return "script" + suff + "." + rt_handlers[scr.Lang].Ext
 }
 
-func (lh *rt_info)info() *swyapi.LangInfo {
+func rtPackages(id SwoId, lang string)  (string, string, bool) {
+	h := rt_handlers[lang]
+	if h.RunPkgPath != nil {
+		h, m := h.RunPkgPath(id)
+		return h, m, true
+	} else {
+		return "", "", false
+	}
+}
+
+func (lh *langInfo)info() *swyapi.LangInfo {
 	return &swyapi.LangInfo{
 		Version:	lh.Version,
 		Packages:	lh.Packages,
 	}
+}
+
+func packagesDir() string {
+	return conf.Wdog.Volume + "/" + PackagesSubdir
 }

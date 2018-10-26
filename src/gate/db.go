@@ -179,7 +179,7 @@ func idReq(ctx context.Context, id string, q bson.M) bson.M {
 }
 
 type DBLogRec struct {
-	FnId		string		`bson:"fnid"`
+	Cookie		string		`bson:"cookie"`
 	Event		string		`bson:"event"`
 	Time		time.Time	`bson:"ts"`
 	Text		string		`bson:"text"`
@@ -360,13 +360,13 @@ func dbFnStatsDrop(ctx context.Context, cookie string, st *FnStats) error {
 	return maybe(dbCol(ctx, DBColFnStats).Remove(bson.M{"cookie": cookie}))
 }
 
-func logSaveResult(ctx context.Context, fnCookie, event, stdout, stderr string) {
+func logSaveResult(ctx context.Context, cookie, event, stdout, stderr string) {
 	c := dbCol(ctx, DBColLogs)
 	tm := time.Now()
 
 	if stdout != "" {
 		c.Insert(DBLogRec{
-			FnId:		fnCookie,
+			Cookie:		cookie,
 			Event:		"stdout." + event,
 			Time:		tm,
 			Text:		stdout,
@@ -375,7 +375,7 @@ func logSaveResult(ctx context.Context, fnCookie, event, stdout, stderr string) 
 
 	if stderr != "" {
 		c.Insert(DBLogRec{
-			FnId:		fnCookie,
+			Cookie:		cookie,
 			Event:		"stderr." + event,
 			Time:		tm,
 			Text:		stderr,
@@ -383,18 +383,18 @@ func logSaveResult(ctx context.Context, fnCookie, event, stdout, stderr string) 
 	}
 }
 
-func logSaveEvent(ctx context.Context, fnid, text string) {
+func logSaveEvent(ctx context.Context, cookie, text string) {
 	dbCol(ctx, DBColLogs).Insert(DBLogRec{
-		FnId:		fnid,
+		Cookie:		cookie,
 		Event:		"event",
 		Time:		time.Now(),
 		Text:		text,
 	})
 }
 
-func logGetFor(ctx context.Context, id *SwoId, since *time.Time) ([]DBLogRec, error) {
+func logGetFor(ctx context.Context, cookie string, since *time.Time) ([]DBLogRec, error) {
 	var logs []DBLogRec
-	q := bson.M{"fnid": id.Cookie()}
+	q := bson.M{"cookie": cookie}
 	if since != nil {
 		q["ts"] = bson.M{"$gt": since}
 	}
@@ -403,7 +403,7 @@ func logGetFor(ctx context.Context, id *SwoId, since *time.Time) ([]DBLogRec, er
 }
 
 func logRemove(ctx context.Context, fn *FunctionDesc) error {
-	_, err := dbCol(ctx, DBColLogs).RemoveAll(bson.M{"fnid": fn.Cookie})
+	_, err := dbCol(ctx, DBColLogs).RemoveAll(bson.M{"cookie": fn.Cookie})
 	return maybe(err)
 }
 
@@ -597,6 +597,11 @@ func dbConnect() error {
 	err = dbs.DB(DBStateDB).C(DBColEvents).EnsureIndex(index)
 	if err != nil {
 		return fmt.Errorf("No name index for repos: %s", err.Error())
+	}
+
+	_, err = dbs.DB(DBStateDB).C(DBColLogs).UpdateAll(bson.M{}, bson.M{"$rename":bson.M{"fnid":"cookie"}})
+	if err != nil {
+		return fmt.Errorf("Cannot update logs field fnid to cookie")
 	}
 
 	return nil

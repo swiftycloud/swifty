@@ -207,7 +207,7 @@ type ProjectItem struct {
 	Project		string			`json:"project"`
 }
 
-type FunctionLogEntry struct {
+type LogEntry struct {
 	Event		string			`json:"event"`
 	Ts		string			`json:"ts"`
 	Text		string			`json:"text"`
@@ -317,7 +317,8 @@ type RouterEntry struct {
 	Method		string		`json:"method"`
 	Path		string		`json:"path"`
 	Call		string		`json:"call"`
-	Key		string		`json:"key"`
+	AuthCtx		string		`json:"authctx,omitempty"`
+	Key		string		`json:"key,omitempty"`
 }
 
 type RouterAdd struct {
@@ -334,6 +335,15 @@ type RouterInfo struct {
 	TLen		int		`json:"table_len"`
 	URL		string		`json:"url"`
 }
+
+type PkgAdd struct {
+	Name		string		`json:"name"`
+}
+
+type PkgInfo struct {
+	Id		string		`json:"id"`	// name
+}
+
 
 /*
  * This type is not seen by wdog itself, instead, it's described

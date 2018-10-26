@@ -73,7 +73,7 @@ func setupLimits(ten string, td *TenantMemData, ul *swyapi.UserLimits, off *TenS
 		 * Bad design? Maybe, but what are other options?
 		 */
 		td.GBS_l = ul.Fn.GBS
-		td.GBS_o = off.GBS()
+		td.GBS_o = GBS(off.RunCost)
 		td.BOut_l = ul.Fn.BytesOut
 		td.BOut_o = off.BytesOut
 	}
@@ -250,7 +250,7 @@ func (fmd *FnMemData)rslimited() bool {
 	tmd := fmd.td
 
 	if tmd.GBS_l != 0 {
-		if tmd.stats.GBS() - tmd.GBS_o > tmd.GBS_l {
+		if GBS(tmd.stats.RunCost) - tmd.GBS_o > tmd.GBS_l {
 			return true
 		}
 	}

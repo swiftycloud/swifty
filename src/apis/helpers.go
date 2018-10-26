@@ -90,6 +90,10 @@ func (cln *Client)Accounts() *Collection {
 	return &Collection{cln, "accounts"}
 }
 
+func (cln *Client)Packages(lng string) *Collection {
+	return &Collection{cln, "packages/" + lng}
+}
+
 func (cln *Client)Repos() *Collection {
 	return &Collection{cln, "repos"}
 }

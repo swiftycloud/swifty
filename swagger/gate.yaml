@@ -117,6 +117,39 @@ paths:
           description: Need to authenticate
         '403':
           description: Bad authentication token
+  '/logs':
+    parameters:
+      - in: header
+        name: X-Auth-Token
+        type: string
+        required: true
+      - in: query
+        name: project
+        type: string
+        required: false
+        description: 'Project to get logs for'
+      - in: query
+        name: last
+        type: string
+        required: false
+        description: 'Get logs for last pariod. Format is ([0-9]+h)?([0-9]+m)?([0-9]+s)?'
+    get:
+      summary: Show per-project user logs
+      responses:
+        '200':
+          description: OK
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/LogEntry'
+        '400':
+          description: Bad request
+          schema:
+            $ref: '#/definitions/GateError'
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad authentication token
   /project/list:
     post:
       summary: List projects
@@ -425,7 +458,7 @@ paths:
           schema:
             type: array
             items:
-              $ref: '#/definitions/FunctionLogEntry'
+              $ref: '#/definitions/LogEntry'
         '400':
           description: Bad request
           schema:
@@ -2374,7 +2407,7 @@ definitions:
         items:
           type: string
           example: foobucket
-  FunctionLogEntry:
+  LogEntry:
     description: Entry in function logs
     properties:
       event:
@@ -2640,6 +2673,9 @@ definitions:
       key:
         type: string
         description: Random value (up to 64 bytes long) passed into functions
+      authctx:
+        type: string
+        description: Auth context this entry will enforce
   RouterAdd:
     type: object
     description: Router creation info

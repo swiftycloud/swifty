@@ -62,6 +62,11 @@ func tryRefreshToken(kc *KsClient, token string) error {
 }
 
 func (kc *KsClient)MakeReq(ksreq *KeystoneReq, in interface{}, out interface{}) error {
+	err, _ := kc.MakeReq2(ksreq, in, out)
+	return err
+}
+
+func (kc *KsClient)MakeReq2(ksreq *KeystoneReq, in interface{}, out interface{}) (error, int) {
 	var cToken string
 	headers := make(map[string]string)
 retry:
@@ -89,7 +94,12 @@ retry:
 				goto retry
 			}
 		}
-		return err
+
+		code := -1
+		if resp != nil {
+			code = resp.StatusCode
+		}
+		return err, code
 	}
 
 	defer resp.Body.Close()
@@ -98,11 +108,11 @@ retry:
 	if out != nil {
 		err = xhttp.RResp(resp, out)
 		if err != nil {
-			return err
+			return err, -1
 		}
 	}
 
-	return nil
+	return nil, 0
 }
 
 var tdCache sync.Map
@@ -128,9 +138,14 @@ func KeystoneGetTokenData(addr, token string) (*KeystoneTokenData, int) {
 		},
 	}
 
-	err := kc.MakeReq(&req, nil, &out)
+	err, code := kc.MakeReq2(&req, nil, &out)
 	if err != nil {
-		return nil, http.StatusUnauthorized /* FIXME -- get status from keystone too */
+		switch code {
+		case http.StatusUnauthorized, http.StatusNotFound:
+			return nil, http.StatusUnauthorized
+		default:
+			return nil, http.StatusInternalServerError
+		}
 	}
 
 	v, loaded := tdCache.LoadOrStore(token, &out.Token)

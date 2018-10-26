@@ -40,6 +40,10 @@ var repStates = map[int]string {
 	DBRepoStateRdy:	"ready",
 }
 
+func cloneDir() string {
+	return conf.Home + "/" + CloneDir
+}
+
 type RepoDesc struct {
 	// These objects are kept in Mongo, which requires the below
 	// field to be present...
@@ -245,6 +249,7 @@ func cloneGit(ctx context.Context, rd *RepoDesc, ac *AccDesc) (string, error) {
 		ctxlog(ctx).Errorf("can't clone %s -> %s: %s (%s:%s)",
 				rd.URL(), clone_to, err.Error(),
 				stdout.String(), stderr.String())
+		logSaveResult(ctx, rd.SwoId.PCookie(), "repo_clone", stdout.String(), stderr.String())
 		return "", err
 	}
 
@@ -257,7 +262,6 @@ func bgClone(rd *RepoDesc, ac *AccDesc, rh *repoHandler) {
 
 	commit, err := rh.clone(ctx, rd, ac)
 	if err != nil {
-		/* FIXME -- keep logs and show them user */
 		dbUpdatePart(ctx, rd, bson.M{ "state": DBRepoStateStl })
 		return
 	}
@@ -421,7 +425,7 @@ func (rd *RepoDesc)pullManual(ctx context.Context) *xrest.ReqErr {
 
 func (rd *RepoDesc)changedFiles(ctx context.Context, till string) ([]string, error) {
 	if rd.Commit == "" {
-		/* FIXME -- pre-configured repos might have this unset */
+		/* Pre-configured repos might have this unset */
 		return []string{}, nil
 	}
 
@@ -566,6 +570,7 @@ func (rd *RepoDesc)pull(ctx context.Context) error {
 		ctxlog(ctx).Errorf("can't pull %s -> %s: %s (%s:%s)",
 			rd.URL(), clone_to, err.Error(),
 			stdout.String(), stderr.String())
+		logSaveResult(ctx, rd.SwoId.PCookie(), "repo_pull", stdout.String(), stderr.String())
 		return err
 	}
 
@@ -745,7 +750,7 @@ func iterAttached(ctx context.Context, accid string, cb func(context.Context, xr
 }
 
 func iterFromAccounts(ctx context.Context, accid string, cb func(context.Context, xrest.Obj) *xrest.ReqErr, urls map[string]bool) *xrest.ReqErr {
-	/* FIXME -- maybe cache repos in a DB? */
+	/* XXX -- maybe cache repos in a DB? */
 	var ac AccDesc
 
 	q := bson.M{"type": "github", "tennant":  gctx(ctx).Tenant}

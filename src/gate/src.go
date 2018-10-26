@@ -31,11 +31,11 @@ func (fn *FunctionDesc)srcDir(version string) string {
 }
 
 func (fn *FunctionDesc)srcPath(version string) string {
-	return conf.Wdog.Volume + "/" + fn.srcDir(version)
+	return functionsDir() + "/" + fn.srcDir(version)
 }
 
-func cloneDir() string {
-	return conf.Home + "/" + CloneDir
+func functionsDir() string {
+	return conf.Wdog.Volume + "/" + FunctionsSubdir
 }
 
 func gitCommit(dir string) (string, error) {
@@ -174,7 +174,7 @@ func putFileFromUrl(ctx context.Context, src *swyapi.FunctionSources, to, script
 }
 
 func GCOldSources(ctx context.Context, fn *FunctionDesc, ver string) {
-	np, err := xh.DropDirPrep(conf.Wdog.Volume, fn.srcDir(ver))
+	np, err := xh.DropDirPrep(functionsDir(), fn.srcDir(ver))
 	if err != nil {
 		ctxlog(ctx).Errorf("Leaking %s sources till FN removal (err %s)", ver, err.Error())
 		return
@@ -222,14 +222,7 @@ func GCOldSources(ctx context.Context, fn *FunctionDesc, ver string) {
 }
 
 func removeSources(ctx context.Context, fn *FunctionDesc) error {
-	sd := fn.srcRoot()
-
-	_, err := xh.DropDir(conf.Home + "/" + CloneDir, sd)
-	if err != nil {
-		return err
-	}
-
-	_, err = xh.DropDir(conf.Wdog.Volume, sd)
+	_, err := xh.DropDir(functionsDir(), fn.srcRoot())
 	if err != nil {
 		return err
 	}

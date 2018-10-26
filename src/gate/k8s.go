@@ -280,30 +280,63 @@ func k8sRun(ctx context.Context, conf *YAMLConf, fn *FunctionDesc) error {
 
 	envs := k8sGenEnvVar(ctx, fn, conf.Wdog.Port)
 
+	vols := []v1.Volume {
+		{
+			Name:		"code",
+			VolumeSource:	v1.VolumeSource {
+				HostPath: &v1.HostPathVolumeSource{
+					Path: fn.srcPath(""),
+				},
+			},
+		},
+		{
+			Name:		"conn",
+			VolumeSource:	v1.VolumeSource {
+				HostPath: &v1.HostPathVolumeSource{
+					Path: "/var/run/swifty/wdogconn/" + fn.Cookie,
+				},
+			},
+		},
+	}
+
+	vols_m := []v1.VolumeMount {
+		{
+			Name:		"code",
+			ReadOnly:	false,
+			MountPath:	rtCodePath(&fn.Code),
+		},
+		{
+			Name:		"conn",
+			ReadOnly:	false,
+			MountPath:	wdogCresponderDir,
+		},
+	}
+
+	h, m, ok := rtPackages(fn.SwoId, fn.Code.Lang)
+	if ok {
+		vols = append(vols, v1.Volume {
+			Name:		"pkg",
+			VolumeSource:	v1.VolumeSource {
+				HostPath: &v1.HostPathVolumeSource {
+					Path: h,
+				},
+			},
+		})
+
+		vols_m = append(vols_m, v1.VolumeMount {
+			Name:		"pkg",
+			ReadOnly:	false,
+			MountPath:	m,
+		})
+	}
+
 	podspec := v1.PodTemplateSpec{
 		ObjectMeta:	metav1.ObjectMeta {
 			Name:	depname,
 			Labels:	k8sGenLabels(fn, depname),
 		},
 		Spec:			v1.PodSpec {
-			Volumes:	[]v1.Volume{
-				{
-					Name:		"code",
-					VolumeSource:	v1.VolumeSource {
-						HostPath: &v1.HostPathVolumeSource{
-								Path: fn.srcPath(""),
-							},
-					},
-				},
-				{
-					Name:		"conn",
-					VolumeSource:	v1.VolumeSource {
-						HostPath: &v1.HostPathVolumeSource{
-								Path: "/var/run/swifty/wdogconn/" + fn.Cookie,
-							},
-					},
-				},
-			},
+			Volumes:	vols,
 			HostNetwork:	false,
 //			HostAliases:	[]v1.HostAlias {
 //				FIXME -- resolve and add s3 API endpoint here
@@ -317,18 +350,7 @@ func k8sRun(ctx context.Context, conf *YAMLConf, fn *FunctionDesc) error {
 					Name:		"wdog",
 					Image:		fn.Code.image(),
 					Env:		envs,
-					VolumeMounts:	[]v1.VolumeMount{
-						{
-							Name:		"code",
-							ReadOnly:	false,
-							MountPath:	rtCodePath(&fn.Code),
-						},
-						{
-							Name:		"conn",
-							ReadOnly:	false,
-							MountPath:	wdogCresponderDir,
-						},
-					},
+					VolumeMounts:	vols_m,
 					ImagePullPolicy: v1.PullNever,
 					SecurityContext: &v1.SecurityContext {
 						ReadOnlyRootFilesystem: &roRoot,
@@ -743,6 +765,25 @@ func refreshDepsAndPods(ctx context.Context, hard bool) error {
 	podiface := k8sClientSet.CoreV1().Pods(conf.Wdog.Namespace)
 
 	for iter.Next(&fn) {
+		if fn.State == DBFuncStateIni {
+			/* Record reft from the early fn.Add stage. Just clean
+			 * one out and forget the sources.
+			 */
+			err = removeSources(ctx, &fn)
+			if err != nil {
+				ctxlog(ctx).Errorf("Can't remove sources for %s: %s", fn.SwoId.Str(), err.Error())
+				return err
+			}
+
+			err = dbRemove(ctx, fn)
+			if err != nil {
+				ctxlog(ctx).Errorf("db %s remove error: %s", fn.SwoId.Str(), err.Error())
+				return err
+			}
+
+			continue
+		}
+
 		/* Try to restatr deps for starting fns and pick up the
 		 * pods for ready ones. For hard-refresh, also restart
 		 * the stalled ones
@@ -774,7 +815,7 @@ func refreshDepsAndPods(ctx context.Context, hard bool) error {
 				 * k8s cluster. Anyway -- try to revitalize it.
 				 */
 
-				err = k8sRun(ctx, &conf, &fn)
+				err = fn.Start(ctx)
 				if err != nil {
 					ctxlog(ctx).Errorf("Can't start back %s dep: %s", fn.SwoId.Str(), err.Error())
 					return err

@@ -969,7 +969,7 @@ func function_code(args []string, opts [16]string) {
 }
 
 func function_logs(args []string, opts [16]string) {
-	var res []swyapi.FunctionLogEntry
+	var res []swyapi.LogEntry
 	args[0], _ = swyclient.Functions().Resolve(curProj, args[0])
 
 	fa := []string{}
@@ -1339,6 +1339,39 @@ func repo_del(args []string, opts [16]string) {
 	swyclient.Repos().Del(args[0])
 }
 
+func pkg_list(args []string, opts [16]string) {
+	var pkgs []swyapi.PkgInfo
+
+	ua := []string{}
+	if opts[0] != "" {
+		ua = append(ua, "lang=" + opts[0])
+	}
+
+	swyclient.Packages(args[0]).List(ua, &pkgs)
+	for _, pkg := range pkgs {
+		fmt.Printf("%s\n", pkg.Id)
+	}
+}
+
+func pkg_info(args []string, opts [16]string) {
+	var pkg swyapi.PkgInfo
+	swyclient.Packages(args[0]).Get(args[1], &pkg)
+	fmt.Printf("%s\n", pkg.Id)
+}
+
+func pkg_add(args []string, opts [16]string) {
+	var pkg swyapi.PkgInfo
+
+	swyclient.Packages(args[0]).Add(&swyapi.PkgAdd{
+		Name: args[1],
+	}, &pkg)
+	fmt.Printf("%s package created\n", pkg.Id)
+}
+
+func pkg_del(args []string, opts [16]string) {
+	swyclient.Packages(args[0]).Del(args[1])
+}
+
 func acc_list(args []string, opts [16]string) {
 	var ais []map[string]string
 	ua := []string{}
@@ -1646,6 +1679,11 @@ const (
 	CMD_AD string		= "ad"
 	CMD_AU string		= "au"
 
+	CMD_PKL string		= "pkl"
+	CMD_PKI string		= "pki"
+	CMD_PKA string		= "pka"
+	CMD_PKD string		= "pkd"
+
 	CMD_UL string		= "ul"
 	CMD_UI string		= "ui"
 	CMD_UA string		= "ua"
@@ -1724,6 +1762,11 @@ var cmdOrder = []string {
 	CMD_AI,
 	CMD_AD,
 	CMD_AU,
+
+	CMD_PKL,
+	CMD_PKI,
+	CMD_PKA,
+	CMD_PKD,
 
 	CMD_UL,
 	CMD_UI,
@@ -1814,6 +1857,11 @@ var cmdMap = map[string]*cmdDesc {
 	CMD_AA:		&cmdDesc{ help: "Add account",		call: acc_add		},
 	CMD_AD:		&cmdDesc{ help: "Del account",		call: acc_del		},
 	CMD_AU:		&cmdDesc{ help: "Update account",	call: acc_upd		},
+
+	CMD_PKL:	&cmdDesc{ help: "List packages",	call: pkg_list		},
+	CMD_PKI:	&cmdDesc{ help: "Show package info",	call: pkg_info		},
+	CMD_PKA:	&cmdDesc{ help: "Add package",		call: pkg_add		},
+	CMD_PKD:	&cmdDesc{ help: "Del package",		call: pkg_del		},
 
 	CMD_UL:		&cmdDesc{ help: "List users",		call: user_list,	adm: true },
 	CMD_UI:		&cmdDesc{ help: "Show user info",	call: user_info,	adm: true },
@@ -1974,6 +2022,11 @@ func main() {
 	setupCommonCmd(CMD_AD, "ID")
 	setupCommonCmd(CMD_AU, "ID")
 	cmdMap[CMD_AU].opts.StringVar(&opts[0], "param", "", "List of key=value pairs, :-separated")
+
+	setupCommonCmd(CMD_PKL, "LANG")
+	setupCommonCmd(CMD_PKA, "LANG", "NAME")
+	setupCommonCmd(CMD_PKI, "LANG", "NAME")
+	setupCommonCmd(CMD_PKD, "LANG", "NAME")
 
 	setupCommonCmd(CMD_UL)
 	setupCommonCmd(CMD_UA, "UID")
