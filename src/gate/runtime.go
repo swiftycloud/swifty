@@ -5,6 +5,8 @@ import (
 	"os/exec"
 	"strings"
 	"swifty/apis"
+	"strconv"
+	"swifty/common/http"
 	"context"
 )
 
@@ -16,7 +18,6 @@ type langInfo struct {
 	ServiceIP	string
 
 	LInfo		*swyapi.LangInfo
-	Info		func() *swyapi.LangInfo
 
 	Install		func(context.Context, SwoId) error
 	Remove		func(context.Context, SwoId) error
@@ -53,24 +54,55 @@ func init() {
 	}
 }
 
+func getLangInfos(wl string) {
+	for l, h := range rt_handlers {
+		if wl != "*" && wl != l {
+			continue
+		}
+
+		li := getInfo(l, h)
+		if li == nil {
+			continue
+		}
+
+		glog.Debugf("Set %s lang info: %v", l, li)
+		h.LInfo = li
+	}
+}
+
 func RtInit() {
 	glog.Debugf("Will detect rt languages in the background")
-	go func() {
-		for l, h := range rt_handlers {
-			if h.Info == nil {
-				continue
-			}
+	go getLangInfos("*")
+	addSysctl("lang_info_refresh", func() string { return "set language name or * here" },
+		func(v string) error {
+			getLangInfos(v)
+			return nil
+		},
+	)
 
-			li := h.Info()
-			if li == nil {
-				glog.Debugf("Cannot get %s lang info", l)
-				continue
-			}
+}
 
-			glog.Debugf("Set %s lang info: %v", l, li)
-			h.LInfo = li
-		}
-	}()
+func getInfo(l string, rh *langInfo) *swyapi.LangInfo {
+	var result swyapi.LangInfo
+
+	resp, err := xhttp.Req(
+			&xhttp.RestReq{
+				Method:  "GET",
+				Address: "http://" + rh.ServiceIP + ":" + strconv.Itoa(conf.Wdog.Port) + "/v1/info",
+				Timeout: 120,
+			}, nil)
+	if err != nil {
+		glog.Errorf("Error getting info from %s: %s", l, err.Error())
+		return nil
+	}
+
+	err = xhttp.RResp(resp, &result)
+	if err != nil {
+		glog.Errorf("Can't parse %s info result: %s", l, err.Error())
+		return nil
+	}
+
+	return &result
 }
 
 func rtLangImage(lng string) string {

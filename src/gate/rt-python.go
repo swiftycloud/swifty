@@ -6,14 +6,12 @@ import (
 	"os"
 	"strings"
 	"errors"
-	"swifty/apis"
 	"os/exec"
 )
 
 var py_info = langInfo {
 	Ext:		"py",
 	CodePath:	"/function",
-	Info:		pyInfo,
 
 	/*
 	 * Install -- call pip install
@@ -24,24 +22,6 @@ var py_info = langInfo {
 	Remove:		xpipRemove,
 	List:		xpipList,
 	RunPkgPath:	pyPackages,
-}
-
-func pyInfo() *swyapi.LangInfo {
-	args := []string{"run", "--rm", rtLangImage("python"), "python3", "--version"}
-	vout, err := exec.Command("docker", args...).Output()
-	if err != nil {
-		return nil
-	}
-
-	ps := GetLines("python", "pip3", "list", "--format", "freeze")
-	if ps == nil {
-		return nil
-	}
-
-	return &swyapi.LangInfo {
-		Version:	string(vout),
-		Packages:	ps,
-	}
 }
 
 func pyPackages(id SwoId) (string, string) {

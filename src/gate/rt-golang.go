@@ -8,7 +8,6 @@ import (
 	"strings"
 	"context"
 	"swifty/common"
-	"swifty/apis"
 	"path/filepath"
 )
 
@@ -30,20 +29,6 @@ var golang_info = langInfo {
 	Remove:		goRemove,
 	List:		goList,
 	BuildPkgPath:	goPkgPath,
-
-	Info:		goInfo,
-}
-
-func goInfo() *swyapi.LangInfo {
-	args := []string{"run", "--rm", rtLangImage("golang"), "go", "version"}
-	out, err := exec.Command("docker", args...).Output()
-	if err != nil {
-		return nil
-	}
-
-	return &swyapi.LangInfo{
-		Version: string(out),
-	}
 }
 
 func goInstall(ctx context.Context, id SwoId) error {

@@ -329,7 +329,6 @@ func main() {
 
 	glog.Debugf("Flavor: %s", Flavor)
 	glog.Debugf("Proxy: %v", conf.Wdog.Proxy != 0)
-	RtInit()
 
 	err = tracerInit()
 	if err != nil {
@@ -385,6 +384,7 @@ func main() {
 		glog.Fatalf("Can't set up prometheus: %s", err.Error())
 	}
 
+	RtInit()
 	done(ctx)
 
 	err = xhttp.ListenAndServe(
