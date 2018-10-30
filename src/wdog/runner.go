@@ -54,7 +54,7 @@ func makeLocalRunner(lang string, tmous int64, suff string) (*Runner, error) {
 	p := make([]int, 2)
 
 	ld := ldescs[lang]
-	lr := &localRunner{lang: &ld, tmous: tmous, suff: suff}
+	lr := &localRunner{lang: ld, tmous: tmous, suff: suff}
 	runner := &Runner {l: lr, restart: restartLocal, ready: true}
 
 	err = syscall.Pipe(p)
@@ -77,7 +77,7 @@ func makeLocalRunner(lang string, tmous int64, suff string) (*Runner, error) {
 	syscall.CloseOnExec(p[0])
 	runner.fine = os.NewFile(uintptr(p[0]), "runner.stderr")
 
-	ld.prep(&ld, suff)
+	ld.prep(ld, suff)
 
 	err = startQnR(runner)
 	if err != nil {

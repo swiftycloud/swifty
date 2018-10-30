@@ -7,6 +7,11 @@ const (
 	MonitorRole	string	= "swifty.monitor"
 )
 
+type LangInfo struct {
+	Version		string			`json:"version"`
+	Packages	[]string		`json:"packages"`
+}
+
 type WdogFunctionRunResult struct {
 	Return		string		`json:"return"`
 	Code		int		`json:"code"`
