@@ -462,19 +462,25 @@ func main() {
 	r := mux.NewRouter()
 
 	inst := xh.SafeEnv("SWD_INSTANCE", "")
-	if inst == "build" {
+	if inst == "service" {
 		lang := xh.SafeEnv("SWD_LANG", "")
 		if lang == "" {
 			log.Fatal("SWD_LANG not set")
 		}
 
 		ld, ok := ldescs[lang]
-		if !ok || ld.build == nil {
-			log.Fatal("No build handler for lang")
+		if !ok {
+			log.Fatal("No handler for lang")
 		}
 
-		r.HandleFunc("/v1/run", func(w http.ResponseWriter, r *http.Request) {
-			handleBuild(w, r, ld.build)
+		if ld.build != nil {
+			r.HandleFunc("/v1/build", func(w http.ResponseWriter, r *http.Request) {
+				handleBuild(w, r, ld.build)
+			})
+		}
+
+		r.HandleFunc("/v1/ping", func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
 		})
 	} else if inst == "proxy" {
 		crespDir := xh.SafeEnv("SWD_CRESPONDER", "")

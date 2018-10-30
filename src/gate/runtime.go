@@ -13,7 +13,7 @@ type langInfo struct {
 	Ext		string
 	Build		bool
 	Devel		bool
-	BuildIP		string
+	ServiceIP	string
 
 	LInfo		*swyapi.LangInfo
 	Info		func() *swyapi.LangInfo
@@ -92,8 +92,8 @@ func rtNeedToBuild(scr *FnCodeDesc) (bool, *langInfo) {
 	return rh.Build, rh
 }
 
-func rtSetBuilder(lang, ip string) {
-	rt_handlers[lang].BuildIP = ip
+func rtSetService(lang, ip string) {
+	rt_handlers[lang].ServiceIP= ip
 }
 
 /* Path where the sources would appear in container */
