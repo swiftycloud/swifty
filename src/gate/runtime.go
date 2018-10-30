@@ -14,10 +14,9 @@ type langInfo struct {
 	Build		bool
 	Devel		bool
 	BuildIP		string
-	Version		string
-	VArgs		[]string
-	Packages	[]string
-	PList		func() []string
+
+	LInfo		*swyapi.LangInfo
+	Info		func() *swyapi.LangInfo
 
 	Install		func(context.Context, SwoId) error
 	Remove		func(context.Context, SwoId) error
@@ -31,7 +30,7 @@ func GetLines(lng string, args ...string) []string {
 	cmd := append([]string{"run", "--rm", rtLangImage(lng)}, args...)
 	out, err := exec.Command("docker", cmd...).Output()
 	if err != nil {
-		return []string{}
+		return nil
 	}
 
 	sout := strings.TrimSpace(string(out))
@@ -58,23 +57,18 @@ func RtInit() {
 	glog.Debugf("Will detect rt languages in the background")
 	go func() {
 		for l, h := range rt_handlers {
-			args := append([]string{"run", "--rm", rtLangImage(l)}, h.VArgs...)
-			out, err := exec.Command("docker", args...).Output()
-			if err != nil {
-				glog.Debugf("Cannot detect %s version", l)
+			if h.Info == nil {
 				continue
 			}
 
-			h.Version = string(out)
-		}
-	}()
-	go func() {
-		for _, h := range rt_handlers {
-			if h.PList == nil {
+			li := h.Info()
+			if li == nil {
+				glog.Debugf("Cannot get %s lang info", l)
 				continue
 			}
 
-			h.Packages = h.PList()
+			glog.Debugf("Set %s lang info: %v", l, li)
+			h.LInfo = li
 		}
 	}()
 }
@@ -123,10 +117,7 @@ func rtPackages(id SwoId, lang string)  (string, string, bool) {
 }
 
 func (lh *langInfo)info() *swyapi.LangInfo {
-	return &swyapi.LangInfo{
-		Version:	lh.Version,
-		Packages:	lh.Packages,
-	}
+	return lh.LInfo
 }
 
 func packagesDir() string {

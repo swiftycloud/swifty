@@ -7,24 +7,14 @@ import (
 	"os"
 	"os/exec"
 	"errors"
+	"swifty/apis"
 	"swifty/common"
 )
 
 var nodejs_info = langInfo {
 	Ext:		"js",
 	CodePath:	"/function",
-	VArgs:		[]string{"node", "--version"},
-	PList:		func() []string {
-		o := GetLines("nodejs", "npm", "list")
-		ret := []string{}
-		if len(o) > 0 {
-			for _, p := range(o[1:]) {
-				ps := strings.Fields(p)
-				ret = append(ret, ps[len(ps)-1])
-			}
-		}
-		return ret
-	},
+	Info:		nodeInfo,
 
 	/*
 	 * Install -- use npm install
@@ -35,6 +25,32 @@ var nodejs_info = langInfo {
 	Remove:		nodeRemove,
 	List:		nodeList,
 	RunPkgPath:	nodeModules,
+}
+
+func nodeInfo() *swyapi.LangInfo {
+	args := []string{"run", "--rm", rtLangImage("nodejs"), "node", "--version"}
+	vout, err := exec.Command("docker", args...).Output()
+	if err != nil {
+		return nil
+	}
+
+	o := GetLines("nodejs", "npm", "list")
+	if o == nil {
+		return nil
+	}
+
+	ret := []string{}
+	if len(o) > 0 {
+		for _, p := range(o[1:]) {
+			ps := strings.Fields(p)
+			ret = append(ret, ps[len(ps)-1])
+		}
+	}
+
+	return &swyapi.LangInfo {
+		Version:	string(vout),
+		Packages:	ret,
+	}
 }
 
 func nodeModules(id SwoId) (string, string) {
