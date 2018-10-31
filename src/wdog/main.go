@@ -81,12 +81,17 @@ type LangDesc struct {
 	build		buildFn
 	prep		func(*LangDesc, string)
 	info		func() (string, []string, error)
+	packages	func(string) ([]string, error)
 }
 
 func goList(dir string) ([]string, error) {
 	stuff := []string{}
 
 	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
 		if !info.IsDir() {
 			return nil
 		}
@@ -122,6 +127,10 @@ func goInfo() (string, []string, error) {
 	return string(v), ps, nil
 }
 
+func goPackages(tenant string) ([]string, error) {
+	return goList("/go-pkg/" + tenant + "/golang/src")
+}
+
 func pyInfo() (string, []string, error) {
 	v, err := exec.Command("python3", "--version").Output()
 	if err != nil {
@@ -134,6 +143,15 @@ func pyInfo() (string, []string, error) {
 	}
 
 	return string(v), xh.GetLines(ps), nil
+}
+
+func xpipPackages(tenant string) ([]string, error) {
+	ps, err := exec.Command("python3", "/usr/bin/xpip.py", tenant, "list").Output()
+	if err != nil {
+		return nil, err
+	}
+
+	return xh.GetLines(ps), nil
 }
 
 func nodeInfo() (string, []string, error) {
@@ -159,6 +177,31 @@ func nodeInfo() (string, []string, error) {
 	return string(v), ret, nil
 }
 
+func nodeModules(tenant string) ([]string, error) {
+	stuff := []string{}
+
+	d := "/packages/" + tenant + "/nodejs/node_modules"
+	dir, err := os.Open(d)
+	if err != nil {
+		return nil, errors.New("Error accessing node_modules")
+	}
+
+	ents, err := dir.Readdirnames(-1)
+	dir.Close()
+	if err != nil {
+		return nil, errors.New("Error reading node_modules")
+	}
+
+	for _, sd := range ents {
+		_, err := os.Stat(d + "/" + sd + "/package.json")
+		if err == nil {
+			stuff = append(stuff, sd)
+		}
+	}
+
+	return stuff, nil
+}
+
 func rubyInfo() (string, []string, error) {
 	v, err := exec.Command("ruby", "--version").Output()
 	if err != nil {
@@ -179,11 +222,13 @@ var ldescs = map[string]*LangDesc {
 		build:	doBuildGo,
 		prep:	mkExecRunner,
 		info:	goInfo,
+		packages: goPackages,
 	},
 	"python": &LangDesc {
 		runner:	"/usr/bin/swy-runner.py",
 		prep:	mkExecPath,
 		info:	pyInfo,
+		packages: xpipPackages,
 	},
 	"swift": &LangDesc {
 		runner:	"/swift/swycode/debug/runner",
@@ -194,6 +239,7 @@ var ldescs = map[string]*LangDesc {
 		runner:	"/home/swifty/runner-js.sh",
 		prep:	mkExecPath,
 		info:	nodeInfo,
+		packages: nodeModules,
 	},
 	"ruby": &LangDesc {
 		runner:	"/home/swifty/runner.rb",
@@ -318,6 +364,40 @@ func handleRun(runner *Runner, w http.ResponseWriter, r *http.Request) {
 out:
 	http.Error(w, err.Error(), code)
 	log.Errorf("%s", err.Error())
+}
+
+func listPackages(w http.ResponseWriter, ld *LangDesc, tenant string) {
+	var res []string
+
+	err := errors.New("Not implemented")
+	if ld.packages == nil {
+		goto out
+	}
+
+	res, err = ld.packages(tenant)
+	if err != nil {
+		goto out
+	}
+
+	err = xhttp.Respond(w, &res)
+	if err != nil {
+		goto out
+	}
+
+	return
+
+out:
+	http.Error(w, err.Error(), http.StatusInternalServerError)
+	log.Errorf("%s", err.Error())
+}
+
+func handlePackages(w http.ResponseWriter, r *http.Request, ld *LangDesc, tenant string) {
+	switch r.Method {
+	case "GET":
+		listPackages(w, ld, tenant)
+	default:
+		http.Error(w, "", http.StatusMethodNotAllowed)
+	}
 }
 
 func handleInfo(w http.ResponseWriter, r *http.Request, ld *LangDesc) {
@@ -599,6 +679,10 @@ func main() {
 		})
 		r.HandleFunc("/v1/info", func(w http.ResponseWriter, r *http.Request) {
 			handleInfo(w, r, ld)
+		})
+		r.HandleFunc("/v1/packages/{tenant}", func(w http.ResponseWriter, r *http.Request) {
+			ten := mux.Vars(r)["tenant"]
+			handlePackages(w, r, ld, ten)
 		})
 	} else if inst == "proxy" {
 		crespDir := xh.SafeEnv("SWD_CRESPONDER", "")
