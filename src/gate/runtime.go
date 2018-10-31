@@ -2,8 +2,6 @@ package main
 
 import (
 	"path/filepath"
-	"os/exec"
-	"strings"
 	"swifty/apis"
 	"strconv"
 	"swifty/common/http"
@@ -25,17 +23,6 @@ type langInfo struct {
 
 	BuildPkgPath	func(SwoId) string
 	RunPkgPath	func(SwoId) (string, string)
-}
-
-func GetLines(lng string, args ...string) []string {
-	cmd := append([]string{"run", "--rm", rtLangImage(lng)}, args...)
-	out, err := exec.Command("docker", cmd...).Output()
-	if err != nil {
-		return nil
-	}
-
-	sout := strings.TrimSpace(string(out))
-	return strings.Split(sout, "\n")
 }
 
 var rt_handlers = map[string]*langInfo {
