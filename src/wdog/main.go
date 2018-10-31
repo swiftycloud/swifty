@@ -111,7 +111,21 @@ func nodeInfo() (string, []string, error) {
 		return "", nil, err
 	}
 
-	return string(v), []string{}, nil
+	out, err := exec.Command("npm", "list").Output()
+	if err != nil {
+		return "", nil, err
+	}
+
+	o := xh.GetLines(out)
+	ret := []string{}
+	if len(o) > 0 {
+		for _, p := range(o[1:]) {
+			ps := strings.Fields(p)
+			ret = append(ret, ps[len(ps)-1])
+		}
+	}
+
+	return string(v), ret, nil
 }
 
 func rubyInfo() (string, []string, error) {
