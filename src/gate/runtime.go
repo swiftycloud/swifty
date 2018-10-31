@@ -29,6 +29,56 @@ var rt_handlers = map[string]*langInfo {
 	"nodejs":	&nodejs_info,
 	"ruby":		&ruby_info,
 }
+var golang_info = langInfo {
+	Ext:		"go",
+	CodePath:	"/go/src/swycode",
+	Build:		true,
+	BuildPkgPath:	goPkgPath,
+}
+
+func goPkgPath(id SwoId) string {
+	/*
+	 * Build dep mounts volume's packages subdir to /go-pkg
+	 * Wdog builder sets GOPATH to /go:/<this-string>
+	 */
+	return "/go-pkg/" + id.Tennant + "/golang"
+}
+
+var py_info = langInfo {
+	Ext:		"py",
+	CodePath:	"/function",
+	RunPkgPath:	pyPackages,
+}
+
+func pyPackages(id SwoId) (string, string) {
+	/* Python runner adds /packages/* to sys.path for every dir met in there */
+	return packagesDir() + "/" + id.Tennant + "/python", "/packages"
+}
+
+var nodejs_info = langInfo {
+	Ext:		"js",
+	CodePath:	"/function",
+	RunPkgPath:	nodeModules,
+}
+
+func nodeModules(id SwoId) (string, string) {
+	/*
+	 * Node's runner-js.sh sets /home/packages/node_modules as NODE_PATH
+	 */
+	return packagesDir() + "/" + id.Tennant + "/nodejs", "/home/packages"
+}
+
+var ruby_info = langInfo {
+	Ext:		"rb",
+	CodePath:	"/function",
+}
+
+var swift_info = langInfo {
+	Ext:		"swift",
+	CodePath:	"/swift/swycode",
+	Build:		true,
+}
+
 var extmap map[string]string
 
 func init() {
