@@ -21,7 +21,6 @@ var nodejs_info = langInfo {
 	 */
 	Install:	npmInstall,
 	Remove:		nodeRemove,
-	List:		nodeList,
 	RunPkgPath:	nodeModules,
 }
 
@@ -50,31 +49,6 @@ func nodeRemove(ctx context.Context, id SwoId) error {
 	}
 
 	return nil
-}
-
-func nodeList(ctx context.Context, tenant string) ([]string, error) {
-	stuff := []string{}
-
-	d := packagesDir() + "/" + tenant + "/nodejs/node_modules"
-	dir, err := os.Open(d)
-	if err != nil {
-		return nil, errors.New("Error accessing node_modules")
-	}
-
-	ents, err := dir.Readdirnames(-1)
-	dir.Close()
-	if err != nil {
-		return nil, errors.New("Error reading node_modules")
-	}
-
-	for _, sd := range ents {
-		_, err := os.Stat(d + "/" + sd + "/package.json")
-		if err == nil {
-			stuff = append(stuff, sd)
-		}
-	}
-
-	return stuff, nil
 }
 
 func npmInstall(ctx context.Context, id SwoId) error {

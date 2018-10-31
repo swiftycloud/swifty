@@ -5,6 +5,7 @@ import (
 	"swifty/apis"
 	"strconv"
 	"swifty/common/http"
+	"swifty/common/xrest"
 	"context"
 )
 
@@ -19,7 +20,6 @@ type langInfo struct {
 
 	Install		func(context.Context, SwoId) error
 	Remove		func(context.Context, SwoId) error
-	List		func(context.Context, string) ([]string, error)
 
 	BuildPkgPath	func(SwoId) string
 	RunPkgPath	func(SwoId) (string, string)
@@ -90,6 +90,29 @@ func getInfo(l string, rh *langInfo) *swyapi.LangInfo {
 	}
 
 	return &result
+}
+
+func rtListPackages(ctx context.Context, rh *langInfo) ([]string, *xrest.ReqErr) {
+	var result []string
+
+	ten := gctx(ctx).Tenant
+
+	resp, err := xhttp.Req(
+			&xhttp.RestReq{
+				Method:  "GET",
+				Address: rtService(rh, "packages/" + ten),
+				Timeout: 120,
+			}, nil)
+	if err != nil {
+		return nil, GateErrM(swyapi.GateGenErr, "Cannot list packages")
+	}
+
+	err = xhttp.RResp(resp, &result)
+	if err != nil {
+		return nil, GateErrM(swyapi.GateBadResp, "Cannot list packages")
+	}
+
+	return result, nil
 }
 
 func rtLangImage(lng string) string {

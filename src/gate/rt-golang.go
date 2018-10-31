@@ -8,7 +8,6 @@ import (
 	"strings"
 	"context"
 	"swifty/common"
-	"path/filepath"
 )
 
 const (
@@ -27,7 +26,6 @@ var golang_info = langInfo {
 	 */
 	Install:	goInstall,
 	Remove:		goRemove,
-	List:		goList,
 	BuildPkgPath:	goPkgPath,
 }
 
@@ -79,32 +77,6 @@ func goRemove(ctx context.Context, id SwoId) error {
 	}
 
 	return nil
-}
-
-func goList(ctx context.Context, tenant string) ([]string, error) {
-	stuff := []string{}
-
-	d := packagesDir() + "/" + tenant + "/golang/src"
-	err := filepath.Walk(d, func(path string, info os.FileInfo, err error) error {
-		if !info.IsDir() {
-			return nil
-		}
-
-		if strings.HasSuffix(path, "/.git") {
-			path, _ = filepath.Rel(d, path)	// Cut the packages folder
-			path = filepath.Dir(path)	// Cut the .git one
-			stuff = append(stuff, path)
-			return filepath.SkipDir
-		}
-
-		return nil
-	})
-
-	if err != nil {
-		return nil, errors.New("Error listing packages")
-	}
-
-	return stuff, nil
 }
 
 func goPkgPath(id SwoId) string {

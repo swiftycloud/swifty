@@ -41,19 +41,18 @@ func (ps Packages)Get(ctx context.Context, r *http.Request) (xrest.Obj, *xrest.R
 }
 
 func (ps Packages)Iterate(ctx context.Context, q url.Values, cb func(context.Context, xrest.Obj) *xrest.ReqErr) *xrest.ReqErr {
-	h := rt_handlers[ps.Lang]
-	if h.List == nil {
+	h, ok := rt_handlers[ps.Lang]
+	if !ok {
 		return GateErrC(swyapi.GateNotAvail)
 	}
 
-	packages, err := h.List(ctx, gctx(ctx).Tenant)
-	if err != nil {
-		return GateErrE(swyapi.GateGenErr, err)
+	pkgs, cerr := rtListPackages(ctx, h)
+	if cerr != nil {
+		return cerr
 	}
-
 	id := ctxSwoId(ctx, NoProject, "")
 
-	for _, pkg := range packages {
+	for _, pkg := range pkgs {
 		id.Name = pkg
 		cerr := cb(ctx, &PackageDesc {
 			SwoId: *id,
