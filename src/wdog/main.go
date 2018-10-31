@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"time"
 	"sync"
+	"path/filepath"
 	"syscall"
 	"fmt"
 	"io"
@@ -82,13 +83,43 @@ type LangDesc struct {
 	info		func() (string, []string, error)
 }
 
+func goList(dir string) ([]string, error) {
+	stuff := []string{}
+
+	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+		if !info.IsDir() {
+			return nil
+		}
+
+		if strings.HasSuffix(path, "/.git") {
+			path, _ = filepath.Rel(dir, path) // Cut the packages folder
+			path = filepath.Dir(path)       // Cut the .git one
+			stuff = append(stuff, path)
+			return filepath.SkipDir
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return nil, errors.New("Error listing packages")
+	}
+
+	return stuff, nil
+}
+
 func goInfo() (string, []string, error) {
 	v, err := exec.Command("go", "version").Output()
 	if err != nil {
 		return "", nil, err
 	}
 
-	return string(v), []string{}, nil
+	ps, err := goList("/go/src")
+	if err != nil {
+		return "", nil, err
+	}
+
+	return string(v), ps, nil
 }
 
 func pyInfo() (string, []string, error) {
