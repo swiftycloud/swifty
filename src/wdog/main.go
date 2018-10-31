@@ -120,7 +120,12 @@ func rubyInfo() (string, []string, error) {
 		return "", nil, err
 	}
 
-	return string(v), []string{}, nil
+	ps, err := exec.Command("gem", "list").Output()
+	if err != nil {
+		return "", nil, err
+	}
+
+	return string(v), xh.GetLines(ps), nil
 }
 
 var ldescs = map[string]*LangDesc {
