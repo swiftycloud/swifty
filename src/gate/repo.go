@@ -613,6 +613,11 @@ func pullRepos(ctx context.Context, ts time.Time) (int, error) {
 }
 
 var repoSyncPeriod time.Duration
+var repoResyncOnError time.Duration = 5 * time.Minute
+
+func init() {
+	addTimeSysctl("repo_resync_on_error", &repoResyncOnError)
+}
 
 func periodicPullRepos() {
 	for {
@@ -623,7 +628,7 @@ func periodicPullRepos() {
 
 		synced, err := pullRepos(ctx, t.Add(-nxt))
 		if err != nil {
-			nxt = 5 * time.Minute /* Will try in 5 minutes */
+			nxt = repoResyncOnError
 		}
 
 		t = t.Add(nxt)
