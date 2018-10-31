@@ -1,0 +1,44 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  labels:
+    deployment: swy-ruby-service
+  annotations:
+    scheduler.alpha.kubernetes.io/critical-pod: /
+  name: swy-ruby-service
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      deployment: swy-ruby-service
+  template:
+    metadata:
+      labels:
+        deployment: swy-ruby-service
+        swyservice: ruby
+      name: swy-ruby-service
+    spec:
+      containers:
+      - name: ruby-service
+        image: "swifty/ruby"
+        imagePullPolicy: Never
+        env:
+        - name: SWD_INSTANCE
+          value: "service"
+        - name: SWD_PORT
+          value: "8687"
+        - name: SWD_LANG
+          value: "ruby"
+        - name: SWD_POD_IP
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: status.podIP
+        volumeMounts:
+        - mountPath: /packages
+          name: packages
+      volumes:
+      - hostPath:
+          path: /home/swifty-volume/packages
+        name: packages

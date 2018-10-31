@@ -406,11 +406,17 @@ type k8sPod struct {
 }
 
 func (pod *k8sPod)Service() string {
-	if pod.DepName == "swy-go-service" {
+	switch pod.DepName {
+	case "swy-go-service":
 		return "golang"
-	}
-	if pod.DepName == "swy-swift-service" {
+	case "swy-swift-service":
 		return "swift"
+	case "swy-python-service":
+		return "python"
+	case "swy-ruby-service":
+		return "ruby"
+	case "swy-nodejs-service":
+		return "nodejs"
 	}
 
 	return ""
