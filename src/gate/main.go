@@ -37,6 +37,8 @@ const (
 )
 
 var (
+	PodStartBase time.Duration		= 100 * time.Millisecond
+	PodStartGain time.Duration		= 50 * time.Millisecond
 	PodStartTmo time.Duration		= 120 * time.Second
 	DepScaleupRelax time.Duration		= 16 * time.Second
 	DepScaledownStep time.Duration		= 8 * time.Second
@@ -45,6 +47,8 @@ var (
 
 func init() {
 	addTimeSysctl("pod_start_tmo",		&PodStartTmo)
+	addTimeSysctl("pod_start_relax",	&PodStartBase)
+	addTimeSysctl("pod_start_gain",		&PodStartGain)
 	addTimeSysctl("dep_scaleup_relax",	&DepScaleupRelax)
 	addTimeSysctl("dep_scaledown_step",	&DepScaledownStep)
 	addTimeSysctl("limits_update_period",	&TenantLimitsUpdPeriod)

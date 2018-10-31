@@ -472,7 +472,7 @@ func k8sPodDel(obj interface{}) {
 
 func waitPodPort(ctx context.Context, addr, port string) error {
 	printed := false
-	wt := 100 * time.Millisecond
+	wt := PodStartBase
 	till := time.Now().Add(PodStartTmo)
 	for {
 		conn, err := net.Dial("tcp", addr + ":" + port)
@@ -500,7 +500,7 @@ func waitPodPort(ctx context.Context, addr, port string) error {
 			printed = true
 		}
 		<-time.After(wt)
-		wt += 50 * time.Millisecond
+		wt += PodStartGain
 	}
 
 	return nil
