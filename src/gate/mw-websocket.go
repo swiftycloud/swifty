@@ -66,7 +66,7 @@ var MwareWebSocket = MwareOps {
 	Fini:	FiniWebSocket,
 	GetEnv:	GetEnvWebSocket,
 	Info:	InfoWebSocket,
-	Devel:	true,
+	Disabled:	true,
 }
 
 type wsConnMap struct {

@@ -56,5 +56,5 @@ var MwarePostgres = MwareOps {
 	Init:	InitPostgres,
 	Fini:	FiniPostgres,
 	GetEnv:	GetEnvPostgres,
-	Devel:  true,
+	Disabled:  true,
 }

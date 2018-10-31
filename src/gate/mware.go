@@ -69,7 +69,7 @@ type MwareOps struct {
 	Fini	func(ctx context.Context, mwd *MwareDesc) (error)
 	GetEnv	func(ctx context.Context, mwd *MwareDesc) (map[string][]byte)
 	Info	func(ctx context.Context, mwd *MwareDesc, ifo *swyapi.MwareInfo) (error)
-	Devel	bool
+	Disabled bool
 	LiteOK	bool
 }
 
@@ -457,7 +457,7 @@ func (mwd *MwareDesc)Add(ctx context.Context, _ interface{}) *xrest.ReqErr {
 
 	handler, _ = mwareHandlers[mwd.MwareType]
 
-	if handler.Devel && !ModeDevel {
+	if handler.Disabled {
 		err = fmt.Errorf("Bad mware type %s", mwd.MwareType)
 		goto outdb
 	}
@@ -522,4 +522,13 @@ out:
 stalled:
 	mwd.ToState(ctx, DBMwareStateStl, -1)
 	goto out
+}
+
+func MwInit() {
+	for mw, mh := range mwareHandlers {
+		if ModeDevel {
+			mh.Disabled = false
+		}
+		addBoolSysctl("mw_" + mw + "_disable", &mh.Disabled)
+	}
 }

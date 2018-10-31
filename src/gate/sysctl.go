@@ -39,6 +39,24 @@ func (ctl *Sysctl)Upd(ctx context.Context, upd interface{}) *xrest.ReqErr {
 
 var sysctls = map[string]*Sysctl {}
 
+func addBoolSysctl(name string, b *bool) {
+	sysctls[name] = &Sysctl{
+		Name: name,
+		Get: func() string { if *b { return "true" } else { return "false" } },
+		Set: func(v string) error {
+			switch v {
+			case "1", "true", "yes", "on":
+				*b = true
+			case "0", "false", "no", "off":
+				*b = false
+			default:
+				return errors.New("Invalid value")
+			}
+			return nil
+		},
+	}
+}
+
 func addTimeSysctl(name string, d *time.Duration) {
 	sysctls[name] = &Sysctl{
 		Name: name,

@@ -110,6 +110,6 @@ var MwareRabbitMQ = MwareOps {
 	Init:	InitRabbitMQ,
 	Fini:	FiniRabbitMQ,
 	GetEnv:	GetEnvRabbitMQ,
-	Devel:	true,
+	Disabled:	true,
 }
 

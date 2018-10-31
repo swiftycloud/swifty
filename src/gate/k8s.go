@@ -757,7 +757,7 @@ func ServiceDepsInit(ctx context.Context) error {
 	}
 
 	for l, rt := range(rt_handlers) {
-		if !rt.Devel || ModeDevel {
+		if !rt.Disabled {
 			ip, ok := srvIps[l]
 			if !ok {
 				if !rt.Build {

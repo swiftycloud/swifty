@@ -13,7 +13,7 @@ type langInfo struct {
 	CodePath	string
 	Ext		string
 	Build		bool
-	Devel		bool
+	Disabled	bool
 	ServiceIP	string
 
 	LInfo		*swyapi.LangInfo
@@ -29,6 +29,7 @@ var rt_handlers = map[string]*langInfo {
 	"nodejs":	&nodejs_info,
 	"ruby":		&ruby_info,
 }
+
 var golang_info = langInfo {
 	Ext:		"go",
 	CodePath:	"/go/src/swycode",
@@ -114,6 +115,12 @@ func RtInit() {
 		},
 	)
 
+	for l, d := range rt_handlers {
+		if ModeDevel {
+			d.Disabled = false
+		}
+		addBoolSysctl("rt_" + l + "_disable", &d.Disabled)
+	}
 }
 
 func getInfo(l string, rh *langInfo) *swyapi.LangInfo {
@@ -203,7 +210,7 @@ func rtLangDetect(fname string) string {
 
 func rtLangEnabled(lang string) bool {
 	h, ok := rt_handlers[lang]
-	return ok && (ModeDevel || !h.Devel)
+	return ok && !h.Disabled
 }
 
 func rtNeedToBuild(scr *FnCodeDesc) (bool, *langInfo) {

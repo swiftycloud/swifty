@@ -384,6 +384,7 @@ func main() {
 		glog.Fatalf("Can't set up prometheus: %s", err.Error())
 	}
 
+	MwInit()
 	RtInit()
 	done(ctx)
 
