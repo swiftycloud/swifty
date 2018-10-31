@@ -20,8 +20,8 @@ type PackageDesc struct {
 
 func (ps Packages)Create(ctx context.Context, p interface{}) (xrest.Obj, *xrest.ReqErr) {
 	params := p.(*swyapi.PkgAdd)
-	h, ok := rt_handlers[ps.Lang]
-	if !ok || h.Install == nil {
+	_, ok := rt_handlers[ps.Lang]
+	if !ok {
 		return nil, GateErrM(swyapi.GateNotFound, "Language not supported")
 	}
 
@@ -68,12 +68,7 @@ func (ps Packages)Iterate(ctx context.Context, q url.Values, cb func(context.Con
 
 func (pkg *PackageDesc)Add(ctx context.Context, _ interface{}) *xrest.ReqErr {
 	h := rt_handlers[pkg.Lang]
-	err := h.Install(ctx, pkg.SwoId)
-	if err != nil {
-		return GateErrE(swyapi.GateGenErr, err)
-	}
-
-	return nil
+	return rtInstallPackage(ctx, h, pkg.SwoId)
 }
 
 func (pkg *PackageDesc)Del(ctx context.Context) *xrest.ReqErr {
