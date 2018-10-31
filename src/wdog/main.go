@@ -82,6 +82,7 @@ type LangDesc struct {
 	prep		func(*LangDesc, string)
 	info		func() (string, []string, error)
 	packages	func(string) ([]string, error)
+	install		func(string, string) error
 	remove		func(string, string) error
 }
 
@@ -136,6 +137,24 @@ const (
         goOsArch string = "linux_amd64" /* FIXME -- run go env and parse */
 )
 
+func goInstall(tenant, name string) error {
+	if strings.Contains(name, "...") {
+		return errors.New("No wildcards (at least yet)")
+	}
+
+	cmd := exec.Command("go", "get", name)
+	env := []string{}
+	for _, oe := range os.Environ() {
+		if strings.HasPrefix(oe, "GOPATH=") {
+			env = append(env, "GOPATH=/go-pkg/" + tenant + "/golang")
+		} else {
+			env = append(env, oe)
+		}
+	}
+	cmd.Env = env
+	return cmd.Run()
+}
+
 func goRemove(tenant, name string) error {
 	if strings.Contains(name, "..") {
 		return errors.New("Bad package name")
@@ -183,6 +202,10 @@ func xpipPackages(tenant string) ([]string, error) {
 	}
 
 	return xh.GetLines(ps), nil
+}
+
+func pipInstall(tenant, name string) error {
+	return exec.Command("pip", "install", "--root", "/packages/" + tenant + "/python", name).Run()
 }
 
 func xpipRemove(tenant, name string) error {
@@ -237,6 +260,12 @@ func nodeModules(tenant string) ([]string, error) {
 	return stuff, nil
 }
 
+func npmInstall(tenant, name string) error {
+	cmd := exec.Command("npm", "install", "--no-save", name)
+	cmd.Dir = "/packages/" + tenant + "/nodejs"
+	return cmd.Run()
+}
+
 func nodeRemove(tenant, name string) error {
 	if strings.Contains(name, "..") || strings.Contains(name, "/") {
 		return errors.New("Bad package name")
@@ -278,6 +307,7 @@ var ldescs = map[string]*LangDesc {
 		prep:	mkExecRunner,
 		info:	goInfo,
 		packages: goPackages,
+		install:  goInstall,
 		remove:   goRemove,
 	},
 	"python": &LangDesc {
@@ -285,6 +315,7 @@ var ldescs = map[string]*LangDesc {
 		prep:	mkExecPath,
 		info:	pyInfo,
 		packages: xpipPackages,
+		install:  pipInstall,
 		remove:   xpipRemove,
 	},
 	"swift": &LangDesc {
@@ -297,6 +328,7 @@ var ldescs = map[string]*LangDesc {
 		prep:	mkExecPath,
 		info:	nodeInfo,
 		packages: nodeModules,
+		install:  npmInstall,
 		remove:   nodeRemove,
 	},
 	"ruby": &LangDesc {
@@ -449,6 +481,32 @@ out:
 	log.Errorf("%s", err.Error())
 }
 
+func installPackage(w http.ResponseWriter, r *http.Request, ld *LangDesc, tenant string) {
+	var rq swyapi.Package
+
+	err := errors.New("Not implemented")
+	if ld.install == nil {
+		goto out
+	}
+
+	err = xhttp.RReq(r, &rq)
+	if err != nil {
+		goto out
+	}
+
+	err = ld.install(tenant, rq.Name)
+	if err != nil {
+		goto out
+	}
+
+	w.WriteHeader(http.StatusOK)
+	return
+
+out:
+	http.Error(w, err.Error(), http.StatusInternalServerError)
+	log.Errorf("%s", err.Error())
+}
+
 func deletePackage(w http.ResponseWriter, r *http.Request, ld *LangDesc, tenant string) {
 	var rq swyapi.Package
 
@@ -481,6 +539,8 @@ func handlePackages(w http.ResponseWriter, r *http.Request, ld *LangDesc, tenant
 		listPackages(w, ld, tenant)
 	case "DELETE":
 		deletePackage(w, r, ld, tenant)
+	case "PUT":
+		installPackage(w, r, ld, tenant)
 	default:
 		http.Error(w, "", http.StatusMethodNotAllowed)
 	}
