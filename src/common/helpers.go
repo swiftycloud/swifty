@@ -213,3 +213,8 @@ func Fortune() string {
 		return ""
 	}
 }
+
+func GetLines(data []byte) []string {
+        sout := strings.TrimSpace(string(data))
+        return strings.Split(sout, "\n")
+}

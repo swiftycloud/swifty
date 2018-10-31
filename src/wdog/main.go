@@ -97,7 +97,12 @@ func pyInfo() (string, []string, error) {
 		return "", nil, err
 	}
 
-	return string(v), []string{}, nil
+	ps, err := exec.Command("pip3", "list", "--format", "freeze").Output()
+	if err != nil {
+		return "", nil, err
+	}
+
+	return string(v), xh.GetLines(ps), nil
 }
 
 func nodeInfo() (string, []string, error) {
