@@ -642,10 +642,10 @@ func handleAuths(ctx context.Context, w http.ResponseWriter, r *http.Request) *x
 		dd := getDeployDesc(ctxSwoId(ctx, aa.Project, aa.Name))
 		dd.Labels = []string{ "auth" }
 		cerr := dd.getItemsParams(ctx, &swyapi.DeploySource{
-			Repo:	demoRep.ObjID.Hex() + "/swy-aaas.yaml",
+			Repo:	demoRep.ObjID.Hex() + "/" + conf.AAASDep,
 		}, map[string]string { "name": aa.Name }, 0)
 		if cerr != nil {
-			ctxlog(ctx).Errorf("Error getting swy-aaas.yaml file")
+			ctxlog(ctx).Errorf("Error getting %s file", conf.AAASDep)
 			return cerr
 		}
 

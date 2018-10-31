@@ -242,6 +242,7 @@ type YAMLConf struct {
 	RepoSyncPeriod	int			`yaml:"repo-sync-period"`
 	RunRate		int			`yaml:"tryrun-rate"`
 	DemoRepo	YAMLConfDemoRepo	`yaml:"demo-repo"`
+	AAASDep		string			`yaml:"aaas-dep"`
 }
 
 func (c *YAMLConf)Validate() error {
@@ -286,6 +287,12 @@ func (c *YAMLConf)Validate() error {
 		fmt.Printf("'tryrun-rate' not set, using default 1/s\n")
 		c.RunRate = 1
 	}
+
+	if c.AAASDep == "" {
+		fmt.Printf("'aaas-dep' not set, using default\n")
+		c.AAASDep = "swy-aaas.yaml"
+	}
+	addStringSysctl("aaas_dep_file", &c.AAASDep)
 	return nil
 }
 
