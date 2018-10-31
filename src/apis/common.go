@@ -7,6 +7,11 @@ const (
 	MonitorRole	string	= "swifty.monitor"
 )
 
+type LangInfo struct {
+	Version		string			`json:"version"`
+	Packages	[]string		`json:"packages"`
+}
+
 type WdogFunctionRunResult struct {
 	Return		string		`json:"return"`
 	Code		int		`json:"code"`
@@ -44,4 +49,8 @@ type UserLimits struct {
 	UId	string			`json:"-",bson:"uid"`
 	PlanId	string			`json:"planid",bson:"planid"`
 	Fn	*FunctionLimits		`json:"function,omitempty",bson:"function,omitempty"`
+}
+
+type Package struct {
+	Name	string		`json:"name"`
 }

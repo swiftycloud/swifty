@@ -79,30 +79,47 @@ type LangDesc struct {
 	runner		string
 	build		buildFn
 	prep		func(*LangDesc, string)
+	info		func() (string, []string, error)
+	packages	func(string) ([]string, error)
+	install		func(string, string) error
+	remove		func(string, string) error
 }
 
-var ldescs = map[string]LangDesc {
-	"golang": LangDesc {
+var ldescs = map[string]*LangDesc {
+	"golang": &LangDesc {
 		runner:	"/go/src/swycode/runner",
 		build:	doBuildGo,
 		prep:	mkExecRunner,
+		info:	goInfo,
+		packages: goPackages,
+		install:  goInstall,
+		remove:   goRemove,
 	},
-	"python": LangDesc {
+	"python": &LangDesc {
 		runner:	"/usr/bin/swy-runner.py",
 		prep:	mkExecPath,
+		info:	pyInfo,
+		packages: xpipPackages,
+		install:  pipInstall,
+		remove:   xpipRemove,
 	},
-	"swift": LangDesc {
+	"swift": &LangDesc {
 		runner:	"/swift/swycode/debug/runner",
 		build:	doBuildSwift,
 		prep:	mkExecRunner,
 	},
-	"nodejs": LangDesc {
+	"nodejs": &LangDesc {
 		runner:	"/home/swifty/runner-js.sh",
 		prep:	mkExecPath,
+		info:	nodeInfo,
+		packages: nodeModules,
+		install:  npmInstall,
+		remove:   nodeRemove,
 	},
-	"ruby": LangDesc {
+	"ruby": &LangDesc {
 		runner:	"/home/swifty/runner.rb",
 		prep:	mkExecPath,
+		info:	rubyInfo,
 	},
 }
 
@@ -221,6 +238,115 @@ func handleRun(runner *Runner, w http.ResponseWriter, r *http.Request) {
 
 out:
 	http.Error(w, err.Error(), code)
+	log.Errorf("%s", err.Error())
+}
+
+func listPackages(w http.ResponseWriter, ld *LangDesc, tenant string) {
+	var res []string
+
+	err := errors.New("Not implemented")
+	if ld.packages == nil {
+		goto out
+	}
+
+	res, err = ld.packages(tenant)
+	if err != nil {
+		goto out
+	}
+
+	err = xhttp.Respond(w, &res)
+	if err != nil {
+		goto out
+	}
+
+	return
+
+out:
+	http.Error(w, err.Error(), http.StatusInternalServerError)
+	log.Errorf("%s", err.Error())
+}
+
+func installPackage(w http.ResponseWriter, r *http.Request, ld *LangDesc, tenant string) {
+	var rq swyapi.Package
+
+	err := errors.New("Not implemented")
+	if ld.install == nil {
+		goto out
+	}
+
+	err = xhttp.RReq(r, &rq)
+	if err != nil {
+		goto out
+	}
+
+	err = ld.install(tenant, rq.Name)
+	if err != nil {
+		goto out
+	}
+
+	w.WriteHeader(http.StatusOK)
+	return
+
+out:
+	http.Error(w, err.Error(), http.StatusInternalServerError)
+	log.Errorf("%s", err.Error())
+}
+
+func deletePackage(w http.ResponseWriter, r *http.Request, ld *LangDesc, tenant string) {
+	var rq swyapi.Package
+
+	err := errors.New("Not implemented")
+	if ld.remove == nil {
+		goto out
+	}
+
+	err = xhttp.RReq(r, &rq)
+	if err != nil {
+		goto out
+	}
+
+	err = ld.remove(tenant, rq.Name)
+	if err != nil {
+		goto out
+	}
+
+	w.WriteHeader(http.StatusOK)
+	return
+
+out:
+	http.Error(w, err.Error(), http.StatusInternalServerError)
+	log.Errorf("%s", err.Error())
+}
+
+func handlePackages(w http.ResponseWriter, r *http.Request, ld *LangDesc, tenant string) {
+	switch r.Method {
+	case "GET":
+		listPackages(w, ld, tenant)
+	case "DELETE":
+		deletePackage(w, r, ld, tenant)
+	case "PUT":
+		installPackage(w, r, ld, tenant)
+	default:
+		http.Error(w, "", http.StatusMethodNotAllowed)
+	}
+}
+
+func handleInfo(w http.ResponseWriter, r *http.Request, ld *LangDesc) {
+	if ld.info == nil {
+		w.WriteHeader(http.StatusNotImplemented)
+		return
+	}
+
+	v, pkgs, err := ld.info()
+	err = xhttp.Respond(w, &swyapi.LangInfo{ Version: v, Packages: pkgs })
+	if err != nil {
+		goto out
+	}
+
+	return
+
+out:
+	http.Error(w, err.Error(), http.StatusInternalServerError)
 	log.Errorf("%s", err.Error())
 }
 
@@ -462,19 +588,32 @@ func main() {
 	r := mux.NewRouter()
 
 	inst := xh.SafeEnv("SWD_INSTANCE", "")
-	if inst == "build" {
+	if inst == "service" {
 		lang := xh.SafeEnv("SWD_LANG", "")
 		if lang == "" {
 			log.Fatal("SWD_LANG not set")
 		}
 
 		ld, ok := ldescs[lang]
-		if !ok || ld.build == nil {
-			log.Fatal("No build handler for lang")
+		if !ok {
+			log.Fatal("No handler for lang")
 		}
 
-		r.HandleFunc("/v1/run", func(w http.ResponseWriter, r *http.Request) {
-			handleBuild(w, r, ld.build)
+		if ld.build != nil {
+			r.HandleFunc("/v1/build", func(w http.ResponseWriter, r *http.Request) {
+				handleBuild(w, r, ld.build)
+			})
+		}
+
+		r.HandleFunc("/v1/ping", func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+		})
+		r.HandleFunc("/v1/info", func(w http.ResponseWriter, r *http.Request) {
+			handleInfo(w, r, ld)
+		})
+		r.HandleFunc("/v1/packages/{tenant}", func(w http.ResponseWriter, r *http.Request) {
+			ten := mux.Vars(r)["tenant"]
+			handlePackages(w, r, ld, ten)
 		})
 	} else if inst == "proxy" {
 		crespDir := xh.SafeEnv("SWD_CRESPONDER", "")

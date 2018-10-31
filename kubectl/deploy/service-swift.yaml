@@ -1,0 +1,44 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  labels:
+    deployment: swy-swift-service
+  annotations:
+    scheduler.alpha.kubernetes.io/critical-pod: /
+  name: swy-swift-service
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      deployment: swy-swift-service
+  template:
+    metadata:
+      labels:
+        deployment: swy-swift-service
+        swyservice: swift
+      name: swy-swift-service
+    spec:
+      containers:
+      - name: swift-service
+        image: "swifty/swift"
+        imagePullPolicy: Never
+        env:
+        - name: SWD_INSTANCE
+          value: "service"
+        - name: SWD_PORT
+          value: "8687"
+        - name: SWD_LANG
+          value: "swift"
+        - name: SWD_POD_IP
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: status.podIP
+        volumeMounts:
+        - mountPath: /swift/swycode
+          name: code
+      volumes:
+      - hostPath:
+          path: /home/swifty-volume/functions
+        name: code

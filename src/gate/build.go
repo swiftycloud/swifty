@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"context"
-	"strconv"
 	"swifty/apis"
 	"swifty/common/http"
 )
@@ -33,7 +32,7 @@ func buildFunction(ctx context.Context, rh *langInfo, fn *FunctionDesc, suf stri
 
 	resp, err := xhttp.Req(
 			&xhttp.RestReq{
-				Address: "http://" + rh.BuildIP + ":" + strconv.Itoa(conf.Wdog.Port) + "/v1/run",
+				Address: rtService(rh, "build"),
 				Timeout: 120,
 			}, breq)
 	if err != nil {
@@ -56,24 +55,24 @@ func buildFunction(ctx context.Context, rh *langInfo, fn *FunctionDesc, suf stri
 }
 
 func BuilderInit(ctx context.Context) error {
-	buildIps, err := k8sGetBuildPods(ctx)
+	srvIps, err := k8sGetServicePods(ctx)
 	if err != nil {
 		return err
 	}
 
 	for l, rt := range(rt_handlers) {
-		if !rt.Build {
-			continue
-		}
-
 		if !rt.Devel || ModeDevel {
-			ip, ok := buildIps[l]
+			ip, ok := srvIps[l]
 			if !ok {
+				if !rt.Build {
+					continue
+				}
+
 				return fmt.Errorf("No builder for %s", l)
 			}
 
-			ctxlog(ctx).Debugf("Set %s as builder for %s", ip, l)
-			rt.BuildIP = ip
+			ctxlog(ctx).Debugf("Set %s as service for %s", ip, l)
+			rt.ServiceIP= ip
 		}
 	}
 

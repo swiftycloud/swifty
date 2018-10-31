@@ -2,43 +2,48 @@ apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
   labels:
-    deployment: swy-swift-builder
+    deployment: swy-go-service
   annotations:
     scheduler.alpha.kubernetes.io/critical-pod: /
-  name: swy-swift-builder
+  name: swy-go-service
   namespace: default
 spec:
   replicas: 1
   selector:
     matchLabels:
-      deployment: swy-swift-builder
+      deployment: swy-go-service
   template:
     metadata:
       labels:
-        deployment: swy-swift-builder
-        swybuild: swift
-      name: swy-swift-builder
+        deployment: swy-go-service
+        swyservice: golang
+      name: swy-go-service
     spec:
       containers:
-      - name: swift-build
-        image: "swifty/swift"
+      - name: golang-service
+        image: "swifty/golang"
         imagePullPolicy: Never
         env:
         - name: SWD_INSTANCE
-          value: "build"
+          value: "service"
         - name: SWD_PORT
           value: "8687"
         - name: SWD_LANG
-          value: "swift"
+          value: "golang"
         - name: SWD_POD_IP
           valueFrom:
             fieldRef:
               apiVersion: v1
               fieldPath: status.podIP
         volumeMounts:
-        - mountPath: /swift/swycode
+        - mountPath: /go/src/swycode
           name: code
+        - mountPath: /go-pkg
+          name: packages
       volumes:
       - hostPath:
           path: /home/swifty-volume/functions
         name: code
+      - hostPath:
+          path: /home/swifty-volume/packages
+        name: packages

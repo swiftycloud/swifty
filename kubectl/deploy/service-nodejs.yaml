@@ -1,0 +1,44 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  labels:
+    deployment: swy-nodejs-service
+  annotations:
+    scheduler.alpha.kubernetes.io/critical-pod: /
+  name: swy-nodejs-service
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      deployment: swy-nodejs-service
+  template:
+    metadata:
+      labels:
+        deployment: swy-nodejs-service
+        swyservice: nodejs
+      name: swy-nodejs-service
+    spec:
+      containers:
+      - name: nodejs-service
+        image: "swifty/nodejs"
+        imagePullPolicy: Never
+        env:
+        - name: SWD_INSTANCE
+          value: "service"
+        - name: SWD_PORT
+          value: "8687"
+        - name: SWD_LANG
+          value: "nodejs"
+        - name: SWD_POD_IP
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: status.podIP
+        volumeMounts:
+        - mountPath: /packages
+          name: packages
+      volumes:
+      - hostPath:
+          path: /home/swifty-volume/packages
+        name: packages

@@ -2,9 +2,10 @@ package main
 
 import (
 	"path/filepath"
-	"os/exec"
-	"strings"
 	"swifty/apis"
+	"strconv"
+	"swifty/common/http"
+	"swifty/common/xrest"
 	"context"
 )
 
@@ -13,29 +14,12 @@ type langInfo struct {
 	Ext		string
 	Build		bool
 	Devel		bool
-	BuildIP		string
-	Version		string
-	VArgs		[]string
-	Packages	[]string
-	PList		func() []string
+	ServiceIP	string
 
-	Install		func(context.Context, SwoId) error
-	Remove		func(context.Context, SwoId) error
-	List		func(context.Context, string) ([]string, error)
+	LInfo		*swyapi.LangInfo
 
 	BuildPkgPath	func(SwoId) string
 	RunPkgPath	func(SwoId) (string, string)
-}
-
-func GetLines(lng string, args ...string) []string {
-	cmd := append([]string{"run", "--rm", rtLangImage(lng)}, args...)
-	out, err := exec.Command("docker", cmd...).Output()
-	if err != nil {
-		return []string{}
-	}
-
-	sout := strings.TrimSpace(string(out))
-	return strings.Split(sout, "\n")
 }
 
 var rt_handlers = map[string]*langInfo {
@@ -45,6 +29,56 @@ var rt_handlers = map[string]*langInfo {
 	"nodejs":	&nodejs_info,
 	"ruby":		&ruby_info,
 }
+var golang_info = langInfo {
+	Ext:		"go",
+	CodePath:	"/go/src/swycode",
+	Build:		true,
+	BuildPkgPath:	goPkgPath,
+}
+
+func goPkgPath(id SwoId) string {
+	/*
+	 * Build dep mounts volume's packages subdir to /go-pkg
+	 * Wdog builder sets GOPATH to /go:/<this-string>
+	 */
+	return "/go-pkg/" + id.Tennant + "/golang"
+}
+
+var py_info = langInfo {
+	Ext:		"py",
+	CodePath:	"/function",
+	RunPkgPath:	pyPackages,
+}
+
+func pyPackages(id SwoId) (string, string) {
+	/* Python runner adds /packages/* to sys.path for every dir met in there */
+	return packagesDir() + "/" + id.Tennant + "/python", "/packages"
+}
+
+var nodejs_info = langInfo {
+	Ext:		"js",
+	CodePath:	"/function",
+	RunPkgPath:	nodeModules,
+}
+
+func nodeModules(id SwoId) (string, string) {
+	/*
+	 * Node's runner-js.sh sets /home/packages/node_modules as NODE_PATH
+	 */
+	return packagesDir() + "/" + id.Tennant + "/nodejs", "/home/packages"
+}
+
+var ruby_info = langInfo {
+	Ext:		"rb",
+	CodePath:	"/function",
+}
+
+var swift_info = langInfo {
+	Ext:		"swift",
+	CodePath:	"/swift/swycode",
+	Build:		true,
+}
+
 var extmap map[string]string
 
 func init() {
@@ -54,29 +88,108 @@ func init() {
 	}
 }
 
+func getLangInfos(wl string) {
+	for l, h := range rt_handlers {
+		if wl != "*" && wl != l {
+			continue
+		}
+
+		li := getInfo(l, h)
+		if li == nil {
+			continue
+		}
+
+		glog.Debugf("Set %s lang info: %v", l, li)
+		h.LInfo = li
+	}
+}
+
 func RtInit() {
 	glog.Debugf("Will detect rt languages in the background")
-	go func() {
-		for l, h := range rt_handlers {
-			args := append([]string{"run", "--rm", rtLangImage(l)}, h.VArgs...)
-			out, err := exec.Command("docker", args...).Output()
-			if err != nil {
-				glog.Debugf("Cannot detect %s version", l)
-				continue
-			}
+	go getLangInfos("*")
+	addSysctl("lang_info_refresh", func() string { return "set language name or * here" },
+		func(v string) error {
+			getLangInfos(v)
+			return nil
+		},
+	)
 
-			h.Version = string(out)
-		}
-	}()
-	go func() {
-		for _, h := range rt_handlers {
-			if h.PList == nil {
-				continue
-			}
+}
 
-			h.Packages = h.PList()
-		}
-	}()
+func getInfo(l string, rh *langInfo) *swyapi.LangInfo {
+	var result swyapi.LangInfo
+
+	resp, err := xhttp.Req(
+			&xhttp.RestReq{
+				Method:  "GET",
+				Address: rtService(rh, "info"),
+				Timeout: 120,
+			}, nil)
+	if err != nil {
+		glog.Errorf("Error getting info from %s: %s", l, err.Error())
+		return nil
+	}
+
+	err = xhttp.RResp(resp, &result)
+	if err != nil {
+		glog.Errorf("Can't parse %s info result: %s", l, err.Error())
+		return nil
+	}
+
+	return &result
+}
+
+func rtListPackages(ctx context.Context, rh *langInfo) ([]string, *xrest.ReqErr) {
+	var result []string
+
+	ten := gctx(ctx).Tenant
+
+	resp, err := xhttp.Req(
+			&xhttp.RestReq{
+				Method:  "GET",
+				Address: rtService(rh, "packages/" + ten),
+				Timeout: 120,
+			}, nil)
+	if err != nil {
+		return nil, GateErrM(swyapi.GateGenErr, "Cannot list packages")
+	}
+
+	err = xhttp.RResp(resp, &result)
+	if err != nil {
+		return nil, GateErrM(swyapi.GateBadResp, "Cannot list packages")
+	}
+
+	return result, nil
+}
+
+func rtRemovePackage(ctx context.Context, rh *langInfo, id SwoId) (*xrest.ReqErr) {
+	ten := gctx(ctx).Tenant
+	_, err := xhttp.Req(
+			&xhttp.RestReq{
+				Method:  "DELETE",
+				Address: rtService(rh, "packages/" + ten),
+				Timeout: 120,
+			}, &swyapi.Package{ Name: id.Name })
+	if err != nil {
+		return GateErrM(swyapi.GateGenErr, "Cannot remove package")
+	}
+
+	return nil
+}
+
+func rtInstallPackage(ctx context.Context, rh *langInfo, id SwoId) (*xrest.ReqErr) {
+	ten := gctx(ctx).Tenant
+	_, err := xhttp.Req(
+			&xhttp.RestReq{
+				Method:  "PUT",
+				Address: rtService(rh, "packages/" + ten),
+				Timeout: 600,
+			}, &swyapi.Package{ Name: id.Name })
+	if err != nil {
+		return GateErrM(swyapi.GateGenErr, "Cannot remove package")
+	}
+
+	return nil
 }
 
 func rtLangImage(lng string) string {
@@ -98,8 +211,12 @@ func rtNeedToBuild(scr *FnCodeDesc) (bool, *langInfo) {
 	return rh.Build, rh
 }
 
-func rtSetBuilder(lang, ip string) {
-	rt_handlers[lang].BuildIP = ip
+func rtSetService(lang, ip string) {
+	rt_handlers[lang].ServiceIP= ip
+}
+
+func rtService(rh *langInfo, call string) string {
+	return "http://" + rh.ServiceIP + ":" + strconv.Itoa(conf.Wdog.Port) + "/v1/" + call
 }
 
 /* Path where the sources would appear in container */
@@ -123,10 +240,7 @@ func rtPackages(id SwoId, lang string)  (string, string, bool) {
 }
 
 func (lh *langInfo)info() *swyapi.LangInfo {
-	return &swyapi.LangInfo{
-		Version:	lh.Version,
-		Packages:	lh.Packages,
-	}
+	return lh.LInfo
 }
 
 func packagesDir() string {

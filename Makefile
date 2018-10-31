@@ -190,7 +190,7 @@ swifty/s3: swy-s3 kubectl/docker/s3/Dockerfile
 	$(Q) $(CP) swy-s3 kubectl/docker/s3/swy-s3
 	$(Q) $(MAKE) -C kubectl/docker/s3 all
 
-images: swifty/python swifty/golang swifty/swift swifty/nodejs
+images: swifty/python swifty/golang swifty/swift swifty/nodejs swifty/ruby
 	@true
 .PHONY: images
 

@@ -308,11 +308,6 @@ type RepoFile struct {
 	Children	*[]*RepoFile	`json:"children,omitempty"`
 }
 
-type LangInfo struct {
-	Version		string			`json:"version"`
-	Packages	[]string		`json:"packages"`
-}
-
 type RouterEntry struct {
 	Method		string		`json:"method"`
 	Path		string		`json:"path"`

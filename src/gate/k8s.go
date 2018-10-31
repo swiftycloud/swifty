@@ -405,12 +405,18 @@ type k8sPod struct {
 	UID		string
 }
 
-func (pod *k8sPod)Build() string {
-	if pod.DepName == "swy-go-builder" {
+func (pod *k8sPod)Service() string {
+	switch pod.DepName {
+	case "swy-go-service":
 		return "golang"
-	}
-	if pod.DepName == "swy-swift-builder" {
+	case "swy-swift-service":
 		return "swift"
+	case "swy-python-service":
+		return "python"
+	case "swy-ruby-service":
+		return "ruby"
+	case "swy-nodejs-service":
+		return "nodejs"
 	}
 
 	return ""
@@ -501,10 +507,10 @@ func waitPodPort(ctx context.Context, addr, port string) error {
 }
 
 func k8sPodUp(ctx context.Context, pod *k8sPod) error {
-	bld := pod.Build()
-	if bld != "" {
-		ctxlog(ctx).Debugf("Update %s builder to %s", bld, pod.WdogAddr)
-		rtSetBuilder(bld, pod.WdogAddr)
+	lng := pod.Service()
+	if lng != "" {
+		ctxlog(ctx).Debugf("Update %s service to %s", lng, pod.WdogAddr)
+		rtSetService(lng, pod.WdogAddr)
 		return nil
 	}
 
@@ -540,7 +546,7 @@ func k8sPodUp(ctx context.Context, pod *k8sPod) error {
 }
 
 func k8sPodDown(ctx context.Context, pod *k8sPod) {
-	if pod.Build() != "" {
+	if pod.Service() != "" {
 		return
 	}
 
@@ -726,19 +732,19 @@ func k8sDepScaleDown(depname string, replicas uint32) uint32 {
 	return uint32(k8sDepScale(depname, int32(replicas), false))
 }
 
-func k8sGetBuildPods(ctx context.Context) (map[string]string, error) {
+func k8sGetServicePods(ctx context.Context) (map[string]string, error) {
 	rv := make(map[string]string)
 
 	podiface := k8sClientSet.CoreV1().Pods(conf.Wdog.Namespace)
-	pods, err := podiface.List(metav1.ListOptions{ LabelSelector: "swybuild" })
+	pods, err := podiface.List(metav1.ListOptions{ LabelSelector: "swyservice" })
 	if err != nil {
 		ctxlog(ctx).Errorf("Error listing PODs: %s", err.Error())
 		return nil, errors.New("Error listing PODs")
 	}
 
 	for _, pod := range pods.Items {
-		build := pod.ObjectMeta.Labels["swybuild"]
-		rv[build] = pod.Status.PodIP
+		lang := pod.ObjectMeta.Labels["swyservice"]
+		rv[lang] = pod.Status.PodIP
 	}
 
 	return rv, nil
