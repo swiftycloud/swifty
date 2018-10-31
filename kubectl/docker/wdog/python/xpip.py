@@ -14,7 +14,7 @@ if sys.argv[2] == "list":
         print(p)
 
 if sys.argv[2] == "remove":
-    pkg = local_set.get(sys.argv[2], None)
+    pkg = local_set.get(sys.argv[3], None)
     if pkg == None:
         sys.exit(1)
 

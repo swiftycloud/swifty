@@ -82,6 +82,7 @@ type LangDesc struct {
 	prep		func(*LangDesc, string)
 	info		func() (string, []string, error)
 	packages	func(string) ([]string, error)
+	remove		func(string, string) error
 }
 
 func goList(dir string) ([]string, error) {
@@ -131,6 +132,36 @@ func goPackages(tenant string) ([]string, error) {
 	return goList("/go-pkg/" + tenant + "/golang/src")
 }
 
+const (
+        goOsArch string = "linux_amd64" /* FIXME -- run go env and parse */
+)
+
+func goRemove(tenant, name string) error {
+	if strings.Contains(name, "..") {
+		return errors.New("Bad package name")
+	}
+
+	d := "/go-pkg/" + tenant + "/golang"
+	st, err := os.Stat(d + "/src/" + name + "/.git")
+	if err != nil || !st.IsDir() {
+		return errors.New("Package not installed")
+	}
+
+	err = os.Remove(d + "/pkg/" + goOsArch + "/" + name + ".a")
+	if err != nil {
+		log.Errorf("Can't remove %s' package %s: %s", tenant, name, err.Error())
+		return errors.New("Error removing pkg")
+	}
+
+	x, err := xh.DropDir(d, "/src/" + name)
+	if err != nil {
+		log.Errorf("Can't remove %s' sources %s (%s): %s", tenant, name, x, err.Error())
+		return errors.New("Error removing pkg")
+	}
+
+	return nil
+}
+
 func pyInfo() (string, []string, error) {
 	v, err := exec.Command("python3", "--version").Output()
 	if err != nil {
@@ -152,6 +183,10 @@ func xpipPackages(tenant string) ([]string, error) {
 	}
 
 	return xh.GetLines(ps), nil
+}
+
+func xpipRemove(tenant, name string) error {
+	return exec.Command("python3", "/usr/bin/xpip.py", tenant, "remove", name).Run()
 }
 
 func nodeInfo() (string, []string, error) {
@@ -202,6 +237,26 @@ func nodeModules(tenant string) ([]string, error) {
 	return stuff, nil
 }
 
+func nodeRemove(tenant, name string) error {
+	if strings.Contains(name, "..") || strings.Contains(name, "/") {
+		return errors.New("Bad package name")
+	}
+
+	d := "/packages/" + tenant + "/nodejs/node_modules"
+	_, err := os.Stat(d + "/" + name + "/package.json")
+	if err != nil {
+		return errors.New("Package not installed")
+	}
+
+	x, err := xh.DropDir(d, name)
+	if err != nil {
+		log.Errorf("Can't remove %s' sources %s (%s): %s", tenant, name, x, err.Error())
+		return errors.New("Error removing pkg")
+	}
+
+	return nil
+}
+
 func rubyInfo() (string, []string, error) {
 	v, err := exec.Command("ruby", "--version").Output()
 	if err != nil {
@@ -223,12 +278,14 @@ var ldescs = map[string]*LangDesc {
 		prep:	mkExecRunner,
 		info:	goInfo,
 		packages: goPackages,
+		remove:   goRemove,
 	},
 	"python": &LangDesc {
 		runner:	"/usr/bin/swy-runner.py",
 		prep:	mkExecPath,
 		info:	pyInfo,
 		packages: xpipPackages,
+		remove:   xpipRemove,
 	},
 	"swift": &LangDesc {
 		runner:	"/swift/swycode/debug/runner",
@@ -240,6 +297,7 @@ var ldescs = map[string]*LangDesc {
 		prep:	mkExecPath,
 		info:	nodeInfo,
 		packages: nodeModules,
+		remove:   nodeRemove,
 	},
 	"ruby": &LangDesc {
 		runner:	"/home/swifty/runner.rb",
@@ -391,10 +449,38 @@ out:
 	log.Errorf("%s", err.Error())
 }
 
+func deletePackage(w http.ResponseWriter, r *http.Request, ld *LangDesc, tenant string) {
+	var rq swyapi.Package
+
+	err := errors.New("Not implemented")
+	if ld.remove == nil {
+		goto out
+	}
+
+	err = xhttp.RReq(r, &rq)
+	if err != nil {
+		goto out
+	}
+
+	err = ld.remove(tenant, rq.Name)
+	if err != nil {
+		goto out
+	}
+
+	w.WriteHeader(http.StatusOK)
+	return
+
+out:
+	http.Error(w, err.Error(), http.StatusInternalServerError)
+	log.Errorf("%s", err.Error())
+}
+
 func handlePackages(w http.ResponseWriter, r *http.Request, ld *LangDesc, tenant string) {
 	switch r.Method {
 	case "GET":
 		listPackages(w, ld, tenant)
+	case "DELETE":
+		deletePackage(w, r, ld, tenant)
 	default:
 		http.Error(w, "", http.StatusMethodNotAllowed)
 	}
