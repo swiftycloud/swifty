@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"context"
-	"strconv"
 	"swifty/apis"
 	"swifty/common/http"
 )
@@ -33,7 +32,7 @@ func buildFunction(ctx context.Context, rh *langInfo, fn *FunctionDesc, suf stri
 
 	resp, err := xhttp.Req(
 			&xhttp.RestReq{
-				Address: "http://" + rh.ServiceIP+ ":" + strconv.Itoa(conf.Wdog.Port) + "/v1/build",
+				Address: rtService(rh, "build"),
 				Timeout: 120,
 			}, breq)
 	if err != nil {

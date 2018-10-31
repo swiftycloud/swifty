@@ -75,7 +75,7 @@ func getInfo(l string, rh *langInfo) *swyapi.LangInfo {
 	resp, err := xhttp.Req(
 			&xhttp.RestReq{
 				Method:  "GET",
-				Address: "http://" + rh.ServiceIP + ":" + strconv.Itoa(conf.Wdog.Port) + "/v1/info",
+				Address: rtService(rh, "info"),
 				Timeout: 120,
 			}, nil)
 	if err != nil {
@@ -113,6 +113,10 @@ func rtNeedToBuild(scr *FnCodeDesc) (bool, *langInfo) {
 
 func rtSetService(lang, ip string) {
 	rt_handlers[lang].ServiceIP= ip
+}
+
+func rtService(rh *langInfo, call string) string {
+	return "http://" + rh.ServiceIP + ":" + strconv.Itoa(conf.Wdog.Port) + "/v1/" + call
 }
 
 /* Path where the sources would appear in container */
