@@ -19,7 +19,6 @@ type langInfo struct {
 	LInfo		*swyapi.LangInfo
 
 	Install		func(context.Context, SwoId) error
-	Remove		func(context.Context, SwoId) error
 
 	BuildPkgPath	func(SwoId) string
 	RunPkgPath	func(SwoId) (string, string)
@@ -113,6 +112,21 @@ func rtListPackages(ctx context.Context, rh *langInfo) ([]string, *xrest.ReqErr)
 	}
 
 	return result, nil
+}
+
+func rtRemovePackage(ctx context.Context, rh *langInfo, id SwoId) (*xrest.ReqErr) {
+	ten := gctx(ctx).Tenant
+	_, err := xhttp.Req(
+			&xhttp.RestReq{
+				Method:  "DELETE",
+				Address: rtService(rh, "packages/" + ten),
+				Timeout: 120,
+			}, &swyapi.Package{ Name: id.Name })
+	if err != nil {
+		return GateErrM(swyapi.GateGenErr, "Cannot remove package")
+	}
+
+	return nil
 }
 
 func rtLangImage(lng string) string {

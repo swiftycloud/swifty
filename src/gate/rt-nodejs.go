@@ -1,13 +1,11 @@
 package main
 
 import (
-	"strings"
 	"context"
 	"bytes"
 	"os"
 	"os/exec"
 	"errors"
-	"swifty/common"
 )
 
 var nodejs_info = langInfo {
@@ -20,7 +18,6 @@ var nodejs_info = langInfo {
 	 * Remove  -- manualy remove the dir
 	 */
 	Install:	npmInstall,
-	Remove:		nodeRemove,
 	RunPkgPath:	nodeModules,
 }
 
@@ -29,26 +26,6 @@ func nodeModules(id SwoId) (string, string) {
 	 * Node's runner-js.sh sets /home/packages/node_modules as NODE_PATH
 	 */
 	return packagesDir() + "/" + id.Tennant + "/nodejs", "/home/packages"
-}
-
-func nodeRemove(ctx context.Context, id SwoId) error {
-	if strings.Contains(id.Name, "..") || strings.Contains(id.Name, "/") {
-		return errors.New("Bad package name")
-	}
-
-	d := packagesDir() + "/" + id.Tennant + "/nodejs/node_modules"
-	_, err := os.Stat(d + "/" + id.Name + "/package.json")
-	if err != nil {
-		return errors.New("Package not installed")
-	}
-
-	x, err := xh.DropDir(d, id.Name)
-	if err != nil {
-		ctxlog(ctx).Errorf("Can't remove %s' sources (%s): %s", id.Str(), x, err.Error())
-		return errors.New("Error removing pkg")
-	}
-
-	return nil
 }
 
 func npmInstall(ctx context.Context, id SwoId) error {

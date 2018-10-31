@@ -78,16 +78,7 @@ func (pkg *PackageDesc)Add(ctx context.Context, _ interface{}) *xrest.ReqErr {
 
 func (pkg *PackageDesc)Del(ctx context.Context) *xrest.ReqErr {
 	h := rt_handlers[pkg.Lang]
-	if h.Remove == nil {
-		return GateErrC(swyapi.GateNotAvail)
-	}
-
-	err := h.Remove(ctx, pkg.SwoId)
-	if err != nil {
-		return GateErrE(swyapi.GateGenErr, err)
-	}
-
-	return nil
+	return rtRemovePackage(ctx, h, pkg.SwoId)
 }
 
 func (pkg *PackageDesc)Info(ctx context.Context, q url.Values, details bool) (interface{}, *xrest.ReqErr) {

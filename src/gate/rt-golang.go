@@ -7,7 +7,6 @@ import (
 	"errors"
 	"strings"
 	"context"
-	"swifty/common"
 )
 
 const (
@@ -25,7 +24,6 @@ var golang_info = langInfo {
 	 * Remove  -- manually remove the whole dir (and .a from pkg)
 	 */
 	Install:	goInstall,
-	Remove:		goRemove,
 	BuildPkgPath:	goPkgPath,
 }
 
@@ -48,32 +46,6 @@ func goInstall(ctx context.Context, id SwoId) error {
 	if err != nil {
 		logSaveResult(ctx, id.PCookie(), "pkg_install", stdout.String(), stderr.String())
 		return errors.New("Error installing pkg")
-	}
-
-	return nil
-}
-
-func goRemove(ctx context.Context, id SwoId) error {
-	if strings.Contains(id.Name, "..") {
-		return errors.New("Bad package name")
-	}
-
-	d := packagesDir() + "/" + id.Tennant + "/golang"
-	st, err := os.Stat(d + "src/" + id.Name + "/.git")
-	if err != nil || !st.IsDir() {
-		return errors.New("Package not installed")
-	}
-
-	err = os.Remove(d + "/pkg/" + goOsArch + "/" + id.Name + ".a")
-	if err != nil {
-		ctxlog(ctx).Errorf("Can't remove %s' package: %s", id.Str(), err.Error())
-		return errors.New("Error removing pkg")
-	}
-
-	x, err := xh.DropDir(d, "src/" + id.Name)
-	if err != nil {
-		ctxlog(ctx).Errorf("Can't remove %s' sources (%s): %s", id.Str(), x, err.Error())
-		return errors.New("Error removing pkg")
 	}
 
 	return nil

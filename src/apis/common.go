@@ -45,3 +45,7 @@ type UserLimits struct {
 	PlanId	string			`json:"planid",bson:"planid"`
 	Fn	*FunctionLimits		`json:"function,omitempty",bson:"function,omitempty"`
 }
+
+type Package struct {
+	Name	string		`json:"name"`
+}
