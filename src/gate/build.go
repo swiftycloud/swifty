@@ -53,28 +53,3 @@ func buildFunction(ctx context.Context, rh *langInfo, fn *FunctionDesc, suf stri
 
 	return nil
 }
-
-func BuilderInit(ctx context.Context) error {
-	srvIps, err := k8sGetServicePods(ctx)
-	if err != nil {
-		return err
-	}
-
-	for l, rt := range(rt_handlers) {
-		if !rt.Devel || ModeDevel {
-			ip, ok := srvIps[l]
-			if !ok {
-				if !rt.Build {
-					continue
-				}
-
-				return fmt.Errorf("No builder for %s", l)
-			}
-
-			ctxlog(ctx).Debugf("Set %s as service for %s", ip, l)
-			rt.ServiceIP= ip
-		}
-	}
-
-	return nil
-}

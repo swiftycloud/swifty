@@ -750,6 +750,31 @@ func k8sGetServicePods(ctx context.Context) (map[string]string, error) {
 	return rv, nil
 }
 
+func ServiceDepsInit(ctx context.Context) error {
+	srvIps, err := k8sGetServicePods(ctx)
+	if err != nil {
+		return err
+	}
+
+	for l, rt := range(rt_handlers) {
+		if !rt.Devel || ModeDevel {
+			ip, ok := srvIps[l]
+			if !ok {
+				if !rt.Build {
+					continue
+				}
+
+				return fmt.Errorf("No builder for %s", l)
+			}
+
+			ctxlog(ctx).Debugf("Set %s as service for %s", ip, l)
+			rt.ServiceIP= ip
+		}
+	}
+
+	return nil
+}
+
 func listFnPods(fn *FunctionDesc) (*v1.PodList, error) {
 	podiface := k8sClientSet.CoreV1().Pods(conf.Wdog.Namespace)
 	return podiface.List(metav1.ListOptions{ LabelSelector: "fnid=" + fn.Cookie[:32] })
