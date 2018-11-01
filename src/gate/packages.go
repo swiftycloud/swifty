@@ -246,6 +246,7 @@ func init() {
 	go func() {
 		for {
 			x := <-pkgScan
+			pkgScans.Inc()
 			langStatScan(x)
 			if x.Sync != nil {
 				x.Sync <-true
