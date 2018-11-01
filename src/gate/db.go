@@ -276,6 +276,30 @@ func dbMwareCount(ctx context.Context) (map[string]int, error) {
 	return ret, nil
 }
 
+func dbAccCount(ctx context.Context) (map[string]int, error) {
+	var counts []struct {
+		Id	string	`bson:"_id"`
+		Count	int	`bson:"count"`
+	}
+
+	err := dbCol(ctx, DBColAccounts).Pipe([]bson.M{
+			bson.M{"$group": bson.M{
+				"_id":"$type",
+				"count":bson.M{"$sum": 1},
+			},
+		}}).All(&counts)
+	if err != nil {
+		return nil, err
+	}
+
+	ret := map[string]int{}
+	for _, cnt := range counts {
+		ret[cnt.Id] = cnt.Count
+	}
+
+	return ret, nil
+}
+
 func dbFuncCount(ctx context.Context) (int, error) {
 	return dbCol(ctx, DBColFunc).Count()
 }

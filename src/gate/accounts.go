@@ -379,6 +379,7 @@ func (ad *AccDesc)Add(ctx context.Context, _ interface{}) *xrest.ReqErr {
 		goto outs
 	}
 
+	gateAccounts.WithLabelValues(ad.Type).Inc()
 	return nil
 
 outs:
@@ -418,5 +419,7 @@ func (ad *AccDesc)Del(ctx context.Context) *xrest.ReqErr {
 	if err != nil {
 		return GateErrD(err)
 	}
+
+	gateAccounts.WithLabelValues(ad.Type).Dec()
 	return nil
 }

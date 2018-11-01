@@ -46,6 +46,14 @@ var (
 		},
 	)
 
+	gateAccounts = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "swifty_gate_nr_accounts",
+			Help: "Number of accounts registered",
+		},
+		[]string { "type" },
+	)
+
 	scalers = prometheus.NewGauge(
 		prometheus.GaugeOpts{
 			Name: "swifty_gate_scalers",
@@ -178,6 +186,16 @@ func PrometheusInit(ctx context.Context) error {
 		gateMwares.WithLabelValues(mt).Set(float64(nr))
 	}
 	prometheus.MustRegister(gateMwares)
+
+	nrs, err = dbAccCount(ctx)
+	if err != nil {
+		return err
+	}
+
+	for at, nr := range(nrs) {
+		gateAccounts.WithLabelValues(at).Set(float64(nr))
+	}
+	prometheus.MustRegister(gateAccounts)
 
 	nr, err = dbRouterCount(ctx)
 	if err != nil {
