@@ -93,6 +93,21 @@ var (
 			},
 		},
 	)
+
+	wdogWaitLat = prometheus.NewHistogram(
+		prometheus.HistogramOpts{
+			Name: "swifty_wdog_up_lat",
+			Help: "Time it takes gate to wait for wdog port open",
+			Buckets: []float64{
+				(  5 * time.Millisecond).Seconds(), /* Immediately */
+				( 50 * time.Millisecond).Seconds(),
+				(100 * time.Millisecond).Seconds(),
+				(200 * time.Millisecond).Seconds(),
+				(400 * time.Millisecond).Seconds(),
+				(800 * time.Millisecond).Seconds(),
+			},
+		},
+	)
 )
 
 func PrometheusInit(ctx context.Context) error {
@@ -133,6 +148,7 @@ func PrometheusInit(ctx context.Context) error {
 	/* XXX: We can pick up the call-counts from the database, but ... */
 	prometheus.MustRegister(gateCalls)
 	prometheus.MustRegister(gateCalLat)
+	prometheus.MustRegister(wdogWaitLat)
 	prometheus.MustRegister(contextRuns)
 	prometheus.MustRegister(repoPulls)
 	prometheus.MustRegister(repoPllErrs)
