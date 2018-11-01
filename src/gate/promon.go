@@ -53,6 +53,13 @@ var (
 		},
 	)
 
+	srcGCs = prometheus.NewGauge(
+		prometheus.GaugeOpts{
+			Name: "swifty_gate_srcgcs",
+			Help: "Number of active source GCs",
+		},
+	)
+
 	gateCalls = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "swifty_gate_function_calls",
@@ -208,6 +215,7 @@ func PrometheusInit(ctx context.Context) error {
 	prometheus.MustRegister(statWrites)
 	prometheus.MustRegister(statWriteFails)
 	prometheus.MustRegister(scalers)
+	prometheus.MustRegister(srcGCs)
 
 	r := mux.NewRouter()
 	r.Handle("/metrics", promhttp.Handler())

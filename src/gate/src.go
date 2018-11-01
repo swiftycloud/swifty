@@ -188,6 +188,7 @@ func GCOldSources(ctx context.Context, fn *FunctionDesc, ver string) {
 	cookie := fn.Cookie
 
 	go func() {
+		srcGCs.Inc()
 		tmo := 16 * 60 * time.Second
 		ctx, done := mkContext("::gcoldsource")
 		defer done(ctx)
@@ -218,6 +219,7 @@ func GCOldSources(ctx context.Context, fn *FunctionDesc, ver string) {
 		}
 
 		w.Done()
+		srcGCs.Dec()
 	}()
 }
 
