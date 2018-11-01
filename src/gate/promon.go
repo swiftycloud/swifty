@@ -68,6 +68,14 @@ var (
 		},
 	)
 
+	danglingEvents = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "swifty_gate_dangling_events",
+			Help: "Number of events that do not have target fn",
+		},
+		[]string { "event" },
+	)
+
 	gateCalls = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "swifty_gate_function_calls",
@@ -234,6 +242,7 @@ func PrometheusInit(ctx context.Context) error {
 	prometheus.MustRegister(statWriteFails)
 	prometheus.MustRegister(scalers)
 	prometheus.MustRegister(srcGCs)
+	prometheus.MustRegister(danglingEvents)
 
 	r := mux.NewRouter()
 	r.Handle("/metrics", promhttp.Handler())

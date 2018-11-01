@@ -246,6 +246,7 @@ func wsTrigger(mwd *MwareDesc, cid string, mtype int, message []byte, claims map
 
 		err := dbFind(ctx, bson.M{"cookie": ed.FnId, "state": DBFuncStateRdy}, &fn)
 		if err != nil {
+			danglingEvents.WithLabelValues("websock").Inc()
 			continue
 		}
 
