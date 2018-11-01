@@ -156,10 +156,17 @@ func InfoMariaDB(ctx context.Context, mwd *MwareDesc, ifo *swyapi.MwareInfo) err
 	return nil
 }
 
+func TInfoMaria(ctx context.Context) *swyapi.MwareTypeInfo {
+	return &swyapi.MwareTypeInfo{
+		Envs: stdEnvNames("maria", "DBNAME"),
+	}
+}
+
 var MwareMariaDB = MwareOps {
 	Init:	InitMariaDB,
 	Fini:	FiniMariaDB,
 	GetEnv:	GetEnvMariaDB,
 	Info:	InfoMariaDB,
+	TInfo:	TInfoMaria,
 }
 

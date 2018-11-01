@@ -167,7 +167,7 @@ func (fmd *FnMemData)Handle(ctx context.Context, w http.ResponseWriter, r *http.
 	w.WriteHeader(res.Code)
 	w.Write([]byte(res.Return))
 
-	statsUpdate(fmd, sopq, res)
+	statsUpdate(fmd, sopq, res, "url")
 
 	return
 

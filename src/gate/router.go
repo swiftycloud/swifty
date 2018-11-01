@@ -184,6 +184,7 @@ func (rd *RouterDesc)Add(ctx context.Context, _ interface{}) *xrest.ReqErr {
 		return GateErrD(err)
 	}
 
+	gateRouters.Inc()
 	return nil
 }
 
@@ -204,6 +205,7 @@ func (rd *RouterDesc)Del(ctx context.Context) *xrest.ReqErr {
 		return GateErrD(err)
 	}
 
+	gateRouters.Dec()
 	urlClean(ctx, URLRouter, rd.Cookie)
 	return nil
 }

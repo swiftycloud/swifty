@@ -16,7 +16,7 @@ func init() {
 }
 
 type statsWriter interface {
-	Write(ctx context.Context)
+	Write(ctx context.Context) error
 }
 
 type statsFlush struct {
@@ -199,7 +199,7 @@ func statsStart() *statsOpaque {
 	return sopq
 }
 
-func statsUpdate(fmd *FnMemData, op *statsOpaque, res *swyapi.WdogFunctionRunResult) {
+func statsUpdate(fmd *FnMemData, op *statsOpaque, res *swyapi.WdogFunctionRunResult, event string) {
 	lat := time.Since(op.ts)
 	if op.trace != nil {
 		op.trace["stop"] = lat
@@ -209,7 +209,7 @@ func statsUpdate(fmd *FnMemData, op *statsOpaque, res *swyapi.WdogFunctionRunRes
 	rt := res.FnTime()
 	gatelat := lat - rt
 	gateCalLat.Observe(gatelat.Seconds())
-	gateCalls.WithLabelValues("calls").Inc()
+	gateCalls.WithLabelValues(event).Inc()
 
 	fmd.lock.Lock()
 	fmd.stats.Called++
@@ -253,9 +253,15 @@ func statsInit() error {
 		for {
 			fc := <-statsFlushReqs
 			ctx, done := mkContext("::statswrite")
-			fc.writer.Write(ctx)
+			er := fc.writer.Write(ctx)
 			done(ctx)
 			fc.flushed <- true
+
+			if er == nil {
+				statWrites.Inc()
+			} else {
+				statWriteFails.Inc()
+			}
 		}
 	}()
 	return nil
@@ -285,7 +291,7 @@ func (st *FnStats)Init(ctx context.Context, fn *FunctionDesc) error {
 	return err
 }
 
-func (st *FnStats)Write(ctx context.Context) {
+func (st *FnStats)Write(ctx context.Context) error {
 	var now gmgo.FnStatValues = st.FnStatValues
 	delta := gmgo.FnStatValues {
 		Called: now.Called - st.onDisk.Called,
@@ -302,6 +308,7 @@ func (st *FnStats)Write(ctx context.Context) {
 	} else {
 		ctxlog(ctx).Errorf("Error upserting fn stats: %s", err.Error())
 	}
+	return err
 }
 
 func (st *TenStats)Init(ctx context.Context, tenant string) error {
@@ -315,7 +322,7 @@ func (st *TenStats)Init(ctx context.Context, tenant string) error {
 	return err
 }
 
-func (st *TenStats)Write(ctx context.Context) {
+func (st *TenStats)Write(ctx context.Context) error {
 	var now gmgo.TenStatValues = st.TenStatValues
 	delta := gmgo.TenStatValues {
 		Called: now.Called - st.onDisk.Called,
@@ -330,6 +337,7 @@ func (st *TenStats)Write(ctx context.Context) {
 		/* Next time we'll get here with largetr deltas */
 		ctxlog(ctx).Errorf("Error upserting tenant stats: %s", err.Error())
 	}
+	return err
 }
 
 func (fc *statsFlush)Init(writer statsWriter, id string) {

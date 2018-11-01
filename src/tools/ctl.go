@@ -1372,6 +1372,15 @@ func pkg_del(args []string, opts [16]string) {
 	swyclient.Packages(args[0]).Del(args[1])
 }
 
+func pkg_stat(args []string, opts [16]string) {
+	var st swyapi.PkgStat
+	swyclient.Req1("GET", "packages", http.StatusOK, nil, &st)
+	fmt.Printf("DU:                 %dK\n", st.DU)
+	for l, lst := range st.Lang {
+		fmt.Printf("`- %12s:     %dK\n", l, lst.DU)
+	}
+}
+
 func acc_list(args []string, opts [16]string) {
 	var ais []map[string]string
 	ua := []string{}
@@ -1482,11 +1491,21 @@ func languages(args []string, opts [16]string) {
 }
 
 func mware_types(args []string, opts [16]string) {
-	var r []string
+	if opts[0] == "" {
+		var r []string
 
-	swyclient.Req1("GET", "info/mwares", http.StatusOK, nil, &r)
-	for _, v := range r {
-		fmt.Printf("%s\n", v)
+		swyclient.Req1("GET", "info/mwares", http.StatusOK, nil, &r)
+		for _, v := range r {
+			fmt.Printf("%s\n", v)
+		}
+	} else {
+		var ti swyapi.MwareTypeInfo
+
+		swyclient.Req1("GET", "info/mwares/" + opts[0], http.StatusOK, nil, &ti)
+		fmt.Printf("Envs:\n")
+		for _, env := range ti.Envs {
+			fmt.Printf("\t%s\n", env)
+		}
 	}
 }
 
@@ -1683,6 +1702,7 @@ const (
 	CMD_PKI string		= "pki"
 	CMD_PKA string		= "pka"
 	CMD_PKD string		= "pkd"
+	CMD_PKS string		= "pks"
 
 	CMD_UL string		= "ul"
 	CMD_UI string		= "ui"
@@ -1767,6 +1787,7 @@ var cmdOrder = []string {
 	CMD_PKI,
 	CMD_PKA,
 	CMD_PKD,
+	CMD_PKS,
 
 	CMD_UL,
 	CMD_UI,
@@ -1862,6 +1883,7 @@ var cmdMap = map[string]*cmdDesc {
 	CMD_PKI:	&cmdDesc{ help: "Show package info",	call: pkg_info		},
 	CMD_PKA:	&cmdDesc{ help: "Add package",		call: pkg_add		},
 	CMD_PKD:	&cmdDesc{ help: "Del package",		call: pkg_del		},
+	CMD_PKS:	&cmdDesc{ help: "Stats about packages",	call: pkg_stat		},
 
 	CMD_UL:		&cmdDesc{ help: "List users",		call: user_list,	adm: true },
 	CMD_UI:		&cmdDesc{ help: "Show user info",	call: user_info,	adm: true },
@@ -2027,6 +2049,7 @@ func main() {
 	setupCommonCmd(CMD_PKA, "LANG", "NAME")
 	setupCommonCmd(CMD_PKI, "LANG", "NAME")
 	setupCommonCmd(CMD_PKD, "LANG", "NAME")
+	setupCommonCmd(CMD_PKS)
 
 	setupCommonCmd(CMD_UL)
 	setupCommonCmd(CMD_UA, "UID")
@@ -2055,6 +2078,7 @@ func main() {
 	setupCommonCmd(CMD_TD, "ID")
 
 	setupCommonCmd(CMD_MTYPES)
+	cmdMap[CMD_MTYPES].opts.StringVar(&opts[0], "t", "", "Show info about specific mware type")
 	setupCommonCmd(CMD_LANGS)
 
 	setupCommonCmd(CMD_LANG)

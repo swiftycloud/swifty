@@ -278,6 +278,12 @@ func (ad *AccDesc)Upd(ctx context.Context, upd interface{}) *xrest.ReqErr {
 	return ad.Update(ctx, *upd.(*map[string]string))
 }
 
+var secretTrim = 6
+
+func init() {
+	addIntSysctl("acc_secret_trim", &secretTrim)
+}
+
 func (ad *AccDesc)toInfo(ctx context.Context, details bool) map[string]string {
 	ai := map[string]string {
 		"id":		ad.ObjID.Hex(),
@@ -293,8 +299,8 @@ func (ad *AccDesc)toInfo(ctx context.Context, details bool) map[string]string {
 		v, err := sv.value()
 		if err != nil {
 			v = "<BROKEN>"
-		} else if len(v) > 6 {
-			v = v[:6] + "..."
+		} else if len(v) > secretTrim {
+			v = v[:secretTrim] + "..."
 		} else {
 			v = "..."
 		}
@@ -373,6 +379,7 @@ func (ad *AccDesc)Add(ctx context.Context, _ interface{}) *xrest.ReqErr {
 		goto outs
 	}
 
+	gateAccounts.WithLabelValues(ad.Type).Inc()
 	return nil
 
 outs:
@@ -412,5 +419,7 @@ func (ad *AccDesc)Del(ctx context.Context) *xrest.ReqErr {
 	if err != nil {
 		return GateErrD(err)
 	}
+
+	gateAccounts.WithLabelValues(ad.Type).Dec()
 	return nil
 }

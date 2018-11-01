@@ -130,6 +130,7 @@ func tendatGetOrInit(ctx context.Context, tenant string) (*TenantMemData, error)
 				time.Sleep(TenantLimitsUpdPeriod)
 				ul, err := dbTenantGetLimits(cctx, tenant)
 				if err != nil {
+					limitPullErrs.Inc()
 					ctxlog(cctx).Errorf("No way to read user limits: %s", err.Error())
 					done(cctx)
 					continue
@@ -137,6 +138,7 @@ func tendatGetOrInit(ctx context.Context, tenant string) (*TenantMemData, error)
 
 				off, err := dbTenStatsGetLatestArch(cctx, tenant)
 				if err != nil {
+					limitPullErrs.Inc()
 					ctxlog(cctx).Errorf("No way to read user latest stats: %s", err.Error())
 					done(cctx)
 					continue

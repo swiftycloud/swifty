@@ -88,6 +88,7 @@ func mqEvent(ctx context.Context, mwid, queue, userid, data string) {
 	var mware MwareDesc
 	err := dbFind(ctx, bson.M{"mwaretype": "rabbit", "client": userid}, &mware)
 	if err != nil {
+		//danglingEvents.WithLabelValues("mq").Inc()
 		return
 	}
 
@@ -110,6 +111,6 @@ var MwareRabbitMQ = MwareOps {
 	Init:	InitRabbitMQ,
 	Fini:	FiniRabbitMQ,
 	GetEnv:	GetEnvRabbitMQ,
-	Devel:	true,
+	Disabled:	true,
 }
 

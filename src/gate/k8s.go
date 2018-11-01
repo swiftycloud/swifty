@@ -472,16 +472,19 @@ func k8sPodDel(obj interface{}) {
 
 func waitPodPort(ctx context.Context, addr, port string) error {
 	printed := false
-	wt := 100 * time.Millisecond
+	lat := time.Duration(0)
+	wt := PodStartBase
 	till := time.Now().Add(PodStartTmo)
 	for {
 		conn, err := net.Dial("tcp", addr + ":" + port)
 		if err == nil {
+			wdogWaitLat.Observe(lat.Seconds())
 			conn.Close()
 			break
 		}
 
 		if time.Now().After(till) {
+			wdogErrors.WithLabelValues("Start timeout").Inc()
 			return fmt.Errorf("Pod's port not up for too long")
 		}
 
@@ -500,7 +503,8 @@ func waitPodPort(ctx context.Context, addr, port string) error {
 			printed = true
 		}
 		<-time.After(wt)
-		wt += 50 * time.Millisecond
+		lat += wt
+		wt += PodStartGain
 	}
 
 	return nil
@@ -748,6 +752,31 @@ func k8sGetServicePods(ctx context.Context) (map[string]string, error) {
 	}
 
 	return rv, nil
+}
+
+func ServiceDepsInit(ctx context.Context) error {
+	srvIps, err := k8sGetServicePods(ctx)
+	if err != nil {
+		return err
+	}
+
+	for l, rt := range(rt_handlers) {
+		if !rt.Disabled {
+			ip, ok := srvIps[l]
+			if !ok {
+				if !rt.Build {
+					continue
+				}
+
+				return fmt.Errorf("No builder for %s", l)
+			}
+
+			ctxlog(ctx).Debugf("Set %s as service for %s", ip, l)
+			rt.ServiceIP= ip
+		}
+	}
+
+	return nil
 }
 
 func listFnPods(fn *FunctionDesc) (*v1.PodList, error) {

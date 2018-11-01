@@ -557,6 +557,15 @@ func handleRepoPull(ctx context.Context, w http.ResponseWriter, r *http.Request)
 
 /******************************* PACKAGES *************************************/
 func handlePackages(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
+	pstat, cerr := packagesStats(ctx, r)
+	if cerr != nil {
+		return cerr
+	}
+
+	return xrest.Respond(ctx, w, pstat)
+}
+
+func handlePackagesLang(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
 	if !ModeDevel {
 		return GateErrC(swyapi.GateNotAvail)
 	}
@@ -642,10 +651,10 @@ func handleAuths(ctx context.Context, w http.ResponseWriter, r *http.Request) *x
 		dd := getDeployDesc(ctxSwoId(ctx, aa.Project, aa.Name))
 		dd.Labels = []string{ "auth" }
 		cerr := dd.getItemsParams(ctx, &swyapi.DeploySource{
-			Repo:	demoRep.ObjID.Hex() + "/swy-aaas.yaml",
+			Repo:	demoRep.ObjID.Hex() + "/" + conf.AAASDep,
 		}, map[string]string { "name": aa.Name }, 0)
 		if cerr != nil {
-			ctxlog(ctx).Errorf("Error getting swy-aaas.yaml file")
+			ctxlog(ctx).Errorf("Error getting %s file", conf.AAASDep)
 			return cerr
 		}
 
@@ -670,7 +679,7 @@ func handleLanguages(ctx context.Context, w http.ResponseWriter, r *http.Request
 	var ret []string
 
 	for l, lh := range rt_handlers {
-		if lh.Devel && !ModeDevel {
+		if lh.Disabled {
 			continue
 		}
 
@@ -683,7 +692,7 @@ func handleLanguages(ctx context.Context, w http.ResponseWriter, r *http.Request
 func handleLanguage(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
 	lang := mux.Vars(r)["lang"]
 	lh, ok := rt_handlers[lang]
-	if !ok || (lh.Devel && !ModeDevel) {
+	if !ok || lh.Disabled {
 		return GateErrM(swyapi.GateGenErr, "Language not supported")
 	}
 
@@ -694,11 +703,21 @@ func handleMwareTypes(ctx context.Context, w http.ResponseWriter, r *http.Reques
 	var ret []string
 
 	for mw, mt := range mwareHandlers {
-		if mt.Devel && !ModeDevel {
+		if mt.Disabled {
 			continue
 		}
 
 		ret = append(ret, mw)
+	}
+
+	return xrest.Respond(ctx, w, ret)
+}
+
+func handleMwareType(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
+	mtyp := mux.Vars(r)["mtyp"]
+	ret, cerr := mwareGetInfo(ctx, mtyp)
+	if cerr != nil {
+		return cerr
 	}
 
 	return xrest.Respond(ctx, w, ret)

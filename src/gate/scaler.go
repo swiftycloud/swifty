@@ -22,6 +22,7 @@ func scalerLog(fdm *FnMemData, msg string) {
 }
 
 func balancerFnScaler(fdm *FnMemData) {
+	scalers.Inc()
 up:
 	scalerLog(fdm, "up")
 	goal := k8sDepScaleUp(fdm.depname, fdm.bd.goal)
@@ -71,9 +72,11 @@ down:
 fin:
 	fdm.lock.Unlock()
 	scalerLog(fdm, "fin")
+	scalers.Dec()
 }
 
 func balancerFnDepGrow(ctx context.Context, fdm *FnMemData, goal uint32) {
+	scalerGoals.Observe(float64(goal))
 	if goal <= fdm.bd.goal {
 		return
 	}

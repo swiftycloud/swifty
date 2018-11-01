@@ -106,6 +106,7 @@ func githubRepoUpdated(ctx context.Context, r *http.Request) {
 
 	for _, rd := range rds {
 		if rd.pullSync() == nil {
+			repoPulls.WithLabelValues("hook").Inc()
 			synced++
 		}
 	}
@@ -292,6 +293,7 @@ func (rd *RepoDesc)Attach(ctx context.Context, ac *AccDesc) *xrest.ReqErr {
 	}
 
 	go bgClone(rd, ac, &rh)
+	gateRepos.Inc()
 
 	return nil
 }
@@ -329,6 +331,7 @@ func (rd *RepoDesc)Del(ctx context.Context) *xrest.ReqErr {
 		return GateErrD(err)
 	}
 
+	gateRepos.Dec()
 	return nil
 }
 
@@ -420,6 +423,7 @@ func (rd *RepoDesc)pullManual(ctx context.Context) *xrest.ReqErr {
 	}
 
 	rd.pullAsync()
+	repoPulls.WithLabelValues("manual").Inc()
 	return nil
 }
 
@@ -534,6 +538,9 @@ func init() {
 			if rq.done != nil {
 				rq.done <-err
 			}
+			if err != nil {
+				repoPllErrs.Inc()
+			}
 			done(ctx)
 		}
 	}()
@@ -605,6 +612,7 @@ func pullRepos(ctx context.Context, ts time.Time) (int, error) {
 
 	for _, rd := range rds {
 		if rd.pullSync() == nil {
+			repoPulls.WithLabelValues("priodic").Inc()
 			synced++
 		}
 	}
@@ -613,6 +621,11 @@ func pullRepos(ctx context.Context, ts time.Time) (int, error) {
 }
 
 var repoSyncPeriod time.Duration
+var repoResyncOnError time.Duration = 5 * time.Minute
+
+func init() {
+	addTimeSysctl("repo_resync_on_error", &repoResyncOnError)
+}
 
 func periodicPullRepos() {
 	for {
@@ -623,7 +636,7 @@ func periodicPullRepos() {
 
 		synced, err := pullRepos(ctx, t.Add(-nxt))
 		if err != nil {
-			nxt = 5 * time.Minute /* Will try in 5 minutes */
+			nxt = repoResyncOnError
 		}
 
 		t = t.Add(nxt)

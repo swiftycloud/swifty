@@ -69,7 +69,8 @@ type MwareOps struct {
 	Fini	func(ctx context.Context, mwd *MwareDesc) (error)
 	GetEnv	func(ctx context.Context, mwd *MwareDesc) (map[string][]byte)
 	Info	func(ctx context.Context, mwd *MwareDesc, ifo *swyapi.MwareInfo) (error)
-	Devel	bool
+	TInfo	func(ctx context.Context) *swyapi.MwareTypeInfo
+	Disabled bool
 	LiteOK	bool
 }
 
@@ -79,6 +80,20 @@ func mkEnvName(typ, name, env string) string {
 
 func (mw *MwareDesc)envName(envName string) string {
 	return mkEnvName(mw.MwareType, mw.Name, envName)
+}
+
+func stdEnvNames(typ string, extra ...string) []string {
+	ret := []string {
+		mkEnvName(typ, "%name%", "ADDR"),
+		mkEnvName(typ, "%name%", "USER"),
+		mkEnvName(typ, "%name%", "PASS"),
+	}
+
+	for _, x := range extra {
+		ret = append(ret, mkEnvName(typ, "%name%", x))
+	}
+
+	return ret
 }
 
 func (mwd *MwareDesc)stdEnvs(mwaddr string) map[string][]byte {
@@ -457,7 +472,7 @@ func (mwd *MwareDesc)Add(ctx context.Context, _ interface{}) *xrest.ReqErr {
 
 	handler, _ = mwareHandlers[mwd.MwareType]
 
-	if handler.Devel && !ModeDevel {
+	if handler.Disabled {
 		err = fmt.Errorf("Bad mware type %s", mwd.MwareType)
 		goto outdb
 	}
@@ -522,4 +537,26 @@ out:
 stalled:
 	mwd.ToState(ctx, DBMwareStateStl, -1)
 	goto out
+}
+
+func mwareGetInfo(ctx context.Context, mtyp string) (*swyapi.MwareTypeInfo, *xrest.ReqErr) {
+	handler, ok := mwareHandlers[mtyp]
+	if !ok {
+		return nil, GateErrM(swyapi.GateBadRequest, "Not such type")
+	}
+
+	if handler.TInfo == nil {
+		return nil, GateErrC(swyapi.GateNotAvail)
+	}
+
+	return handler.TInfo(ctx), nil
+}
+
+func MwInit() {
+	for mw, mh := range mwareHandlers {
+		if ModeDevel {
+			mh.Disabled = false
+		}
+		addBoolSysctl("mw_" + mw + "_disable", &mh.Disabled)
+	}
 }

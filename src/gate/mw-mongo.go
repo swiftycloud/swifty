@@ -89,10 +89,17 @@ func InfoMongo(ctx context.Context, mwd *MwareDesc, ifo *swyapi.MwareInfo) error
 	return nil
 }
 
+func TInfoMongo(ctx context.Context) *swyapi.MwareTypeInfo {
+	return &swyapi.MwareTypeInfo{
+		Envs: stdEnvNames("mongo", "DBNAME"),
+	}
+}
+
 var MwareMongo = MwareOps {
 	Init:	InitMongo,
 	Fini:	FiniMongo,
 	GetEnv:	GetEnvMongo,
 	Info:	InfoMongo,
+	TInfo:	TInfoMongo,
 	LiteOK:	true,
 }

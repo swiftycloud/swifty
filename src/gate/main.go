@@ -37,6 +37,8 @@ const (
 )
 
 var (
+	PodStartBase time.Duration		= 100 * time.Millisecond
+	PodStartGain time.Duration		= 50 * time.Millisecond
 	PodStartTmo time.Duration		= 120 * time.Second
 	DepScaleupRelax time.Duration		= 16 * time.Second
 	DepScaledownStep time.Duration		= 8 * time.Second
@@ -45,6 +47,8 @@ var (
 
 func init() {
 	addTimeSysctl("pod_start_tmo",		&PodStartTmo)
+	addTimeSysctl("pod_start_relax",	&PodStartBase)
+	addTimeSysctl("pod_start_gain",		&PodStartGain)
 	addTimeSysctl("dep_scaleup_relax",	&DepScaleupRelax)
 	addTimeSysctl("dep_scaledown_step",	&DepScaledownStep)
 	addTimeSysctl("limits_update_period",	&TenantLimitsUpdPeriod)
@@ -231,7 +235,8 @@ func getHandlers() http.Handler {
 	r.Handle("/v1/functions/{fid}/wait",	genReqHandler(handleFunctionWait)).Methods("POST", "OPTIONS")
 	r.Handle("/v1/functions/{fid}/mdat",	genReqHandler(handleFunctionMdat)).Methods("GET")
 
-	r.Handle("/v1/packages/{lang}",		genReqHandler(handlePackages)).Methods("GET", "POST", "OPTIONS")
+	r.Handle("/v1/packages",		genReqHandler(handlePackages)).Methods("GET", "OPTIONS")
+	r.Handle("/v1/packages/{lang}",		genReqHandler(handlePackagesLang)).Methods("GET", "POST", "OPTIONS")
 	r.Handle("/v1/packages/{lang}/{pkgid:[a-zA-Z0-9./_-]+}",
 						genReqHandler(handlePackage)).Methods("GET", "DELETE", "OPTIONS")
 
@@ -262,6 +267,7 @@ func getHandlers() http.Handler {
 	r.Handle("/v1/info/langs",		genReqHandler(handleLanguages)).Methods("GET", "OPTIONS")
 	r.Handle("/v1/info/langs/{lang}",	genReqHandler(handleLanguage)).Methods("GET", "OPTIONS")
 	r.Handle("/v1/info/mwares",		genReqHandler(handleMwareTypes)).Methods("GET", "OPTIONS")
+	r.Handle("/v1/info/mwares/{mtyp}",	genReqHandler(handleMwareType)).Methods("GET", "OPTIONS")
 
 	r.PathPrefix("/call/{urlid}").Methods(clientMethods...).HandlerFunc(handleCall)
 
@@ -364,7 +370,7 @@ func main() {
 		glog.Fatalf("Can't setup: %s", err.Error())
 	}
 
-	err = BuilderInit(ctx)
+	err = ServiceDepsInit(ctx)
 	if err != nil {
 		glog.Fatalf("Can't set up builder: %s", err.Error())
 	}
@@ -384,6 +390,7 @@ func main() {
 		glog.Fatalf("Can't set up prometheus: %s", err.Error())
 	}
 
+	MwInit()
 	RtInit()
 	done(ctx)
 

@@ -60,13 +60,23 @@ func InfoWebSocket(ctx context.Context, mwd *MwareDesc, ifo *swyapi.MwareInfo) e
 	return nil
 }
 
+func TInfoWebSocket(ctx context.Context) *swyapi.MwareTypeInfo {
+	return &swyapi.MwareTypeInfo {
+		Envs: []string {
+			mkEnvName("websocket", "%name%", "TOKEN"),
+			mkEnvName("websocket", "%name%", "URL"),
+		},
+	}
+}
+
 var MwareWebSocket = MwareOps {
 	Setup:	SetupWebSocket,
 	Init:	InitWebSocket,
 	Fini:	FiniWebSocket,
 	GetEnv:	GetEnvWebSocket,
 	Info:	InfoWebSocket,
-	Devel:	true,
+	TInfo:	TInfoWebSocket,
+	Disabled:	true,
 }
 
 type wsConnMap struct {
@@ -236,6 +246,7 @@ func wsTrigger(mwd *MwareDesc, cid string, mtype int, message []byte, claims map
 
 		err := dbFind(ctx, bson.M{"cookie": ed.FnId, "state": DBFuncStateRdy}, &fn)
 		if err != nil {
+			danglingEvents.WithLabelValues("websock").Inc()
 			continue
 		}
 

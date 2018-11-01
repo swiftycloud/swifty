@@ -30,50 +30,29 @@ func buildFunction(ctx context.Context, rh *langInfo, fn *FunctionDesc, suf stri
 		breq.Packages = rh.BuildPkgPath(fn.SwoId)
 	}
 
+	gateBuilds.WithLabelValues(fn.Code.Lang, "start").Inc()
 	resp, err := xhttp.Req(
 			&xhttp.RestReq{
 				Address: rtService(rh, "build"),
 				Timeout: 120,
 			}, breq)
 	if err != nil {
+		gateBuilds.WithLabelValues(fn.Code.Lang, "error").Inc()
 		ctxlog(ctx).Errorf("Error building function: %s", err.Error())
 		return fmt.Errorf("Can't build function")
 	}
 
 	err = xhttp.RResp(resp, &wd_result)
 	if err != nil {
+		gateBuilds.WithLabelValues(fn.Code.Lang, "error2").Inc()
 		ctxlog(ctx).Errorf("Can't get build result back: %s", err.Error())
 		return fmt.Errorf("Error building function")
 	}
 
 	if wd_result.Code != 0 {
+		gateBuilds.WithLabelValues(fn.Code.Lang, "fail").Inc()
 		logSaveResult(ctx, fn.Cookie, "build", wd_result.Stdout, wd_result.Stderr)
 		return fmt.Errorf("Error building function")
-	}
-
-	return nil
-}
-
-func BuilderInit(ctx context.Context) error {
-	srvIps, err := k8sGetServicePods(ctx)
-	if err != nil {
-		return err
-	}
-
-	for l, rt := range(rt_handlers) {
-		if !rt.Devel || ModeDevel {
-			ip, ok := srvIps[l]
-			if !ok {
-				if !rt.Build {
-					continue
-				}
-
-				return fmt.Errorf("No builder for %s", l)
-			}
-
-			ctxlog(ctx).Debugf("Set %s as service for %s", ip, l)
-			rt.ServiceIP= ip
-		}
 	}
 
 	return nil

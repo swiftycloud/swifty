@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"encoding/base64"
 	"swifty/common"
+	"swifty/apis"
 	"net/http"
 	"swifty/common/crypto"
 	"crypto"
@@ -149,9 +150,18 @@ func GetEnvAuthJWT(ctx context.Context, mwd *MwareDesc) map[string][]byte {
 	return map[string][]byte{mwd.envName("SIGNKEY"): []byte(mwd.Secret)}
 }
 
+func TInfoAuthJWT(ctx context.Context) *swyapi.MwareTypeInfo {
+	return &swyapi.MwareTypeInfo {
+		Envs: []string {
+			mkEnvName("authjwt", "%name%", "SIGNKEY"),
+		},
+	}
+}
+
 var MwareAuthJWT = MwareOps {
 	Init:	InitAuthJWT,
 	Fini:	FiniAuthJWT,
 	GetEnv:	GetEnvAuthJWT,
+	TInfo:	TInfoAuthJWT,
 	LiteOK:	true,
 }

@@ -167,6 +167,7 @@ func handleS3Event(ctx context.Context, user string, data []byte) {
 
 		err := dbFind(ctx, bson.M{"cookie": ed.FnId}, &fn)
 		if err != nil {
+			danglingEvents.WithLabelValues("s3").Inc()
 			continue
 		}
 

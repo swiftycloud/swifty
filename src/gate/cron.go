@@ -25,11 +25,13 @@ func cronEventStart(ctx context.Context, _ *FunctionDesc, evt *FnEventDesc) erro
 
 		err := dbFind(cctx, bson.M{"cookie": evt.FnId}, &fn)
 		if err != nil {
+			danglingEvents.WithLabelValues("cron").Inc()
 			ctxlog(cctx).Errorf("Can't find FN %s to run Cron event", evt.FnId)
 			return
 		}
 
 		if fn.State != DBFuncStateRdy {
+			danglingEvents.WithLabelValues("cron").Inc()
 			return
 		}
 
