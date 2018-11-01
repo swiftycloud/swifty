@@ -557,6 +557,15 @@ func handleRepoPull(ctx context.Context, w http.ResponseWriter, r *http.Request)
 
 /******************************* PACKAGES *************************************/
 func handlePackages(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
+	pstat, cerr := packagesStats(ctx, r)
+	if cerr != nil {
+		return cerr
+	}
+
+	return xrest.Respond(ctx, w, pstat)
+}
+
+func handlePackagesLang(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
 	if !ModeDevel {
 		return GateErrC(swyapi.GateNotAvail)
 	}

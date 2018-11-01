@@ -343,6 +343,15 @@ type PkgInfo struct {
 	Id		string		`json:"id"`	// name
 }
 
+type PkgLangStat struct {
+	DU		uint64			`json:"disk_usage"` /* in ... KB */
+}
+
+type PkgStat struct {
+	DU		uint64			`json:"disk_usage"` /* in ... KB */
+	Lang		map[string]*PkgLangStat	`json:"lang"`
+}
+
 /*
  * This type is not seen by wdog itself, instead, it's described
  * by each wdog runner by smth like "Request"

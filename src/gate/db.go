@@ -69,6 +69,7 @@ func init() {
 	dbColMap[reflect.TypeOf(&RouterDesc{})] = DBColRouters
 	dbColMap[reflect.TypeOf([]*RouterDesc{})] = DBColRouters
 	dbColMap[reflect.TypeOf(&[]*RouterDesc{})] = DBColRouters
+	dbColMap[reflect.TypeOf(&PackagesCache{})] = DBColPackages
 }
 
 func dbCol(ctx context.Context, col string) *mgo.Collection {
@@ -319,27 +320,41 @@ func dbTenStatsUpdate(ctx context.Context, tenant string, delta *gmgo.TenStatVal
 	return err
 }
 
-func dbPackagesFind(ctx context.Context, cookie string) *PackagesCache {
+func dbPackagesFind(ctx context.Context) (*PackagesCache, error) {
+	cookie := xh.Cookify(gctx(ctx).Tenant)
 	var pc PackagesCache
 	err := dbCol(ctx, DBColPackages).Find(bson.M{"cookie": cookie}).One(&pc)
 	if err != nil {
-		return nil
+		return nil, err
 	}
 
-	return &pc
+	return &pc, nil
 }
 
-func dbPackagesCache(ctx context.Context, pc *PackagesCache) {
-	dbCol(ctx, DBColPackages).Upsert(bson.M{"cookie": pc.Cookie},
+func dbPackagesUpdateList(ctx context.Context, lang string, pkl []*swyapi.Package) {
+	ten := gctx(ctx).Tenant
+	cookie := xh.Cookify(ten)
+	dbCol(ctx, DBColPackages).Upsert(bson.M{"cookie": cookie},
 			bson.M{"$set": bson.M{
-				"packages": pc.Packages,
-				"tenant": pc.Tenant,
-				"lang": pc.Lang,
+				"tenant": ten,
+				"packages." + lang: pkl,
 			}})
 }
 
-func dbPackagesFlush(ctx context.Context, cookie string) {
-	dbCol(ctx, DBColPackages).Remove(bson.M{"cookie": cookie})
+func dbPackagesUpdateDU(ctx context.Context, ten, lang string, du uint64) error {
+	cookie := xh.Cookify(ten)
+	_, err := dbCol(ctx, DBColPackages).Upsert(bson.M{"cookie": cookie},
+			bson.M{"$set": bson.M{
+				"tenant": ten,
+				"stats." + lang + ".du": du,
+			}})
+	return err
+}
+
+func dbPackagesFlushList(ctx context.Context, lang string) {
+	ten := gctx(ctx).Tenant
+	cookie := xh.Cookify(ten)
+	dbCol(ctx, DBColPackages).Update(bson.M{"cookie": cookie}, bson.M{"$unset": bson.M{"packages." + lang: ""}})
 }
 
 func dbPackagesFlushAll(ctx context.Context) {

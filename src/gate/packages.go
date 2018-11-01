@@ -4,11 +4,13 @@ import (
 	"github.com/gorilla/mux"
 	"gopkg.in/mgo.v2/bson"
 	"swifty/common/xrest"
-	"swifty/common"
+	"path/filepath"
 	"swifty/apis"
 	"net/http"
 	"net/url"
+	"syscall"
 	"context"
+	"os"
 )
 
 type Packages struct {
@@ -20,16 +22,17 @@ type PackageDesc struct {
 	Lang	string
 }
 
+type PackagesStats struct {
+	DU		uint64			`bson:"du,omitempty"`
+}
+
 type PackagesCache struct {
 	ObjID		bson.ObjectId		`bson:"_id,omitempty"`
 	Cookie		string			`bson:"cookie"`
 	Tenant		string			`bson:"tenant"`
-	Lang		string			`bson:"lang"`
-	Packages	[]*swyapi.Package	`bson:"packages"`
-}
 
-func pcCookie(ctx context.Context, lang string) string {
-	return xh.CookifyS(gctx(ctx).Tenant, lang)
+	Packages	map[string][]*swyapi.Package	`bson:"packages,omitempty"`
+	Stats		map[string]*PackagesStats	`bson:"stats,omitempty"`
 }
 
 func init() {
@@ -72,11 +75,12 @@ func (ps Packages)Iterate(ctx context.Context, q url.Values, cb func(context.Con
 
 	var pkgs []*swyapi.Package
 
-	cc := pcCookie(ctx, ps.Lang)
-	pc := dbPackagesFind(ctx, cc)
-	if pc != nil {
-		pkgs = pc.Packages
-	} else {
+	pc, _ := dbPackagesFind(ctx)
+	if pc != nil && pc.Packages != nil {
+		pkgs = pc.Packages[ps.Lang]
+	}
+
+	if pkgs == nil {
 		var cerr *xrest.ReqErr
 
 		pkgs, cerr = rtListPackages(ctx, h)
@@ -84,12 +88,7 @@ func (ps Packages)Iterate(ctx context.Context, q url.Values, cb func(context.Con
 			return cerr
 		}
 
-		dbPackagesCache(ctx, &PackagesCache{
-			Tenant: gctx(ctx).Tenant,
-			Lang: ps.Lang,
-			Cookie: cc,
-			Packages: pkgs,
-		})
+		dbPackagesUpdateList(ctx, ps.Lang, pkgs)
 	}
 
 	id := ctxSwoId(ctx, NoProject, "")
@@ -111,7 +110,8 @@ func (pkg *PackageDesc)Add(ctx context.Context, _ interface{}) *xrest.ReqErr {
 	h := rt_handlers[pkg.Lang]
 	cerr := rtInstallPackage(ctx, h, pkg.SwoId)
 	if cerr == nil {
-		dbPackagesFlush(ctx, pcCookie(ctx, pkg.Lang))
+		dbPackagesFlushList(ctx, pkg.Lang)
+		rescanKick(ctx, pkg.Lang, false)
 	}
 	return cerr
 }
@@ -120,7 +120,8 @@ func (pkg *PackageDesc)Del(ctx context.Context) *xrest.ReqErr {
 	h := rt_handlers[pkg.Lang]
 	cerr := rtRemovePackage(ctx, h, pkg.SwoId)
 	if cerr == nil {
-		dbPackagesFlush(ctx, pcCookie(ctx, pkg.Lang))
+		dbPackagesFlushList(ctx, pkg.Lang)
+		rescanKick(ctx, pkg.Lang, false)
 	}
 	return cerr
 }
@@ -133,4 +134,122 @@ func (pkg *PackageDesc)Info(ctx context.Context, q url.Values, details bool) (in
 
 func (pkg *PackageDesc)Upd(ctx context.Context, upd interface{}) *xrest.ReqErr {
 	return GateErrC(swyapi.GateNotAvail)
+}
+
+func packagesStats(ctx context.Context, r *http.Request) (*swyapi.PkgStat, *xrest.ReqErr) {
+	ps, _ := dbPackagesFind(ctx)
+	if ps == nil || ps.Stats == nil {
+		rescanKick(ctx, "", true)
+
+		var err error
+
+		ps, err = dbPackagesFind(ctx)
+		if err == nil {
+			goto ok
+		}
+
+		return nil, GateErrD(err)
+	}
+
+ok:
+	ret := &swyapi.PkgStat {
+		Lang:	map[string]*swyapi.PkgLangStat{},
+	}
+
+	var tot uint64
+	for l, ls := range ps.Stats {
+		tot += ls.DU
+		ret.Lang[l] = &swyapi.PkgLangStat{ DU: ls.DU >> 10 }
+	}
+
+	ret.DU = tot >> 10
+
+	return ret, nil
+}
+
+type pkgScanReq struct {
+	Ten	string
+	Lang	string
+	Sync	chan bool
+}
+
+var pkgScan chan *pkgScanReq
+
+func getDirDU(dir string) (uint64, error) {
+	var size uint64
+
+	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if path == dir {
+			return nil
+		}
+
+		stat, _ := info.Sys().(*syscall.Stat_t)
+		size += uint64(stat.Blocks << 9)
+		return nil
+	})
+
+	return size, err
+}
+
+func langStatScan(rq *pkgScanReq) {
+	ctx, done := mkContext("::pkgscan")
+	defer done(ctx)
+
+	if rq.Lang != "" {
+		langStatScanOne(ctx, rq)
+	} else {
+		for l, _ := range rt_handlers {
+			rq.Lang = l
+			langStatScanOne(ctx, rq)
+		}
+	}
+}
+
+func langStatScanOne(ctx context.Context, rq *pkgScanReq) {
+	ctxlog(ctx).Debugf("Will re-scan %s/%s packages", rq.Ten, rq.Lang)
+	du, err := getDirDU(packagesDir() + "/" + rq.Ten + "/" + rq.Lang)
+	if err != nil {
+		ctxlog(ctx).Errorf("Cannot san %s/%s packages", rq.Ten, rq.Lang)
+		return
+	}
+
+	err = dbPackagesUpdateDU(ctx, rq.Ten, rq.Lang, du)
+	if err != nil {
+		ctxlog(ctx).Errorf("Cannot update %s/%s pkg stats", rq.Ten, rq.Lang)
+		return
+	}
+}
+
+func rescanKick(ctx context.Context, lang string, sync bool) {
+	rq := pkgScanReq {
+		Ten: gctx(ctx).Tenant,
+		Lang: lang,
+	}
+
+	if sync {
+		rq.Sync = make(chan bool)
+	}
+
+	pkgScan <-&rq
+
+	if sync {
+		<-rq.Sync
+	}
+}
+
+func init() {
+	pkgScan = make(chan *pkgScanReq)
+	go func() {
+		for {
+			x := <-pkgScan
+			langStatScan(x)
+			if x.Sync != nil {
+				x.Sync <-true
+			}
+		}
+	}()
 }

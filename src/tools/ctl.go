@@ -1372,6 +1372,15 @@ func pkg_del(args []string, opts [16]string) {
 	swyclient.Packages(args[0]).Del(args[1])
 }
 
+func pkg_stat(args []string, opts [16]string) {
+	var st swyapi.PkgStat
+	swyclient.Req1("GET", "packages", http.StatusOK, nil, &st)
+	fmt.Printf("DU:                 %dK\n", st.DU)
+	for l, lst := range st.Lang {
+		fmt.Printf("`- %12s:     %dK\n", l, lst.DU)
+	}
+}
+
 func acc_list(args []string, opts [16]string) {
 	var ais []map[string]string
 	ua := []string{}
@@ -1693,6 +1702,7 @@ const (
 	CMD_PKI string		= "pki"
 	CMD_PKA string		= "pka"
 	CMD_PKD string		= "pkd"
+	CMD_PKS string		= "pks"
 
 	CMD_UL string		= "ul"
 	CMD_UI string		= "ui"
@@ -1777,6 +1787,7 @@ var cmdOrder = []string {
 	CMD_PKI,
 	CMD_PKA,
 	CMD_PKD,
+	CMD_PKS,
 
 	CMD_UL,
 	CMD_UI,
@@ -1872,6 +1883,7 @@ var cmdMap = map[string]*cmdDesc {
 	CMD_PKI:	&cmdDesc{ help: "Show package info",	call: pkg_info		},
 	CMD_PKA:	&cmdDesc{ help: "Add package",		call: pkg_add		},
 	CMD_PKD:	&cmdDesc{ help: "Del package",		call: pkg_del		},
+	CMD_PKS:	&cmdDesc{ help: "Stats about packages",	call: pkg_stat		},
 
 	CMD_UL:		&cmdDesc{ help: "List users",		call: user_list,	adm: true },
 	CMD_UI:		&cmdDesc{ help: "Show user info",	call: user_info,	adm: true },
@@ -2037,6 +2049,7 @@ func main() {
 	setupCommonCmd(CMD_PKA, "LANG", "NAME")
 	setupCommonCmd(CMD_PKI, "LANG", "NAME")
 	setupCommonCmd(CMD_PKD, "LANG", "NAME")
+	setupCommonCmd(CMD_PKS)
 
 	setupCommonCmd(CMD_UL)
 	setupCommonCmd(CMD_UA, "UID")
