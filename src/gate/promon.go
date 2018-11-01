@@ -55,6 +55,14 @@ var (
 		[]string { "description" },
 	)
 
+	repoPulls = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "swifty_repo_pulls",
+			Help: "Number of repository pull-s",
+		},
+		[]string { "reason" },
+	)
+
 	wdogErrors = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "swifty_gate_wdog_errs",
@@ -119,6 +127,7 @@ func PrometheusInit(ctx context.Context) error {
 	prometheus.MustRegister(gateCalls)
 	prometheus.MustRegister(gateCalLat)
 	prometheus.MustRegister(contextRuns)
+	prometheus.MustRegister(repoPulls)
 
 	r := mux.NewRouter()
 	r.Handle("/metrics", promhttp.Handler())

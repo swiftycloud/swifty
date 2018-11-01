@@ -106,6 +106,7 @@ func githubRepoUpdated(ctx context.Context, r *http.Request) {
 
 	for _, rd := range rds {
 		if rd.pullSync() == nil {
+			repoPulls.WithLabelValues("hook").Inc()
 			synced++
 		}
 	}
@@ -420,6 +421,7 @@ func (rd *RepoDesc)pullManual(ctx context.Context) *xrest.ReqErr {
 	}
 
 	rd.pullAsync()
+	repoPulls.WithLabelValues("manual").Inc()
 	return nil
 }
 
@@ -605,6 +607,7 @@ func pullRepos(ctx context.Context, ts time.Time) (int, error) {
 
 	for _, rd := range rds {
 		if rd.pullSync() == nil {
+			repoPulls.WithLabelValues("priodic").Inc()
 			synced++
 		}
 	}
