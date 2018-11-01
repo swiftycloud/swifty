@@ -34,6 +34,7 @@ const (
 	DBColRepos	= "Repos"
 	DBColAccounts	= "Accounts"
 	DBColRouters	= "Routers"
+	DBColPackages	= "Packages"
 )
 
 var dbColMap map[reflect.Type]string
@@ -318,6 +319,29 @@ func dbTenStatsUpdate(ctx context.Context, tenant string, delta *gmgo.TenStatVal
 	return err
 }
 
+func dbPackagesFind(ctx context.Context, cookie string) *PackagesCache {
+	var pc PackagesCache
+	err := dbCol(ctx, DBColPackages).Find(bson.M{"cookie": cookie}).One(&pc)
+	if err != nil {
+		return nil
+	}
+
+	return &pc
+}
+
+func dbPackagesCache(ctx context.Context, pc *PackagesCache) {
+	dbCol(ctx, DBColPackages).Upsert(bson.M{"cookie": pc.Cookie},
+			bson.M{"$set": bson.M{"packages": pc.Packages}})
+}
+
+func dbPackagesFlush(ctx context.Context, cookie string) {
+	dbCol(ctx, DBColPackages).Remove(bson.M{"cookie": cookie})
+}
+
+func dbPackagesFlushAll(ctx context.Context) {
+	dbCol(ctx, DBColPackages).RemoveAll(bson.M{})
+}
+
 func dbFnStatsGet(ctx context.Context, cookie string, st *FnStats) error {
 	return maybe(dbCol(ctx, DBColFnStats).Find(bson.M{"cookie": cookie}).One(st))
 }
@@ -570,6 +594,10 @@ func dbConnect() error {
 	err = dbs.DB(DBStateDB).C(DBColRouters).EnsureIndex(index)
 	if err != nil {
 		return fmt.Errorf("No cookie index for mware: %s", err.Error())
+	}
+	err = dbs.DB(DBStateDB).C(DBColPackages).EnsureIndex(index)
+	if err != nil {
+		return fmt.Errorf("No cookie index for package cache: %s", err.Error())
 	}
 
 	index.Key = []string{"uid"}
