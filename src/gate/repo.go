@@ -293,6 +293,7 @@ func (rd *RepoDesc)Attach(ctx context.Context, ac *AccDesc) *xrest.ReqErr {
 	}
 
 	go bgClone(rd, ac, &rh)
+	gateRepos.Inc()
 
 	return nil
 }
@@ -330,6 +331,7 @@ func (rd *RepoDesc)Del(ctx context.Context) *xrest.ReqErr {
 		return GateErrD(err)
 	}
 
+	gateRepos.Dec()
 	return nil
 }
 

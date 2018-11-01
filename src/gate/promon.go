@@ -32,6 +32,13 @@ var (
 		},
 	)
 
+	gateRepos = prometheus.NewGauge(
+		prometheus.GaugeOpts{
+			Name: "swifty_gate_nr_repos",
+			Help: "Number of repos registered",
+		},
+	)
+
 	gateDeploys = prometheus.NewGauge(
 		prometheus.GaugeOpts{
 			Name: "swifty_gate_nr_deploys",
@@ -158,6 +165,14 @@ func PrometheusInit(ctx context.Context) error {
 
 	gateRouters.Set(float64(nr))
 	prometheus.MustRegister(gateRouters)
+
+	nr, err = dbRepoCount(ctx)
+	if err != nil {
+		return err
+	}
+
+	gateRepos.Set(float64(nr))
+	prometheus.MustRegister(gateRepos)
 
 	nr, err = dbDeployCount(ctx)
 	if err != nil {

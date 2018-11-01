@@ -292,6 +292,10 @@ func dbRouterCount(ctx context.Context) (int, error) {
 	return dbCol(ctx, DBColRouters).Count()
 }
 
+func dbRepoCount(ctx context.Context) (int, error) {
+	return dbCol(ctx, DBColRepos).Count()
+}
+
 func dbDeployCount(ctx context.Context) (int, error) {
 	return dbCol(ctx, DBColDeploy).Count()
 }
