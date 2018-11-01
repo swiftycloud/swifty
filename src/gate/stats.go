@@ -199,7 +199,7 @@ func statsStart() *statsOpaque {
 	return sopq
 }
 
-func statsUpdate(fmd *FnMemData, op *statsOpaque, res *swyapi.WdogFunctionRunResult) {
+func statsUpdate(fmd *FnMemData, op *statsOpaque, res *swyapi.WdogFunctionRunResult, event string) {
 	lat := time.Since(op.ts)
 	if op.trace != nil {
 		op.trace["stop"] = lat
@@ -209,7 +209,7 @@ func statsUpdate(fmd *FnMemData, op *statsOpaque, res *swyapi.WdogFunctionRunRes
 	rt := res.FnTime()
 	gatelat := lat - rt
 	gateCalLat.Observe(gatelat.Seconds())
-	gateCalls.WithLabelValues("calls").Inc()
+	gateCalls.WithLabelValues(event).Inc()
 
 	fmd.lock.Lock()
 	fmd.stats.Called++

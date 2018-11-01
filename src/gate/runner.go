@@ -156,7 +156,7 @@ func doRun(ctx context.Context, fn *FunctionDesc, event string, args *swyapi.Fun
 	sopq := statsStart()
 	res, err := conn.Run(ctx, sopq, "", event, args)
 	if err == nil {
-		statsUpdate(fmd, sopq, res)
+		statsUpdate(fmd, sopq, res, event)
 	}
 
 	return res, err
