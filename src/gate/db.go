@@ -331,7 +331,11 @@ func dbPackagesFind(ctx context.Context, cookie string) *PackagesCache {
 
 func dbPackagesCache(ctx context.Context, pc *PackagesCache) {
 	dbCol(ctx, DBColPackages).Upsert(bson.M{"cookie": pc.Cookie},
-			bson.M{"$set": bson.M{"packages": pc.Packages}})
+			bson.M{"$set": bson.M{
+				"packages": pc.Packages,
+				"tenant": pc.Tenant,
+				"lang": pc.Lang,
+			}})
 }
 
 func dbPackagesFlush(ctx context.Context, cookie string) {

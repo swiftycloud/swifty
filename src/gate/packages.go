@@ -23,6 +23,8 @@ type PackageDesc struct {
 type PackagesCache struct {
 	ObjID		bson.ObjectId		`bson:"_id,omitempty"`
 	Cookie		string			`bson:"cookie"`
+	Tenant		string			`bson:"tenant"`
+	Lang		string			`bson:"lang"`
 	Packages	[]*swyapi.Package	`bson:"packages"`
 }
 
@@ -82,7 +84,12 @@ func (ps Packages)Iterate(ctx context.Context, q url.Values, cb func(context.Con
 			return cerr
 		}
 
-		dbPackagesCache(ctx, &PackagesCache{ Cookie: cc, Packages: pkgs })
+		dbPackagesCache(ctx, &PackagesCache{
+			Tenant: gctx(ctx).Tenant,
+			Lang: ps.Lang,
+			Cookie: cc,
+			Packages: pkgs,
+		})
 	}
 
 	id := ctxSwoId(ctx, NoProject, "")
