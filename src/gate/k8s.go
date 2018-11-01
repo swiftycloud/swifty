@@ -484,6 +484,7 @@ func waitPodPort(ctx context.Context, addr, port string) error {
 		}
 
 		if time.Now().After(till) {
+			wdogErrors.WithLabelValues("Start timeout").Inc()
 			return fmt.Errorf("Pod's port not up for too long")
 		}
 
