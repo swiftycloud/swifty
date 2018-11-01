@@ -86,6 +86,20 @@ var (
 		[]string { "code" },
 	)
 
+	statWrites = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "swifty_gate_stat_writes",
+			Help: "Number of stats bg flushes into DB",
+		},
+	)
+
+	statWriteFails = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "swifty_gate_stat_write_fails",
+			Help: "Number of errors in bg stats flush",
+		},
+	)
+
 	gateCalLat = prometheus.NewHistogram(
 		prometheus.HistogramOpts{
 			Name: "swifty_gate_call_latency",
@@ -161,6 +175,8 @@ func PrometheusInit(ctx context.Context) error {
 	prometheus.MustRegister(contextRuns)
 	prometheus.MustRegister(repoPulls)
 	prometheus.MustRegister(repoPllErrs)
+	prometheus.MustRegister(statWrites)
+	prometheus.MustRegister(statWriteFails)
 
 	r := mux.NewRouter()
 	r.Handle("/metrics", promhttp.Handler())
