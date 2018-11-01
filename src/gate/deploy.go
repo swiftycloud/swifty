@@ -512,6 +512,7 @@ func (dep *DeployDesc)Add(ctx context.Context, p interface{}) *xrest.ReqErr {
 		return cerr
 	}
 
+	gateDeploys.Inc()
 	return nil
 }
 
@@ -581,6 +582,7 @@ func (dep *DeployDesc)Del(ctx context.Context) (*xrest.ReqErr) {
 		return GateErrD(err)
 	}
 
+	gateDeploys.Dec()
 	return nil
 }
 

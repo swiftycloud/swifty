@@ -292,6 +292,10 @@ func dbRouterCount(ctx context.Context) (int, error) {
 	return dbCol(ctx, DBColRouters).Count()
 }
 
+func dbDeployCount(ctx context.Context) (int, error) {
+	return dbCol(ctx, DBColDeploy).Count()
+}
+
 func dbTenStatsGet(ctx context.Context, tenant string, st *TenStats) error {
 	return maybe(dbCol(ctx, DBColTenStats).Find(bson.M{"tenant": tenant}).One(st))
 }

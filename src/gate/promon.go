@@ -32,6 +32,13 @@ var (
 		},
 	)
 
+	gateDeploys = prometheus.NewGauge(
+		prometheus.GaugeOpts{
+			Name: "swifty_gate_nr_deploys",
+			Help: "Number of deployments registered",
+		},
+	)
+
 	gateCalls = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "swifty_gate_function_calls",
@@ -99,6 +106,14 @@ func PrometheusInit(ctx context.Context) error {
 
 	gateRouters.Set(float64(nr))
 	prometheus.MustRegister(gateRouters)
+
+	nr, err = dbDeployCount(ctx)
+	if err != nil {
+		return err
+	}
+
+	gateDeploys.Set(float64(nr))
+	prometheus.MustRegister(gateDeploys)
 
 	/* XXX: We can pick up the call-counts from the database, but ... */
 	prometheus.MustRegister(gateCalls)
