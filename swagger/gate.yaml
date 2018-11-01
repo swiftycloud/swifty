@@ -2049,6 +2049,32 @@ paths:
           description: Need to authenticate
         '403':
           description: Bad authentication token
+  /info/mwares/{mtyp}:
+    get:
+      summary: Show info about middleware
+      parameters:
+        - in: header
+          name: X-Auth-Token
+          type: string
+          required: true
+        - name: mtyp
+          in: path
+          description: Mware type name
+          required: true
+          type: string
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/MwareTypeInfo'
+        '400':
+          description: Bad request
+          schema:
+            $ref: '#/definitions/GateError'
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad authentication token
 definitions:
   UserLogin:
     required:
@@ -2522,6 +2548,15 @@ definitions:
       userdata:
         type: string
         description: And string user wishes to keep with this mware
+  MwareTypeInfo:
+    type: object
+    description: Middleware type inforamtion
+    properties:
+      envs:
+        description: How environments passed to functions look like
+        type: array
+        items:
+          type: string
   MwareInfo:
     type: object
     description: Middleware inforamtion
