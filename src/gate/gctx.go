@@ -27,6 +27,8 @@ func mkContext3(desc, tenant string, admin bool) (context.Context, func(context.
 		session.Copy(),
 	}
 
+	contextRuns.WithLabelValues(desc).Inc()
+
 	return gatectx, func(ctx context.Context) { gctx(ctx).S.Close() }
 }
 

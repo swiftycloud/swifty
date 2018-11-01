@@ -33,6 +33,14 @@ var (
 		[]string { "result" },
 	)
 
+	contextRuns = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "swifty_context_runs",
+			Help: "Number of contexts of different types seen",
+		},
+		[]string { "description" },
+	)
+
 	wdogErrors = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "swifty_gate_wdog_errs",
@@ -80,6 +88,7 @@ func PrometheusInit(ctx context.Context) error {
 	/* XXX: We can pick up the call-counts from the database, but ... */
 	prometheus.MustRegister(gateCalls)
 	prometheus.MustRegister(gateCalLat)
+	prometheus.MustRegister(contextRuns)
 
 	r := mux.NewRouter()
 	r.Handle("/metrics", promhttp.Handler())
