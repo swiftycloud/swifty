@@ -69,6 +69,7 @@ type MwareOps struct {
 	Fini	func(ctx context.Context, mwd *MwareDesc) (error)
 	GetEnv	func(ctx context.Context, mwd *MwareDesc) (map[string][]byte)
 	Info	func(ctx context.Context, mwd *MwareDesc, ifo *swyapi.MwareInfo) (error)
+	TInfo	func(ctx context.Context) *swyapi.MwareTypeInfo
 	Disabled bool
 	LiteOK	bool
 }
@@ -522,6 +523,19 @@ out:
 stalled:
 	mwd.ToState(ctx, DBMwareStateStl, -1)
 	goto out
+}
+
+func mwareGetInfo(ctx context.Context, mtyp string) (*swyapi.MwareTypeInfo, *xrest.ReqErr) {
+	handler, ok := mwareHandlers[mtyp]
+	if !ok {
+		return nil, GateErrM(swyapi.GateBadRequest, "Not such type")
+	}
+
+	if handler.TInfo == nil {
+		return nil, GateErrC(swyapi.GateNotAvail)
+	}
+
+	return handler.TInfo(ctx), nil
 }
 
 func MwInit() {

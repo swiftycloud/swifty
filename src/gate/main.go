@@ -266,6 +266,7 @@ func getHandlers() http.Handler {
 	r.Handle("/v1/info/langs",		genReqHandler(handleLanguages)).Methods("GET", "OPTIONS")
 	r.Handle("/v1/info/langs/{lang}",	genReqHandler(handleLanguage)).Methods("GET", "OPTIONS")
 	r.Handle("/v1/info/mwares",		genReqHandler(handleMwareTypes)).Methods("GET", "OPTIONS")
+	r.Handle("/v1/info/mwares/{mtyp}",	genReqHandler(handleMwareType)).Methods("GET", "OPTIONS")
 
 	r.PathPrefix("/call/{urlid}").Methods(clientMethods...).HandlerFunc(handleCall)
 

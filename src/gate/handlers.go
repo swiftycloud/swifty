@@ -704,6 +704,16 @@ func handleMwareTypes(ctx context.Context, w http.ResponseWriter, r *http.Reques
 	return xrest.Respond(ctx, w, ret)
 }
 
+func handleMwareType(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
+	mtyp := mux.Vars(r)["mtyp"]
+	ret, cerr := mwareGetInfo(ctx, mtyp)
+	if cerr != nil {
+		return cerr
+	}
+
+	return xrest.Respond(ctx, w, ret)
+}
+
 func handleS3Access(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
 	var params swyapi.S3Access
 

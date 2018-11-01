@@ -1482,11 +1482,21 @@ func languages(args []string, opts [16]string) {
 }
 
 func mware_types(args []string, opts [16]string) {
-	var r []string
+	if opts[0] == "" {
+		var r []string
 
-	swyclient.Req1("GET", "info/mwares", http.StatusOK, nil, &r)
-	for _, v := range r {
-		fmt.Printf("%s\n", v)
+		swyclient.Req1("GET", "info/mwares", http.StatusOK, nil, &r)
+		for _, v := range r {
+			fmt.Printf("%s\n", v)
+		}
+	} else {
+		var ti swyapi.MwareTypeInfo
+
+		swyclient.Req1("GET", "info/mwares/" + opts[0], http.StatusOK, nil, &ti)
+		fmt.Printf("Envs:\n")
+		for _, env := range ti.Envs {
+			fmt.Printf("\t%s\n", env)
+		}
 	}
 }
 
@@ -2055,6 +2065,7 @@ func main() {
 	setupCommonCmd(CMD_TD, "ID")
 
 	setupCommonCmd(CMD_MTYPES)
+	cmdMap[CMD_MTYPES].opts.StringVar(&opts[0], "mt", "", "Show info about specific mware type")
 	setupCommonCmd(CMD_LANGS)
 
 	setupCommonCmd(CMD_LANG)

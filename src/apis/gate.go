@@ -153,6 +153,10 @@ type MwareAdd struct {
 	AuthCtx		string			`json:"authctx,omitempty"`
 }
 
+type MwareTypeInfo struct {
+	Envs		[]string		`json:"envs"`
+}
+
 type MwareInfo struct {
 	Id		string			`json:"id"`
 	Labels		[]string		`json:"labels,omitempty"`
@@ -338,7 +342,6 @@ type PkgAdd struct {
 type PkgInfo struct {
 	Id		string		`json:"id"`	// name
 }
-
 
 /*
  * This type is not seen by wdog itself, instead, it's described
