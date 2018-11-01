@@ -536,6 +536,9 @@ func init() {
 			if rq.done != nil {
 				rq.done <-err
 			}
+			if err != nil {
+				repoPllErrs.Inc()
+			}
 			done(ctx)
 		}
 	}()
