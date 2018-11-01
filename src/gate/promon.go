@@ -78,7 +78,7 @@ var (
 
 	contextRuns = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
-			Name: "swifty_context_runs",
+			Name: "swifty_gate_context_runs",
 			Help: "Number of contexts of different types seen",
 		},
 		[]string { "description" },
@@ -86,7 +86,7 @@ var (
 
 	repoPulls = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
-			Name: "swifty_repo_pulls",
+			Name: "swifty_gate_repo_pulls",
 			Help: "Number of repository pull-s",
 		},
 		[]string { "reason" },
@@ -94,14 +94,14 @@ var (
 
 	repoPllErrs = prometheus.NewCounter(
 		prometheus.CounterOpts{
-			Name: "swifty_repo_pull_errs",
+			Name: "swifty_gate_repo_pull_errs",
 			Help: "Number of failed repo pulls",
 		},
 	)
 
 	pkgScans = prometheus.NewCounter(
 		prometheus.CounterOpts{
-			Name: "swifty_pkg_scans",
+			Name: "swifty_gate_pkg_scans",
 			Help: "Number of FS scans for packages",
 		},
 	)
@@ -146,7 +146,7 @@ var (
 
 	wdogWaitLat = prometheus.NewHistogram(
 		prometheus.HistogramOpts{
-			Name: "swifty_wdog_up_lat",
+			Name: "swifty_gate_wdog_up_lat",
 			Help: "Time it takes gate to wait for wdog port open",
 			Buckets: []float64{
 				(  5 * time.Millisecond).Seconds(), /* Immediately */
