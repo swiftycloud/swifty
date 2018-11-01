@@ -82,6 +82,20 @@ func (mw *MwareDesc)envName(envName string) string {
 	return mkEnvName(mw.MwareType, mw.Name, envName)
 }
 
+func stdEnvNames(typ string, extra ...string) []string {
+	ret := []string {
+		mkEnvName(typ, "%name%", "ADDR"),
+		mkEnvName(typ, "%name%", "USER"),
+		mkEnvName(typ, "%name%", "PASS"),
+	}
+
+	for _, x := range extra {
+		ret = append(ret, mkEnvName(typ, "%name%", x))
+	}
+
+	return ret
+}
+
 func (mwd *MwareDesc)stdEnvs(mwaddr string) map[string][]byte {
 	return map[string][]byte {
 		mwd.envName("ADDR"): []byte(mwaddr),

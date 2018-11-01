@@ -2065,7 +2065,7 @@ func main() {
 	setupCommonCmd(CMD_TD, "ID")
 
 	setupCommonCmd(CMD_MTYPES)
-	cmdMap[CMD_MTYPES].opts.StringVar(&opts[0], "mt", "", "Show info about specific mware type")
+	cmdMap[CMD_MTYPES].opts.StringVar(&opts[0], "t", "", "Show info about specific mware type")
 	setupCommonCmd(CMD_LANGS)
 
 	setupCommonCmd(CMD_LANG)
