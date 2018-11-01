@@ -181,6 +181,22 @@ var (
 			},
 		},
 	)
+
+	scalerGoals = prometheus.NewHistogram(
+		prometheus.HistogramOpts{
+			Name: "swifty_gate_scaler_goals",
+			Help: "Goals that balancer put on scaler",
+			Buckets: []float64{
+				 1.05, /* They are ints, so +0.05 to make comparison always the way we want */
+				 2.05,
+				 4.05,
+				 8.05,
+				16.05,
+				32.05,
+				64.05,
+			},
+		},
+	)
 )
 
 func PrometheusInit(ctx context.Context) error {
@@ -241,6 +257,7 @@ func PrometheusInit(ctx context.Context) error {
 	prometheus.MustRegister(gateBuilds)
 	prometheus.MustRegister(gateCalLat)
 	prometheus.MustRegister(wdogWaitLat)
+	prometheus.MustRegister(scalerGoals)
 	prometheus.MustRegister(contextRuns)
 	prometheus.MustRegister(repoPulls)
 	prometheus.MustRegister(repoPllErrs)

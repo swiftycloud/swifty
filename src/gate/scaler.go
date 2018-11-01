@@ -76,6 +76,7 @@ fin:
 }
 
 func balancerFnDepGrow(ctx context.Context, fdm *FnMemData, goal uint32) {
+	scalerGoals.Observe(float64(goal))
 	if goal <= fdm.bd.goal {
 		return
 	}
