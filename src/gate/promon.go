@@ -122,6 +122,13 @@ var (
 		},
 	)
 
+	limitPullErrs = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "swifty_gate_limit_pull_err",
+			Help: "Number of errors pulling tenant limits",
+		},
+	)
+
 	wdogErrors = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "swifty_gate_wdog_errs",
@@ -238,6 +245,7 @@ func PrometheusInit(ctx context.Context) error {
 	prometheus.MustRegister(repoPulls)
 	prometheus.MustRegister(repoPllErrs)
 	prometheus.MustRegister(pkgScans)
+	prometheus.MustRegister(limitPullErrs)
 	prometheus.MustRegister(statWrites)
 	prometheus.MustRegister(statWriteFails)
 	prometheus.MustRegister(scalers)
