@@ -53,7 +53,7 @@ func (ps Packages)Iterate(ctx context.Context, q url.Values, cb func(context.Con
 	id := ctxSwoId(ctx, NoProject, "")
 
 	for _, pkg := range pkgs {
-		id.Name = pkg
+		id.Name = pkg.Name
 		cerr := cb(ctx, &PackageDesc {
 			SwoId: *id,
 			Lang:	ps.Lang,

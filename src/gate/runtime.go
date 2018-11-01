@@ -146,8 +146,8 @@ func getInfo(l string, rh *langInfo) *swyapi.LangInfo {
 	return &result
 }
 
-func rtListPackages(ctx context.Context, rh *langInfo) ([]string, *xrest.ReqErr) {
-	var result []string
+func rtListPackages(ctx context.Context, rh *langInfo) ([]*swyapi.Package, *xrest.ReqErr) {
+	var result []*swyapi.Package
 
 	ten := gctx(ctx).Tenant
 

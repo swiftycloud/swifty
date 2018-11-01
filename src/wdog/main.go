@@ -242,16 +242,21 @@ out:
 }
 
 func listPackages(w http.ResponseWriter, ld *LangDesc, tenant string) {
-	var res []string
+	var pks []string
+	var res []*swyapi.Package
 
 	err := errors.New("Not implemented")
 	if ld.packages == nil {
 		goto out
 	}
 
-	res, err = ld.packages(tenant)
+	pks, err = ld.packages(tenant)
 	if err != nil {
 		goto out
+	}
+
+	for _, p := range pks {
+		res = append(res, &swyapi.Package{ Name: p })
 	}
 
 	err = xhttp.Respond(w, &res)
