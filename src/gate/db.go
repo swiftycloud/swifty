@@ -288,6 +288,10 @@ func dbFuncUpdate(ctx context.Context, q, ch bson.M) (error) {
 	return dbCol(ctx, DBColFunc).Update(q, ch)
 }
 
+func dbRouterCount(ctx context.Context) (int, error) {
+	return dbCol(ctx, DBColRouters).Count()
+}
+
 func dbTenStatsGet(ctx context.Context, tenant string, st *TenStats) error {
 	return maybe(dbCol(ctx, DBColTenStats).Find(bson.M{"tenant": tenant}).One(st))
 }
