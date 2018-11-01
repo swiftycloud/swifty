@@ -46,6 +46,13 @@ var (
 		},
 	)
 
+	scalers = prometheus.NewGauge(
+		prometheus.GaugeOpts{
+			Name: "swifty_gate_scalers",
+			Help: "Number of active scalers running",
+		},
+	)
+
 	gateCalls = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "swifty_gate_function_calls",
@@ -192,6 +199,7 @@ func PrometheusInit(ctx context.Context) error {
 	prometheus.MustRegister(repoPllErrs)
 	prometheus.MustRegister(statWrites)
 	prometheus.MustRegister(statWriteFails)
+	prometheus.MustRegister(scalers)
 
 	r := mux.NewRouter()
 	r.Handle("/metrics", promhttp.Handler())
