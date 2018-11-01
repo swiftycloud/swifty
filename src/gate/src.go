@@ -173,6 +173,12 @@ func putFileFromUrl(ctx context.Context, src *swyapi.FunctionSources, to, script
 	return writeSourceFile(ctx, to, script, resp.Body)
 }
 
+var srcLeakTmo time.Duration = 16 * 60 * time.Second
+
+func init() {
+	addTimeSysctl("src_leak_tmo", &srcLeakTmo)
+}
+
 func GCOldSources(ctx context.Context, fn *FunctionDesc, ver string) {
 	np, err := xh.DropDirPrep(functionsDir(), fn.srcDir(ver))
 	if err != nil {
@@ -189,7 +195,7 @@ func GCOldSources(ctx context.Context, fn *FunctionDesc, ver string) {
 
 	go func() {
 		srcGCs.Inc()
-		tmo := 16 * 60 * time.Second
+		tmo := srcLeakTmo
 		ctx, done := mkContext("::gcoldsource")
 		defer done(ctx)
 
