@@ -2,7 +2,7 @@ import sys
 import os
 import subprocess
 
-ten = sys.args[1]
+ten = sys.argv[1]
 ppath = "/packages/" + ten + "/python"
 sys.path += [ ppath + z for z in sys.path ]
 from pkg_resources import working_set, get_distribution
