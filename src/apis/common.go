@@ -45,10 +45,15 @@ type FunctionLimits struct {
 	BytesOut	uint64	`json:"bytesout,omitempty",bson:"bytesout,omitempty"`
 }
 
+type PackagesLimits struct {
+	DiskSizeK	uint64	`json:"disk_size_kb"` // KB
+}
+
 type UserLimits struct {
 	UId	string			`json:"-",bson:"uid"`
 	PlanId	string			`json:"planid",bson:"planid"`
 	Fn	*FunctionLimits		`json:"function,omitempty",bson:"function,omitempty"`
+	Pkg	*PackagesLimits		`json:"packages,omitempty",bson:"packages,omitempty"`
 }
 
 type Package struct {

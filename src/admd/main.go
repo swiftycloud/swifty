@@ -330,10 +330,11 @@ out:
 }
 
 func (pl *PlanLimits)toInfo() *swyapi.PlanLimits {
-	return&swyapi.PlanLimits{
+	return &swyapi.PlanLimits{
 		Id:	pl.ObjID.Hex(),
 		Name:	pl.Name,
 		Fn:	pl.Fn,
+		Pkg:	pl.Pkg,
 	}
 }
 
@@ -539,6 +540,7 @@ func handleAddUser(w http.ResponseWriter, r *http.Request, td *xkst.KeystoneToke
 			UId:	params.UId,
 			PlanId:	params.PlanId,
 			Fn:	plim.Fn,
+			Pkg:	plim.Pkg,
 		})
 		if err != nil {
 			goto out
@@ -571,6 +573,7 @@ type PlanLimits struct {
 	ObjID	bson.ObjectId		`bson:"_id,omitempty"`
 	Name	string			`bson:"name"`
 	Fn	*swyapi.FunctionLimits	`bson:"function,omitempty"`
+	Pkg	*swyapi.PackagesLimits	`bson:"packages,omitempty"`
 }
 
 func handleAddPlan(w http.ResponseWriter, r *http.Request, td *xkst.KeystoneTokenData) {
@@ -603,6 +606,7 @@ func handleAddPlan(w http.ResponseWriter, r *http.Request, td *xkst.KeystoneToke
 		ObjID:	bson.NewObjectId(),
 		Name:	params.Name,
 		Fn:	params.Fn,
+		Pkg:	params.Pkg,
 	}
 	code = http.StatusInternalServerError
 	err = dbAddPlanLimits(ses, pl)
@@ -674,6 +678,16 @@ func handleSetLimits(w http.ResponseWriter, r *http.Request, uid string, td *xks
 
 				if params.Fn.BytesOut == 0 {
 					params.Fn.BytesOut = plim.Fn.BytesOut
+				}
+			}
+		}
+
+		if plim.Pkg != nil {
+			if params.Pkg == nil {
+				params.Pkg = plim.Pkg
+			} else {
+				if params.Pkg.DiskSizeK == 0 {
+					params.Pkg.DiskSizeK = plim.Pkg.DiskSizeK
 				}
 			}
 		}

@@ -29,4 +29,5 @@ type PlanLimits struct {
 	Id	string			`json:"id,omitempty"`
 	Name	string			`json:"name"`
 	Fn	*FunctionLimits		`json:"function,omitempty"`
+	Pkg	*PackagesLimits		`json:"packages,omitempty"`
 }
