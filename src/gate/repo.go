@@ -254,6 +254,7 @@ func cloneGit(ctx context.Context, rd *RepoDesc, ac *AccDesc) (string, error) {
 		return "", err
 	}
 
+	rd.dirty()
 	return gitCommit(clone_to)
 }
 
@@ -527,10 +528,16 @@ type pullReq struct {
 	done	chan error
 }
 
+type scrapeReq struct {
+	r	*RepoDesc
+}
+
 var pulls chan *pullReq
+var scrapes chan *scrapeReq
 
 func init() {
 	pulls = make(chan *pullReq)
+	scrapes = make(chan *scrapeReq)
 	go func() {
 		for rq := range pulls {
 			ctx, done := mkContext("::repo-pull")
@@ -540,6 +547,16 @@ func init() {
 			}
 			if err != nil {
 				repoPllErrs.Inc()
+			}
+			done(ctx)
+		}
+	}()
+	go func() {
+		for rq := range scrapes {
+			ctx, done := mkContext("::repo-scrape")
+			err := rq.r.scrape(ctx)
+			if err != nil {
+				repoScrapeErrs.Inc()
 			}
 			done(ctx)
 		}
@@ -561,6 +578,14 @@ func (rd *RepoDesc)pullSync() *xrest.ReqErr {
 func (rd *RepoDesc)pullAsync() {
 	rq := pullReq{rd, nil}
 	pulls <-&rq
+}
+
+func (rd *RepoDesc)dirty() {
+	scrapes <-&scrapeReq{rd}
+}
+
+func (rd *RepoDesc)scrape(ctx context.Context) error {
+	return nil
 }
 
 func (rd *RepoDesc)pull(ctx context.Context) error {
@@ -585,6 +610,7 @@ func (rd *RepoDesc)pull(ctx context.Context) error {
 	if err == nil {
 		t := time.Now()
 		dbUpdatePart(ctx, rd, bson.M{"commit": cmt, "last_pull": &t})
+		rd.dirty()
 		tryToUpdateFunctions(ctx, rd, cmt)
 	}
 
