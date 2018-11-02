@@ -45,3 +45,4 @@ go get -d gopkg.in/robfig/cron.v2;
 patch -d${VGOPATH}/src/gopkg.in/robfig/cron.v2 -p1 < $(pwd)/contrib/robfig-cron.patch;
 go install gopkg.in/robfig/cron.v2
 go get github.com/ceph/go-ceph/rados
+go get code.cloudfoundry.org/bytefmt
