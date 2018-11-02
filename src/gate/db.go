@@ -34,7 +34,7 @@ const (
 	DBColRepos	= "Repos"
 	DBColAccounts	= "Accounts"
 	DBColRouters	= "Routers"
-	DBColPackages	= "Packages"
+	DBColTCache	= "TCache"
 )
 
 var dbColMap map[reflect.Type]string
@@ -69,7 +69,6 @@ func init() {
 	dbColMap[reflect.TypeOf(&RouterDesc{})] = DBColRouters
 	dbColMap[reflect.TypeOf([]*RouterDesc{})] = DBColRouters
 	dbColMap[reflect.TypeOf(&[]*RouterDesc{})] = DBColRouters
-	dbColMap[reflect.TypeOf(&PackagesCache{})] = DBColPackages
 }
 
 func dbCol(ctx context.Context, col string) *mgo.Collection {
@@ -356,10 +355,10 @@ func dbTenStatsUpdate(ctx context.Context, tenant string, delta *gmgo.TenStatVal
 	return err
 }
 
-func dbPackagesFind(ctx context.Context) (*PackagesCache, error) {
+func dbTCacheFind(ctx context.Context) (*TenantCache, error) {
 	cookie := xh.Cookify(gctx(ctx).Tenant)
-	var pc PackagesCache
-	err := dbCol(ctx, DBColPackages).Find(bson.M{"cookie": cookie}).One(&pc)
+	var pc TenantCache
+	err := dbCol(ctx, DBColTCache).Find(bson.M{"cookie": cookie}).One(&pc)
 	if err != nil {
 		return nil, err
 	}
@@ -367,34 +366,34 @@ func dbPackagesFind(ctx context.Context) (*PackagesCache, error) {
 	return &pc, nil
 }
 
-func dbPackagesUpdateList(ctx context.Context, lang string, pkl []*swyapi.Package) {
+func dbTCacheUpdatePackages(ctx context.Context, lang string, pkl []*swyapi.Package) {
 	ten := gctx(ctx).Tenant
 	cookie := xh.Cookify(ten)
-	dbCol(ctx, DBColPackages).Upsert(bson.M{"cookie": cookie},
+	dbCol(ctx, DBColTCache).Upsert(bson.M{"cookie": cookie},
 			bson.M{"$set": bson.M{
 				"tenant": ten,
 				"packages." + lang: pkl,
 			}})
 }
 
-func dbPackagesUpdateDU(ctx context.Context, ten, lang string, du uint64) error {
+func dbTCacheUpdatePkgDU(ctx context.Context, ten, lang string, du uint64) error {
 	cookie := xh.Cookify(ten)
-	_, err := dbCol(ctx, DBColPackages).Upsert(bson.M{"cookie": cookie},
+	_, err := dbCol(ctx, DBColTCache).Upsert(bson.M{"cookie": cookie},
 			bson.M{"$set": bson.M{
 				"tenant": ten,
-				"stats." + lang + ".du": du,
+				"pkg_stats." + lang + ".du": du,
 			}})
 	return err
 }
 
-func dbPackagesFlushList(ctx context.Context, lang string) {
+func dbTCacheFlushList(ctx context.Context, lang string) {
 	ten := gctx(ctx).Tenant
 	cookie := xh.Cookify(ten)
-	dbCol(ctx, DBColPackages).Update(bson.M{"cookie": cookie}, bson.M{"$unset": bson.M{"packages." + lang: ""}})
+	dbCol(ctx, DBColTCache).Update(bson.M{"cookie": cookie}, bson.M{"$unset": bson.M{"packages." + lang: ""}})
 }
 
-func dbPackagesFlushAll(ctx context.Context) {
-	dbCol(ctx, DBColPackages).RemoveAll(bson.M{})
+func dbTCacheFlushAll(ctx context.Context) {
+	dbCol(ctx, DBColTCache).RemoveAll(bson.M{})
 }
 
 func dbFnStatsGet(ctx context.Context, cookie string, st *FnStats) error {
@@ -650,9 +649,9 @@ func dbConnect() error {
 	if err != nil {
 		return fmt.Errorf("No cookie index for mware: %s", err.Error())
 	}
-	err = dbs.DB(DBStateDB).C(DBColPackages).EnsureIndex(index)
+	err = dbs.DB(DBStateDB).C(DBColTCache).EnsureIndex(index)
 	if err != nil {
-		return fmt.Errorf("No cookie index for package cache: %s", err.Error())
+		return fmt.Errorf("No cookie index for ten cache: %s", err.Error())
 	}
 
 	index.Key = []string{"uid"}

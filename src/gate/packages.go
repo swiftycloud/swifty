@@ -2,7 +2,6 @@ package main
 
 import (
 	"github.com/gorilla/mux"
-	"gopkg.in/mgo.v2/bson"
 	"swifty/common/xrest"
 	"path/filepath"
 	"swifty/apis"
@@ -24,25 +23,6 @@ type PackageDesc struct {
 
 type PackagesStats struct {
 	DU		uint64			`bson:"du,omitempty"`
-}
-
-type PackagesCache struct {
-	ObjID		bson.ObjectId		`bson:"_id,omitempty"`
-	Cookie		string			`bson:"cookie"`
-	Tenant		string			`bson:"tenant"`
-
-	Packages	map[string][]*swyapi.Package	`bson:"packages,omitempty"`
-	Stats		map[string]*PackagesStats	`bson:"stats,omitempty"`
-}
-
-func init() {
-	addSysctl("pkg_cache_flush", func() string { return "Set any value here" },
-		func(_ string) error {
-			ctx, done := mkContext("::pkg-flush")
-			defer done(ctx)
-			dbPackagesFlushAll(ctx)
-			return nil
-		})
 }
 
 func (ps Packages)Create(ctx context.Context, p interface{}) (xrest.Obj, *xrest.ReqErr) {
@@ -75,7 +55,7 @@ func (ps Packages)Iterate(ctx context.Context, q url.Values, cb func(context.Con
 
 	var pkgs []*swyapi.Package
 
-	pc, _ := dbPackagesFind(ctx)
+	pc, _ := dbTCacheFind(ctx)
 	if pc != nil && pc.Packages != nil {
 		pkgs = pc.Packages[ps.Lang]
 	}
@@ -88,7 +68,7 @@ func (ps Packages)Iterate(ctx context.Context, q url.Values, cb func(context.Con
 			return cerr
 		}
 
-		dbPackagesUpdateList(ctx, ps.Lang, pkgs)
+		dbTCacheUpdatePackages(ctx, ps.Lang, pkgs)
 	}
 
 	id := ctxSwoId(ctx, NoProject, "")
@@ -138,7 +118,7 @@ func (pkg *PackageDesc)Add(ctx context.Context, _ interface{}) *xrest.ReqErr {
 	h := rt_handlers[pkg.Lang]
 	cerr := rtInstallPackage(ctx, h, pkg.SwoId)
 	if cerr == nil {
-		dbPackagesFlushList(ctx, pkg.Lang)
+		dbTCacheFlushList(ctx, pkg.Lang)
 		rescanKick(ctx, pkg.Lang, false)
 	}
 	return cerr
@@ -148,7 +128,7 @@ func (pkg *PackageDesc)Del(ctx context.Context) *xrest.ReqErr {
 	h := rt_handlers[pkg.Lang]
 	cerr := rtRemovePackage(ctx, h, pkg.SwoId)
 	if cerr == nil {
-		dbPackagesFlushList(ctx, pkg.Lang)
+		dbTCacheFlushList(ctx, pkg.Lang)
 		rescanKick(ctx, pkg.Lang, false)
 	}
 	return cerr
@@ -169,13 +149,13 @@ func packagesStats(ctx context.Context, r *http.Request) (*swyapi.PkgStat, *xres
 }
 
 func packagesGetStats(ctx context.Context, brokenout bool) (*swyapi.PkgStat, *xrest.ReqErr) {
-	ps, _ := dbPackagesFind(ctx)
-	if ps == nil || ps.Stats == nil {
+	ps, _ := dbTCacheFind(ctx)
+	if ps == nil || ps.PkgStats == nil {
 		rescanKick(ctx, "", true)
 
 		var err error
 
-		ps, err = dbPackagesFind(ctx)
+		ps, err = dbTCacheFind(ctx)
 		if err == nil {
 			goto ok
 		}
@@ -190,7 +170,7 @@ ok:
 	}
 
 	var tot uint64
-	for l, ls := range ps.Stats {
+	for l, ls := range ps.PkgStats {
 		tot += ls.DU
 		if brokenout {
 			ret.Lang[l] = &swyapi.PkgLangStat{ DU: ls.DU >> 10 }
@@ -252,7 +232,7 @@ func langStatScanOne(ctx context.Context, rq *pkgScanReq) {
 		return
 	}
 
-	err = dbPackagesUpdateDU(ctx, rq.Ten, rq.Lang, du)
+	err = dbTCacheUpdatePkgDU(ctx, rq.Ten, rq.Lang, du)
 	if err != nil {
 		ctxlog(ctx).Errorf("Cannot update %s/%s pkg stats", rq.Ten, rq.Lang)
 		return
