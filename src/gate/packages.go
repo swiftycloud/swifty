@@ -3,13 +3,11 @@ package main
 import (
 	"github.com/gorilla/mux"
 	"swifty/common/xrest"
-	"path/filepath"
+	"swifty/common"
 	"swifty/apis"
 	"net/http"
 	"net/url"
-	"syscall"
 	"context"
-	"os"
 )
 
 type Packages struct {
@@ -190,26 +188,6 @@ type pkgScanReq struct {
 
 var pkgScan chan *pkgScanReq
 
-func getDirDU(dir string) (uint64, error) {
-	var size uint64
-
-	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-
-		if path == dir {
-			return nil
-		}
-
-		stat, _ := info.Sys().(*syscall.Stat_t)
-		size += uint64(stat.Blocks << 9)
-		return nil
-	})
-
-	return size, err
-}
-
 func langStatScan(rq *pkgScanReq) {
 	ctx, done := mkContext("::pkgscan")
 	defer done(ctx)
@@ -226,7 +204,7 @@ func langStatScan(rq *pkgScanReq) {
 
 func langStatScanOne(ctx context.Context, rq *pkgScanReq) {
 	ctxlog(ctx).Debugf("Will re-scan %s/%s packages", rq.Ten, rq.Lang)
-	du, err := getDirDU(packagesDir() + "/" + rq.Ten + "/" + rq.Lang)
+	du, err := xh.GetDirDU(packagesDir() + "/" + rq.Ten + "/" + rq.Lang)
 	if err != nil {
 		ctxlog(ctx).Errorf("Cannot san %s/%s packages", rq.Ten, rq.Lang)
 		return
