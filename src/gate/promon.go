@@ -61,6 +61,13 @@ var (
 		},
 	)
 
+	portWaiters = prometheus.NewGauge(
+		prometheus.GaugeOpts{
+			Name: "swifty_gate_port_waiters",
+			Help: "Number of wdog port waiters",
+		},
+	)
+
 	srcGCs = prometheus.NewGauge(
 		prometheus.GaugeOpts{
 			Name: "swifty_gate_srcgcs",
@@ -274,6 +281,7 @@ func PrometheusInit(ctx context.Context) error {
 	prometheus.MustRegister(statWrites)
 	prometheus.MustRegister(statWriteFails)
 	prometheus.MustRegister(scalers)
+	prometheus.MustRegister(portWaiters)
 	prometheus.MustRegister(srcGCs)
 	prometheus.MustRegister(danglingEvents)
 
