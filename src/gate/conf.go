@@ -275,6 +275,9 @@ func (c *YAMLConf)Validate() error {
 	}
 	if c.RepoSyncDelay == 0 {
 		fmt.Printf("'repo-sync-delay' not set, pulls will be unlimited\n")
+		if !ModeDevel {
+			return errors.New("'repo-sync-delay' not set")
+		}
 	}
 	repoSyncDelay = time.Duration(c.RepoSyncDelay) * time.Second
 	addTimeSysctl("repo_sync_delay", &repoSyncDelay)
