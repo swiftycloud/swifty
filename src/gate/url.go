@@ -21,6 +21,7 @@ type FnURL struct {
 }
 
 const (
+	URLAuto		= "auto"
 	URLRouter	= "r"
 	URLFunction	= ""
 )
@@ -99,7 +100,14 @@ func urlClean(ctx context.Context, typ, urlid string) {
 }
 
 var urlEOps = EventOps {
-	setup:	func(ed *FnEventDesc, evt *swyapi.FunctionEvent) error { return nil },
+	setup:	func(ed *FnEventDesc, evt *swyapi.FunctionEvent) error {
+		/* XXX -- empty is for backward compat */
+		if evt.URL != "" && evt.URL != URLAuto {
+			return errors.New("Invalid \"url\" parameter")
+		}
+
+		return nil
+	},
 	start:	urlEventStart,
 	stop:	urlEventStop,
 }

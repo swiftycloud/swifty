@@ -187,7 +187,26 @@ func (e *FnEventDesc)toInfo(fn *FunctionDesc) *swyapi.FunctionEvent {
 	return &ae
 }
 
+func guessSource(evt *swyapi.FunctionEvent) string {
+	switch {
+	case evt.URL != "":
+		return "url"
+	case evt.Cron != nil:
+		return "cron"
+	case evt.S3 != nil:
+		return "s3"
+	case evt.WS != nil:
+		return "websocket"
+	default:
+		return ""
+	}
+}
+
 func getEventDesc(evt *swyapi.FunctionEvent) (*FnEventDesc, *xrest.ReqErr) {
+	if evt.Source == "" {
+		evt.Source = guessSource(evt)
+	}
+
 	ed := &FnEventDesc{
 		Name: evt.Name,
 		Source: evt.Source,

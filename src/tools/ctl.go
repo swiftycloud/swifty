@@ -921,25 +921,27 @@ func event_add(args []string, opts [16]string) {
 	args[0], _ = swyclient.Functions().Resolve(curProj, args[0])
 	e := swyapi.FunctionEvent {
 		Name: args[1],
-		Source: args[2],
 	}
-	if e.Source == "cron" {
+
+	switch args[2] {
+	case "cron":
 		e.Cron = &swyapi.FunctionEventCron {
 			Tab: opts[0],
 			Args: split_args_string(opts[1]),
 		}
-	}
-	if e.Source == "s3" {
+	case "s3":
 		e.S3 = &swyapi.FunctionEventS3 {
 			Bucket: opts[0],
 			Ops: opts[1],
 		}
-	}
-	if e.Source == "websocket" {
+	case "websocket":
 		e.WS = &swyapi.FunctionEventWebsock {
 			MwName: opts[0],
 		}
+	case "url":
+		e.URL = "auto"
 	}
+
 	var ei swyapi.FunctionEvent
 	swyclient.Triggers(args[0]).Add(&e, &ei)
 	fmt.Printf("Event %s created\n", ei.Id)
