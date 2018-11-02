@@ -165,6 +165,13 @@ var (
 		},
 	)
 
+	scaleOverruns = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "swifty_gate_scale_overruns",
+			Help: "How many times we refused to scale over configured limit",
+		},
+	)
+
 	gateCalLat = prometheus.NewHistogram(
 		prometheus.HistogramOpts{
 			Name: "swifty_gate_call_latency",
@@ -279,6 +286,7 @@ func PrometheusInit(ctx context.Context) error {
 	prometheus.MustRegister(pkgScans)
 	prometheus.MustRegister(limitPullErrs)
 	prometheus.MustRegister(statWrites)
+	prometheus.MustRegister(scaleOverruns)
 	prometheus.MustRegister(statWriteFails)
 	prometheus.MustRegister(scalers)
 	prometheus.MustRegister(portWaiters)
