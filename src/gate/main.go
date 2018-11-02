@@ -67,6 +67,8 @@ func init() {
 
 		return ret
 	})
+
+	addRoSysctl("gate_version", func() string { return Version })
 }
 
 var CORS_Headers = []string {
