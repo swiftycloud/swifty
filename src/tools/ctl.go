@@ -1411,9 +1411,9 @@ func pkg_del(args []string, opts [16]string) {
 func pkg_stat(args []string, opts [16]string) {
 	var st swyapi.PkgStat
 	swyclient.Req1("GET", "packages", http.StatusOK, nil, &st)
-	fmt.Printf("DU:                 %dK\n", st.DU)
+	fmt.Printf("DU:                 %dK\n", st.DU_Kb)
 	for l, lst := range st.Lang {
-		fmt.Printf("`- %12s:     %dK\n", l, lst.DU)
+		fmt.Printf("`- %12s:     %dK\n", l, lst.DU_Kb)
 	}
 }
 

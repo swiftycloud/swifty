@@ -108,7 +108,7 @@ func (pkg *PackageDesc)Add(ctx context.Context, _ interface{}) *xrest.ReqErr {
 		}
 
 		/* ps.DU is in Kb, pkgl.DiskSizeK is in Kb too */
-		if ps.DU + (pkgLimitGap<<10) > td.pkgl.DiskSizeK {
+		if ps.DU_Kb + (pkgLimitGap<<10) > td.pkgl.DiskSizeK {
 			return GateErrC(swyapi.GateLimitHit)
 		}
 	}
@@ -171,11 +171,13 @@ ok:
 	for l, ls := range ps.PkgStats {
 		tot += ls.DU
 		if brokenout {
-			ret.Lang[l] = &swyapi.PkgLangStat{ DU: ls.DU >> 10 }
+			x := &swyapi.PkgLangStat{}
+			x.SetDU(ls.DU)
+			ret.Lang[l] = x
 		}
 	}
 
-	ret.DU = tot >> 10
+	ret.SetDU(tot)
 
 	return ret, nil
 }
