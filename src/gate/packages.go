@@ -131,7 +131,7 @@ func (pkg *PackageDesc)Add(ctx context.Context, _ interface{}) *xrest.ReqErr {
 
 		/* ps.DU is in Kb, pkgl.DiskSizeK is in Kb too */
 		if ps.DU + (pkgLimitGap<<10) > td.pkgl.DiskSizeK {
-			return GateErrM(swyapi.GateGenErr, "Too many packages already")
+			return GateErrC(swyapi.GateLimitHit)
 		}
 	}
 

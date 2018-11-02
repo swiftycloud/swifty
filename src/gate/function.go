@@ -410,6 +410,7 @@ func (fn *FunctionDesc)Add(ctx context.Context, p interface{}) *xrest.ReqErr {
 
 	err = checkCount(ctx, &fn.SwoId)
 	if err != nil {
+		cerr = GateErrC(swyapi.GateLimitHit)
 		goto out_clean_func
 	}
 

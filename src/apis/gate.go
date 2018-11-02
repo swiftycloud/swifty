@@ -14,6 +14,7 @@ const (
 	GateNotFound	uint = 6	// No resource found
 	GateFsError	uint = 7	// Error accessing file(s)
 	GateNotAvail	uint = 8	// Operation not available on selected object
+	GateLimitHit	uint = 9	// Resource limitation
 )
 
 type ProjectList struct {
