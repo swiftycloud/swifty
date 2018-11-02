@@ -421,7 +421,7 @@ func handleFunctionRun(ctx context.Context, w http.ResponseWriter, r *http.Reque
 
 	suff := ""
 	if params.Src != nil {
-		td, err := tendatGet(ctx, gctx(ctx).Tenant)
+		td, err := tendatGet(ctx)
 		if err != nil {
 			return GateErrD(err)
 		}

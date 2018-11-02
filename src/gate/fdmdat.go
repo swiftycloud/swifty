@@ -93,7 +93,8 @@ func setupLimits(ten string, td *TenantMemData, ul *swyapi.UserLimits, off *TenS
 	td.pkgl = ul.Pkg
 }
 
-func tendatGet(ctx context.Context, tenant string) (*TenantMemData, error) {
+func tendatGet(ctx context.Context) (*TenantMemData, error) {
+	tenant := gctx(ctx).Tenant
 	return tendatGetOrInit(ctx, tenant)
 }
 

@@ -376,7 +376,7 @@ func getFunctionDesc(id *SwoId, p_add *swyapi.FunctionAdd) (*FunctionDesc, *xres
 }
 
 func checkCount(ctx context.Context, id *SwoId) error {
-	tmd, err := tendatGet(ctx, id.Tennant)
+	tmd, err := tendatGet(ctx)
 	if err != nil {
 		return err
 	}

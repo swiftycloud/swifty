@@ -82,7 +82,7 @@ func getCallStats(ctx context.Context, periods int) ([]swyapi.TenantStatsFn, *xr
 
 	ten := gctx(ctx).Tenant
 
-	td, err := tendatGet(ctx, ten)
+	td, err := tendatGet(ctx)
 	if err != nil {
 		return nil, GateErrD(err)
 	}
