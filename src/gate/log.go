@@ -2,33 +2,59 @@ package main
 
 import (
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 	"context"
+	"errors"
 )
 
 var glog *zap.SugaredLogger
 
-func setupLogger(conf *YAMLConf) {
-	lvl := zap.WarnLevel
-
-	if conf != nil {
-		switch conf.Daemon.LogLevel {
-		case "debug":
-			lvl = zap.DebugLevel
-			break
-		case "info":
-			lvl = zap.InfoLevel
-			break
-		case "warn":
-			lvl = zap.WarnLevel
-			break
-		case "error":
-			lvl = zap.ErrorLevel
-			break
-		}
+func l2z(v string) (zapcore.Level, error) {
+	switch v {
+	case "debug":
+		return zap.DebugLevel, nil
+	case "info":
+		return zap.InfoLevel, nil
+	case "warn":
+		return zap.WarnLevel, nil
+	case "error":
+		return zap.ErrorLevel, nil
+	default:
+		return zap.WarnLevel, errors.New("Unknown level")
 	}
+}
+
+func z2l(l zapcore.Level) string {
+	switch l {
+	case zap.DebugLevel:
+		return "debug"
+	case zap.InfoLevel:
+		return "info"
+	case zap.WarnLevel:
+		return "warn"
+	case zap.ErrorLevel:
+		return "error"
+	default:
+		return "?"
+	}
+}
+
+func setupLogger(conf *YAMLConf) {
+	l, _ := l2z(conf.Daemon.LogLevel)
+	lvl := zap.NewAtomicLevelAt(l)
+
+	addSysctl("gate_log_level",
+		func() string { return z2l(lvl.Level()) },
+		func(v string) error {
+			nl, er := l2z(v)
+			if er == nil {
+				lvl.SetLevel(nl)
+			}
+			return er
+		})
 
 	zcfg := zap.Config {
-		Level:            zap.NewAtomicLevelAt(lvl),
+		Level:            lvl,
 		Development:      true,
 		DisableStacktrace:true,
 		Encoding:         "console",
