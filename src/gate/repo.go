@@ -429,8 +429,10 @@ func (rd *RepoDesc)listFiles(ctx context.Context) ([]*swyapi.RepoFile, *xrest.Re
 	return *root.Children, nil
 }
 
+var repoSyncDelay time.Duration
+
 func (rd *RepoDesc)pullManual(ctx context.Context) *xrest.ReqErr {
-	if rd.LastPull != nil && time.Now().Before( rd.LastPull.Add(time.Duration(conf.RepoSyncRate) * time.Minute)) {
+	if rd.LastPull != nil && time.Now().Before(rd.LastPull.Add(repoSyncDelay)) {
 		return GateErrM(swyapi.GateNotAvail, "To frequent sync")
 	}
 
