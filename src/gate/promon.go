@@ -115,6 +115,13 @@ var (
 		},
 	)
 
+	repoScrapeErrs = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "swifty_gate_repo_scrape_errs",
+			Help: "Number of repo scrapes finished with error",
+		},
+	)
+
 	pkgScans = prometheus.NewCounter(
 		prometheus.CounterOpts{
 			Name: "swifty_gate_pkg_scans",
@@ -261,6 +268,7 @@ func PrometheusInit(ctx context.Context) error {
 	prometheus.MustRegister(contextRuns)
 	prometheus.MustRegister(repoPulls)
 	prometheus.MustRegister(repoPllErrs)
+	prometheus.MustRegister(repoScrapeErrs)
 	prometheus.MustRegister(pkgScans)
 	prometheus.MustRegister(limitPullErrs)
 	prometheus.MustRegister(statWrites)

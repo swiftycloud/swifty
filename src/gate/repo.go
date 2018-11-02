@@ -54,7 +54,7 @@ type RepoDesc struct {
 	Commit		string		`bson:"commit,omitempty"`
 	UserData	string		`bson:"userdata,omitempty"`
 	Pull		string		`bson:"pulling"`
-
+	DU		uint64		`bson:"du"`
 	Path		string		`bson:"path"`
 	LastPull	*time.Time	`bson:"last_pull,omitempty"`
 
@@ -171,6 +171,15 @@ func (rd *RepoDesc)Info(ctx context.Context, q url.Values, details bool) (interf
 }
 
 func (rd *RepoDesc)toInfo(ctx context.Context, details bool) (*swyapi.RepoInfo, *xrest.ReqErr) {
+	if rd.DU == 0 {
+		rq := &scrapeReq{r:rd, done:make(chan error)}
+		scrapes <-rq
+		err := <-rq.done
+		if err != nil {
+			return nil, GateErrC(swyapi.GateGenErr)
+		}
+	}
+
 	r := &swyapi.RepoInfo {
 		Id:		rd.ObjID.Hex(),
 		Type:		rd.Type,
@@ -179,6 +188,8 @@ func (rd *RepoDesc)toInfo(ctx context.Context, details bool) (*swyapi.RepoInfo, 
 		Commit:		rd.Commit,
 		AccID:		rd.AccID.Hex(),
 	}
+
+	r.SetDU(rd.DU)
 
 	if details {
 		r.UserData = rd.UserData
@@ -254,6 +265,7 @@ func cloneGit(ctx context.Context, rd *RepoDesc, ac *AccDesc) (string, error) {
 		return "", err
 	}
 
+	rd.dirty()
 	return gitCommit(clone_to)
 }
 
@@ -417,8 +429,10 @@ func (rd *RepoDesc)listFiles(ctx context.Context) ([]*swyapi.RepoFile, *xrest.Re
 	return *root.Children, nil
 }
 
+var repoSyncDelay time.Duration
+
 func (rd *RepoDesc)pullManual(ctx context.Context) *xrest.ReqErr {
-	if rd.LastPull != nil && time.Now().Before( rd.LastPull.Add(time.Duration(conf.RepoSyncRate) * time.Minute)) {
+	if rd.LastPull != nil && time.Now().Before(rd.LastPull.Add(repoSyncDelay)) {
 		return GateErrM(swyapi.GateNotAvail, "To frequent sync")
 	}
 
@@ -527,10 +541,17 @@ type pullReq struct {
 	done	chan error
 }
 
+type scrapeReq struct {
+	r	*RepoDesc
+	done	chan error
+}
+
 var pulls chan *pullReq
+var scrapes chan *scrapeReq
 
 func init() {
 	pulls = make(chan *pullReq)
+	scrapes = make(chan *scrapeReq)
 	go func() {
 		for rq := range pulls {
 			ctx, done := mkContext("::repo-pull")
@@ -540,6 +561,19 @@ func init() {
 			}
 			if err != nil {
 				repoPllErrs.Inc()
+			}
+			done(ctx)
+		}
+	}()
+	go func() {
+		for rq := range scrapes {
+			ctx, done := mkContext("::repo-scrape")
+			err := rq.r.scrape(ctx)
+			if rq.done != nil {
+				rq.done <-err
+			}
+			if err != nil {
+				repoScrapeErrs.Inc()
 			}
 			done(ctx)
 		}
@@ -561,6 +595,20 @@ func (rd *RepoDesc)pullSync() *xrest.ReqErr {
 func (rd *RepoDesc)pullAsync() {
 	rq := pullReq{rd, nil}
 	pulls <-&rq
+}
+
+func (rd *RepoDesc)dirty() {
+	scrapes <-&scrapeReq{r:rd, done:nil}
+}
+
+func (rd *RepoDesc)scrape(ctx context.Context) error {
+	du, err := xh.GetDirDU(rd.clonePath())
+	if err != nil {
+		return err
+	}
+
+	dbUpdatePart(ctx, rd, bson.M{"du": du})
+	return nil
 }
 
 func (rd *RepoDesc)pull(ctx context.Context) error {
@@ -585,6 +633,7 @@ func (rd *RepoDesc)pull(ctx context.Context) error {
 	if err == nil {
 		t := time.Now()
 		dbUpdatePart(ctx, rd, bson.M{"commit": cmt, "last_pull": &t})
+		rd.dirty()
 		tryToUpdateFunctions(ctx, rd, cmt)
 	}
 

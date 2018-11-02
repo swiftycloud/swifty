@@ -238,7 +238,7 @@ type YAMLConf struct {
 	Mware		YAMLConfMw		`yaml:"middleware"`
 	Runtime		YAMLConfRt		`yaml:"runtime"`
 	Wdog		YAMLConfWdog		`yaml:"wdog"`
-	RepoSyncRate	int			`yaml:"repo-sync-rate"`
+	RepoSyncDelay	int			`yaml:"repo-sync-delay"`
 	RepoSyncPeriod	int			`yaml:"repo-sync-period"`
 	RunRate		int			`yaml:"tryrun-rate"`
 	DemoRepo	YAMLConfDemoRepo	`yaml:"demo-repo"`
@@ -273,10 +273,14 @@ func (c *YAMLConf)Validate() error {
 	if c.Home == "" {
 		return errors.New("'home' not set")
 	}
-	if c.RepoSyncRate == 0 {
-		fmt.Printf("'repo-sync-rate' not set, pulls will be unlimited\n")
+	if c.RepoSyncDelay == 0 {
+		fmt.Printf("'repo-sync-delay' not set, pulls will be unlimited\n")
+		if !ModeDevel {
+			return errors.New("'repo-sync-delay' not set")
+		}
 	}
-	addIntSysctl("repo_sync_per_sec_max", &c.RepoSyncRate)
+	repoSyncDelay = time.Duration(c.RepoSyncDelay) * time.Second
+	addTimeSysctl("repo_sync_delay", &repoSyncDelay)
 	if c.RepoSyncPeriod == 0 {
 		fmt.Printf("'repo-sync-period' not set, using default 30min\n")
 		c.RepoSyncPeriod = 30

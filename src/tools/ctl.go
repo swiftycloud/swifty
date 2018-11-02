@@ -1326,17 +1326,19 @@ func repo_pull(args []string, opts [16]string) {
 func repo_info(args []string, opts [16]string) {
 	var ri swyapi.RepoInfo
 	swyclient.Repos().Get(args[0], &ri)
-	fmt.Printf("State:     %s\n", ri.State)
-	fmt.Printf("Type:      %s\n", ri.Type)
-	fmt.Printf("URL:       %s\n", ri.URL)
-	fmt.Printf("Pull:      %s\n", ri.Pull)
+	fmt.Printf("State:      %s\n", ri.State)
+	fmt.Printf("Type:       %s\n", ri.Type)
+	fmt.Printf("URL:        %s\n", ri.URL)
+	fmt.Printf("Pull:       %s\n", ri.Pull)
 	if ri.Commit != "" {
-		fmt.Printf("Commit:    %s\n", ri.Commit)
+		fmt.Printf("Commit:     %s\n", ri.Commit)
 	}
 	if ri.AccID != "" {
-		fmt.Printf("Account:   %s\n", ri.AccID)
+		fmt.Printf("Account:    %s\n", ri.AccID)
 	}
-
+	if ri.DU_Kb != 0 {
+		fmt.Printf("Disk usage: %s\n", formatBytes(ri.DU_Kb << 10))
+	}
 	if ri.Desc {
 		fmt.Printf("With description\n")
 	}
@@ -1411,9 +1413,9 @@ func pkg_del(args []string, opts [16]string) {
 func pkg_stat(args []string, opts [16]string) {
 	var st swyapi.PkgStat
 	swyclient.Req1("GET", "packages", http.StatusOK, nil, &st)
-	fmt.Printf("DU:                 %dK\n", st.DU)
+	fmt.Printf("DU:                 %dK\n", st.DU_Kb)
 	for l, lst := range st.Lang {
-		fmt.Printf("`- %12s:     %dK\n", l, lst.DU)
+		fmt.Printf("`- %12s:     %dK\n", l, lst.DU_Kb)
 	}
 }
 
