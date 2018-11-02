@@ -54,6 +54,19 @@ func init() {
 	addTimeSysctl("limits_update_period",	&TenantLimitsUpdPeriod)
 
 	addTimeSysctl("ks_token_cache_exp",	&xkst.TokenCacheExpires)
+
+	addRoSysctl("gate_mode", func() string {
+		ret := "mode:"
+		if ModeDevel {
+			ret += "devel"
+		} else {
+			ret += "prod"
+		}
+
+		ret += ", flavor:" + Flavor
+
+		return ret
+	})
 }
 
 var CORS_Headers = []string {
