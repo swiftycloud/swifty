@@ -2315,7 +2315,6 @@ definitions:
     description: Event specification
     required:
       - name
-      - source
     properties:
       id:
         type: string
@@ -2324,7 +2323,7 @@ definitions:
         type: string
       source:
         type: string
-        description: 'Event source type, supported by platform'
+        description: 'Event source type, supported by platform, reported on GET'
         example: 'url, cron, s3'
       cron:
         $ref: '#/definitions/FunctionEventCron'
@@ -2334,7 +2333,7 @@ definitions:
         $ref: '#/definitions/FunctionEventWebsock'
       url:
         type: string
-        description: Function callable URL if the source is "url"
+        description: Function callable URL on GET, set to "auto" on POST (during creation)
   FunctionSources:
     type: object
     description: Sources description
