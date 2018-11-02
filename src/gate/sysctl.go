@@ -40,6 +40,14 @@ func (ctl *Sysctl)Upd(ctx context.Context, upd interface{}) *xrest.ReqErr {
 
 var sysctls = map[string]*Sysctl {}
 
+func addRoSysctl(name string, read func() string) {
+	sysctls[name] = &Sysctl{
+		Name: name,
+		Get:  read,
+		Set: func(v string) error { return errors.New("R/O sysctl") },
+	}
+}
+
 func addBoolSysctl(name string, b *bool) {
 	sysctls[name] = &Sysctl{
 		Name: name,

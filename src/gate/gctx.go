@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"strconv"
 	"sync/atomic"
 	"gopkg.in/mgo.v2"
 )
@@ -16,6 +17,10 @@ type gateContext struct {
 }
 
 var reqIds uint64
+
+func init() {
+	addRoSysctl("gate_req_rover", func() string { return strconv.FormatUint(reqIds, 10) } )
+}
 
 func mkContext3(desc, tenant string, admin bool) (context.Context, func(context.Context)) {
 	gatectx := &gateContext{
