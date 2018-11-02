@@ -54,7 +54,7 @@ type RepoDesc struct {
 	Commit		string		`bson:"commit,omitempty"`
 	UserData	string		`bson:"userdata,omitempty"`
 	Pull		string		`bson:"pulling"`
-
+	DU		uint64		`bson:"du"`
 	Path		string		`bson:"path"`
 	LastPull	*time.Time	`bson:"last_pull,omitempty"`
 
@@ -171,6 +171,15 @@ func (rd *RepoDesc)Info(ctx context.Context, q url.Values, details bool) (interf
 }
 
 func (rd *RepoDesc)toInfo(ctx context.Context, details bool) (*swyapi.RepoInfo, *xrest.ReqErr) {
+	if rd.DU == 0 {
+		rq := &scrapeReq{r:rd, done:make(chan error)}
+		scrapes <-rq
+		err := <-rq.done
+		if err != nil {
+			return nil, GateErrC(swyapi.GateGenErr)
+		}
+	}
+
 	r := &swyapi.RepoInfo {
 		Id:		rd.ObjID.Hex(),
 		Type:		rd.Type,
@@ -179,6 +188,8 @@ func (rd *RepoDesc)toInfo(ctx context.Context, details bool) (*swyapi.RepoInfo, 
 		Commit:		rd.Commit,
 		AccID:		rd.AccID.Hex(),
 	}
+
+	r.SetDU(rd.DU)
 
 	if details {
 		r.UserData = rd.UserData
@@ -530,6 +541,7 @@ type pullReq struct {
 
 type scrapeReq struct {
 	r	*RepoDesc
+	done	chan error
 }
 
 var pulls chan *pullReq
@@ -555,6 +567,9 @@ func init() {
 		for rq := range scrapes {
 			ctx, done := mkContext("::repo-scrape")
 			err := rq.r.scrape(ctx)
+			if rq.done != nil {
+				rq.done <-err
+			}
 			if err != nil {
 				repoScrapeErrs.Inc()
 			}
@@ -581,10 +596,16 @@ func (rd *RepoDesc)pullAsync() {
 }
 
 func (rd *RepoDesc)dirty() {
-	scrapes <-&scrapeReq{rd}
+	scrapes <-&scrapeReq{r:rd, done:nil}
 }
 
 func (rd *RepoDesc)scrape(ctx context.Context) error {
+	du, err := xh.GetDirDU(rd.clonePath())
+	if err != nil {
+		return err
+	}
+
+	dbUpdatePart(ctx, rd, bson.M{"du": du})
 	return nil
 }
 

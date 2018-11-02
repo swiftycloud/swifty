@@ -291,6 +291,11 @@ type RepoInfo struct {
 	AccID		string			`json:"account_id,omitempty"`
 	Pull		string			`json:"pulling,omitempty"`
 	Desc		bool			`json:"desc"`
+	DU_Kb		uint64			`json:"disk_usage"`
+}
+
+func (ri *RepoInfo)SetDU(bytes uint64) {
+	ri.DU_Kb = bytes>>10
 }
 
 type RepoEntry struct {
