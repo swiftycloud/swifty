@@ -4,8 +4,10 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"gopkg.in/yaml.v2"
+	"path/filepath"
 	"crypto/rand"
 	"io/ioutil"
+	"syscall"
 	"os/exec"
 	"strconv"
 	"strings"
@@ -217,4 +219,24 @@ func Fortune() string {
 func GetLines(data []byte) []string {
         sout := strings.TrimSpace(string(data))
         return strings.Split(sout, "\n")
+}
+
+func GetDirDU(dir string) (uint64, error) {
+	var size uint64
+
+	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if path == dir {
+			return nil
+		}
+
+		stat, _ := info.Sys().(*syscall.Stat_t)
+		size += uint64(stat.Blocks << 9)
+		return nil
+	})
+
+	return size, err
 }

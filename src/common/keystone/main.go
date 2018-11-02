@@ -8,9 +8,7 @@ import (
 	"swifty/apis"
 )
 
-const (
-	KsTokenCacheExpires time.Duration = 60 * time.Second
-)
+var TokenCacheExpires time.Duration = 60 * time.Second
 
 func HasRole(td *KeystoneTokenData, wroles ...string) bool {
 	for _, role := range td.Roles {
@@ -150,7 +148,7 @@ func KeystoneGetTokenData(addr, token string) (*KeystoneTokenData, int) {
 
 	v, loaded := tdCache.LoadOrStore(token, &out.Token)
 	if !loaded {
-		time.AfterFunc(KsTokenCacheExpires, func() { tdCache.Delete(token) })
+		time.AfterFunc(TokenCacheExpires, func() { tdCache.Delete(token) })
 	}
 
 	return v.(*KeystoneTokenData), 0

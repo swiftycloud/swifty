@@ -376,7 +376,7 @@ func getFunctionDesc(id *SwoId, p_add *swyapi.FunctionAdd) (*FunctionDesc, *xres
 }
 
 func checkCount(ctx context.Context, id *SwoId) error {
-	tmd, err := tendatGet(ctx, id.Tennant)
+	tmd, err := tendatGet(ctx)
 	if err != nil {
 		return err
 	}
@@ -396,6 +396,7 @@ func checkCount(ctx context.Context, id *SwoId) error {
 
 func (fn *FunctionDesc)Add(ctx context.Context, p interface{}) *xrest.ReqErr {
 	var err, erc error
+	var cerr *xrest.ReqErr
 
 	src := &p.(*swyapi.FunctionAdd).Sources
 
@@ -403,11 +404,13 @@ func (fn *FunctionDesc)Add(ctx context.Context, p interface{}) *xrest.ReqErr {
 	fn.State = DBFuncStateIni
 	err = dbInsert(ctx, fn)
 	if err != nil {
-		return GateErrD(err)
+		cerr = GateErrD(err)
+		goto out
 	}
 
 	err = checkCount(ctx, &fn.SwoId)
 	if err != nil {
+		cerr = GateErrC(swyapi.GateLimitHit)
 		goto out_clean_func
 	}
 
@@ -425,7 +428,7 @@ func (fn *FunctionDesc)Add(ctx context.Context, p interface{}) *xrest.ReqErr {
 		})
 	if err != nil {
 		ctxlog(ctx).Errorf("Can't update added %s: %s", fn.SwoId.Str(), err.Error())
-		err = errors.New("DB error")
+		cerr = GateErrD(err)
 		goto out_clean_repo
 	}
 
@@ -456,7 +459,10 @@ out_clean_func:
 
 	gateFunctions.Dec()
 out:
-	return GateErrE(swyapi.GateGenErr, err)
+	if cerr == nil {
+		cerr = GateErrE(swyapi.GateGenErr, err)
+	}
+	return cerr
 
 stalled:
 	fn.ToState(ctx, DBFuncStateStl, -1)

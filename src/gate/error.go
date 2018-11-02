@@ -15,6 +15,7 @@ var gateErrMsg = map[uint]string {
 	swyapi.GateNotFound:	"ID not found",
 	swyapi.GateFsError:	"Files access failed",
 	swyapi.GateNotAvail:	"Operation not (yet) available",
+	swyapi.GateLimitHit:	"Resource limitation hit",
 }
 
 func GateErrC(code uint) *xrest.ReqErr {

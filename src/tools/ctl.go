@@ -1,6 +1,7 @@
 package main
 
 import (
+	"code.cloudfoundry.org/bytefmt"
 	"encoding/base64"
 	"io/ioutil"
 	"net/http"
@@ -119,6 +120,7 @@ func tplan_list(args []string, opts[16]string) {
 	for _, p := range(plans) {
 		fmt.Printf("%s/%s:\n", p.Id, p.Name)
 		show_fn_limits(p.Fn)
+		show_pkg_limits(p.Pkg)
 	}
 }
 
@@ -126,8 +128,9 @@ func tplan_add(args []string, opts[16]string) {
 	var l swyapi.PlanLimits
 
 	l.Name = args[0]
-	l.Fn = parse_limits(opts[0:])
-	if l.Fn == nil {
+	l.Fn = parse_fn_limits(opts[0:])
+	l.Pkg = parse_pkg_limits(opts[0:])
+	if l.Fn == nil && l.Pkg == nil {
 		fatal(fmt.Errorf("No limits"))
 	}
 	swyclient.Add("plans", http.StatusCreated, &l, &l)
@@ -139,6 +142,7 @@ func tplan_info(args []string, opts[16]string) {
 	swyclient.Get("plans/" + args[0], http.StatusOK, &p)
 	fmt.Printf("%s/%s:\n", p.Id, p.Name)
 	show_fn_limits(p.Fn)
+	show_pkg_limits(p.Pkg)
 }
 
 func tplan_del(args []string, opts[16]string) {
@@ -152,9 +156,10 @@ func user_limits(args []string, opts [16]string) {
 		l.PlanId = opts[0]
 	}
 
-	l.Fn = parse_limits(opts[1:])
+	l.Fn = parse_fn_limits(opts[1:])
+	l.Pkg = parse_pkg_limits(opts[1:])
 
-	if l.Fn != nil || l.PlanId != "" {
+	if l.Fn != nil || l.Pkg != nil || l.PlanId != "" {
 		l.UId = args[0]
 		swyclient.Mod("users/" + args[0] + "/limits", http.StatusOK, &l)
 	} else {
@@ -163,11 +168,12 @@ func user_limits(args []string, opts [16]string) {
 			fmt.Printf("Plan ID: %s\n", l.PlanId)
 		}
 		show_fn_limits(l.Fn)
+		show_pkg_limits(l.Pkg)
 		fmt.Printf(">>> %s\n", l.UId)
 	}
 }
 
-func parse_limits(opts []string) *swyapi.FunctionLimits {
+func parse_fn_limits(opts []string) *swyapi.FunctionLimits {
 	var ret *swyapi.FunctionLimits
 
 	if opts[1] != "" {
@@ -213,6 +219,25 @@ func parse_limits(opts []string) *swyapi.FunctionLimits {
 	return ret
 }
 
+func parse_pkg_limits(opts []string) *swyapi.PackagesLimits {
+	var ret *swyapi.PackagesLimits
+
+	if opts[5] != "" {
+		if ret == nil {
+			ret = &swyapi.PackagesLimits{}
+		}
+
+		v, err := bytefmt.ToBytes(opts[5])
+		if err != nil {
+			fatal(fmt.Errorf("Bad packages limits value %s: %s", opts[5], err.Error()))
+		}
+
+		ret.DiskSizeK = v>>10
+	}
+
+	return ret
+}
+
 func show_fn_limits(fl *swyapi.FunctionLimits) {
 	if fl != nil {
 		fmt.Printf("Functions:\n")
@@ -227,6 +252,15 @@ func show_fn_limits(fl *swyapi.FunctionLimits) {
 		}
 		if fl.BytesOut != 0 {
 			fmt.Printf("    Max bytes out:     %d\n", formatBytes(fl.BytesOut))
+		}
+	}
+}
+
+func show_pkg_limits(pkg *swyapi.PackagesLimits) {
+	if pkg != nil {
+		fmt.Printf("Packages:\n")
+		if pkg.DiskSizeK != 0 {
+			fmt.Printf("DiskSize:              %s\n", formatBytes(pkg.DiskSizeK<<10))
 		}
 	}
 }
@@ -887,25 +921,27 @@ func event_add(args []string, opts [16]string) {
 	args[0], _ = swyclient.Functions().Resolve(curProj, args[0])
 	e := swyapi.FunctionEvent {
 		Name: args[1],
-		Source: args[2],
 	}
-	if e.Source == "cron" {
+
+	switch args[2] {
+	case "cron":
 		e.Cron = &swyapi.FunctionEventCron {
 			Tab: opts[0],
 			Args: split_args_string(opts[1]),
 		}
-	}
-	if e.Source == "s3" {
+	case "s3":
 		e.S3 = &swyapi.FunctionEventS3 {
 			Bucket: opts[0],
 			Ops: opts[1],
 		}
-	}
-	if e.Source == "websocket" {
+	case "websocket":
 		e.WS = &swyapi.FunctionEventWebsock {
 			MwName: opts[0],
 		}
+	case "url":
+		e.URL = "auto"
 	}
+
 	var ei swyapi.FunctionEvent
 	swyclient.Triggers(args[0]).Add(&e, &ei)
 	fmt.Printf("Event %s created\n", ei.Id)
@@ -2067,6 +2103,7 @@ func main() {
 	cmdMap[CMD_ULIM].opts.StringVar(&opts[2], "fnr", "", "Number of functions (in a project)")
 	cmdMap[CMD_ULIM].opts.StringVar(&opts[3], "gbs", "", "Maximum number of GBS to consume")
 	cmdMap[CMD_ULIM].opts.StringVar(&opts[4], "bo", "", "Maximum outgoing network bytes")
+	cmdMap[CMD_ULIM].opts.StringVar(&opts[5], "pkgs", "", "Disk size for packages")
 
 	setupCommonCmd(CMD_TL)
 	setupCommonCmd(CMD_TA, "NAME")
@@ -2074,6 +2111,7 @@ func main() {
 	cmdMap[CMD_TA].opts.StringVar(&opts[1], "fnr", "", "Number of functions (in a project)")
 	cmdMap[CMD_TA].opts.StringVar(&opts[2], "gbs", "", "Maximum number of GBS to consume")
 	cmdMap[CMD_TA].opts.StringVar(&opts[3], "bo", "", "Maximum outgoing network bytes")
+	cmdMap[CMD_TA].opts.StringVar(&opts[4], "pkgs", "", "Disk size for packages")
 	setupCommonCmd(CMD_TI, "ID")
 	setupCommonCmd(CMD_TD, "ID")
 

@@ -52,6 +52,8 @@ func init() {
 	addTimeSysctl("dep_scaleup_relax",	&DepScaleupRelax)
 	addTimeSysctl("dep_scaledown_step",	&DepScaledownStep)
 	addTimeSysctl("limits_update_period",	&TenantLimitsUpdPeriod)
+
+	addTimeSysctl("ks_token_cache_exp",	&xkst.TokenCacheExpires)
 }
 
 var CORS_Headers = []string {

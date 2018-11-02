@@ -1,6 +1,7 @@
 package main
 
 import (
+	"code.cloudfoundry.org/bytefmt"
 	"github.com/gorilla/mux"
 	"context"
 	"errors"
@@ -98,6 +99,24 @@ func addStringSysctl(name string, s *string) {
 		Get: func() string { return *s },
 		Set: func(v string) error {
 			*s = v
+			return nil
+		},
+	}
+}
+
+func addMemSysctl(name string, mem *uint64) {
+	sysctls[name] = &Sysctl{
+		Name: name,
+		Get: func() string {
+			return bytefmt.ByteSize(*mem)
+		},
+		Set: func(nv string) error {
+			nmem, err := bytefmt.ToBytes(nv)
+			if err != nil {
+				return err
+			}
+
+			*mem = nmem
 			return nil
 		},
 	}
