@@ -106,7 +106,35 @@ func (ps Packages)Iterate(ctx context.Context, q url.Values, cb func(context.Con
 	return nil
 }
 
+/*
+ * When installing a package we check current packages disk size
+ * before the installation itself, so here's some "gap" between
+ * the current usage and the limit at which we stop new installations
+ */
+var pkgLimitGap uint64 = uint64(32) << 10
+
+func init() {
+	addMemSysctl("pkg_disk_size_gap", &pkgLimitGap)
+}
+
 func (pkg *PackageDesc)Add(ctx context.Context, _ interface{}) *xrest.ReqErr {
+	td, err := tendatGet(ctx)
+	if err != nil {
+		return GateErrC(swyapi.GateGenErr)
+	}
+
+	if td.pkgl != nil && td.pkgl.DiskSizeK != 0 {
+		ps, cer := packagesGetStats(ctx, false)
+		if cer != nil {
+			return cer
+		}
+
+		/* ps.DU is in Kb, pkgl.DiskSizeK is in Kb too */
+		if ps.DU + (pkgLimitGap<<10) > td.pkgl.DiskSizeK {
+			return GateErrM(swyapi.GateGenErr, "Too many packages already")
+		}
+	}
+
 	h := rt_handlers[pkg.Lang]
 	cerr := rtInstallPackage(ctx, h, pkg.SwoId)
 	if cerr == nil {
@@ -137,6 +165,10 @@ func (pkg *PackageDesc)Upd(ctx context.Context, upd interface{}) *xrest.ReqErr {
 }
 
 func packagesStats(ctx context.Context, r *http.Request) (*swyapi.PkgStat, *xrest.ReqErr) {
+	return packagesGetStats(ctx, true)
+}
+
+func packagesGetStats(ctx context.Context, brokenout bool) (*swyapi.PkgStat, *xrest.ReqErr) {
 	ps, _ := dbPackagesFind(ctx)
 	if ps == nil || ps.Stats == nil {
 		rescanKick(ctx, "", true)
@@ -152,14 +184,17 @@ func packagesStats(ctx context.Context, r *http.Request) (*swyapi.PkgStat, *xres
 	}
 
 ok:
-	ret := &swyapi.PkgStat {
-		Lang:	map[string]*swyapi.PkgLangStat{},
+	ret := &swyapi.PkgStat {}
+	if brokenout {
+		ret.Lang = map[string]*swyapi.PkgLangStat{}
 	}
 
 	var tot uint64
 	for l, ls := range ps.Stats {
 		tot += ls.DU
-		ret.Lang[l] = &swyapi.PkgLangStat{ DU: ls.DU >> 10 }
+		if brokenout {
+			ret.Lang[l] = &swyapi.PkgLangStat{ DU: ls.DU >> 10 }
+		}
 	}
 
 	ret.DU = tot >> 10
