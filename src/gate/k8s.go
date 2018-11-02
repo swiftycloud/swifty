@@ -501,6 +501,8 @@ func waitPodPort(ctx context.Context, addr, port string) error {
 		if !printed {
 			ctxlog(ctx).Debugf("Port %s:%s not open yet (%s) ... polling", addr, port, err.Error())
 			printed = true
+			portWaiters.Inc()
+			defer portWaiters.Dec()
 		}
 		<-time.After(wt)
 		lat += wt

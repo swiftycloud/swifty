@@ -61,6 +61,13 @@ var (
 		},
 	)
 
+	portWaiters = prometheus.NewGauge(
+		prometheus.GaugeOpts{
+			Name: "swifty_gate_port_waiters",
+			Help: "Number of wdog port waiters",
+		},
+	)
+
 	srcGCs = prometheus.NewGauge(
 		prometheus.GaugeOpts{
 			Name: "swifty_gate_srcgcs",
@@ -155,6 +162,13 @@ var (
 		prometheus.CounterOpts{
 			Name: "swifty_gate_stat_write_fails",
 			Help: "Number of errors in bg stats flush",
+		},
+	)
+
+	scaleOverruns = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "swifty_gate_scale_overruns",
+			Help: "How many times we refused to scale over configured limit",
 		},
 	)
 
@@ -272,8 +286,10 @@ func PrometheusInit(ctx context.Context) error {
 	prometheus.MustRegister(pkgScans)
 	prometheus.MustRegister(limitPullErrs)
 	prometheus.MustRegister(statWrites)
+	prometheus.MustRegister(scaleOverruns)
 	prometheus.MustRegister(statWriteFails)
 	prometheus.MustRegister(scalers)
+	prometheus.MustRegister(portWaiters)
 	prometheus.MustRegister(srcGCs)
 	prometheus.MustRegister(danglingEvents)
 
