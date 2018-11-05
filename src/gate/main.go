@@ -387,11 +387,6 @@ func main() {
 		glog.Fatalf("Can't setup: %s", err.Error())
 	}
 
-	err = ServiceDepsInit(ctx)
-	if err != nil {
-		glog.Fatalf("Can't set up builder: %s", err.Error())
-	}
-
 	err = DeployInit(ctx)
 	if err != nil {
 		glog.Fatalf("Can't set up deploys: %s", err.Error())
