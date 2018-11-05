@@ -942,6 +942,12 @@ func k8sInit(ctx context.Context, config_path string) error {
 	stop := make(chan struct{})
 	go controller.Run(stop)
 
+	err = ServiceDepsInit(ctx)
+	if err != nil {
+		ctxlog(ctx).Errorf("Can't set up builder: %s", err.Error())
+		return err
+	}
+
 	err = refreshDepsAndPods(ctx, false)
 	if err != nil {
 		ctxlog(ctx).Errorf("Can't sart scaler: %s", err.Error())
