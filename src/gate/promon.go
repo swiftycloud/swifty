@@ -96,7 +96,7 @@ var (
 			Name: "swifty_gate_builds",
 			Help: "Number of functions builds",
 		},
-		[]string { "result" },
+		[]string { "lang", "result" },
 	)
 
 	contextRuns = prometheus.NewCounterVec(
