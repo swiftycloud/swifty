@@ -1950,7 +1950,7 @@ func setupCommonCmd(cmd string, args ...string) {
 	if cd.wp {
 		cd.opts.StringVar(&curProj, "proj", "", "Project to work on")
 	}
-	cd.opts.BoolVar(&verbose, "V", false, "Verbose: show the request sent and responce got")
+	cd.opts.BoolVar(&verbose, "V", false, "Verbose: show the request sent and response got")
 	cd.opts.StringVar(&curRelay, "for", "", "Act as another user (admin-only")
 
 	cd.npa = len(args)

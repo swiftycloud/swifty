@@ -25,7 +25,7 @@
 #    curl -X GET -H 'Authorization: Bearer $USER_JWT' '$THIS_FN_URL'
 #    THe result of this call is '{ "img": $STRING }' JSON.
 #
-# Swifty FN API doesn't yet allow to pass binary data between request/responce
+# Swifty FN API doesn't yet allow to pass binary data between request/response
 # bodies and function code, so we recommend you base64-encode your image before
 # putting into this FN.
 #

@@ -34,5 +34,6 @@ wdog:
         volume: "/home/swifty-volume"
         port: 8687
         k8s-namespace: "default"
+repo-sync-delay: 1
 demo-repo:
         url: "https://github.com/swiftycloud/swifty.demo"

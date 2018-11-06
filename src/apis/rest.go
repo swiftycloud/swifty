@@ -124,7 +124,7 @@ func (cln *Client)Login() error {
 
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("Bad responce from server: " + string(resp.Status))
+		return fmt.Errorf("Bad response from server: " + string(resp.Status))
 	}
 
 	token := resp.Header.Get("X-Subject-Token")
@@ -183,7 +183,7 @@ again:
 				err = fmt.Errorf("Operation failed with no details")
 			}
 		} else {
-			err = fmt.Errorf("Bad responce: %s", string(resp.Status))
+			err = fmt.Errorf("Bad response: %s", string(resp.Status))
 		}
 
 		if cln.onerr != nil {

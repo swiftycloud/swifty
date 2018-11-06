@@ -18,7 +18,7 @@ type Request struct {
 	B		*Body			`json:"-"`
 }
 
-type Responce struct {
+type Response struct {
 	Status	int
 }
 
@@ -28,7 +28,7 @@ type RunnerRes struct {
 	Status	int
 }
 
-func use(resp *Responce) {}
+func use(resp *Response) {}
 
 func main() {
 
@@ -73,7 +73,7 @@ func main() {
 
 		err = q.Send(out)
 		if err != nil {
-			fmt.Printf("Can't send responce: %s", err.Error())
+			fmt.Printf("Can't send response: %s", err.Error())
 			return
 		}
 	}

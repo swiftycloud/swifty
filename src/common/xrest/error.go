@@ -8,7 +8,7 @@ import (
 const (
 	GenErr		uint = 1	// Unclassified error
 	BadRequest	uint = 2	// Error parsing request data
-	BadResp		uint = 3	// Error generating responce
+	BadResp		uint = 3	// Error generating response
 )
 
 type ReqErr struct {

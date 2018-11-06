@@ -51,7 +51,7 @@ func traceError(ctx context.Context, ce *xrest.ReqErr) {
 	})
 }
 
-func traceResponce(ctx context.Context, r interface{}) {
+func traceResponse(ctx context.Context, r interface{}) {
 	if !traceEnabled() {
 		return
 	}
@@ -223,7 +223,7 @@ func tracerListen(sk *net.UnixListener) {
 
 func tracerInit() error {
 	tracers = list.New()
-	xrest.TraceFn = traceResponce
+	xrest.TraceFn = traceResponse
 
 	tp := GateTracerPath
 	os.Remove(tp)

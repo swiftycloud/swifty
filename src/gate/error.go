@@ -9,7 +9,7 @@ import (
 var gateErrMsg = map[uint]string {
 	swyapi.GateGenErr:	"Unknown error",
 	swyapi.GateBadRequest:	"Error parsing request parameters",
-	swyapi.GateBadResp:	"Error writing responce",
+	swyapi.GateBadResp:	"Error writing response",
 	swyapi.GateDbError:	"Database request failed",
 	swyapi.GateDuplicate:	"ID already exists",
 	swyapi.GateNotFound:	"ID not found",

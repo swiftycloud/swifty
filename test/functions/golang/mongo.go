@@ -6,7 +6,7 @@ import (
 	"gopkg.in/mgo.v2/bson"
 )
 
-func Main(rq *Request) (interface{}, *Responce) {
+func Main(rq *Request) (interface{}, *Response) {
 	db, err := swifty.MongoDatabase(rq.Args["dbname"])
 	if err != nil {
 		fmt.Println(err)
