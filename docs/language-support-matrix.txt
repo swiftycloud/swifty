@@ -16,6 +16,6 @@ Lib				+  +
    Maria			+  +
    S3				+
    Auth				+
-Responce			+  +  +  +
-   Code				+  +  +  +
+Responce			+  +  +  +  +
+   Code				+  +  +  +  +
 Auto-unmarshal body		+  +

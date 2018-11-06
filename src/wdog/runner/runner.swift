@@ -18,13 +18,18 @@ struct Request: Codable {
 struct Result: Codable {
 	var res: Int
 	var ret: String
+	var status: Int
+}
+
+struct Response {
+	var status: Int
 }
 
 func load(data: [Byte]) -> Request {
 	return try! JSONDecoder().decode(Request.self, from: Data(bytes: data))
 }
 
-func save(obj: Encodable) -> Data {
+func save(obj: Encodable, resp: Response?) -> Data {
 	struct EncWrap: Encodable {
 		let o: Encodable
 
@@ -34,7 +39,8 @@ func save(obj: Encodable) -> Data {
 	}
 
 	let jstr = String(data: try! JSONEncoder().encode(EncWrap(o:obj)), encoding: .utf8)!
-	return try! JSONEncoder().encode(Result(res: 0, ret: jstr))
+	let result = Result(res: 0, ret: jstr, status: resp?.status ?? 0)
+	return try! JSONEncoder().encode(result)
 }
 
 while true {
@@ -42,8 +48,10 @@ while true {
 	recv(qfd, &msg, 1024, 0)
 
 	let rq = load(data: msg)
-	let ret = Main(rq: rq)
-	var out = save(obj: ret)
+	var resp: Response?
+	var ret: Encodable
+	(ret, resp) = Main(rq: rq)
+	var out = save(obj: ret, resp: resp)
 
 	var pointer: UnsafePointer<UInt8>! = nil
 	out.withUnsafeBytes { (u8Ptr: UnsafePointer<UInt8>) in
