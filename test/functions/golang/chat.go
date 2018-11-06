@@ -9,7 +9,7 @@ import (
 	"encoding/json"
 )
 
-func Main(rq *Request) (interface{}, *Responce) {
+func Main(rq *Request) (interface{}, *Response) {
 	chname := strings.ToUpper(os.Getenv("CHAT_NAME"))
 	url := os.Getenv("MWARE_WEBSOCKET" + chname + "_URL")
 	tok := os.Getenv("MWARE_WEBSOCKET" + chname + "_TOKEN")

@@ -3,7 +3,7 @@ The text file describes what we have and want to have in languages
 
 Imports -- libraries to access a specific middleware are installed
 Lib -- swifty/lib that provides helper functions is available
-Responce -- Main can return back "control" object
+Response -- Main can return back "control" object
 
 Feature				go py ru js sw
 Imports
@@ -16,6 +16,6 @@ Lib				+  +
    Maria			+  +
    S3				+
    Auth				+
-Responce			+  +  +  +  +
+Response			+  +  +  +  +
    Code				+  +  +  +  +
 Auto-unmarshal body		+  +

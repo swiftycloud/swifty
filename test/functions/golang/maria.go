@@ -5,7 +5,7 @@ import (
 	"swifty"
 )
 
-func Main(rq *Request) (interface{}, *Responce) {
+func Main(rq *Request) (interface{}, *Response) {
 	db, err := swifty.MariaConn(rq.Args["dbname"])
 	if err != nil {
 		fmt.Println(err)

@@ -18,7 +18,7 @@ type Request struct {
 	B		*Body			`json:"-"`
 }
 
-type Responce struct {
+type Response struct {
 	Status	int
 }
 
@@ -28,7 +28,7 @@ type RunnerRes struct {
 	Status	int
 }
 
-func use(resp *Responce) {}
+func use(resp *Response) {}
 
 func main() {
 

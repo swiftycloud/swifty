@@ -24,7 +24,7 @@ func showS3Err(err error) {
 	}
 }
 
-func Main(rq *Request) (interface{}, *Responce) {
+func Main(rq *Request) (interface{}, *Response) {
 	svc, err := swifty.S3BucketProt("images", "http")
 	if err != nil {
 		panic("Can't get bkt")

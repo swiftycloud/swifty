@@ -31,7 +31,7 @@ the URLs looking like
 the /call/{funcitonid} part is mandatory, while the /{subpath}
 may be of any length and passed as is into function.
 
-== Responce ==
+== Response ==
 
 In simple cases functions return anything JSON-encodable which
 gets returned by swifty to http request in body. The content type
@@ -39,7 +39,7 @@ is set to 'application/json', the status code is 200 (OK).
 
 Repsonce object (2nd return value) can be used to change this
 behavior in the future (NOTE: nothing is implemented yet). The
-responce may be a language-specific no-value thing if no
+response may be a language-specific no-value thing if no
 actions are needed.
 
 Actions that are planned to be supported:
@@ -53,7 +53,7 @@ Now examples of functions just returning the "foo" argument value
 
 == Go ==
 package main
-func Main(req *Request) (interface{}, *Responce) {
+func Main(req *Request) (interface{}, *Response) {
 	return req.Args["foo"], nil
 }
 
@@ -67,10 +67,10 @@ def Main(req)
 
 == JS ==
 exports.Main = function(rq) {
-	return req.args.foo, null
+	return { req.args.foo, null }
 }
 
 == Swift ==
-func Main(rq: Request) -> (Encodable, Responce) {
-	return rq.args!["foo"], nil
+func Main(rq: Request) -> (Encodable, Response?) {
+	return ( rq.args!["foo"], nil )
 }

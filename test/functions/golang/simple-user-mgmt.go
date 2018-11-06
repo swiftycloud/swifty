@@ -95,7 +95,7 @@ func doLeave(auth *swifty.AuthCtx, args map[string]string) interface{} {
 	return &authResp{}
 }
 
-func Main(req *Request) (interface{}, *Responce) {
+func Main(req *Request) (interface{}, *Response) {
 	auth, err := swifty.AuthContext()
 
 	if err != nil {
