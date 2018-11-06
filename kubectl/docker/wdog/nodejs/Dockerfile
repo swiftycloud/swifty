@@ -1,9 +1,11 @@
 FROM node:latest
 
 WORKDIR /home/swifty
-RUN npm install jskernel
-RUN npm install libjs
-RUN npm install libsys
+RUN npm install jskernel && \
+	npm install libjs && \
+	npm install libsys && \
+	npm install mongodb
+
 COPY swy-wdog /usr/bin/
 COPY swy-runner /usr/bin/
 RUN chmod +x /usr/bin/swy-wdog
