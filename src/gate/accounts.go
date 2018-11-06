@@ -116,6 +116,25 @@ func init() {
 	secretFields["secret"] = true
 	secretFields["password"] = true
 	secretFields["key"] = true
+
+	addSysctl("acc_secret_fields",
+		func() string {
+			rv := ""
+			for k, _ := range secretFields {
+				rv += ":" + k
+			}
+
+			return rv[1:]
+		},
+		func (nv string) error {
+			vs := strings.Split(nv, ":")
+			sf := make(map[string]bool)
+			for _, k := range vs {
+				sf[k] = true
+			}
+			secretFields = sf
+			return nil
+		})
 }
 
 func isSecret(f string) bool {
