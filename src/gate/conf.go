@@ -292,6 +292,7 @@ func (c *YAMLConf)Validate() error {
 		c.RunRate = 1
 	}
 
+	addIntSysctl("fn_tryrun_rate", &c.RunRate)
 	if c.AAASDep == "" {
 		fmt.Printf("'aaas-dep' not set, using default\n")
 		c.AAASDep = "swy-aaas.yaml"

@@ -10,6 +10,7 @@ type RL struct {
 	t	time.Time
 	eps	uint
 	burst	uint
+	base	time.Duration
 	l	sync.Mutex
 }
 
@@ -30,12 +31,12 @@ func (rl *RL)Get() bool {
 	if rl.bts == 0 {
 		t := time.Now()
 		d := t.Sub(rl.t)
-		if d >= time.Second {
+		if d >= rl.base {
 			rl.bts = rl.burst
 			rl.t = t
 		} else {
 			/* time.Second / rl.eps time is needed to get one bts */
-			nb := uint(uint64(d) * uint64(rl.eps) / uint64(time.Second))
+			nb := uint(uint64(d) * uint64(rl.eps) / uint64(rl.base))
 			if nb == 0 {
 				rl.l.Unlock()
 				return false
@@ -47,7 +48,7 @@ func (rl *RL)Get() bool {
 				rl.bts = nb
 			}
 
-			rl.t = rl.t.Add(time.Second * time.Duration(nb) / time.Duration(rl.eps))
+			rl.t = rl.t.Add(rl.base * time.Duration(nb) / time.Duration(rl.eps))
 		}
 	}
 
@@ -65,6 +66,10 @@ func (rl *RL)Update(burst, eps uint) {
 	rl.l.Unlock()
 }
 
+func MakeRLBase(burst, eps uint, base time.Duration) *RL {
+	return &RL{t: time.Now(), bts: burst + 1, burst: burst + 1, eps: eps, base: base}
+}
+
 func MakeRL(burst, eps uint) *RL {
-	return &RL{t: time.Now(), bts: burst + 1, burst: burst + 1, eps: eps}
+	return MakeRLBase(burst, eps, time.Second)
 }

@@ -7,6 +7,9 @@ import (
 	"swifty/apis"
 	"sync"
 	"net/http"
+	"swifty/common/xratelimit"
+	"strconv"
+	"strings"
 )
 
 type URL interface {
@@ -118,6 +121,36 @@ func (furl *FnURL)Handle(ctx context.Context, w http.ResponseWriter, r *http.Req
 	furl.fd.Handle(ctx, w, r, sopq, args)
 }
 
+var wrl *xratelimit.RL
+
+func init() {
+	wrl = xratelimit.MakeRL(5, 1)
+	addSysctl("fn_call_error_rate",
+			func() string {
+				vs := wrl.If()
+				return strconv.Itoa(int(vs[2])) + ":" + strconv.Itoa(int(vs[1]))
+			},
+			func(nv string) error {
+				vs := strings.Split(nv, ":")
+				if len(vs) != 2 {
+					return errors.New("Invalid value, use \"burst\":\"rate\"")
+				}
+
+				nb, err := strconv.Atoi(vs[0])
+				if err != nil || nb < 0 {
+					return errors.New("Bad burst")
+				}
+
+				nr, err := strconv.Atoi(vs[1])
+				if err != nil || nr <= 0 {
+					return errors.New("Bad rate")
+				}
+
+				wrl.Update(uint(nb), uint(nr))
+				return nil
+			})
+}
+
 func (fmd *FnMemData)Handle(ctx context.Context, w http.ResponseWriter, r *http.Request, sopq *statsOpaque,
 		args *swyapi.FunctionRun) {
 	var res *swyapi.WdogFunctionRunResult
@@ -158,10 +191,16 @@ func (fmd *FnMemData)Handle(ctx context.Context, w http.ResponseWriter, r *http.
 	res, err = conn.Run(ctx, sopq, "", "call", args)
 	if err != nil {
 		code = http.StatusInternalServerError
+		gateCallErrs.WithLabelValues("fail").Inc()
 		goto out
 	}
 
+	statsUpdate(fmd, sopq, res, "url")
+
 	if res.Code < 0 {
+		if wrl.Get() {
+			ctxlog(ctx).Warnf("Function call falied: %d/%s", res.Code, res.Return)
+		}
 		code = -res.Code
 		err = errors.New(res.Return)
 		goto out
@@ -174,8 +213,6 @@ func (fmd *FnMemData)Handle(ctx context.Context, w http.ResponseWriter, r *http.
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(res.Code)
 	w.Write([]byte(res.Return))
-
-	statsUpdate(fmd, sopq, res, "url")
 
 	return
 

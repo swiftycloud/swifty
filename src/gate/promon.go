@@ -88,7 +88,15 @@ var (
 			Name: "swifty_gate_function_calls",
 			Help: "Number of functions invocations",
 		},
-		[]string { "lang", "result" },
+		[]string { "event" },
+	)
+
+	gateCallErrs = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "swifty_gate_function_errors",
+			Help: "Number of failed functions invocations",
+		},
+		[]string { "reason" },
 	)
 
 	gateBuilds = prometheus.NewCounterVec(
@@ -275,6 +283,7 @@ func PrometheusInit(ctx context.Context) error {
 
 	/* XXX: We can pick up the call-counts from the database, but ... */
 	prometheus.MustRegister(gateCalls)
+	prometheus.MustRegister(gateCallErrs)
 	prometheus.MustRegister(gateBuilds)
 	prometheus.MustRegister(gateCalLat)
 	prometheus.MustRegister(wdogWaitLat)
