@@ -10,6 +10,7 @@ import (
 	"swifty/common/http"
 	"swifty/common/crypto"
 	"swifty/common/xrest"
+	"swifty/common"
 	"swifty/apis"
 )
 
@@ -108,38 +109,17 @@ func setupGithubAcc(ad *AccDesc) *xrest.ReqErr {
 	return nil
 }
 
-var secretFields map[string]bool
+var secretFields xh.StringsValues
 
 func init() {
-	secretFields = make(map[string]bool)
-	secretFields["token"] = true
-	secretFields["secret"] = true
-	secretFields["password"] = true
-	secretFields["key"] = true
+	secretFields = xh.MakeStringValues("token", "secret", "password", "key")
 
 	addSysctl("acc_secret_fields",
-		func() string {
-			rv := ""
-			for k, _ := range secretFields {
-				rv += ":" + k
-			}
-
-			return rv[1:]
-		},
+		func() string { return secretFields.String() },
 		func (nv string) error {
-			vs := strings.Split(nv, ":")
-			sf := make(map[string]bool)
-			for _, k := range vs {
-				sf[k] = true
-			}
-			secretFields = sf
+			secretFields = xh.ParseStringValues(nv)
 			return nil
 		})
-}
-
-func isSecret(f string) bool {
-	_, ok := secretFields[f]
-	return ok
 }
 
 func (ad *AccDesc)fill(values map[string]string) *xrest.ReqErr {
@@ -151,7 +131,7 @@ func (ad *AccDesc)fill(values map[string]string) *xrest.ReqErr {
 			continue
 		}
 
-		if isSecret(k) {
+		if secretFields.Have(k) {
 			ad.Secrets[k], err = mkSecret(k, v)
 			if err != nil {
 				return GateErrE(swyapi.GateGenErr, err)
