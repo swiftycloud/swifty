@@ -108,6 +108,21 @@ func setupGithubAcc(ad *AccDesc) *xrest.ReqErr {
 	return nil
 }
 
+var secretFields map[string]bool
+
+func init() {
+	secretFields = make(map[string]bool)
+	secretFields["token"] = true
+	secretFields["secret"] = true
+	secretFields["password"] = true
+	secretFields["key"] = true
+}
+
+func isSecret(f string) bool {
+	_, ok := secretFields[f]
+	return ok
+}
+
 func (ad *AccDesc)fill(values map[string]string) *xrest.ReqErr {
 	var err error
 
@@ -115,12 +130,14 @@ func (ad *AccDesc)fill(values map[string]string) *xrest.ReqErr {
 		switch k {
 		case "id", "name", "type":
 			continue
-		case "token", "secret", "password", "key":
+		}
+
+		if isSecret(k) {
 			ad.Secrets[k], err = mkSecret(k, v)
 			if err != nil {
 				return GateErrE(swyapi.GateGenErr, err)
 			}
-		default:
+		} else {
 			ad.Values[k] = v
 		}
 	}
