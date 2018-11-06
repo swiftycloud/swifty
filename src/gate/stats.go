@@ -216,10 +216,10 @@ func statsUpdate(fmd *FnMemData, op *statsOpaque, res *swyapi.WdogFunctionRunRes
 	if res.Code < 0 {
 		if res.Code == -xhttp.StatusTimeoutOccurred {
 			fmd.stats.Timeouts++
-			gateCalls.WithLabelValues("timeout").Inc()
+			gateCallErrs.WithLabelValues("timeout").Inc()
 		} else {
 			fmd.stats.Errors++
-			gateCalls.WithLabelValues("error").Inc()
+			gateCallErrs.WithLabelValues("error").Inc()
 		}
 	}
 	fmd.stats.LastCall = op.ts

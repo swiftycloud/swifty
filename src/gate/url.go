@@ -191,6 +191,7 @@ func (fmd *FnMemData)Handle(ctx context.Context, w http.ResponseWriter, r *http.
 	res, err = conn.Run(ctx, sopq, "", "call", args)
 	if err != nil {
 		code = http.StatusInternalServerError
+		gateCallErrs.WithLabelValues("fail").Inc()
 		goto out
 	}
 
