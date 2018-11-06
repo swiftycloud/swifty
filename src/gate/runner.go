@@ -19,6 +19,13 @@ var acceptedContent xh.StringsValues
 
 func init() {
 	acceptedContent = xh.MakeStringValues("application/json", "text/plain")
+
+	addSysctl("call_accepted_ctyp",
+		func() string { return acceptedContent.String() },
+		func (nv string) error {
+			acceptedContent = xh.ParseStringValues(nv)
+			return nil
+		})
 }
 
 func makeArgs(args *swyapi.FunctionRun, sopq *statsOpaque, r *http.Request) {
