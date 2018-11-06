@@ -88,7 +88,7 @@ var (
 			Name: "swifty_gate_function_calls",
 			Help: "Number of functions invocations",
 		},
-		[]string { "lang", "result" },
+		[]string { "result" },
 	)
 
 	gateBuilds = prometheus.NewCounterVec(
