@@ -382,13 +382,13 @@ func makeGateReq(gate, tennant, addr string, in interface{}, out interface{}, au
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("Bad responce from server: %s", string(resp.Status))
+		return fmt.Errorf("Bad response from server: %s", string(resp.Status))
 	}
 
 	if out != nil {
 		err = xhttp.RResp(resp, out)
 		if err != nil {
-			return fmt.Errorf("Bad responce body: %s", err.Error())
+			return fmt.Errorf("Bad response body: %s", err.Error())
 		}
 	}
 

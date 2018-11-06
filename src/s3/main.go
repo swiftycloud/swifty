@@ -890,7 +890,7 @@ func handleStats(w http.ResponseWriter, r *http.Request) {
 		OutBytesWeb:	st.OutBytesWeb,
 	})
 	if err != nil {
-		http.Error(w, "Bad responce", http.StatusNoContent)
+		http.Error(w, "Bad response", http.StatusNoContent)
 	}
 }
 

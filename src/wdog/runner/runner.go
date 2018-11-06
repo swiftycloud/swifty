@@ -73,7 +73,7 @@ func main() {
 
 		err = q.Send(out)
 		if err != nil {
-			fmt.Printf("Can't send responce: %s", err.Error())
+			fmt.Printf("Can't send response: %s", err.Error())
 			return
 		}
 	}
