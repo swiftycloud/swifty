@@ -194,6 +194,8 @@ func (fmd *FnMemData)Handle(ctx context.Context, w http.ResponseWriter, r *http.
 		goto out
 	}
 
+	statsUpdate(fmd, sopq, res, "url")
+
 	if res.Code < 0 {
 		if wrl.Get() {
 			ctxlog(ctx).Warnf("Function call falied: %d/%s", res.Code, res.Return)
@@ -210,8 +212,6 @@ func (fmd *FnMemData)Handle(ctx context.Context, w http.ResponseWriter, r *http.
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(res.Code)
 	w.Write([]byte(res.Return))
-
-	statsUpdate(fmd, sopq, res, "url")
 
 	return
 
