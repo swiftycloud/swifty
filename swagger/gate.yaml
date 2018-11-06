@@ -2159,7 +2159,7 @@ definitions:
         description: The data provided during /add call
   FunctionStatsResp:
     type: object
-    description: Responce with FN stats
+    description: Response with FN stats
     properties:
       stats:
         type: array
@@ -2170,7 +2170,7 @@ definitions:
           $ref: '#/definitions/FunctionStats'
   UserStatsResp:
     type: object
-    description: Responce with user stats
+    description: Response with user stats
     properties:
       stats:
         type: array
@@ -2290,7 +2290,7 @@ definitions:
         type: string
         description: Websocket mware name
       mtype:
-        type: int
+        type: integer
         description: Message type to match
   FunctionEventS3:
     type: object
@@ -2318,7 +2318,7 @@ definitions:
     properties:
       id:
         type: string
-        description: Used in responces
+        description: Used in responses
       name:
         type: string
       source:
