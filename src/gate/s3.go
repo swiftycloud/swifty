@@ -206,7 +206,7 @@ func s3EventStop(ctx context.Context, evt *FnEventDesc) error {
 	conf := &conf.Mware
 	err := s3Unsubscribe(ctx, conf, evt.S3)
 	if err == nil {
-		mqStopListener(conf.S3.cn.Addr() + "/" + conf.S3.cn.Domn, "events")
+		mqStopListener(conf.S3.cn.Addr() + "/" + conf.S3.cn.Domn, gates3queue)
 	}
 	return err
 }
