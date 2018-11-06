@@ -111,9 +111,11 @@ func (ck *YAMLConfKeystone)Validate() error {
 	if ck.Addr == "" {
 		return errors.New("'keystone.address' not set, want HOST:PORT value")
 	}
+	addStringSysctl("keystone_addr", &ck.Addr)
 	if ck.Domain == "" {
 		return errors.New("'keystone.domain' not set")
 	}
+	addStringSysctl("keystone_domain", &ck.Domain)
 	return nil
 }
 
