@@ -1,0 +1,156 @@
+Gate exports various configuration knobs via /v1/sysctls URL.
+They are read/write-able by swifty.admin user only. The swyctl
+tool has "sc" action to manipulate them.
+
+Here they are:
+
+* aaas_dep_file                    = swy-aaas.yaml
+Name of the AaaS deployment file in the demo repo.
+
+* acc_secret_trim                  = 6
+Number of characters to leave when trimming secret fields from
+user's accounts.
+
+* call_default_cors                = true
+Whether or not to allow CORS for /call URLs (i.e. -- when
+calling user funciton).
+
+* dep_scaledown_step               = 8s
+* dep_scaleup_relax                = 16s
+These two control the way scaler tries to shrink dows the fn
+deployment after the load peak passes. First, it sleeps for
+the relax time, then tries to shring deployment 1 (one) replica
+down each step seconds. It literally "tries", i.e. if the load
+still requires big nr of replicas, no actual scale-down happens.
+
+* deploy_include_depth_max         = 4
+Maximum number of include-s handles when loading deployment file.
+
+* fn_call_error_rate               = 6:1
+When calling an FN fails, the warning message is printed in logs
+limited by this burst:rate value.
+
+* fn_memory_def_mb                 = 128
+* fn_memory_max_mb                 = 1024
+* fn_memory_min_mb                 = 64
+
+Min/Max/Def values for FN memory sizes.
+
+* fn_replicas_limit                = 32
+Absolute upper limit on the functions' deployments scale-up.
+
+* fn_timeout_def_sec               = 1
+* fn_timeout_max_sec               = 60
+Def/Max value for fn timeout.
+
+* fn_tryrun_rate                   = 1
+How may times per second a user may do /run with "src:" field set.
+
+* gate_call                        = http://localhost:8684
+Address of the call-gate.
+
+* gate_log_level                   = debug
+Log level for gate.
+
+* gate_mode                        = mode:devel, flavor:default
+Gate runtime description. Mode (default/devel) set by cli option,
+and flavor (lite/default) set build-time.
+
+* gate_req_rover                   = 5
+Gate request rover. R/O field, showing the value of the request
+IDs generator
+
+* gate_s3api                       = s3-dev.swifty.cloud:8787
+Address of the S3 endpoint that is set to functions asking for S3
+buckets to work with.
+
+* gate_version                     = 0.1-ff67496
+Gate version and Git commit.
+
+* gate_ws                          = http://159.69.216.175:8684
+Websocket API gate that is set to functions asking for WS mware.
+
+* k8s_namespace                    = default
+Kubernetes namespace. Not runtime configurable.
+
+* k8s_refresh                      = set soft/hard here
+Kicker to make gate refresh deps and pods. Soft means gate will just
+refresh the internal state of balancer. Hard means that deployments
+will be forcibly created for started functions.
+
+* keystone_addr                    = 127.0.0.1:5000
+* keystone_domain                  = swifty
+Keystone address/domain to login users and validate their tokens.
+
+* ks_token_cache_exp               = 1m0s
+Period for which gate keeps keystone tokes w/o re-validation.
+
+* lang_info_refresh                = set language name or * here
+Kicker to make gate re-scan service pods for language info-s (version
+and list of pre-installed packages).
+
+* limits_update_period             = 2m0s
+How often will gate re-read user limits from the DB.
+
+* mw_authjwt_disable               = false
+* mw_maria_disable                 = false
+* mw_mongo_disable                 = false
+* mw_postgres_disable              = false
+* mw_rabbit_disable                = false
+* mw_websocket_disable             = false
+Whether or not a middleware is enabled.
+
+* pkg_disk_size_gap                = 32K
+When installing a new package, gate allows adding new packages
+if the _current_ disk consumption is less than the limit. This
+allows installing a package, that would overflow the limit. Thus
+this value is how much space should be there till the limit for
+a new package to be allowed.
+
+* pod_start_gain                   = 50ms
+* pod_start_relax                  = 100ms
+When waiting for a pod to open the wdog port gate waits the
+relax time, then pings the port with the icreasing by gain value
+intervals.
+
+* pod_start_tmo                    = 2m0s
+If port doesn't get opened for this time, it's marked as dead and
+not used.
+
+* prometheus                       = 127.0.0.1:9012
+Prometheus endpoint exposed by gate. Runtime configurable.
+
+* repo_resync_on_error             = 5m0s
+If periodic repo pull fails, the next re-try will happen in this time.
+
+* repo_sync_delay                  = 0s
+How much time a use rhave to wait between manual repos sync.
+
+* repo_sync_period                 = 1h0m0s
+Periodic pulls happen this often.
+
+* router_table_key_len_max         = 64
+How many entries can there be in a router entry.
+
+* rt_golang_disable                = false
+* rt_nodejs_disable                = false
+* rt_python_disable                = false
+* rt_ruby_disable                  = false
+* rt_swift_disable                 = false
+Whether the language support is enable.
+
+* s3_hidden_key_timeout_sec        = 120
+How much seconds a hidden (i.e. used by UI only) S3 key is valid.
+
+* src_leak_tmo                     = 16m0s
+When updating a funciton, old sources are expected to become unused
+by older pods this fast.
+
+* stats_fush_period                = 8s
+How frequentrly to flush stats into DB.
+
+* ten_cache_flush                  = Set any value here
+Kicker to flush all entries from TCache collection.
+
+* wdog_image_prefix                = swiftycloudou
+Prefix of images with watch-dogs.

@@ -10,6 +10,7 @@ import (
 	"swifty/common/http"
 	"swifty/common/crypto"
 	"swifty/common/xrest"
+	"swifty/common"
 	"swifty/apis"
 )
 
@@ -108,6 +109,19 @@ func setupGithubAcc(ad *AccDesc) *xrest.ReqErr {
 	return nil
 }
 
+var secretFields xh.StringsValues
+
+func init() {
+	secretFields = xh.MakeStringValues("token", "secret", "password", "key")
+
+	addSysctl("acc_secret_fields",
+		func() string { return secretFields.String() },
+		func (nv string) error {
+			secretFields = xh.ParseStringValues(nv)
+			return nil
+		})
+}
+
 func (ad *AccDesc)fill(values map[string]string) *xrest.ReqErr {
 	var err error
 
@@ -115,12 +129,14 @@ func (ad *AccDesc)fill(values map[string]string) *xrest.ReqErr {
 		switch k {
 		case "id", "name", "type":
 			continue
-		case "token", "secret", "password", "key":
+		}
+
+		if secretFields.Have(k) {
 			ad.Secrets[k], err = mkSecret(k, v)
 			if err != nil {
 				return GateErrE(swyapi.GateGenErr, err)
 			}
-		default:
+		} else {
 			ad.Values[k] = v
 		}
 	}

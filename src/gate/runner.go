@@ -9,10 +9,24 @@ import (
 	"io/ioutil"
 
 	"swifty/apis"
+	"swifty/common"
 	"swifty/common/http"
 	"swifty/common/xrest"
 	"swifty/common/xratelimit"
 )
+
+var acceptedContent xh.StringsValues
+
+func init() {
+	acceptedContent = xh.MakeStringValues("application/json", "text/plain")
+
+	addSysctl("call_accepted_ctyp",
+		func() string { return acceptedContent.String() },
+		func (nv string) error {
+			acceptedContent = xh.ParseStringValues(nv)
+			return nil
+		})
+}
 
 func makeArgs(args *swyapi.FunctionRun, sopq *statsOpaque, r *http.Request) {
 	defer r.Body.Close()
@@ -45,8 +59,7 @@ func makeArgs(args *swyapi.FunctionRun, sopq *statsOpaque, r *http.Request) {
 			 * with asyncs, as binary data can be big and
 			 * tranferring is back and firth is not good.
 			 */
-			switch ctp[0] {
-			case "application/json", "text/plain":
+			if acceptedContent.Have(ctp[0]) {
 				args.ContentType = ctp[0]
 				args.Body = string(body)
 				sopq.bodySz = len(body)

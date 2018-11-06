@@ -305,8 +305,29 @@ func PrometheusInit(ctx context.Context) error {
 	r := mux.NewRouter()
 	r.Handle("/metrics", promhttp.Handler())
 
-	psrv := &http.Server{Handler: r, Addr: conf.Daemon.Prometheus}
-	go psrv.ListenAndServe()
+	ac := make(chan bool)
+	go func() {
+		for {
+			glog.Debugf("Starting prometheus endpoint on %s", conf.Daemon.Prometheus)
+			psrv := &http.Server{Handler: r, Addr: conf.Daemon.Prometheus}
+			go func(srv *http.Server) {
+				err := srv.ListenAndServe()
+				if err != nil {
+					glog.Errorf("Prometheus @%s stopped: %s", srv.Addr, err.Error())
+				}
+			}(psrv)
+
+			<-ac
+			psrv.Close()
+		}
+	}()
+
+	addSysctl("prometheus", func() string { return conf.Daemon.Prometheus },
+		func(na string) error {
+			conf.Daemon.Prometheus = na
+			ac <-true
+			return nil
+		})
 
 	ctxlog(ctx).Debugf("Prometeus exporter started at %s", conf.Daemon.Prometheus)
 

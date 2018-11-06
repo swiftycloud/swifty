@@ -174,16 +174,13 @@ func guessSource(evt *swyapi.FunctionEvent) string {
 }
 
 func getEventDesc(evt *swyapi.FunctionEvent) (*FnEventDesc, *xrest.ReqErr) {
-	if evt.Source == "" {
-		evt.Source = guessSource(evt)
-	}
-
+	source := guessSource(evt)
 	ed := &FnEventDesc{
 		Name: evt.Name,
-		Source: evt.Source,
+		Source: source,
 	}
 
-	h, ok := evtHandlers[evt.Source]
+	h, ok := evtHandlers[source]
 	if !ok {
 		return nil, GateErrM(swyapi.GateBadRequest, "Unsupported event type")
 	}
