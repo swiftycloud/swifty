@@ -529,24 +529,18 @@ func k8sPodUp(ctx context.Context, pod *k8sPod) error {
 		return nil
 	}
 
-	err := BalancerPodUp(ctx, pod)
-	if err != nil {
-		ctxlog(ctx).Errorf("Can't prep pod %s/%s: %s", pod.DepName, pod.UID, err.Error())
-		return err
-	}
-
 	go func() {
 		ctx, done := mkContext("::podwait")
 		defer done(ctx)
 
-		err = waitPodPort(ctx, pod.WdogAddr, pod.WdogPort)
+		err := waitPodPort(ctx, pod.WdogAddr, pod.WdogPort)
 		if err != nil {
 			ctxlog(ctx).Errorf("POD %s port wait err: %s",
 					pod.UID, err.Error())
 			return
 		}
 
-		err = BalancerPodRdy(ctx, pod)
+		err = BalancerPodAdd(ctx, pod)
 		if err != nil {
 			ctxlog(ctx).Errorf("Can't add pod %s/%s/%s: %s",
 					pod.DepName, pod.UID,
@@ -799,10 +793,6 @@ func refreshDepsAndPods(ctx context.Context, hard bool) error {
 	var fn FunctionDesc
 
 	ctxlog(ctx).Debugf("Refreshing deps and pods (hard: %v)", hard)
-	err := podsDelStuck(ctx)
-	if err != nil {
-		return fmt.Errorf("Can't drop stuck PODs: %s", err.Error)
-	}
 
 	iter := dbIterAll(ctx, bson.M{}, &fn)
 	defer iter.Close()
@@ -815,7 +805,7 @@ func refreshDepsAndPods(ctx context.Context, hard bool) error {
 			/* Record reft from the early fn.Add stage. Just clean
 			 * one out and forget the sources.
 			 */
-			err = removeSources(ctx, &fn)
+			err := removeSources(ctx, &fn)
 			if err != nil {
 				ctxlog(ctx).Errorf("Can't remove sources for %s: %s", fn.SwoId.Str(), err.Error())
 				return err
@@ -906,7 +896,7 @@ func refreshDepsAndPods(ctx context.Context, hard bool) error {
 		}
 	}
 
-	err = iter.Err()
+	err := iter.Err()
 	if err != nil {
 		return err
 	}

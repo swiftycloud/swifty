@@ -35,14 +35,10 @@ func BalancerPodDel(ctx context.Context, pod *k8sPod) error {
 	return nil
 }
 
-func BalancerPodUp(ctx context.Context, pod *k8sPod) error {
-	return podsAdd(ctx, pod)
-}
-
-func BalancerPodRdy(ctx context.Context, pod *k8sPod) error {
+func BalancerPodAdd(ctx context.Context, pod *k8sPod) error {
 	fnid := pod.SwoId.Cookie()
 
-	err := podsRdy(ctx, fnid, pod)
+	err := podsAdd(ctx, fnid, pod)
 	if err != nil {
 		return fmt.Errorf("Add error: %s", err.Error())
 	}

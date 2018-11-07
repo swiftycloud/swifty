@@ -27,10 +27,6 @@ func makeFnPods() *fnPods {
 	return x
 }
 
-func podsAdd(ctx context.Context, pod *k8sPod) error {
-	return nil
-}
-
 func podsDel(ctx context.Context, fnid string, pod *k8sPod) error {
 	fnp := findFnPods(fnid)
 	if fnp == nil {
@@ -44,7 +40,7 @@ func podsDel(ctx context.Context, fnid string, pod *k8sPod) error {
 	return nil
 }
 
-func podsRdy(ctx context.Context, fnid string, pod *k8sPod) error {
+func podsAdd(ctx context.Context, fnid string, pod *k8sPod) error {
 	x, ok := fnPodsStore.Load(fnid)
 	if !ok {
 		x, _ = fnPodsStore.LoadOrStore(fnid, makeFnPods())
@@ -61,10 +57,6 @@ func podsRdy(ctx context.Context, fnid string, pod *k8sPod) error {
 
 func podsDelAll(ctx context.Context, fnid string) error {
 	fnPodsStore.Delete(fnid)
-	return nil
-}
-
-func podsDelStuck(ctx context.Context) error {
 	return nil
 }
 
