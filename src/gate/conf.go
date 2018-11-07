@@ -72,6 +72,7 @@ func (cw *YAMLConfWdog)Validate() error {
 type YAMLConfDaemon struct {
 	Addr		string			`yaml:"address"`
 	CallGate	string			`yaml:"callgate"`
+	ApiGate		string			`yaml:"apigate"`
 	LogLevel	string			`yaml:"loglevel"`
 	Prometheus	string			`yaml:"prometheus"`
 	HTTPS		*xhttp.YAMLConfHTTPS	`yaml:"https,omitempty"`
@@ -88,6 +89,10 @@ func (cd *YAMLConfDaemon)Validate() error {
 		fmt.Printf("'daemon.callgate' not set, gate is callgate\n")
 	}
 	addStringSysctl("gate_call", &cd.CallGate)
+	if cd.ApiGate == "" {
+		fmt.Printf("'daemon.apigate' not set, gate is apigate\n")
+	}
+	addStringSysctl("gate_api", &cd.ApiGate)
 	if cd.LogLevel == "" {
 		fmt.Printf("'daemon.loglevel' not set, using \"warn\" one\n")
 	}
