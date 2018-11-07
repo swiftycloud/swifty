@@ -1,6 +1,7 @@
 FROM ruby:latest
 
 WORKDIR /home/swifty
+RUN gem install mongo
 COPY swy-wdog /usr/bin/
 COPY swy-runner /usr/bin/
 RUN chmod +x /usr/bin/swy-wdog

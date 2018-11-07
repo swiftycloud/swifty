@@ -47,11 +47,11 @@ func GetEnvWebSocket(ctx context.Context, mwd *MwareDesc) map[string][]byte {
 }
 
 func wsURL(mwd *MwareDesc) string {
-	url := conf.Daemon.WSGate
+	url := conf.Mware.WS.API
 	if url == "" {
 		url = conf.Daemon.Addr
 	}
-	return url + "/websockets/" + mwd.Cookie
+	return xh.MakeEndpoint(url + "/websockets/" + mwd.Cookie)
 }
 
 func InfoWebSocket(ctx context.Context, mwd *MwareDesc, ifo *swyapi.MwareInfo) error {

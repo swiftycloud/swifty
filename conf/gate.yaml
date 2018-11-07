@@ -6,6 +6,7 @@ keystone:
         domain: "swifty"
 daemon:
         address: "swy0-web:8686"
+        apigate: "swy0-web:8686"
         callgate: "swy0-web:8686"
         loglevel: "debug"
         prometheus: "swy0:9012"
@@ -29,6 +30,8 @@ middleware:
                 creds: "-:S3TOKEN@swy1:8789"
                 api: "swy1:8787"
                 notify: "swifty:S3IFYPASS@swy0:5672/s3"
+        websocket:
+                api: "http://159.69.216.175:8684"
 wdog:
         img-prefix: "swifty"
         volume: "/home/swifty-volume"

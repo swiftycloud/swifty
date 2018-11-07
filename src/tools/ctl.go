@@ -478,11 +478,7 @@ func function_info(args []string, opts [16]string) {
 	fmt.Printf("Version:     %s%s\n", ver, rv)
 	fmt.Printf("State:       %s\n", ifo.State)
 	if ifo.URL != "" {
-		pfx := ""
-		if !isURL(ifo.URL) {
-			pfx = gateProto() + "://"
-		}
-		fmt.Printf("URL:         %s%s\n", pfx, ifo.URL)
+		fmt.Printf("URL:         %s\n", ifo.URL)
 	}
 	fmt.Printf("Timeout:     %dms\n", ifo.Size.Timeout)
 	if ifo.Size.Rate != 0 {

@@ -51,6 +51,15 @@ func handleCall(w http.ResponseWriter, r *http.Request) {
 	url.Handle(ctx, w, r, sopq)
 }
 
+func apiGate() string {
+	ag := conf.Daemon.ApiGate
+	if ag == "" {
+		ag = conf.Daemon.Addr
+	}
+
+	return xh.MakeEndpoint(ag)
+}
+
 func handleUserLogin(w http.ResponseWriter, r *http.Request) {
 	var params swyapi.UserLogin
 	var token string
@@ -72,7 +81,7 @@ func handleUserLogin(w http.ResponseWriter, r *http.Request) {
 		goto out
 	}
 
-	td.Endpoint = conf.Daemon.Addr
+	td.Endpoint = apiGate()
 	glog.Debugf("Login passed, token %s (exp %s)", token[:16], td.Expires)
 
 	w.Header().Set("X-Subject-Token", token)

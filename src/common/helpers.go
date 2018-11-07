@@ -17,6 +17,13 @@ import (
 	"os"
 )
 
+func MakeEndpoint(addr string) string {
+	if !(strings.HasPrefix(addr, "http://") || strings.HasPrefix(addr, "https://")) {
+		addr = "https://" + addr
+	}
+	return addr
+}
+
 func Sha256sum(s []byte) string {
 	h := sha256.New()
 	h.Write([]byte(s))
