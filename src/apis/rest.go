@@ -132,11 +132,17 @@ func (cln *Client)Login() error {
 		return fmt.Errorf("No auth token from server")
 	}
 
-//	var td UserToken
-//	err = xhttp.RResp(resp, &td)
-//	if err != nil {
-//		return fmt.Errorf("Can't unmarshal login resp: %s", err.Error())
-//	}
+	if cln.verb {
+		var td UserToken
+		err = xhttp.RResp(resp, &td)
+		if err != nil {
+			fmt.Printf("Can't unmarshal login resp: %s", err.Error())
+		} else {
+			fmt.Printf("Token:\n")
+			fmt.Printf("\tEndpoint: %s\n", td.Endpoint)
+			fmt.Printf("\tExpires:  %s\n", td.Expires)
+		}
+	}
 
 	cln.token = token
 	if cln.stok != nil {
