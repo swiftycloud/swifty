@@ -69,6 +69,27 @@ func main() {
 			break
 		}
 
+		if tm.Type == "call" {
+			fmt.Printf("%s >%s\n", tm.Ts.Format("15:04:05.000"), tm.Data["fname"])
+			fmt.Printf("\t%v (%v)\n", tm.Data["code"], tm.Data["status"])
+			type x struct {
+				n	string
+				d	uint64
+			}
+			times := []x{}
+			for n, dur := range tm.Data["times"].(map[string]interface{}) {
+				times = append(times, x{n:n, d:uint64(dur.(float64))})
+			}
+			sort.Slice(times, func(i, j int) bool {
+				return times[i].d < times[j].d
+			})
+			for _, t := range times {
+				fmt.Printf("\t   %-10s%16d\n", t.n, t.d)
+			}
+
+			continue
+		}
+
 		var rqid string
 		if tm.RqID == prevr {
 			rqid = "      `-"
@@ -85,22 +106,6 @@ func main() {
 			fmt.Printf("%s\n", tm.Data["values"])
 		case "error":
 			fmt.Printf("%d %s\n", tm.Data["code"], tm.Data["message"])
-		case "call":
-			fmt.Printf("\n")
-			type x struct {
-				n	string
-				d	uint64
-			}
-			times := []x{}
-			for n, dur := range tm.Data["times"].(map[string]interface{}) {
-				times = append(times, x{n:n, d:uint64(dur.(float64))})
-			}
-			sort.Slice(times, func(i, j int) bool {
-				return times[i].d < times[j].d
-			})
-			for _, t := range times {
-				fmt.Printf("\t%-10s%16d\n", t.n, t.d)
-			}
 		default:
 			fmt.Printf("%v\n", tm.Data)
 		}

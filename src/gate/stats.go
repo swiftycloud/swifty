@@ -203,7 +203,7 @@ func statsUpdate(fmd *FnMemData, op *statsOpaque, res *swyapi.WdogFunctionRunRes
 	lat := time.Since(op.ts)
 	if op.trace != nil {
 		op.trace["stop"] = lat
-		traceCall(fmd.fnid, op.trace)
+		traceCall(fmd, res, op.trace)
 	}
 
 	rt := res.FnTime()

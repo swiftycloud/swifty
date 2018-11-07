@@ -107,19 +107,25 @@ func traceEventSlow(ctx context.Context, ten, typ string, values map[string]inte
 	tLock.RUnlock()
 }
 
-func traceCall(cookie string, times map[string]time.Duration) {
+func traceCall(fmd *FnMemData, res *swyapi.WdogFunctionRunResult, times map[string]time.Duration) {
 	evt := &swyapi.TracerEvent {
 		Ts: time.Now(),
 		Type: "call",
 		Data: map[string]interface{} {
 			"times": times,
+			"fname": fmd.id.Str(),
+			"code":  res.Code,
 		},
+	}
+
+	if res.Code < 0 {
+		evt.Data["status"] = res.Return
 	}
 
 	tLock.RLock()
 	for e := tracers.Front(); e != nil; e = e.Next() {
 		t := e.Value.(*Tracer)
-		if t.id == "url:" + cookie {
+		if t.id == "url::" || t.id == "url:" + fmd.fnid {
 			t.evs <-evt
 		}
 	}

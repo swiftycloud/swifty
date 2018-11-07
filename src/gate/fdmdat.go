@@ -22,6 +22,7 @@ type FnMemData struct {
 	td	*TenantMemData
 	stats	FnStats
 	lock	sync.Mutex
+	id	SwoId
 }
 
 type TenantMemData struct {
@@ -198,6 +199,7 @@ func fndatGetOrInit(ctx context.Context, cookie string, fn *FunctionDesc, forRem
 	nret.mem = fn.Size.Mem
 	nret.depname = fn.DepName()
 	nret.fnid = fn.Cookie
+	nret.id = fn.SwoId
 
 	if fn.AuthCtx != "" && !forRemoval {
 		nret.ac, err = authCtxGet(ctx, fn.SwoId, fn.AuthCtx)
