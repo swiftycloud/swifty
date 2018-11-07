@@ -196,6 +196,9 @@ func (fmd *FnMemData)Handle(ctx context.Context, w http.ResponseWriter, r *http.
 	}
 
 	statsUpdate(fmd, sopq, res, "url")
+	if sopq.trace != nil {
+		traceCall(fmd, args, res, sopq.trace)
+	}
 
 	if res.Code < 0 {
 		if wrl.Get() {

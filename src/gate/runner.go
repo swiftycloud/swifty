@@ -170,6 +170,9 @@ func doRun(ctx context.Context, fn *FunctionDesc, event string, args *swyapi.Fun
 	res, err := conn.Run(ctx, sopq, "", event, args)
 	if err == nil {
 		statsUpdate(fmd, sopq, res, event)
+		if sopq.trace != nil {
+			traceCall(fmd, args, res, sopq.trace)
+		}
 	}
 
 	return res, err

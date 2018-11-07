@@ -201,10 +201,7 @@ func statsStart() *statsOpaque {
 
 func statsUpdate(fmd *FnMemData, op *statsOpaque, res *swyapi.WdogFunctionRunResult, event string) {
 	lat := time.Since(op.ts)
-	if op.trace != nil {
-		op.trace["stop"] = lat
-		traceCall(fmd, res, op.trace)
-	}
+	traceTime(op, "stop", nil)
 
 	rt := res.FnTime()
 	gatelat := lat - rt

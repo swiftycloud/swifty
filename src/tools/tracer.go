@@ -70,7 +70,8 @@ func main() {
 		}
 
 		if tm.Type == "call" {
-			fmt.Printf("%s >%s\n", tm.Ts.Format("15:04:05.000"), tm.Data["fname"])
+			fmt.Printf("%s %s.%s//%s//%s\n", tm.Ts.Format("15:04:05.000"),
+					tm.Data["event"], tm.Data["method"], tm.Data["fname"], tm.Data["path"])
 			fmt.Printf("\t%v (%v)\n", tm.Data["code"], tm.Data["status"])
 			type x struct {
 				n	string

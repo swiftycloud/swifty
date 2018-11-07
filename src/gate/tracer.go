@@ -107,13 +107,16 @@ func traceEventSlow(ctx context.Context, ten, typ string, values map[string]inte
 	tLock.RUnlock()
 }
 
-func traceCall(fmd *FnMemData, res *swyapi.WdogFunctionRunResult, times map[string]time.Duration) {
+func traceCall(fmd *FnMemData, args *swyapi.FunctionRun, res *swyapi.WdogFunctionRunResult, times map[string]time.Duration) {
 	evt := &swyapi.TracerEvent {
 		Ts: time.Now(),
 		Type: "call",
 		Data: map[string]interface{} {
 			"times": times,
 			"fname": fmd.id.Str(),
+			"event": args.Event,
+			"method": args.Method,
+			"path":	args.Path,
 			"code":  res.Code,
 		},
 	}
