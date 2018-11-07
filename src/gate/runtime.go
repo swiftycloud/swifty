@@ -120,6 +120,8 @@ func RtInit() {
 			d.Disabled = false
 		}
 		addBoolSysctl("rt_" + l + "_disable", &d.Disabled)
+		rd := d
+		addRoSysctl("rt_" + l + "_service", func() string { return rd.ServiceIP })
 	}
 }
 
