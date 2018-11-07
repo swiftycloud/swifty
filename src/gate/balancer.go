@@ -22,17 +22,11 @@ func (bd *BalancerDat)Flush() {
 	bd.pods = []*podConn{}
 }
 
-func BalancerPodDel(ctx context.Context, pod *k8sPod) error {
+func BalancerPodDel(ctx context.Context, pod *k8sPod) {
 	fnid := pod.SwoId.Cookie()
 	balancerPodsFlush(fnid)
-
-	err := podsDel(ctx, fnid, pod)
-	if err != nil {
-		return fmt.Errorf("Pod del error: %s", err.Error())
-	}
-
+	podsDel(ctx, fnid, pod)
 	fnWaiterKick(fnid)
-	return nil
 }
 
 func BalancerPodAdd(ctx context.Context, pod *k8sPod) error {
@@ -59,11 +53,7 @@ func BalancerDelete(ctx context.Context, fnid string) (error) {
 		fdm.lock.Unlock()
 	}
 
-	err := podsDelAll(ctx, fnid)
-	if err != nil {
-		return fmt.Errorf("POD del all error: %s", err.Error())
-	}
-
+	podsDelAll(ctx, fnid)
 	return nil
 }
 

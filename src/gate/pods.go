@@ -27,17 +27,13 @@ func makeFnPods() *fnPods {
 	return x
 }
 
-func podsDel(ctx context.Context, fnid string, pod *k8sPod) error {
+func podsDel(ctx context.Context, fnid string, pod *k8sPod) {
 	fnp := findFnPods(fnid)
-	if fnp == nil {
-		return nil
+	if fnp != nil {
+		fnp.lock.Lock()
+		delete(fnp.pods, pod.UID)
+		fnp.lock.Unlock()
 	}
-
-	fnp.lock.Lock()
-	delete(fnp.pods, pod.UID)
-	fnp.lock.Unlock()
-
-	return nil
 }
 
 func podsAdd(ctx context.Context, fnid string, pod *k8sPod) error {
@@ -55,9 +51,8 @@ func podsAdd(ctx context.Context, fnid string, pod *k8sPod) error {
 	return nil
 }
 
-func podsDelAll(ctx context.Context, fnid string) error {
+func podsDelAll(ctx context.Context, fnid string) {
 	fnPodsStore.Delete(fnid)
-	return nil
 }
 
 func podsFindExact(ctx context.Context, fnid, version string) (*podConn, error) {

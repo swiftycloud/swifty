@@ -559,12 +559,7 @@ func k8sPodDown(ctx context.Context, pod *k8sPod) {
 		return
 	}
 
-	err := BalancerPodDel(ctx, pod)
-	if err != nil {
-		ctxlog(ctx).Errorf("Can't delete pod %s/%s/%s: %s",
-				pod.DepName, pod.UID,
-				pod.WdogAddr, err.Error())
-	}
+	BalancerPodDel(ctx, pod)
 }
 
 func k8sPodUpd(obj_old, obj_new interface{}) {
@@ -829,12 +824,7 @@ func refreshDepsAndPods(ctx context.Context, hard bool) error {
 			continue
 		}
 
-		err := podsDelAll(ctx, fn.Cookie)
-		if err != nil {
-			ctxlog(ctx).Errorf("Can't flush PODs info: %s", err.Error())
-			return err
-		}
-
+		podsDelAll(ctx, fn.Cookie)
 		dep, err := depiface.Get(fn.DepName(), metav1.GetOptions{})
 		if err != nil {
 			if !k8serr.IsNotFound(err) {
