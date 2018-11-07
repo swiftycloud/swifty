@@ -53,10 +53,10 @@ func podsDelAll(ctx context.Context, fnid string) {
 	fnPodsStore.Delete(fnid)
 }
 
-func podsFindExact(ctx context.Context, fnid, version string) (*podConn, error) {
+func podsFindExact(ctx context.Context, fnid, version string) *podConn {
 	fnp := findFnPods(fnid)
 	if fnp == nil {
-		return nil, nil
+		return nil
 	}
 
 	fnp.lock.RLock()
@@ -64,17 +64,17 @@ func podsFindExact(ctx context.Context, fnid, version string) (*podConn, error) 
 
 	for _, pod := range fnp.pods {
 		if pod.Version == version {
-			return pod.conn(), nil
+			return pod.conn()
 		}
 	}
 
-	return nil, nil
+	return nil
 }
 
-func podsFindAll(ctx context.Context, fnid string) ([]*podConn, error) {
+func podsFindAll(ctx context.Context, fnid string) []*podConn {
 	fnp := findFnPods(fnid)
 	if fnp == nil {
-		return nil, nil
+		return nil
 	}
 
 	fnp.lock.RLock()
@@ -85,13 +85,13 @@ func podsFindAll(ctx context.Context, fnid string) ([]*podConn, error) {
 		ret = append(ret, pod.conn())
 	}
 
-	return ret, nil
+	return ret
 }
 
-func podsListVersions(ctx context.Context, fnid string) ([]string, error) {
+func podsListVersions(ctx context.Context, fnid string) []string {
 	fnp := findFnPods(fnid)
 	if fnp == nil {
-		return nil, nil
+		return []string{}
 	}
 
 	fnp.lock.RLock()
@@ -108,5 +108,5 @@ func podsListVersions(ctx context.Context, fnid string) ([]string, error) {
 		ret = append(ret, v)
 	}
 
-	return ret, nil
+	return ret
 }

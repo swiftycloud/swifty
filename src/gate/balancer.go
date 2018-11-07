@@ -70,33 +70,24 @@ func balancerGetConnExact(ctx context.Context, cookie, version string) (*podConn
 	 * We can lookup id.Cookie() here, but ... it's manual run,
 	 * let's also make sure the FN exists at all
 	 */
-	ap, err := podsFindExact(ctx, cookie, version)
-	if ap == nil {
-		if err == nil {
-			return nil, GateErrM(swyapi.GateGenErr, "Nothing to run (yet)")
-		}
+	var xer *xrest.ReqErr
 
-		ctxlog(ctx).Errorf("balancer-db: Can't find pod %s/%s: %s",
-				cookie, version, err.Error())
-		return nil, GateErrD(err)
+	ap := podsFindExact(ctx, cookie, version)
+	if ap == nil {
+		xer = GateErrM(swyapi.GateGenErr, "Nothing to run (yet)")
 	}
 
-	return ap, nil
+	return ap, xer
 }
 
 func balancerGetConnAny(ctx context.Context, fdm *FnMemData) (*podConn, error) {
 	var aps []*podConn
-	var err error
 
 	aps = fdm.bd.pods
 	if len(aps) == 0 {
-		aps, err = podsFindAll(ctx, fdm.fnid)
+		aps = podsFindAll(ctx, fdm.fnid)
 		if aps == nil {
-			if err == nil {
-				return nil, errors.New("No available PODs")
-			}
-
-			return nil, err
+			return nil, errors.New("No available PODs")
 		}
 
 		fdm.lock.Lock()
