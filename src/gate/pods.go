@@ -12,6 +12,43 @@ type fnPods struct {
 
 var fnPodsStore sync.Map
 
+var show string
+
+func showPodsStore() string {
+	if show == "" {
+		return "set 'list' or $fnid here"
+	}
+
+	if show == "list" {
+		x := ""
+		fnPodsStore.Range(func(k, v interface{}) bool {
+			x += " " + k.(string)
+			return true
+		})
+
+		return x[1:]
+	}
+
+	fp := findFnPods(show)
+	if fp == nil {
+		return "---"
+	}
+
+	x := ""
+	fp.lock.RLock()
+	defer fp.lock.RUnlock()
+
+	for _, p := range fp.pods {
+		x += " " + p.WdogAddr + "/" + p.Version
+	}
+
+	return x[1:]
+}
+
+func init() {
+	addSysctl("pods_store", showPodsStore, func(nv string) error { show = nv; return nil })
+}
+
 func findFnPods(fnid string) *fnPods {
 	x, ok := fnPodsStore.Load(fnid)
 	if !ok {
