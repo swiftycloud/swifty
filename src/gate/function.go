@@ -93,8 +93,12 @@ type FnSizeDesc struct {
 	Rate		uint		`bson:"rate"`
 }
 
+func (fn *FunctionDesc)k8sId() string {
+	return fn.Cookie[:32]
+}
+
 func (fn *FunctionDesc)DepName() string {
-	return "swd-" + fn.Cookie[:32]
+	return "swd-" + fn.k8sId()
 }
 
 type FunctionDesc struct {
