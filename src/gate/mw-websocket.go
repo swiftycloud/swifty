@@ -47,7 +47,7 @@ func GetEnvWebSocket(ctx context.Context, mwd *MwareDesc) map[string][]byte {
 }
 
 func wsURL(mwd *MwareDesc) string {
-	url := conf.Daemon.WSGate
+	url := conf.Mware.WS.API
 	if url == "" {
 		url = conf.Daemon.Addr
 	}

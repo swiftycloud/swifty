@@ -72,7 +72,6 @@ func (cw *YAMLConfWdog)Validate() error {
 type YAMLConfDaemon struct {
 	Addr		string			`yaml:"address"`
 	CallGate	string			`yaml:"callgate"`
-	WSGate		string			`yaml:"wsgate"`
 	LogLevel	string			`yaml:"loglevel"`
 	Prometheus	string			`yaml:"prometheus"`
 	HTTPS		*xhttp.YAMLConfHTTPS	`yaml:"https,omitempty"`
@@ -89,10 +88,6 @@ func (cd *YAMLConfDaemon)Validate() error {
 		fmt.Printf("'daemon.callgate' not set, gate is callgate\n")
 	}
 	addStringSysctl("gate_call", &cd.CallGate)
-	if cd.WSGate == "" {
-		fmt.Printf("'daemon.wsgate' not set, gate is wsgate\n")
-	}
-	addStringSysctl("gate_ws", &cd.WSGate)
 	if cd.LogLevel == "" {
 		fmt.Printf("'daemon.loglevel' not set, using \"warn\" one\n")
 	}
@@ -151,6 +146,10 @@ type YAMLConfS3 struct {
 	cn		*xh.XCreds
 }
 
+type YAMLConfWS struct {
+	API		string			`yaml:"api"`
+}
+
 type YAMLConfMw struct {
 	SecKey		string			`yaml:"mwseckey"`
 	Rabbit		YAMLConfRabbit		`yaml:"rabbit"`
@@ -158,6 +157,7 @@ type YAMLConfMw struct {
 	Mongo		YAMLConfMongo		`yaml:"mongo"`
 	Postgres	YAMLConfPostgres	`yaml:"postgres"`
 	S3		YAMLConfS3		`yaml:"s3"`
+	WS		YAMLConfWS		`yaml:"websocket"`
 }
 
 func (cm *YAMLConfMw)Validate() error {
@@ -171,6 +171,11 @@ func (cm *YAMLConfMw)Validate() error {
 	}
 	addIntSysctl("s3_hidden_key_timeout_sec", &cm.S3.HiddenKeyTmo)
 	addStringSysctl("gate_s3api", &cm.S3.API)
+
+	if cm.WS.API == "" {
+		fmt.Printf("'middleware.websocket.api' not set, gate is wsgate\n")
+	}
+	addStringSysctl("gate_ws", &cm.WS.API)
 
 	return nil
 }
