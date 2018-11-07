@@ -36,7 +36,7 @@ func podsDel(ctx context.Context, fnid string, pod *k8sPod) {
 	}
 }
 
-func podsAdd(ctx context.Context, fnid string, pod *k8sPod) error {
+func podsAdd(ctx context.Context, fnid string, pod *k8sPod) {
 	x, ok := fnPodsStore.Load(fnid)
 	if !ok {
 		x, _ = fnPodsStore.LoadOrStore(fnid, makeFnPods())
@@ -47,8 +47,6 @@ func podsAdd(ctx context.Context, fnid string, pod *k8sPod) error {
 	fnp.lock.Lock()
 	fnp.pods[pod.UID] = pod
 	fnp.lock.Unlock()
-
-	return nil
 }
 
 func podsDelAll(ctx context.Context, fnid string) {

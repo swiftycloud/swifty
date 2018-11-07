@@ -5,7 +5,6 @@ import (
 	"sync/atomic"
 	"errors"
 	"context"
-	"fmt"
 
 	"swifty/common/xrest"
 	"swifty/apis"
@@ -29,16 +28,10 @@ func BalancerPodDel(ctx context.Context, pod *k8sPod) {
 	fnWaiterKick(fnid)
 }
 
-func BalancerPodAdd(ctx context.Context, pod *k8sPod) error {
+func BalancerPodAdd(ctx context.Context, pod *k8sPod) {
 	fnid := pod.SwoId.Cookie()
-
-	err := podsAdd(ctx, fnid, pod)
-	if err != nil {
-		return fmt.Errorf("Add error: %s", err.Error())
-	}
-
+	podsAdd(ctx, fnid, pod)
 	balancerPodsFlush(fnid)
-	return nil
 }
 
 func BalancerDelete(ctx context.Context, fnid string) (error) {

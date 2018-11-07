@@ -540,14 +540,7 @@ func k8sPodUp(ctx context.Context, pod *k8sPod) error {
 			return
 		}
 
-		err = BalancerPodAdd(ctx, pod)
-		if err != nil {
-			ctxlog(ctx).Errorf("Can't add pod %s/%s/%s: %s",
-					pod.DepName, pod.UID,
-					pod.WdogAddr, err.Error())
-			return
-		}
-
+		BalancerPodAdd(ctx, pod)
 		notifyPodUp(ctx, pod)
 	}()
 
