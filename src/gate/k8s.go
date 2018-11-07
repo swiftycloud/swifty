@@ -790,7 +790,7 @@ func refreshDepsAndPods(ctx context.Context, hard bool) error {
 	var fn FunctionDesc
 
 	ctxlog(ctx).Debugf("Refreshing deps and pods (hard: %v)", hard)
-	err := dbBalancerPodDelStuck(ctx)
+	err := podsDelStuck(ctx)
 	if err != nil {
 		return fmt.Errorf("Can't drop stuck PODs: %s", err.Error)
 	}
@@ -830,7 +830,7 @@ func refreshDepsAndPods(ctx context.Context, hard bool) error {
 			continue
 		}
 
-		err := dbBalancerPodDelAll(ctx, fn.Cookie)
+		err := podsDelAll(ctx, fn.Cookie)
 		if err != nil {
 			ctxlog(ctx).Errorf("Can't flush PODs info: %s", err.Error())
 			return err

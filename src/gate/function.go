@@ -280,7 +280,7 @@ func (fn *FunctionDesc)toInfo(ctx context.Context, details bool, periods int) (*
 			return nil, cerr
 		}
 
-		fi.RdyVersions, err = dbBalancerListVersions(ctx, fn.Cookie)
+		fi.RdyVersions, err = podsListVersions(ctx, fn.Cookie)
 		if err != nil {
 			return nil, GateErrD(err)
 		}
@@ -921,7 +921,7 @@ func waitFunctionVersion(ctx context.Context, fn *FunctionDesc, version string, 
 		var vers []string
 		var ok bool
 
-		vers, err = dbBalancerListVersions(ctx, fn.Cookie)
+		vers, err = podsListVersions(ctx, fn.Cookie)
 		if err != nil {
 			break
 		}
