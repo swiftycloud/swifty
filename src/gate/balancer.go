@@ -26,7 +26,7 @@ func BalancerPodDel(ctx context.Context, pod *k8sPod) error {
 	fnid := pod.SwoId.Cookie()
 	balancerPodsFlush(fnid)
 
-	err := podsDel(ctx, pod)
+	err := podsDel(ctx, fnid, pod)
 	if err != nil {
 		return fmt.Errorf("Pod del error: %s", err.Error())
 	}

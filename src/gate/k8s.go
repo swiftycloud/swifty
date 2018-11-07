@@ -405,6 +405,15 @@ type k8sPod struct {
 	UID		string
 }
 
+func (pod *k8sPod)conn() *podConn {
+	return &podConn {
+		Addr: pod.WdogAddr,
+		Port: pod.WdogPort,
+		Host: pod.Host,
+		Cookie: pod.SwoId.Cookie(),
+	}
+}
+
 func (pod *k8sPod)Service() string {
 	switch pod.DepName {
 	case "swy-go-service":
