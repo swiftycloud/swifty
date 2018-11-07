@@ -27,7 +27,6 @@ const (
 	DBColFnStatsA	= "FnStatsArch"
 	DBColTenStats	= "TenantStats"
 	DBColTenStatsA	= "TenantStatsArch"
-	DBColBal	= "BalancerRS"
 	DBColDeploy	= "Deploy"
 	DBColLimits	= "Limits"
 	DBColEvents	= "Events"
@@ -485,112 +484,6 @@ func logRemove(ctx context.Context, fn *FunctionDesc) error {
 	return maybe(err)
 }
 
-func dbBalancerPodAdd(ctx context.Context, pod *k8sPod) error {
-	err := dbCol(ctx, DBColBal).Insert(bson.M{
-			"uid":		pod.UID,
-			"wdogaddr":	pod.WdogAddr,
-			"wdogport":	pod.WdogPort,
-			"host":		pod.Host,
-		})
-	if err != nil {
-		return fmt.Errorf("add: %s", err.Error())
-	}
-
-	return nil
-}
-
-func dbBalancerPodUpd(ctx context.Context, fnId string, pod *k8sPod) error {
-	err := dbCol(ctx, DBColBal).Update(bson.M{"uid": pod.UID}, bson.M{"$set": bson.M {
-			"fnid":		fnId,
-			"fnversion":	pod.Version,
-		}})
-	if err != nil && err != mgo.ErrNotFound {
-		return fmt.Errorf("add: %s", err.Error())
-	}
-
-	return nil
-}
-
-func dbBalancerPodDel(ctx context.Context, pod *k8sPod) (error) {
-	err := maybe(dbCol(ctx, DBColBal).Remove(bson.M{ "uid": pod.UID, }))
-	if err != nil {
-		return fmt.Errorf("del: %s", err.Error())
-	}
-
-	return nil
-}
-
-func dbBalancerPodDelStuck(ctx context.Context) (error) {
-	_, err := dbCol(ctx, DBColBal).RemoveAll(bson.M{ "fnid": bson.M{"$exists": false}})
-	return maybe(err)
-}
-
-func dbBalancerPodDelAll(ctx context.Context, fnid string) (error) {
-	_, err := dbCol(ctx, DBColBal).RemoveAll(bson.M{ "fnid": fnid })
-	return maybe(err)
-}
-
-type balancerEntry struct {
-	ObjID		bson.ObjectId	`bson:"_id,omitempty"`
-	FnId		string		`bson:"fnid"`
-	UID		string		`bson:"uid"`
-	WdogAddr	string		`bson:"wdogaddr"`
-	WdogPort	string		`bson:"wdogport"`
-	Host		string		`bson:"host"`
-	Version		string		`bson:"fnversion"`
-}
-
-func (be *balancerEntry)conn() *podConn {
-	return &podConn {
-		Addr: be.WdogAddr,
-		Port: be.WdogPort,
-		Host: be.Host,
-		Cookie: be.FnId,
-	}
-}
-
-func dbBalancerListVersions(ctx context.Context, cookie string) ([]string, error) {
-	var fv []string
-	err := dbCol(ctx, DBColBal).Find(bson.M{"fnid": cookie }).Distinct("fnversion", &fv)
-	return fv, err
-}
-
-func dbBalancerGetConnsByCookie(ctx context.Context, cookie string) ([]*podConn, error) {
-	var v []*balancerEntry
-
-	err := dbCol(ctx, DBColBal).Find(bson.M{ "fnid": cookie }).All(&v)
-	if err != nil {
-		if err == mgo.ErrNotFound {
-			return nil, nil
-		}
-		return nil, err
-	}
-
-	var ret []*podConn
-	for _, b := range(v) {
-		ret = append(ret, b.conn())
-	}
-
-	return ret, nil
-}
-
-func dbBalancerGetConnExact(ctx context.Context, fnid, version string) (*podConn, error) {
-	var v balancerEntry
-
-	err := dbCol(ctx, DBColBal).Find(bson.M{
-			"fnid":		fnid,
-			"fnversion":	version,
-		}).One(&v)
-	if err != nil {
-		if err == mgo.ErrNotFound {
-			return nil, nil
-		}
-		return nil, err
-	}
-
-	return v.conn(), nil
-}
-
 func dbProjectListAll(ctx context.Context, ten string) (fn []string, mw []string, err error) {
 	err = dbCol(ctx, DBColFunc).Find(bson.M{"tennant": ten}).Distinct("project", &fn)
 	if err != nil {
@@ -652,12 +545,6 @@ func dbConnect() error {
 	err = dbs.DB(DBStateDB).C(DBColTCache).EnsureIndex(index)
 	if err != nil {
 		return fmt.Errorf("No cookie index for ten cache: %s", err.Error())
-	}
-
-	index.Key = []string{"uid"}
-	err = dbs.DB(DBStateDB).C(DBColBal).EnsureIndex(index)
-	if err != nil {
-		return fmt.Errorf("No uid index for balancerrs: %s", err.Error())
 	}
 
 	index.Unique = false

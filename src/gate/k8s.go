@@ -203,7 +203,7 @@ func k8sGenEnvVar(ctx context.Context, fn *FunctionDesc, wd_port int) []v1.EnvVa
 func k8sGenLabels(fn *FunctionDesc, depname string) map[string]string {
 	labels := map[string]string {
 		"deployment":	depname,
-		"fnid":		fn.Cookie[:32],
+		"fnid":		fn.k8sId(),
 	}
 	return labels
 }
@@ -405,6 +405,15 @@ type k8sPod struct {
 	UID		string
 }
 
+func (pod *k8sPod)conn() *podConn {
+	return &podConn {
+		Addr: pod.WdogAddr,
+		Port: pod.WdogPort,
+		Host: pod.Host,
+		Cookie: pod.SwoId.Cookie(),
+	}
+}
+
 func (pod *k8sPod)Service() string {
 	switch pod.DepName {
 	case "swy-go-service":
@@ -520,31 +529,18 @@ func k8sPodUp(ctx context.Context, pod *k8sPod) error {
 		return nil
 	}
 
-	err := BalancerPodUp(ctx, pod)
-	if err != nil {
-		ctxlog(ctx).Errorf("Can't prep pod %s/%s: %s", pod.DepName, pod.UID, err.Error())
-		return err
-	}
-
 	go func() {
 		ctx, done := mkContext("::podwait")
 		defer done(ctx)
 
-		err = waitPodPort(ctx, pod.WdogAddr, pod.WdogPort)
+		err := waitPodPort(ctx, pod.WdogAddr, pod.WdogPort)
 		if err != nil {
 			ctxlog(ctx).Errorf("POD %s port wait err: %s",
 					pod.UID, err.Error())
 			return
 		}
 
-		err = BalancerPodRdy(ctx, pod)
-		if err != nil {
-			ctxlog(ctx).Errorf("Can't add pod %s/%s/%s: %s",
-					pod.DepName, pod.UID,
-					pod.WdogAddr, err.Error())
-			return
-		}
-
+		BalancerPodAdd(ctx, pod)
 		notifyPodUp(ctx, pod)
 	}()
 
@@ -556,32 +552,35 @@ func k8sPodDown(ctx context.Context, pod *k8sPod) {
 		return
 	}
 
-	err := BalancerPodDel(ctx, pod)
-	if err != nil {
-		ctxlog(ctx).Errorf("Can't delete pod %s/%s/%s: %s",
-				pod.DepName, pod.UID,
-				pod.WdogAddr, err.Error())
-	}
+	BalancerPodDel(ctx, pod)
+}
+
+var showPodUpd bool
+
+func init() {
+	addBoolSysctl("pod_show_updates", &showPodUpd)
 }
 
 func k8sPodUpd(obj_old, obj_new interface{}) {
 	po := obj_old.(*v1.Pod)
 	pn := obj_new.(*v1.Pod)
 
-/*
- *	poc := ""
- *	pnc := ""
- *	for _, cond := range po.Status.Conditions {
- *		poc += string(cond.Type) + "=" + string(cond.Status) + ","
- *	}
- *	for _, cond := range pn.Status.Conditions {
- *		pnc += string(cond.Type) + "=" + string(cond.Status) + ","
- *	}
- *
- *	glog.Debugf("POD events\n%s:%s:%s:%s:%s ->\n%s:%s:%s:%s:%s\n",
- *		po.ObjectMeta.Labels["deployment"], po.ObjectMeta.UID, po.Status.PodIP, po.Status.Phase, poc,
- *		pn.ObjectMeta.Labels["deployment"], pn.ObjectMeta.UID, pn.Status.PodIP, pn.Status.Phase, pnc)
- */
+	if showPodUpd {
+		poc := ""
+		pnc := ""
+		for _, cond := range po.Status.Conditions {
+			poc += string(cond.Type) + "=" + string(cond.Status) + ","
+		}
+		for _, cond := range pn.Status.Conditions {
+			pnc += string(cond.Type) + "=" + string(cond.Status) + ","
+		}
+
+		glog.Debugf("POD UPDATE dep:%s uid:%s st:%s ph:%s co:%s -> st:%s ph:%s co:%s\n",
+			po.ObjectMeta.Labels["deployment"], po.ObjectMeta.UID,
+			po.Status.PodIP, po.Status.Phase, poc,
+			pn.Status.PodIP, pn.Status.Phase, pnc)
+	}
+
 
 	if po.Status.PodIP == "" && pn.Status.PodIP != "" {
 		podEvents <- &podEvent{up: true, pod: genBalancerPod(pn)}
@@ -783,17 +782,13 @@ func ServiceDepsInit(ctx context.Context) error {
 
 func listFnPods(fn *FunctionDesc) (*v1.PodList, error) {
 	podiface := k8sClientSet.CoreV1().Pods(conf.Wdog.Namespace)
-	return podiface.List(metav1.ListOptions{ LabelSelector: "fnid=" + fn.Cookie[:32] })
+	return podiface.List(metav1.ListOptions{ LabelSelector: "fnid=" + fn.k8sId() })
 }
 
 func refreshDepsAndPods(ctx context.Context, hard bool) error {
 	var fn FunctionDesc
 
 	ctxlog(ctx).Debugf("Refreshing deps and pods (hard: %v)", hard)
-	err := dbBalancerPodDelStuck(ctx)
-	if err != nil {
-		return fmt.Errorf("Can't drop stuck PODs: %s", err.Error)
-	}
 
 	iter := dbIterAll(ctx, bson.M{}, &fn)
 	defer iter.Close()
@@ -806,7 +801,7 @@ func refreshDepsAndPods(ctx context.Context, hard bool) error {
 			/* Record reft from the early fn.Add stage. Just clean
 			 * one out and forget the sources.
 			 */
-			err = removeSources(ctx, &fn)
+			err := removeSources(ctx, &fn)
 			if err != nil {
 				ctxlog(ctx).Errorf("Can't remove sources for %s: %s", fn.SwoId.Str(), err.Error())
 				return err
@@ -830,12 +825,7 @@ func refreshDepsAndPods(ctx context.Context, hard bool) error {
 			continue
 		}
 
-		err := dbBalancerPodDelAll(ctx, fn.Cookie)
-		if err != nil {
-			ctxlog(ctx).Errorf("Can't flush PODs info: %s", err.Error())
-			return err
-		}
-
+		podsDelAll(ctx, fn.Cookie)
 		dep, err := depiface.Get(fn.DepName(), metav1.GetOptions{})
 		if err != nil {
 			if !k8serr.IsNotFound(err) {
@@ -881,7 +871,7 @@ func refreshDepsAndPods(ctx context.Context, hard bool) error {
 			}
 		}
 
-		pods, err := podiface.List(metav1.ListOptions{ LabelSelector: "fnid=" + fn.Cookie[:32] })
+		pods, err := podiface.List(metav1.ListOptions{ LabelSelector: "fnid=" + fn.k8sId() })
 		if err != nil {
 			ctxlog(ctx).Errorf("Error listing PODs: %s", err.Error())
 			return errors.New("Error listing PODs")
@@ -897,7 +887,7 @@ func refreshDepsAndPods(ctx context.Context, hard bool) error {
 		}
 	}
 
-	err = iter.Err()
+	err := iter.Err()
 	if err != nil {
 		return err
 	}

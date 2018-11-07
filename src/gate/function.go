@@ -93,8 +93,12 @@ type FnSizeDesc struct {
 	Rate		uint		`bson:"rate"`
 }
 
+func (fn *FunctionDesc)k8sId() string {
+	return fn.Cookie[:32]
+}
+
 func (fn *FunctionDesc)DepName() string {
-	return "swd-" + fn.Cookie[:32]
+	return "swd-" + fn.k8sId()
 }
 
 type FunctionDesc struct {
@@ -151,11 +155,11 @@ func (fn *FunctionDesc)toMInfo(ctx context.Context) *swyapi.FunctionMdat {
 	fid.Cookie = fn.Cookie
 
 	if gctx(ctx).Admin {
-		pods, err := listFnPods(fn)
-		if err == nil {
-			for _, pod := range pods.Items {
-				fid.Hosts = append(fid.Hosts, pod.Status.HostIP)
-				fid.IPs = append(fid.IPs, pod.Status.PodIP)
+		pcs := podsFindAll(ctx, fn.Cookie)
+		if pcs != nil {
+			for _, pc := range pcs {
+				fid.Hosts = append(fid.Hosts, pc.Host)
+				fid.IPs = append(fid.IPs, pc.Addr)
 			}
 		}
 
@@ -280,11 +284,7 @@ func (fn *FunctionDesc)toInfo(ctx context.Context, details bool, periods int) (*
 			return nil, cerr
 		}
 
-		fi.RdyVersions, err = dbBalancerListVersions(ctx, fn.Cookie)
-		if err != nil {
-			return nil, GateErrD(err)
-		}
-
+		fi.RdyVersions = podsListVersions(ctx, fn.Cookie)
 		fi.AuthCtx = fn.AuthCtx
 		fi.UserData = fn.UserData
 		fi.Code = &swyapi.FunctionCode{
@@ -921,11 +921,7 @@ func waitFunctionVersion(ctx context.Context, fn *FunctionDesc, version string, 
 		var vers []string
 		var ok bool
 
-		vers, err = dbBalancerListVersions(ctx, fn.Cookie)
-		if err != nil {
-			break
-		}
-
+		vers = podsListVersions(ctx, fn.Cookie)
 		ok, err = checkVersion(ctx, fn, version, vers)
 		if ok || err != nil {
 			break

@@ -200,11 +200,7 @@ func GCOldSources(ctx context.Context, fn *FunctionDesc, ver string) {
 		defer done(ctx)
 
 		for {
-			vers, err := dbBalancerListVersions(ctx, cookie)
-			if err != nil {
-				break /* What to do? */
-			}
-
+			vers := podsListVersions(ctx, cookie)
 			found := false
 			for _, v := range(vers) {
 				if ver == v {

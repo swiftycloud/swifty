@@ -49,6 +49,14 @@ loop do
 	req = JSON.parse(str, object_class: OpenStruct)
 
 	begin
+		if req.content == "application/json"
+			req.b = JSON.parse(req.body, object_class: OpenStruct)
+		end
+	rescue
+		# Nothing
+	end
+
+	begin
 		ret = CallMain(req)
 	rescue
 		puts "Exception running FN"

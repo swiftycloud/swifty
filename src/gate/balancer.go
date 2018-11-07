@@ -5,7 +5,6 @@ import (
 	"sync/atomic"
 	"errors"
 	"context"
-	"fmt"
 
 	"swifty/common/xrest"
 	"swifty/apis"
@@ -22,33 +21,17 @@ func (bd *BalancerDat)Flush() {
 	bd.pods = []*podConn{}
 }
 
-func BalancerPodDel(ctx context.Context, pod *k8sPod) error {
+func BalancerPodDel(ctx context.Context, pod *k8sPod) {
 	fnid := pod.SwoId.Cookie()
 	balancerPodsFlush(fnid)
-
-	err := dbBalancerPodDel(ctx, pod)
-	if err != nil {
-		return fmt.Errorf("Pod del error: %s", err.Error())
-	}
-
+	podsDel(ctx, fnid, pod)
 	fnWaiterKick(fnid)
-	return nil
 }
 
-func BalancerPodUp(ctx context.Context, pod *k8sPod) error {
-	return dbBalancerPodAdd(ctx, pod)
-}
-
-func BalancerPodRdy(ctx context.Context, pod *k8sPod) error {
+func BalancerPodAdd(ctx context.Context, pod *k8sPod) {
 	fnid := pod.SwoId.Cookie()
-
-	err := dbBalancerPodUpd(ctx, fnid, pod)
-	if err != nil {
-		return fmt.Errorf("Add error: %s", err.Error())
-	}
-
+	podsAdd(ctx, fnid, pod)
 	balancerPodsFlush(fnid)
-	return nil
 }
 
 func BalancerDelete(ctx context.Context, fnid string) (error) {
@@ -63,11 +46,7 @@ func BalancerDelete(ctx context.Context, fnid string) (error) {
 		fdm.lock.Unlock()
 	}
 
-	err := dbBalancerPodDelAll(ctx, fnid)
-	if err != nil {
-		return fmt.Errorf("POD del all error: %s", err.Error())
-	}
-
+	podsDelAll(ctx, fnid)
 	return nil
 }
 
@@ -91,33 +70,24 @@ func balancerGetConnExact(ctx context.Context, cookie, version string) (*podConn
 	 * We can lookup id.Cookie() here, but ... it's manual run,
 	 * let's also make sure the FN exists at all
 	 */
-	ap, err := dbBalancerGetConnExact(ctx, cookie, version)
-	if ap == nil {
-		if err == nil {
-			return nil, GateErrM(swyapi.GateGenErr, "Nothing to run (yet)")
-		}
+	var xer *xrest.ReqErr
 
-		ctxlog(ctx).Errorf("balancer-db: Can't find pod %s/%s: %s",
-				cookie, version, err.Error())
-		return nil, GateErrD(err)
+	ap := podsFindExact(ctx, cookie, version)
+	if ap == nil {
+		xer = GateErrM(swyapi.GateGenErr, "Nothing to run (yet)")
 	}
 
-	return ap, nil
+	return ap, xer
 }
 
 func balancerGetConnAny(ctx context.Context, fdm *FnMemData) (*podConn, error) {
 	var aps []*podConn
-	var err error
 
 	aps = fdm.bd.pods
 	if len(aps) == 0 {
-		aps, err = dbBalancerGetConnsByCookie(ctx, fdm.fnid)
+		aps = podsFindAll(ctx, fdm.fnid)
 		if aps == nil {
-			if err == nil {
-				return nil, errors.New("No available PODs")
-			}
-
-			return nil, err
+			return nil, errors.New("No available PODs")
 		}
 
 		fdm.lock.Lock()
