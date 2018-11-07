@@ -5,6 +5,7 @@ import (
 	"context"
 	"gopkg.in/mgo.v2/bson"
 	"swifty/apis"
+	"swifty/common"
 	"sync"
 	"net/http"
 	"swifty/common/xratelimit"
@@ -34,7 +35,7 @@ func getURL(typ, urlid string) string {
 	if cg == "" {
 		cg = conf.Daemon.Addr
 	}
-	return cg + "/call/" + typ + urlid
+	return xh.MakeEndpoint(cg + "/call/" + typ + urlid)
 }
 
 func urlKey(fnid string) string { return "url:" + fnid }

@@ -72,7 +72,7 @@ func handleUserLogin(w http.ResponseWriter, r *http.Request) {
 		goto out
 	}
 
-	td.Endpoint = conf.Daemon.Addr
+	td.Endpoint = xh.MakeEndpoint(conf.Daemon.Addr)
 	glog.Debugf("Login passed, token %s (exp %s)", token[:16], td.Expires)
 
 	w.Header().Set("X-Subject-Token", token)

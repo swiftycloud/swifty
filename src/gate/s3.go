@@ -11,6 +11,7 @@ import (
 	"gopkg.in/mgo.v2/bson"
 	"swifty/common/http"
 	"swifty/apis"
+	"swifty/common"
 	"swifty/apis/s3"
 	"swifty/common/xrest"
 )
@@ -216,7 +217,7 @@ func s3Endpoint(conf *YAMLConfS3, public bool) string {
 	 * XXX 2 -- functions may go directly to S3 host, but certificates
 	 * and routing may kill us
 	 */
-	return conf.API
+	return xh.MakeEndpoint(conf.API)
 }
 
 func GenBucketKeysS3(ctx context.Context, conf *YAMLConfMw, fid *SwoId, bucket string) (map[string]string, error) {

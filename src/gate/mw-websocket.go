@@ -51,7 +51,7 @@ func wsURL(mwd *MwareDesc) string {
 	if url == "" {
 		url = conf.Daemon.Addr
 	}
-	return url + "/websockets/" + mwd.Cookie
+	return xh.MakeEndpoint(url + "/websockets/" + mwd.Cookie)
 }
 
 func InfoWebSocket(ctx context.Context, mwd *MwareDesc, ifo *swyapi.MwareInfo) error {
