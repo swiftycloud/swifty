@@ -555,24 +555,32 @@ func k8sPodDown(ctx context.Context, pod *k8sPod) {
 	BalancerPodDel(ctx, pod)
 }
 
+var showPodUpd bool
+
+func init() {
+	addBoolSysctl("pod_show_updates", &showPodUpd)
+}
+
 func k8sPodUpd(obj_old, obj_new interface{}) {
 	po := obj_old.(*v1.Pod)
 	pn := obj_new.(*v1.Pod)
 
-/*
- *	poc := ""
- *	pnc := ""
- *	for _, cond := range po.Status.Conditions {
- *		poc += string(cond.Type) + "=" + string(cond.Status) + ","
- *	}
- *	for _, cond := range pn.Status.Conditions {
- *		pnc += string(cond.Type) + "=" + string(cond.Status) + ","
- *	}
- *
- *	glog.Debugf("POD events\n%s:%s:%s:%s:%s ->\n%s:%s:%s:%s:%s\n",
- *		po.ObjectMeta.Labels["deployment"], po.ObjectMeta.UID, po.Status.PodIP, po.Status.Phase, poc,
- *		pn.ObjectMeta.Labels["deployment"], pn.ObjectMeta.UID, pn.Status.PodIP, pn.Status.Phase, pnc)
- */
+	if showPodUpd {
+		poc := ""
+		pnc := ""
+		for _, cond := range po.Status.Conditions {
+			poc += string(cond.Type) + "=" + string(cond.Status) + ","
+		}
+		for _, cond := range pn.Status.Conditions {
+			pnc += string(cond.Type) + "=" + string(cond.Status) + ","
+		}
+
+		glog.Debugf("POD UPDATE dep:%s uid:%s st:%s ph:%s co:%s -> st:%s ph:%s co:%s\n",
+			po.ObjectMeta.Labels["deployment"], po.ObjectMeta.UID,
+			po.Status.PodIP, po.Status.Phase, poc,
+			pn.Status.PodIP, pn.Status.Phase, pnc)
+	}
+
 
 	if po.Status.PodIP == "" && pn.Status.PodIP != "" {
 		podEvents <- &podEvent{up: true, pod: genBalancerPod(pn)}
