@@ -151,11 +151,11 @@ func (fn *FunctionDesc)toMInfo(ctx context.Context) *swyapi.FunctionMdat {
 	fid.Cookie = fn.Cookie
 
 	if gctx(ctx).Admin {
-		pods, err := listFnPods(fn)
+		pcs, err := podsFindAll(ctx, fn.Cookie)
 		if err == nil {
-			for _, pod := range pods.Items {
-				fid.Hosts = append(fid.Hosts, pod.Status.HostIP)
-				fid.IPs = append(fid.IPs, pod.Status.PodIP)
+			for _, pc := range pcs {
+				fid.Hosts = append(fid.Hosts, pc.Host)
+				fid.IPs = append(fid.IPs, pc.Addr)
 			}
 		}
 
