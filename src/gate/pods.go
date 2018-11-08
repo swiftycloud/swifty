@@ -8,6 +8,7 @@ import (
 type fnPods struct {
 	lock	sync.RWMutex
 	pods	map[string]*k8sPod
+	dead	bool
 }
 
 var fnPodsStore sync.Map
@@ -64,30 +65,36 @@ func makeFnPods() *fnPods {
 	return x
 }
 
-func podsDel(ctx context.Context, fnid string, pod *k8sPod) {
-	fnp := findFnPods(fnid)
+func podsDel(ctx context.Context, pod *k8sPod) {
+	fnp := findFnPods(pod.FnId)
 	if fnp != nil {
 		fnp.lock.Lock()
 		delete(fnp.pods, pod.UID)
+		if len(fnp.pods) == 0 {
+			/* All PODs are gone, we may kill the whole thing */
+			fnp.dead = true
+			fnPodsStore.Delete(pod.FnId)
+		}
 		fnp.lock.Unlock()
 	}
 }
 
-func podsAdd(ctx context.Context, fnid string, pod *k8sPod) {
-	x, ok := fnPodsStore.Load(fnid)
+func podsAdd(ctx context.Context, pod *k8sPod) {
+again:
+	x, ok := fnPodsStore.Load(pod.FnId)
 	if !ok {
-		x, _ = fnPodsStore.LoadOrStore(fnid, makeFnPods())
+		x, _ = fnPodsStore.LoadOrStore(pod.FnId, makeFnPods())
 	}
 
 	fnp := x.(*fnPods)
 
 	fnp.lock.Lock()
+	if fnp.dead {
+		fnp.lock.Unlock()
+		goto again
+	}
 	fnp.pods[pod.UID] = pod
 	fnp.lock.Unlock()
-}
-
-func podsDelAll(ctx context.Context, fnid string) {
-	fnPodsStore.Delete(fnid)
 }
 
 func podsFindExact(ctx context.Context, fnid, version string) *podConn {

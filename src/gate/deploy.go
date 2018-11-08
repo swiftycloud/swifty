@@ -74,7 +74,7 @@ func (i *DeployFunction)start(ctx context.Context) *xrest.ReqErr {
 		i.src = &src
 	}
 
-	cerr := i.Fn.Add(ctx, &swyapi.FunctionAdd{Sources: *i.src})
+	cerr := i.Fn.Add(ctx, &swyapi.FunctionAdd{Sources: i.src})
 	if cerr != nil {
 		return cerr
 	}
@@ -371,6 +371,10 @@ func (dep *DeployDesc)getItemsDesc(ctx context.Context, dd *swyapi.DeployDescrip
 	}
 
 	for _, fn := range dd.Functions {
+		if fn.Sources == nil {
+			return GateErrM(swyapi.GateBadRequest, "Empty sources")
+		}
+
 		srcd, er := json.Marshal(fn.Sources)
 		if er != nil {
 			return GateErrE(swyapi.GateGenErr, er)
@@ -394,7 +398,7 @@ func (dep *DeployDesc)getItemsDesc(ctx context.Context, dd *swyapi.DeployDescrip
 
 		fd.Labels = dep.Labels
 		dep.Functions = append(dep.Functions, &DeployFunction{
-			Id: id, Fn: fd, FnSrc: string(srcd), src: &fn.Sources, Evs: evs,
+			Id: id, Fn: fd, FnSrc: string(srcd), src: fn.Sources, Evs: evs,
 		})
 	}
 

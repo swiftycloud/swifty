@@ -21,32 +21,30 @@ func (bd *BalancerDat)Flush() {
 	bd.pods = []*podConn{}
 }
 
+func balancerPodsFlush(fnid string) {
+	fdm := memdGetCond(fnid)
+	if fdm != nil {
+		fdm.bd.Flush()
+	}
+}
+
 func BalancerPodDel(ctx context.Context, pod *k8sPod) {
-	fnid := pod.SwoId.Cookie()
-	balancerPodsFlush(fnid)
-	podsDel(ctx, fnid, pod)
-	fnWaiterKick(fnid)
+	podsDel(ctx, pod)
+	balancerPodsFlush(pod.FnId)
 }
 
 func BalancerPodAdd(ctx context.Context, pod *k8sPod) {
-	fnid := pod.SwoId.Cookie()
-	podsAdd(ctx, fnid, pod)
-	balancerPodsFlush(fnid)
+	podsAdd(ctx, pod)
+	balancerPodsFlush(pod.FnId)
 }
 
 func BalancerDelete(ctx context.Context, fnid string) (error) {
 	fdm := memdGetCond(fnid)
 	if fdm != nil {
 		fdm.bd.Flush()
-		fdm.lock.Lock()
-		if fdm.bd.wakeup != nil {
-			fdm.bd.goal = 0
-			fdm.bd.wakeup.Signal()
-		}
-		fdm.lock.Unlock()
+		scalerStop(ctx, fdm)
 	}
 
-	podsDelAll(ctx, fnid)
 	return nil
 }
 
@@ -56,13 +54,6 @@ func BalancerCreate(ctx context.Context, fnid string) (error) {
 
 func BalancerInit() (error) {
 	return nil
-}
-
-func balancerPodsFlush(fnid string) {
-	fdm := memdGetCond(fnid)
-	if fdm != nil {
-		fdm.bd.Flush()
-	}
 }
 
 func balancerGetConnExact(ctx context.Context, cookie, version string) (*podConn, *xrest.ReqErr) {
@@ -101,7 +92,7 @@ func balancerGetConnAny(ctx context.Context, fdm *FnMemData) (*podConn, error) {
 
 	/* Emulate simple RR balancing -- each next call picks next POD */
 	sc := atomic.AddUint32(&fdm.bd.rover[0], 1)
-	balancerFnDepGrow(ctx, fdm, sc - fdm.bd.rover[1])
+	scalerSetGoal(ctx, fdm, sc - fdm.bd.rover[1])
 
 	return aps[sc % uint32(len(aps))], nil
 }

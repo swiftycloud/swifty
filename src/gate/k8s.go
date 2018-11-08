@@ -397,6 +397,7 @@ func k8sRun(ctx context.Context, conf *YAMLConf, fn *FunctionDesc) error {
 
 type k8sPod struct {
 	SwoId
+	FnId		string
 	Version		string
 	DepName		string
 	WdogAddr	string
@@ -410,7 +411,7 @@ func (pod *k8sPod)conn() *podConn {
 		Addr: pod.WdogAddr,
 		Port: pod.WdogPort,
 		Host: pod.Host,
-		Cookie: pod.SwoId.Cookie(),
+		Cookie: pod.FnId,
 	}
 }
 
@@ -454,6 +455,8 @@ func genBalancerPod(pod *v1.Pod) (*k8sPod) {
 			}
 		}
 	}
+
+	r.FnId = r.SwoId.Cookie()
 
 	return r
 }
@@ -553,6 +556,7 @@ func k8sPodDown(ctx context.Context, pod *k8sPod) {
 	}
 
 	BalancerPodDel(ctx, pod)
+	notifyPodDown(ctx, pod)
 }
 
 var showPodUpd bool
@@ -825,7 +829,6 @@ func refreshDepsAndPods(ctx context.Context, hard bool) error {
 			continue
 		}
 
-		podsDelAll(ctx, fn.Cookie)
 		dep, err := depiface.Get(fn.DepName(), metav1.GetOptions{})
 		if err != nil {
 			if !k8serr.IsNotFound(err) {

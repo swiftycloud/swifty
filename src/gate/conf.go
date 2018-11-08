@@ -233,12 +233,26 @@ func (cr *YAMLConfRt)Validate() error {
 
 type YAMLConfDemoRepo struct {
 	URL		string			`yaml:"url"`
+	AAASDep		string			`yaml:"aaas-dep"`
+	EmptySources	string			`yaml:"empty-sources"`
 }
 
 func (dr *YAMLConfDemoRepo)Validate() error {
 	if dr.URL == "" {
 		return errors.New("'demo-repo.url' not set")
 	}
+
+	if dr.AAASDep == "" {
+		fmt.Printf("'demo-repo.aaas-dep' not set, using default\n")
+		dr.AAASDep = "swy-aaas.yaml"
+	}
+	addStringSysctl("aaas_dep_file", &dr.AAASDep)
+	if dr.EmptySources == "" {
+		fmt.Printf("'demo-repo.empty-sources' not set, using default\n")
+		dr.EmptySources = "functions/empty"
+	}
+	addStringSysctl("empty_sources_path", &dr.EmptySources)
+
 	return nil
 }
 
@@ -254,7 +268,6 @@ type YAMLConf struct {
 	RepoSyncPeriod	int			`yaml:"repo-sync-period"`
 	RunRate		int			`yaml:"tryrun-rate"`
 	DemoRepo	YAMLConfDemoRepo	`yaml:"demo-repo"`
-	AAASDep		string			`yaml:"aaas-dep"`
 }
 
 func (c *YAMLConf)Validate() error {
@@ -305,11 +318,6 @@ func (c *YAMLConf)Validate() error {
 	}
 
 	addIntSysctl("fn_tryrun_rate", &c.RunRate)
-	if c.AAASDep == "" {
-		fmt.Printf("'aaas-dep' not set, using default\n")
-		c.AAASDep = "swy-aaas.yaml"
-	}
-	addStringSysctl("aaas_dep_file", &c.AAASDep)
 	return nil
 }
 

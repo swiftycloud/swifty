@@ -196,27 +196,26 @@ func (fmd *FnMemData)Handle(ctx context.Context, w http.ResponseWriter, r *http.
 		goto out
 	}
 
+	if res.Code >= 0 {
+		if res.Code == 0 {
+			res.Code = http.StatusOK
+		}
+
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(res.Code)
+		w.Write([]byte(res.Return))
+	} else {
+		http.Error(w, res.Return, -res.Code)
+
+		if wrl.Get() {
+			ctxlog(ctx).Warnf("Function call falied: %d/%s", res.Code, res.Return)
+		}
+	}
+
 	statsUpdate(fmd, sopq, res, "url")
 	if sopq.trace != nil {
 		traceCall(fmd, args, res, sopq.trace)
 	}
-
-	if res.Code < 0 {
-		if wrl.Get() {
-			ctxlog(ctx).Warnf("Function call falied: %d/%s", res.Code, res.Return)
-		}
-		code = -res.Code
-		err = errors.New(res.Return)
-		goto out
-	}
-
-	if res.Code == 0 {
-		res.Code = http.StatusOK
-	}
-
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.WriteHeader(res.Code)
-	w.Write([]byte(res.Return))
 
 	return
 
