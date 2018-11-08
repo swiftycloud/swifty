@@ -31,6 +31,9 @@ const (
 
 const (
 	RepoDescFile	= ".swifty.yml"
+
+	PullEvent	= "event"
+	PullPeriodic	= "periodic"
 )
 
 var repStates = map[int]string {
@@ -95,7 +98,7 @@ func githubRepoUpdated(ctx context.Context, r *http.Request) {
 
 	err = dbFindAll(ctx, bson.M{
 		"name": params.Repo.URL,
-		"pulling": "event",
+		"pulling": PullEvent,
 	}, &rds)
 	if err != nil {
 		ctxlog(ctx).Errorf("Cannot get repos: %s", err.Error())
@@ -142,6 +145,12 @@ func getRepoDesc(id *SwoId, params *swyapi.RepoAdd) *RepoDesc {
 func (_ Repos)Create(ctx context.Context, p interface{}) (xrest.Obj, *xrest.ReqErr) {
 	params := p.(*swyapi.RepoAdd)
 	id := ctxSwoId(ctx, NoProject, params.URL)
+	switch params.Pull {
+	case PullPeriodic, PullEvent, "":
+		;
+	default:
+		return nil, GateErrM(swyapi.GateBadRequest, "Bad pull mode")
+	}
 	return getRepoDesc(id, params), nil
 }
 
@@ -644,7 +653,7 @@ func pullRepos(ctx context.Context, ts time.Time) (int, error) {
 	var rds []*RepoDesc
 
 	err := dbFindAll(ctx, bson.M{
-			"pulling": "periodic",
+			"pulling": PullPeriodic,
 			"last_pull": bson.M{"$lt": ts},
 		}, &rds)
 	if err != nil {
