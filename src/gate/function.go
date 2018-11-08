@@ -408,7 +408,7 @@ func (fn *FunctionDesc)Add(ctx context.Context, p interface{}) *xrest.ReqErr {
 		 * wouldn't guess one and fail
 		 */
 		src = &swyapi.FunctionSources {
-			Repo: demoRep.ObjID.Hex() + "/" + conf.EmptySources + "/" + rtScriptName(&fn.Code, ""),
+			Repo: demoRep.ObjID.Hex() + "/" + conf.DemoRepo.EmptySources + "/" + rtScriptName(&fn.Code, ""),
 		}
 	}
 
