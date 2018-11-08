@@ -825,7 +825,6 @@ func refreshDepsAndPods(ctx context.Context, hard bool) error {
 			continue
 		}
 
-		podsDelAll(ctx, fn.Cookie)
 		dep, err := depiface.Get(fn.DepName(), metav1.GetOptions{})
 		if err != nil {
 			if !k8serr.IsNotFound(err) {

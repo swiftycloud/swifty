@@ -46,7 +46,6 @@ func BalancerDelete(ctx context.Context, fnid string) (error) {
 		fdm.lock.Unlock()
 	}
 
-	podsDelAll(ctx, fnid)
 	return nil
 }
 

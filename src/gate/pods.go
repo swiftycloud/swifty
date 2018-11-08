@@ -8,6 +8,7 @@ import (
 type fnPods struct {
 	lock	sync.RWMutex
 	pods	map[string]*k8sPod
+	dead	bool
 }
 
 var fnPodsStore sync.Map
@@ -69,11 +70,17 @@ func podsDel(ctx context.Context, fnid string, pod *k8sPod) {
 	if fnp != nil {
 		fnp.lock.Lock()
 		delete(fnp.pods, pod.UID)
+		if len(fnp.pods) == 0 {
+			/* All PODs are gone, we may kill the whole thing */
+			fnp.dead = true
+			fnPodsStore.Delete(fnid)
+		}
 		fnp.lock.Unlock()
 	}
 }
 
 func podsAdd(ctx context.Context, fnid string, pod *k8sPod) {
+again:
 	x, ok := fnPodsStore.Load(fnid)
 	if !ok {
 		x, _ = fnPodsStore.LoadOrStore(fnid, makeFnPods())
@@ -82,12 +89,12 @@ func podsAdd(ctx context.Context, fnid string, pod *k8sPod) {
 	fnp := x.(*fnPods)
 
 	fnp.lock.Lock()
+	if fnp.dead {
+		fnp.lock.Unlock()
+		goto again
+	}
 	fnp.pods[pod.UID] = pod
 	fnp.lock.Unlock()
-}
-
-func podsDelAll(ctx context.Context, fnid string) {
-	fnPodsStore.Delete(fnid)
 }
 
 func podsFindExact(ctx context.Context, fnid, version string) *podConn {
