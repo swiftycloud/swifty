@@ -553,6 +553,7 @@ func k8sPodDown(ctx context.Context, pod *k8sPod) {
 	}
 
 	BalancerPodDel(ctx, pod)
+	notifyPodDown(ctx, pod)
 }
 
 var showPodUpd bool

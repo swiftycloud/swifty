@@ -962,6 +962,10 @@ out:
 	ctxlog(ctx).Errorf("POD update notify: %s", err.Error())
 }
 
+func notifyPodDown(ctx context.Context, pod *k8sPod) {
+	fnWaiterKick(pod.SwoId.Cookie())
+}
+
 func deactivateFunction(ctx context.Context, fn *FunctionDesc) *xrest.ReqErr {
 	var err error
 

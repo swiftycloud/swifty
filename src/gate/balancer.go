@@ -21,11 +21,17 @@ func (bd *BalancerDat)Flush() {
 	bd.pods = []*podConn{}
 }
 
+func balancerPodsFlush(fnid string) {
+	fdm := memdGetCond(fnid)
+	if fdm != nil {
+		fdm.bd.Flush()
+	}
+}
+
 func BalancerPodDel(ctx context.Context, pod *k8sPod) {
 	fnid := pod.SwoId.Cookie()
-	balancerPodsFlush(fnid)
 	podsDel(ctx, fnid, pod)
-	fnWaiterKick(fnid)
+	balancerPodsFlush(fnid)
 }
 
 func BalancerPodAdd(ctx context.Context, pod *k8sPod) {
@@ -50,13 +56,6 @@ func BalancerCreate(ctx context.Context, fnid string) (error) {
 
 func BalancerInit() (error) {
 	return nil
-}
-
-func balancerPodsFlush(fnid string) {
-	fdm := memdGetCond(fnid)
-	if fdm != nil {
-		fdm.bd.Flush()
-	}
 }
 
 func balancerGetConnExact(ctx context.Context, cookie, version string) (*podConn, *xrest.ReqErr) {
