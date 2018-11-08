@@ -75,7 +75,16 @@ fin:
 	scalers.Dec()
 }
 
-func balancerFnDepGrow(ctx context.Context, fdm *FnMemData, goal uint32) {
+func scalerStop(ctx context.Context, fdm *FnMemData) {
+	fdm.lock.Lock()
+	if fdm.bd.wakeup != nil {
+		fdm.bd.goal = 0
+		fdm.bd.wakeup.Signal()
+	}
+	fdm.lock.Unlock()
+}
+
+func scalerSetGoal(ctx context.Context, fdm *FnMemData, goal uint32) {
 	scalerGoals.Observe(float64(goal))
 	if goal <= fdm.bd.goal {
 		return

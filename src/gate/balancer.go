@@ -38,12 +38,7 @@ func BalancerDelete(ctx context.Context, fnid string) (error) {
 	fdm := memdGetCond(fnid)
 	if fdm != nil {
 		fdm.bd.Flush()
-		fdm.lock.Lock()
-		if fdm.bd.wakeup != nil {
-			fdm.bd.goal = 0
-			fdm.bd.wakeup.Signal()
-		}
-		fdm.lock.Unlock()
+		scalerStop(ctx, fdm)
 	}
 
 	return nil
@@ -100,7 +95,7 @@ func balancerGetConnAny(ctx context.Context, fdm *FnMemData) (*podConn, error) {
 
 	/* Emulate simple RR balancing -- each next call picks next POD */
 	sc := atomic.AddUint32(&fdm.bd.rover[0], 1)
-	balancerFnDepGrow(ctx, fdm, sc - fdm.bd.rover[1])
+	scalerSetGoal(ctx, fdm, sc - fdm.bd.rover[1])
 
 	return aps[sc % uint32(len(aps))], nil
 }
