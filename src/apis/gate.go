@@ -191,7 +191,7 @@ type S3Creds struct {
 type FunctionAdd struct {
 	Name		string			`json:"name"`
 	Project		string			`json:"project,omitempty"`
-	Sources		FunctionSources		`json:"sources"`
+	Sources		*FunctionSources	`json:"sources,omitempty"`
 	Code		FunctionCode		`json:"code"`
 	Size		FunctionSize		`json:"size"`
 	Mware		[]string		`json:"mware,omitempty"`

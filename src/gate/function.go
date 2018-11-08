@@ -305,6 +305,10 @@ func (fn *FunctionDesc)toInfo(ctx context.Context, details bool, periods int) (*
 func guessLang(p *swyapi.FunctionAdd) bool {
 	var fn string
 
+	if p.Sources == nil {
+		return false
+	}
+
 	switch {
 	case p.Sources.Repo != "":
 		fn = p.Sources.Repo
@@ -398,7 +402,15 @@ func (fn *FunctionDesc)Add(ctx context.Context, p interface{}) *xrest.ReqErr {
 	var err, erc error
 	var cerr *xrest.ReqErr
 
-	src := &p.(*swyapi.FunctionAdd).Sources
+	src := p.(*swyapi.FunctionAdd).Sources
+	if src == nil {
+		/* Lang must have been set, otherwise getFunctionDesc
+		 * wouldn't guess one and fail
+		 */
+		src = &swyapi.FunctionSources {
+			Repo: demoRep.ObjID.Hex() + "/" + conf.EmptySources + "/" + rtScriptName(&fn.Code, ""),
+		}
+	}
 
 	fn.ObjID = bson.NewObjectId()
 	fn.State = DBFuncStateIni

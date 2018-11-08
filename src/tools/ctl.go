@@ -713,17 +713,20 @@ func getSrc(opt string, src *swyapi.FunctionSources) {
 }
 
 func function_add(args []string, opts [16]string) {
-	sources := swyapi.FunctionSources{}
-	code := swyapi.FunctionCode{}
+	var src *swyapi.FunctionSources
 
-	getSrc(opts[1], &sources)
+	if opts[1] != "" {
+		var sources swyapi.FunctionSources
+		getSrc(opts[1], &sources)
+		src = &sources
 
-	if opts[0] == "" {
-		opts[0] = detect_language(opts[1])
-		fmt.Printf("Detected lang to %s\n", opts[0])
+		if opts[0] == "" {
+			opts[0] = detect_language(opts[1])
+			fmt.Printf("Detected lang to %s\n", opts[0])
+		}
 	}
 
-	code.Lang = opts[0]
+	code := swyapi.FunctionCode{Lang: opts[0]}
 	if opts[7] != "" {
 		code.Env = strings.Split(opts[7], ":")
 	}
@@ -736,7 +739,7 @@ func function_add(args []string, opts [16]string) {
 	req := swyapi.FunctionAdd{
 		Name: args[0],
 		Project: curProj,
-		Sources: sources,
+		Sources: src,
 		Code: code,
 		Mware: mw,
 	}

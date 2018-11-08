@@ -255,6 +255,7 @@ type YAMLConf struct {
 	RunRate		int			`yaml:"tryrun-rate"`
 	DemoRepo	YAMLConfDemoRepo	`yaml:"demo-repo"`
 	AAASDep		string			`yaml:"aaas-dep"`
+	EmptySources	string			`yaml:"empty-sources"`
 }
 
 func (c *YAMLConf)Validate() error {
@@ -310,6 +311,11 @@ func (c *YAMLConf)Validate() error {
 		c.AAASDep = "swy-aaas.yaml"
 	}
 	addStringSysctl("aaas_dep_file", &c.AAASDep)
+	if c.EmptySources == "" {
+		fmt.Printf("'empty-sources' not set, using default\n")
+		c.EmptySources = "functions/empty"
+	}
+	addStringSysctl("empty_sources_path", &c.EmptySources)
 	return nil
 }
 
