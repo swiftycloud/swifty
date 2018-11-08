@@ -179,6 +179,12 @@ swifty/admd: swy-admd kubectl/docker/admd/Dockerfile
 	$(Q) $(MAKE) -C kubectl/docker/admd all
 .PHONY: swifty/admd
 
+swifty/swydbscr: swydbscr kubectl/docker/dbscr/Dockerfile
+	$(call msg-gen,$@)
+	$(Q) $(CP) swydbscr kubectl/docker/dbscr/swydbscr
+	$(Q) $(MAKE) -C kubectl/docker/dbscr all
+.PHONY: swifty/swydbscr
+
 swifty/proxy: swy-wdog kubectl/docker/proxy/Dockerfile
 	$(call msg-gen,$@)
 	$(Q) $(CP) swy-wdog kubectl/docker/proxy/swy-wdog
