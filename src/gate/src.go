@@ -132,6 +132,8 @@ func writeSourceFile(ctx context.Context, to, script string, data io.Reader) err
 		return errors.New("FS error")
 	}
 
+	defer f.Close()
+
 	_, err = io.Copy(f, data)
 	if err != nil {
 		ctxlog(ctx).Error("Can't write sources: %s", err.Error())
