@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	"log"
 	"flag"
 	"time"
 	"strings"
@@ -106,14 +106,14 @@ func getUserInfo(ten string) (*swyapi.UserInfo, error) {
 
 		err := cln.Login()
 		if err != nil {
-			fmt.Printf("  cannot login to admd: %s\n", err.Error())
+			log.Printf("  cannot login to admd: %s\n", err.Error())
 			return nil, err
 		}
 
 		var ifs []*swyapi.UserInfo
 		err = cln.Req1("GET", "users", http.StatusOK, nil, &ifs)
 		if err != nil {
-			fmt.Printf("  error getting users: %s\n", err.Error())
+			log.Printf("  error getting users: %s\n", err.Error())
 			return nil, err
 		}
 
@@ -134,29 +134,29 @@ func getLastStats(arch *mgo.Collection, ten string) *time.Time {
 	if err == nil {
 		last = ast.Till
 	} else if err == mgo.ErrNotFound {
-		fmt.Printf("\t\tNo archive - requesting creation time\n")
+		log.Printf("\t\tNo archive - requesting creation time\n")
 		ui, err := getUserInfo(ten)
 		if err != nil {
 			return nil
 		}
 		if ui == nil {
-			fmt.Printf("\t\tERR: user unregistered\n")
+			log.Printf("\t\tERR: user unregistered\n")
 			return nil
 		}
 		if ui.Created == "" {
-			fmt.Printf("\t\tERR: created time missing\n")
+			log.Printf("\t\tERR: created time missing\n")
 			return nil
 		}
 		ct, err := time.Parse(time.RFC1123Z, ui.Created)
 		if err != nil {
-			fmt.Printf("\t\tERR: created time %s parse error %s\n",
+			log.Printf("\t\tERR: created time %s parse error %s\n",
 				ui.Created, err.Error())
 			return nil
 		}
-		fmt.Printf("\t\tCreated %s\n", last)
 		last = &ct
+		log.Printf("\t\tCreated %s\n", last)
 	} else {
-		fmt.Printf("\t\tERR: arch query error: %s", err.Error())
+		log.Printf("\t\tERR: arch query error: %s", err.Error())
 		return nil
 	}
 
@@ -173,29 +173,29 @@ func doArchPass(now time.Time, s *mgo.Session) {
 	var st TenStats
 	iter := curr.Find(nil).Iter()
 	for iter.Next(&st) {
-		fmt.Printf("\tFound stats for %s, checking archive\n", st.Tenant)
+		log.Printf("\tFound stats for %s, checking archive\n", st.Tenant)
 		last := getLastStats(arch, st.Tenant)
 		if last == nil {
 			continue
 		}
 
-		fmt.Printf("\tLast archive at %s\n", last)
+		log.Printf("\tLast archive at %s\n", last)
 		if !timePassed(last, now, conf.SA.Period) {
-			fmt.Printf("\t\tFresh archive, skipping\n")
+			log.Printf("\t\tFresh archive, skipping\n")
 			continue
 		}
 
-		fmt.Printf("\tArchive %s stats (%s)\n", st.Tenant, now)
+		log.Printf("\tArchive %s stats (%s)\n", st.Tenant, now)
 		st.Till = &now
 		err := arch.Insert(&st)
 		if err != nil {
-			fmt.Printf("\t\tERR: error archiving: %s\n", err.Error())
+			log.Printf("\t\tERR: error archiving: %s\n", err.Error())
 		}
 	}
 
 	err := iter.Close()
 	if err != nil {
-		fmt.Printf("ERR:  error requesting stats: %s", err.Error())
+		log.Printf("ERR:  error requesting stats: %s", err.Error())
 	}
 }
 
@@ -206,13 +206,13 @@ func main() {
 	flag.Parse()
 
 	if config_path == "" {
-		fmt.Printf("Specify config path\n")
+		log.Printf("Specify config path\n")
 		return
 	}
 
 	err := xh.ReadYamlConfig(config_path, &conf)
 	if err != nil {
-		fmt.Printf("Bad config: %s\n", err.Error())
+		log.Printf("Bad config: %s\n", err.Error())
 		return
 	}
 
@@ -231,21 +231,22 @@ func main() {
 
 	session, err := mgo.DialWithInfo(&info);
 	if err != nil {
-		fmt.Printf("dbConnect: Can't dial (%s)\n", err.Error())
+		log.Printf("dbConnect: Can't dial (%s)\n", err.Error())
 		return
 	}
 
 	if conf.Logs.Keep > 0 {
-		fmt.Printf("Start logs cleaner (%d days old)", conf.Logs.Keep)
+		log.Printf("Start logs cleaner (%d days old)\n", conf.Logs.Keep)
 		go func() {
 			for {
 				time.Sleep(LogsCleanPeriod)
+				log.Printf("Cleaner logs ...\n", conf.Logs.Keep)
 
 				s := session.Copy()
 				logs := s.DB(DBName).C(ColLogs)
 				dur := time.Now().AddDate(0, 0, -conf.Logs.Keep)
 				logs.RemoveAll(bson.M{"ts": bson.M{"$lt": dur }})
-				fmt.Printf("Cleaned logs < %s", dur.String())
+				log.Printf("`- ... cleaned < %s\n", dur.String())
 				s.Close()
 			}
 		}()
@@ -253,11 +254,11 @@ func main() {
 
 	for {
 		now := time.Now()
-		fmt.Printf("%s: Check stats\n", now.Format("Mon Jan 2 15:04:05 2006"))
+		log.Printf("%s: Check stats\n", now.Format("Mon Jan 2 15:04:05 2006"))
 
 		doArchPass(now, session.Copy())
 
-		fmt.Printf("-----------8<--------------------------------\n")
+		log.Printf("-----------8<--------------------------------\n")
 
 		slp := nextPeriod(&now, conf.SA.Check).Sub(now)
 		<-time.After(slp)
