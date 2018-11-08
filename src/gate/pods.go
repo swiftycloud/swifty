@@ -65,25 +65,25 @@ func makeFnPods() *fnPods {
 	return x
 }
 
-func podsDel(ctx context.Context, fnid string, pod *k8sPod) {
-	fnp := findFnPods(fnid)
+func podsDel(ctx context.Context, pod *k8sPod) {
+	fnp := findFnPods(pod.FnId)
 	if fnp != nil {
 		fnp.lock.Lock()
 		delete(fnp.pods, pod.UID)
 		if len(fnp.pods) == 0 {
 			/* All PODs are gone, we may kill the whole thing */
 			fnp.dead = true
-			fnPodsStore.Delete(fnid)
+			fnPodsStore.Delete(pod.FnId)
 		}
 		fnp.lock.Unlock()
 	}
 }
 
-func podsAdd(ctx context.Context, fnid string, pod *k8sPod) {
+func podsAdd(ctx context.Context, pod *k8sPod) {
 again:
-	x, ok := fnPodsStore.Load(fnid)
+	x, ok := fnPodsStore.Load(pod.FnId)
 	if !ok {
-		x, _ = fnPodsStore.LoadOrStore(fnid, makeFnPods())
+		x, _ = fnPodsStore.LoadOrStore(pod.FnId, makeFnPods())
 	}
 
 	fnp := x.(*fnPods)

@@ -29,15 +29,13 @@ func balancerPodsFlush(fnid string) {
 }
 
 func BalancerPodDel(ctx context.Context, pod *k8sPod) {
-	fnid := pod.SwoId.Cookie()
-	podsDel(ctx, fnid, pod)
-	balancerPodsFlush(fnid)
+	podsDel(ctx, pod)
+	balancerPodsFlush(pod.FnId)
 }
 
 func BalancerPodAdd(ctx context.Context, pod *k8sPod) {
-	fnid := pod.SwoId.Cookie()
-	podsAdd(ctx, fnid, pod)
-	balancerPodsFlush(fnid)
+	podsAdd(ctx, pod)
+	balancerPodsFlush(pod.FnId)
 }
 
 func BalancerDelete(ctx context.Context, fnid string) (error) {

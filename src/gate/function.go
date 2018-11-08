@@ -963,7 +963,7 @@ out:
 }
 
 func notifyPodDown(ctx context.Context, pod *k8sPod) {
-	fnWaiterKick(pod.SwoId.Cookie())
+	fnWaiterKick(pod.FnId)
 }
 
 func deactivateFunction(ctx context.Context, fn *FunctionDesc) *xrest.ReqErr {
