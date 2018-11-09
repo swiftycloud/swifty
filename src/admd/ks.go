@@ -373,9 +373,14 @@ func ksDelUserAndProject(c *xh.XCreds, kuid, kproj string) error {
 func ksInit(c *xh.XCreds) error {
 	var err error
 
+	pwd, err := admdSecrets.Get(c.Pass)
+	if err != nil {
+		return fmt.Errorf("No keystone password: %s", err.Error())
+	}
+
 	log.Debugf("Logging in")
 	ksClient, err = xkst.KeystoneConnect(c.Addr(), "default",
-				&swyapi.UserLogin{UserName: c.User, Password: admdSecrets[c.Pass]})
+				&swyapi.UserLogin{UserName: c.User, Password: pwd})
 	if err != nil {
 		return err
 	}

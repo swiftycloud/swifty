@@ -75,12 +75,19 @@ func dbConnect(conf *YAMLConf) error {
 	var err error
 
 	dbc := xh.ParseXCreds(conf.DB)
+	pwd, err := admdSecrets.Get(dbc.Pass)
+	if err != nil {
+		log.Errorf("DB password secret not found: %s", err.Error())
+		return err
+	}
+
 	info := mgo.DialInfo{
 		Addrs:		[]string{dbc.Addr()},
 		Database:	DBSwiftyDB,
 		Timeout:	60 * time.Second,
 		Username:	dbc.User,
-		Password:	admdSecrets[dbc.Pass]}
+		Password:	pwd,
+	}
 
 	session, err = mgo.DialWithInfo(&info);
 	if err != nil {
