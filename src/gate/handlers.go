@@ -634,7 +634,7 @@ func handleAuths(ctx context.Context, w http.ResponseWriter, r *http.Request) *x
 			project = DefaultProject
 		}
 
-		iter := dbIterAll(ctx, listReq(ctx, project, []string{"auth"}), &dep)
+		iter := dbIterAll(ctx, listReq(ctx, project, []string{authLabel}), &dep)
 		defer iter.Close()
 
 		var auths []*swyapi.AuthInfo
@@ -666,7 +666,7 @@ func handleAuths(ctx context.Context, w http.ResponseWriter, r *http.Request) *x
 		}
 
 		dd := getDeployDesc(ctxSwoId(ctx, aa.Project, aa.Name))
-		dd.Labels = []string{ "auth" }
+		dd.Labels = []string{ authLabel }
 		cerr := dd.getItemsParams(ctx, &swyapi.DeploySource{
 			Repo:	demoRep.ObjID.Hex() + "/" + conf.DemoRepo.AAASDep,
 		}, map[string]string { "name": aa.Name }, 0)

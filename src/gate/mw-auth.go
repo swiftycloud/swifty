@@ -17,6 +17,10 @@ import (
 	"context"
 )
 
+const (
+	authLabel = "auth"
+)
+
 func decodeString(s string) ([]byte, error) {
 	if l := len(s) % 4; l > 0 {
 		s += strings.Repeat("=", 4-l)

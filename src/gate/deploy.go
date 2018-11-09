@@ -448,7 +448,7 @@ func (ds Deployments)Get(ctx context.Context, r *http.Request) (xrest.Obj, *xres
 	var cerr *xrest.ReqErr
 
 	if ds.auth {
-		cerr = objFindForReq2(ctx, r, "aid", &dd, bson.M{"labels": "auth"})
+		cerr = objFindForReq2(ctx, r, "aid", &dd, bson.M{"labels": authLabel})
 	} else {
 		cerr = objFindForReq(ctx, r, "did", &dd)
 	}
