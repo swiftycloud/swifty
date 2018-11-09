@@ -89,7 +89,12 @@ func notifyInit(conf *YAMLConfNotify) error {
 	}
 
 	xc := xh.ParseXCreds(conf.Rabbit)
-	xc.Pass = s3Secrets[xc.Pass]
+	pwd, err := s3Secrets.Get(xc.Pass)
+	if err != nil {
+		return fmt.Errorf("No notify queue password: %s", err.Error())
+	}
+
+	xc.Pass = pwd
 
 	log.Debugf("Turn on AMQP notifications via %s", xc.Domn)
 

@@ -26,7 +26,7 @@ import (
 	"swifty/apis/s3"
 )
 
-var s3Secrets map[string]string
+var s3Secrets xsecret.Store
 var s3SecKey []byte
 var S3ModeDevel bool
 
@@ -994,15 +994,27 @@ func main() {
 
 	log.Debugf("config: %v", &conf)
 
-	s3Secrets, err = xsecret.ReadSecrets("s3")
+	s3Secrets, err = xsecret.Init("s3")
 	if err != nil {
 		log.Errorf("Can't read gate secrets: %s", err.Error())
 		return
 	}
 
-	s3SecKey, err = hex.DecodeString(s3Secrets[conf.SecKey])
+	conf.SecKey, err = s3Secrets.Get(conf.SecKey)
+	if err != nil {
+		log.Error("Cannot find seckey secret: %s", err.Error())
+		return
+	}
+
+	s3SecKey, err = hex.DecodeString(conf.SecKey)
 	if err != nil || len(s3SecKey) < 16 {
 		log.Error("Secret key should be decodable and be 16 bytes long at least")
+		return
+	}
+
+	adminAccToken, err = s3Secrets.Get(conf.Daemon.Token)
+	if err != nil || len(adminAccToken) < 16 {
+		log.Errorf("Bad admin access token: %s", err)
 		return
 	}
 

@@ -48,12 +48,19 @@ func dbConnect(conf *YAMLConf) error {
 	var err error
 
 	dbc := xh.ParseXCreds(conf.DB)
+	pwd, err := s3Secrets.Get(dbc.Pass)
+	if err != nil {
+		log.Errorf("No DB password found: %s", err.Error())
+		return err
+	}
+
 	info := mgo.DialInfo{
 		Addrs:		[]string{dbc.Addr()},
 		Database:	DBName,
 		Timeout:	60 * time.Second,
 		Username:	dbc.User,
-		Password:	s3Secrets[dbc.Pass]}
+		Password:	pwd,
+	}
 
 	session, err = mgo.DialWithInfo(&info);
 	if err != nil {
