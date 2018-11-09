@@ -310,6 +310,12 @@ func main() {
 		return
 	}
 
+	gateSecrets, err = xsecret.Init("gate")
+	if err != nil {
+		fmt.Printf("Can't read gate secrets: %s", err.Error())
+		return
+	}
+
 	err = xh.ReadYamlConfig(config_path, &conf)
 	if err != nil {
 		fmt.Printf("Bad config: %s\n", err.Error())
@@ -325,15 +331,9 @@ func main() {
 
 	setupLogger(&conf)
 
-	gateSecrets, err = xsecret.Init("gate")
-	if err != nil {
-		glog.Errorf("Can't read gate secrets: %s", err.Error())
-		return
-	}
-
 	err = setupMwareAddr(&conf)
 	if err != nil {
-		glog.Error("Bad mware configuration: %s", err.Error())
+		glog.Errorf("Bad mware configuration: %s", err.Error())
 		return
 	}
 
