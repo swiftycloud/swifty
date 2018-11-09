@@ -21,7 +21,7 @@ type YAMLConfWdog struct {
 	p_port		string
 }
 
-func setupMwareAddr(conf *YAMLConf) {
+func setupMwareAddr(conf *YAMLConf) error {
 	conf.Mware.Maria.c = xh.ParseXCreds(conf.Mware.Maria.Creds)
 	conf.Mware.Maria.c.Resolve()
 
@@ -39,6 +39,8 @@ func setupMwareAddr(conf *YAMLConf) {
 
 	conf.Mware.S3.cn = xh.ParseXCreds(conf.Mware.S3.Notify)
 	conf.Mware.S3.cn.Resolve()
+
+	return nil
 }
 
 func (cw *YAMLConfWdog)Validate() error {

@@ -11,7 +11,6 @@ import (
 	"context"
 	"time"
 	"fmt"
-	"os"
 
 	"swifty/apis"
 	"swifty/common"
@@ -312,31 +311,30 @@ func main() {
 		return
 	}
 
-	if _, err := os.Stat(config_path); err == nil {
-		err := xh.ReadYamlConfig(config_path, &conf)
-		if err != nil {
-			fmt.Printf("Bad config: %s\n", err.Error())
-			return
-		}
-
-		fmt.Printf("Validating config\n")
-		err = conf.Validate()
-		if err != nil {
-			fmt.Printf("Error in config: %s\n", err.Error())
-			return
-		}
-
-		setupLogger(&conf)
-		setupMwareAddr(&conf)
-	} else {
-		setupLogger(nil)
-		glog.Errorf("Provide config path")
+	err = xh.ReadYamlConfig(config_path, &conf)
+	if err != nil {
+		fmt.Printf("Bad config: %s\n", err.Error())
 		return
 	}
+
+	fmt.Printf("Validating config\n")
+	err = conf.Validate()
+	if err != nil {
+		fmt.Printf("Error in config: %s\n", err.Error())
+		return
+	}
+
+	setupLogger(&conf)
 
 	gateSecrets, err = xsecret.ReadSecrets("gate")
 	if err != nil {
 		glog.Errorf("Can't read gate secrets: %s", err.Error())
+		return
+	}
+
+	err = setupMwareAddr(&conf)
+	if err != nil {
+		glog.Error("Bad mware configuration: %s", err.Error())
 		return
 	}
 

@@ -73,7 +73,6 @@ func ReadYamlConfig(path string, c interface{}) error {
 	yamlFile, err := ioutil.ReadFile(path)
 	if err == nil {
 		err = yaml.Unmarshal(yamlFile, c)
-		return err
 	}
 	return err
 }
@@ -81,7 +80,7 @@ func ReadYamlConfig(path string, c interface{}) error {
 func WriteYamlConfig(path string, c interface{}) error {
 	bytes, err := yaml.Marshal(c)
 	if err == nil {
-		return ioutil.WriteFile(path, bytes, 0600)
+		err = ioutil.WriteFile(path, bytes, 0600)
 	}
 	return err
 
