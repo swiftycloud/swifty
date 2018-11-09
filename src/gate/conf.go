@@ -27,32 +27,40 @@ func setupMwareAddr(conf *YAMLConf) error {
 
 	mc := &conf.Mware
 
-	mc.Maria.c = xh.ParseXCreds(mc.Maria.Creds)
-	mc.Maria.c.Resolve()
-	mc.Maria.c.Pass, err = gateSecrets.Get(mc.Maria.c.Pass)
-	if err != nil {
-		return errors.New("mware.maria secret not found")
+	if mc.Maria != nil {
+		mc.Maria.c = xh.ParseXCreds(mc.Maria.Creds)
+		mc.Maria.c.Resolve()
+		mc.Maria.c.Pass, err = gateSecrets.Get(mc.Maria.c.Pass)
+		if err != nil {
+			return errors.New("mware.maria secret not found")
+		}
 	}
 
-	mc.Rabbit.c = xh.ParseXCreds(mc.Rabbit.Creds)
-	mc.Rabbit.c.Resolve()
-	mc.Rabbit.c.Pass, err = gateSecrets.Get(mc.Rabbit.c.Pass)
-	if err != nil {
-		return errors.New("mware.rabbit secret not found")
+	if mc.Rabbit != nil {
+		mc.Rabbit.c = xh.ParseXCreds(mc.Rabbit.Creds)
+		mc.Rabbit.c.Resolve()
+		mc.Rabbit.c.Pass, err = gateSecrets.Get(mc.Rabbit.c.Pass)
+		if err != nil {
+			return errors.New("mware.rabbit secret not found")
+		}
 	}
 
-	mc.Mongo.c = xh.ParseXCreds(mc.Mongo.Creds)
-	mc.Mongo.c.Resolve()
-	mc.Mongo.c.Pass, err = gateSecrets.Get(mc.Mongo.c.Pass)
-	if err != nil {
-		return errors.New("mware.mongo secret not found")
+	if mc.Mongo != nil {
+		mc.Mongo.c = xh.ParseXCreds(mc.Mongo.Creds)
+		mc.Mongo.c.Resolve()
+		mc.Mongo.c.Pass, err = gateSecrets.Get(mc.Mongo.c.Pass)
+		if err != nil {
+			return errors.New("mware.mongo secret not found")
+		}
 	}
 
-	mc.Postgres.c = xh.ParseXCreds(mc.Postgres.Creds)
-	mc.Postgres.c.Resolve()
-	mc.Postgres.c.Pass, err = gateSecrets.Get(mc.Postgres.c.Pass)
-	if err != nil  {
-		return errors.New("mware.postgres secret not found")
+	if mc.Postgres != nil {
+		mc.Postgres.c = xh.ParseXCreds(mc.Postgres.Creds)
+		mc.Postgres.c.Resolve()
+		mc.Postgres.c.Pass, err = gateSecrets.Get(mc.Postgres.c.Pass)
+		if err != nil  {
+			return errors.New("mware.postgres secret not found")
+		}
 	}
 
 	mc.S3.c = xh.ParseXCreds(mc.S3.Creds)
@@ -188,10 +196,10 @@ type YAMLConfWS struct {
 
 type YAMLConfMw struct {
 	SecKey		string			`yaml:"mwseckey"`
-	Rabbit		YAMLConfRabbit		`yaml:"rabbit"`
-	Maria		YAMLConfMaria		`yaml:"maria"`
-	Mongo		YAMLConfMongo		`yaml:"mongo"`
-	Postgres	YAMLConfPostgres	`yaml:"postgres"`
+	Rabbit		*YAMLConfRabbit		`yaml:"rabbit,omitempty"`
+	Maria		*YAMLConfMaria		`yaml:"maria,omitempty"`
+	Mongo		*YAMLConfMongo		`yaml:"mongo,omitempty"`
+	Postgres	*YAMLConfPostgres	`yaml:"postgres,omitempty"`
 	S3		YAMLConfS3		`yaml:"s3"`
 	WS		YAMLConfWS		`yaml:"websocket"`
 }

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"strings"
 	"context"
 	"swifty/common/http"
@@ -8,6 +9,10 @@ import (
 )
 
 func InitPostgres(ctx context.Context, mwd *MwareDesc) (error) {
+	if conf.Mware.Postgres == nil {
+		return errors.New("Not configured")
+	}
+
 	err := mwareGenerateUserPassClient(ctx, mwd)
 	if err != nil {
 		return err

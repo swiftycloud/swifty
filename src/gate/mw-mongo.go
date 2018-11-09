@@ -9,6 +9,10 @@ import (
 )
 
 func mgoDial() (*mgo.Session, error) {
+	if conf.Mware.Mongo == nil {
+		return nil, errors.New("Not configured")
+	}
+
 	ifo := mgo.DialInfo {
 		Addrs:		[]string{conf.Mware.Mongo.c.Addr()},
 		Database:	"admin",

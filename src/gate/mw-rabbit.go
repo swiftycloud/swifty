@@ -6,10 +6,15 @@ import (
 	"gopkg.in/mgo.v2/bson"
 	"github.com/michaelklishin/rabbit-hole"
 	"fmt"
+	"errors"
 	"swifty/apis"
 )
 
 func rabbitConn() (*rabbithole.Client, error) {
+	if conf.Mware.Rabbit == nil {
+		return nil, errors.New("Not configured")
+	}
+
 	addr := conf.Mware.Rabbit.c.AddrP(conf.Mware.Rabbit.AdminPort)
 	return rabbithole.NewClient("http://" + addr, conf.Mware.Rabbit.c.User, conf.Mware.Rabbit.c.Pass)
 }
