@@ -3,7 +3,6 @@ package main
 import (
 	"github.com/gorilla/mux"
 
-	"encoding/hex"
 	"net/http"
 	"net/url"
 	"flag"
@@ -11,7 +10,6 @@ import (
 	"context"
 	"time"
 	"fmt"
-	"os"
 
 	"swifty/apis"
 	"swifty/common"
@@ -22,7 +20,7 @@ import (
 )
 
 var ModeDevel bool
-var gateSecrets map[string]string
+var gateSecrets xsecret.Store
 var gateSecPas []byte
 
 func isLite() bool { return Flavor == "lite" }
@@ -312,37 +310,30 @@ func main() {
 		return
 	}
 
-	if _, err := os.Stat(config_path); err == nil {
-		err := xh.ReadYamlConfig(config_path, &conf)
-		if err != nil {
-			fmt.Printf("Bad config: %s\n", err.Error())
-			return
-		}
-
-		fmt.Printf("Validating config\n")
-		err = conf.Validate()
-		if err != nil {
-			fmt.Printf("Error in config: %s\n", err.Error())
-			return
-		}
-
-		setupLogger(&conf)
-		setupMwareAddr(&conf)
-	} else {
-		setupLogger(nil)
-		glog.Errorf("Provide config path")
-		return
-	}
-
-	gateSecrets, err = xsecret.ReadSecrets("gate")
+	gateSecrets, err = xsecret.Init("gate")
 	if err != nil {
-		glog.Errorf("Can't read gate secrets: %s", err.Error())
+		fmt.Printf("Can't read gate secrets: %s", err.Error())
 		return
 	}
 
-	gateSecPas, err = hex.DecodeString(gateSecrets[conf.Mware.SecKey])
-	if err != nil || len(gateSecPas) < 16 {
-		glog.Errorf("Secrets pass should be decodable and at least 16 bytes long")
+	err = xh.ReadYamlConfig(config_path, &conf)
+	if err != nil {
+		fmt.Printf("Bad config: %s\n", err.Error())
+		return
+	}
+
+	fmt.Printf("Validating config\n")
+	err = conf.Validate()
+	if err != nil {
+		fmt.Printf("Error in config: %s\n", err.Error())
+		return
+	}
+
+	setupLogger(&conf)
+
+	err = setupMwareAddr(&conf)
+	if err != nil {
+		glog.Errorf("Bad mware configuration: %s", err.Error())
 		return
 	}
 

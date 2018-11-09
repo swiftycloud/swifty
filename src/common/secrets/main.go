@@ -3,14 +3,43 @@ package xsecret
 import (
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
+	"strings"
 	"os"
 	"fmt"
 	"errors"
 )
 
+type Store interface {
+	Get(string) (string, error)
+}
+
+type FileSecrets map[string]string
+
+func (fs FileSecrets)Get(name string) (string, error) {
+	sv, ok := fs[name]
+	if !ok {
+		return "", errors.New("No such secret")
+	}
+
+	return sv, nil
+}
+
+type EnvSecrets struct {
+	pfx	string
+}
+
+func (es EnvSecrets)Get(name string) (string, error) {
+	v := os.Getenv(es.pfx + name)
+	if v == "" {
+		return "", errors.New("No such secret")
+	}
+
+	return v, nil
+}
+
 const secretDir string = ".swysecrets"
 
-func ReadSecrets(name string) (map[string]string, error) {
+func Init(name string) (Store, error) {
 	path, ok := os.LookupEnv("HOME")
 	if !ok {
 		return nil, errors.New("Can't find HOME dir")
@@ -19,6 +48,11 @@ func ReadSecrets(name string) (map[string]string, error) {
 	path += "/" + secretDir
 	st, err := os.Stat(path)
 	if err != nil {
+		if os.IsNotExist(err) {
+			/* Likely, we will be provided with environment. */
+			return &EnvSecrets{pfx: strings.ToUpper(name) + "_"}, nil
+		}
+
 		return nil, fmt.Errorf("Can't find secrets dir %s: %s", path, err.Error())
 	}
 	if st.Mode() & os.ModePerm != 0700 {
@@ -29,6 +63,11 @@ func ReadSecrets(name string) (map[string]string, error) {
 	path += "/" + name
 	st, err = os.Stat(path)
 	if err != nil {
+		if os.IsNotExist(err) {
+			/* Likely, we will be provided with environment. */
+			return &EnvSecrets{pfx: strings.ToUpper(name) + "_"}, nil
+		}
+
 		return nil, fmt.Errorf("Can't find secrets file %s: %s", path, err.Error())
 	}
 	if st.Mode() & os.ModePerm != 0600 {
@@ -48,5 +87,5 @@ func ReadSecrets(name string) (map[string]string, error) {
 		return nil, fmt.Errorf("Error parsing secrets %s: %s", path, err.Error())
 	}
 
-	return ret, nil
+	return FileSecrets(ret), nil
 }

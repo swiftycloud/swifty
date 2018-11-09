@@ -135,7 +135,7 @@ func startListener(req *mq_listener_req) error {
 func mqStartListener(user, pass, url, queue string, cb mqListenerCb) error {
 	return factoryMakeReq(&mq_listener_req{
 			user: user,
-			pass: gateSecrets[pass],
+			pass: pass,
 			url: url,
 			queue: queue,
 			cb: cb,

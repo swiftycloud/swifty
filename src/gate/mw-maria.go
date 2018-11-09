@@ -15,10 +15,14 @@ const (
 )
 
 func mariaConn() (*sql.DB, error) {
+	if conf.Mware.Maria == nil {
+		return nil, errors.New("Not configured")
+	}
+
 	return sql.Open("mysql",
 			fmt.Sprintf("%s:%s@tcp(%s)/?charset=utf8",
 				conf.Mware.Maria.c.User,
-				gateSecrets[conf.Mware.Maria.c.Pass],
+				conf.Mware.Maria.c.Pass,
 				conf.Mware.Maria.c.Addr()))
 }
 
@@ -109,7 +113,7 @@ func FiniMariaDB(ctx context.Context, mwd *MwareDesc) error {
 	}
 	defer db.Close()
 
-	mariaDropQuota(ctx, &conf.Mware.Maria, db, mwd)
+	mariaDropQuota(ctx, conf.Mware.Maria, db, mwd)
 	mariaDropUser(ctx, db, mwd)
 	mariaDropDb(ctx, db, mwd)
 

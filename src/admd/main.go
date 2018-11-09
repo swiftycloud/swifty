@@ -21,7 +21,7 @@ import (
 	"swifty/common/secrets"
 )
 
-var admdSecrets map[string]string
+var admdSecrets xsecret.Store
 
 type YAMLConfDaemon struct {
 	Address		string			`yaml:"address"`
@@ -883,7 +883,7 @@ func main() {
 		return
 	}
 
-	admdSecrets, err = xsecret.ReadSecrets("admd")
+	admdSecrets, err = xsecret.Init("admd")
 	if err != nil {
 		log.Errorf("Can't read gate secrets: %s", err.Error())
 		return

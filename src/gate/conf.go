@@ -6,6 +6,7 @@ import (
 	"time"
 	"errors"
 	"strconv"
+	"encoding/hex"
 	"swifty/common"
 	"swifty/common/http"
 )
@@ -21,24 +22,64 @@ type YAMLConfWdog struct {
 	p_port		string
 }
 
-func setupMwareAddr(conf *YAMLConf) {
-	conf.Mware.Maria.c = xh.ParseXCreds(conf.Mware.Maria.Creds)
-	conf.Mware.Maria.c.Resolve()
+func setupMwareAddr(conf *YAMLConf) error {
+	var err error
 
-	conf.Mware.Rabbit.c = xh.ParseXCreds(conf.Mware.Rabbit.Creds)
-	conf.Mware.Rabbit.c.Resolve()
+	mc := &conf.Mware
 
-	conf.Mware.Mongo.c = xh.ParseXCreds(conf.Mware.Mongo.Creds)
-	conf.Mware.Mongo.c.Resolve()
+	if mc.Maria != nil {
+		mc.Maria.c = xh.ParseXCreds(mc.Maria.Creds)
+		mc.Maria.c.Resolve()
+		mc.Maria.c.Pass, err = gateSecrets.Get(mc.Maria.c.Pass)
+		if err != nil {
+			return errors.New("mware.maria secret not found")
+		}
+	}
 
-	conf.Mware.Postgres.c = xh.ParseXCreds(conf.Mware.Postgres.Creds)
-	conf.Mware.Postgres.c.Resolve()
+	if mc.Rabbit != nil {
+		mc.Rabbit.c = xh.ParseXCreds(mc.Rabbit.Creds)
+		mc.Rabbit.c.Resolve()
+		mc.Rabbit.c.Pass, err = gateSecrets.Get(mc.Rabbit.c.Pass)
+		if err != nil {
+			return errors.New("mware.rabbit secret not found")
+		}
+	}
 
-	conf.Mware.S3.c = xh.ParseXCreds(conf.Mware.S3.Creds)
-	conf.Mware.S3.c.Resolve()
+	if mc.Mongo != nil {
+		mc.Mongo.c = xh.ParseXCreds(mc.Mongo.Creds)
+		mc.Mongo.c.Resolve()
+		mc.Mongo.c.Pass, err = gateSecrets.Get(mc.Mongo.c.Pass)
+		if err != nil {
+			return errors.New("mware.mongo secret not found")
+		}
+	}
 
-	conf.Mware.S3.cn = xh.ParseXCreds(conf.Mware.S3.Notify)
-	conf.Mware.S3.cn.Resolve()
+	if mc.Postgres != nil {
+		mc.Postgres.c = xh.ParseXCreds(mc.Postgres.Creds)
+		mc.Postgres.c.Resolve()
+		mc.Postgres.c.Pass, err = gateSecrets.Get(mc.Postgres.c.Pass)
+		if err != nil  {
+			return errors.New("mware.postgres secret not found")
+		}
+	}
+
+	if mc.S3 != nil {
+		mc.S3.c = xh.ParseXCreds(mc.S3.Creds)
+		mc.S3.c.Resolve()
+		mc.S3.c.Pass, err = gateSecrets.Get(mc.S3.c.Pass)
+		if err != nil {
+			return errors.New("mware.s3 secret not found")
+		}
+
+		mc.S3.cn = xh.ParseXCreds(mc.S3.Notify)
+		mc.S3.cn.Resolve()
+		mc.S3.cn.Pass, err = gateSecrets.Get(mc.S3.cn.Pass)
+		if err != nil {
+			return errors.New("mware.s3.notify secret not found")
+		}
+	}
+
+	return nil
 }
 
 func (cw *YAMLConfWdog)Validate() error {
@@ -157,12 +198,12 @@ type YAMLConfWS struct {
 
 type YAMLConfMw struct {
 	SecKey		string			`yaml:"mwseckey"`
-	Rabbit		YAMLConfRabbit		`yaml:"rabbit"`
-	Maria		YAMLConfMaria		`yaml:"maria"`
-	Mongo		YAMLConfMongo		`yaml:"mongo"`
-	Postgres	YAMLConfPostgres	`yaml:"postgres"`
-	S3		YAMLConfS3		`yaml:"s3"`
-	WS		YAMLConfWS		`yaml:"websocket"`
+	Rabbit		*YAMLConfRabbit		`yaml:"rabbit,omitempty"`
+	Maria		*YAMLConfMaria		`yaml:"maria,omitempty"`
+	Mongo		*YAMLConfMongo		`yaml:"mongo,omitempty"`
+	Postgres	*YAMLConfPostgres	`yaml:"postgres,omitempty"`
+	S3		*YAMLConfS3		`yaml:"s3,omitempty"`
+	WS		*YAMLConfWS		`yaml:"websocket,omitempty"`
 }
 
 func (cm *YAMLConfMw)Validate() error {
@@ -170,17 +211,31 @@ func (cm *YAMLConfMw)Validate() error {
 		return errors.New("'middleware.mwseckey' not set")
 	}
 
-	if cm.S3.HiddenKeyTmo == 0 {
-		cm.S3.HiddenKeyTmo = 120
-		fmt.Printf("'middleware.s3.hidden-key-timeout' not set, using default 120sec\n")
+	v, err := gateSecrets.Get(cm.SecKey)
+	if err != nil {
+		return errors.New("'middleware.mwseckey' secret not found")
 	}
-	addIntSysctl("s3_hidden_key_timeout_sec", &cm.S3.HiddenKeyTmo)
-	addStringSysctl("gate_s3api", &cm.S3.API)
 
-	if cm.WS.API == "" {
-		fmt.Printf("'middleware.websocket.api' not set, gate is wsgate\n")
+	gateSecPas, err = hex.DecodeString(v)
+	if err != nil || len(gateSecPas) < 16 {
+		return errors.New("'middleware.mwseckey' format error")
 	}
-	addStringSysctl("gate_ws", &cm.WS.API)
+
+	if cm.S3 != nil {
+		if cm.S3.HiddenKeyTmo == 0 {
+			cm.S3.HiddenKeyTmo = 120
+			fmt.Printf("'middleware.s3.hidden-key-timeout' not set, using default 120sec\n")
+		}
+		addIntSysctl("s3_hidden_key_timeout_sec", &cm.S3.HiddenKeyTmo)
+		addStringSysctl("gate_s3api", &cm.S3.API)
+	}
+
+	if cm.WS != nil {
+		if cm.WS.API == "" {
+			fmt.Printf("'middleware.websocket.api' not set, gate is wsgate\n")
+		}
+		addStringSysctl("gate_ws", &cm.WS.API)
+	}
 
 	return nil
 }

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"strings"
 	"context"
 	"swifty/common/http"
@@ -8,6 +9,10 @@ import (
 )
 
 func InitPostgres(ctx context.Context, mwd *MwareDesc) (error) {
+	if conf.Mware.Postgres == nil {
+		return errors.New("Not configured")
+	}
+
 	err := mwareGenerateUserPassClient(ctx, mwd)
 	if err != nil {
 		return err
@@ -25,7 +30,7 @@ func InitPostgres(ctx context.Context, mwd *MwareDesc) (error) {
 				Timeout: 120,
 			},
 			&swyapi.PgRequest{
-				Token: gateSecrets[conf.Mware.Postgres.c.Pass],
+				Token: conf.Mware.Postgres.c.Pass,
 				User: mwd.Client, Pass: mwd.Secret, DbName: mwd.Namespace,
 			})
 	return err
@@ -39,7 +44,7 @@ func FiniPostgres(ctx context.Context, mwd *MwareDesc) error {
 				Timeout: 120,
 			},
 			&swyapi.PgRequest{
-				Token: gateSecrets[conf.Mware.Postgres.c.Pass],
+				Token: conf.Mware.Postgres.c.Pass,
 				User: mwd.Client, DbName: mwd.Namespace,
 			})
 

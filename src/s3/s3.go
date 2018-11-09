@@ -21,13 +21,15 @@ func verifyAclValue(acl string, acls []string) bool {
 	return false
 }
 
+var adminAccToken string
+
 func s3VerifyAdmin(r *http.Request) error {
 	access_token := r.Header.Get(swys3api.SwyS3_AdminToken)
 
-	if access_token != s3Secrets[conf.Daemon.Token] {
+	if access_token != adminAccToken {
 		if access_token != "" && S3ModeDevel {
 			log.Errorf("Access token mismatch (%s!=%s)",
-				access_token, s3Secrets[conf.Daemon.Token])
+				access_token, adminAccToken)
 		}
 		return fmt.Errorf("X-SwyS3-Token header mismatched or missed")
 	}
@@ -41,7 +43,7 @@ func s3AuthorizeAdmin(ctx context.Context, r *http.Request) (*s3mgo.AccessKey, e
 		return nil, nil
 	}
 
-	if access_token != s3Secrets[conf.Daemon.Token] {
+	if access_token != adminAccToken {
 		return nil, errors.New("Bad admin authorization creds")
 	}
 
