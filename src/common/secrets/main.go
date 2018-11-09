@@ -3,6 +3,7 @@ package xsecret
 import (
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
+	"strings"
 	"os"
 	"fmt"
 	"errors"
@@ -23,6 +24,19 @@ func (fs FileSecrets)Get(name string) (string, error) {
 	return sv, nil
 }
 
+type EnvSecrets struct {
+	pfx	string
+}
+
+func (es EnvSecrets)Get(name string) (string, error) {
+	v := os.Getenv(es.pfx + name)
+	if v == "" {
+		return "", errors.New("No such secret")
+	}
+
+	return v, nil
+}
+
 const secretDir string = ".swysecrets"
 
 func Init(name string) (Store, error) {
@@ -34,6 +48,11 @@ func Init(name string) (Store, error) {
 	path += "/" + secretDir
 	st, err := os.Stat(path)
 	if err != nil {
+		if os.IsNotExist(err) {
+			/* Likely, we will be provided with environment. */
+			return &EnvSecrets{pfx: strings.ToUpper(name) + "_"}, nil
+		}
+
 		return nil, fmt.Errorf("Can't find secrets dir %s: %s", path, err.Error())
 	}
 	if st.Mode() & os.ModePerm != 0700 {
@@ -44,6 +63,11 @@ func Init(name string) (Store, error) {
 	path += "/" + name
 	st, err = os.Stat(path)
 	if err != nil {
+		if os.IsNotExist(err) {
+			/* Likely, we will be provided with environment. */
+			return &EnvSecrets{pfx: strings.ToUpper(name) + "_"}, nil
+		}
+
 		return nil, fmt.Errorf("Can't find secrets file %s: %s", path, err.Error())
 	}
 	if st.Mode() & os.ModePerm != 0600 {
