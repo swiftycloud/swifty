@@ -460,7 +460,7 @@ func (ds Deployments)Get(ctx context.Context, r *http.Request) (xrest.Obj, *xres
 	return &dd, nil
 }
 
-func (_ Deployments)Iterate(ctx context.Context, q url.Values, cb func(context.Context, xrest.Obj) *xrest.ReqErr) *xrest.ReqErr {
+func (ds Deployments)Iterate(ctx context.Context, q url.Values, cb func(context.Context, xrest.Obj) *xrest.ReqErr) *xrest.ReqErr {
 	var err error
 
 	project := q.Get("project")
@@ -480,7 +480,12 @@ func (_ Deployments)Iterate(ctx context.Context, q url.Values, cb func(context.C
 		return cb(ctx, &dep)
 	}
 
-	iter := dbIterAll(ctx, listReq(ctx, project, q["label"]), &dep)
+	labs := q["label"]
+	if ds.auth {
+		labs = append(labs, authLabel)
+	}
+
+	iter := dbIterAll(ctx, listReq(ctx, project, labs), &dep)
 	defer iter.Close()
 
 	for iter.Next(&dep) {
