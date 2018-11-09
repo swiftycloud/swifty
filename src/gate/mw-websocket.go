@@ -26,6 +26,10 @@ func SetupWebSocket(mwd *MwareDesc, p *swyapi.MwareAdd) {
 func InitWebSocket(ctx context.Context, mwd *MwareDesc) (error) {
 	var err error
 
+	if conf.Mware.WS == nil {
+		return errors.New("Not configured")
+	}
+
 	mwd.Secret, err = xh.GenRandId(32)
 	if err != nil {
 		return err
@@ -283,6 +287,10 @@ func wsEventStart(ctx context.Context, fn *FunctionDesc, ed *FnEventDesc) error 
 
 var wsEOps = EventOps {
 	setup: func(ed *FnEventDesc, evt *swyapi.FunctionEvent) error {
+		if conf.Mware.WS == nil {
+			return errors.New("Not enabled")
+		}
+
 		if evt.WS == nil {
 			return errors.New("Field \"websocket\" missing")
 		}

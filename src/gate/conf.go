@@ -201,7 +201,7 @@ type YAMLConfMw struct {
 	Mongo		*YAMLConfMongo		`yaml:"mongo,omitempty"`
 	Postgres	*YAMLConfPostgres	`yaml:"postgres,omitempty"`
 	S3		YAMLConfS3		`yaml:"s3"`
-	WS		YAMLConfWS		`yaml:"websocket"`
+	WS		*YAMLConfWS		`yaml:"websocket,omitempty"`
 }
 
 func (cm *YAMLConfMw)Validate() error {
@@ -226,10 +226,12 @@ func (cm *YAMLConfMw)Validate() error {
 	addIntSysctl("s3_hidden_key_timeout_sec", &cm.S3.HiddenKeyTmo)
 	addStringSysctl("gate_s3api", &cm.S3.API)
 
-	if cm.WS.API == "" {
-		fmt.Printf("'middleware.websocket.api' not set, gate is wsgate\n")
+	if cm.WS != nil {
+		if cm.WS.API == "" {
+			fmt.Printf("'middleware.websocket.api' not set, gate is wsgate\n")
+		}
+		addStringSysctl("gate_ws", &cm.WS.API)
 	}
-	addStringSysctl("gate_ws", &cm.WS.API)
 
 	return nil
 }
