@@ -11,7 +11,7 @@ import (
 
 func rabbitConn() (*rabbithole.Client, error) {
 	addr := conf.Mware.Rabbit.c.AddrP(conf.Mware.Rabbit.AdminPort)
-	return rabbithole.NewClient("http://" + addr, conf.Mware.Rabbit.c.User, gateSecrets[conf.Mware.Rabbit.c.Pass])
+	return rabbithole.NewClient("http://" + addr, conf.Mware.Rabbit.c.User, conf.Mware.Rabbit.c.Pass)
 }
 
 func rabbitErr(resp *http.Response, err error) error {

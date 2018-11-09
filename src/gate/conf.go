@@ -6,6 +6,7 @@ import (
 	"time"
 	"errors"
 	"strconv"
+	"encoding/hex"
 	"swifty/common"
 	"swifty/common/http"
 )
@@ -22,23 +23,51 @@ type YAMLConfWdog struct {
 }
 
 func setupMwareAddr(conf *YAMLConf) error {
-	conf.Mware.Maria.c = xh.ParseXCreds(conf.Mware.Maria.Creds)
-	conf.Mware.Maria.c.Resolve()
+	var err error
 
-	conf.Mware.Rabbit.c = xh.ParseXCreds(conf.Mware.Rabbit.Creds)
-	conf.Mware.Rabbit.c.Resolve()
+	mc := &conf.Mware
 
-	conf.Mware.Mongo.c = xh.ParseXCreds(conf.Mware.Mongo.Creds)
-	conf.Mware.Mongo.c.Resolve()
+	mc.Maria.c = xh.ParseXCreds(mc.Maria.Creds)
+	mc.Maria.c.Resolve()
+	mc.Maria.c.Pass, err = gateSecrets.Get(mc.Maria.c.Pass)
+	if err != nil {
+		return errors.New("mware.maria secret not found")
+	}
 
-	conf.Mware.Postgres.c = xh.ParseXCreds(conf.Mware.Postgres.Creds)
-	conf.Mware.Postgres.c.Resolve()
+	mc.Rabbit.c = xh.ParseXCreds(mc.Rabbit.Creds)
+	mc.Rabbit.c.Resolve()
+	mc.Rabbit.c.Pass, err = gateSecrets.Get(mc.Rabbit.c.Pass)
+	if err != nil {
+		return errors.New("mware.rabbit secret not found")
+	}
 
-	conf.Mware.S3.c = xh.ParseXCreds(conf.Mware.S3.Creds)
-	conf.Mware.S3.c.Resolve()
+	mc.Mongo.c = xh.ParseXCreds(mc.Mongo.Creds)
+	mc.Mongo.c.Resolve()
+	mc.Mongo.c.Pass, err = gateSecrets.Get(mc.Mongo.c.Pass)
+	if err != nil {
+		return errors.New("mware.mongo secret not found")
+	}
 
-	conf.Mware.S3.cn = xh.ParseXCreds(conf.Mware.S3.Notify)
-	conf.Mware.S3.cn.Resolve()
+	mc.Postgres.c = xh.ParseXCreds(mc.Postgres.Creds)
+	mc.Postgres.c.Resolve()
+	mc.Postgres.c.Pass, err = gateSecrets.Get(mc.Postgres.c.Pass)
+	if err != nil  {
+		return errors.New("mware.postgres secret not found")
+	}
+
+	mc.S3.c = xh.ParseXCreds(mc.S3.Creds)
+	mc.S3.c.Resolve()
+	mc.S3.c.Pass, err = gateSecrets.Get(mc.S3.c.Pass)
+	if err != nil {
+		return errors.New("mware.s3 secret not found")
+	}
+
+	mc.S3.cn = xh.ParseXCreds(mc.S3.Notify)
+	mc.S3.cn.Resolve()
+	mc.S3.cn.Pass, err = gateSecrets.Get(mc.S3.cn.Pass)
+	if err != nil {
+		return errors.New("mware.s3.notify secret not found")
+	}
 
 	return nil
 }
@@ -170,6 +199,16 @@ type YAMLConfMw struct {
 func (cm *YAMLConfMw)Validate() error {
 	if cm.SecKey == "" {
 		return errors.New("'middleware.mwseckey' not set")
+	}
+
+	v, err := gateSecrets.Get(cm.SecKey)
+	if err != nil {
+		return errors.New("'middleware.mwseckey' secret not found")
+	}
+
+	gateSecPas, err = hex.DecodeString(v)
+	if err != nil || len(gateSecPas) < 16 {
+		return errors.New("'middleware.mwseckey' format error")
 	}
 
 	if cm.S3.HiddenKeyTmo == 0 {

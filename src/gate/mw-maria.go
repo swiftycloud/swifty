@@ -18,7 +18,7 @@ func mariaConn() (*sql.DB, error) {
 	return sql.Open("mysql",
 			fmt.Sprintf("%s:%s@tcp(%s)/?charset=utf8",
 				conf.Mware.Maria.c.User,
-				gateSecrets[conf.Mware.Maria.c.Pass],
+				conf.Mware.Maria.c.Pass,
 				conf.Mware.Maria.c.Addr()))
 }
 

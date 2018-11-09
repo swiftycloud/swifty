@@ -51,7 +51,7 @@ func s3Call2(rq *xhttp.RestReq, in interface{}, out interface{}) (error, int) {
 	addr := conf.Mware.S3.c.Addr()
 	rq.Address = "http://" + addr + rq.Address
 	rq.Timeout = 120
-	rq.Headers = map[string]string{"X-SwyS3-Token": gateSecrets[conf.Mware.S3.c.Pass]}
+	rq.Headers = map[string]string{"X-SwyS3-Token": conf.Mware.S3.c.Pass}
 
 	resp, err := xhttp.Req(rq, in)
 	if err != nil {

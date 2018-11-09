@@ -8,9 +8,24 @@ import (
 	"errors"
 )
 
+type Store interface {
+	Get(string) (string, error)
+}
+
+type FileSecrets map[string]string
+
+func (fs FileSecrets)Get(name string) (string, error) {
+	sv, ok := fs[name]
+	if !ok {
+		return "", errors.New("No such secret")
+	}
+
+	return sv, nil
+}
+
 const secretDir string = ".swysecrets"
 
-func ReadSecrets(name string) (map[string]string, error) {
+func Init(name string) (Store, error) {
 	path, ok := os.LookupEnv("HOME")
 	if !ok {
 		return nil, errors.New("Can't find HOME dir")
@@ -48,5 +63,5 @@ func ReadSecrets(name string) (map[string]string, error) {
 		return nil, fmt.Errorf("Error parsing secrets %s: %s", path, err.Error())
 	}
 
-	return ret, nil
+	return FileSecrets(ret), nil
 }

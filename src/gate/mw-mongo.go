@@ -14,7 +14,7 @@ func mgoDial() (*mgo.Session, error) {
 		Database:	"admin",
 		Timeout:	60*time.Second,
 		Username:	conf.Mware.Mongo.c.User,
-		Password:	gateSecrets[conf.Mware.Mongo.c.Pass],
+		Password:	conf.Mware.Mongo.c.Pass,
 	}
 
 	return mgo.DialWithInfo(&ifo)

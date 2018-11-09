@@ -3,7 +3,6 @@ package main
 import (
 	"github.com/gorilla/mux"
 
-	"encoding/hex"
 	"net/http"
 	"net/url"
 	"flag"
@@ -21,7 +20,7 @@ import (
 )
 
 var ModeDevel bool
-var gateSecrets map[string]string
+var gateSecrets xsecret.Store
 var gateSecPas []byte
 
 func isLite() bool { return Flavor == "lite" }
@@ -326,7 +325,7 @@ func main() {
 
 	setupLogger(&conf)
 
-	gateSecrets, err = xsecret.ReadSecrets("gate")
+	gateSecrets, err = xsecret.Init("gate")
 	if err != nil {
 		glog.Errorf("Can't read gate secrets: %s", err.Error())
 		return
@@ -335,12 +334,6 @@ func main() {
 	err = setupMwareAddr(&conf)
 	if err != nil {
 		glog.Error("Bad mware configuration: %s", err.Error())
-		return
-	}
-
-	gateSecPas, err = hex.DecodeString(gateSecrets[conf.Mware.SecKey])
-	if err != nil || len(gateSecPas) < 16 {
-		glog.Errorf("Secrets pass should be decodable and at least 16 bytes long")
 		return
 	}
 

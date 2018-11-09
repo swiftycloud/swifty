@@ -498,13 +498,19 @@ func dbConnect() error {
 	var err error
 
 	dbc := xh.ParseXCreds(conf.DB)
+	pwd, err := gateSecrets.Get(dbc.Pass)
+	if err != nil {
+		glog.Errorf("No DB password found in secrets")
+		return err
+	}
 
 	info := mgo.DialInfo{
 		Addrs:		[]string{dbc.Addr()},
 		Database:	DBStateDB,
 		Timeout:	60 * time.Second,
 		Username:	dbc.User,
-		Password:	gateSecrets[dbc.Pass]}
+		Password:	pwd,
+	}
 
 	session, err = mgo.DialWithInfo(&info);
 	if err != nil {
