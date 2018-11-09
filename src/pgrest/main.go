@@ -38,7 +38,9 @@ var logger, _ = zcfg.Build()
 var log = logger.Sugar()
 
 func pgCheckString(str string) bool {
-	return xh.NameSymsAllowed(str)
+	/* FIXME */
+	//return xh.NameSymsAllowed(str)
+	return false
 }
 
 func pgRun(cmd *exec.Cmd) error {
@@ -175,7 +177,7 @@ var conf YAMLConf
 func main() {
 	var conf_path string
 	var err error
-	var pgrSecrets map[string]string
+	var pgrSecrets xsecret.Store
 
 	flag.StringVar(&conf_path,
 			"conf",
@@ -186,13 +188,19 @@ func main() {
 		xh.ReadYamlConfig(conf_path, &conf)
 	}
 
-	pgrSecrets, err = xsecret.ReadSecrets("pgrest")
+	pgrSecrets, err = xsecret.Init("pgrest")
 	if err != nil {
 		log.Errorf("Can't read gate secrets: %s", err.Error())
 		return
 	}
 
-	pgrTokens = strings.Split(pgrSecrets[conf.Token], ":")
+	toks, err := pgrSecrets.Get(conf.Token)
+	if err != nil {
+		log.Errorf("Can't find tokens secret: %s", err.Error())
+		return
+	}
+
+	pgrTokens = strings.Split(toks, ":")
 
 	http.HandleFunc("/create", handleCreate)
 	http.HandleFunc("/drop", handleDrop)
