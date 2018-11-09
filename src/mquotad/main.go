@@ -31,7 +31,7 @@ type YAMLConf struct {
 }
 
 var conf YAMLConf
-var qdSecrets map[string]string
+var qdSecrets xsecret.Store
 const quotaOverflowReq = `
 SELECT * FROM (
 	SELECT 
@@ -110,13 +110,19 @@ func main() {
 
 	log.Debugf("Config: %v", conf)
 
-	qdSecrets, err = xsecret.ReadSecrets("mqd")
+	qdSecrets, err = xsecret.Init("mqd")
 	if err != nil {
 		log.Errorf("Can't read gate secrets: %s", err.Error())
 		return
 	}
 
-	qdb, err := sql.Open("mysql", conf.User + ":" + qdSecrets[conf.Pass] + "@tcp(" + conf.Addr + ")/" + conf.DB)
+	pwd, err := qdSecrets.Get(conf.Pass)
+	if err != nil {
+		log.Errorf("No password found: %s", err.Error())
+		return
+	}
+
+	qdb, err := sql.Open("mysql", conf.User + ":" + pwd + "@tcp(" + conf.Addr + ")/" + conf.DB)
 	if err == nil {
 		err = qdb.Ping()
 	}
