@@ -186,7 +186,7 @@ func k8sGenEnvVar(ctx context.Context, fn *FunctionDesc, wd_port int) []v1.EnvVa
 	}
 
 	for _, s3b := range(fn.S3Buckets) {
-		envs, err := GenBucketKeysS3(ctx, &conf.Mware, &fn.SwoId, s3b)
+		envs, err := s3GenBucketKeys(ctx, &fn.SwoId, s3b)
 		if err != nil {
 			ctxlog(ctx).Errorf("No s3 bucket secret for %s", s3b)
 			continue

@@ -63,18 +63,20 @@ func setupMwareAddr(conf *YAMLConf) error {
 		}
 	}
 
-	mc.S3.c = xh.ParseXCreds(mc.S3.Creds)
-	mc.S3.c.Resolve()
-	mc.S3.c.Pass, err = gateSecrets.Get(mc.S3.c.Pass)
-	if err != nil {
-		return errors.New("mware.s3 secret not found")
-	}
+	if mc.S3 != nil {
+		mc.S3.c = xh.ParseXCreds(mc.S3.Creds)
+		mc.S3.c.Resolve()
+		mc.S3.c.Pass, err = gateSecrets.Get(mc.S3.c.Pass)
+		if err != nil {
+			return errors.New("mware.s3 secret not found")
+		}
 
-	mc.S3.cn = xh.ParseXCreds(mc.S3.Notify)
-	mc.S3.cn.Resolve()
-	mc.S3.cn.Pass, err = gateSecrets.Get(mc.S3.cn.Pass)
-	if err != nil {
-		return errors.New("mware.s3.notify secret not found")
+		mc.S3.cn = xh.ParseXCreds(mc.S3.Notify)
+		mc.S3.cn.Resolve()
+		mc.S3.cn.Pass, err = gateSecrets.Get(mc.S3.cn.Pass)
+		if err != nil {
+			return errors.New("mware.s3.notify secret not found")
+		}
 	}
 
 	return nil
@@ -200,7 +202,7 @@ type YAMLConfMw struct {
 	Maria		*YAMLConfMaria		`yaml:"maria,omitempty"`
 	Mongo		*YAMLConfMongo		`yaml:"mongo,omitempty"`
 	Postgres	*YAMLConfPostgres	`yaml:"postgres,omitempty"`
-	S3		YAMLConfS3		`yaml:"s3"`
+	S3		*YAMLConfS3		`yaml:"s3,omitempty"`
 	WS		*YAMLConfWS		`yaml:"websocket,omitempty"`
 }
 
@@ -219,12 +221,14 @@ func (cm *YAMLConfMw)Validate() error {
 		return errors.New("'middleware.mwseckey' format error")
 	}
 
-	if cm.S3.HiddenKeyTmo == 0 {
-		cm.S3.HiddenKeyTmo = 120
-		fmt.Printf("'middleware.s3.hidden-key-timeout' not set, using default 120sec\n")
+	if cm.S3 != nil {
+		if cm.S3.HiddenKeyTmo == 0 {
+			cm.S3.HiddenKeyTmo = 120
+			fmt.Printf("'middleware.s3.hidden-key-timeout' not set, using default 120sec\n")
+		}
+		addIntSysctl("s3_hidden_key_timeout_sec", &cm.S3.HiddenKeyTmo)
+		addStringSysctl("gate_s3api", &cm.S3.API)
 	}
-	addIntSysctl("s3_hidden_key_timeout_sec", &cm.S3.HiddenKeyTmo)
-	addStringSysctl("gate_s3api", &cm.S3.API)
 
 	if cm.WS != nil {
 		if cm.WS.API == "" {
