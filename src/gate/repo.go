@@ -156,6 +156,23 @@ func (_ Repos)Create(ctx context.Context, p interface{}) (xrest.Obj, *xrest.ReqE
 
 func (rd *RepoDesc)Add(ctx context.Context, p interface{}) *xrest.ReqErr {
 	var acc *AccDesc
+
+	td, err := tendatGet(ctx)
+	if err != nil {
+		return GateErrC(swyapi.GateGenErr)
+	}
+
+	if td.repl != nil && td.repl.Number != 0 {
+		cnr, err := dbRepoCountTen(ctx)
+		if err != nil {
+			return GateErrD(err)
+		}
+
+		if uint32(cnr + 1) > td.repl.Number {
+			return GateErrC(swyapi.GateLimitHit)
+		}
+	}
+
 	params := p.(*swyapi.RepoAdd)
 	if params.AccID != "" {
 		var ac AccDesc

@@ -318,6 +318,11 @@ func dbRepoCount(ctx context.Context) (int, error) {
 	return dbCol(ctx, DBColRepos).Count()
 }
 
+func dbRepoCountTen(ctx context.Context) (int, error) {
+	return dbCol(ctx, DBColRepos).Find(bson.M{"tenant": gctx(ctx).Tenant}).Count()
+}
+
+
 func dbDeployCount(ctx context.Context) (int, error) {
 	return dbCol(ctx, DBColDeploy).Count()
 }
