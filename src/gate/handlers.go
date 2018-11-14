@@ -626,28 +626,7 @@ func handleOneDeployment(ctx context.Context, w http.ResponseWriter, r *http.Req
 func handleAuths(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
 	switch r.Method {
 	case "GET":
-		var dep DeployDesc
-
-		q := r.URL.Query()
-		project := q.Get("project")
-		if project == "" {
-			project = DefaultProject
-		}
-
-		iter := dbIterAll(ctx, listReq(ctx, project, []string{"auth"}), &dep)
-		defer iter.Close()
-
-		var auths []*swyapi.AuthInfo
-		for iter.Next(&dep) {
-			auths = append(auths, &swyapi.AuthInfo{ Id: dep.ObjID.Hex(), Name: dep.SwoId.Name })
-		}
-
-		err := iter.Err()
-		if err != nil {
-			return GateErrD(err)
-		}
-
-		return xrest.Respond(ctx, w, auths)
+		return xrest.HandleGetList(ctx, w, r, Deployments{true})
 
 	case "POST":
 		var aa swyapi.AuthAdd
@@ -666,7 +645,7 @@ func handleAuths(ctx context.Context, w http.ResponseWriter, r *http.Request) *x
 		}
 
 		dd := getDeployDesc(ctxSwoId(ctx, aa.Project, aa.Name))
-		dd.Labels = []string{ "auth" }
+		dd.Labels = []string{ authLabel }
 		cerr := dd.getItemsParams(ctx, &swyapi.DeploySource{
 			Repo:	demoRep.ObjID.Hex() + "/" + conf.DemoRepo.AAASDep,
 		}, map[string]string { "name": aa.Name }, 0)
