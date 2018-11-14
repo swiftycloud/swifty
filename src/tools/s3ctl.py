@@ -1,5 +1,10 @@
 #!/usr/bin/python3
 
+#
+# © 2018 SwiftyCloud OÜ. All rights reserved.
+# Info: info@swifty.cloud
+#
+
 import http.client
 import argparse
 import random
