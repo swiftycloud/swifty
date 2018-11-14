@@ -1,4 +1,10 @@
 #!/usr/local/bin/python3 -u
+
+#
+# © 2018 SwiftyCloud OÜ. All rights reserved.
+# Info: info@swifty.cloud
+#
+
 import os
 import sys
 import socket

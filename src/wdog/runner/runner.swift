@@ -1,3 +1,8 @@
+//
+// © 2018 SwiftyCloud OÜ. All rights reserved.
+// Info: info@swifty.cloud
+//
+
 import Foundation
 import Glibc
 
