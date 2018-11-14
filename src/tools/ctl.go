@@ -121,6 +121,7 @@ func tplan_list(args []string, opts[16]string) {
 		fmt.Printf("%s/%s:\n", p.Id, p.Name)
 		show_fn_limits(p.Fn)
 		show_pkg_limits(p.Pkg)
+		show_repo_limits(p.Repo)
 	}
 }
 
@@ -130,7 +131,8 @@ func tplan_add(args []string, opts[16]string) {
 	l.Name = args[0]
 	l.Fn = parse_fn_limits(opts[0:])
 	l.Pkg = parse_pkg_limits(opts[0:])
-	if l.Fn == nil && l.Pkg == nil {
+	l.Repo = parse_repo_limits(opts[0:])
+	if l.Fn == nil && l.Pkg == nil && l.Repo == nil {
 		fatal(fmt.Errorf("No limits"))
 	}
 	swyclient.Add("plans", http.StatusCreated, &l, &l)
@@ -143,6 +145,7 @@ func tplan_info(args []string, opts[16]string) {
 	fmt.Printf("%s/%s:\n", p.Id, p.Name)
 	show_fn_limits(p.Fn)
 	show_pkg_limits(p.Pkg)
+	show_repo_limits(p.Repo)
 }
 
 func tplan_del(args []string, opts[16]string) {
@@ -158,8 +161,9 @@ func user_limits(args []string, opts [16]string) {
 
 	l.Fn = parse_fn_limits(opts[1:])
 	l.Pkg = parse_pkg_limits(opts[1:])
+	l.Repo = parse_repo_limits(opts[1:])
 
-	if l.Fn != nil || l.Pkg != nil || l.PlanId != "" {
+	if l.Fn != nil || l.Pkg != nil || l.Repo != nil || l.PlanId != "" {
 		l.UId = args[0]
 		swyclient.Mod("users/" + args[0] + "/limits", http.StatusOK, &l)
 	} else {
@@ -169,6 +173,7 @@ func user_limits(args []string, opts [16]string) {
 		}
 		show_fn_limits(l.Fn)
 		show_pkg_limits(l.Pkg)
+		show_repo_limits(l.Repo)
 		fmt.Printf(">>> %s\n", l.UId)
 	}
 }
@@ -238,6 +243,25 @@ func parse_pkg_limits(opts []string) *swyapi.PackagesLimits {
 	return ret
 }
 
+func parse_repo_limits(opts []string) *swyapi.ReposLimits {
+	var ret *swyapi.ReposLimits
+
+	if opts[6] != "" {
+		if ret == nil {
+			ret = &swyapi.ReposLimits{}
+		}
+
+		v, err := strconv.ParseUint(opts[6], 10, 32)
+		if err != nil {
+			fatal(fmt.Errorf("Bad repos number value %s: %s", opts[6], err.Error()))
+		}
+
+		ret.Number = uint32(v)
+	}
+
+	return ret
+}
+
 func show_fn_limits(fl *swyapi.FunctionLimits) {
 	if fl != nil {
 		fmt.Printf("Functions:\n")
@@ -261,6 +285,15 @@ func show_pkg_limits(pkg *swyapi.PackagesLimits) {
 		fmt.Printf("Packages:\n")
 		if pkg.DiskSizeK != 0 {
 			fmt.Printf("DiskSize:              %s\n", formatBytes(pkg.DiskSizeK<<10))
+		}
+	}
+}
+
+func show_repo_limits(repo *swyapi.ReposLimits) {
+	if repo != nil {
+		fmt.Printf("Repos:\n")
+		if repo.Number != 0 {
+			fmt.Printf("Number:                %d\n", repo.Number)
 		}
 	}
 }
@@ -2105,6 +2138,7 @@ func main() {
 	cmdMap[CMD_ULIM].opts.StringVar(&opts[3], "gbs", "", "Maximum number of GBS to consume")
 	cmdMap[CMD_ULIM].opts.StringVar(&opts[4], "bo", "", "Maximum outgoing network bytes")
 	cmdMap[CMD_ULIM].opts.StringVar(&opts[5], "pkgs", "", "Disk size for packages")
+	cmdMap[CMD_ULIM].opts.StringVar(&opts[6], "reps", "", "Maximum number of repos")
 
 	setupCommonCmd(CMD_TL)
 	setupCommonCmd(CMD_TA, "NAME")
@@ -2113,6 +2147,7 @@ func main() {
 	cmdMap[CMD_TA].opts.StringVar(&opts[2], "gbs", "", "Maximum number of GBS to consume")
 	cmdMap[CMD_TA].opts.StringVar(&opts[3], "bo", "", "Maximum outgoing network bytes")
 	cmdMap[CMD_TA].opts.StringVar(&opts[4], "pkgs", "", "Disk size for packages")
+	cmdMap[CMD_TA].opts.StringVar(&opts[5], "reps", "", "Maximum number of repos")
 	setupCommonCmd(CMD_TI, "ID")
 	setupCommonCmd(CMD_TD, "ID")
 

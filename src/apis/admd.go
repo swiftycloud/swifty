@@ -30,4 +30,5 @@ type PlanLimits struct {
 	Name	string			`json:"name"`
 	Fn	*FunctionLimits		`json:"function,omitempty"`
 	Pkg	*PackagesLimits		`json:"packages,omitempty"`
+	Repo	*ReposLimits		`json:"repos,omitempty"`
 }

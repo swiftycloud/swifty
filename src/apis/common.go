@@ -49,11 +49,16 @@ type PackagesLimits struct {
 	DiskSizeK	uint64	`json:"disk_size_kb"` // KB
 }
 
+type ReposLimits struct {
+	Number		uint32	`json:"number"`
+}
+
 type UserLimits struct {
 	UId	string			`json:"-",bson:"uid"`
 	PlanId	string			`json:"planid",bson:"planid"`
 	Fn	*FunctionLimits		`json:"function,omitempty",bson:"function,omitempty"`
 	Pkg	*PackagesLimits		`json:"packages,omitempty",bson:"packages,omitempty"`
+	Repo	*ReposLimits		`json:"repos,omitempty",bson:"repos,omitempty"`
 }
 
 type Package struct {
