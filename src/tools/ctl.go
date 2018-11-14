@@ -181,42 +181,42 @@ func user_limits(args []string, opts [16]string) {
 func parse_fn_limits(opts []string) *swyapi.FunctionLimits {
 	var ret *swyapi.FunctionLimits
 
+	if opts[0] != "" {
+		if ret == nil {
+			ret = &swyapi.FunctionLimits{}
+		}
+		ret.Rate, ret.Burst = parse_rate(opts[0])
+	}
+
 	if opts[1] != "" {
 		if ret == nil {
 			ret = &swyapi.FunctionLimits{}
 		}
-		ret.Rate, ret.Burst = parse_rate(opts[1])
+		v, err := strconv.ParseUint(opts[1], 10, 32)
+		if err != nil {
+			fatal(fmt.Errorf("Bad max-fn value %s: %s", opts[1], err.Error()))
+		}
+		ret.MaxInProj = uint(v)
 	}
 
 	if opts[2] != "" {
 		if ret == nil {
 			ret = &swyapi.FunctionLimits{}
 		}
-		v, err := strconv.ParseUint(opts[2], 10, 32)
+		v, err := strconv.ParseFloat(opts[2], 64)
 		if err != nil {
-			fatal(fmt.Errorf("Bad max-fn value %s: %s", opts[2], err.Error()))
+			fatal(fmt.Errorf("Bad GBS value %s: %s", opts[2], err.Error()))
 		}
-		ret.MaxInProj = uint(v)
+		ret.GBS = v
 	}
 
 	if opts[3] != "" {
 		if ret == nil {
 			ret = &swyapi.FunctionLimits{}
 		}
-		v, err := strconv.ParseFloat(opts[3], 64)
+		v, err := strconv.ParseUint(opts[3], 10, 64)
 		if err != nil {
-			fatal(fmt.Errorf("Bad GBS value %s: %s", opts[3], err.Error()))
-		}
-		ret.GBS = v
-	}
-
-	if opts[4] != "" {
-		if ret == nil {
-			ret = &swyapi.FunctionLimits{}
-		}
-		v, err := strconv.ParseUint(opts[4], 10, 64)
-		if err != nil {
-			fatal(fmt.Errorf("Bad bytes-out value %s: %s", opts[4], err.Error()))
+			fatal(fmt.Errorf("Bad bytes-out value %s: %s", opts[3], err.Error()))
 		}
 		ret.BytesOut = v
 	}
@@ -227,14 +227,14 @@ func parse_fn_limits(opts []string) *swyapi.FunctionLimits {
 func parse_pkg_limits(opts []string) *swyapi.PackagesLimits {
 	var ret *swyapi.PackagesLimits
 
-	if opts[5] != "" {
+	if opts[4] != "" {
 		if ret == nil {
 			ret = &swyapi.PackagesLimits{}
 		}
 
-		v, err := bytefmt.ToBytes(opts[5])
+		v, err := bytefmt.ToBytes(opts[4])
 		if err != nil {
-			fatal(fmt.Errorf("Bad packages limits value %s: %s", opts[5], err.Error()))
+			fatal(fmt.Errorf("Bad packages limits value %s: %s", opts[4], err.Error()))
 		}
 
 		ret.DiskSizeK = v>>10
@@ -246,14 +246,14 @@ func parse_pkg_limits(opts []string) *swyapi.PackagesLimits {
 func parse_repo_limits(opts []string) *swyapi.ReposLimits {
 	var ret *swyapi.ReposLimits
 
-	if opts[6] != "" {
+	if opts[5] != "" {
 		if ret == nil {
 			ret = &swyapi.ReposLimits{}
 		}
 
-		v, err := strconv.ParseUint(opts[6], 10, 32)
+		v, err := strconv.ParseUint(opts[5], 10, 32)
 		if err != nil {
-			fatal(fmt.Errorf("Bad repos number value %s: %s", opts[6], err.Error()))
+			fatal(fmt.Errorf("Bad repos number value %s: %s", opts[5], err.Error()))
 		}
 
 		ret.Number = uint32(v)
