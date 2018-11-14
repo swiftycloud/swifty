@@ -298,8 +298,6 @@ definitions:
     properties:
       enabled:
         type: boolean
-
-
   UserAdd:
     required:
       - uid
@@ -326,6 +324,10 @@ definitions:
         description: Tariff plan ID
       function:
         $ref: '#/definitions/FunctionLimits'
+      packages:
+        $ref: '#/definitions/PackagesLimits'
+      repos:
+        $ref: '#/definitions/ReposLimits'
   PlanLimits:
     properties:
       id:
@@ -336,6 +338,20 @@ definitions:
         description: Tariff plan description
       function:
         $ref: '#/definitions/FunctionLimits'
+      packages:
+        $ref: '#/definitions/PackagesLimits'
+      repos:
+        $ref: '#/definitions/ReposLimits'
+  PackagesLimits:
+    properties:
+      disk_size_kb:
+        type: integer
+        description: Maximum disk size by all packages for all languages
+  ReposLimits:
+    properties:
+      number:
+        type: integer
+        description: Maximum number of repos attached by a user
   FunctionLimits:
     description: Limits for functions invocations
     properties:
