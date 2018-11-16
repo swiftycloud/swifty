@@ -391,7 +391,7 @@ func checkCount(ctx context.Context, id *SwoId) error {
 	}
 
 	if tmd.fnlim != 0 {
-		nr, err := dbFuncCountProj(ctx, id)
+		nr, err := dbFuncCountTen(ctx)
 		if err != nil {
 			return err
 		}

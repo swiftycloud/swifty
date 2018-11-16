@@ -46,7 +46,7 @@ type PgRequest struct {
 type FunctionLimits struct {
 	Rate		uint	`json:"rate,omitempty",bson:"rate,omitempty"`
 	Burst		uint	`json:"burst,omitempty",bson:"burst,omitempty"`
-	MaxInProj	uint	`json:"maxinproj,omitempty",bson:"maxinproj,omitempty"`
+	Max		uint	`json:"max,omitempty",bson:"max,omitempty"`
 	GBS		float64	`json:"gbs,omitempty",bson:"gbs,omitempty"`
 	BytesOut	uint64	`json:"bytesout,omitempty",bson:"bytesout,omitempty"`
 }

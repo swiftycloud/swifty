@@ -361,9 +361,9 @@ definitions:
       burst:
         type: integer
         description: rate-limiter burst value
-      maxinproj:
+        max:
         type: integer
-        description: maximum number of functions in a single project
+        description: maximum number of functions
       gbs:
         type: integer
         description: maximum GBS value per billing period

@@ -368,8 +368,8 @@ func dbFuncCount(ctx context.Context) (int, error) {
 	return dbCol(ctx, DBColFunc).Count()
 }
 
-func dbFuncCountProj(ctx context.Context, id *SwoId) (int, error) {
-	return dbCol(ctx, DBColFunc).Find(bson.M{"tenant": id.Tennant, "project": id.Project}).Count()
+func dbFuncCountTen(ctx context.Context) (int, error) {
+	return dbCol(ctx, DBColFunc).Find(bson.M{"tenant": gctx(ctx).Tenant}).Count()
 }
 
 func dbFuncUpdate(ctx context.Context, q, ch bson.M) (error) {

@@ -201,7 +201,7 @@ func parse_fn_limits(opts []string) *swyapi.FunctionLimits {
 		if err != nil {
 			fatal(fmt.Errorf("Bad max-fn value %s: %s", opts[1], err.Error()))
 		}
-		ret.MaxInProj = uint(v)
+		ret.Max = uint(v)
 	}
 
 	if opts[2] != "" {
@@ -273,8 +273,8 @@ func show_fn_limits(fl *swyapi.FunctionLimits) {
 		if fl.Rate != 0 {
 			fmt.Printf("    Rate:              %d:%d\n", fl.Rate, fl.Burst)
 		}
-		if fl.MaxInProj != 0 {
-			fmt.Printf("    Max in project:    %d\n", fl.MaxInProj)
+		if fl.Max != 0 {
+			fmt.Printf("    Max number:        %d\n", fl.Max)
 		}
 		if fl.GBS != 0 {
 			fmt.Printf("    Max GBS:           %f\n", fl.GBS)
@@ -2139,7 +2139,7 @@ func main() {
 	setupCommonCmd(CMD_ULIM, "UID")
 	cmdMap[CMD_ULIM].opts.StringVar(&opts[0], "plan", "", "Taroff plan ID")
 	cmdMap[CMD_ULIM].opts.StringVar(&opts[1], "rl", "", "Rate (rate[:burst])")
-	cmdMap[CMD_ULIM].opts.StringVar(&opts[2], "fnr", "", "Number of functions (in a project)")
+	cmdMap[CMD_ULIM].opts.StringVar(&opts[2], "fnr", "", "Number of functions")
 	cmdMap[CMD_ULIM].opts.StringVar(&opts[3], "gbs", "", "Maximum number of GBS to consume")
 	cmdMap[CMD_ULIM].opts.StringVar(&opts[4], "bo", "", "Maximum outgoing network bytes")
 	cmdMap[CMD_ULIM].opts.StringVar(&opts[5], "pkgs", "", "Disk size for packages")
@@ -2148,7 +2148,7 @@ func main() {
 	setupCommonCmd(CMD_TL)
 	setupCommonCmd(CMD_TA, "NAME")
 	cmdMap[CMD_TA].opts.StringVar(&opts[0], "rl", "", "Rate (rate[:burst])")
-	cmdMap[CMD_TA].opts.StringVar(&opts[1], "fnr", "", "Number of functions (in a project)")
+	cmdMap[CMD_TA].opts.StringVar(&opts[1], "fnr", "", "Number of functions")
 	cmdMap[CMD_TA].opts.StringVar(&opts[2], "gbs", "", "Maximum number of GBS to consume")
 	cmdMap[CMD_TA].opts.StringVar(&opts[3], "bo", "", "Maximum outgoing network bytes")
 	cmdMap[CMD_TA].opts.StringVar(&opts[4], "pkgs", "", "Disk size for packages")
