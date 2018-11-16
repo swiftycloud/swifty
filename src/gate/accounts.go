@@ -13,7 +13,6 @@ import (
 	"strings"
 	"gopkg.in/mgo.v2/bson"
 	"swifty/common/http"
-	"swifty/common/crypto"
 	"swifty/common/xrest"
 	"swifty/common"
 	"swifty/apis"
@@ -25,7 +24,7 @@ func (ct Secret)value() (string, error) {
 	var err error
 	t := string(ct)
 	if t != "" {
-		t, err = xcrypt.DecryptString(gateSecPas, t)
+		t, err = xh.DecryptString(gateSecPas, t)
 	}
 	return t, err
 }
@@ -38,7 +37,7 @@ func mkSecret(k, v string) (Secret, error) {
 
 		var err error
 
-		v, err = xcrypt.EncryptString(gateSecPas, v)
+		v, err = xh.EncryptString(gateSecPas, v)
 		if err != nil {
 			return "", err
 		}

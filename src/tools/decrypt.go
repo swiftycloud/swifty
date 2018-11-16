@@ -6,7 +6,7 @@
 package main
 
 import (
-	"swifty/common/crypto"
+	"swifty/common"
 	"encoding/hex"
 	"fmt"
 	"os"
@@ -26,7 +26,7 @@ func main() {
 		return
 	}
 
-	dec, err := xcrypt.DecryptString(pass, os.Args[1])
+	dec, err := xh.DecryptString(pass, os.Args[1])
 	if err != nil {
 		fmt.Printf("Error decrypting value: %s\n", err.Error())
 		return
