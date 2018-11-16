@@ -80,9 +80,19 @@ swy-runner: src/wdog/runner/runner.c
 	$(call msg-gen,$@)
 	$(Q) $(CC) -Wall -Werror -O2 -static -o $@ $<
 
+LANGS = python golang swift ruby nodejs
+IMAGES =
+
+define gen-lang
+IMAGES += swifty/$(1)
+swifty/$(1): swy-wdog swy-runner kubectl/docker/wdog/$(1)/Dockerfile
+endef
+
+$(foreach l,$(LANGS),$(eval $(call gen-lang,$l)))
+
 #
 # Docker images
-swifty/python: swy-wdog swy-runner src/wdog/runner/runner.py kubectl/docker/wdog/python/Dockerfile
+swifty/python: src/wdog/runner/runner.py
 	$(call msg-gen,$@)
 	$(Q) $(CP) swy-wdog  kubectl/docker/wdog/python/swy-wdog
 	$(Q) $(CP) swy-runner  kubectl/docker/wdog/python/
@@ -91,7 +101,7 @@ swifty/python: swy-wdog swy-runner src/wdog/runner/runner.py kubectl/docker/wdog
 	$(Q) $(MAKE) -C kubectl/docker/wdog/python all
 .PHONY: swifty/python
 
-swifty/golang: swy-wdog swy-runner src/wdog/runner/runner.go kubectl/docker/wdog/golang/Dockerfile
+swifty/golang: src/wdog/runner/runner.go
 	$(call msg-gen,$@)
 	$(Q) $(CP) swy-wdog  kubectl/docker/wdog/golang/swy-wdog
 	$(Q) $(CP) swy-runner  kubectl/docker/wdog/golang/
@@ -102,7 +112,7 @@ swifty/golang: swy-wdog swy-runner src/wdog/runner/runner.go kubectl/docker/wdog
 	$(Q) $(MAKE) -C kubectl/docker/wdog/golang all
 .PHONY: swifty/golang
 
-swifty/swift: swy-wdog swy-runner src/wdog/runner/runner.swift kubectl/docker/wdog/swift/Dockerfile
+swifty/swift: src/wdog/runner/runner.swift
 	$(call msg-gen,$@)
 	$(Q) $(CP) swy-wdog  kubectl/docker/wdog/swift/swy-wdog
 	$(Q) $(CP) swy-runner  kubectl/docker/wdog/swift/
@@ -110,7 +120,7 @@ swifty/swift: swy-wdog swy-runner src/wdog/runner/runner.swift kubectl/docker/wd
 	$(Q) $(MAKE) -C kubectl/docker/wdog/swift all
 .PHONY: swifty/swift
 
-swifty/nodejs: swy-wdog swy-runner src/wdog/runner/runner.js kubectl/docker/wdog/nodejs/Dockerfile
+swifty/nodejs: src/wdog/runner/runner.js
 	$(call msg-gen,$@)
 	$(Q) $(CP) swy-wdog  kubectl/docker/wdog/nodejs/swy-wdog
 	$(Q) $(CP) swy-runner  kubectl/docker/wdog/nodejs/
@@ -118,7 +128,7 @@ swifty/nodejs: swy-wdog swy-runner src/wdog/runner/runner.js kubectl/docker/wdog
 	$(Q) $(MAKE) -C kubectl/docker/wdog/nodejs all
 .PHONY: swifty/nodejs
 
-swifty/ruby: swy-wdog swy-runner src/wdog/runner/runner.js kubectl/docker/wdog/ruby/Dockerfile
+swifty/ruby: src/wdog/runner/runner.js
 	$(call msg-gen,$@)
 	$(Q) $(CP) swy-wdog kubectl/docker/wdog/ruby/swy-wdog
 	$(Q) $(CP) swy-runner  kubectl/docker/wdog/ruby/
@@ -155,8 +165,9 @@ swifty/s3: swy-s3 kubectl/docker/s3/Dockerfile
 	$(Q) $(CP) swy-s3 kubectl/docker/s3/swy-s3
 	$(Q) $(MAKE) -C kubectl/docker/s3 all
 
-images: swifty/python swifty/golang swifty/swift swifty/nodejs swifty/ruby
+images: $(IMAGES)
 	@true
+
 .PHONY: images
 
 help:
