@@ -9,10 +9,8 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"gopkg.in/yaml.v2"
-	"path/filepath"
 	"crypto/rand"
 	"io/ioutil"
-	"syscall"
 	"os/exec"
 	"strconv"
 	"strings"
@@ -128,43 +126,6 @@ func Exec(exe string, args []string) (bytes.Buffer, bytes.Buffer, error) {
 	return stdout, stderr, nil
 }
 
-func DropDir(dir, subdir string) (string, error) {
-	nn, err := DropDirPrep(dir, subdir)
-	if err != nil {
-		return "", err
-	}
-
-	DropDirComplete(nn)
-	return nn, nil
-}
-
-func DropDirPrep(dir, subdir string) (string, error) {
-	_, err := os.Stat(dir + "/" + subdir)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return "", nil
-		}
-
-		return "", fmt.Errorf("Can't stat %s%s: %s", dir, subdir, err.Error())
-	}
-
-	nname, err := ioutil.TempDir(dir, ".rm")
-	if err != nil {
-		return "", fmt.Errorf("leaking %s: %s", subdir, err.Error())
-	}
-
-	err = os.Rename(dir + "/" + subdir, nname + "/" + strings.Replace(subdir, "/", "_", -1))
-	if err != nil {
-		return "", fmt.Errorf("can't move repo clone: %s", err.Error())
-	}
-
-	return nname, nil
-}
-
-func DropDirComplete(nname string) {
-	go os.RemoveAll(nname)
-}
-
 func Fortune() string {
 	var fort []byte
 	fort, err := exec.Command("fortune", "fortunes").Output()
@@ -178,24 +139,4 @@ func Fortune() string {
 func GetLines(data []byte) []string {
         sout := strings.TrimSpace(string(data))
         return strings.Split(sout, "\n")
-}
-
-func GetDirDU(dir string) (uint64, error) {
-	var size uint64
-
-	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-
-		if path == dir {
-			return nil
-		}
-
-		stat, _ := info.Sys().(*syscall.Stat_t)
-		size += uint64(stat.Blocks << 9)
-		return nil
-	})
-
-	return size, err
 }
