@@ -159,7 +159,7 @@ func (fn *FunctionDesc)toMInfo(ctx context.Context) *swyapi.FunctionMdat {
 	}
 	fid.Cookie = fn.Cookie
 
-	if gctx(ctx).Admin {
+	if gctx(ctx).Admin() {
 		pcs := podsFindAll(ctx, fn.Cookie)
 		if pcs != nil {
 			for _, pc := range pcs {

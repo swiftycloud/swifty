@@ -185,6 +185,13 @@ var (
 		},
 	)
 
+	dbAccViolations = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "swifty_db_access_violations",
+			Help: "Number of errorneous DB updates",
+		},
+	)
+
 	gateCalLat = prometheus.NewHistogram(
 		prometheus.HistogramOpts{
 			Name: "swifty_gate_call_latency",
@@ -301,6 +308,7 @@ func PrometheusInit(ctx context.Context) error {
 	prometheus.MustRegister(limitPullErrs)
 	prometheus.MustRegister(statWrites)
 	prometheus.MustRegister(scaleOverruns)
+	prometheus.MustRegister(dbAccViolations)
 	prometheus.MustRegister(statWriteFails)
 	prometheus.MustRegister(scalers)
 	prometheus.MustRegister(portWaiters)

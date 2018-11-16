@@ -8,9 +8,11 @@ package main
 import (
 	"time"
 	"fmt"
+	"errors"
 	"context"
 	"reflect"
 	"net/http"
+	"runtime/debug"
 	"github.com/gorilla/mux"
 
 	"gopkg.in/mgo.v2"
@@ -20,6 +22,7 @@ import (
 	"swifty/common"
 	"swifty/apis"
 	"swifty/common/xrest"
+	"swifty/common/xratelimit"
 )
 
 const (
@@ -42,6 +45,44 @@ const (
 )
 
 var dbColMap map[reflect.Type]string
+var dbNotAllowed = errors.New("Not allowed")
+var dbStrict bool = true
+var dbwrl *xratelimit.RL
+
+func init() {
+	addBoolSysctl("db_strict_access", &dbStrict)
+	dbwrl = xratelimit.MakeRL(1, 1)
+}
+
+func dbMayModify(ctx context.Context) bool {
+	gx := gctx(ctx)
+	if gx.Role != swyapi.NobodyRole {
+		return true
+	}
+
+	dbAccViolations.Inc()
+	if dbwrl.Get() {
+		glog.Errorf("!!! ALERT: Unauthorized DB modification attempt (strict:%v)\n" +
+				"ctx desc:%s ten:%s role:%s id:%d\n" +
+				"%s\n===============8<====================\n",
+				dbStrict, gx.Desc, gx.Tenant, gx.Role, gx.ReqId,
+				string(debug.Stack()))
+	}
+
+	return !dbStrict
+}
+
+func dbMayInsert(ctx context.Context) bool {
+	return dbMayModify(ctx)
+}
+
+func dbMayRemove(ctx context.Context) bool {
+	return dbMayModify(ctx)
+}
+
+func dbMayUpdate(ctx context.Context) bool {
+	return dbMayModify(ctx)
+}
 
 func init() {
 	dbColMap = make(map[reflect.Type]string)
@@ -116,11 +157,19 @@ func objq(ctx context.Context, o interface{}) (*mgo.Collection, bson.M) {
 }
 
 func dbRemove(ctx context.Context, o interface{}) error {
+	if !dbMayRemove(ctx) {
+		return dbNotAllowed
+	}
+
 	col, q := objq(ctx, o)
 	return col.Remove(q)
 }
 
 func dbInsert(ctx context.Context, o interface{}) error {
+	if !dbMayInsert(ctx) {
+		return dbNotAllowed
+	}
+
 	col, _ := objq(ctx, o)
 	return col.Insert(o)
 }
@@ -139,6 +188,10 @@ func dbFind(ctx context.Context, q bson.M, o interface{}) error {
 }
 
 func dbUpdatePart2(ctx context.Context, o interface{}, q2 bson.M, u bson.M) error {
+	if !dbMayUpdate(ctx) {
+		return dbNotAllowed
+	}
+
 	col, q := objq(ctx, o)
 	for k, v := range q2 {
 		q[k] = v
@@ -147,11 +200,19 @@ func dbUpdatePart2(ctx context.Context, o interface{}, q2 bson.M, u bson.M) erro
 }
 
 func dbUpdatePart(ctx context.Context, o interface{}, u bson.M) error {
+	if !dbMayUpdate(ctx) {
+		return dbNotAllowed
+	}
+
 	col, q := objq(ctx, o)
 	return col.Update(q, bson.M{"$set": u})
 }
 
 func dbUpdateAll(ctx context.Context, o interface{}) error {
+	if !dbMayUpdate(ctx) {
+		return dbNotAllowed
+	}
+
 	col, q := objq(ctx, o)
 	return col.Update(q, o)
 }
@@ -226,7 +287,7 @@ func repoFindForReq(ctx context.Context, r *http.Request, user_action bool) (*Re
 
 	if !user_action {
 		gx := gctx(ctx)
-		if !gx.Admin && rd.SwoId.Tennant != gx.Tenant {
+		if !gx.Admin() && rd.SwoId.Tennant != gx.Tenant {
 			return nil, GateErrM(swyapi.GateNotAvail, "Shared repo")
 		}
 	}
@@ -312,6 +373,10 @@ func dbFuncCountProj(ctx context.Context, id *SwoId) (int, error) {
 }
 
 func dbFuncUpdate(ctx context.Context, q, ch bson.M) (error) {
+	if !dbMayUpdate(ctx) {
+		return dbNotAllowed
+	}
+
 	return dbCol(ctx, DBColFunc).Update(q, ch)
 }
 
@@ -352,6 +417,10 @@ func dbTenStatsGetLatestArch(ctx context.Context, tenant string) (*TenStats, err
 }
 
 func dbTenStatsUpdate(ctx context.Context, tenant string, delta *gmgo.TenStatValues) error {
+	if !dbMayUpdate(ctx) {
+		return dbNotAllowed
+	}
+
 	_, err := dbCol(ctx, DBColTenStats).Upsert(bson.M{"tenant": tenant}, bson.M{
 			"$set": bson.M{"tenant": tenant},
 			"$inc": bson.M{
@@ -376,6 +445,10 @@ func dbTCacheFind(ctx context.Context) (*TenantCache, error) {
 }
 
 func dbTCacheUpdatePackages(ctx context.Context, lang string, pkl []*swyapi.Package) {
+	if !dbMayUpdate(ctx) {
+		return
+	}
+
 	ten := gctx(ctx).Tenant
 	cookie := xh.Cookify(ten)
 	dbCol(ctx, DBColTCache).Upsert(bson.M{"cookie": cookie},
@@ -386,6 +459,10 @@ func dbTCacheUpdatePackages(ctx context.Context, lang string, pkl []*swyapi.Pack
 }
 
 func dbTCacheUpdatePkgDU(ctx context.Context, ten, lang string, du uint64) error {
+	if !dbMayUpdate(ctx) {
+		return dbNotAllowed
+	}
+
 	cookie := xh.Cookify(ten)
 	_, err := dbCol(ctx, DBColTCache).Upsert(bson.M{"cookie": cookie},
 			bson.M{"$set": bson.M{
@@ -396,12 +473,20 @@ func dbTCacheUpdatePkgDU(ctx context.Context, ten, lang string, du uint64) error
 }
 
 func dbTCacheFlushList(ctx context.Context, lang string) {
+	if !dbMayUpdate(ctx) {
+		return
+	}
+
 	ten := gctx(ctx).Tenant
 	cookie := xh.Cookify(ten)
 	dbCol(ctx, DBColTCache).Update(bson.M{"cookie": cookie}, bson.M{"$unset": bson.M{"packages." + lang: ""}})
 }
 
 func dbTCacheFlushAll(ctx context.Context) {
+	if !dbMayRemove(ctx) {
+		return
+	}
+
 	dbCol(ctx, DBColTCache).RemoveAll(bson.M{})
 }
 
@@ -416,6 +501,10 @@ func dbFnStatsGetArch(ctx context.Context, id string, nr int) ([]FnStats, error)
 }
 
 func dbFnStatsUpdate(ctx context.Context, cookie string, delta *gmgo.FnStatValues, lastCall time.Time) error {
+	if !dbMayUpdate(ctx) {
+		return dbNotAllowed
+	}
+
 	_, err := dbCol(ctx, DBColFnStats).Upsert(bson.M{"cookie": cookie}, bson.M{
 			"$set": bson.M{"cookie": cookie},
 			"$inc": bson.M{
@@ -433,6 +522,10 @@ func dbFnStatsUpdate(ctx context.Context, cookie string, delta *gmgo.FnStatValue
 }
 
 func dbFnStatsDrop(ctx context.Context, cookie string, st *FnStats) error {
+	if !dbMayRemove(ctx) {
+		return dbNotAllowed
+	}
+
 	if st.Called != 0 {
 		n := time.Now()
 		st.Dropped = &n
@@ -471,6 +564,10 @@ func logSaveResult(ctx context.Context, cookie, event, stdout, stderr string) {
 }
 
 func logSaveEvent(ctx context.Context, cookie, text string) {
+	if !dbMayUpdate(ctx) {
+		return
+	}
+
 	dbCol(ctx, DBColLogs).Insert(DBLogRec{
 		Cookie:		cookie,
 		Event:		"event",
@@ -490,6 +587,10 @@ func logGetFor(ctx context.Context, cookie string, since *time.Time) ([]DBLogRec
 }
 
 func logRemove(ctx context.Context, fn *FunctionDesc) error {
+	if !dbMayRemove(ctx) {
+		return dbNotAllowed
+	}
+
 	_, err := dbCol(ctx, DBColLogs).RemoveAll(bson.M{"cookie": fn.Cookie})
 	return maybe(err)
 }

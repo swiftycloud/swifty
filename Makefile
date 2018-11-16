@@ -1,48 +1,7 @@
 .PHONY: all .FORCE
 .DEFAULT_GOAL := all
 
-ifeq ($(strip $(V)),)
-        E := @echo
-        Q := @
-else
-        E := @\#
-        Q :=
-endif
-
-export E Q
-
-define msg-gen
-        $(E) "  GEN     " $(1)
-endef
-
-define msg-clean
-        $(E) "  CLEAN   " $(1)
-endef
-
-export msg-gen msg-clean
-
-MAKEFLAGS += --no-print-directory
-export MAKEFLAGS
-
-RM		?= rm -f
-MAKE		?= make
-GIT		?= git
-CP		?= cp -f
-MV		?= mv -f
-GO		?= go
-GO-BUILD-OPTS	?= build
-GOTAGS		?= gotags
-MONGO		?= mongo --quiet localhost:27017
-KUBECTL		?= kubectl
-IPVSADM		?= ipvsadm
-FLAVOR		?= default
-
-LOCAL_SOURCES	?= /home/swifty/local-sources
-VOLUME_DIR	?= /home/swifty-volume
-TEST_REPO	?= test/.repo
-
-export RM MAKE GIT CP GO GO-BUILD-OPTS GOTAGS MONGO KUBECTL IPVSADM
-
+include Makefile.inc
 include Makefile.versions
 
 GITID_FILE	:= .gitid
@@ -105,14 +64,14 @@ go-dbscr-y	+= src/tools/scraper.go
 $(eval $(call gen-gobuild-n,gate))
 $(eval $(call gen-gobuild-n,admd))
 $(eval $(call gen-gobuild-n,s3))
-$(eval $(call gen-gobuild,pgrest))
-$(eval $(call gen-gobuild,mquotad))
+$(eval $(call gen-gobuild-n,wdog))
+#$(eval $(call gen-gobuild,pgrest))
+#$(eval $(call gen-gobuild,mquotad))
 $(eval $(call gen-gobuild-t,ctl))
 $(eval $(call gen-gobuild-t,trace))
 $(eval $(call gen-gobuild-t,s3fsck))
 $(eval $(call gen-gobuild-t,sg))
 $(eval $(call gen-gobuild-t,dbscr))
-$(eval $(call gen-gobuild-n,wdog))
 
 # Default target
 all: $(all-y)
@@ -121,9 +80,19 @@ swy-runner: src/wdog/runner/runner.c
 	$(call msg-gen,$@)
 	$(Q) $(CC) -Wall -Werror -O2 -static -o $@ $<
 
+LANGS = python golang swift ruby nodejs
+IMAGES =
+
+define gen-lang
+IMAGES += swifty/$(1)
+swifty/$(1): swy-wdog swy-runner kubectl/docker/wdog/$(1)/Dockerfile
+endef
+
+$(foreach l,$(LANGS),$(eval $(call gen-lang,$l)))
+
 #
 # Docker images
-swifty/python: swy-wdog swy-runner src/wdog/runner/runner.py kubectl/docker/wdog/python/Dockerfile
+swifty/python: src/wdog/runner/runner.py
 	$(call msg-gen,$@)
 	$(Q) $(CP) swy-wdog  kubectl/docker/wdog/python/swy-wdog
 	$(Q) $(CP) swy-runner  kubectl/docker/wdog/python/
@@ -132,7 +101,7 @@ swifty/python: swy-wdog swy-runner src/wdog/runner/runner.py kubectl/docker/wdog
 	$(Q) $(MAKE) -C kubectl/docker/wdog/python all
 .PHONY: swifty/python
 
-swifty/golang: swy-wdog swy-runner src/wdog/runner/runner.go kubectl/docker/wdog/golang/Dockerfile
+swifty/golang: src/wdog/runner/runner.go
 	$(call msg-gen,$@)
 	$(Q) $(CP) swy-wdog  kubectl/docker/wdog/golang/swy-wdog
 	$(Q) $(CP) swy-runner  kubectl/docker/wdog/golang/
@@ -143,7 +112,7 @@ swifty/golang: swy-wdog swy-runner src/wdog/runner/runner.go kubectl/docker/wdog
 	$(Q) $(MAKE) -C kubectl/docker/wdog/golang all
 .PHONY: swifty/golang
 
-swifty/swift: swy-wdog swy-runner src/wdog/runner/runner.swift kubectl/docker/wdog/swift/Dockerfile
+swifty/swift: src/wdog/runner/runner.swift
 	$(call msg-gen,$@)
 	$(Q) $(CP) swy-wdog  kubectl/docker/wdog/swift/swy-wdog
 	$(Q) $(CP) swy-runner  kubectl/docker/wdog/swift/
@@ -151,7 +120,7 @@ swifty/swift: swy-wdog swy-runner src/wdog/runner/runner.swift kubectl/docker/wd
 	$(Q) $(MAKE) -C kubectl/docker/wdog/swift all
 .PHONY: swifty/swift
 
-swifty/nodejs: swy-wdog swy-runner src/wdog/runner/runner.js kubectl/docker/wdog/nodejs/Dockerfile
+swifty/nodejs: src/wdog/runner/runner.js
 	$(call msg-gen,$@)
 	$(Q) $(CP) swy-wdog  kubectl/docker/wdog/nodejs/swy-wdog
 	$(Q) $(CP) swy-runner  kubectl/docker/wdog/nodejs/
@@ -159,7 +128,7 @@ swifty/nodejs: swy-wdog swy-runner src/wdog/runner/runner.js kubectl/docker/wdog
 	$(Q) $(MAKE) -C kubectl/docker/wdog/nodejs all
 .PHONY: swifty/nodejs
 
-swifty/ruby: swy-wdog swy-runner src/wdog/runner/runner.js kubectl/docker/wdog/ruby/Dockerfile
+swifty/ruby: src/wdog/runner/runner.js
 	$(call msg-gen,$@)
 	$(Q) $(CP) swy-wdog kubectl/docker/wdog/ruby/swy-wdog
 	$(Q) $(CP) swy-runner  kubectl/docker/wdog/ruby/
@@ -196,8 +165,9 @@ swifty/s3: swy-s3 kubectl/docker/s3/Dockerfile
 	$(Q) $(CP) swy-s3 kubectl/docker/s3/swy-s3
 	$(Q) $(MAKE) -C kubectl/docker/s3 all
 
-images: swifty/python swifty/golang swifty/swift swifty/nodejs swifty/ruby
+images: $(IMAGES)
 	@true
+
 .PHONY: images
 
 help:
@@ -208,18 +178,20 @@ help:
 	@echo '    * swy-gate        - Build gate'
 	@echo '    * swy-wdog        - Build watchdog'
 	@echo '    * swy-admd        - Build adm daemon'
-	@echo '    * swy-pgrest      - Build pgrest daemon'
-	@echo '    * swy-mquotad     - Build mquotad daemon'
+#	@echo '    * swy-pgrest      - Build pgrest daemon'
+#	@echo '    * swy-mquotad     - Build mquotad daemon'
 	@echo '    * swy-wdog        - Build golang daemon'
 	@echo '    * swy-s3          - Build s3 daemon'
 	@echo '    * swyctl          - Build gate cli'
 	@echo '    * swytrace        - Build gate eq tracing tool'
 	@echo '    * swys3fsck       - Build s3 databaase integrity checker'
 	@echo '    * swysg           - Build secrets generator cli'
+	@echo '    * swydbscr        - Build DB scraper tool'
 	@echo '      swifty/python   - Build swifty/python docker image'
 	@echo '      swifty/golang   - Build swifty/golang docker image'
 	@echo '      swifty/swift    - Build swifty/swift docker image'
 	@echo '      swifty/nodejs   - Build swifty/nodejs docker image'
+	@echo '      swifty/ruby     - Build swifty/ruby docker image'
 	@echo '      rsclean         - Cleanup resources'
 	@echo '      clean-db-swifty - Cleanup swifty mongo collections'
 	@echo '      clean-db-s3     - Cleanup s3 mongo collections'

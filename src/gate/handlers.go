@@ -38,7 +38,7 @@ func handleCall(w http.ResponseWriter, r *http.Request) {
 
 	sopq := statsStart()
 
-	ctx, done := mkContext2("::call", false)
+	ctx, done := mkContext2("::call", swyapi.NobodyRole)
 	defer done(ctx)
 
 	uid := mux.Vars(r)["urlid"]
@@ -849,7 +849,7 @@ func handleWebSocketClient(w http.ResponseWriter, r *http.Request) {
 	ws := mux.Vars(r)["ws"]
 	var wsmw MwareDesc
 
-	ctx, done := mkContext2("::ws", false)
+	ctx, done := mkContext2("::ws", swyapi.NobodyRole)
 	err := dbFind(ctx, bson.M{"cookie": ws, "mwaretype": "websocket", "state": DBMwareStateRdy}, &wsmw)
 	if err != nil {
 		done(ctx)
@@ -895,7 +895,7 @@ func handleWebSocketClient(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleWebSocketsMw(w http.ResponseWriter, r *http.Request) {
-	ctx, done := mkContext2("::ws", false)
+	ctx, done := mkContext2("::ws", swyapi.UserRole)
 	defer done(ctx)
 
 	var wsmw MwareDesc
@@ -926,14 +926,14 @@ func handleWebSocketsMw(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleSysctls(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
-	if !gctx(ctx).Admin {
+	if !gctx(ctx).Admin() {
 		return GateErrC(swyapi.GateNotAvail)
 	}
 	return xrest.HandleMany(ctx, w, r, Sysctls{}, nil)
 }
 
 func handleSysctl(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
-	if !gctx(ctx).Admin {
+	if !gctx(ctx).Admin() {
 		return GateErrC(swyapi.GateNotAvail)
 	}
 	var upd string

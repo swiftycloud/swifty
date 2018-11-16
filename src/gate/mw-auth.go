@@ -15,7 +15,6 @@ import (
 	"swifty/common"
 	"swifty/apis"
 	"net/http"
-	"swifty/common/crypto"
 	"crypto"
 	_ "crypto/sha256"
 	"crypto/hmac"
@@ -51,7 +50,7 @@ func authCtxGet(ctx context.Context, id SwoId, ac string) (*AuthCtx, error) {
 	}
 
 	if item.MwareType == "authjwt" {
-		key, err := xcrypt.DecryptString(gateSecPas, item.Secret)
+		key, err := xh.DecryptString(gateSecPas, item.Secret)
 		if err != nil {
 			return nil, err
 		}

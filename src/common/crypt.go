@@ -3,7 +3,7 @@
  * Info: info@swifty.cloud
  */
 
-package xcrypt
+package xh
 
 import (
 	"bytes"

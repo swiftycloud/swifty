@@ -10,6 +10,7 @@ const (
 	UserRole	string	= "swifty.owner"
 	UIRole		string	= "swifty.ui"
 	MonitorRole	string	= "swifty.monitor"
+	NobodyRole	string	= "swifty.nobody"
 )
 
 type LangInfo struct {

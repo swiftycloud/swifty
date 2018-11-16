@@ -14,7 +14,7 @@ import (
 	"crypto/rand"
 	"fmt"
 
-	"swifty/common/crypto"
+	"swifty/common"
 	"swifty/s3/mgo"
 )
 
@@ -123,7 +123,7 @@ func genNewAccessKey(ctx context.Context, namespace, bname string, lifetime uint
 		goto out_2
 	}
 
-	akey.AccessKeySecret, err = xcrypt.EncryptString(s3SecKey, akey.AccessKeySecret)
+	akey.AccessKeySecret, err = xh.EncryptString(s3SecKey, akey.AccessKeySecret)
 	if err != nil {
 		goto out_2
 	}
@@ -158,7 +158,7 @@ func FindBuckets(ctx context.Context) ([]s3mgo.Bucket, error) {
 }
 
 func s3DecryptAccessKeySecret(akey *s3mgo.AccessKey) string {
-	sec, err := xcrypt.DecryptString(s3SecKey, akey.AccessKeySecret)
+	sec, err := xh.DecryptString(s3SecKey, akey.AccessKeySecret)
 	if err != nil {
 		return ""
 	}
