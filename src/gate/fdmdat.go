@@ -69,7 +69,7 @@ func memdGetCond(cookie string) *FnMemData {
 
 func setupLimits(ten string, td *TenantMemData, ul *swyapi.UserLimits, off *TenStats) {
 	if ul.Fn != nil {
-		td.fnlim = ul.Fn.MaxInProj
+		td.fnlim = ul.Fn.Max
 
 		/*
 		 * Some explanation about limiting. The GBS(RunCost) and BytesOut are

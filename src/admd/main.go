@@ -677,8 +677,8 @@ func handleSetLimits(w http.ResponseWriter, r *http.Request, uid string, td *xks
 					params.Fn.Burst = plim.Fn.Burst
 				}
 
-				if params.Fn.MaxInProj == 0 {
-					params.Fn.MaxInProj = plim.Fn.MaxInProj
+				if params.Fn.Max == 0 {
+					params.Fn.Max = plim.Fn.Max
 				}
 
 				if params.Fn.GBS == 0 {
