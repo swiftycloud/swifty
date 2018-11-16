@@ -64,14 +64,14 @@ go-dbscr-y	+= src/tools/scraper.go
 $(eval $(call gen-gobuild-n,gate))
 $(eval $(call gen-gobuild-n,admd))
 $(eval $(call gen-gobuild-n,s3))
-$(eval $(call gen-gobuild,pgrest))
-$(eval $(call gen-gobuild,mquotad))
+$(eval $(call gen-gobuild-n,wdog))
+#$(eval $(call gen-gobuild,pgrest))
+#$(eval $(call gen-gobuild,mquotad))
 $(eval $(call gen-gobuild-t,ctl))
 $(eval $(call gen-gobuild-t,trace))
 $(eval $(call gen-gobuild-t,s3fsck))
 $(eval $(call gen-gobuild-t,sg))
 $(eval $(call gen-gobuild-t,dbscr))
-$(eval $(call gen-gobuild-n,wdog))
 
 # Default target
 all: $(all-y)
