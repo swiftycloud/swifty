@@ -9,6 +9,7 @@ import (
 	"context"
 	"strconv"
 	"sync/atomic"
+	"swifty/apis"
 	"gopkg.in/mgo.v2"
 )
 
@@ -16,7 +17,7 @@ type gateContext struct {
 	context.Context
 	Desc	string
 	Tenant	string
-	Admin	bool
+	Role	string
 	ReqId	uint64
 	S	*mgo.Session
 }
@@ -27,12 +28,12 @@ func init() {
 	addRoSysctl("gate_req_rover", func() string { return strconv.FormatUint(reqIds, 10) } )
 }
 
-func mkContext3(desc, tenant string, admin bool) (context.Context, func(context.Context)) {
+func mkContext3(desc, tenant, role string) (context.Context, func(context.Context)) {
 	gatectx := &gateContext{
 		context.Background(),
 		desc,
 		tenant,
-		admin,
+		role,
 		atomic.AddUint64(&reqIds, 1),
 		session.Copy(),
 	}
@@ -42,12 +43,12 @@ func mkContext3(desc, tenant string, admin bool) (context.Context, func(context.
 	return gatectx, func(ctx context.Context) { gctx(ctx).S.Close() }
 }
 
-func mkContext2(desc string, admin bool) (context.Context, func(context.Context)) {
-	return mkContext3(desc, "", admin)
+func mkContext2(desc string, role string) (context.Context, func(context.Context)) {
+	return mkContext3(desc, "", role)
 }
 
 func mkContext(desc string) (context.Context, func(context.Context)) {
-	return mkContext2(desc, true) /* Internal contexts are admin always! */
+	return mkContext2(desc, swyapi.AdminRole) /* Internal contexts are admin always! */
 }
 
 func gctx(ctx context.Context) *gateContext {
@@ -62,4 +63,8 @@ func (gx *gateContext)tpush(tenant string) string {
 
 func (gx *gateContext)tpop(tenant string) {
 	gx.Tenant = tenant
+}
+
+func (gx *gateContext)Admin() bool {
+	return gx.Role == swyapi.AdminRole
 }

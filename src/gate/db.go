@@ -226,7 +226,7 @@ func repoFindForReq(ctx context.Context, r *http.Request, user_action bool) (*Re
 
 	if !user_action {
 		gx := gctx(ctx)
-		if !gx.Admin && rd.SwoId.Tennant != gx.Tenant {
+		if !gx.Admin() && rd.SwoId.Tennant != gx.Tenant {
 			return nil, GateErrM(swyapi.GateNotAvail, "Shared repo")
 		}
 	}

@@ -125,46 +125,52 @@ func reqPeriods(q url.Values) int {
 	return periods
 }
 
-func makeContextFor(r *http.Request, tenant string, admin bool) (context.Context, func(context.Context)) {
-	if admin {
+func makeContextFor(r *http.Request, tenant, role string) (context.Context, func(context.Context)) {
+	if role == swyapi.AdminRole {
+		/*
+		 * Setting X-Relay-Tennant means that it's an admin
+		 * coming to modify the user's setup. In this case we
+		 * need the swifty.admin role. Otherwise it's the
+		 * swifty.owner guy that can only work on his tennant.
+		 */
+
 		rten := r.Header.Get("X-Relay-Tennant")
 		if rten != "" {
 			tenant = rten
 		}
 	}
 
-	return mkContext3("::r", tenant, admin)
+	return mkContext3("::r", tenant, role)
 }
 
-func tryKeystoneAuth(token string) (string, bool, int) {
+func tryKeystoneAuth(token string) (string, string, int) {
 	td, code := xkst.KeystoneGetTokenData(conf.Keystone.Addr, token)
 	if code != 0 {
-		return "", false, code
+		return "", "", code
 	}
+
+	var role string
 
 	/*
-	 * Setting X-Relay-Tennant means that it's an admin
-	 * coming to modify the user's setup. In this case we
-	 * need the swifty.admin role. Otherwise it's the
-	 * swifty.owner guy that can only work on his tennant.
+	 * Find the most powerful role the current client has.
+	 * All the checks in gate give admin the same rights
+	 * as to regular user PLUS more.
 	 */
-
-	admin := false
-	user := false
-	for _, role := range td.Roles {
-		if role.Name == swyapi.AdminRole {
-			admin = true
+	for _, r := range td.Roles {
+		if r.Name == swyapi.AdminRole {
+			role = r.Name
+			break
 		}
-		if role.Name == swyapi.UserRole {
-			user = true
+		if r.Name == swyapi.UserRole {
+			role = r.Name
 		}
 	}
 
-	if !admin && !user {
-		return "", false, http.StatusForbidden
+	if role == "" {
+		return "", "", http.StatusForbidden
 	}
 
-	return td.Project.Name, admin, 0
+	return td.Project.Name, role, 0
 }
 
 func getReqContext(w http.ResponseWriter, r *http.Request) (context.Context, func(context.Context)) {
@@ -174,13 +180,13 @@ func getReqContext(w http.ResponseWriter, r *http.Request) (context.Context, fun
 		return nil, nil
 	}
 
-	tenant, admin, code := tryKeystoneAuth(token)
+	tenant, role, code := tryKeystoneAuth(token)
 	if tenant == "" {
 		http.Error(w, "Keystone authentication error", code)
 		return nil, nil
 	}
 
-	return makeContextFor(r, tenant, admin)
+	return makeContextFor(r, tenant, role)
 }
 
 func genReqHandler(cb gateGenReq) http.Handler {
