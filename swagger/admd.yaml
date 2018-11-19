@@ -73,6 +73,8 @@ paths:
           description: Need to authenticate
         '403':
           description: Bad auth token
+        '409':
+          description: User already exists
   '/users/{uid}':
     parameters:
       - in: path
