@@ -76,7 +76,17 @@ func user_list(args []string, opts [16]string) {
 
 func user_add(args []string, opts [16]string) {
 	var ui swyapi.UserInfo
-	swyclient.Add("users", http.StatusCreated, &swyapi.AddUser{UId: args[0], Pass: opts[1], Name: opts[0]}, &ui)
+
+	ua := &swyapi.AddUser{UId: args[0], Pass: opts[1], Name: opts[0]}
+	if opts[2] != "" {
+		if opts[2][0] == ':' {
+			ua.PlanId = opts[2][1:]
+		} else {
+			ua.PlanNm = opts[2]
+		}
+	}
+
+	swyclient.Add("users", http.StatusCreated, ua, &ui)
 	fmt.Printf("%s user created\n", ui.ID)
 }
 
@@ -2130,6 +2140,7 @@ func main() {
 	setupCommonCmd(CMD_UA, "UID")
 	cmdMap[CMD_UA].opts.StringVar(&opts[0], "name", "", "User name")
 	cmdMap[CMD_UA].opts.StringVar(&opts[1], "pass", "", "User password")
+	cmdMap[CMD_UA].opts.StringVar(&opts[2], "plan", "", "User plan ID/Name")
 	setupCommonCmd(CMD_UD, "UID")
 	setupCommonCmd(CMD_UPASS, "UID")
 	cmdMap[CMD_UPASS].opts.StringVar(&opts[0], "pass", "", "New password")

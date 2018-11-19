@@ -531,16 +531,29 @@ func handleAddUser(w http.ResponseWriter, r *http.Request, td *xkst.KeystoneToke
 	log.Debugf("Add user %v", params)
 	code = http.StatusBadRequest
 
-	if params.PlanId != "" {
-		if !bson.IsObjectIdHex(params.PlanId) {
-			err = errors.New("Bad plan ID value")
-			goto out
-		}
-
+	if params.PlanId != "" || params.PlanNm != "" {
 		var plim *PlanLimits
-		plim, err = dbGetPlanLimits(ses, bson.ObjectIdHex(params.PlanId))
-		if err != nil {
-			goto out
+
+		if params.PlanId != "" {
+			if !bson.IsObjectIdHex(params.PlanId) {
+				err = errors.New("Bad plan ID value")
+				goto out
+			}
+
+			plim, err = dbGetPlanLimits(ses, bson.ObjectIdHex(params.PlanId))
+			if err != nil {
+				goto out
+			}
+
+			if params.PlanNm != "" && plim.Name != params.PlanNm {
+				err = errors.New("Plang name mismatch")
+				goto out
+			}
+		} else {
+			plim, err = dbGetPlanLimitsByName(ses, params.PlanNm)
+			if err != nil {
+				goto out
+			}
 		}
 
 		err = dbSetUserLimits(ses, &conf, &swyapi.UserLimits {

@@ -28,6 +28,7 @@ type AddUser struct {
 	Pass	string		`json:"pass"`
 	Name	string		`json:"name"`
 	PlanId	string		`json:"planid"`
+	PlanNm	string		`json:"plan_name"`
 }
 
 type PlanLimits struct {

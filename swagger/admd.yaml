@@ -317,6 +317,12 @@ definitions:
         description: >-
           ID of a tariff plan. If set, user limits will be set creation-time
           into tariff values.
+      plan_name:
+        type: string
+        description: >-
+          Name of a tariff plan. If set, user limits will be set creation-time
+          into tariff values. The planid value takes preference over this when
+          both are set
   UserLimits:
     properties:
       planid:
