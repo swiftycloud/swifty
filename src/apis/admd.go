@@ -32,10 +32,10 @@ type AddUser struct {
 }
 
 type PlanLimits struct {
-	Id	string			`json:"id,omitempty"`
-	Name	string			`json:"name"`
-	Descr	string			`json:"description,omitempty"`
-	Fn	*FunctionLimits		`json:"function,omitempty"`
-	Pkg	*PackagesLimits		`json:"packages,omitempty"`
-	Repo	*ReposLimits		`json:"repos,omitempty"`
+	Id	string			`json:"id,omitempty",yaml:"-"`
+	Name	string			`json:"name",yaml:"name"`
+	Descr	string			`json:"description,omitempty",yaml:"description,omitempty"`
+	Fn	*FunctionLimits		`json:"function,omitempty",yaml:"function,omitempty"`
+	Pkg	*PackagesLimits		`json:"packages,omitempty",yaml:"packages,omitempty"`
+	Repo	*ReposLimits		`json:"repos,omitempty",yaml:"repos,omitempty"`
 }

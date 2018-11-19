@@ -7,6 +7,7 @@ package main
 
 import (
 	"code.cloudfoundry.org/bytefmt"
+	"gopkg.in/yaml.v2"
 	"encoding/base64"
 	"io/ioutil"
 	"net/http"
@@ -140,16 +141,25 @@ func tplan_list(args []string, opts[16]string) {
 	}
 }
 
+func parse_limits_file(fname string, l *swyapi.PlanLimits) {
+	yamlFile, err := ioutil.ReadFile(fname)
+	if err != nil {
+		fatal(err)
+	}
+	err = yaml.Unmarshal(yamlFile, l)
+	if err != nil {
+		fatal(err)
+	}
+}
+
 func tplan_add(args []string, opts[16]string) {
 	var l swyapi.PlanLimits
 
+	parse_limits_file(args[1], &l)
+
+	l.Id = ""
 	l.Name = args[0]
-	l.Fn = parse_fn_limits(opts[0:])
-	l.Pkg = parse_pkg_limits(opts[0:])
-	l.Repo = parse_repo_limits(opts[0:])
-	if l.Fn == nil && l.Pkg == nil && l.Repo == nil {
-		fatal(fmt.Errorf("No limits"))
-	}
+
 	swyclient.Add("plans", http.StatusCreated, &l, &l)
 	fmt.Printf("%s plan created\n", l.Id)
 }
@@ -2157,13 +2167,7 @@ func main() {
 	cmdMap[CMD_ULIM].opts.StringVar(&opts[6], "reps", "", "Maximum number of repos")
 
 	setupCommonCmd(CMD_TL)
-	setupCommonCmd(CMD_TA, "NAME")
-	cmdMap[CMD_TA].opts.StringVar(&opts[0], "rl", "", "Rate (rate[:burst])")
-	cmdMap[CMD_TA].opts.StringVar(&opts[1], "fnr", "", "Number of functions")
-	cmdMap[CMD_TA].opts.StringVar(&opts[2], "gbs", "", "Maximum number of GBS to consume")
-	cmdMap[CMD_TA].opts.StringVar(&opts[3], "bo", "", "Maximum outgoing network bytes")
-	cmdMap[CMD_TA].opts.StringVar(&opts[4], "pkgs", "", "Disk size for packages")
-	cmdMap[CMD_TA].opts.StringVar(&opts[5], "reps", "", "Maximum number of repos")
+	setupCommonCmd(CMD_TA, "NAME", "FILE")
 	setupCommonCmd(CMD_TI, "ID")
 	setupCommonCmd(CMD_TD, "ID")
 

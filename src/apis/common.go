@@ -44,19 +44,19 @@ type PgRequest struct {
 }
 
 type FunctionLimits struct {
-	Rate		uint	`json:"rate,omitempty",bson:"rate,omitempty"`
-	Burst		uint	`json:"burst,omitempty",bson:"burst,omitempty"`
-	Max		uint	`json:"max,omitempty",bson:"max,omitempty"`
-	GBS		float64	`json:"gbs,omitempty",bson:"gbs,omitempty"`
-	BytesOut	uint64	`json:"bytesout,omitempty",bson:"bytesout,omitempty"`
+	Rate		uint	`json:"rate,omitempty",yaml:"rate,omitempty"`
+	Burst		uint	`json:"burst,omitempty",yaml:"burst,omitempty"`
+	Max		uint	`json:"max,omitempty",yaml:"max,omitempty"`
+	GBS		float64	`json:"gbs,omitempty",yaml:"gbs,omitempty"`
+	BytesOut	uint64	`json:"bytesout,omitempty",yaml:"bytesout,omitempty"`
 }
 
 type PackagesLimits struct {
-	DiskSizeK	uint64	`json:"disk_size_kb"` // KB
+	DiskSizeK	uint64	`json:"disk_size_kb",yaml:"disk_size_kb"` // KB
 }
 
 type ReposLimits struct {
-	Number		uint32	`json:"number"`
+	Number		uint32	`json:"number",yaml:"number"`
 }
 
 type UserLimits struct {
