@@ -814,7 +814,7 @@ func handleTenantStats(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	switch sub {
 	case "calls":
 		resp, cerr = getCallStats(ctx, periods)
-	case "wmare":
+	case "mware":
 		resp, cerr = getMwareStats(ctx)
 	case "s3":
 		resp, cerr = getS3Stats(ctx)

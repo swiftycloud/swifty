@@ -342,6 +342,25 @@ func dateOnly(tm string) string {
 }
 
 func show_stats(args []string, opts [16]string) {
+	switch opts[1] {
+	default:
+		show_all_stats(args, opts)
+	case "fn":
+		var st []swyapi.TenantStatsFn
+		swyclient.Get("stats/calls", http.StatusOK, &st)
+		show_fn_stats(st)
+	case "mw":
+		var st map[string]*swyapi.TenantStatsMware
+		swyclient.Get("stats/mware", http.StatusOK, &st)
+		show_mw_stats(st)
+	case "s3":
+		var st swyapi.S3NsStats
+		swyclient.Get("stats/s3", http.StatusOK, &st)
+		show_s3_stats(&st)
+	}
+}
+
+func show_all_stats(args []string, opts[16]string) {
 	var st swyapi.TenantStatsResp
 
 	ua := []string{}
@@ -350,28 +369,38 @@ func show_stats(args []string, opts [16]string) {
 	}
 
 	swyclient.Get(url("stats", ua), http.StatusOK, &st)
+	show_fn_stats(st.Stats)
+	show_mw_stats(st.Mware)
+	show_s3_stats(st.S3)
+}
+
+func show_fn_stats(sts []swyapi.TenantStatsFn) {
 
 	fmt.Printf("*********** Calls ***********\n")
-	for _, s := range(st.Stats) {
+	for _, s := range(sts) {
 		fmt.Printf("---\n%s ... %s\n", dateOnly(s.From), dateOnly(s.Till))
 		fmt.Printf("Called:           %d\n", s.Called)
 		fmt.Printf("GBS:              %f\n", s.GBS)
 		fmt.Printf("Bytes sent:       %s\n", formatBytes(s.BytesOut))
 	}
+}
 
+func show_mw_stats(sts map[string]*swyapi.TenantStatsMware) {
 	fmt.Printf("*********** Mware ***********\n")
-	for mt, st := range(st.Mware) {
+	for mt, st := range(sts) {
 		fmt.Printf("* %s:\n", mt)
 		fmt.Printf("  Count:        %d\n", st.Count)
 		if st.DU != nil {
 			fmt.Printf("  Disk usage:   %s\n", formatBytes(*st.DU << 10))
 		}
 	}
+}
 
-	if st.S3 != nil {
+func show_s3_stats(sts *swyapi.S3NsStats) {
+	if sts != nil {
 		fmt.Printf("*********** S3 **************\n")
-		fmt.Printf("  Objects:        %d\n", st.S3.CntObjects)
-		fmt.Printf("    Space:        %s\n", formatBytes(uint64(st.S3.CntBytes)))
+		fmt.Printf("  Objects:        %d\n", sts.CntObjects)
+		fmt.Printf("    Space:        %s\n", formatBytes(uint64(sts.CntBytes)))
 	}
 }
 
@@ -2045,6 +2074,7 @@ func main() {
 
 	setupCommonCmd(CMD_STATS)
 	cmdMap[CMD_STATS].opts.StringVar(&opts[0], "p", "0", "Periods to report")
+	cmdMap[CMD_STATS].opts.StringVar(&opts[1], "t", "", "Which stats to show")
 
 	setupCommonCmd(CMD_PS)
 
