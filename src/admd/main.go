@@ -154,6 +154,8 @@ func handlePlan(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
 		handlePlanInfo(w, r, p_id, td)
+	case "PUT":
+		handlePlanUpdate(w, r, p_id, td)
 	case "DELETE":
 		handleDelPlan(w, r, p_id, td)
 	}
@@ -251,6 +253,50 @@ func handlePlanInfo(w http.ResponseWriter, r *http.Request, pid bson.ObjectId, t
 
 	code := http.StatusInternalServerError
 	pl, err = dbGetPlanLimits(ses, pid)
+	if err != nil {
+		goto out
+	}
+
+	err = xhttp.Respond(w, pl.toInfo())
+	if err != nil {
+		goto out
+	}
+
+	return
+
+out:
+	http.Error(w, err.Error(), code)
+}
+
+func handlePlanUpdate(w http.ResponseWriter, r *http.Request, pid bson.ObjectId, td *xkst.KeystoneTokenData) {
+	var params swyapi.PlanLimits
+	var pl *PlanLimits
+	var err error
+
+	ses := session.Copy()
+	defer ses.Close()
+
+	code := http.StatusBadRequest
+	err = xhttp.RReq(r, &params)
+	if err != nil {
+		goto out
+	}
+
+	code = http.StatusInternalServerError
+	pl, err = dbGetPlanLimits(ses, pid)
+	if err != nil {
+		goto out
+	}
+
+	if params.Descr != "" {
+		pl.Descr = params.Descr
+	}
+
+	mergeFnLimits(&pl.Fn, params.Fn)
+	mergePkgLimits(&pl.Pkg, params.Pkg)
+	mergeRepoLimits(&pl.Repo, params.Repo)
+
+	err = dbSetPlanLimits(ses, pl)
 	if err != nil {
 		goto out
 	}
@@ -651,6 +697,67 @@ out:
 	http.Error(w, err.Error(), code)
 }
 
+func mergeFnLimits(into_p **swyapi.FunctionLimits, from *swyapi.FunctionLimits) {
+	if from == nil {
+		return
+	}
+
+	into := *into_p
+	if into == nil {
+		*into_p = from
+		return
+	}
+
+	if into.Rate == 0 {
+		into.Rate = from.Rate
+		into.Burst = from.Burst
+	}
+
+	if into.Max == 0 {
+		into.Max = from.Max
+	}
+
+	if into.GBS == 0 {
+		into.GBS = from.GBS
+	}
+
+	if into.BytesOut == 0 {
+		into.BytesOut = from.BytesOut
+	}
+}
+
+func mergePkgLimits(into_p **swyapi.PackagesLimits, from *swyapi.PackagesLimits) {
+	if from == nil {
+		return
+	}
+
+	into := *into_p
+	if into == nil {
+		*into_p = from
+		return
+	}
+
+	if into.DiskSizeK == 0 {
+		into.DiskSizeK = from.DiskSizeK
+	}
+}
+
+func mergeRepoLimits(into_p **swyapi.ReposLimits, from *swyapi.ReposLimits) {
+	if from == nil {
+		return
+	}
+
+	into := *into_p
+	if into == nil {
+		*into_p = from
+		return
+	}
+
+	if into.Number == 0 {
+		into.Number = from.Number
+	}
+}
+
 func handleSetLimits(w http.ResponseWriter, r *http.Request, uid string, td *xkst.KeystoneTokenData) {
 	var params swyapi.UserLimits
 	var rui *swyapi.UserInfo
@@ -684,48 +791,9 @@ func handleSetLimits(w http.ResponseWriter, r *http.Request, uid string, td *xks
 		}
 
 		/* Set nil params' limits to plans' ones */
-		if plim.Fn != nil {
-			if params.Fn == nil {
-				params.Fn = plim.Fn
-			} else {
-				if params.Fn.Rate == 0 {
-					params.Fn.Rate = plim.Fn.Rate
-					params.Fn.Burst = plim.Fn.Burst
-				}
-
-				if params.Fn.Max == 0 {
-					params.Fn.Max = plim.Fn.Max
-				}
-
-				if params.Fn.GBS == 0 {
-					params.Fn.GBS = plim.Fn.GBS
-				}
-
-				if params.Fn.BytesOut == 0 {
-					params.Fn.BytesOut = plim.Fn.BytesOut
-				}
-			}
-		}
-
-		if plim.Pkg != nil {
-			if params.Pkg == nil {
-				params.Pkg = plim.Pkg
-			} else {
-				if params.Pkg.DiskSizeK == 0 {
-					params.Pkg.DiskSizeK = plim.Pkg.DiskSizeK
-				}
-			}
-		}
-
-		if plim.Repo != nil {
-			if params.Repo == nil {
-				params.Repo = plim.Repo
-			} else {
-				if params.Repo.Number == 0 {
-					params.Repo.Number = plim.Repo.Number
-				}
-			}
-		}
+		mergeFnLimits(&params.Fn, plim.Fn)
+		mergePkgLimits(&params.Pkg, plim.Pkg)
+		mergeRepoLimits(&params.Repo, plim.Repo)
 	}
 
 	code = http.StatusInternalServerError
@@ -946,7 +1014,7 @@ func main() {
 	r.HandleFunc("/v1/users/{uid}/pass", handleSetPassword).Methods("PUT", "OPTIONS")
 	r.HandleFunc("/v1/users/{uid}/limits", handleUserLimits).Methods("PUT", "GET", "OPTIONS")
 	r.HandleFunc("/v1/plans", handlePlans).Methods("POST", "GET", "OPTIONS")
-	r.HandleFunc("/v1/plans/{pid}", handlePlan).Methods("GET", "DELETE", "OPTIONS")
+	r.HandleFunc("/v1/plans/{pid}", handlePlan).Methods("GET", "DELETE", "PUT", "OPTIONS")
 
 	err = xhttp.ListenAndServe(
 		&http.Server{

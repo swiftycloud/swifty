@@ -164,6 +164,15 @@ func tplan_add(args []string, opts[16]string) {
 	fmt.Printf("%s plan created\n", l.Id)
 }
 
+func tplan_update(args []string, opts[16]string) {
+	var l swyapi.PlanLimits
+
+	parse_limits_file(args[1], &l)
+
+	swyclient.Mod("plans/" + args[0], http.StatusOK, &l)
+}
+
+
 func tplan_info(args []string, opts[16]string) {
 	var p swyapi.PlanLimits
 	swyclient.Get("plans/" + args[0], http.StatusOK, &p)
@@ -1809,6 +1818,7 @@ const (
 
 	CMD_TL string		= "tl"
 	CMD_TA string		= "ta"
+	CMD_TU string		= "tu"
 	CMD_TI string		= "ti"
 	CMD_TD string		= "td"
 
@@ -1894,6 +1904,7 @@ var cmdOrder = []string {
 
 	CMD_TL,
 	CMD_TA,
+	CMD_TU,
 	CMD_TI,
 	CMD_TD,
 
@@ -1990,6 +2001,7 @@ var cmdMap = map[string]*cmdDesc {
 
 	CMD_TL:		&cmdDesc{ help: "List plans",		call: tplan_list,	adm: true },
 	CMD_TA:		&cmdDesc{ help: "Add plan",		call: tplan_add,	adm: true },
+	CMD_TU:		&cmdDesc{ help: "Update plan",		call: tplan_update,	adm: true },
 	CMD_TI:		&cmdDesc{ help: "Show plan info",	call: tplan_info,	adm: true },
 	CMD_TD:		&cmdDesc{ help: "Del plan",		call: tplan_del,	adm: true },
 
@@ -2168,6 +2180,7 @@ func main() {
 
 	setupCommonCmd(CMD_TL)
 	setupCommonCmd(CMD_TA, "NAME", "FILE")
+	setupCommonCmd(CMD_TU, "ID", "FILE")
 	setupCommonCmd(CMD_TI, "ID")
 	setupCommonCmd(CMD_TD, "ID")
 

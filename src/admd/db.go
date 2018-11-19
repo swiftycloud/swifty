@@ -61,6 +61,12 @@ func dbAddPlanLimits(ses *mgo.Session, pl *PlanLimits) error {
 	return c.Insert(pl)
 }
 
+func dbSetPlanLimits(ses *mgo.Session, pl *PlanLimits) error {
+	c := ses.DB(DBTenantDB).C(DBColPlans)
+	return c.Update(bson.M{"_id": pl.ObjID}, pl)
+}
+
+
 func dbListPlanLimits(ses *mgo.Session) ([]*PlanLimits, error) {
 	c := ses.DB(DBTenantDB).C(DBColPlans)
 	var v []*PlanLimits

@@ -246,6 +246,17 @@ paths:
           description: Need to authenticate
         '403':
           description: Bad auth token
+    put:
+      summary: Update plan description AND limits
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/PlanLimits'
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad auth token
     delete:
       summary: Del existing plan (admin only)
       responses:
