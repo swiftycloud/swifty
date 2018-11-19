@@ -13,7 +13,7 @@ import (
 	"swifty/apis"
 )
 
-func mgoDial() (*mgo.Session, error) {
+func mgoDial(ctx context.Context) (*mgo.Session, error) {
 	if conf.Mware.Mongo == nil {
 		return nil, errors.New("Not configured")
 	}
@@ -26,7 +26,12 @@ func mgoDial() (*mgo.Session, error) {
 		Password:	conf.Mware.Mongo.c.Pass,
 	}
 
-	return mgo.DialWithInfo(&ifo)
+	s, err := mgo.DialWithInfo(&ifo)
+	if err != nil {
+		ctxlog(ctx).Errorf("Error dialing mware mongo: %s", err.Error())
+	}
+
+	return s, err
 }
 
 func InitMongo(ctx context.Context, mwd *MwareDesc) (error) {
@@ -37,7 +42,7 @@ func InitMongo(ctx context.Context, mwd *MwareDesc) (error) {
 
 	mwd.Namespace = mwd.Client
 
-	sess, err := mgoDial()
+	sess, err := mgoDial(ctx)
 	if err != nil {
 		return err
 	}
@@ -54,7 +59,7 @@ func InitMongo(ctx context.Context, mwd *MwareDesc) (error) {
 }
 
 func FiniMongo(ctx context.Context, mwd *MwareDesc) error {
-	sess, err := mgoDial()
+	sess, err := mgoDial(ctx)
 	if err != nil {
 		return err
 	}
@@ -80,7 +85,7 @@ type MgoStat struct {
 }
 
 func InfoMongo(ctx context.Context, mwd *MwareDesc, ifo *swyapi.MwareInfo) error {
-	sess, err := mgoDial()
+	sess, err := mgoDial(ctx)
 	if err != nil {
 		return err
 	}
