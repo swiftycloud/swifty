@@ -617,8 +617,17 @@ func handleAddUser(w http.ResponseWriter, r *http.Request, td *xkst.KeystoneToke
 		}
 	}
 
-	kid, err = ksAddUserAndProject(conf.kc, &params)
+	kid, err, code = ksAddUserAndProject(conf.kc, &params)
 	if err != nil {
+		if code == http.StatusConflict {
+			err = errors.New("User already exists")
+		} else {
+			log.Errorf("Can't add user: %s/%d", err.Error(), code)
+			if code == -1 {
+				code = http.StatusInternalServerError
+			}
+			err = errors.New("Error registering user")
+		}
 		dbDelUserLimits(ses, &conf, params.UId)
 		goto out
 	}

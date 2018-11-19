@@ -118,7 +118,7 @@ func listUsers(c *xh.XCreds) ([]*swyapi.UserInfo, error) {
 	return res, nil
 }
 
-func ksAddUserAndProject(c *xh.XCreds, user *swyapi.AddUser) (string, error) {
+func ksAddUserAndProject(c *xh.XCreds, user *swyapi.AddUser) (string, error, int) {
 	var presp xkst.KeystoneProjectAdd
 
 	now := time.Now()
@@ -128,10 +128,10 @@ func ksAddUserAndProject(c *xh.XCreds, user *swyapi.AddUser) (string, error) {
 		Created:	&now,
 	})
 	if err != nil {
-		return "", fmt.Errorf("Can't marshal user desc: %s", err.Error())
+		return "", fmt.Errorf("Can't marshal user desc: %s", err.Error()), -1
 	}
 
-	err = ksClient.MakeReq(
+	err, code := ksClient.MakeReq2(
 		&xkst.KeystoneReq {
 			Type:	"POST",
 			URL:	"projects",
@@ -144,7 +144,7 @@ func ksAddUserAndProject(c *xh.XCreds, user *swyapi.AddUser) (string, error) {
 		}, &presp)
 
 	if err != nil {
-		return "", fmt.Errorf("Can't add KS project: %s", err.Error())
+		return "", fmt.Errorf("Can't add KS project: %s", err.Error()), code
 	}
 
 	log.Debugf("Added project %s (id %s)", presp.Project.Name, presp.Project.Id[:8])
@@ -168,7 +168,7 @@ func ksAddUserAndProject(c *xh.XCreds, user *swyapi.AddUser) (string, error) {
 			},
 		}, &uresp)
 	if err != nil {
-		return "", fmt.Errorf("Can't add KS user: %s", err.Error())
+		return "", fmt.Errorf("Can't add KS user: %s", err.Error()), -1
 	}
 
 	log.Debugf("Added user %s (id %s)", uresp.User.Name, uresp.User.Id[:8])
@@ -178,10 +178,10 @@ func ksAddUserAndProject(c *xh.XCreds, user *swyapi.AddUser) (string, error) {
 			URL:	"projects/" + presp.Project.Id + "/users/" + uresp.User.Id + "/roles/" + ksSwyOwnerRole,
 			Succ:	http.StatusNoContent, }, nil, nil)
 	if err != nil {
-		return "", fmt.Errorf("Can't assign role: %s", err.Error())
+		return "", fmt.Errorf("Can't assign role: %s", err.Error()), -1
 	}
 
-	return uresp.User.Id, nil
+	return uresp.User.Id, nil, 0
 }
 
 func toUserInfo(ui *xkst.KeystoneUser) (*swyapi.UserInfo, error) {

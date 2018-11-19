@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"fmt"
 	"encoding/json"
+	"io/ioutil"
 	"swifty/common/http"
 	"swifty/common/xrest"
 )
@@ -182,19 +183,25 @@ again:
 			goto again
 		}
 
+		defer resp.Body.Close()
+
 		if resp.StatusCode == http.StatusBadRequest {
 			var gerr xrest.ReqErr
+			var rd []byte
 
-			err = xhttp.RResp(resp, &gerr)
-			resp.Body.Close()
+			rd, err = ioutil.ReadAll(resp.Body)
+			if err == nil {
+				err = json.Unmarshal(rd, &gerr)
+			}
 
 			if err == nil {
 				err = fmt.Errorf("Operation failed (%d): %s", gerr.Code, gerr.Message)
 			} else {
-				err = fmt.Errorf("Operation failed with no details")
+				err = fmt.Errorf("Operation failed: %s", string(rd))
 			}
 		} else {
-			err = fmt.Errorf("Bad response: %s", string(resp.Status))
+			rd, _ := ioutil.ReadAll(resp.Body)
+			err = fmt.Errorf("Bad response: %s (%s)", string(resp.Status), string(rd))
 		}
 
 		if cln.onerr != nil {
