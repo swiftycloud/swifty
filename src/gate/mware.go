@@ -461,9 +461,37 @@ func getMwareDesc(id *SwoId, params *swyapi.MwareAdd) (*MwareDesc, *xrest.ReqErr
 	return ret, nil
 }
 
+func checkMwCount(ctx context.Context, mt string) error {
+	tmd, err := tendatGet(ctx)
+	if err != nil {
+		return err
+	}
+
+	if tmd.mwl == nil {
+		return nil
+	}
+
+	if lim, ok := tmd.mwl[mt]; ok {
+		nr, err := dbMwareCountTen(ctx, mt)
+		if err != nil {
+			return err
+		}
+
+		if uint32(nr) >= lim.Number {
+			return errors.New("Too many mwares created")
+		}
+	}
+
+	return nil
+}
+
 func (mwd *MwareDesc)Add(ctx context.Context, _ interface{}) *xrest.ReqErr {
 	var handler *MwareOps
 	var err, erc error
+
+	if checkMwCount(ctx, mwd.MwareType) != nil {
+		return GateErrC(swyapi.GateLimitHit)
+	}
 
 	mwd.ObjID = bson.NewObjectId()
 	err = dbInsert(ctx, mwd)

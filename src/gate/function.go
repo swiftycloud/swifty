@@ -384,7 +384,7 @@ func getFunctionDesc(id *SwoId, p_add *swyapi.FunctionAdd) (*FunctionDesc, *xres
 	return fn, nil
 }
 
-func checkCount(ctx context.Context, id *SwoId) error {
+func checkFnCount(ctx context.Context, id *SwoId) error {
 	tmd, err := tendatGet(ctx)
 	if err != nil {
 		return err
@@ -425,7 +425,7 @@ func (fn *FunctionDesc)Add(ctx context.Context, p interface{}) *xrest.ReqErr {
 		goto out
 	}
 
-	err = checkCount(ctx, &fn.SwoId)
+	err = checkFnCount(ctx, &fn.SwoId)
 	if err != nil {
 		cerr = GateErrC(swyapi.GateLimitHit)
 		goto out_clean_func

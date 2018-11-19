@@ -246,6 +246,17 @@ paths:
           description: Need to authenticate
         '403':
           description: Bad auth token
+    put:
+      summary: Update plan description AND limits
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/PlanLimits'
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad auth token
     delete:
       summary: Del existing plan (admin only)
       responses:
@@ -317,6 +328,12 @@ definitions:
         description: >-
           ID of a tariff plan. If set, user limits will be set creation-time
           into tariff values.
+      plan_name:
+        type: string
+        description: >-
+          Name of a tariff plan. If set, user limits will be set creation-time
+          into tariff values. The planid value takes preference over this when
+          both are set
   UserLimits:
     properties:
       planid:
@@ -328,12 +345,19 @@ definitions:
         $ref: '#/definitions/PackagesLimits'
       repos:
         $ref: '#/definitions/ReposLimits'
+      mware:
+        type: object
+        additionalProperties:
+          $ref: '#/definitions/MwareLimits'
   PlanLimits:
     properties:
       id:
         type: string
-        description: ID
+        description: Internal ID
       name:
+        type: string
+        description: Tariff plan short-name
+      description:
         type: string
         description: Tariff plan description
       function:
@@ -342,6 +366,10 @@ definitions:
         $ref: '#/definitions/PackagesLimits'
       repos:
         $ref: '#/definitions/ReposLimits'
+      mware:
+        type: object
+        additionalProperties:
+          $ref: '#/definitions/MwareLimits'
   PackagesLimits:
     properties:
       disk_size_kb:
@@ -352,6 +380,11 @@ definitions:
       number:
         type: integer
         description: Maximum number of repos attached by a user
+  MwareLimits:
+    properties:
+      number:
+        type: integer
+        description: Maximum number of mware of given type
   FunctionLimits:
     description: Limits for functions invocations
     properties:
@@ -361,7 +394,7 @@ definitions:
       burst:
         type: integer
         description: rate-limiter burst value
-        max:
+      max:
         type: integer
         description: maximum number of functions
       gbs:

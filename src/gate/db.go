@@ -372,6 +372,10 @@ func dbFuncCountTen(ctx context.Context) (int, error) {
 	return dbCol(ctx, DBColFunc).Find(bson.M{"tenant": gctx(ctx).Tenant}).Count()
 }
 
+func dbMwareCountTen(ctx context.Context, mt string) (int, error) {
+	return dbCol(ctx, DBColFunc).Find(bson.M{"tenant": gctx(ctx).Tenant, "mwaretype": mt}).Count()
+}
+
 func dbFuncUpdate(ctx context.Context, q, ch bson.M) (error) {
 	if !dbMayUpdate(ctx) {
 		return dbNotAllowed
