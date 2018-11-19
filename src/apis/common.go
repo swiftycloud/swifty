@@ -59,12 +59,17 @@ type ReposLimits struct {
 	Number		uint32	`json:"number",yaml:"number"`
 }
 
+type MwareLimits struct {
+	Number		uint32	`json:"number",yaml:"number"`
+}
+
 type UserLimits struct {
 	UId	string			`json:"-",bson:"uid"`
 	PlanId	string			`json:"planid",bson:"planid"`
 	Fn	*FunctionLimits		`json:"function,omitempty",bson:"function,omitempty"`
 	Pkg	*PackagesLimits		`json:"packages,omitempty",bson:"packages,omitempty"`
 	Repo	*ReposLimits		`json:"repos,omitempty",bson:"repos,omitempty"`
+	Mware	map[string]*MwareLimits	`json:"mware,omitempty",bson:"mware,omitempty"`
 }
 
 type Package struct {

@@ -44,6 +44,7 @@ type TenantMemData struct {
 
 	pkgl	*swyapi.PackagesLimits
 	repl	*swyapi.ReposLimits
+	mwl	map[string]*swyapi.MwareLimits
 }
 
 func memdGetFnForRemoval(ctx context.Context, fn *FunctionDesc) (*FnMemData, error) {
@@ -99,6 +100,7 @@ func setupLimits(ten string, td *TenantMemData, ul *swyapi.UserLimits, off *TenS
 
 	td.pkgl = ul.Pkg
 	td.repl = ul.Repo
+	td.mwl = ul.Mware
 }
 
 func tendatGet(ctx context.Context) (*TenantMemData, error) {

@@ -295,6 +295,7 @@ func handlePlanUpdate(w http.ResponseWriter, r *http.Request, pid bson.ObjectId,
 	mergeFnLimits(&pl.Fn, params.Fn)
 	mergePkgLimits(&pl.Pkg, params.Pkg)
 	mergeRepoLimits(&pl.Repo, params.Repo)
+	mergeMwareLimits(pl.Mware, params.Mware)
 
 	err = dbSetPlanLimits(ses, pl)
 	if err != nil {
@@ -388,6 +389,7 @@ func (pl *PlanLimits)toInfo() *swyapi.PlanLimits {
 		Fn:	pl.Fn,
 		Pkg:	pl.Pkg,
 		Repo:	pl.Repo,
+		Mware:	pl.Mware,
 	}
 }
 
@@ -608,6 +610,7 @@ func handleAddUser(w http.ResponseWriter, r *http.Request, td *xkst.KeystoneToke
 			Fn:	plim.Fn,
 			Pkg:	plim.Pkg,
 			Repo:	plim.Repo,
+			Mware:	plim.Mware,
 		})
 		if err != nil {
 			goto out
@@ -643,6 +646,7 @@ type PlanLimits struct {
 	Fn	*swyapi.FunctionLimits	`bson:"function,omitempty"`
 	Pkg	*swyapi.PackagesLimits	`bson:"packages,omitempty"`
 	Repo	*swyapi.ReposLimits	`bson:"repos,omitempty"`
+	Mware	map[string]*swyapi.MwareLimits	`bson:"mware"`
 }
 
 func handleAddPlan(w http.ResponseWriter, r *http.Request, td *xkst.KeystoneTokenData) {
@@ -678,6 +682,7 @@ func handleAddPlan(w http.ResponseWriter, r *http.Request, td *xkst.KeystoneToke
 		Fn:	params.Fn,
 		Pkg:	params.Pkg,
 		Repo:	params.Repo,
+		Mware:	params.Mware,
 	}
 	code = http.StatusInternalServerError
 	err = dbAddPlanLimits(ses, pl)
@@ -758,6 +763,19 @@ func mergeRepoLimits(into_p **swyapi.ReposLimits, from *swyapi.ReposLimits) {
 	}
 }
 
+func mergeMwareLimits(into map[string]*swyapi.MwareLimits, from map[string]*swyapi.MwareLimits) {
+	for m, lf := range from {
+		lt, ok := into[m]
+		if !ok {
+			into[m] = lf
+		} else {
+			if lt.Number == 0 {
+				lt.Number = lf.Number
+			}
+		}
+	}
+}
+
 func handleSetLimits(w http.ResponseWriter, r *http.Request, uid string, td *xkst.KeystoneTokenData) {
 	var params swyapi.UserLimits
 	var rui *swyapi.UserInfo
@@ -794,6 +812,7 @@ func handleSetLimits(w http.ResponseWriter, r *http.Request, uid string, td *xks
 		mergeFnLimits(&params.Fn, plim.Fn)
 		mergePkgLimits(&params.Pkg, plim.Pkg)
 		mergeRepoLimits(&params.Repo, plim.Repo)
+		mergeMwareLimits(params.Mware, plim.Mware)
 	}
 
 	code = http.StatusInternalServerError

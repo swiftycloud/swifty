@@ -345,6 +345,10 @@ definitions:
         $ref: '#/definitions/PackagesLimits'
       repos:
         $ref: '#/definitions/ReposLimits'
+      mware:
+        type: object
+        additionalProperties:
+          $ref: '#/definitions/MwareLimits'
   PlanLimits:
     properties:
       id:
@@ -362,6 +366,10 @@ definitions:
         $ref: '#/definitions/PackagesLimits'
       repos:
         $ref: '#/definitions/ReposLimits'
+      mware:
+        type: object
+        additionalProperties:
+          $ref: '#/definitions/MwareLimits'
   PackagesLimits:
     properties:
       disk_size_kb:
@@ -372,6 +380,11 @@ definitions:
       number:
         type: integer
         description: Maximum number of repos attached by a user
+  MwareLimits:
+    properties:
+      number:
+        type: integer
+        description: Maximum number of mware of given type
   FunctionLimits:
     description: Limits for functions invocations
     properties:

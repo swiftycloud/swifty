@@ -38,4 +38,5 @@ type PlanLimits struct {
 	Fn	*FunctionLimits		`json:"function,omitempty",yaml:"function,omitempty"`
 	Pkg	*PackagesLimits		`json:"packages,omitempty",yaml:"packages,omitempty"`
 	Repo	*ReposLimits		`json:"repos,omitempty",yaml:"repos,omitempty"`
+	Mware	map[string]*MwareLimits	`json:"mware,omitempty",yaml:"mware,omitempty"`
 }
