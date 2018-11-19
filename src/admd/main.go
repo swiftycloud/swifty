@@ -338,6 +338,7 @@ func (pl *PlanLimits)toInfo() *swyapi.PlanLimits {
 	return &swyapi.PlanLimits{
 		Id:	pl.ObjID.Hex(),
 		Name:	pl.Name,
+		Descr:	pl.Descr,
 		Fn:	pl.Fn,
 		Pkg:	pl.Pkg,
 		Repo:	pl.Repo,
@@ -579,6 +580,7 @@ out:
 type PlanLimits struct {
 	ObjID	bson.ObjectId		`bson:"_id,omitempty"`
 	Name	string			`bson:"name"`
+	Descr	string			`bson:"descr"`
 	Fn	*swyapi.FunctionLimits	`bson:"function,omitempty"`
 	Pkg	*swyapi.PackagesLimits	`bson:"packages,omitempty"`
 	Repo	*swyapi.ReposLimits	`bson:"repos,omitempty"`
@@ -613,6 +615,7 @@ func handleAddPlan(w http.ResponseWriter, r *http.Request, td *xkst.KeystoneToke
 	pl = &PlanLimits {
 		ObjID:	bson.NewObjectId(),
 		Name:	params.Name,
+		Descr:	params.Descr,
 		Fn:	params.Fn,
 		Pkg:	params.Pkg,
 		Repo:	params.Repo,

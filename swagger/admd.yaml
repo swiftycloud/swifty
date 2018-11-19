@@ -332,8 +332,11 @@ definitions:
     properties:
       id:
         type: string
-        description: ID
+        description: Internal ID
       name:
+        type: string
+        description: Tariff plan short-name
+      description:
         type: string
         description: Tariff plan description
       function:
@@ -361,7 +364,7 @@ definitions:
       burst:
         type: integer
         description: rate-limiter burst value
-        max:
+      max:
         type: integer
         description: maximum number of functions
       gbs:
