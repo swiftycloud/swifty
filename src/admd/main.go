@@ -621,6 +621,7 @@ func handleAddUser(w http.ResponseWriter, r *http.Request, td *xkst.KeystoneToke
 		err = dbSetUserLimits(ses, &conf, &swyapi.UserLimits {
 			UId:	params.UId,
 			PlanId:	plim.ObjID.Hex(),
+			PlanNm:	plim.Name,
 			Fn:	plim.Fn,
 			Pkg:	plim.Pkg,
 			Repo:	plim.Repo,
@@ -836,6 +837,7 @@ func handleSetLimits(w http.ResponseWriter, r *http.Request, uid string, td *xks
 		mergePkgLimits(&params.Pkg, plim.Pkg)
 		mergeRepoLimits(&params.Repo, plim.Repo)
 		mergeMwareLimits(params.Mware, plim.Mware)
+		params.PlanNm = plim.Name
 	}
 
 	code = http.StatusInternalServerError
