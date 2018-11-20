@@ -117,7 +117,28 @@ paths:
           description: Need to authenticate
         '403':
           description: Bad authentication token
-  '/logs':
+  /stats/s3:
+    get:
+      summary: Show user S3 statistics
+      parameters:
+        - in: header
+          name: X-Auth-Token
+          type: string
+          required: true
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/S3NamespaceStats'
+        '400':
+          description: Bad request
+          schema:
+            $ref: '#/definitions/GateError'
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad authentication token
+  /logs:
     parameters:
       - in: header
         name: X-Auth-Token
@@ -127,7 +148,7 @@ paths:
         name: project
         type: string
         required: false
-        description: 'Project to get logs for'
+        description: Project to get logs for
       - in: query
         name: last
         type: string
@@ -237,7 +258,9 @@ paths:
           name: prefix
           type: string
           required: false
-          description: Filter functions by name prefix. The dot, if needed, must be added explicitly!
+          description: >-
+            Filter functions by name prefix. The dot, if needed, must be added
+            explicitly!
         - in: query
           name: label
           type: string
@@ -298,13 +321,12 @@ paths:
         type: string
         required: false
         description: >-
-          Whether or not to show leaf nodes, i.e. function names (value itself is
-          ignored)
+          Whether or not to show leaf nodes, i.e. function names (value itself
+          is ignored)
     get:
       tags:
         - function
       summary: Show tree of function names
-      
       responses:
         '200':
           description: OK
@@ -319,7 +341,7 @@ paths:
         '401':
           description: Need to authenticate
         '403':
-          description: Bad authentication token          
+          description: Bad authentication token
   '/functions/{fid}':
     parameters:
       - in: header
@@ -2049,7 +2071,7 @@ paths:
           description: Need to authenticate
         '403':
           description: Bad authentication token
-  /info/mwares/{mtyp}:
+  '/info/mwares/{mtyp}':
     get:
       summary: Show info about middleware
       parameters:
@@ -2190,6 +2212,8 @@ definitions:
             du: 42
           authjwt:
             count: 1
+      s3:
+        $ref: '#/definitions/S3NamespaceStats'
   UserMwareStats:
     type: object
     description: Here and now stats about user's mware
@@ -2197,9 +2221,25 @@ definitions:
       count:
         type: integer
         description: Number of mwares of that type in all projects
-      du:
+      disk_usage:
         type: integer
-        description: Total disk consumption (if applicable to that type)
+        description: Total disk consumption (if applicable to that type) in Kb
+  S3NamespaceStats:
+    type: object
+    description: Here and now stats about user's S3
+    properties:
+      cnt-objects:
+        type: integer
+        description: Total number of objects in all buckets
+      cnt-bytes:
+        type: integer
+        description: Total size (in bytes) of all objects
+      out-bytes:
+        type: integer
+        description: Number of bytes downloaded by user via S3 API
+      out-bytes-web:
+        type: integer
+        description: Number of bytes downloaded by user via WEB-buckets
   FunctionStats:
     type: object
     description: Statistics about function
@@ -2333,7 +2373,7 @@ definitions:
         $ref: '#/definitions/FunctionEventWebsock'
       url:
         type: string
-        description: Function callable URL on GET, set to "auto" on POST (during creation)
+        description: 'Function callable URL on GET, set to "auto" on POST (during creation)'
   FunctionSources:
     type: object
     description: Sources description
@@ -2354,7 +2394,7 @@ definitions:
       url:
         type: string
         description: URL where to GET the sources from
-        example: https://foo.bar/functions/file.py
+        example: 'https://foo.bar/functions/file.py'
   FunctionCode:
     type: object
     description: Code description
@@ -2465,7 +2505,7 @@ definitions:
         description: node name (function name part between dots)
       path:
         type: string
-        description: node path (name prefix from the beginning, including the final dot)
+        description: 'node path (name prefix from the beginning, including the final dot)'
       kids:
         type: array
         items:
@@ -2637,7 +2677,7 @@ definitions:
       url:
         type: string
         description: URL where to GET the data from
-        example: https://foo.bar/file.yaml
+        example: 'https://foo.bar/file.yaml'
   DeployStart:
     type: object
     description: Description of deployment
