@@ -37,10 +37,6 @@ func dbGetPlanLimits(ses *mgo.Session, id bson.ObjectId) (*PlanLimits, error) {
 	var v PlanLimits
 	q := bson.M{"_id": id}
 	err := c.Find(q).One(&v)
-	if err == mgo.ErrNotFound {
-		err = nil
-	}
-
 	return &v, err
 }
 
@@ -49,10 +45,6 @@ func dbGetPlanLimitsByName(ses *mgo.Session, name string) (*PlanLimits, error) {
 	var v PlanLimits
 	q := bson.M{"name": name}
 	err := c.Find(q).One(&v)
-	if err == mgo.ErrNotFound {
-		err = nil
-	}
-
 	return &v, err
 }
 
