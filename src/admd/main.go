@@ -8,6 +8,7 @@ package main
 import (
 	"go.uber.org/zap"
 
+	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 	"github.com/gorilla/mux"
 
@@ -38,6 +39,7 @@ type YAMLConf struct {
 	Gate		string			`yaml:"gate"`
 	Keystone	string			`yaml:"keystone"`
 	DB		string			`yaml:"db"`
+	DefaultPlan	string			`yaml:"default_plan"`
 	kc		*xh.XCreds
 }
 
@@ -550,10 +552,41 @@ out:
 	http.Error(w, err.Error(), code)
 }
 
+func selectPlan(ses *mgo.Session, params *swyapi.AddUser) (*PlanLimits, error) {
+
+	if params.PlanId == "" {
+		pn := params.PlanNm
+		if pn == "" {
+			pn = conf.DefaultPlan
+			if pn == "" {
+				return nil, nil
+			}
+		}
+
+		return dbGetPlanLimitsByName(ses, pn)
+	}
+
+	if !bson.IsObjectIdHex(params.PlanId) {
+		return nil, errors.New("Bad plan ID value")
+	}
+
+	plim, err := dbGetPlanLimits(ses, bson.ObjectIdHex(params.PlanId))
+	if err != nil {
+		return nil, err
+	}
+
+	if params.PlanNm != "" && plim.Name != params.PlanNm {
+		return  nil, errors.New("Plang name mismatch")
+	}
+
+	return plim, nil
+}
+
 func handleAddUser(w http.ResponseWriter, r *http.Request, td *xkst.KeystoneTokenData) {
 	var params swyapi.AddUser
 	var kid string
 	var err error
+	var plim *PlanLimits
 
 	ses := session.Copy()
 	defer ses.Close()
@@ -579,34 +612,16 @@ func handleAddUser(w http.ResponseWriter, r *http.Request, td *xkst.KeystoneToke
 	log.Debugf("Add user %v", params)
 	code = http.StatusBadRequest
 
-	if params.PlanId != "" || params.PlanNm != "" {
-		var plim *PlanLimits
+	plim, err = selectPlan(ses, &params)
+	if err != nil {
+		goto out
+	}
 
-		if params.PlanId != "" {
-			if !bson.IsObjectIdHex(params.PlanId) {
-				err = errors.New("Bad plan ID value")
-				goto out
-			}
-
-			plim, err = dbGetPlanLimits(ses, bson.ObjectIdHex(params.PlanId))
-			if err != nil {
-				goto out
-			}
-
-			if params.PlanNm != "" && plim.Name != params.PlanNm {
-				err = errors.New("Plang name mismatch")
-				goto out
-			}
-		} else {
-			plim, err = dbGetPlanLimitsByName(ses, params.PlanNm)
-			if err != nil {
-				goto out
-			}
-		}
-
+	if plim != nil {
 		err = dbSetUserLimits(ses, &conf, &swyapi.UserLimits {
 			UId:	params.UId,
-			PlanId:	params.PlanId,
+			PlanId:	plim.ObjID.Hex(),
+			PlanNm:	plim.Name,
 			Fn:	plim.Fn,
 			Pkg:	plim.Pkg,
 			Repo:	plim.Repo,
@@ -822,6 +837,7 @@ func handleSetLimits(w http.ResponseWriter, r *http.Request, uid string, td *xks
 		mergePkgLimits(&params.Pkg, plim.Pkg)
 		mergeRepoLimits(&params.Repo, plim.Repo)
 		mergeMwareLimits(params.Mware, plim.Mware)
+		params.PlanNm = plim.Name
 	}
 
 	code = http.StatusInternalServerError
@@ -1012,6 +1028,10 @@ func main() {
 		setupLogger(nil)
 		log.Errorf("Provide config path")
 		return
+	}
+
+	if conf.DefaultPlan == "" {
+		log.Warnf("No default plan limit set!")
 	}
 
 	admdSecrets, err = xsecret.Init("admd")

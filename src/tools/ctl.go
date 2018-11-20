@@ -133,11 +133,13 @@ func user_info(args []string, opts [16]string) {
 func tplan_list(args []string, opts[16]string) {
 	var plans []*swyapi.PlanLimits
 	swyclient.List("plans", http.StatusOK, &plans)
+
 	for _, p := range(plans) {
-		fmt.Printf("%s/%s:\n", p.Id, p.Name)
+		fmt.Printf("%s/%s (%s):\n", p.Id, p.Name, p.Descr)
 		show_fn_limits(p.Fn)
 		show_pkg_limits(p.Pkg)
 		show_repo_limits(p.Repo)
+		show_mware_limits(p.Mware)
 	}
 }
 
@@ -180,6 +182,7 @@ func tplan_info(args []string, opts[16]string) {
 	show_fn_limits(p.Fn)
 	show_pkg_limits(p.Pkg)
 	show_repo_limits(p.Repo)
+	show_mware_limits(p.Mware)
 }
 
 func tplan_del(args []string, opts[16]string) {
@@ -203,11 +206,12 @@ func user_limits(args []string, opts [16]string) {
 	} else {
 		swyclient.Get("users/" + args[0] + "/limits", http.StatusOK, &l)
 		if l.PlanId != "" {
-			fmt.Printf("Plan ID: %s\n", l.PlanId)
+			fmt.Printf("Plan: %s/%s\n", l.PlanId, l.PlanNm)
 		}
 		show_fn_limits(l.Fn)
 		show_pkg_limits(l.Pkg)
 		show_repo_limits(l.Repo)
+		show_mware_limits(l.Mware)
 		fmt.Printf(">>> %s\n", l.UId)
 	}
 }
@@ -309,7 +313,7 @@ func show_fn_limits(fl *swyapi.FunctionLimits) {
 			fmt.Printf("    Max GBS:           %f\n", fl.GBS)
 		}
 		if fl.BytesOut != 0 {
-			fmt.Printf("    Max bytes out:     %d\n", formatBytes(fl.BytesOut))
+			fmt.Printf("    Max bytes out:     %s\n", formatBytes(fl.BytesOut))
 		}
 	}
 }
@@ -327,7 +331,16 @@ func show_repo_limits(repo *swyapi.ReposLimits) {
 	if repo != nil {
 		fmt.Printf("Repos:\n")
 		if repo.Number != 0 {
-			fmt.Printf("Number:                %d\n", repo.Number)
+			fmt.Printf("    Number:            %d\n", repo.Number)
+		}
+	}
+}
+
+func show_mware_limits(mwl map[string]*swyapi.MwareLimits) {
+	for m, ml := range mwl {
+		fmt.Printf("Mware.%s:\n", m)
+		if ml.Number != 0 {
+			fmt.Printf("    Number:            %d\n", ml.Number)
 		}
 	}
 }
