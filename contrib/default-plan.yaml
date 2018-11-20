@@ -1,0 +1,16 @@
+---
+name: default
+description: "Default plan limit for new users"
+function:
+  rate: 100
+  burst: 0 
+  max: 100
+  gbs: 10000
+  bytesout: 5368709120
+repos:
+  number: 5
+mware:
+  mongo:
+    number: 5
+  maria:
+    number: 5
