@@ -301,6 +301,14 @@ func dbNF(err error) bool {
 	return err == mgo.ErrNotFound
 }
 
+func maybe(err error) error {
+	if err == mgo.ErrNotFound {
+		return nil
+	} else {
+		return err
+	}
+}
+
 func dbTenantGetLimits(ctx context.Context, tenant string) (*swyapi.UserLimits, error) {
 	c := gctx(ctx).S.DB(DBTenantDB).C(DBColLimits)
 	var v swyapi.UserLimits
