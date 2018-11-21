@@ -8,8 +8,9 @@ import (
 
 type rqShow struct {}
 
-func (*rqShow)request(conid string, rq *mongo_req) {
+func (*rqShow)request(conid string, rq *mongo_req) error {
 	rq.show(conid)
+	return nil
 }
 
 func (rq *mongo_req)show(conid string) {

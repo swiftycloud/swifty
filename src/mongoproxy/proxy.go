@@ -15,6 +15,7 @@ func (fw *sender)dataReady(data []byte) error {
 	for {
 		w, err := fw.to.Write(data)
 		if err != nil {
+			log.Printf("%s: Error writing: %s\n", fw.id, err.Error())
 			return err
 		}
 
@@ -34,15 +35,15 @@ func (f *collector)dataReady(data []byte) error {
 	f.collected = append(f.collected, data...)
 
 	for {
-		cl := f.cons.try(f.sender.id, f.collected)
+		cl, err := f.cons.try(f.sender.id, f.collected)
 		if cl == 0 {
-			return nil
+			return err
 		}
 
 		cons := f.collected[:cl]
 		f.collected = f.collected[cl:]
 
-		err := f.sender.dataReady(cons)
+		err = f.sender.dataReady(cons)
 		if err != nil {
 			return err
 		}
@@ -50,7 +51,7 @@ func (f *collector)dataReady(data []byte) error {
 }
 
 type consumer interface {
-	try(string, []byte) int
+	try(string, []byte) (int, error)
 }
 
 type collector struct {
@@ -78,7 +79,7 @@ func forward(conid string, from *net.TCPConn, prc processor, done chan bool) {
 
 		err = prc.dataReady(data[:r])
 		if err != nil {
-			log.Printf("%s: Error writing: %s\n", conid, err.Error())
+			from.CloseRead()
 			done <-false
 			return
 		}
