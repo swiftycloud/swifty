@@ -2,13 +2,17 @@ package main
 
 import (
 	"log"
+	"time"
 	"sync"
 	"errors"
 	"sync/atomic"
 	"gopkg.in/mgo.v2"
 )
 
-const quotaCheckThresh uint32 = 4
+const (
+	quotaCheckThresh uint32 = 4
+	unlockScanPeriod time.Duration = time.Minute
+)
 
 var quotas sync.Map
 var cheq chan string
@@ -44,6 +48,10 @@ func quotaLock(db string) {
 	}
 }
 
+func quotaUnlock(qs *dbQuota) {
+	qs.locked = false
+}
+
 var growOps = map[string]bool {
 	"insert":	true,
 	"update":	true,
@@ -56,7 +64,7 @@ func (*quota)request(conid string, rq *mongo_req) error {
 
 	_, ok := growOps[rq.inf.act]
 	if ok && quotaLocked(rq.inf.db) {
-		log.Printf("Q: quota exceeded for %s, stopping\n", rq.inf.db)
+		log.Printf("%s: Q: quota exceeded for %s, stopping\n", conid, rq.inf.db)
 		return errors.New("quota force abort")
 	}
 
@@ -82,7 +90,7 @@ type MgoStat struct {
 }
 
 func quotaCheckDB(db string) {
-	log.Printf("Q: Will check quota for %s\n", db)
+	log.Printf("Q: Will check if quota exceeded for %s\n", db)
 
 	sess, err := mgo.DialWithInfo(pinfo)
 	if err != nil {
@@ -98,9 +106,49 @@ func quotaCheckDB(db string) {
 		return
 	}
 
-	log.Printf("Q: db %s is %v\n", db, &st)
 	if quotaExceeded(sess, db, &st) {
 		quotaLock(db)
+	}
+}
+
+func maybeUnlockQuota(sess *mgo.Session, db string, q *dbQuota) {
+	if !q.locked {
+		return
+	}
+
+	log.Printf("Q: Will check if quota clamped for %s\n", db)
+
+	var st MgoStat
+	err := sess.DB(db).Run("dbStats", &st)
+	if err != nil {
+		if err == mgo.ErrNotFound {
+			log.Printf("Q: No stats for %s -- dropping the qouta cache\n", db)
+			quotas.Delete(db)
+		} else {
+			log.Printf("Q: can't get dbStats for %s: %s\n", db, err.Error())
+		}
+		return
+	}
+
+	if !quotaExceeded(sess, db, &st) {
+		log.Printf("Q: DB %s is OK, unlocking\n", db)
+		quotaUnlock(q)
+	}
+}
+
+func maybeUnlockQuotas() {
+	for {
+		time.Sleep(unlockScanPeriod)
+		sess, err := mgo.DialWithInfo(pinfo)
+		if err != nil {
+			log.Printf("Q: error dialing: %s\n", err.Error())
+			continue
+		}
+		quotas.Range(func(k, v interface{}) bool {
+			maybeUnlockQuota(sess, k.(string), v.(*dbQuota))
+			return true
+		})
+		sess.Close()
 	}
 }
 
@@ -111,4 +159,5 @@ func init() {
 			quotaCheckDB(<-cheq)
 		}
 	}()
+	go maybeUnlockQuotas()
 }
