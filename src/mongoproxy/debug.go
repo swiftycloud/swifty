@@ -10,7 +10,7 @@ import (
 type rqShow struct {}
 var showAll bool
 
-func (*rqShow)config(mc map[string]interface{}, conf *Config) error {
+func (*rqShow)config(mc map[string]interface{}) error {
 	x, ok := mc["all"].(bool)
 	if !ok {
 		return errors.New("all must be bool")

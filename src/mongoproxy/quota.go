@@ -57,27 +57,7 @@ var growOps = map[string]bool {
 
 type quota struct {}
 
-func (*quota)config(mc map[string]interface{}, conf *Config) error {
-	if conf.Target.Addr == "" {
-		return errors.New("No target.address")
-	}
-	if conf.Target.DB == "" {
-		return errors.New("No target.db")
-	}
-	if conf.Target.User == "" {
-		return errors.New("No target.user")
-	}
-	if conf.Target.Pass == "" {
-		return errors.New("No target.password")
-	}
-
-	pinfo = &mgo.DialInfo {
-		Addrs:		[]string{conf.Target.Addr},
-		Database:	conf.Target.DB,
-		Username:	conf.Target.User,
-		Password:	conf.Target.Pass,
-	}
-
+func (*quota)config(mc map[string]interface{}) error {
 	if x, ok := mc["check_thresh"]; ok {
 		switch y := x.(type) {
 		case int:
@@ -130,8 +110,6 @@ func (*quota)request(conid string, rq *mongo_req) error {
 
 	return nil
 }
-
-var pinfo *mgo.DialInfo
 
 type MgoStat struct {
 	ISize	uint64	`bson:"indexSize"`

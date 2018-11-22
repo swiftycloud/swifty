@@ -32,6 +32,12 @@ func main() {
 		return
 	}
 
+	err = configureSession(&config)
+	if err != nil {
+		log.Printf("Error configuring session: %s\n", err.Error())
+		return
+	}
+
 	err = loadModules(&config)
 	if err != nil {
 		log.Printf("Error loading modules: %s\n", err.Error())

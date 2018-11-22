@@ -6,7 +6,7 @@ import (
 
 type module interface {
 	request(string, *mongo_req) error
-	config(map[string]interface{}, *Config) error
+	config(map[string]interface{}) error
 }
 
 var modules map[string]module = map[string]module {
@@ -21,7 +21,7 @@ func loadModules(config *Config) error {
 			return fmt.Errorf("Error: no %s module\n", mod)
 		}
 
-		err := m.config(mconf, config)
+		err := m.config(mconf)
 		if err != nil {
 			return fmt.Errorf("Error configuring %s: %s\n", mod, err.Error())
 		}
