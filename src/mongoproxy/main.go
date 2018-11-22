@@ -38,7 +38,7 @@ func main() {
 		return
 	}
 
-	p := makeProxy(config.Listen, config.Target.Addr)
+	p := makeProxy(config.Listen, config.Target.Addr, &mgoConsumer{})
 	if p == nil {
 		return
 	}

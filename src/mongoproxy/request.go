@@ -208,7 +208,7 @@ func decode_mongo_req(data []byte) *mongo_req {
 	return rq
 }
 
-func (mc *mgoConsumer)try(conid string, data []byte) (int, error) {
+func (*mgoConsumer)try(conid string, data []byte) (int, error) {
 	rq := decode_mongo_req(data)
 	if rq == nil {
 		return 0, nil

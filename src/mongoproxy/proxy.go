@@ -86,7 +86,7 @@ func forward(conid string, from *net.TCPConn, prc processor, done chan bool) {
 	}
 }
 
-func handle(conid string, con *net.TCPConn, to *net.TCPAddr) {
+func handle(conid string, con *net.TCPConn, to *net.TCPAddr, cons consumer) {
 	log.Printf("%s: Accepted conn from %s\n", conid, con.RemoteAddr())
 
 	defer con.Close()
@@ -105,7 +105,7 @@ func handle(conid string, con *net.TCPConn, to *net.TCPAddr) {
 	ing := &collector {
 		sender:		sender { id: conid, to: tgt },
 		collected:	[]byte{},
-		cons:		&mgoConsumer { },
+		cons:		cons,
 	}
 	go forward(conid + ".ing", con, ing, done_ing)
 
@@ -127,9 +127,10 @@ func handle(conid string, con *net.TCPConn, to *net.TCPAddr) {
 type Proxy struct {
 	ls	*net.TCPListener
 	tgt	*net.TCPAddr
+	cons	consumer
 }
 
-func makeProxy(from, to string) *Proxy {
+func makeProxy(from, to string, cons consumer) *Proxy {
 	x, err := net.ResolveTCPAddr("tcp", from)
 	if err != nil {
 		log.Printf("Error resolving local: %s\n", err.Error())
@@ -148,7 +149,7 @@ func makeProxy(from, to string) *Proxy {
 		return nil
 	}
 
-	return &Proxy { ls: ls, tgt: x }
+	return &Proxy { ls: ls, tgt: x, cons: cons }
 }
 
 func (p *Proxy)Run() {
@@ -163,7 +164,7 @@ func (p *Proxy)Run() {
 		cid := strconv.Itoa(conid)
 		conid++
 
-		go handle(cid, con, p.tgt)
+		go handle(cid, con, p.tgt, p.cons)
 	}
 }
 
