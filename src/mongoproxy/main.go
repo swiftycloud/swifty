@@ -32,20 +32,10 @@ func main() {
 		return
 	}
 
-	for mod, mconf := range config.Modules {
-		m, ok := modules[mod]
-		if !ok {
-			log.Printf("Error: no %s module\n", mod)
-			return
-		}
-
-		err = m.config(mconf, &config)
-		if err != nil {
-			log.Printf("Error configuring %s: %s\n", mod, err.Error())
-			return
-		}
-
-		pipelineAdd(m)
+	err = loadModules(&config)
+	if err != nil {
+		log.Printf("Error loading modules: %s\n", err.Error())
+		return
 	}
 
 	p := makeProxy(config.Listen, config.Target.Addr)
