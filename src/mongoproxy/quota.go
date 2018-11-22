@@ -13,39 +13,41 @@ import (
 var quotaCheckThresh uint32 = 4
 var unlockScanPeriod time.Duration = time.Minute
 var quotas sync.Map
-var cheq chan string
 
-type dbQuota struct {
+type cheqReq struct {
+	db	string
+	locked	bool
+}
+
+var cheq chan *cheqReq
+
+type dbQState struct {
 	check	uint32
 	locked	bool
 }
 
 func quotaLocked(db string) bool {
-	x, _ := quotas.LoadOrStore(db, &dbQuota{})
-	qs := x.(*dbQuota)
+	x, _ := quotas.LoadOrStore(db, &dbQState{})
+	qs := x.(*dbQState)
 	if qs.locked {
 		return true
 	}
 
 	if atomic.AddUint32(&qs.check, 1) % quotaCheckThresh == 0 {
-		cheq <-db
+		cheq <-&cheqReq{db: db, locked: false}
 	}
 
 	return false
 }
 
-func quotaLock(db string) {
+func quotaSetLocked(db string, val bool) {
 	x, ok := quotas.Load(db)
 	if ok {
-		qs := x.(*dbQuota)
-		qs.locked = true
+		qs := x.(*dbQState)
+		qs.locked = val
 	} else {
-		log.Printf("Q: cannot mark %s locked\n", db)
+		log.Printf("Q: cannot mark %s locked=%v\n", db, val)
 	}
-}
-
-func quotaUnlock(qs *dbQuota) {
-	qs.locked = false
 }
 
 var growOps = map[string]bool {
@@ -138,8 +140,8 @@ type MgoStat struct {
 	Indexes	uint32	`bson:"indexes"`
 }
 
-func quotaCheckDB(db string) {
-	log.Printf("Q: Will check if quota exceeded for %s\n", db)
+func quotaCheckDB(rq *cheqReq) {
+	log.Printf("Q: Will check quota for %s (locked %v)\n", rq.db, rq.locked)
 
 	sess, err := mgo.DialWithInfo(pinfo)
 	if err != nil {
@@ -149,66 +151,45 @@ func quotaCheckDB(db string) {
 	defer sess.Close()
 
 	var st MgoStat
-	err = sess.DB(db).Run("dbStats", &st)
+	err = sess.DB(rq.db).Run("dbStats", &st)
 	if err != nil {
-		log.Printf("Q: can't get dbStats for %s: %s\n", db, err.Error())
-		return
-	}
-
-	if quotaExceeded(sess, db, &st) {
-		quotaLock(db)
-	}
-}
-
-func maybeUnlockQuota(sess *mgo.Session, db string, q *dbQuota) {
-	if !q.locked {
-		return
-	}
-
-	log.Printf("Q: Will check if quota clamped for %s\n", db)
-
-	var st MgoStat
-	err := sess.DB(db).Run("dbStats", &st)
-	if err != nil {
+		log.Printf("Q: can't get dbStats for %s: %s\n", rq.db, err.Error())
 		if err == mgo.ErrNotFound {
-			log.Printf("Q: No stats for %s -- dropping the qouta cache\n", db)
-			quotas.Delete(db)
-		} else {
-			log.Printf("Q: can't get dbStats for %s: %s\n", db, err.Error())
+			quotas.Delete(rq.db)
 		}
 		return
 	}
 
-	if !quotaExceeded(sess, db, &st) {
-		log.Printf("Q: DB %s is OK, unlocking\n", db)
-		quotaUnlock(q)
-	}
-}
-
-func maybeUnlockQuotas() {
-	for {
-		time.Sleep(unlockScanPeriod)
-		sess, err := mgo.DialWithInfo(pinfo)
-		if err != nil {
-			log.Printf("Q: error dialing (u): %s\n", err.Error())
-			continue
+	if quotaExceeded(sess, rq.db, &st) {
+		if !rq.locked {
+			quotaSetLocked(rq.db, true)
 		}
-		quotas.Range(func(k, v interface{}) bool {
-			maybeUnlockQuota(sess, k.(string), v.(*dbQuota))
-			return true
-		})
-		sess.Close()
+	} else {
+		if rq.locked {
+			quotaSetLocked(rq.db, false)
+		}
 	}
 }
 
 func init() {
-	cheq = make(chan string)
+	cheq = make(chan *cheqReq)
 	go func() {
 		for {
 			quotaCheckDB(<-cheq)
 		}
 	}()
-	go maybeUnlockQuotas()
+	go func() {
+		for {
+			time.Sleep(unlockScanPeriod)
+			quotas.Range(func(k, v interface{}) bool {
+				q := v.(*dbQState)
+				if q.locked {
+					cheq <-&cheqReq{db: k.(string), locked: true}
+				}
+				return true
+			})
+		}
+	}()
 }
 
 var colQuotas string = "Quotas"
