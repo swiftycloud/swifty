@@ -4,11 +4,7 @@ import (
 	"log"
 )
 
-type notify interface {
-	request(string, *mongo_req) error
-}
-
-var pipeline []notify
+var pipeline []module
 
 func pipelineRun(conid string, rq *mongo_req) error {
 	for _, n := range pipeline {
@@ -22,6 +18,6 @@ func pipelineRun(conid string, rq *mongo_req) error {
 	return nil
 }
 
-func pipelineAdd(n notify) {
+func pipelineAdd(n module) {
 	pipeline = append(pipeline, n)
 }

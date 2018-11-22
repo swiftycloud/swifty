@@ -6,9 +6,7 @@ import (
 	"gopkg.in/mgo.v2/bson"
 )
 
-const (
-	ColQuotas string = "Quotas"
-)
+var colQuotas string = "Quotas"
 
 type DbQuota struct {
 	ObjID		bson.ObjectId	`bson:"_id,omitempty"`
@@ -31,7 +29,7 @@ func exceeded(lim uint64, val uint64, db, l string) bool {
 func quotaExceeded(ses *mgo.Session, db string, st *MgoStat) bool {
 	var q DbQuota
 
-	err := ses.DB(pinfo.Database).C(ColQuotas).Find(bson.M{"db": db}).One(&q)
+	err := ses.DB(pinfo.Database).C(colQuotas).Find(bson.M{"db": db}).One(&q)
 	if err != nil {
 		if err != mgo.ErrNotFound {
 			log.Printf("ERROR: cannot get quota for %s: %s\n", db, err.Error())

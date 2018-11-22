@@ -9,11 +9,8 @@ import (
 	"gopkg.in/mgo.v2"
 )
 
-const (
-	quotaCheckThresh uint32 = 4
-	unlockScanPeriod time.Duration = time.Minute
-)
-
+var quotaCheckThresh uint32 = 4
+var unlockScanPeriod time.Duration = time.Minute
 var quotas sync.Map
 var cheq chan string
 
@@ -21,8 +18,6 @@ type dbQuota struct {
 	check	uint32
 	locked	bool
 }
-
-type quota struct {}
 
 func quotaLocked(db string) bool {
 	x, _ := quotas.LoadOrStore(db, &dbQuota{})
@@ -57,6 +52,68 @@ var growOps = map[string]bool {
 	"update":	true,
 }
 
+type quota struct {}
+
+func (*quota)config(mc map[string]interface{}, conf *Config) error {
+	if conf.Target.Addr == "" {
+		return errors.New("No target.address")
+	}
+	if conf.Target.DB == "" {
+		return errors.New("No target.db")
+	}
+	if conf.Target.User == "" {
+		return errors.New("No target.user")
+	}
+	if conf.Target.Pass == "" {
+		return errors.New("No target.password")
+	}
+
+	pinfo = &mgo.DialInfo {
+		Addrs:		[]string{conf.Target.Addr},
+		Database:	conf.Target.DB,
+		Username:	conf.Target.User,
+		Password:	conf.Target.Pass,
+	}
+
+	if x, ok := mc["check_thresh"]; ok {
+		switch y := x.(type) {
+		case int:
+			quotaCheckThresh = uint32(y)
+		case float64:
+			quotaCheckThresh = uint32(y)
+		default:
+			return errors.New("check_thres must be integer")
+		}
+		log.Printf("Set quota check thresh to %v\n", quotaCheckThresh)
+	}
+
+	if x, ok := mc["unlock_period"]; ok {
+		switch y := x.(type) {
+		case string:
+			var err error
+			unlockScanPeriod, err = time.ParseDuration(y)
+			if err != nil {
+				return err
+			}
+		default:
+			return errors.New("unlock_period must be string")
+		}
+		log.Printf("Set unlock check period to %s\n", unlockScanPeriod.String())
+	}
+
+	if x, ok := mc["quotas"]; ok {
+		switch y := x.(type) {
+		case string:
+			colQuotas = y
+		default:
+			return errors.New("quotas must be string")
+		}
+		log.Printf("Set quotas collection to %s\n", colQuotas)
+	}
+
+	return nil
+}
+
 func (*quota)request(conid string, rq *mongo_req) error {
 	if rq.inf == nil {
 		return nil
@@ -73,15 +130,6 @@ func (*quota)request(conid string, rq *mongo_req) error {
 
 var pinfo *mgo.DialInfo
 
-func quotaSetCreds(addr, user, pass, db string) {
-	pinfo = &mgo.DialInfo {
-		Addrs:		[]string{addr},
-		Database:	db,
-		Username:	user,
-		Password:	pass,
-	}
-}
-
 type MgoStat struct {
 	ISize	uint64	`bson:"indexSize"`
 	SSize	uint64	`bson:"storageSize"`
@@ -94,7 +142,7 @@ func quotaCheckDB(db string) {
 
 	sess, err := mgo.DialWithInfo(pinfo)
 	if err != nil {
-		log.Printf("Q: error dialing: %s\n", err.Error())
+		log.Printf("Q: error dialing (c): %s\n", err.Error())
 		return
 	}
 	defer sess.Close()
@@ -141,7 +189,7 @@ func maybeUnlockQuotas() {
 		time.Sleep(unlockScanPeriod)
 		sess, err := mgo.DialWithInfo(pinfo)
 		if err != nil {
-			log.Printf("Q: error dialing: %s\n", err.Error())
+			log.Printf("Q: error dialing (u): %s\n", err.Error())
 			continue
 		}
 		quotas.Range(func(k, v interface{}) bool {
