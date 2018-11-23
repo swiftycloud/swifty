@@ -10,11 +10,14 @@ import (
 	"github.com/gorilla/mux"
 	"gopkg.in/mgo.v2/bson"
 
+	"compress/gzip"
 	"net/http"
 	"net/url"
 	"strings"
 	"context"
 	"time"
+	"fmt"
+	"io"
 
 	"swifty/apis"
 	"swifty/common"
@@ -350,7 +353,13 @@ func handleFunctionStats(ctx context.Context, w http.ResponseWriter, r *http.Req
 }
 
 func handleFunctionLogs(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
-	return xrest.HandleProp(ctx, w, r, Functions{}, &FnLogsProp{}, nil)
+	fo, cerr := Functions{}.Get(ctx, r)
+	if cerr != nil {
+		return cerr
+	}
+
+	fn := fo.(*FunctionDesc)
+	return handleLogsFor(ctx, fn.SwoId.Cookie(), w, r.URL.Query())
 }
 
 func handleFunctions(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
@@ -740,27 +749,60 @@ func handleS3Access(ctx context.Context, w http.ResponseWriter, r *http.Request)
 	return xrest.Respond(ctx, w, creds)
 }
 
-func handleLogsFor(ctx context.Context, cookie string, q url.Values) ([]*swyapi.LogEntry, *xrest.ReqErr) {
+func writeLogs(w io.Writer, logs []DBLogRec) {
+	for _, loge := range logs {
+		fmt.Fprintf(w, "%s%12s: %s\n",
+			loge.Time.String(), loge.Event, loge.Text)
+	}
+}
+
+func gzipLogs(ctx context.Context, w http.ResponseWriter, logs []DBLogRec) *xrest.ReqErr {
+	w.Header().Set("Content-Type", "application/gzip")
+	w.WriteHeader(http.StatusOK)
+	gw := gzip.NewWriter(w)
+	writeLogs(gw, logs)
+	gw.Close()
+	return nil
+}
+
+func textLogs(ctx context.Context, w http.ResponseWriter, logs []DBLogRec) *xrest.ReqErr {
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+	writeLogs(w, logs)
+	return nil
+}
+
+func handleLogsFor(ctx context.Context, cookie string, w http.ResponseWriter, q url.Values) *xrest.ReqErr {
 	since, cerr := getSince(q)
 	if cerr != nil {
-		return nil, cerr
+		return cerr
 	}
 
 	logs, err := logGetFor(ctx, cookie, since)
 	if err != nil {
-		return nil, GateErrD(err)
+		return GateErrD(err)
 	}
 
-	var resp []*swyapi.LogEntry
-	for _, loge := range logs {
-		resp = append(resp, &swyapi.LogEntry{
-			Event:	loge.Event,
-			Ts:	loge.Time.Format(time.RFC1123Z),
-			Text:	loge.Text,
-		})
-	}
+	fmt := q.Get("format")
+	switch fmt {
+	case "", "json":
+		var resp []*swyapi.LogEntry
+		for _, loge := range logs {
+			resp = append(resp, &swyapi.LogEntry{
+				Event:	loge.Event,
+				Ts:	loge.Time.Format(time.RFC1123Z),
+				Text:	loge.Text,
+			})
+		}
 
-	return resp, nil
+		return xrest.Respond(ctx, w, resp)
+	case "gzip":
+		return gzipLogs(ctx, w, logs)
+	case "text":
+		return textLogs(ctx, w, logs)
+	default:
+		return GateErrM(swyapi.GateBadRequest, "Bad format")
+	}
 }
 
 func handleLogs(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
@@ -771,12 +813,7 @@ func handleLogs(ctx context.Context, w http.ResponseWriter, r *http.Request) *xr
 	}
 
 	id := ctxSwoId(ctx, NoProject, "")
-	resp, cer := handleLogsFor(ctx, id.PCookie(), q)
-	if cer != nil {
-		return cer
-	}
-
-	return xrest.Respond(ctx, w, resp)
+	return handleLogsFor(ctx, id.PCookie(), w, q)
 }
 
 func handleTenantStatsAll(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {

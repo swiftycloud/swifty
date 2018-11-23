@@ -154,8 +154,17 @@ paths:
         type: string
         required: false
         description: 'Get logs for last pariod. Format is ([0-9]+h)?([0-9]+m)?([0-9]+s)?'
+      - in: query
+        name: format
+        type: string
+        required: false
+        description: 'How to get logs. Options: josn (default), gzip, text'
     get:
       summary: Show per-project user logs
+      produces:
+        - application/json
+        - application/gzip
+        - text/plain
       responses:
         '200':
           description: OK
@@ -163,6 +172,7 @@ paths:
             type: array
             items:
               $ref: '#/definitions/LogEntry'
+  
         '400':
           description: Bad request
           schema:
@@ -470,10 +480,19 @@ paths:
         type: string
         required: false
         description: 'Get logs for last pariod. Format is ([0-9]+h)?([0-9]+m)?([0-9]+s)?'
+      - in: query
+        name: format
+        type: string
+        required: false
+        description: 'How to get logs. Options: josn (default), gzip, text'
     get:
       tags:
         - function
       summary: Show function logs
+      produces:
+        - application/json
+        - application/gzip
+        - text/plain
       responses:
         '200':
           description: OK
