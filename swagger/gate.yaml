@@ -155,7 +155,7 @@ paths:
         required: false
         description: 'Get logs for last pariod. Format is ([0-9]+h)?([0-9]+m)?([0-9]+s)?'
       - in: query
-        name: format
+        name: as
         type: string
         required: false
         description: 'How to get logs. Options: josn (default), gzip, text'
@@ -481,7 +481,7 @@ paths:
         required: false
         description: 'Get logs for last pariod. Format is ([0-9]+h)?([0-9]+m)?([0-9]+s)?'
       - in: query
-        name: format
+        name: as
         type: string
         required: false
         description: 'How to get logs. Options: josn (default), gzip, text'

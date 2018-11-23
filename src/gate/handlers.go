@@ -783,7 +783,7 @@ func handleLogsFor(ctx context.Context, cookie string, w http.ResponseWriter, q 
 		return GateErrD(err)
 	}
 
-	fmt := q.Get("format")
+	fmt := q.Get("as")
 	switch fmt {
 	case "", "json":
 		var resp []*swyapi.LogEntry
