@@ -757,16 +757,22 @@ func handleLogsFor(ctx context.Context, cookie string, w http.ResponseWriter, q 
 		return GateErrD(err)
 	}
 
-	var resp []*swyapi.LogEntry
-	for _, loge := range logs {
-		resp = append(resp, &swyapi.LogEntry{
-			Event:	loge.Event,
-			Ts:	loge.Time.Format(time.RFC1123Z),
-			Text:	loge.Text,
-		})
-	}
+	fmt := q.Get("format")
+	switch fmt {
+	case "", "json":
+		var resp []*swyapi.LogEntry
+		for _, loge := range logs {
+			resp = append(resp, &swyapi.LogEntry{
+				Event:	loge.Event,
+				Ts:	loge.Time.Format(time.RFC1123Z),
+				Text:	loge.Text,
+			})
+		}
 
-	return xrest.Respond(ctx, w, resp)
+		return xrest.Respond(ctx, w, resp)
+	default:
+		return GateErrM(swyapi.GateBadRequest, "Bad format")
+	}
 }
 
 func handleLogs(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
