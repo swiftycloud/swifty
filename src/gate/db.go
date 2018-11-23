@@ -22,7 +22,7 @@ import (
 	"swifty/common"
 	"swifty/apis"
 	"swifty/common/xrest"
-	"swifty/common/xratelimit"
+	"swifty/common/ratelimit"
 )
 
 const (
@@ -47,11 +47,11 @@ const (
 var dbColMap map[reflect.Type]string
 var dbNotAllowed = errors.New("Not allowed")
 var dbStrict bool = true
-var dbwrl *xratelimit.RL
+var dbwrl *xrl.RL
 
 func init() {
 	addBoolSysctl("db_strict_access", &dbStrict)
-	dbwrl = xratelimit.MakeRL(1, 1)
+	dbwrl = xrl.MakeRL(1, 1)
 }
 
 func dbMayModify(ctx context.Context) bool {

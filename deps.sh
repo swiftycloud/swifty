@@ -21,10 +21,24 @@ set -e
 # it to 6.0.0, then fetch the Godep-s of it, then fiv protobuf version
 # to be 1.1.1, then install k8s, then proceed with the rest.
 
-yum install -y golang patch librados2-devel glibc-headers glibc-static
-yum groupinstall -y "Development Libraries" 
+if which yum ; then
+	yum install -y golang patch librados2-devel glibc-headers glibc-static
+	yum groupinstall -y "Development Libraries" 
+elif which apt-get ; then
+	apt-get install librados-dev
+fi
+
 go get github.com/tools/godep
-cp ${VGOPATH}/bin/godep /usr/bin
+if [ "x$USER" = "xroot" ] ; then
+	cp ${VGOPATH}/bin/godep /usr/bin
+else
+	case :$PATH: # notice colons around the value
+		in *:$HOME/bin:*) ;; # do nothing, it's there
+		*) echo "$HOME/bin not in $PATH" >&2; exit 0 ;;
+	esac
+	cp ${VGOPATH}/bin/godep $HOME/bin
+fi
+
 go get -d k8s.io/client-go/...
 cd ${VGOPATH}/src/k8s.io/client-go
 git checkout -b swy6.0.0 v6.0.0
@@ -44,5 +58,5 @@ go get gopkg.in/mgo.v2
 go get -d gopkg.in/robfig/cron.v2;
 patch -d${VGOPATH}/src/gopkg.in/robfig/cron.v2 -p1 < $(pwd)/contrib/robfig-cron.patch;
 go install gopkg.in/robfig/cron.v2
-go get github.com/ceph/go-ceph/rados
 go get code.cloudfoundry.org/bytefmt
+go get github.com/ceph/go-ceph/rados # this gent is broken in deb, so last

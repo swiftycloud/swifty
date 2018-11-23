@@ -3,7 +3,7 @@
  * Info: info@swifty.cloud
  */
 
-package xratelimit
+package xrl
 
 import (
 	"time"

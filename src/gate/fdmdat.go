@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 	"context"
-	"swifty/common/xratelimit"
+	"swifty/common/ratelimit"
 	"swifty/apis"
 	"gopkg.in/mgo.v2/bson"
 )
@@ -23,7 +23,7 @@ type FnMemData struct {
 	fnid	string
 	ac	*AuthCtx
 	bd	BalancerDat
-	crl	*xratelimit.RL
+	crl	*xrl.RL
 	td	*TenantMemData
 	stats	FnStats
 	lock	sync.Mutex
@@ -31,13 +31,13 @@ type FnMemData struct {
 }
 
 type TenantMemData struct {
-	crl	*xratelimit.RL
+	crl	*xrl.RL
 	stats	TenStats
 	fnlim	uint
 	lock	sync.Mutex
 
 	runlock	sync.Mutex
-	runrate	*xratelimit.RL
+	runrate	*xrl.RL
 
 	GBS_l, GBS_o	float64
 	BOut_l, BOut_o	uint64
@@ -92,7 +92,7 @@ func setupLimits(ten string, td *TenantMemData, ul *swyapi.UserLimits, off *TenS
 		td.crl = nil
 	} else {
 		if td.crl == nil {
-			td.crl = xratelimit.MakeRL(ul.Fn.Burst, ul.Fn.Rate)
+			td.crl = xrl.MakeRL(ul.Fn.Burst, ul.Fn.Rate)
 		} else {
 			td.crl.Update(ul.Fn.Burst, ul.Fn.Rate)
 		}
@@ -202,7 +202,7 @@ func fndatGetOrInit(ctx context.Context, cookie string, fn *FunctionDesc, forRem
 	}
 
 	if fn.Size.Rate != 0 {
-		nret.crl = xratelimit.MakeRL(fn.Size.Burst, fn.Size.Rate)
+		nret.crl = xrl.MakeRL(fn.Size.Burst, fn.Size.Rate)
 	}
 
 	nret.mem = fn.Size.Mem
@@ -233,7 +233,7 @@ func memdGone(fn *FunctionDesc) {
 }
 
 func (fmd *FnMemData)ratelimited() bool {
-	var frl, trl *xratelimit.RL
+	var frl, trl *xrl.RL
 
 	/* Per-function RL first, as it's ... more likely to fail */
 	frl = fmd.crl
