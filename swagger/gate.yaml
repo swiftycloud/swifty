@@ -161,22 +161,18 @@ paths:
         description: 'How to get logs. Options: josn (default), gzip, text'
     get:
       summary: Show per-project user logs
+      produces:
+        - application/json
+        - application/gzip
+        - text/plain
       responses:
         '200':
           description: OK
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/definitions/LogEntry'
-            application/gzip:
-              schema:
-                type: string
-                format: binary
-            text/plain:
-              schema:
-                type: string
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/LogEntry'
+  
         '400':
           description: Bad request
           schema:
@@ -493,22 +489,17 @@ paths:
       tags:
         - function
       summary: Show function logs
+      produces:
+        - application/json
+        - application/gzip
+        - text/plain
       responses:
         '200':
           description: OK
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/definitions/LogEntry'
-            application/gzip:
-              schema:
-                type: string
-                format: binary
-            text/plain:
-              schema:
-                type: string
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/LogEntry'
         '400':
           description: Bad request
           schema:
