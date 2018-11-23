@@ -17,7 +17,7 @@ import (
 	"gopkg.in/mgo.v2/bson"
 
 	"swifty/apis"
-	"swifty/common/xratelimit"
+	"swifty/common/ratelimit"
 	"swifty/common/xwait"
 	"swifty/common/xrest"
 )
@@ -629,7 +629,7 @@ func (fn *FunctionDesc)setSize(ctx context.Context, sz *swyapi.FunctionSize) *xr
 					fdm.crl.Update(fn.Size.Burst, fn.Size.Rate)
 				} else {
 					/* Create */
-					fdm.crl = xratelimit.MakeRL(fn.Size.Burst, fn.Size.Rate)
+					fdm.crl = xrl.MakeRL(fn.Size.Burst, fn.Size.Rate)
 				}
 			} else {
 				/* Remove */

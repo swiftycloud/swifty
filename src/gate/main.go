@@ -21,7 +21,7 @@ import (
 	"swifty/common/http"
 	"swifty/common/keystone"
 	"swifty/common/secrets"
-	"swifty/common/xratelimit"
+	"swifty/common/ratelimit"
 )
 
 var ModeDevel bool
@@ -115,7 +115,7 @@ func reqPath(r *http.Request) string {
 	}
 }
 
-var grl *xratelimit.RL
+var grl *xrl.RL
 
 func reqPeriods(q url.Values) int {
 	periods, e := xhttp.ReqAtoi(q, "periods", 0)
@@ -349,7 +349,7 @@ func main() {
 	}
 
 	if isLite() {
-		grl = xratelimit.MakeRL(0, 1000)
+		grl = xrl.MakeRL(0, 1000)
 	}
 
 	glog.Debugf("Flavor: %s", Flavor)

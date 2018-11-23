@@ -17,7 +17,7 @@ import (
 	"swifty/common"
 	"swifty/common/http"
 	"swifty/common/xrest"
-	"swifty/common/xratelimit"
+	"swifty/common/ratelimit"
 )
 
 var acceptedContent xh.StringsValues
@@ -192,7 +192,7 @@ func doRunBg(ctx context.Context, fn *FunctionDesc, event string, args *swyapi.F
 
 func prepareTempRun(ctx context.Context, fn *FunctionDesc, td *TenantMemData, params *swyapi.FunctionSources, w http.ResponseWriter) (string, *xrest.ReqErr) {
 	if td.runrate == nil {
-		td.runrate = xratelimit.MakeRL(0, uint(conf.RunRate))
+		td.runrate = xrl.MakeRL(0, uint(conf.RunRate))
 	}
 
 	if !td.runrate.Get() {

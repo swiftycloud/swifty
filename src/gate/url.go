@@ -13,7 +13,7 @@ import (
 	"swifty/common"
 	"sync"
 	"net/http"
-	"swifty/common/xratelimit"
+	"swifty/common/ratelimit"
 	"strconv"
 	"strings"
 )
@@ -127,10 +127,10 @@ func (furl *FnURL)Handle(ctx context.Context, w http.ResponseWriter, r *http.Req
 	furl.fd.Handle(ctx, w, r, sopq, args)
 }
 
-var wrl *xratelimit.RL
+var wrl *xrl.RL
 
 func init() {
-	wrl = xratelimit.MakeRL(5, 1)
+	wrl = xrl.MakeRL(5, 1)
 	addSysctl("fn_call_error_rate",
 			func() string {
 				vs := wrl.If()
