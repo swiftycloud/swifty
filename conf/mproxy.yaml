@@ -11,3 +11,5 @@ modules:
   quota:
     check_thresh: 16
     unlock_period: "2m"
+  rate:
+    cache_duration: "8s"

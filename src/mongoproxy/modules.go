@@ -12,6 +12,7 @@ type module interface {
 var modules map[string]module = map[string]module {
 	"show":	&rqShow{},
 	"quota": &quota{},
+	"rate": &ratelimit{},
 }
 
 func loadModules(config *Config) error {
