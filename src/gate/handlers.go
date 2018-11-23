@@ -10,11 +10,13 @@ import (
 	"github.com/gorilla/mux"
 	"gopkg.in/mgo.v2/bson"
 
+	"compress/gzip"
 	"net/http"
 	"net/url"
 	"strings"
 	"context"
 	"time"
+	"fmt"
 
 	"swifty/apis"
 	"swifty/common"
@@ -746,6 +748,18 @@ func handleS3Access(ctx context.Context, w http.ResponseWriter, r *http.Request)
 	return xrest.Respond(ctx, w, creds)
 }
 
+func gzipLogs(ctx context.Context, w http.ResponseWriter, logs []DBLogRec) *xrest.ReqErr {
+	w.Header().Set("Content-Type", "application/gzip")
+	w.WriteHeader(http.StatusOK)
+	gw := gzip.NewWriter(w)
+	for _, loge := range logs {
+		fmt.Fprintf(gw, "%s%12s: %s\n",
+			loge.Time.String(), loge.Event, loge.Text)
+	}
+	gw.Close()
+	return nil
+}
+
 func handleLogsFor(ctx context.Context, cookie string, w http.ResponseWriter, q url.Values) *xrest.ReqErr {
 	since, cerr := getSince(q)
 	if cerr != nil {
@@ -770,6 +784,8 @@ func handleLogsFor(ctx context.Context, cookie string, w http.ResponseWriter, q 
 		}
 
 		return xrest.Respond(ctx, w, resp)
+	case "gzip":
+		return gzipLogs(ctx, w, logs)
 	default:
 		return GateErrM(swyapi.GateBadRequest, "Bad format")
 	}
