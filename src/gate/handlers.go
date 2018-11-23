@@ -350,7 +350,13 @@ func handleFunctionStats(ctx context.Context, w http.ResponseWriter, r *http.Req
 }
 
 func handleFunctionLogs(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
-	return xrest.HandleProp(ctx, w, r, Functions{}, &FnLogsProp{}, nil)
+	fo, cerr := Functions{}.Get(ctx, r)
+	if cerr != nil {
+		return cerr
+	}
+
+	fn := fo.(*FunctionDesc)
+	return handleLogsFor(ctx, fn.SwoId.Cookie(), w, r.URL.Query())
 }
 
 func handleFunctions(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
@@ -740,15 +746,15 @@ func handleS3Access(ctx context.Context, w http.ResponseWriter, r *http.Request)
 	return xrest.Respond(ctx, w, creds)
 }
 
-func handleLogsFor(ctx context.Context, cookie string, q url.Values) ([]*swyapi.LogEntry, *xrest.ReqErr) {
+func handleLogsFor(ctx context.Context, cookie string, w http.ResponseWriter, q url.Values) *xrest.ReqErr {
 	since, cerr := getSince(q)
 	if cerr != nil {
-		return nil, cerr
+		return cerr
 	}
 
 	logs, err := logGetFor(ctx, cookie, since)
 	if err != nil {
-		return nil, GateErrD(err)
+		return GateErrD(err)
 	}
 
 	var resp []*swyapi.LogEntry
@@ -760,7 +766,7 @@ func handleLogsFor(ctx context.Context, cookie string, q url.Values) ([]*swyapi.
 		})
 	}
 
-	return resp, nil
+	return xrest.Respond(ctx, w, resp)
 }
 
 func handleLogs(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
@@ -771,12 +777,7 @@ func handleLogs(ctx context.Context, w http.ResponseWriter, r *http.Request) *xr
 	}
 
 	id := ctxSwoId(ctx, NoProject, "")
-	resp, cer := handleLogsFor(ctx, id.PCookie(), q)
-	if cer != nil {
-		return cer
-	}
-
-	return xrest.Respond(ctx, w, resp)
+	return handleLogsFor(ctx, id.PCookie(), w, q)
 }
 
 func handleTenantStatsAll(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {

@@ -1106,8 +1106,6 @@ func (_ *FnStatsProp)Upd(ctx context.Context, o xrest.Obj, p interface{}) *xrest
 	return GateErrC(swyapi.GateNotAvail)
 }
 
-type FnLogsProp struct { }
-
 func getSince(q url.Values) (*time.Time, *xrest.ReqErr) {
 	s := q.Get("last")
 	if s == "" {
@@ -1121,13 +1119,4 @@ func getSince(q url.Values) (*time.Time, *xrest.ReqErr) {
 
 	t := time.Now().Add(-d)
 	return &t, nil
-}
-
-func (_ *FnLogsProp)Info(ctx context.Context, o xrest.Obj, q url.Values) (interface{}, *xrest.ReqErr) {
-	fn := o.(*FunctionDesc)
-	return handleLogsFor(ctx, fn.SwoId.Cookie(), q)
-}
-
-func (_ *FnLogsProp)Upd(ctx context.Context, o xrest.Obj, p interface{}) *xrest.ReqErr {
-	return GateErrC(swyapi.GateNotAvail)
 }
