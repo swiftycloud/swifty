@@ -2,11 +2,24 @@ package main
 
 import (
 	"log"
+	"errors"
 	"encoding/hex"
 	"gopkg.in/mgo.v2/bson"
 )
 
 type rqShow struct {}
+var showAll bool
+
+func (*rqShow)config(mc map[string]interface{}) error {
+	x, ok := mc["all"].(bool)
+	if !ok {
+		return errors.New("all must be bool")
+	}
+
+	showAll = x
+	log.Printf("Will show requests (all: %v)\n", showAll)
+	return nil
+}
 
 func (*rqShow)request(conid string, rq *mongo_req) error {
 	rq.show(conid)
@@ -15,7 +28,9 @@ func (*rqShow)request(conid string, rq *mongo_req) error {
 
 func (rq *mongo_req)show(conid string) {
 	if rq.inf != nil {
-		log.Printf("%s: %s.%s@%s.%s\n", conid, rq.inf.typ, rq.inf.act, rq.inf.db, rq.inf.col)
+		if showAll {
+			log.Printf("%s: %s.%s@%s.%s\n", conid, rq.inf.typ, rq.inf.act, rq.inf.db, rq.inf.col)
+		}
 		return
 	}
 

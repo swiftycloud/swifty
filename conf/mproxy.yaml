@@ -1,0 +1,15 @@
+---
+listen: ":27018"
+target:
+  db: "swifty"
+  address: "127.0.0.1:27017"
+  user: "swygate"
+  password: "o3LqdQqfSb0lm98T"
+modules:
+  show:
+    all: false
+  quota:
+    check_thresh: 16
+    unlock_period: "2m"
+  rate:
+    cache_duration: "8s"

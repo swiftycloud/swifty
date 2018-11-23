@@ -1,27 +1,50 @@
 package main
 
 import (
+	"log"
 	"flag"
+	"swifty/common"
 )
 
+type DBConf struct {
+	DB	string	`yaml:"db"`
+	Addr	string	`yaml:"address"`
+	User	string	`yaml:"user"`
+	Pass	string	`yaml:"password"`
+}
+
+type Config struct {
+	Listen	string	`yaml:"listen"`
+	Target	DBConf	`yaml:"target"`
+	Modules	map[string]map[string]interface{} `yaml:"modules"`
+}
+
 func main() {
-	var from string
-	var to string
-	var to_db, to_user, to_pass string
+	var conf string
+	var config Config
 
-	flag.StringVar(&from, "from", ":27018", "Where to listen for connections")
-	flag.StringVar(&to, "to", "127.0.0.1:27017", "Where to connect for mongo")
-
-	flag.StringVar(&to_db, "d", "", "DB for policies")
-	flag.StringVar(&to_user, "u", "", "User for policies")
-	flag.StringVar(&to_pass, "p", "", "Pass for policies")
+	flag.StringVar(&conf, "conf", "/etc/swifty/conf/mongo_proxy.yaml", "Path to config file")
 	flag.Parse()
 
-	pipelineAdd(&rqShow{})
-	pipelineAdd(&quota{})
-	quotaSetCreds(to, to_user, to_pass, to_db)
+	err := xh.ReadYamlConfig(conf, &config)
+	if err != nil {
+		log.Printf("Error reading config: %s\n", err.Error())
+		return
+	}
 
-	p := makeProxy(from, to)
+	err = configureSession(&config)
+	if err != nil {
+		log.Printf("Error configuring session: %s\n", err.Error())
+		return
+	}
+
+	err = loadModules(&config)
+	if err != nil {
+		log.Printf("Error loading modules: %s\n", err.Error())
+		return
+	}
+
+	p := makeProxy(config.Listen, config.Target.Addr, &mgoConsumer{})
 	if p == nil {
 		return
 	}
