@@ -2237,12 +2237,16 @@ func main() {
 	setupCommonCmd(CMD_SYSCTL)
 
 	flag.Usage = func() {
+		sa := len(os.Args) >=2 && os.Args[1] == "-ha"
 		for _, v := range cmdOrder {
+			if !sa && cmdMap[v].adm {
+				continue
+			}
 			cmdMap[v].opts.Usage()
 		}
 	}
 
-	if len(os.Args) < 2 || os.Args[1] == "-h" {
+	if len(os.Args) < 2 || os.Args[1] == "-h" || os.Args[1] == "-ha" {
 		flag.Usage()
 		os.Exit(1)
 	}
