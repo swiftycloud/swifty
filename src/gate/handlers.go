@@ -17,6 +17,7 @@ import (
 	"context"
 	"time"
 	"fmt"
+	"io"
 
 	"swifty/apis"
 	"swifty/common"
@@ -748,15 +749,26 @@ func handleS3Access(ctx context.Context, w http.ResponseWriter, r *http.Request)
 	return xrest.Respond(ctx, w, creds)
 }
 
+func writeLogs(w io.Writer, logs []DBLogRec) {
+	for _, loge := range logs {
+		fmt.Fprintf(w, "%s%12s: %s\n",
+			loge.Time.String(), loge.Event, loge.Text)
+	}
+}
+
 func gzipLogs(ctx context.Context, w http.ResponseWriter, logs []DBLogRec) *xrest.ReqErr {
 	w.Header().Set("Content-Type", "application/gzip")
 	w.WriteHeader(http.StatusOK)
 	gw := gzip.NewWriter(w)
-	for _, loge := range logs {
-		fmt.Fprintf(gw, "%s%12s: %s\n",
-			loge.Time.String(), loge.Event, loge.Text)
-	}
+	writeLogs(gw, logs)
 	gw.Close()
+	return nil
+}
+
+func textLogs(ctx context.Context, w http.ResponseWriter, logs []DBLogRec) *xrest.ReqErr {
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+	writeLogs(w, logs)
 	return nil
 }
 
@@ -786,6 +798,8 @@ func handleLogsFor(ctx context.Context, cookie string, w http.ResponseWriter, q 
 		return xrest.Respond(ctx, w, resp)
 	case "gzip":
 		return gzipLogs(ctx, w, logs)
+	case "text":
+		return textLogs(ctx, w, logs)
 	default:
 		return GateErrM(swyapi.GateBadRequest, "Bad format")
 	}
