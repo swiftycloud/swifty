@@ -658,11 +658,12 @@ func handleAuths(ctx context.Context, w http.ResponseWriter, r *http.Request) *x
 			return GateErrM(swyapi.GateGenErr, "AaaS configuration error")
 		}
 
+		labels := []string{ authLabel }
 		dd := getDeployDesc(ctxSwoId(ctx, aa.Project, aa.Name))
-		dd.Labels = []string{ authLabel }
+		dd.Labels = labels
 		cerr := dd.getItemsParams(ctx, &swyapi.DeploySource{
 			Repo:	demoRep.ObjID.Hex() + "/" + conf.DemoRepo.AAASDep,
-		}, map[string]string { "name": aa.Name }, 0)
+		}, map[string]string { "name": aa.Name }, labels, 0)
 		if cerr != nil {
 			ctxlog(ctx).Errorf("Error getting %s file", conf.DemoRepo.AAASDep)
 			return cerr
