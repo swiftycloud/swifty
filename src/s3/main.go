@@ -646,11 +646,12 @@ func handlePutObject(ctx context.Context, oname string, bucket *s3mgo.Bucket, w 
 		return &S3Error{ ErrorCode: S3ErrIncompleteBody }
 	}
 
-	_, err = AddObject(ctx, bucket, oname, canned_acl, body)
+	o, err := AddObject(ctx, bucket, oname, canned_acl, body)
 	if err != nil {
 		return &S3Error{ ErrorCode: S3ErrInvalidRequest, Message: err.Error() }
 	}
 
+	w.Header().Set("ETag", o.ETag)
 	w.WriteHeader(http.StatusOK)
 	return nil
 }
