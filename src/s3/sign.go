@@ -15,6 +15,7 @@ import (
 	"net/url"
 	"strings"
 	"regexp"
+	"errors"
 	"sort"
 	"bytes"
 	"fmt"
@@ -22,7 +23,8 @@ import (
 )
 
 const (
-	AWSAuthHeaderPrefix	= "AWS4-HMAC-SHA256"
+	AWSAuthV2HeaderPrefix	= "AWS"
+	AWSAuthV4HeaderPrefix	= "AWS4-HMAC-SHA256"
 	AWSEmptyStringSHA256	= "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
 	AWSUnsignedPayload	= "UNSIGNED-PAYLOAD"
 	AWS4ServiceS3		= "s3"
@@ -61,16 +63,27 @@ func makeSha256(data []byte) []byte {
 	return hash.Sum(nil)
 }
 
-func (actx *AuthContext) ParseAuthorization(authHeader string) error {
+func (actx *AuthContext) ParseAuthorization(authHeader string) (int, error) {
+	if strings.HasPrefix(authHeader, AWSAuthV4HeaderPrefix + " ") {
+		err := actx.ParseV4Authorization(authHeader)
+		if err == nil {
+			return 0, nil
+		}
+
+		return S3ErrAuthorizationHeaderMalformed, err
+	}
+
+	if strings.HasPrefix(authHeader, AWSAuthV2HeaderPrefix + " ") {
+		return actx.ParseV2Authorization(authHeader)
+	}
+
+	return S3ErrAuthorizationHeaderMalformed, errors.New("The authorization header you provided is invalid.")
+}
+
+func (actx *AuthContext)ParseV4Authorization(authHeader string) error {
 	var hasAWSAuthHeaderPrefix bool
 	var elems []string
 	var e string
-
-	if authHeader == "" ||
-		len(authHeader) < len(AWSAuthHeaderPrefix) ||
-		authHeader[:len(AWSAuthHeaderPrefix)] != AWSAuthHeaderPrefix {
-		return fmt.Errorf("s3: No 'Authorization' header provided")
-	}
 
 	re := regexp.MustCompile(" ")
 	authHeader = strings.Join(strings.Fields(strings.Replace(authHeader, ",", " ", -1)), " ")
@@ -83,7 +96,7 @@ func (actx *AuthContext) ParseAuthorization(authHeader string) error {
 	for _, e = range elems {
 		pos := strings.Index(e, "=")
 		if pos < 0 {
-			if e == AWSAuthHeaderPrefix {
+			if e == AWSAuthV4HeaderPrefix {
 				hasAWSAuthHeaderPrefix = true
 			} else {
 				return fmt.Errorf("s3: Unknown value '%s' in header", e)
@@ -121,17 +134,21 @@ func (actx *AuthContext) ParseAuthorization(authHeader string) error {
 
 	// Verify fields
 	if !hasAWSAuthHeaderPrefix {
-		return fmt.Errorf("s3: No %s prefix detected", AWSAuthHeaderPrefix)
+		return fmt.Errorf("s3: No %s prefix detected", AWSAuthV4HeaderPrefix)
 	} else if actx.Signature == "" {
 		return fmt.Errorf("s3: Empty signature decected")
 	} else if len(actx.SignedHeaders) < 1 {
 		return fmt.Errorf("s3: Empty signed headers decected")
-	} else if actx.AccessKey == "" || actx.ShortTimeStamp == "" ||
-		actx.Region == "" {
+	} else if actx.AccessKey == "" || actx.ShortTimeStamp == "" || actx.Region == "" {
 		return fmt.Errorf("s3: Empty credentials decected")
 	}
 
 	return nil
+}
+
+func (actx *AuthContext)ParseV2Authorization(authHeader string) (int, error) {
+	return S3ErrInvalidRequest,
+			errors.New("The authorization mechanism you have provided is not supported. Please use AWS4-HMAC-SHA256.")
 }
 
 func (actx *AuthContext) BuildBodyDigest(r *http.Request) (error) {
@@ -231,7 +248,7 @@ func (actx *AuthContext) BuildSigningKey(secret string) {
 
 func (actx *AuthContext) BuildStringToSign() {
 	actx.StringToSign = strings.Join([]string{
-		AWSAuthHeaderPrefix,
+		AWSAuthV4HeaderPrefix,
 		actx.LongTimeStamp,
 		strings.Join([]string{
 			actx.ShortTimeStamp,
@@ -248,21 +265,20 @@ func (actx *AuthContext) BuildSignature() {
 	actx.BuiltSignature = hex.EncodeToString(signature)
 }
 
-func s3VerifyAuthorizationHeaders(ctx context.Context, r *http.Request, authHeader string) (*s3mgo.AccessKey, error) {
+func s3VerifyAuthorizationHeaders(ctx context.Context, r *http.Request, authHeader string) (*s3mgo.AccessKey, int, error) {
 	var akey *s3mgo.AccessKey
 	var actx AuthContext
-	var err error
 
-	err = actx.ParseAuthorization(authHeader)
+	code, err := actx.ParseAuthorization(authHeader)
 	if err != nil {
 		log.Error(err.Error())
-		return nil, err
+		return nil, code, err
 	}
 
 	akey, err = LookupAccessKey(ctx, actx.AccessKey)
 	if err != nil {
 		log.Error(err.Error())
-		return nil, err
+		return nil, S3ErrAccessDenied, err
 	}
 
 	actx.BuildSigningKey(s3DecryptAccessKeySecret(akey))
@@ -272,7 +288,7 @@ func s3VerifyAuthorizationHeaders(ctx context.Context, r *http.Request, authHead
 	err = actx.BuildBodyDigest(r)
 	if err != nil {
 		log.Error(err.Error())
-		return nil, err
+		return nil, S3ErrInvalidDigest, err
 	}
 
 	actx.BuildCanonicalString(r)
@@ -282,18 +298,18 @@ func s3VerifyAuthorizationHeaders(ctx context.Context, r *http.Request, authHead
 	log.Debugf("s3: s3VerifyAuthorizationHeaders: %s %s",
 		actx.Signature, actx.BuiltSignature)
 	if actx.Signature == actx.BuiltSignature {
-		return akey, nil
+		return akey, 0, nil
 	}
 
-	return nil, fmt.Errorf("Signature mismatch")
+	return nil, S3ErrSignatureDoesNotMatch, fmt.Errorf("Signature mismatch")
 }
 
-func s3AuthorizeUser(ctx context.Context, r *http.Request) (*s3mgo.AccessKey, error) {
+func s3AuthorizeUser(ctx context.Context, r *http.Request) (*s3mgo.AccessKey, int, error) {
 	var authHeader string
 
 	authHeader = getHeader(r, "Authorization")
 	if authHeader == "" {
-		return nil, nil
+		return nil, 0, nil
 	}
 
 	return s3VerifyAuthorizationHeaders(ctx, r, authHeader)

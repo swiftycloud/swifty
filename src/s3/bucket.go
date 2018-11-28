@@ -32,9 +32,11 @@ type S3ListObjectsRP struct {
 	ContToken		string
 	FetchOwner		bool
 	StartAfter		string
+	Marker			string
 
 	// Private fields
 	ContTokenDecoded	string
+	V2			bool
 }
 
 type S3Website struct {
@@ -433,6 +435,10 @@ func (params *S3ListObjectsRP) Validate() (bool) {
 		params.ContTokenDecoded = string(token[:])
 	}
 
+	if params.Marker != "" {
+		params.ContTokenDecoded = params.Marker
+	}
+
 	if len(params.Delimiter) > 1 { return false }
 
 	if params.MaxKeys <= 0 {
@@ -538,8 +544,13 @@ func s3ListBucket(ctx context.Context, bname string, params *S3ListObjectsRP) (*
 
 		if list.KeyCount >= list.MaxKeys {
 			list.IsTruncated = true
-			list.ContinuationToken = params.ContToken
-			list.NextContinuationToken = base64_encode([]byte(object.Key))
+			if params.V2 {
+				list.ContinuationToken = params.ContToken
+				list.NextContinuationToken = base64_encode([]byte(object.Key))
+			} else {
+				list.Marker = params.Marker
+				list.NextMarker = object.Key
+			}
 			break
 		}
 	}

@@ -287,21 +287,30 @@ func handleListObjects(ctx context.Context, bname string, w http.ResponseWriter,
 		return &S3Error{ ErrorCode: S3ErrMethodNotAllowed }
 	}
 
+	var params *S3ListObjectsRP
 	listType := getURLValue(r, "list-type")
-	if listType != "2" {
+
+	switch listType {
+	case "2":
+		params = &S3ListObjectsRP {
+			V2:		true,
+			ContToken:	getURLValue(r, "continuation-token"),
+			StartAfter:	getURLValue(r, "start-after"),
+			FetchOwner:	getURLBool(r, "fetch-owner"),
+		}
+	case "":
+		params = &S3ListObjectsRP {
+			Marker:		getURLValue(r, "marker"),
+		}
+	default:
 		return &S3Error{
 			ErrorCode: S3ErrInvalidArgument,
 			Message: "Invalid list-type",
 		}
 	}
 
-	params := &S3ListObjectsRP {
-		Delimiter:	getURLValue(r, "delimiter"),
-		Prefix:		getURLValue(r, "prefix"),
-		ContToken:	getURLValue(r, "continuation-token"),
-		StartAfter:	getURLValue(r, "start-after"),
-		FetchOwner:	getURLBool(r, "fetch-owner"),
-	}
+	params.Prefix = getURLValue(r, "prefix")
+	params.Delimiter = getURLValue(r, "delimiter")
 
 	if v, ok := getURLParam(r, "max-keys"); ok {
 		params.MaxKeys, _ = strconv.ParseInt(v, 10, 64)
@@ -637,11 +646,12 @@ func handlePutObject(ctx context.Context, oname string, bucket *s3mgo.Bucket, w 
 		return &S3Error{ ErrorCode: S3ErrIncompleteBody }
 	}
 
-	_, err = AddObject(ctx, bucket, oname, canned_acl, body)
+	o, err := AddObject(ctx, bucket, oname, canned_acl, body)
 	if err != nil {
 		return &S3Error{ ErrorCode: S3ErrInvalidRequest, Message: err.Error() }
 	}
 
+	w.Header().Set("ETag", o.ETag)
 	w.WriteHeader(http.StatusOK)
 	return nil
 }
@@ -675,8 +685,12 @@ func handleAccessObject(ctx context.Context, bname, oname string, w http.Respons
 }
 
 func handleObjectReq(ctx context.Context, w http.ResponseWriter, r *http.Request) *S3Error {
-	var bname string = mux.Vars(r)["BucketName"]
 	var oname string = mux.Vars(r)["ObjName"]
+	if oname == "" {
+		return handleBucket(ctx, w, r)
+	}
+
+	var bname string = mux.Vars(r)["BucketName"]
 	return handleObject(ctx, w, r, bname, oname)
 }
 
@@ -744,28 +758,28 @@ e_access:
 	return &S3Error{ ErrorCode: S3ErrAccessDenied }
 }
 
-func s3AuthorizeGetKey(ctx context.Context, r *http.Request) (*s3mgo.AccessKey, error) {
-	akey, err := s3AuthorizeUser(ctx, r)
+func s3AuthorizeGetKey(ctx context.Context, r *http.Request) (*s3mgo.AccessKey, int, error) {
+	akey, code, err := s3AuthorizeUser(ctx, r)
 	if akey != nil || err != nil {
-		return akey, err
+		return akey, code, err
 	}
 
 	akey, err = s3AuthorizeAdmin(ctx, r)
 	if akey != nil || err != nil {
-		return akey, err
+		return akey, S3ErrAccessDenied, err
 	}
 
-	return nil, errors.New("Not authorized")
+	return nil, S3ErrAccessDenied, errors.New("Not authorized")
 }
 
-func s3Authorize(ctx context.Context, r *http.Request) error {
-	key, err := s3AuthorizeGetKey(ctx, r)
+func s3Authorize(ctx context.Context, r *http.Request) (int, error) {
+	key, code, err := s3AuthorizeGetKey(ctx, r)
 	if err != nil {
-		return err
+		return code, err
 	}
 
 	if key.Expired() {
-		return errors.New("Key is expired")
+		return S3ErrAccessDenied, errors.New("Key is expired")
 	}
 
 	iam, err := s3IamFind(ctx, key)
@@ -774,7 +788,7 @@ func s3Authorize(ctx context.Context, r *http.Request) error {
 	}
 
 	ctxAuthorize(ctx, iam)
-	return nil
+	return 0, nil
 }
 
 func handleS3API(cb func(ctx context.Context, w http.ResponseWriter, r *http.Request) *S3Error) http.Handler {
@@ -788,9 +802,9 @@ func handleS3API(cb func(ctx context.Context, w http.ResponseWriter, r *http.Req
 
 		if xhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
 
-		err := s3Authorize(ctx, r)
+		code, err := s3Authorize(ctx, r)
 		if err != nil {
-			HTTPRespError(w, S3ErrAccessDenied, err.Error())
+			HTTPRespError(w, code, err.Error())
 			return
 		}
 
@@ -1019,6 +1033,7 @@ func main() {
 
 	adminAccToken, err = s3Secrets.Get(conf.Daemon.Token)
 	if err != nil || len(adminAccToken) < 16 {
+		log.Debugf(">> %s vs %s", conf.Daemon.Token, adminAccToken)
 		log.Errorf("Bad admin access token: %s", err)
 		return
 	}
@@ -1033,7 +1048,7 @@ func main() {
 	rgatesrv := mux.NewRouter()
 	match_bucket := fmt.Sprintf("/{BucketName:%s*}",
 		S3BucketName_Letter)
-	match_object := fmt.Sprintf("/{BucketName:%s+}/{ObjName:%s+}",
+	match_object := fmt.Sprintf("/{BucketName:%s+}/{ObjName:%s*}",
 		S3BucketName_Letter, S3ObjectName_Letter)
 
 	rgatesrv.Handle(match_bucket,	handleS3API(handleBucket))

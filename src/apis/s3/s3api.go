@@ -151,9 +151,13 @@ type S3Bucket struct {
 	CommonPrefixes		[]S3Prefix			`xml:"CommonPrefixes,omitempy"`
 	Delimiter		string				`xml:"Delimiter,omitempy"`
 	EncodingType		string				`xml:"Encoding-Type,omitempy"`
+
 	ContinuationToken	string				`xml:"ContinuationToken,omitempy"`
 	NextContinuationToken	string				`xml:"NextContinuationToken,omitempy"`
 	StartAfter		string				`xml:"StartAfter,omitempy"`
+
+	Marker			string				`xml:"Marker,omitempy"`
+	NextMarker		string				`xml:"NextMarker,omitempy"`
 }
 
 type S3BucketListEntry struct {
