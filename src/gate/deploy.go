@@ -320,13 +320,14 @@ func (dep *DeployDesc)getItems(ctx context.Context, ds *swyapi.DeployStart) *xre
 		ds.Params["name"] = dep.SwoId.Name
 	}
 
-	return dep.getItemsParams(ctx, &ds.From, ds.Params, 0)
+	return dep.getItemsParams(ctx, &ds.From, ds.Params, nil, 0)
 }
 
-func (dep *DeployDesc)getItemsParams(ctx context.Context, from *swyapi.DeploySource, params map[string]string, depth int) *xrest.ReqErr {
+func (dep *DeployDesc)getItemsParams(ctx context.Context, from *swyapi.DeploySource, params map[string]string, labels []string, depth int) *xrest.ReqErr {
 	var dd swyapi.DeployDescription
 	var desc []byte
 	var err error
+	var trusted bool
 
 	switch {
 	case from.Descr != "":
@@ -335,7 +336,7 @@ func (dep *DeployDesc)getItemsParams(ctx context.Context, from *swyapi.DeploySou
 			return GateErrE(swyapi.GateGenErr, err)
 		}
 	case from.Repo != "":
-		desc, err = repoReadFile(ctx, from.Repo)
+		desc, trusted, err = repoReadFile(ctx, from.Repo)
 		if err != nil {
 			return GateErrE(swyapi.GateGenErr, err)
 		}
@@ -358,10 +359,24 @@ func (dep *DeployDesc)getItemsParams(ctx context.Context, from *swyapi.DeploySou
 		return GateErrE(swyapi.GateBadRequest, err)
 	}
 
-	return dep.getItemsDesc(ctx, &dd, params, depth)
+	if trusted && dd.Labels != nil && len(dd.Labels) != 0 {
+		dep.Labels = dd.Labels
+
+		var x map[string]bool
+		for _, l := range labels {
+			x[l] = true
+		}
+		for _, l := range dd.Labels {
+			if _, ok := x[l]; !ok {
+				labels = append(labels, l)
+			}
+		}
+	}
+
+	return dep.getItemsDesc(ctx, &dd, params, labels, depth)
 }
 
-func (dep *DeployDesc)getItemsDesc(ctx context.Context, dd *swyapi.DeployDescription, params map[string]string, depth int) *xrest.ReqErr {
+func (dep *DeployDesc)getItemsDesc(ctx context.Context, dd *swyapi.DeployDescription, params map[string]string, labels []string, depth int) *xrest.ReqErr {
 	id := dep.SwoId
 
 	for _, inc := range dd.Include {
@@ -369,7 +384,7 @@ func (dep *DeployDesc)getItemsDesc(ctx context.Context, dd *swyapi.DeployDescrip
 			return GateErrM(swyapi.GateBadRequest, "Too many includes")
 		}
 
-		cer := dep.getItemsParams(ctx, &inc.DeploySource, params, depth + 1)
+		cer := dep.getItemsParams(ctx, &inc.DeploySource, params, labels, depth + 1)
 		if cer != nil {
 			return cer
 		}
@@ -401,7 +416,7 @@ func (dep *DeployDesc)getItemsDesc(ctx context.Context, dd *swyapi.DeployDescrip
 			evs = append(evs, ed)
 		}
 
-		fd.Labels = dep.Labels
+		fd.Labels = labels
 		dep.Functions = append(dep.Functions, &DeployFunction{
 			Id: id, Fn: fd, FnSrc: string(srcd), src: fn.Sources, Evs: evs,
 		})
@@ -414,7 +429,7 @@ func (dep *DeployDesc)getItemsDesc(ctx context.Context, dd *swyapi.DeployDescrip
 			return cerr
 		}
 
-		md.Labels = dep.Labels
+		md.Labels = labels
 		dep.Mwares = append(dep.Mwares, &DeployMware{
 			Id: id, Mw: md,
 		})
@@ -427,7 +442,7 @@ func (dep *DeployDesc)getItemsDesc(ctx context.Context, dd *swyapi.DeployDescrip
 			return cerr
 		}
 
-		rt.Labels = dep.Labels
+		rt.Labels = labels
 		dep.Routers = append(dep.Routers, &DeployRouter{
 			Id: id, Rt: rt,
 		})
