@@ -675,8 +675,12 @@ func handleAccessObject(ctx context.Context, bname, oname string, w http.Respons
 }
 
 func handleObjectReq(ctx context.Context, w http.ResponseWriter, r *http.Request) *S3Error {
-	var bname string = mux.Vars(r)["BucketName"]
 	var oname string = mux.Vars(r)["ObjName"]
+	if oname == "" {
+		return handleBucket(ctx, w, r)
+	}
+
+	var bname string = mux.Vars(r)["BucketName"]
 	return handleObject(ctx, w, r, bname, oname)
 }
 
@@ -1034,7 +1038,7 @@ func main() {
 	rgatesrv := mux.NewRouter()
 	match_bucket := fmt.Sprintf("/{BucketName:%s*}",
 		S3BucketName_Letter)
-	match_object := fmt.Sprintf("/{BucketName:%s+}/{ObjName:%s+}",
+	match_object := fmt.Sprintf("/{BucketName:%s+}/{ObjName:%s*}",
 		S3BucketName_Letter, S3ObjectName_Letter)
 
 	rgatesrv.Handle(match_bucket,	handleS3API(handleBucket))
