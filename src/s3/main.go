@@ -287,21 +287,30 @@ func handleListObjects(ctx context.Context, bname string, w http.ResponseWriter,
 		return &S3Error{ ErrorCode: S3ErrMethodNotAllowed }
 	}
 
+	var params *S3ListObjectsRP
 	listType := getURLValue(r, "list-type")
-	if listType != "2" {
+
+	switch listType {
+	case "2":
+		params = &S3ListObjectsRP {
+			V2:		true,
+			ContToken:	getURLValue(r, "continuation-token"),
+			StartAfter:	getURLValue(r, "start-after"),
+			FetchOwner:	getURLBool(r, "fetch-owner"),
+		}
+	case "":
+		params = &S3ListObjectsRP {
+			Marker:		getURLValue(r, "marker"),
+		}
+	default:
 		return &S3Error{
 			ErrorCode: S3ErrInvalidArgument,
 			Message: "Invalid list-type",
 		}
 	}
 
-	params := &S3ListObjectsRP {
-		Delimiter:	getURLValue(r, "delimiter"),
-		Prefix:		getURLValue(r, "prefix"),
-		ContToken:	getURLValue(r, "continuation-token"),
-		StartAfter:	getURLValue(r, "start-after"),
-		FetchOwner:	getURLBool(r, "fetch-owner"),
-	}
+	params.Prefix = getURLValue(r, "prefix")
+	params.Delimiter = getURLValue(r, "delimiter")
 
 	if v, ok := getURLParam(r, "max-keys"); ok {
 		params.MaxKeys, _ = strconv.ParseInt(v, 10, 64)
