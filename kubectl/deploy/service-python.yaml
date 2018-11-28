@@ -21,7 +21,7 @@ spec:
     spec:
       containers:
       - name: python-service
-        image: "swifty/python"
+        image: "registry.gitlab.com/swiftyteam/swifty/python"
         imagePullPolicy: Never
         env:
         - name: SWD_INSTANCE
