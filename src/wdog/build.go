@@ -124,7 +124,8 @@ func doBuildSwift(params *swyapi.WdogFunctionBuild) (*swyapi.WdogFunctionRunResu
 		return nil, fmt.Errorf("Can't build: %s", err.Error())
 	}
 
-	err = os.Rename("/swift/swycode/debug/function", "/swift/swycode/debug/runner" + params.Suff)
+	pfx := "/swift/swycode/" + srcdir
+	err = os.Rename(pfx + "/debug/function", pfx + "/runner" + params.Suff)
 	if err != nil {
 		return nil, fmt.Errorf("Can't rename binary: %s", err.Error())
 	}

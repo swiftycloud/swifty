@@ -109,7 +109,7 @@ var ldescs = map[string]*LangDesc {
 		remove:   xpipRemove,
 	},
 	"swift": &LangDesc {
-		runner:	"/swift/swycode/debug/runner",
+		runner:	"/swift/swycode/runner",
 		build:	doBuildSwift,
 		prep:	mkExecRunner,
 	},
