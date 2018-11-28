@@ -33,7 +33,7 @@ middleware:
         websocket:
                 api: "http://159.69.216.175:8684"
 wdog:
-        img-prefix: "swifty"
+        img-prefix: "registry.gitlab.com/swiftyteam/swifty"
         volume: "/home/swifty-volume"
         port: 8687
         k8s-namespace: "default"

@@ -21,7 +21,7 @@ spec:
     spec:
       containers:
       - name: swift-service
-        image: "swifty/swift"
+        image: "registry.gitlab.com/swiftyteam/swifty/swift"
         imagePullPolicy: Never
         env:
         - name: SWD_INSTANCE
