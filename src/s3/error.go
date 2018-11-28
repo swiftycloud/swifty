@@ -124,6 +124,8 @@ const (
 	S3ErrThrottlingException			int = 93
 	S3ErrValidationError				int = 94
 
+	S3ErrAuthorizationHeaderMalformed		int = 95
+
 	// Own error codes
 	S3ErrSwyInvalidObjectName			int = 1024
 )
@@ -608,6 +610,11 @@ var s3RespErrorMapData = map[int]s3RespErrorMap {
 	S3ErrValidationError: s3RespErrorMap {
 		HttpStatus:	http.StatusBadRequest,
 		ErrorCode:	"ValidationError",
+	},
+
+	S3ErrAuthorizationHeaderMalformed: s3RespErrorMap {
+		HttpStatus:	http.StatusBadRequest,
+		ErrorCode:	"AuthorizationHeaderMalformed",
 	},
 
 	// The specified object is not valid

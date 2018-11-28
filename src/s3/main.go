@@ -744,28 +744,28 @@ e_access:
 	return &S3Error{ ErrorCode: S3ErrAccessDenied }
 }
 
-func s3AuthorizeGetKey(ctx context.Context, r *http.Request) (*s3mgo.AccessKey, error) {
-	akey, err := s3AuthorizeUser(ctx, r)
+func s3AuthorizeGetKey(ctx context.Context, r *http.Request) (*s3mgo.AccessKey, int, error) {
+	akey, code, err := s3AuthorizeUser(ctx, r)
 	if akey != nil || err != nil {
-		return akey, err
+		return akey, code, err
 	}
 
 	akey, err = s3AuthorizeAdmin(ctx, r)
 	if akey != nil || err != nil {
-		return akey, err
+		return akey, S3ErrAccessDenied, err
 	}
 
-	return nil, errors.New("Not authorized")
+	return nil, S3ErrAccessDenied, errors.New("Not authorized")
 }
 
-func s3Authorize(ctx context.Context, r *http.Request) error {
-	key, err := s3AuthorizeGetKey(ctx, r)
+func s3Authorize(ctx context.Context, r *http.Request) (int, error) {
+	key, code, err := s3AuthorizeGetKey(ctx, r)
 	if err != nil {
-		return err
+		return code, err
 	}
 
 	if key.Expired() {
-		return errors.New("Key is expired")
+		return S3ErrAccessDenied, errors.New("Key is expired")
 	}
 
 	iam, err := s3IamFind(ctx, key)
@@ -774,7 +774,7 @@ func s3Authorize(ctx context.Context, r *http.Request) error {
 	}
 
 	ctxAuthorize(ctx, iam)
-	return nil
+	return 0, nil
 }
 
 func handleS3API(cb func(ctx context.Context, w http.ResponseWriter, r *http.Request) *S3Error) http.Handler {
@@ -788,9 +788,9 @@ func handleS3API(cb func(ctx context.Context, w http.ResponseWriter, r *http.Req
 
 		if xhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
 
-		err := s3Authorize(ctx, r)
+		code, err := s3Authorize(ctx, r)
 		if err != nil {
-			HTTPRespError(w, S3ErrAccessDenied, err.Error())
+			HTTPRespError(w, code, err.Error())
 			return
 		}
 
@@ -1019,6 +1019,7 @@ func main() {
 
 	adminAccToken, err = s3Secrets.Get(conf.Daemon.Token)
 	if err != nil || len(adminAccToken) < 16 {
+		log.Debugf(">> %s vs %s", conf.Daemon.Token, adminAccToken)
 		log.Errorf("Bad admin access token: %s", err)
 		return
 	}
