@@ -327,6 +327,7 @@ func (dep *DeployDesc)getItemsParams(ctx context.Context, from *swyapi.DeploySou
 	var dd swyapi.DeployDescription
 	var desc []byte
 	var err error
+	var trusted bool
 
 	switch {
 	case from.Descr != "":
@@ -335,7 +336,7 @@ func (dep *DeployDesc)getItemsParams(ctx context.Context, from *swyapi.DeploySou
 			return GateErrE(swyapi.GateGenErr, err)
 		}
 	case from.Repo != "":
-		desc, err = repoReadFile(ctx, from.Repo)
+		desc, trusted, err = repoReadFile(ctx, from.Repo)
 		if err != nil {
 			return GateErrE(swyapi.GateGenErr, err)
 		}
@@ -356,6 +357,20 @@ func (dep *DeployDesc)getItemsParams(ctx context.Context, from *swyapi.DeploySou
 	err = yaml.Unmarshal(desc, &dd)
 	if err != nil {
 		return GateErrE(swyapi.GateBadRequest, err)
+	}
+
+	if trusted && dd.Labels != nil && len(dd.Labels) != 0 {
+		dep.Labels = dd.Labels
+
+		var x map[string]bool
+		for _, l := range labels {
+			x[l] = true
+		}
+		for _, l := range dd.Labels {
+			if _, ok := x[l]; !ok {
+				labels = append(labels, l)
+			}
+		}
 	}
 
 	return dep.getItemsDesc(ctx, &dd, params, labels, depth)

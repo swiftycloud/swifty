@@ -232,6 +232,8 @@ type DeployDescription struct {
 	Functions	[]*FunctionAdd		`yaml:"functions"`
 	Mwares		[]*MwareAdd		`yaml:"mwares"`
 	Routers		[]*RouterAdd		`yaml:"routers"`
+
+	Labels		[]string		`yaml:"labels,omitempty"` // Trusted repos only
 }
 
 type DeploySource struct {
