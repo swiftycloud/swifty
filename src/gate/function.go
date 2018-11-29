@@ -147,6 +147,10 @@ func (fn *FunctionDesc)getURL() string {
 	return getURL(URLFunction, fn.Cookie)
 }
 
+func (fn *FunctionDesc)PodToken() string {
+	return fn.Cookie
+}
+
 func (fn *FunctionDesc)toMInfo(ctx context.Context) *swyapi.FunctionMdat {
 	var fid swyapi.FunctionMdat
 	fdm := memdGetCond(fn.Cookie)
