@@ -487,9 +487,9 @@ func handleProxy(dir string, w http.ResponseWriter, req *http.Request) {
 	var runner *Runner
 
 	v := mux.Vars(req)
-	fnid := v["fnid"]
+	podtok := v["podtok"]
 	podip := v["podip"]
-	rkey := fnid + "/" + podip
+	rkey := podtok + "/" + podip
 
 	r, ok := prox_runners.Load(rkey)
 	if ok {
@@ -631,7 +631,7 @@ func main() {
 			log.Fatal("SWD_CRESPONDER not set")
 		}
 
-		r.HandleFunc("/v1/run/{fnid}/{podip}",
+		r.HandleFunc("/v1/run/{podtok}/{podip}",
 				func(w http.ResponseWriter, r *http.Request) {
 					handleProxy(crespDir, w, r)
 				})

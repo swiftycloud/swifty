@@ -46,6 +46,7 @@ var (
 	DepScaleupRelax time.Duration		= 16 * time.Second
 	DepScaledownStep time.Duration		= 8 * time.Second
 	TenantLimitsUpdPeriod time.Duration	= 120 * time.Second
+	PodTokenLen int				= 64
 )
 
 func init() {
@@ -57,6 +58,7 @@ func init() {
 	addTimeSysctl("limits_update_period",	&TenantLimitsUpdPeriod)
 
 	addTimeSysctl("ks_token_cache_exp",	&xkst.TokenCacheExpires)
+	addIntSysctl("pod_token_len",		&PodTokenLen)
 
 	addRoSysctl("gate_mode", func() string {
 		ret := "mode:"

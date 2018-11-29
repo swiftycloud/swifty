@@ -122,7 +122,7 @@ func k8sGenEnvVar(ctx context.Context, fn *FunctionDesc, wd_port int) []v1.EnvVa
 			Value:	fn.Code.Lang, })
 	s = append(s, v1.EnvVar{
 			Name:	"SWD_POD_TOKEN",
-			Value:	fn.Cookie, })
+			Value:	fn.PodToken(), })
 	s = append(s, v1.EnvVar{
 			Name:	"SWD_FN_TMO",
 			Value:	strconv.Itoa(int(fn.Size.Tmo)), })
@@ -298,7 +298,7 @@ func k8sRun(ctx context.Context, conf *YAMLConf, fn *FunctionDesc) error {
 			Name:		"conn",
 			VolumeSource:	v1.VolumeSource {
 				HostPath: &v1.HostPathVolumeSource{
-					Path: "/var/run/swifty/wdogconn/" + fn.Cookie,
+					Path: "/var/run/swifty/wdogconn/" + fn.PodToken(),
 				},
 			},
 		},
@@ -403,6 +403,7 @@ func k8sRun(ctx context.Context, conf *YAMLConf, fn *FunctionDesc) error {
 type k8sPod struct {
 	SwoId
 	FnId		string
+	Token		string
 	Version		string
 	DepName		string
 	WdogAddr	string
@@ -416,13 +417,14 @@ func (pod *k8sPod)conn() *podConn {
 		Addr: pod.WdogAddr,
 		Port: pod.WdogPort,
 		Host: pod.Host,
-		Cookie: pod.FnId,
+		FnId: pod.FnId,
+		PTok: pod.Token,
 	}
 }
 
 func (pod *k8sPod)Service() string {
 	switch pod.DepName {
-	case "swy-go-service":
+	case "swy-go-service", "swy-golang-service":
 		return "golang"
 	case "swy-swift-service":
 		return "swift"
@@ -447,16 +449,19 @@ func genBalancerPod(pod *v1.Pod) (*k8sPod) {
 
 	for _, c := range pod.Spec.Containers {
 		for _, v := range c.Env {
-			if v.Name == "SWD_TENNANT" {
+			switch v.Name {
+			case "SWD_TENNANT":
 				r.Tennant = v.Value
-			} else if v.Name == "SWD_PROJECT" {
+			case "SWD_PROJECT":
 				r.Project = v.Value
-			} else if v.Name == "SWD_FUNCNAME" {
+			case "SWD_FUNCNAME":
 				r.Name = v.Value
-			} else if v.Name == "SWD_VERSION" {
+			case "SWD_VERSION":
 				r.Version = v.Value
-			} else if v.Name == "SWD_PORT" {
+			case "SWD_PORT":
 				r.WdogPort = v.Value
+			case "SWD_POD_TOKEN":
+				r.Token = v.Value
 			}
 		}
 	}

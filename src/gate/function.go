@@ -17,6 +17,7 @@ import (
 	"gopkg.in/mgo.v2/bson"
 
 	"swifty/apis"
+	"swifty/common"
 	"swifty/common/ratelimit"
 	"swifty/common/xwait"
 	"swifty/common/xrest"
@@ -114,6 +115,7 @@ type FunctionDesc struct {
 	SwoId				`bson:",inline"`
 	Labels		[]string	`bson:"labels,omitempty"`
 	Cookie		string		`bson:"cookie"`		// Some "unique" identifier
+	PToken		string		`bson:"pod_token,omitempty"`
 	State		int		`bson:"state"`		// Function state
 	Mware		[]string	`bson:"mware"`
 	S3Buckets	[]string	`bson:"s3buckets"`
@@ -147,6 +149,14 @@ func (fn *FunctionDesc)getURL() string {
 	return getURL(URLFunction, fn.Cookie)
 }
 
+func (fn *FunctionDesc)PodToken() string {
+	if fn.PToken != "" {
+		return fn.PToken
+	} else {
+		return fn.Cookie
+	}
+}
+
 func (fn *FunctionDesc)toMInfo(ctx context.Context) *swyapi.FunctionMdat {
 	var fid swyapi.FunctionMdat
 	fdm := memdGetCond(fn.Cookie)
@@ -169,6 +179,7 @@ func (fn *FunctionDesc)toMInfo(ctx context.Context) *swyapi.FunctionMdat {
 		}
 
 		fid.Dep = fn.DepName()
+		fid.PodToken = fn.PToken
 	}
 
 	return &fid
@@ -415,6 +426,12 @@ func (fn *FunctionDesc)Add(ctx context.Context, p interface{}) *xrest.ReqErr {
 		src = &swyapi.FunctionSources {
 			Repo: demoRep.ObjID.Hex() + "/" + conf.DemoRepo.EmptySources + "/" + rtScriptName(&fn.Code, ""),
 		}
+	}
+
+	fn.PToken, err = xh.GenRandId(PodTokenLen)
+	if err != nil {
+		cerr = GateErrM(swyapi.GateGenErr, "error generating token")
+		goto out
 	}
 
 	fn.ObjID = bson.NewObjectId()

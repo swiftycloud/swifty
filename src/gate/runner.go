@@ -79,7 +79,8 @@ type podConn struct {
 	Addr	string
 	Host	string
 	Port	string
-	Cookie	string
+	FnId	string
+	PTok	string
 }
 
 func talkHTTP(addr, port, url string, args *swyapi.FunctionRun) (*swyapi.WdogFunctionRunResult, error) {
@@ -129,9 +130,9 @@ func (conn *podConn)Run(ctx context.Context, sopq *statsOpaque, suff, event stri
 
 	if proxy {
 		res, err = talkHTTP(conn.Host, conf.Wdog.p_port,
-				conn.Cookie + "/" + strings.Replace(conn.Addr, ".", "_", -1), args)
+				conn.PTok + "/" + strings.Replace(conn.Addr, ".", "_", -1), args)
 	} else {
-		url := conn.Cookie
+		url := conn.PTok
 		if suff != "" {
 			url += "/" + suff
 		}
@@ -148,7 +149,7 @@ func (conn *podConn)Run(ctx context.Context, sopq *statsOpaque, suff, event stri
 		go func() {
 			sctx, done := mkContext("::logsave")
 			defer done(sctx)
-			logSaveResult(sctx, conn.Cookie, event, res.Stdout, res.Stderr)
+			logSaveResult(sctx, conn.FnId, event, res.Stdout, res.Stderr)
 		}()
 	}
 

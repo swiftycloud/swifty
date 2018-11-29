@@ -57,41 +57,37 @@ var growOps = map[string]bool {
 
 type quota struct {}
 
-func (*quota)config(mc map[string]interface{}) error {
-	if x, ok := mc["check_thresh"]; ok {
-		switch y := x.(type) {
-		case int:
-			quotaCheckThresh = uint32(y)
-		case float64:
-			quotaCheckThresh = uint32(y)
-		default:
-			return errors.New("check_thres must be integer")
+func (*quota)config(mc map[string]interface{}) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("Error: %s\n", r)
+			err = errors.New("Error parsing config")
 		}
+	}()
+
+	if x, ok := mc["check_thresh"]; ok {
+		quotaCheckThresh = uint32(x.(int))
 		log.Printf("Set quota check thresh to %v\n", quotaCheckThresh)
 	}
 
 	if x, ok := mc["unlock_period"]; ok {
-		switch y := x.(type) {
-		case string:
-			var err error
-			unlockScanPeriod, err = time.ParseDuration(y)
-			if err != nil {
-				return err
-			}
-		default:
-			return errors.New("unlock_period must be string")
+		unlockScanPeriod, err = time.ParseDuration(x.(string))
+		if err != nil {
+			return err
 		}
 		log.Printf("Set unlock check period to %s\n", unlockScanPeriod.String())
 	}
 
 	if x, ok := mc["quotas"]; ok {
-		switch y := x.(type) {
-		case string:
-			colQuotas = y
-		default:
-			return errors.New("quotas must be string")
-		}
+		colQuotas = x.(string)
 		log.Printf("Set quotas collection to %s\n", colQuotas)
+	}
+
+	if x, ok := mc["methods"]; ok {
+		for _, m := range x.([]interface{}) {
+			growOps[m.(string)] = true
+		}
+		log.Printf("Set grow ops to %v\n", growOps)
 	}
 
 	return nil

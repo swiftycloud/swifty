@@ -2,22 +2,22 @@ apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
   labels:
-    deployment: swy-go-service
+    deployment: swy-golang-service
   annotations:
     scheduler.alpha.kubernetes.io/critical-pod: /
-  name: swy-go-service
+  name: swy-golang-service
   namespace: default
 spec:
   replicas: 1
   selector:
     matchLabels:
-      deployment: swy-go-service
+      deployment: swy-golang-service
   template:
     metadata:
       labels:
-        deployment: swy-go-service
+        deployment: swy-golang-service
         swyservice: golang
-      name: swy-go-service
+      name: swy-golang-service
     spec:
       containers:
       - name: golang-service
