@@ -10,6 +10,7 @@ import (
 	"swifty/common/xqueue"
 	"os"
 	"os/exec"
+	"strings"
 	"net"
 	"fmt"
 	"syscall"
@@ -41,9 +42,17 @@ func startQnR(runner *Runner) error {
 		scr = "-"
 	}
 
+	env := []string{}
+	for _, e := range os.Environ() {
+		if !strings.HasPrefix(e, "SWD_") {
+			env = append(env, e)
+		}
+	}
+
 	runner.l.cmd = exec.Command("/usr/bin/swy-runner",
 					runner.l.fout, runner.l.ferr,
 					runner.q.GetId(), bin, scr)
+	runner.l.cmd.Env = env
 	err = runner.l.cmd.Start()
 	if err != nil {
 		return fmt.Errorf("Can't start runner: %s", err.Error())
