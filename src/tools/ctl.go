@@ -679,6 +679,9 @@ func function_minfo(args []string, opts [16]string) {
 	if ifo.Dep != "" {
 		fmt.Printf("Deployments: %s\n", ifo.Dep)
 	}
+	if ifo.PodToken != "" {
+		fmt.Printf("Pod token %s\n", ifo.PodToken)
+	}
 }
 
 func check_lang(args []string, opts [16]string) {

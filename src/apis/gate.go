@@ -89,6 +89,7 @@ type FunctionInfo struct {
 
 type FunctionMdat struct {
 	Cookie		string			`json:"cookie"`
+	PodToken	string			`json:"pod_token"`
 	RL		[]uint			`json:"rl"`
 	BR		[]uint			`json:"br"`
 	IPs		[]string		`json:"ips,omitempty"`
