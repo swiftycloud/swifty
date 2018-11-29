@@ -1661,7 +1661,7 @@ func login() {
 		fatal(fmt.Errorf("No HOME dir set"))
 	}
 
-	err := xh.ReadYamlConfig(home + "/.swifty.conf", &conf)
+	err := xh.ReadYamlConfig(config(home), &conf)
 	if err != nil {
 		fatal(fmt.Errorf("Login first"))
 	}
@@ -1778,7 +1778,7 @@ func save_config() {
 		fatal(fmt.Errorf("No HOME dir set"))
 	}
 
-	err := xh.WriteYamlConfig(home + "/.swifty.conf", &conf)
+	err := xh.WriteYamlConfig(config(home), &conf)
 	if err != nil {
 		fatal(fmt.Errorf("Can't write swifty.conf: %s", err.Error()))
 	}
@@ -1969,6 +1969,15 @@ var curCmd *cmdDesc
 var curProj string
 var curRelay string
 var verbose bool
+var profile string
+
+func config(home string) string {
+	r := home + "/.swifty.conf"
+	if profile != "" {
+		r += "." + profile
+	}
+	return r
+}
 
 var cmdMap = map[string]*cmdDesc {
 	CMD_LOGIN:	&cmdDesc{ help: "Login to gate/admd" },
@@ -2063,6 +2072,7 @@ func setupCommonCmd(cmd string, args ...string) {
 	}
 	cd.opts.BoolVar(&verbose, "V", false, "Verbose: show the request sent and response got")
 	cd.opts.StringVar(&curRelay, "for", "", "Act as another user (admin-only")
+	cd.opts.StringVar(&profile, "P", "", "Profile to work with")
 
 	cd.npa = len(args)
 	cd.opts.Usage = func() {
@@ -2266,6 +2276,10 @@ func main() {
 	npa := cd.npa + 2
 	if len(os.Args) >= npa {
 		cd.opts.Parse(os.Args[npa:])
+	}
+
+	if profile == "" {
+		profile = os.Getenv("SWYCTL_PROFILE")
 	}
 
 	if os.Args[1] == CMD_LOGIN {
