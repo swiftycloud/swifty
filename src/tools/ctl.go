@@ -902,7 +902,9 @@ func run_function(args []string, opts [16]string) {
 	rq := &swyapi.FunctionRun{}
 
 	args[0], _ = swyclient.Functions().Resolve(curProj, args[0])
-	rq.Args = split_args_string(args[1])
+	if len(args) > 1 {
+		rq.Args = split_args_string(args[1])
+	}
 
 	if opts[0] != "" {
 		src := &swyapi.FunctionSources{}
