@@ -735,6 +735,7 @@ func detect_language(path string) string {
 	gor := regexp.MustCompile("^func\\s+Main\\s*\\(.*interface\\s*{\\s*}")
 	swr := regexp.MustCompile("^func\\s+Main\\s*\\(.*->\\s*Encodable")
 	jsr := regexp.MustCompile("^exports.Main\\s*=\\s*function")
+	csr := regexp.MustCompile("static.*Response.*\\).*Main.*\\(.*Request")
 
 	lines := strings.Split(string(cont), "\n")
 	for _, ln := range(lines) {
@@ -756,6 +757,10 @@ func detect_language(path string) string {
 
 		if jsr.MatchString(ln) {
 			return check_ext(path, ".js", "nodejs")
+		}
+
+		if csr.MatchString(ln) {
+			return check_ext(path, ".cs", "csharp")
 		}
 	}
 
