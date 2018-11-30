@@ -1,3 +1,4 @@
+// Inspired by Mono.Posix UnixStream
 using System;
 using System.Runtime.InteropServices;
 using Mono.Unix;
@@ -7,15 +8,15 @@ namespace XStream {
 
 	public class XStreamFD
 	{
-		public XStreamFD (int fileDescriptor, bool ownsHandle)
+		public XStreamFD (int fd, bool ownsHandle)
 		{
-			this.fileDescriptor = fileDescriptor;
+			this.fd = fd;
 			this.owner = ownsHandle;
 		}
 
 		public int Handle
 		{
-			get { return fileDescriptor; }
+			get { return fd; }
 		}
 
 		public unsafe int Read ([In, Out] byte[] buffer, int offset, int count)
@@ -23,24 +24,21 @@ namespace XStream {
 			long r = 0;
 			fixed (byte* buf = &buffer[offset]) {
 				do {
-					r = Syscall.read (fileDescriptor, buf, (ulong) count);
+					r = Syscall.read (fd, buf, (ulong) count);
 				} while (UnixMarshal.ShouldRetrySyscall ((int) r));
 			}
-			if (r == -1)
-				UnixMarshal.ThrowExceptionForLastError ();
 			return (int) r;
 		}
 
-		public unsafe void Write (byte[] buffer, int offset, int count)
+		public unsafe int Write (byte[] buffer, int offset, int count)
 		{
 			long r = 0;
 			fixed (byte* buf = &buffer[offset]) {
 				do {
-					r = Syscall.write (fileDescriptor, buf, (ulong) count);
+					r = Syscall.write (fd, buf, (ulong) count);
 				} while (UnixMarshal.ShouldRetrySyscall ((int) r));
 			}
-			if (r == -1)
-				UnixMarshal.ThrowExceptionForLastError ();
+			return (int) r;
 		}
 		
 		~XStreamFD ()
@@ -55,15 +53,14 @@ namespace XStream {
 
 			int r;
 			do {
-				r = Syscall.close (fileDescriptor);
+				r = Syscall.close (fd);
 			} while (UnixMarshal.ShouldRetrySyscall (r));
-			UnixMarshal.ThrowExceptionForLastErrorIf (r);
-			fileDescriptor = -1;
+			fd = -1;
 			owner = false;
 			GC.SuppressFinalize (this);
 		}
 		
 		private bool owner = true;
-		private int fileDescriptor = -1;
+		private int fd = -1;
 	}
 }
