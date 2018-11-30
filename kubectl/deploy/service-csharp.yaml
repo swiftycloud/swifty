@@ -1,0 +1,49 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  labels:
+    deployment: swy-csharp-service
+  annotations:
+    scheduler.alpha.kubernetes.io/critical-pod: /
+  name: swy-csharp-service
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      deployment: swy-csharp-service
+  template:
+    metadata:
+      labels:
+        deployment: swy-csharp-service
+        swyservice: csharp
+      name: swy-csharp-service
+    spec:
+      containers:
+      - name: csharp-service
+        image: "swifty/csharp"
+        imagePullPolicy: Never
+        env:
+        - name: SWD_INSTANCE
+          value: "service"
+        - name: SWD_PORT
+          value: "8687"
+        - name: SWD_LANG
+          value: "csharp"
+        - name: SWD_POD_IP
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: status.podIP
+        volumeMounts:
+        - mountPath: /mono/functions
+          name: code
+        - mountPath: /mono/packages
+          name: packages
+      volumes:
+      - hostPath:
+          path: /home/swifty-volume/functions
+        name: code
+      - hostPath:
+          path: /home/swifty-volume/packages
+        name: packages

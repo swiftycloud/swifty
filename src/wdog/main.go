@@ -75,13 +75,16 @@ func mkExecPath(ld *LangDesc, suff string) {
 }
 
 func mkExecRunner(ld *LangDesc, suff string) {
-	makeExecutablePath(ld.runner + suff)
+	makeExecutablePath(ld._runner + suff)
 }
 
+type runFn func(*LangDesc, string) (string, string)
 type buildFn func(*swyapi.WdogFunctionBuild) (*swyapi.WdogFunctionRunResult, error)
 
 type LangDesc struct {
-	runner		string
+	_runner		string
+	run		runFn
+	env		[]string
 	build		buildFn
 	prep		func(*LangDesc, string)
 	info		func() (string, []string, error)
@@ -90,9 +93,22 @@ type LangDesc struct {
 	remove		func(string, string) error
 }
 
+func doRunBinary(lang *LangDesc, suff string) (string, string) {
+	return lang._runner + suff, "-"
+}
+
+func doRunInterp(lang *LangDesc, suff string) (string, string) {
+	return lang._runner, "script" + suff
+}
+
+func doRunMono(lang *LangDesc, suff string) (string, string) {
+	return "/usr/bin/mono", "/function/runner" + suff + ".exe"
+}
+
 var ldescs = map[string]*LangDesc {
 	"golang": &LangDesc {
-		runner:	"/go/src/swycode/runner",
+		_runner:	"/go/src/swycode/runner",
+		run:	doRunBinary,
 		build:	doBuildGo,
 		prep:	mkExecRunner,
 		info:	goInfo,
@@ -101,7 +117,8 @@ var ldescs = map[string]*LangDesc {
 		remove:   goRemove,
 	},
 	"python": &LangDesc {
-		runner:	"/usr/bin/swy-runner.py",
+		_runner:	"/usr/bin/swy-runner.py",
+		run:	doRunInterp,
 		prep:	mkExecPath,
 		info:	pyInfo,
 		packages: xpipPackages,
@@ -109,12 +126,14 @@ var ldescs = map[string]*LangDesc {
 		remove:   xpipRemove,
 	},
 	"swift": &LangDesc {
-		runner:	"/swift/swycode/runner",
+		_runner:	"/swift/swycode/runner",
+		run:	doRunBinary,
 		build:	doBuildSwift,
 		prep:	mkExecRunner,
 	},
 	"nodejs": &LangDesc {
-		runner:	"/home/swifty/runner-js.sh",
+		_runner:	"/home/swifty/runner-js.sh",
+		run:	doRunInterp,
 		prep:	mkExecPath,
 		info:	nodeInfo,
 		packages: nodeModules,
@@ -122,9 +141,16 @@ var ldescs = map[string]*LangDesc {
 		remove:   nodeRemove,
 	},
 	"ruby": &LangDesc {
-		runner:	"/home/swifty/runner.rb",
+		_runner:	"/home/swifty/runner.rb",
+		run:	doRunInterp,
 		prep:	mkExecPath,
 		info:	rubyInfo,
+	},
+	"csharp": &LangDesc {
+		run:	doRunMono,
+		build:	doBuildMono,
+		prep:	mkExecPath,
+		env:	[]string{"MONO_PATH=/mono/runner"},
 	},
 }
 

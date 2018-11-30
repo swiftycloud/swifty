@@ -56,14 +56,30 @@ func main() {
 	syscall.CloseOnExec(erp[0])
 	errf := os.NewFile(uintptr(erp[0]), "runner.stdout")
 
-	njs := exec.Command("./x", q.GetId(), strconv.Itoa(oup[1]), strconv.Itoa(erp[1]))
+	njs := exec.Command("/usr/bin/swy-runner", strconv.Itoa(oup[1]), strconv.Itoa(erp[1]), q.GetId(), os.Args[1], os.Args[2])
 
+	fmt.Printf("Starting command\n")
 	err = njs.Start()
 	if err != nil {
 		fmt.Printf("Error: %s\n", err.Error())
 		return
 	}
 
+	q.Started()
+	go func() {
+		for {
+			x := readLines(outf)
+			if x != "" {
+				fmt.Printf("!!![%s]\n", x)
+			}
+			x = readLines(errf)
+			if x != "" {
+				fmt.Printf("!!![%s]\n", x)
+			}
+		}
+	}()
+
+	fmt.Printf("Running tests\n")
 	n := time.Now()
 	var d time.Duration
 	for i := 0; i < 20; i++ {
@@ -75,18 +91,21 @@ func main() {
 		var ret RunnerRes
 
 		n2 := time.Now()
+		fmt.Printf(">%d\n", i)
 		err = q.Send(data)
 		if err != nil {
 			fmt.Printf("error sending: %s\n", err.Error())
 			goto out
 		}
 
+		fmt.Printf("<%d\n", i)
 		err = q.Recv(&ret)
 		if err != nil {
 			fmt.Printf("error recv: %s\n", err.Error())
 			goto out
 		}
 
+		fmt.Printf("chk\n");
 		x := readLines(outf)
 		if x != "" {
 			fmt.Printf("[%s]\n", x)
@@ -102,6 +121,7 @@ func main() {
 	fmt.Printf("%d each\n", d/20.)
 
 out:
+	time.Sleep(time.Second)
 	njs.Process.Kill()
 	njs.Wait()
 }

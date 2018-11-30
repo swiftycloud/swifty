@@ -132,3 +132,29 @@ func doBuildSwift(params *swyapi.WdogFunctionBuild) (*swyapi.WdogFunctionRunResu
 
 	return &swyapi.WdogFunctionRunResult{Code: 0, Stdout: stdout.String(), Stderr: stderr.String()}, nil
 }
+
+const monoRunner = "/mono/runner/runner.cs"
+const monoXStream = "/mono/runner/XStream.dll"
+
+func doBuildMono(params *swyapi.WdogFunctionBuild) (*swyapi.WdogFunctionRunResult, error) {
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+
+	srcdir := "/mono/functions/" + params.Sources
+	log.Debugf("Run mono build on %s", srcdir)
+	fnScript := srcdir + "/script" + params.Suff + ".cs"
+	fnBinary := srcdir + "/runner" + params.Suff + ".exe"
+	cmd := exec.Command("csc", monoRunner, fnScript, "-m:FR", "-r:" + monoXStream, "-out:" + fnBinary)
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	err := cmd.Run()
+	if err != nil {
+		if exit, code := get_exit_code(err); exit {
+			return &swyapi.WdogFunctionRunResult{Code: code, Stdout: stdout.String(), Stderr: stderr.String()}, nil
+		}
+
+		return nil, fmt.Errorf("Can't build: %s", err.Error())
+	}
+
+	return &swyapi.WdogFunctionRunResult{Code: 0, Stdout: stdout.String(), Stderr: stderr.String()}, nil
+}

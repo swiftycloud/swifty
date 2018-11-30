@@ -81,7 +81,7 @@ swy-runner: src/wdog/runner/runner.c
 	$(call msg-gen,$@)
 	$(Q) $(CC) -Wall -Werror -O2 -static -o $@ $<
 
-LANGS = python golang swift ruby nodejs
+LANGS = python golang swift ruby nodejs csharp
 IMAGES =
 
 define gen-lang
@@ -120,6 +120,18 @@ swifty/swift: src/wdog/runner/runner.swift
 	$(Q) $(CP) src/wdog/runner/runner.swift kubectl/docker/wdog/swift/
 	$(Q) $(MAKE) -C kubectl/docker/wdog/swift all
 .PHONY: swifty/swift
+
+src/wdog/lib/XStream.dll: src/wdog/lib/XStream.cs
+	docker run --rm -v $(CURDIR)/src/wdog/lib/:/mono mono csc /mono/XStream.cs -out:/mono/XStream.dll -target:library -r:Mono.Posix.dll -unsafe
+
+swifty/csharp: src/wdog/runner/runner.cs src/wdog/lib/XStream.dll
+	$(call msg-gen,$@)
+	$(Q) $(CP) swy-wdog  kubectl/docker/wdog/csharp/swy-wdog
+	$(Q) $(CP) swy-runner  kubectl/docker/wdog/csharp/
+	$(Q) $(CP) src/wdog/runner/runner.cs kubectl/docker/wdog/csharp/
+	$(Q) $(CP) src/wdog/lib/XStream.dll kubectl/docker/wdog/csharp/
+	$(Q) $(MAKE) -C kubectl/docker/wdog/csharp all
+.PHONY: swifty/csharp
 
 swifty/nodejs: src/wdog/runner/runner.js
 	$(call msg-gen,$@)

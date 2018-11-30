@@ -33,6 +33,7 @@ var rt_handlers = map[string]*langInfo {
 	"swift":	&swift_info,
 	"nodejs":	&nodejs_info,
 	"ruby":		&ruby_info,
+	"csharp":	&csharp_info,
 }
 
 var golang_info = langInfo {
@@ -82,6 +83,12 @@ var ruby_info = langInfo {
 var swift_info = langInfo {
 	Ext:		"swift",
 	CodePath:	"/swift/swycode",
+	Build:		true,
+}
+
+var csharp_info = langInfo {
+	Ext:		"cs",
+	CodePath:	"/function",
 	Build:		true,
 }
 
