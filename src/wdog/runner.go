@@ -30,18 +30,6 @@ func startQnR(runner *Runner) error {
 		return fmt.Errorf("Can't set receive timeout: %s", err.Error())
 	}
 
-	var bin, scr string
-
-	if runner.l.lang.build == nil {
-		/* /bin/interpreter script${suff}.ext */
-		bin = runner.l.lang.runner
-		scr = "script" + runner.l.suff
-	} else {
-		/* /function${suff} - */
-		bin = runner.l.lang.runner + runner.l.suff
-		scr = "-"
-	}
-
 	env := []string{}
 	for _, e := range os.Environ() {
 		if !strings.HasPrefix(e, "SWD_") {
@@ -49,6 +37,11 @@ func startQnR(runner *Runner) error {
 		}
 	}
 
+	if runner.l.lang.env != nil {
+		env = append(env, runner.l.lang.env...)
+	}
+
+	bin, scr := runner.l.lang.run(runner.l.lang, runner.l.suff)
 	runner.l.cmd = exec.Command("/usr/bin/swy-runner",
 					runner.l.fout, runner.l.ferr,
 					runner.q.GetId(), bin, scr)
