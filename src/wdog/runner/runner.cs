@@ -1,4 +1,8 @@
-//  csc runner.cs script.cs -main:FR -r:Mono.Posix.dll
+//
+// © 2018 SwiftyCloud OÜ. All rights reserved.
+// Info: info@swifty.cloud
+//
+
 using System;
 using System.Runtime.InteropServices;
 using System.Collections.Generic;
