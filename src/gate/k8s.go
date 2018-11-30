@@ -434,6 +434,8 @@ func (pod *k8sPod)Service() string {
 		return "ruby"
 	case "swy-nodejs-service":
 		return "nodejs"
+	case "swy-csharp-service":
+		return "csharp"
 	}
 
 	return ""
