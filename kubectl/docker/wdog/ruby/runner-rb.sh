@@ -1,2 +1,3 @@
 #!/bin/sh
-exec /usr/local/bin/ruby /home/swifty/runner.rb $@
+export RUNNERAPI="1"
+exec /usr/local/bin/ruby /home/swifty/runner.rb "script"$1

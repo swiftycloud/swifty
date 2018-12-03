@@ -102,7 +102,7 @@ func doRunMono(lang *LangDesc, suff string) (string, string) {
 }
 
 func doRunCommon(lang *LangDesc, suff string) (string, string) {
-	return "/usr/bin/start_runner.sh", "script" + suff
+	return "/usr/bin/start_runner.sh", suff
 }
 
 var ldescs = map[string]*LangDesc {
