@@ -143,8 +143,7 @@ var ldescs = map[string]*LangDesc {
 		remove:   nodeRemove,
 	},
 	"ruby": &LangDesc {
-		_runner:	"/home/swifty/runner.rb",
-		run:	doRunInterp,
+		run:	doRunCommon,
 		prep:	mkExecPath,
 		info:	rubyInfo,
 	},

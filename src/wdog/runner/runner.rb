@@ -1,5 +1,3 @@
-#!/usr/local/bin/ruby
-
 #
 # © 2018 SwiftyCloud OÜ. All rights reserved.
 # Info: info@swifty.cloud
