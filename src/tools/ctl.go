@@ -1753,6 +1753,10 @@ func make_login(creds string, opts [16]string) {
 	conf.Login.Host = c.Host
 	conf.Login.Port = c.Port
 
+	if opts[4] != "" {
+		conf.Login.Pass = opts[4]
+	}
+
 	if opts[0] == "no" {
 		conf.TLS = false
 	} else {
@@ -2102,6 +2106,7 @@ func main() {
 	cmdMap[CMD_LOGIN].opts.StringVar(&opts[1], "cert", "", "x509 cert file")
 	cmdMap[CMD_LOGIN].opts.StringVar(&opts[2], "admd", "", "Admd address:port")
 	cmdMap[CMD_LOGIN].opts.StringVar(&opts[3], "proxy", "", "Proxy mode")
+	cmdMap[CMD_LOGIN].opts.StringVar(&opts[4], "pass", "", "Password (optional)")
 
 	setupCommonCmd(CMD_ME, "ACTION")
 
