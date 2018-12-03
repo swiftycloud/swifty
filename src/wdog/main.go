@@ -92,10 +92,6 @@ type LangDesc struct {
 	remove		func(string, string) error
 }
 
-func doRunBinary(lang *LangDesc, suff string) (string, string) {
-	return lang._runner + suff, "-"
-}
-
 func doRunCommon(lang *LangDesc, suff string) (string, string) {
 	return "/usr/bin/start_runner.sh", suff
 }
@@ -121,7 +117,7 @@ var ldescs = map[string]*LangDesc {
 	},
 	"swift": &LangDesc {
 		_runner:	"/swift/swycode/runner",
-		run:	doRunBinary,
+		run:	doRunCommon,
 		build:	doBuildSwift,
 		prep:	mkExecRunner,
 	},
