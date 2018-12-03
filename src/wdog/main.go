@@ -105,6 +105,10 @@ func doRunMono(lang *LangDesc, suff string) (string, string) {
 	return "/usr/bin/mono", "/function/runner" + suff + ".exe"
 }
 
+func doRunCommon(lang *LangDesc, suff string) (string, string) {
+	return "/usr/bin/start_runner.sh", "script" + suff
+}
+
 var ldescs = map[string]*LangDesc {
 	"golang": &LangDesc {
 		_runner:	"/go/src/swycode/runner",
@@ -132,8 +136,7 @@ var ldescs = map[string]*LangDesc {
 		prep:	mkExecRunner,
 	},
 	"nodejs": &LangDesc {
-		_runner:	"/home/swifty/runner-js.sh",
-		run:	doRunInterp,
+		run:	doRunCommon,
 		prep:	mkExecPath,
 		info:	nodeInfo,
 		packages: nodeModules,

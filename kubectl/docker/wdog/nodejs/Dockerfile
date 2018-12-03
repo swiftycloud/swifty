@@ -10,8 +10,8 @@ COPY swy-wdog /usr/bin/
 COPY swy-runner /usr/bin/
 RUN chmod +x /usr/bin/swy-wdog
 COPY runner.js /home/swifty
-COPY runner-js.sh /home/swifty
-RUN chmod +x /home/swifty/runner-js.sh
+COPY runner-js.sh /usr/bin/start_runner.sh
+RUN chmod +x /usr/bin/start_runner.sh
 
 EXPOSE 8687
 
