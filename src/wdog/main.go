@@ -97,10 +97,6 @@ func doRunBinary(lang *LangDesc, suff string) (string, string) {
 	return lang._runner + suff, "-"
 }
 
-func doRunInterp(lang *LangDesc, suff string) (string, string) {
-	return lang._runner, "script" + suff
-}
-
 func doRunMono(lang *LangDesc, suff string) (string, string) {
 	return "/usr/bin/mono", "/function/runner" + suff + ".exe"
 }
