@@ -83,7 +83,6 @@ type buildFn func(*swyapi.WdogFunctionBuild) (*swyapi.WdogFunctionRunResult, err
 
 type LangDesc struct {
 	_runner		string
-	run		runFn
 	build		buildFn
 	prep		func(*LangDesc, string)
 	info		func() (string, []string, error)
@@ -92,14 +91,9 @@ type LangDesc struct {
 	remove		func(string, string) error
 }
 
-func doRunCommon(lang *LangDesc, suff string) (string, string) {
-	return "/usr/bin/start_runner.sh", suff
-}
-
 var ldescs = map[string]*LangDesc {
 	"golang": &LangDesc {
 		_runner:	"/go/src/swycode/runner",
-		run:	doRunCommon,
 		build:	doBuildGo,
 		prep:	mkExecRunner,
 		info:	goInfo,
@@ -108,7 +102,6 @@ var ldescs = map[string]*LangDesc {
 		remove:   goRemove,
 	},
 	"python": &LangDesc {
-		run:	doRunCommon,
 		prep:	mkExecPath,
 		info:	pyInfo,
 		packages: xpipPackages,
@@ -117,12 +110,10 @@ var ldescs = map[string]*LangDesc {
 	},
 	"swift": &LangDesc {
 		_runner:	"/swift/swycode/runner",
-		run:	doRunCommon,
 		build:	doBuildSwift,
 		prep:	mkExecRunner,
 	},
 	"nodejs": &LangDesc {
-		run:	doRunCommon,
 		prep:	mkExecPath,
 		info:	nodeInfo,
 		packages: nodeModules,
@@ -130,12 +121,10 @@ var ldescs = map[string]*LangDesc {
 		remove:   nodeRemove,
 	},
 	"ruby": &LangDesc {
-		run:	doRunCommon,
 		prep:	mkExecPath,
 		info:	rubyInfo,
 	},
 	"csharp": &LangDesc {
-		run:	doRunCommon,
 		build:	doBuildMono,
 		prep:	mkExecPath,
 	},

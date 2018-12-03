@@ -17,6 +17,8 @@ import (
 	"strconv"
 )
 
+const lRunner = "/usr/bin/start_runner.sh"
+
 func startQnR(runner *Runner) error {
 	var err error
 
@@ -37,10 +39,9 @@ func startQnR(runner *Runner) error {
 		}
 	}
 
-	bin, scr := runner.l.lang.run(runner.l.lang, runner.l.suff)
 	runner.l.cmd = exec.Command("/usr/bin/swy-runner",
 					runner.l.fout, runner.l.ferr,
-					runner.q.GetId(), bin, scr)
+					runner.q.GetId(), lRunner, runner.l.suff)
 	runner.l.cmd.Env = env
 	err = runner.l.cmd.Start()
 	if err != nil {
