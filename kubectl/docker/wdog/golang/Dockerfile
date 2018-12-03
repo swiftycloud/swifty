@@ -12,6 +12,8 @@ COPY runner.go /go/src/swyrunner/
 COPY body.go /go/src/swyrunner/body
 COPY lib.go /go/src/swifty/
 COPY queue.go /go/src/xqueue/
+COPY runner-go.sh /usr/bin/start_runner.sh
+RUN chmod +x /usr/bin/start_runner.sh
 
 EXPOSE 8687
 

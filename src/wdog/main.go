@@ -103,7 +103,7 @@ func doRunCommon(lang *LangDesc, suff string) (string, string) {
 var ldescs = map[string]*LangDesc {
 	"golang": &LangDesc {
 		_runner:	"/go/src/swycode/runner",
-		run:	doRunBinary,
+		run:	doRunCommon,
 		build:	doBuildGo,
 		prep:	mkExecRunner,
 		info:	goInfo,
