@@ -40,7 +40,7 @@ src/$(1)/version.go: .FORCE
 
 swy-$(1): .FORCE src/$(1)/version.go
 	$$(call msg-gen,$$@)
-	$$(Q) cd src/$(1)/ && go build
+	$$(Q) cd src/$(1)/ && $$(GO-BUILD)
 	$$(Q) $$(MV) src/$(1)/$(1) $$@
 all-y += swy-$(1)
 endef
@@ -49,7 +49,7 @@ endef
 define gen-gobuild-tool
 swy$(1): $$(go-$(1)-y) .FORCE
 	$$(call msg-gen,$$@)
-	$$(Q) $$(GO) $$(GO-BUILD-OPTS) -o $$@ $$(go-$(1)-y)
+	$$(Q) $$(GO-BUILD) -o $$@ $$(go-$(1)-y)
 all-y += swy$(1)
 endef
 
@@ -64,9 +64,6 @@ go-dbscr-y	+= src/tools/scraper.go
 
 #$(eval $(call gen-gobuild,pgrest))
 #$(eval $(call gen-gobuild,mquotad))
-
-# Default target
-all: $(all-y)
 
 #
 # Docker lang images
@@ -150,6 +147,9 @@ $(eval $(call gen-pack-service-n,proxy,wdog))
 $(eval $(call gen-gobuild-daemon,mongoproxy))
 # The swydbscr tools is packed into image too
 $(eval $(call gen-pack-service-n,dbscr,dbscr))
+
+# Default target
+all: $(all-y)
 
 help:
 	@echo '    Targets:'
