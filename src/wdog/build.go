@@ -92,47 +92,6 @@ func doBuildGo(params *swyapi.WdogFunctionBuild) (*swyapi.WdogFunctionRunResult,
 	return &swyapi.WdogFunctionRunResult{Code: 0, Stdout: stdout.String(), Stderr: stderr.String()}, nil
 }
 
-/*
- * All functions sit at /swift/swycode/
- * Runner sits at /swift/runner/
- */
-const swiftScript = "/swift/runner/Sources/script.swift"
-
-func doBuildSwift(params *swyapi.WdogFunctionBuild) (*swyapi.WdogFunctionRunResult, error) {
-	os.Remove(swiftScript)
-	srcdir := params.Sources
-	err := os.Symlink("/swift/swycode/" + srcdir + "/script" + params.Suff + ".swift", swiftScript)
-	if err != nil {
-		return nil, fmt.Errorf("Can't symlink code: %s", err.Error())
-	}
-
-	var stdout bytes.Buffer
-	var stderr bytes.Buffer
-
-	log.Debugf("Run swift build on %s", srcdir)
-	cmd := exec.Command("swift", "build", "--build-path", "../swycode/" + srcdir)
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-	cmd.Dir = "/swift/runner"
-	err = cmd.Run()
-	os.Remove(swiftScript)
-	if err != nil {
-		if exit, code := get_exit_code(err); exit {
-			return &swyapi.WdogFunctionRunResult{Code: code, Stdout: stdout.String(), Stderr: stderr.String()}, nil
-		}
-
-		return nil, fmt.Errorf("Can't build: %s", err.Error())
-	}
-
-	pfx := "/swift/swycode/" + srcdir
-	err = os.Rename(pfx + "/debug/function", pfx + "/runner" + params.Suff)
-	if err != nil {
-		return nil, fmt.Errorf("Can't rename binary: %s", err.Error())
-	}
-
-	return &swyapi.WdogFunctionRunResult{Code: 0, Stdout: stdout.String(), Stderr: stderr.String()}, nil
-}
-
 const lBuilder = "/usr/bin/build_runner.sh"
 
 func doBuildCommon(params *swyapi.WdogFunctionBuild) (*swyapi.WdogFunctionRunResult, error) {

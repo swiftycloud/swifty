@@ -110,7 +110,7 @@ var ldescs = map[string]*LangDesc {
 	},
 	"swift": &LangDesc {
 		_runner:	"/swift/swycode/runner",
-		build:	doBuildSwift,
+		build:	doBuildCommon,
 		prep:	mkExecRunner,
 	},
 	"nodejs": &LangDesc {
