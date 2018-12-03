@@ -29,7 +29,7 @@ swy-$(1): $$(go-$(1)-y) .FORCE
 all-y += swy-$(1)
 endef
 
-# Build native
+# Build service daemon
 define gen-gobuild-daemon
 src/$(1)/version.go: .FORCE
 	$$(call msg-gen, $$@)
