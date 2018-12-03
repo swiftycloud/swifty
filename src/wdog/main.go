@@ -94,7 +94,7 @@ type LangDesc struct {
 var ldescs = map[string]*LangDesc {
 	"golang": &LangDesc {
 		_runner:	"/go/src/swycode/runner",
-		build:	doBuildGo,
+		build:	doBuildCommon,
 		prep:	mkExecRunner,
 		info:	goInfo,
 		packages: goPackages,

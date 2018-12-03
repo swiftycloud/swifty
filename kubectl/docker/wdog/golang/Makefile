@@ -4,6 +4,7 @@ swifty/golang:
 	$(call msg-gen,$@)
 	$(Q) $(CP) $(BROOT)/swy-wdog .
 	$(Q) $(CP) $(BROOT)/swy-runner .
+	$(Q) $(CP) $(BROOT)/go-sca .
 	$(Q) $(CP) $(BROOT)/src/wdog/runner/runner.go .
 	$(Q) $(CP) $(BROOT)/src/wdog/runner/body.go .
 	$(Q) $(CP) $(BROOT)/src/wdog/lib/lib.go .

@@ -7,13 +7,15 @@ RUN go get golang.org/x/crypto/bcrypt
 RUN go get github.com/aws/aws-sdk-go
 COPY swy-wdog /usr/bin/
 COPY swy-runner /usr/bin/
-RUN chmod +x /usr/bin/swy-wdog
+COPY go-sca /usr/bin/
+RUN chmod +x /usr/bin/swy-wdog /usr/bin/go-sca
 COPY runner.go /go/src/swyrunner/
 COPY body.go /go/src/swyrunner/body
 COPY lib.go /go/src/swifty/
 COPY queue.go /go/src/xqueue/
 COPY runner-go.sh /usr/bin/start_runner.sh
-RUN chmod +x /usr/bin/start_runner.sh
+COPY builder.sh /usr/bin/build_runner.sh
+RUN chmod +x /usr/bin/start_runner.sh /usr/bin/build_runner.sh
 
 EXPOSE 8687
 

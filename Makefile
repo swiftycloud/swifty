@@ -97,7 +97,7 @@ endef
 $(foreach l,$(LANGS),$(eval $(call gen-lang,$l)))
 
 swifty/python: src/wdog/runner/runner.py
-swifty/golang: src/wdog/runner/runner.go
+swifty/golang: src/wdog/runner/runner.go go-sca
 swifty/swift: src/wdog/runner/runner.swift
 swifty/csharp: src/wdog/runner/runner.cs src/wdog/lib/XStream.dll
 swifty/nodejs: src/wdog/runner/runner.js
@@ -109,6 +109,9 @@ src/wdog/lib/XStream.dll: src/wdog/lib/XStream.cs
 swy-runner: src/wdog/runner/runner.c
 	$(call msg-gen,$@)
 	$(Q) $(CC) -Wall -Werror -O2 -static -o $@ $<
+
+go-sca: src/tools/go-sca.go
+	go build $<
 
 #
 # Services
