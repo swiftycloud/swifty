@@ -37,10 +37,6 @@ func startQnR(runner *Runner) error {
 		}
 	}
 
-	if runner.l.lang.env != nil {
-		env = append(env, runner.l.lang.env...)
-	}
-
 	bin, scr := runner.l.lang.run(runner.l.lang, runner.l.suff)
 	runner.l.cmd = exec.Command("/usr/bin/swy-runner",
 					runner.l.fout, runner.l.ferr,

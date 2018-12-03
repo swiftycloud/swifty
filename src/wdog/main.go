@@ -84,7 +84,6 @@ type buildFn func(*swyapi.WdogFunctionBuild) (*swyapi.WdogFunctionRunResult, err
 type LangDesc struct {
 	_runner		string
 	run		runFn
-	env		[]string
 	build		buildFn
 	prep		func(*LangDesc, string)
 	info		func() (string, []string, error)
