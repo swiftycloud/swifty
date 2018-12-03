@@ -77,10 +77,9 @@ $(eval $(call gen-gobuild-t,dbscr))
 # Default target
 all: $(all-y)
 
-swy-runner: src/wdog/runner/runner.c
-	$(call msg-gen,$@)
-	$(Q) $(CC) -Wall -Werror -O2 -static -o $@ $<
-
+#
+# Docker lang images
+#
 LANGS = python golang swift ruby nodejs csharp
 IMAGES =
 
@@ -97,17 +96,23 @@ endef
 
 $(foreach l,$(LANGS),$(eval $(call gen-lang,$l)))
 
-#
-# Docker images
 swifty/python: src/wdog/runner/runner.py
 swifty/golang: src/wdog/runner/runner.go
 swifty/swift: src/wdog/runner/runner.swift
 swifty/csharp: src/wdog/runner/runner.cs src/wdog/lib/XStream.dll
 swifty/nodejs: src/wdog/runner/runner.js
-swifty/ruby: src/wdog/runner/runner.js
+swifty/ruby: src/wdog/runner/runner.rb
 
 src/wdog/lib/XStream.dll: src/wdog/lib/XStream.cs
 	docker run --rm -v $(CURDIR)/src/wdog/lib/:/mono mono csc /mono/XStream.cs -out:/mono/XStream.dll -target:library -r:Mono.Posix.dll -unsafe
+
+swy-runner: src/wdog/runner/runner.c
+	$(call msg-gen,$@)
+	$(Q) $(CC) -Wall -Werror -O2 -static -o $@ $<
+
+#
+# Services
+#
 
 swifty/gate: swy-gate kubectl/docker/gate/Dockerfile test/functions/golang/simple-user-mgmt.go
 	$(call msg-gen,$@)
