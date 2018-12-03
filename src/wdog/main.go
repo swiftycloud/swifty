@@ -97,10 +97,6 @@ func doRunBinary(lang *LangDesc, suff string) (string, string) {
 	return lang._runner + suff, "-"
 }
 
-func doRunMono(lang *LangDesc, suff string) (string, string) {
-	return "/usr/bin/mono", "/function/runner" + suff + ".exe"
-}
-
 func doRunCommon(lang *LangDesc, suff string) (string, string) {
 	return "/usr/bin/start_runner.sh", suff
 }
@@ -144,10 +140,9 @@ var ldescs = map[string]*LangDesc {
 		info:	rubyInfo,
 	},
 	"csharp": &LangDesc {
-		run:	doRunMono,
+		run:	doRunCommon,
 		build:	doBuildMono,
 		prep:	mkExecPath,
-		env:	[]string{"MONO_PATH=/mono/runner"},
 	},
 }
 
