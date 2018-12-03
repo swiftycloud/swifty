@@ -45,8 +45,12 @@ swy-$(1): .FORCE src/$(1)/version.go
 all-y += swy-$(1)
 endef
 
+TOOL_BINS =
+
 # Build tool
 define gen-gobuild-tool
+TOOL_BINS += swy$(1)
+
 swy$(1): $$(go-$(1)-y) .FORCE
 	$$(call msg-gen,$$@)
 	$$(Q) $$(GO-BUILD) -o $$@ $$(go-$(1)-y)
@@ -104,6 +108,8 @@ go-sca: src/tools/go-sca.go
 #
 # Services
 #
+S_IMAGES =
+S_BINARIES =
 
 define gen-pack-service-n
 swifty/$(1): swy$(2) kubectl/docker/$(1)/Dockerfile
@@ -117,13 +123,11 @@ swifty/$(1):
 endef
 
 define gen-pack-service
+S_IMAGES += swifty/$(1)
+S_BINARIES += swy-$(1)
+
 $(eval $(call gen-pack-service-n,$(1),-$(1)))
 endef
-
-images: $(IMAGES)
-	@true
-
-.PHONY: images
 
 #
 # Core rules generation
@@ -151,6 +155,26 @@ $(eval $(call gen-pack-service-n,dbscr,dbscr))
 
 # Default target
 all: $(all-y)
+
+images: $(IMAGES)
+	@true
+
+.PHONY: images
+
+simages: $(S_IMAGES)
+	@true
+
+.PHONY: simages
+
+services: $(S_BINARIES)
+	@true
+
+.PHONY: services
+
+tools: $(TOOL_BINS)
+	@true
+
+.PHONY: tools
 
 help:
 	@echo '    Targets:'
