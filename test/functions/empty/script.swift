@@ -1,3 +1,8 @@
+struct Resp: Encodable {
+	var msg: String
+}
+
 func Main(rq: Request) -> (Encodable, Response?) {
-	return ( "Hello, world", nil )
+	let result = Resp(msg: "Hello, world")
+	return ( result, nil )
 }

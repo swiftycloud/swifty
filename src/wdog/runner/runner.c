@@ -12,7 +12,7 @@
 
 int main(int argc, char **argv)
 {
-	int fd;
+	int fd, ret;
 
 	/* Usage: runner outfd errfd queuefd cmd <args> */
 	fd = atoi(argv[1]);
@@ -37,10 +37,13 @@ int main(int argc, char **argv)
 		close(fd);
 	}
 
-	setresgid(NOBODY, NOBODY, NOBODY);
+	ret = setresgid(NOBODY, NOBODY, NOBODY);
 	setfsgid(NOBODY);
-	setresuid(NOBODY, NOBODY, NOBODY);
+	ret |= setresuid(NOBODY, NOBODY, NOBODY);
 	setfsuid(NOBODY);
+
+	if (ret != 0)
+		; /* :( */
 
 	execv(argv[4], argv + 4);
 	exit(1);

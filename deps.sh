@@ -25,7 +25,7 @@ if which yum ; then
 	yum install -y golang patch librados2-devel glibc-headers glibc-static
 	yum groupinstall -y "Development Libraries" 
 elif which apt-get ; then
-	apt-get install librados-dev
+	apt-get install -y golang librados-dev
 fi
 
 go get github.com/tools/godep

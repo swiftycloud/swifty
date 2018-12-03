@@ -21,6 +21,8 @@ swytrace
 swys3fsck
 swysg
 swydbscr
+swyruntest
+go-sca
 validation
 docs/build
 vendor/

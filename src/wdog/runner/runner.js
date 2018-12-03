@@ -6,7 +6,7 @@
 'use strict';
 
 require('libsys/shim')
-require('libjs/shim')
+const libjs = require('libjs')
 var script = require('/function/' + process.argv[2] + '.js')
 var qfd = 3
 var buf = Buffer.alloc(1024)
@@ -29,7 +29,7 @@ function send(res) {
 
 	while (res.length > 0) {
 		var s = res.substring(0, 1024)
-		libjs.send(qfd, s)
+		libjs.send(qfd, Buffer.from(s, 'binary'))
 		res = res.substring(1024)
 	}
 }

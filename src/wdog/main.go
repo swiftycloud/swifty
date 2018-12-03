@@ -78,14 +78,9 @@ func mkExecRunner(ld *LangDesc, suff string) {
 	makeExecutablePath(ld._runner + suff)
 }
 
-type runFn func(*LangDesc, string) (string, string)
-type buildFn func(*swyapi.WdogFunctionBuild) (*swyapi.WdogFunctionRunResult, error)
-
 type LangDesc struct {
 	_runner		string
-	run		runFn
-	env		[]string
-	build		buildFn
+	build		bool
 	prep		func(*LangDesc, string)
 	info		func() (string, []string, error)
 	packages	func(string) ([]string, error)
@@ -93,32 +88,17 @@ type LangDesc struct {
 	remove		func(string, string) error
 }
 
-func doRunBinary(lang *LangDesc, suff string) (string, string) {
-	return lang._runner + suff, "-"
-}
-
-func doRunInterp(lang *LangDesc, suff string) (string, string) {
-	return lang._runner, "script" + suff
-}
-
-func doRunMono(lang *LangDesc, suff string) (string, string) {
-	return "/usr/bin/mono", "/function/runner" + suff + ".exe"
-}
-
 var ldescs = map[string]*LangDesc {
 	"golang": &LangDesc {
-		_runner:	"/go/src/swycode/runner",
-		run:	doRunBinary,
-		build:	doBuildGo,
+		build:	true,
 		prep:	mkExecRunner,
+		_runner:	"/go/src/swycode/runner",
 		info:	goInfo,
 		packages: goPackages,
 		install:  goInstall,
 		remove:   goRemove,
 	},
 	"python": &LangDesc {
-		_runner:	"/usr/bin/swy-runner.py",
-		run:	doRunInterp,
 		prep:	mkExecPath,
 		info:	pyInfo,
 		packages: xpipPackages,
@@ -126,14 +106,11 @@ var ldescs = map[string]*LangDesc {
 		remove:   xpipRemove,
 	},
 	"swift": &LangDesc {
-		_runner:	"/swift/swycode/runner",
-		run:	doRunBinary,
-		build:	doBuildSwift,
+		build:	true,
 		prep:	mkExecRunner,
+		_runner:	"/swift/swycode/runner",
 	},
 	"nodejs": &LangDesc {
-		_runner:	"/home/swifty/runner-js.sh",
-		run:	doRunInterp,
 		prep:	mkExecPath,
 		info:	nodeInfo,
 		packages: nodeModules,
@@ -141,16 +118,12 @@ var ldescs = map[string]*LangDesc {
 		remove:   nodeRemove,
 	},
 	"ruby": &LangDesc {
-		_runner:	"/home/swifty/runner.rb",
-		run:	doRunInterp,
 		prep:	mkExecPath,
 		info:	rubyInfo,
 	},
 	"csharp": &LangDesc {
-		run:	doRunMono,
-		build:	doBuildMono,
+		build:	true,
 		prep:	mkExecPath,
-		env:	[]string{"MONO_PATH=/mono/runner"},
 	},
 }
 
@@ -386,7 +359,7 @@ out:
 	log.Errorf("%s", err.Error())
 }
 
-func handleBuild(w http.ResponseWriter, r *http.Request, fn buildFn) {
+func handleBuild(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	var params swyapi.WdogFunctionBuild
 	var result *swyapi.WdogFunctionRunResult
@@ -399,7 +372,7 @@ func handleBuild(w http.ResponseWriter, r *http.Request, fn buildFn) {
 
 	code = http.StatusInternalServerError
 	glock.Lock()
-	result, err = fn(&params)
+	result, err = doBuildCommon(&params)
 	glock.Unlock()
 	if err != nil {
 		log.Errorf("Error building FN: %s", err.Error())
@@ -635,10 +608,8 @@ func main() {
 			log.Fatal("No handler for lang")
 		}
 
-		if ld.build != nil {
-			r.HandleFunc("/v1/build", func(w http.ResponseWriter, r *http.Request) {
-				handleBuild(w, r, ld.build)
-			})
+		if ld.build {
+			r.HandleFunc("/v1/build", handleBuild)
 		}
 
 		r.HandleFunc("/v1/ping", func(w http.ResponseWriter, r *http.Request) {

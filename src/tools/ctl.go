@@ -29,12 +29,10 @@ var swyclient *swyapi.Client
 type LoginInfo struct {
 	Host		string		`yaml:"host"`
 	Port		string		`yaml:"port"`
-	Token		string		`yaml:"token"`
 	User		string		`yaml:"user"`
 	Pass		string		`yaml:"pass"`
 	AdmHost		string		`yaml:"admhost,omitempty"`
 	AdmPort		string		`yaml:"admport,omitempty"`
-	Relay		string		`yaml:"relay,omitempty"`
 }
 
 type YAMLConf struct {
@@ -42,6 +40,8 @@ type YAMLConf struct {
 	TLS		bool		`yaml:"tls"`
 	Direct		bool		`yaml:"direct"`
 	Certs		string		`yaml:"x509crtfile"`
+	Relay		string		`yaml:"relay,omitempty"`
+	Token		string		`yaml:"token"`
 }
 
 var conf YAMLConf
@@ -1684,8 +1684,8 @@ func show_login() {
 	if conf.Login.AdmHost != "" || conf.Login.AdmPort != "" {
 		fmt.Printf("\tadmd: %s:%s\n", conf.Login.AdmHost, conf.Login.AdmPort)
 	}
-	if conf.Login.Relay != "" {
-		fmt.Printf("\tfor %s\n", conf.Login.Relay)
+	if conf.Relay != "" {
+		fmt.Printf("\tfor %s\n", conf.Relay)
 	}
 }
 
@@ -1694,7 +1694,7 @@ func set_relay_tenant(rt string) {
 		rt = ""
 	}
 
-	conf.Login.Relay = rt
+	conf.Relay = rt
 	save_config()
 }
 
@@ -1720,8 +1720,8 @@ func mkClient() {
 	}
 	if curRelay != "" {
 		swyclient.Relay(curRelay)
-	} else if conf.Login.Relay != "" {
-		swyclient.Relay(conf.Login.Relay)
+	} else if conf.Relay != "" {
+		swyclient.Relay(conf.Relay)
 	}
 	if verbose {
 		swyclient.Verbose()
@@ -1734,10 +1734,10 @@ func mkClient() {
 	}
 
 	swyclient.OnError(func(err error) { fatal(err) })
-	swyclient.TokSaver(func(tok string) { conf.Login.Token = tok; save_config() })
+	swyclient.TokSaver(func(tok string) { conf.Token = tok; save_config() })
 
 	/* Guy can be cached in config */
-	swyclient.Token(conf.Login.Token)
+	swyclient.Token(conf.Token)
 }
 
 func make_login(creds string, opts [16]string) {
@@ -1752,6 +1752,10 @@ func make_login(creds string, opts [16]string) {
 	conf.Login.Pass = c.Pass
 	conf.Login.Host = c.Host
 	conf.Login.Port = c.Port
+
+	if opts[4] != "" {
+		conf.Login.Pass = opts[4]
+	}
 
 	if opts[0] == "no" {
 		conf.TLS = false
@@ -2102,6 +2106,7 @@ func main() {
 	cmdMap[CMD_LOGIN].opts.StringVar(&opts[1], "cert", "", "x509 cert file")
 	cmdMap[CMD_LOGIN].opts.StringVar(&opts[2], "admd", "", "Admd address:port")
 	cmdMap[CMD_LOGIN].opts.StringVar(&opts[3], "proxy", "", "Proxy mode")
+	cmdMap[CMD_LOGIN].opts.StringVar(&opts[4], "pass", "", "Password (optional)")
 
 	setupCommonCmd(CMD_ME, "ACTION")
 

@@ -27,15 +27,21 @@ GIT		?= git
 CP		?= cp -f
 MV		?= mv -f
 GO		?= go
-GO-BUILD-OPTS	?= build
+GO-BUILD	?= go build
 GOTAGS		?= gotags
 MONGO		?= mongo --quiet localhost:27017
 KUBECTL		?= kubectl
 IPVSADM		?= ipvsadm
 FLAVOR		?= default
+MKDIR		?= mkdir -p
+INST		?= install
+TAR		?= tar
+DOCKER		?= docker run --rm
 
 LOCAL_SOURCES	?= /home/swifty/local-sources
 VOLUME_DIR	?= /home/swifty-volume
 TEST_REPO	?= test/.repo
 
-export RM MAKE GIT CP GO GO-BUILD-OPTS GOTAGS MONGO KUBECTL IPVSADM
+export RM MAKE GIT CP GO GO-BUILD GOTAGS MONGO KUBECTL IPVSADM
+
+.PHONY: .FORCE
