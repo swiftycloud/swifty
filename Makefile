@@ -188,9 +188,15 @@ tags:
 #	$(Q) $(MAKE) -C docs/ html
 #.PHONY: docs
 
-tarball:
+tar:
 	$(Q) $(GIT) archive --format=tar --prefix=swifty/ HEAD > swifty.tar
-.PHONY: tarball
+.PHONY: tar
+
+gtar:
+	$(Q) $(GIT) repack -ad
+	$(Q) $(GIT) gc
+	$(Q) $(TAR) cf ../swifty-git.tar --exclude 'vendor/*' .
+.PHONY: tar
 
 ifneq ($(filter mqclean,$(MAKECMDGOALS)),)
 rabbit-users := $(filter-out guest root, $(shell rabbitmqctl list_users | tail -n +2 | cut -f 1))
