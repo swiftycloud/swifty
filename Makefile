@@ -61,6 +61,7 @@ go-trace-y	+= src/tools/tracer.go
 go-s3fsck-y	+= src/tools/s3-fsck.go
 go-sg-y		+= src/tools/sg.go
 go-dbscr-y	+= src/tools/scraper.go
+go-runtest-y	+= src/tools/runner-tester.go
 
 #$(eval $(call gen-gobuild,pgrest))
 #$(eval $(call gen-gobuild,mquotad))
@@ -130,7 +131,7 @@ images: $(IMAGES)
 
 SRVCS = gate admd s3
 LANGS = python golang swift ruby nodejs csharp
-TOOLS = ctl trace s3fsck sg dbscr
+TOOLS = ctl trace s3fsck sg dbscr runtest
 
 # Each service has its swifty/$name docker image
 $(foreach s,$(SRVCS),$(eval $(call gen-gobuild-daemon,$s)))

@@ -7,7 +7,7 @@ import (
 	"time"
 	"os/exec"
 	"strconv"
-	"../src/common/xqueue"
+	"swifty/common/xqueue"
 )
 
 func readLines(f *os.File) string {
