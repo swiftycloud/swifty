@@ -2,6 +2,7 @@ BROOT=$(CURDIR)/../../../../
 include $(BROOT)/Makefile.inc
 
 layer.tar: .FORCE
+	$(call msg-gen,$@)
 	$(Q) $(MKDIR) .layer
 	$(Q) $(INST) -D $(BROOT)/swy-wdog -t .layer/usr/bin/
 	$(Q) $(INST) $(BROOT)/swy-runner -t .layer/usr/bin/

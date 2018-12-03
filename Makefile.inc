@@ -36,6 +36,7 @@ FLAVOR		?= default
 MKDIR		?= mkdir -p
 INST		?= install
 TAR		?= tar
+DOCKER		?= docker run --rm
 
 LOCAL_SOURCES	?= /home/swifty/local-sources
 VOLUME_DIR	?= /home/swifty-volume

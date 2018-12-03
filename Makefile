@@ -104,13 +104,15 @@ swifty/nodejs: src/wdog/runner/runner.js
 swifty/ruby: src/wdog/runner/runner.rb
 
 src/wdog/lib/XStream.dll: src/wdog/lib/XStream.cs
-	docker run --rm -v $(CURDIR)/src/wdog/lib/:/mono mono csc /mono/XStream.cs -out:/mono/XStream.dll -target:library -r:Mono.Posix.dll -unsafe
+	$(call msg-gen,$@)
+	$(Q) $(DOCKER) -v $(CURDIR)/src/wdog/lib/:/mono mono csc /mono/XStream.cs -out:/mono/XStream.dll -target:library -r:Mono.Posix.dll -unsafe
 
 swy-runner: src/wdog/runner/runner.c
 	$(call msg-gen,$@)
 	$(Q) $(CC) -Wall -Werror -O2 -static -o $@ $<
 
 go-sca: src/tools/go-sca.go
+	$(call msg-gen,$@)
 	go build $<
 
 #
