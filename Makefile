@@ -87,6 +87,12 @@ IMAGES =
 define gen-lang
 IMAGES += swifty/$(1)
 swifty/$(1): swy-wdog swy-runner kubectl/docker/wdog/$(1)/Dockerfile
+
+swifty/$(1):
+	$$(call msg-gen, $$@)
+	$$(Q) $$(MAKE) -C kubectl/docker/wdog/$(1) all
+
+.PHONY: swifty/$(1)
 endef
 
 $(foreach l,$(LANGS),$(eval $(call gen-lang,$l)))
@@ -94,37 +100,14 @@ $(foreach l,$(LANGS),$(eval $(call gen-lang,$l)))
 #
 # Docker images
 swifty/python: src/wdog/runner/runner.py
-	$(call msg-gen,$@)
-	$(Q) $(MAKE) -C kubectl/docker/wdog/python all
-.PHONY: swifty/python
-
 swifty/golang: src/wdog/runner/runner.go
-	$(call msg-gen,$@)
-	$(Q) $(MAKE) -C kubectl/docker/wdog/golang all
-.PHONY: swifty/golang
-
 swifty/swift: src/wdog/runner/runner.swift
-	$(call msg-gen,$@)
-	$(Q) $(MAKE) -C kubectl/docker/wdog/swift all
-.PHONY: swifty/swift
+swifty/csharp: src/wdog/runner/runner.cs src/wdog/lib/XStream.dll
+swifty/nodejs: src/wdog/runner/runner.js
+swifty/ruby: src/wdog/runner/runner.js
 
 src/wdog/lib/XStream.dll: src/wdog/lib/XStream.cs
 	docker run --rm -v $(CURDIR)/src/wdog/lib/:/mono mono csc /mono/XStream.cs -out:/mono/XStream.dll -target:library -r:Mono.Posix.dll -unsafe
-
-swifty/csharp: src/wdog/runner/runner.cs src/wdog/lib/XStream.dll
-	$(call msg-gen,$@)
-	$(Q) $(MAKE) -C kubectl/docker/wdog/csharp all
-.PHONY: swifty/csharp
-
-swifty/nodejs: src/wdog/runner/runner.js
-	$(call msg-gen,$@)
-	$(Q) $(MAKE) -C kubectl/docker/wdog/nodejs all
-.PHONY: swifty/nodejs
-
-swifty/ruby: src/wdog/runner/runner.js
-	$(call msg-gen,$@)
-	$(Q) $(MAKE) -C kubectl/docker/wdog/ruby all
-.PHONY: swifty/ruby
 
 swifty/gate: swy-gate kubectl/docker/gate/Dockerfile test/functions/golang/simple-user-mgmt.go
 	$(call msg-gen,$@)
