@@ -78,12 +78,9 @@ func mkExecRunner(ld *LangDesc, suff string) {
 	makeExecutablePath(ld._runner + suff)
 }
 
-type runFn func(*LangDesc, string) (string, string)
-type buildFn func(*swyapi.WdogFunctionBuild) (*swyapi.WdogFunctionRunResult, error)
-
 type LangDesc struct {
 	_runner		string
-	build		buildFn
+	build		bool
 	prep		func(*LangDesc, string)
 	info		func() (string, []string, error)
 	packages	func(string) ([]string, error)
@@ -93,9 +90,9 @@ type LangDesc struct {
 
 var ldescs = map[string]*LangDesc {
 	"golang": &LangDesc {
-		_runner:	"/go/src/swycode/runner",
-		build:	doBuildCommon,
+		build:	true,
 		prep:	mkExecRunner,
+		_runner:	"/go/src/swycode/runner",
 		info:	goInfo,
 		packages: goPackages,
 		install:  goInstall,
@@ -109,9 +106,9 @@ var ldescs = map[string]*LangDesc {
 		remove:   xpipRemove,
 	},
 	"swift": &LangDesc {
-		_runner:	"/swift/swycode/runner",
-		build:	doBuildCommon,
+		build:	true,
 		prep:	mkExecRunner,
+		_runner:	"/swift/swycode/runner",
 	},
 	"nodejs": &LangDesc {
 		prep:	mkExecPath,
@@ -125,7 +122,7 @@ var ldescs = map[string]*LangDesc {
 		info:	rubyInfo,
 	},
 	"csharp": &LangDesc {
-		build:	doBuildCommon,
+		build:	true,
 		prep:	mkExecPath,
 	},
 }
@@ -362,7 +359,7 @@ out:
 	log.Errorf("%s", err.Error())
 }
 
-func handleBuild(w http.ResponseWriter, r *http.Request, fn buildFn) {
+func handleBuild(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	var params swyapi.WdogFunctionBuild
 	var result *swyapi.WdogFunctionRunResult
@@ -375,7 +372,7 @@ func handleBuild(w http.ResponseWriter, r *http.Request, fn buildFn) {
 
 	code = http.StatusInternalServerError
 	glock.Lock()
-	result, err = fn(&params)
+	result, err = doBuildCommon(&params)
 	glock.Unlock()
 	if err != nil {
 		log.Errorf("Error building FN: %s", err.Error())
@@ -611,10 +608,8 @@ func main() {
 			log.Fatal("No handler for lang")
 		}
 
-		if ld.build != nil {
-			r.HandleFunc("/v1/build", func(w http.ResponseWriter, r *http.Request) {
-				handleBuild(w, r, ld.build)
-			})
+		if ld.build {
+			r.HandleFunc("/v1/build", handleBuild)
 		}
 
 		r.HandleFunc("/v1/ping", func(w http.ResponseWriter, r *http.Request) {
