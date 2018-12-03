@@ -33,9 +33,14 @@ MONGO		?= mongo --quiet localhost:27017
 KUBECTL		?= kubectl
 IPVSADM		?= ipvsadm
 FLAVOR		?= default
+MKDIR		?= mkdir -p
+INST		?= install
+TAR		?= tar
 
 LOCAL_SOURCES	?= /home/swifty/local-sources
 VOLUME_DIR	?= /home/swifty-volume
 TEST_REPO	?= test/.repo
 
 export RM MAKE GIT CP GO GO-BUILD-OPTS GOTAGS MONGO KUBECTL IPVSADM
+
+.PHONY: .FORCE
