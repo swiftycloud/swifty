@@ -133,20 +133,22 @@ func doBuildSwift(params *swyapi.WdogFunctionBuild) (*swyapi.WdogFunctionRunResu
 	return &swyapi.WdogFunctionRunResult{Code: 0, Stdout: stdout.String(), Stderr: stderr.String()}, nil
 }
 
-const monoRunner = "/mono/runner/runner.cs"
-const monoXStream = "/mono/runner/XStream.dll"
+const lBuilder = "/usr/bin/build_runner.sh"
 
-func doBuildMono(params *swyapi.WdogFunctionBuild) (*swyapi.WdogFunctionRunResult, error) {
+func doBuildCommon(params *swyapi.WdogFunctionBuild) (*swyapi.WdogFunctionRunResult, error) {
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 
-	srcdir := "/mono/functions/" + params.Sources
-	log.Debugf("Run mono build on %s", srcdir)
-	fnScript := srcdir + "/script" + params.Suff + ".cs"
-	fnBinary := srcdir + "/runner" + params.Suff + ".exe"
-	cmd := exec.Command("csc", monoRunner, fnScript, "-m:FR", "-r:" + monoXStream, "-out:" + fnBinary)
+	log.Debugf("Run build on %s", params.Sources)
+	cmd := exec.Command(lBuilder)
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
+	penv := []string {
+		"SWD_SOURCES=" + params.Sources,
+		"SWD_SUFFIX=" + params.Suff,
+		"SWD_PACKAGES=" + params.Packages,
+	}
+	cmd.Env = append(os.Environ(), penv...)
 	err := cmd.Run()
 	if err != nil {
 		if exit, code := get_exit_code(err); exit {

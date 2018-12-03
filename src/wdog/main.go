@@ -125,7 +125,7 @@ var ldescs = map[string]*LangDesc {
 		info:	rubyInfo,
 	},
 	"csharp": &LangDesc {
-		build:	doBuildMono,
+		build:	doBuildCommon,
 		prep:	mkExecPath,
 	},
 }
