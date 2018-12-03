@@ -121,8 +121,7 @@ var ldescs = map[string]*LangDesc {
 		remove:   goRemove,
 	},
 	"python": &LangDesc {
-		_runner:	"/usr/bin/swy-runner.py",
-		run:	doRunInterp,
+		run:	doRunCommon,
 		prep:	mkExecPath,
 		info:	pyInfo,
 		packages: xpipPackages,
