@@ -41,3 +41,7 @@ type AcctStats struct {
 	OutBytes		int64		`json:"out-bytes"`
 	OutBytesWeb		int64		`json:"out-bytes-web"`
 }
+
+type AcctLimits struct {
+	CntBytes		int64		`json:"cnt-bytes"`
+}

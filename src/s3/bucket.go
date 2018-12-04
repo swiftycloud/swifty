@@ -98,63 +98,6 @@ func RemoveFromDB(ctx context.Context, bucket *s3mgo.Bucket) (error) {
 	return dbS3RemoveOnState(ctx, bucket, S3StateInactive, query)
 }
 
-func commitObj(ctx context.Context, bucket *s3mgo.Bucket, size int64) (error) {
-	m := bson.M{ "ref": -1 }
-	err := dbS3Update(ctx, bson.M{ "state": S3StateActive },
-		bson.M{ "$inc": m }, true, bucket)
-	if err != nil {
-		log.Errorf("s3: Can't commit %d bytes %s: %s",
-			size, infoLong(bucket), err.Error())
-	}
-	return err
-}
-
-func acctObj(ctx context.Context, bucket *s3mgo.Bucket, size int64) (error) {
-	err := StatsAcct(ctx, bucket.NamespaceID, bson.M{ "cnt-objects": 1, "cnt-bytes": size })
-	if err != nil {
-		log.Errorf("s3: Can't +account %d bytes %s: %s",
-			size, infoLong(bucket), err.Error())
-		return err
-	}
-
-	m := bson.M{ "cnt-objects": 1, "cnt-bytes": size, "ref": 1, "rover": int64(1) }
-	err = dbS3Update(ctx, bson.M{ "state": S3StateActive },
-		bson.M{ "$inc": m }, true, bucket)
-	if err != nil {
-		log.Errorf("s3: Can't +account %d bytes %s: %s",
-			size, infoLong(bucket), err.Error())
-		return err
-	}
-
-	return nil
-}
-
-func unacctObj(ctx context.Context, bucket *s3mgo.Bucket, size int64, dropref bool) (error) {
-	m := bson.M{ "cnt-objects": -1, "cnt-bytes": -size }
-	if dropref {
-		m["ref"] = -1
-	}
-	err := dbS3Update(ctx, bson.M{ "state": S3StateActive },
-		bson.M{ "$inc": m }, true, bucket)
-	if err != nil {
-		log.Errorf("s3: Can't -account %d bytes %s: %s",
-			size, infoLong(bucket), err.Error())
-		return err
-	}
-
-	m = bson.M{ "cnt-objects": -1, "cnt-bytes": -size }
-	err = dbS3Update(ctx, bson.M{ "nsid": bucket.NamespaceID },
-		bson.M{ "$inc": m }, false,
-		&s3mgo.AcctStats {})
-	if err != nil {
-		log.Errorf("s3: Can't -account %d bytes %s: %s",
-			size, infoLong(bucket), err.Error())
-		return err
-	}
-
-	return nil
-}
-
 func FindBucket(ctx context.Context, bname string) (*s3mgo.Bucket, error) {
 	var res s3mgo.Bucket
 	var err error

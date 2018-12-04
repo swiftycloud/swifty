@@ -44,6 +44,7 @@ type TenantMemData struct {
 
 	pkgl	*swyapi.PackagesLimits
 	repl	*swyapi.ReposLimits
+	s3	*swyapi.S3Limits
 	mwl	map[string]*swyapi.MwareLimits
 }
 
@@ -68,7 +69,7 @@ func memdGetCond(cookie string) *FnMemData {
 	}
 }
 
-func setupLimits(ten string, td *TenantMemData, ul *swyapi.UserLimits, off *TenStats) {
+func setupLimits(ctx context.Context, ten string, td *TenantMemData, ul *swyapi.UserLimits, off *TenStats) {
 	if ul.Fn != nil {
 		td.fnlim = ul.Fn.Max
 
@@ -101,6 +102,10 @@ func setupLimits(ten string, td *TenantMemData, ul *swyapi.UserLimits, off *TenS
 	td.pkgl = ul.Pkg
 	td.repl = ul.Repo
 	td.mwl = ul.Mware
+
+	if ul.S3 != nil {
+		td.s3 = s3SetLimits(ctx, ten, td.s3, ul.S3)
+	}
 }
 
 func tendatGet(ctx context.Context) (*TenantMemData, error) {
@@ -130,7 +135,7 @@ func tendatGetOrInit(ctx context.Context, tenant string) (*TenantMemData, error)
 		return nil, err
 	}
 
-	setupLimits(tenant, nret, ul, off)
+	setupLimits(ctx, tenant, nret, ul, off)
 
 	var loaded bool
 	ret, loaded = tdat.LoadOrStore(tenant, nret)
@@ -159,7 +164,7 @@ func tendatGetOrInit(ctx context.Context, tenant string) (*TenantMemData, error)
 					continue
 				}
 
-				setupLimits(tenant, lret, ul, off)
+				setupLimits(cctx, tenant, lret, ul, off)
 				done(cctx)
 			}
 		}()

@@ -325,3 +325,32 @@ func getS3Stats(ctx context.Context) (*swyapi.S3NsStats, *xrest.ReqErr) {
 		OutBytesWeb:	st.OutBytesWeb,
 	}, nil
 }
+
+func s3SetLimits(ctx context.Context, ten string, cache *swyapi.S3Limits, s3l *swyapi.S3Limits) *swyapi.S3Limits {
+	ns := makeSwoId(ten, DefaultProject, "").S3Namespace()
+	var lim swys3api.AcctLimits
+
+	if cache != nil {
+		if cache.SpaceMB != s3l.SpaceMB {
+			goto set
+		}
+
+		return cache
+	}
+
+set:
+	ctxlog(ctx).Debugf("Update S3 limits for %s (%s)", ten, ns)
+	lim.CntBytes = int64(s3l.SpaceMB << 20)
+
+	err := s3Call(
+		&xhttp.RestReq{
+			Method:  "PUT",
+			Address: "/v1/api/stats/" + ns + "/limits",
+		}, &lim, nil)
+	if err != nil {
+		ctxlog(ctx).Errorf("Error setting S3 limits to S3: %s", err.Error())
+		return nil
+	}
+
+	return s3l
+}

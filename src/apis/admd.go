@@ -39,4 +39,5 @@ type PlanLimits struct {
 	Pkg	*PackagesLimits		`json:"packages,omitempty" yaml:"packages,omitempty"`
 	Repo	*ReposLimits		`json:"repos,omitempty" yaml:"repos,omitempty"`
 	Mware	map[string]*MwareLimits	`json:"mware,omitempty" yaml:"mware,omitempty"`
+	S3	*S3Limits		`json:"s3,omitempty" yaml:"s3,omitempty"`
 }

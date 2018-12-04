@@ -913,6 +913,42 @@ func handleStats(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func handleLimits(w http.ResponseWriter, r *http.Request) {
+	var lim swys3api.AcctLimits
+
+	if xhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
+
+	err := s3VerifyAdmin(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+
+	err = xhttp.RReq(r, &lim)
+	if err != nil {
+		http.Error(w, "Cannot read limits", http.StatusBadRequest)
+		return
+	}
+
+	ctx, done := mkContext("statsreq")
+	defer done(ctx)
+	ns := mux.Vars(r)["ns"]
+
+	act, err := s3AccountFind(ctx, ns)
+	if err != nil {
+		http.Error(w, "No such namespace", http.StatusNotFound)
+		return
+	}
+
+	err = LimitsSetFor(ctx, act, &lim)
+	if err != nil {
+		http.Error(w, "Error setting limits", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
 func handleNotify(w http.ResponseWriter, r *http.Request) {
 	var params swys3api.Subscribe
 
@@ -1066,6 +1102,7 @@ func main() {
 	radminsrv.HandleFunc("/v1/api/keys", handleKeys).Methods("POST", "DELETE")
 	radminsrv.HandleFunc("/v1/api/notify", handleNotify).Methods("POST", "DELETE")
 	radminsrv.HandleFunc("/v1/api/stats/{ns}", handleStats).Methods("GET")
+	radminsrv.HandleFunc("/v1/api/stats/{ns}/limits", handleLimits).Methods("PUT")
 
 	err = dbConnect(&conf)
 	if err != nil {

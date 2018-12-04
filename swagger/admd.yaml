@@ -347,6 +347,8 @@ definitions:
         $ref: '#/definitions/PackagesLimits'
       repos:
         $ref: '#/definitions/ReposLimits'
+      s3:
+        $ref: '#/definitions/S3Limits'
       mware:
         type: object
         additionalProperties:
@@ -368,6 +370,8 @@ definitions:
         $ref: '#/definitions/PackagesLimits'
       repos:
         $ref: '#/definitions/ReposLimits'
+      s3:
+        $ref: '#/definitions/S3Limits'
       mware:
         type: object
         additionalProperties:
@@ -382,6 +386,11 @@ definitions:
       number:
         type: integer
         description: Maximum number of repos attached by a user
+  S3Limits:
+    properties:
+      space_mb:
+        type: integer
+        description: Maximum number of mbytes occupied by objects
   MwareLimits:
     properties:
       number:
