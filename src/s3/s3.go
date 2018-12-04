@@ -64,3 +64,6 @@ func s3CheckAccess(ctx context.Context, bname, oname string) error {
 	// FIXME Implement lookup and ACL, for now just allow
 	return nil
 }
+
+func requestFsck() {
+}
