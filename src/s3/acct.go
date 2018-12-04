@@ -8,10 +8,19 @@ package main
 import (
 	"gopkg.in/mgo.v2/bson"
 	"context"
+	"errors"
 	"swifty/s3/mgo"
 )
 
 func rsLimited(st *s3mgo.AcctStats) error {
+	if st.Lim == nil {
+		return nil
+	}
+
+	if st.Lim.CntBytes != 0 && st.CntBytes > st.Lim.CntBytes {
+		return errors.New("Objects total size exceeded")
+	}
+
 	return nil
 }
 

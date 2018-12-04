@@ -30,6 +30,12 @@ type AcctStats struct {
 	CntBytes			int64		`bson:"cnt-bytes"`
 	OutBytes			int64		`bson:"out-bytes"`
 	OutBytesWeb			int64		`bson:"out-bytes-web"`
+
+	Lim				*AcctLimits	`bson:"limits,omitempty"`
+}
+
+type AcctLimits struct {
+	CntBytes			int64		`json:"cnt-bytes"`
 }
 
 type Iam struct {
