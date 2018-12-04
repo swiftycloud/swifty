@@ -143,9 +143,7 @@ func unacctObj(ctx context.Context, bucket *s3mgo.Bucket, size int64, dropref bo
 	}
 
 	m = bson.M{ "cnt-objects": -1, "cnt-bytes": -size }
-	err = dbS3Update(ctx, bson.M{ "nsid": bucket.NamespaceID },
-		bson.M{ "$inc": m }, false,
-		&s3mgo.AcctStats {})
+	err = StatsUnacct(ctx, bucket.NamespaceID, m)
 	if err != nil {
 		log.Errorf("s3: Can't -account %d bytes %s: %s",
 			size, infoLong(bucket), err.Error())

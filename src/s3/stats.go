@@ -12,12 +12,11 @@ import (
 )
 
 func StatsAcct(ctx context.Context, nsid string, upd bson.M) error {
-	err := dbS3Upsert(ctx, bson.M{ "nsid": nsid }, bson.M{ "$inc": upd }, &s3mgo.AcctStats{} )
-	if err != nil {
-		log.Errorf("s3: Can't +account %v to %s: %s",
-				upd, nsid, err.Error())
-	}
-	return nil
+	return dbS3Upsert(ctx, bson.M{ "nsid": nsid }, bson.M{ "$inc": upd }, &s3mgo.AcctStats{} )
+}
+
+func StatsUnacct(ctx context.Context, nsid string, upd bson.M) error {
+	return dbS3Update(ctx, bson.M{ "nsid": nsid }, bson.M{ "$inc": upd }, false, &s3mgo.AcctStats {})
 }
 
 func StatsAcctInt64(ctx context.Context, nsid string, metric string, value int64) error {
