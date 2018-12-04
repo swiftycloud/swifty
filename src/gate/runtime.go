@@ -15,6 +15,7 @@ import (
 )
 
 type langInfo struct {
+	/* See docs/rt-paths.txt for explanation of this thing */
 	CodePath	string
 	Ext		string
 	Build		bool

@@ -1,0 +1,67 @@
+Function code is shared between gate and slaves on a "volume".
+The structure of the volume is described below.
+
+/volume/packages  is where packages are
+/volume/functions is where functions' code is
+
+Parts of the latter dir gets mounted into service and rt pods.
+The structure of it is
+
+  /volume/functions/$tenant/$project/$name/$version
+
+Service pods directory layout is described in:
+	- /volume/functions dir, see the kubectl/deploy/stuff
+	- private pieces, see the kubectl/docker/wdog/$l stuff
+
+Runner pods see the same private layout, but only the
+/volume/functions/$ten/$prj/$nm/$ver part of the volume
+mounted at path described by the rtCodePath() helper.
+
+charp
+ |
+ `- /mono
+    +- /functions/     <-- /volume/functions
+    +- /function/      <-- /volume/functions/$fn
+    `- /runner
+       +- runner.cs     -- the main runner loop
+       `- XStream.dll   -- unix socket read/write shim
+
+golang
+ |
+ `- /go/src
+    +- /swycode/       <-- /volume/functions (and /$fn)
+    +- /swyrunner
+    |   +- runner.go    -- the main runner loop
+    |   `- body         -- the Body type stub
+    +- /swifty/         -- "swifty" package
+    +- /xqueue/         -- package "xqueue"
+    `- /.../            -- go get stuff from Dockerfile
+
+nodejs
+ |
+ +- /function/         <-- /volume/functions/$fn
+ `- /home/swifty
+    +- /node_modules/   -- npm stuff from Dockerfile
+    `- runner.js        -- the main runner loop
+
+python
+ |
+ +- /function/         <-- /volume/functions/$fn
+ +- /usr/bin
+ |  `- swy-runner.py    -- the main runner loop
+ `- /swifty/            -- "swifty" package
+
+ruby
+ |
+ +- /function/         <-- /volume/functions/$fn
+ `- /home/swifty
+    `- runner.rb        -- the main runner loop
+
+swift
+ |
+ `- /swift
+    +- /swycode/       <-- /volume/functions (and /$fn)
+    `- /runner
+       +- /Sources
+       |  `- main.swift -- the main runner loop
+       `- Package.swift -- descriptor
