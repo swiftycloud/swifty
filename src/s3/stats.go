@@ -9,6 +9,7 @@ import (
 	"context"
 	"gopkg.in/mgo.v2/bson"
 	"swifty/s3/mgo"
+	"swifty/apis/s3"
 )
 
 func StatsAcct(ctx context.Context, nsid string, upd bson.M) (*s3mgo.AcctStats, error) {
@@ -35,4 +36,13 @@ func StatsFindFor(ctx context.Context, act *s3mgo.Account) (*s3mgo.AcctStats, er
 	}
 
 	return &st, nil
+}
+
+func LimitsSetFor(ctx context.Context, act *s3mgo.Account, lim *swys3api.AcctLimits) error {
+	limits := &s3mgo.AcctLimits {
+		CntBytes:	lim.CntBytes,
+	}
+
+	return dbS3Update(ctx, bson.M{ "nsid": act.NamespaceID() },
+			bson.M{ "$set": bson.M{ "limits": limits }}, false, &s3mgo.AcctStats{})
 }
