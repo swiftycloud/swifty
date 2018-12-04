@@ -63,6 +63,10 @@ type MwareLimits struct {
 	Number		uint32	`json:"number" yaml:"number"`
 }
 
+type S3Limits struct {
+	SpaceMB		uint64	`json:"space_mb" yaml:"space_mb"`
+}
+
 type UserLimits struct {
 	UId	string			`json:"-" bson:"uid"`
 	PlanId	string			`json:"planid" bson:"planid"`
@@ -71,6 +75,7 @@ type UserLimits struct {
 	Pkg	*PackagesLimits		`json:"packages,omitempty" bson:"packages,omitempty"`
 	Repo	*ReposLimits		`json:"repos,omitempty" bson:"repos,omitempty"`
 	Mware	map[string]*MwareLimits	`json:"mware,omitempty" bson:"mware,omitempty"`
+	S3	*S3Limits		`json:"s3,omitempty" bson:"s3,omitempty"`
 }
 
 type Package struct {

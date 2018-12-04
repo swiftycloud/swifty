@@ -298,6 +298,7 @@ func handlePlanUpdate(w http.ResponseWriter, r *http.Request, pid bson.ObjectId,
 	patchPkgLimits(&pl.Pkg, params.Pkg)
 	patchRepoLimits(&pl.Repo, params.Repo)
 	patchMwareLimits(pl.Mware, params.Mware)
+	patchS3Limits(&pl.S3, params.S3)
 
 	err = dbSetPlanLimits(ses, pl)
 	if err != nil {
@@ -392,6 +393,7 @@ func (pl *PlanLimits)toInfo() *swyapi.PlanLimits {
 		Pkg:	pl.Pkg,
 		Repo:	pl.Repo,
 		Mware:	pl.Mware,
+		S3:	pl.S3,
 	}
 }
 
@@ -404,6 +406,7 @@ func (pl *PlanLimits)toUserLimits(uid string) *swyapi.UserLimits {
 		Pkg:	pl.Pkg,
 		Repo:	pl.Repo,
 		Mware:	pl.Mware,
+		S3:	pl.S3,
 	}
 }
 
@@ -675,6 +678,7 @@ type PlanLimits struct {
 	Pkg	*swyapi.PackagesLimits	`bson:"packages,omitempty"`
 	Repo	*swyapi.ReposLimits	`bson:"repos,omitempty"`
 	Mware	map[string]*swyapi.MwareLimits	`bson:"mware"`
+	S3	*swyapi.S3Limits	`bson:"s3,omitempty"`
 }
 
 func handleAddPlan(w http.ResponseWriter, r *http.Request, td *xkst.KeystoneTokenData) {
@@ -711,6 +715,7 @@ func handleAddPlan(w http.ResponseWriter, r *http.Request, td *xkst.KeystoneToke
 		Pkg:	params.Pkg,
 		Repo:	params.Repo,
 		Mware:	params.Mware,
+		S3:	params.S3,
 	}
 	code = http.StatusInternalServerError
 	err = dbAddPlanLimits(ses, pl)
@@ -804,6 +809,22 @@ func patchMwareLimits(into map[string]*swyapi.MwareLimits, from map[string]*swya
 	}
 }
 
+func patchS3Limits(tgt **swyapi.S3Limits, from *swyapi.S3Limits) {
+	if from == nil {
+		return
+	}
+
+	into := *tgt
+	if into == nil {
+		*tgt = from
+		return
+	}
+
+	if from.SpaceMB != 0 {
+		into.SpaceMB = from.SpaceMB
+	}
+}
+
 func handleSetLimits(w http.ResponseWriter, r *http.Request, uid string, td *xkst.KeystoneTokenData) {
 	var params swyapi.UserLimits
 	var rui *swyapi.UserInfo
@@ -843,6 +864,7 @@ func handleSetLimits(w http.ResponseWriter, r *http.Request, uid string, td *xks
 	patchPkgLimits(&plim.Pkg, params.Pkg)
 	patchRepoLimits(&plim.Repo, params.Repo)
 	patchMwareLimits(plim.Mware, params.Mware)
+	patchS3Limits(&plim.S3, params.S3)
 
 	code = http.StatusInternalServerError
 	rui, err = getUserInfo(conf.kc, uid, false)
