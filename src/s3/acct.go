@@ -11,6 +11,10 @@ import (
 	"swifty/s3/mgo"
 )
 
+func rsLimited(st *s3mgo.AcctStats) error {
+	return nil
+}
+
 func bucketAcct(ctx context.Context, b *s3mgo.Bucket, upd bson.M) error {
 	return dbS3Update(ctx, bson.M{ "state": S3StateActive }, bson.M{ "$inc": upd }, true, b)
 }
@@ -29,9 +33,20 @@ func acctObj(ctx context.Context, bucket *s3mgo.Bucket, size int64) (error) {
 	var eru error
 
 	m := bson.M{ "cnt-objects": 1, "cnt-bytes": size }
-	err := StatsAcct(ctx, bucket.NamespaceID, m)
+	st, err := StatsAcct(ctx, bucket.NamespaceID, m)
 	if err != nil {
 		goto er1
+	}
+
+	err = rsLimited(st)
+	if err != nil {
+		m = bson.M{ "cnt-objects": -1, "cnt-bytes": -size }
+		eru = StatsUnacct(ctx, bucket.NamespaceID, m)
+		if eru != nil {
+			goto er1
+		}
+
+		return err
 	}
 
 	m = bson.M{ "cnt-objects": 1, "cnt-bytes": size, "ref": 1, "rover": int64(1) }
