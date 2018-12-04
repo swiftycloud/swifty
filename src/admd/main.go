@@ -294,10 +294,10 @@ func handlePlanUpdate(w http.ResponseWriter, r *http.Request, pid bson.ObjectId,
 		pl.Descr = params.Descr
 	}
 
-	mergeFnLimits(&pl.Fn, params.Fn)
-	mergePkgLimits(&pl.Pkg, params.Pkg)
-	mergeRepoLimits(&pl.Repo, params.Repo)
-	mergeMwareLimits(pl.Mware, params.Mware)
+	patchFnLimits(&pl.Fn, params.Fn)
+	patchPkgLimits(&pl.Pkg, params.Pkg)
+	patchRepoLimits(&pl.Repo, params.Repo)
+	patchMwareLimits(pl.Mware, params.Mware)
 
 	err = dbSetPlanLimits(ses, pl)
 	if err != nil {
@@ -388,6 +388,18 @@ func (pl *PlanLimits)toInfo() *swyapi.PlanLimits {
 		Id:	pl.ObjID.Hex(),
 		Name:	pl.Name,
 		Descr:	pl.Descr,
+		Fn:	pl.Fn,
+		Pkg:	pl.Pkg,
+		Repo:	pl.Repo,
+		Mware:	pl.Mware,
+	}
+}
+
+func (pl *PlanLimits)toUserLimits(uid string) *swyapi.UserLimits {
+	return &swyapi.UserLimits{
+		UId:    uid,
+		PlanId: pl.ObjID.Hex(),
+		PlanNm: pl.Name,
 		Fn:	pl.Fn,
 		Pkg:	pl.Pkg,
 		Repo:	pl.Repo,
@@ -618,15 +630,7 @@ func handleAddUser(w http.ResponseWriter, r *http.Request, td *xkst.KeystoneToke
 	}
 
 	if plim != nil {
-		err = dbSetUserLimits(ses, &conf, &swyapi.UserLimits {
-			UId:	params.UId,
-			PlanId:	plim.ObjID.Hex(),
-			PlanNm:	plim.Name,
-			Fn:	plim.Fn,
-			Pkg:	plim.Pkg,
-			Repo:	plim.Repo,
-			Mware:	plim.Mware,
-		})
+		err = dbSetUserLimits(ses, &conf, plim.toUserLimits(params.UId))
 		if err != nil {
 			goto out
 		}
@@ -726,74 +730,74 @@ out:
 	http.Error(w, err.Error(), code)
 }
 
-func mergeFnLimits(into_p **swyapi.FunctionLimits, from *swyapi.FunctionLimits) {
+func patchFnLimits(tgt **swyapi.FunctionLimits, from *swyapi.FunctionLimits) {
 	if from == nil {
 		return
 	}
 
-	into := *into_p
+	into := *tgt
 	if into == nil {
-		*into_p = from
+		*tgt = from
 		return
 	}
 
-	if into.Rate == 0 {
+	if from.Rate != 0 {
 		into.Rate = from.Rate
 		into.Burst = from.Burst
 	}
 
-	if into.Max == 0 {
+	if from.Max != 0 {
 		into.Max = from.Max
 	}
 
-	if into.GBS == 0 {
+	if from.GBS != 0 {
 		into.GBS = from.GBS
 	}
 
-	if into.BytesOut == 0 {
+	if from.BytesOut != 0 {
 		into.BytesOut = from.BytesOut
 	}
 }
 
-func mergePkgLimits(into_p **swyapi.PackagesLimits, from *swyapi.PackagesLimits) {
+func patchPkgLimits(tgt **swyapi.PackagesLimits, from *swyapi.PackagesLimits) {
 	if from == nil {
 		return
 	}
 
-	into := *into_p
+	into := *tgt
 	if into == nil {
-		*into_p = from
+		*tgt = from
 		return
 	}
 
-	if into.DiskSizeK == 0 {
+	if from.DiskSizeK != 0 {
 		into.DiskSizeK = from.DiskSizeK
 	}
 }
 
-func mergeRepoLimits(into_p **swyapi.ReposLimits, from *swyapi.ReposLimits) {
+func patchRepoLimits(tgt **swyapi.ReposLimits, from *swyapi.ReposLimits) {
 	if from == nil {
 		return
 	}
 
-	into := *into_p
+	into := *tgt
 	if into == nil {
-		*into_p = from
+		*tgt = from
 		return
 	}
 
-	if into.Number == 0 {
+	if from.Number != 0 {
 		into.Number = from.Number
 	}
 }
 
-func mergeMwareLimits(into map[string]*swyapi.MwareLimits, from map[string]*swyapi.MwareLimits) {
+func patchMwareLimits(into map[string]*swyapi.MwareLimits, from map[string]*swyapi.MwareLimits) {
 	for m, lf := range from {
 		lt, ok := into[m]
 		if !ok {
 			into[m] = lf
 		} else {
-			if lt.Number == 0 {
+			if lf.Number != 0 {
 				lt.Number = lf.Number
 			}
 		}
@@ -804,6 +808,7 @@ func handleSetLimits(w http.ResponseWriter, r *http.Request, uid string, td *xks
 	var params swyapi.UserLimits
 	var rui *swyapi.UserInfo
 	var err error
+	var plim *PlanLimits
 
 	ses := session.Copy()
 	defer ses.Close()
@@ -826,19 +831,18 @@ func handleSetLimits(w http.ResponseWriter, r *http.Request, uid string, td *xks
 			goto out
 		}
 
-		var plim *PlanLimits
 		plim, err = dbGetPlanLimits(ses, bson.ObjectIdHex(params.PlanId))
 		if err != nil {
 			goto out
 		}
-
-		/* Set nil params' limits to plans' ones */
-		mergeFnLimits(&params.Fn, plim.Fn)
-		mergePkgLimits(&params.Pkg, plim.Pkg)
-		mergeRepoLimits(&params.Repo, plim.Repo)
-		mergeMwareLimits(params.Mware, plim.Mware)
-		params.PlanNm = plim.Name
+	} else {
+		plim = &PlanLimits{}
 	}
+
+	patchFnLimits(&plim.Fn, params.Fn)
+	patchPkgLimits(&plim.Pkg, params.Pkg)
+	patchRepoLimits(&plim.Repo, params.Repo)
+	patchMwareLimits(plim.Mware, params.Mware)
 
 	code = http.StatusInternalServerError
 	rui, err = getUserInfo(conf.kc, uid, false)
@@ -846,8 +850,7 @@ func handleSetLimits(w http.ResponseWriter, r *http.Request, uid string, td *xks
 		goto out
 	}
 
-	params.UId = rui.UId
-	err = dbSetUserLimits(ses, &conf, &params)
+	err = dbSetUserLimits(ses, &conf, plim.toUserLimits(rui.UId))
 	if err != nil {
 		goto out
 	}
