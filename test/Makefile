@@ -1,6 +1,7 @@
 TESTS =
 
 TESTS += test-fns
+TESTS += test-aaas
 
 all: $(TESTS)
 	true
