@@ -213,7 +213,7 @@ tar:
 gtar:
 	$(Q) $(GIT) repack -ad
 	$(Q) $(GIT) gc
-	$(Q) $(TAR) cf ../swifty-git.tar --exclude 'vendor/*' .
+	$(TAR) -c -C ../ -f ../swifty-git.tar --exclude 'vendor/*' $(shell basename $(CURDIR))
 .PHONY: tar
 
 ifneq ($(filter mqclean,$(MAKECMDGOALS)),)
