@@ -140,6 +140,7 @@ func tplan_list(args []string, opts[16]string) {
 		show_pkg_limits(p.Pkg)
 		show_repo_limits(p.Repo)
 		show_mware_limits(p.Mware)
+		show_s3_limits(p.S3)
 	}
 }
 
@@ -183,6 +184,7 @@ func tplan_info(args []string, opts[16]string) {
 	show_pkg_limits(p.Pkg)
 	show_repo_limits(p.Repo)
 	show_mware_limits(p.Mware)
+	show_s3_limits(p.S3)
 }
 
 func tplan_del(args []string, opts[16]string) {
@@ -212,6 +214,7 @@ func user_limits(args []string, opts [16]string) {
 		show_pkg_limits(l.Pkg)
 		show_repo_limits(l.Repo)
 		show_mware_limits(l.Mware)
+		show_s3_limits(l.S3)
 		fmt.Printf(">>> %s\n", l.UId)
 	}
 }
@@ -341,6 +344,15 @@ func show_mware_limits(mwl map[string]*swyapi.MwareLimits) {
 		fmt.Printf("Mware.%s:\n", m)
 		if ml.Number != 0 {
 			fmt.Printf("    Number:            %d\n", ml.Number)
+		}
+	}
+}
+
+func show_s3_limits(sl *swyapi.S3Limits) {
+	if sl != nil {
+		fmt.Printf("S3:\n")
+		if sl.SpaceMB != 0 {
+			fmt.Printf("     Space:            %s\n", formatBytes(sl.SpaceMB<<20))
 		}
 	}
 }

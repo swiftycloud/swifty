@@ -113,7 +113,6 @@ func getLangInfos(wl string) {
 			continue
 		}
 
-		glog.Debugf("Set %s lang info: %v", l, li)
 		h.LInfo = li
 	}
 }

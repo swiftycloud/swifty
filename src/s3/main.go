@@ -889,6 +889,7 @@ func handleStats(w http.ResponseWriter, r *http.Request) {
 	ctx, done := mkContext("statsreq")
 	defer done(ctx)
 	ns := mux.Vars(r)["ns"]
+	log.Debugf("Getting stats for %s", ns)
 
 	act, err := s3AccountFind(ctx, ns)
 	if err != nil {
@@ -933,6 +934,7 @@ func handleLimits(w http.ResponseWriter, r *http.Request) {
 	ctx, done := mkContext("statsreq")
 	defer done(ctx)
 	ns := mux.Vars(r)["ns"]
+	log.Debugf("Setting limits for %s", ns)
 
 	act, err := s3AccountFind(ctx, ns)
 	if err != nil {
@@ -942,6 +944,7 @@ func handleLimits(w http.ResponseWriter, r *http.Request) {
 
 	err = LimitsSetFor(ctx, act, &lim)
 	if err != nil {
+		log.Errorf("Error setting limits: %s", err.Error())
 		http.Error(w, "Error setting limits", http.StatusInternalServerError)
 		return
 	}

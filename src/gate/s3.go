@@ -243,10 +243,24 @@ func s3GenBucketKeys(ctx context.Context, fid *SwoId, bucket string) (map[string
 	}, nil
 }
 
+func enforceS3Limits(ctx context.Context) {
+	/* FIXME The best way for doing this is to push the tendat into memory :( */
+	go func() {
+		tendatGet(ctx)
+	}()
+}
+
 func s3GetCreds(ctx context.Context, acc *swyapi.S3Access) (*swyapi.S3Creds, *xrest.ReqErr) {
 	if conf.Mware.S3 == nil {
 		return nil, GateErrC(swyapi.GateNotAvail)
 	}
+
+	/*
+	 * If the user requests keys, it will likely :) go and create
+	 * some objects in the s3. We need to enforce the tendat's
+	 * limits setting loop to setup limits for s3 if configured.
+	 */
+	enforceS3Limits(ctx)
 
 	creds := &swyapi.S3Creds{}
 
