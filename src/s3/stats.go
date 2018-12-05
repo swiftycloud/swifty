@@ -43,6 +43,6 @@ func LimitsSetFor(ctx context.Context, act *s3mgo.Account, lim *swys3api.AcctLim
 		CntBytes:	lim.CntBytes,
 	}
 
-	return dbS3Update(ctx, bson.M{ "nsid": act.NamespaceID() },
-			bson.M{ "$set": bson.M{ "limits": limits }}, false, &s3mgo.AcctStats{})
+	return dbS3Upsert(ctx, bson.M{ "nsid": act.NamespaceID() },
+			bson.M{ "$set": bson.M{ "limits": limits }}, &s3mgo.AcctStats{})
 }
