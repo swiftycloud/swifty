@@ -30,15 +30,11 @@ def json_get(key, data):
     return None
 
 parser = argparse.ArgumentParser(prog='s3ctl.py')
-parser.add_argument('--admin-secret', dest = 'admin_secret',
-                    help = 'access token to ented admin interface')
-parser.add_argument('--endpoint-url', dest = 'endpoint_url',
-                    default = '192.168.122.197:8787',
-                    help = 'S3 service address')
-parser.add_argument('--access-key-id', dest = 'access_key_id',
-                    help = 'Access key')
-parser.add_argument('--secret-key-id', dest = 'secret_key_id',
-                    help = 'Secret key')
+parser.add_argument('--admin-secret', dest = 'admin_secret', help = 'access token to ented admin interface')
+parser.add_argument('--endpoint-url', dest = 'endpoint_url', help = 'S3 service address')
+parser.add_argument('--access-key-id', dest = 'access_key_id', help = 'Access key')
+parser.add_argument('--secret-key-id', dest = 'secret_key_id', help = 'Secret key')
+parser.add_argument('--conf', dest = 'conf', help = 'swyctl s3acc output file')
 
 sp = parser.add_subparsers(dest = 'cmd')
 for cmd in ['keygen']:
@@ -181,7 +177,7 @@ def saveCreds(args):
             creds = {
                 'access-key-id': args.access_key_id,
                 'access-key-secret': args.secret_key_id,
-                'admin-secret': args.admin_secret,
+                'endpoint-url': args.endpoint_url,
             }
             f.write(json.dumps(creds))
             f.close()
@@ -204,8 +200,19 @@ if creds != None:
         args.access_key_id = json_get('access-key-id', creds)
     if not args.secret_key_id:
         args.secret_key_id = json_get('access-key-secret', creds)
-    if not args.admin_secret:
-        args.admin_secret = json_get('admin-secret', creds)
+    if not args.endpoint_url:
+        args.endpoint_url = json_get('endpoint-url', creds)
+
+if args.conf != "":
+    print("Will load creds from %s" % args.conf)
+    for ln in open(args.conf):
+        ls = [ x.strip() for x in ln.split() ]
+        if ls[0] == 'Key:':
+            args.access_key_id = ls[1]
+        if ls[0] == 'Secret:':
+            args.secret_key_id = ls[1]
+        if ls[0] == 'Endpoint':
+            args.endpoint_url = ls[1]
 
 def resp_error(cmd, resp):
     if resp != None:
