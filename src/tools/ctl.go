@@ -2288,6 +2288,11 @@ func main() {
 		os.Exit(1)
 	}
 
+	if os.Args[1] == "-v" {
+		fmt.Printf("Version: %s\n", Version)
+		os.Exit(0)
+	}
+
 	cd, ok := cmdMap[os.Args[1]]
 	if !ok {
 		flag.Usage()
