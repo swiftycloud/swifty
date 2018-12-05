@@ -747,6 +747,8 @@ func ReposInit(ctx context.Context) error {
 		return err
 	}
 
+	demoRep.pullAsync()
+
 	ctxlog(ctx).Debugf("Resolved remo repo: %s", demoRep.ObjID.Hex())
 	return nil
 }
