@@ -503,6 +503,8 @@ func (ds Deployments)Iterate(ctx context.Context, q url.Values, cb func(context.
 	labs := q["label"]
 	if ds.auth {
 		labs = append(labs, authLabel)
+		/* Suppress items list for auths requests */
+		q.Add("noitems", "1")
 	}
 
 	iter := dbIterAll(ctx, listReq(ctx, project, labs), &dep)
@@ -546,14 +548,14 @@ func (dep *DeployDesc)Add(ctx context.Context, p interface{}) *xrest.ReqErr {
 }
 
 func (dep *DeployDesc)Info(ctx context.Context, q url.Values, details bool) (interface{}, *xrest.ReqErr) {
-	return dep.toInfo(ctx, details)
+	return dep.toInfo(ctx, q.Get("noitems") == "", details)
 }
 
 func (dep *DeployDesc)Upd(ctx context.Context, upd interface{}) *xrest.ReqErr {
 	return GateErrM(swyapi.GateGenErr, "Not updatable")
 }
 
-func (dep *DeployDesc)toInfo(ctx context.Context, details bool) (*swyapi.DeployInfo, *xrest.ReqErr) {
+func (dep *DeployDesc)toInfo(ctx context.Context, items, details bool) (*swyapi.DeployInfo, *xrest.ReqErr) {
 	ret := &swyapi.DeployInfo {
 		Id:		dep.ObjID.Hex(),
 		Name:		dep.SwoId.Name,
@@ -562,15 +564,17 @@ func (dep *DeployDesc)toInfo(ctx context.Context, details bool) (*swyapi.DeployI
 		Labels:		dep.Labels,
 	}
 
-	for _, f := range dep.Functions {
-		ret.Items = append(ret.Items, f.info(ctx, details))
-	}
-	for _, m := range dep.Mwares {
-		ret.Items = append(ret.Items, m.info(ctx, details))
-	}
+	if items {
+		for _, f := range dep.Functions {
+			ret.Items = append(ret.Items, f.info(ctx, details))
+		}
+		for _, m := range dep.Mwares {
+			ret.Items = append(ret.Items, m.info(ctx, details))
+		}
 
-	for _, r := range dep.Routers {
-		ret.Items = append(ret.Items, r.info(ctx, details))
+		for _, r := range dep.Routers {
+			ret.Items = append(ret.Items, r.info(ctx, details))
+		}
 	}
 
 	return ret, nil

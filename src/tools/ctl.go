@@ -1221,7 +1221,7 @@ func mware_del(args []string, opts [16]string) {
 func auth_cfg(args []string, opts [16]string) {
 	switch args[0] {
 	case "get", "inf":
-		var auths []*swyapi.AuthInfo
+		var auths []*swyapi.DeployInfo
 		swyclient.List("auths", http.StatusOK, &auths)
 		for _, a := range auths {
 			fmt.Printf("%s (%s)\n", a.Name, a.Id)
@@ -1237,7 +1237,7 @@ func auth_cfg(args []string, opts [16]string) {
 		fmt.Printf("Created %s auth\n", di.Id)
 
 	case "off":
-		var auths []*swyapi.AuthInfo
+		var auths []*swyapi.DeployInfo
 		swyclient.List("auths", http.StatusOK, &auths)
 		for _, a := range auths {
 			if opts[0] != "" && a.Name != opts[0] {
