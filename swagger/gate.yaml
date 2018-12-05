@@ -1318,6 +1318,16 @@ paths:
           type: string
           required: false
           description: Filter output by label(s)
+        - in: query
+          name: noitems
+          type: string
+          required: false
+          description: Set not to report array with items
+        - in: query
+          name: details
+          type: string
+          required: false
+          description: Whether or not to show details about items
       responses:
         '200':
           description: All objects has been /add-ed
@@ -1372,6 +1382,17 @@ paths:
       tags:
         - deploy
       summary: Show info about deployment
+      parameters:
+        - in: query
+          name: noitems
+          type: string
+          required: false
+          description: Set not to report array with items
+        - in: query
+          name: details
+          type: string
+          required: false
+          description: Whether or not to show details about items
       responses:
         '200':
           description: OK
@@ -1577,7 +1598,7 @@ paths:
         '200':
           description: All objects has been /add-ed
           schema:
-            $ref: '#/definitions/AuthInfo'
+            $ref: '#/definitions/DeployInfo'
         '400':
           description: Bad request
           schema:
@@ -2800,16 +2821,6 @@ definitions:
         description: Number of entries in a table
       url:
         type: string
-  AuthInfo:
-    type: object
-    description: AaaS entry description
-    properties:
-      id:
-        type: string
-        description: Deployment ID
-      name:
-        type: string
-        description: Deployment name
   AuthAdd:
     type: object
     description: AaaS creation request

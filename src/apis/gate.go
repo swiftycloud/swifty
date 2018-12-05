@@ -263,12 +263,7 @@ type DeployInfo struct {
 	Project		string			`json:"project"`
 	Labels		[]string		`json:"labels,omitempty"`
 	State		string			`json:"state"`
-	Items		[]*DeployItemInfo	`json:"items"`
-}
-
-type AuthInfo struct {
-	Id		string			`json:"id"`
-	Name		string			`json:"name"`
+	Items		[]*DeployItemInfo	`json:"items,omitempty"`
 }
 
 type AuthAdd struct {

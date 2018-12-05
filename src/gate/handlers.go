@@ -673,7 +673,7 @@ func handleAuths(ctx context.Context, w http.ResponseWriter, r *http.Request) *x
 			return cerr
 		}
 
-		di, _ := dd.toInfo(ctx, false)
+		di, _ := dd.toInfo(ctx, false, false)
 		return xrest.Respond(ctx, w, &di)
 	}
 
