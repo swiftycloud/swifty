@@ -320,3 +320,35 @@ func ReadObject(ctx context.Context, bucket *s3mgo.Bucket, oname string, part, v
 
 	return ReadData(ctx, bucket, object)
 }
+
+
+type IterChunksFn func(*s3mgo.DataChunk) error
+type IterPartsFn func(*s3mgo.ObjectPart) error
+
+func ObjectIterChunks(ctx context.Context, bucket *s3mgo.Bucket, oname string,
+		part, version int, fn IterChunksFn) error {
+	var object *s3mgo.Object
+	var err error
+
+	object, err = FindCurObject(ctx, bucket, oname)
+	if err != nil {
+		if err != mgo.ErrNotFound {
+			log.Errorf("s3: Can't find object %s on %s: %s",
+					oname, infoLong(bucket), err.Error())
+		}
+		return err
+	}
+
+	err = s3ObjectPartsIter(ctx, object.ObjID, func(p *s3mgo.ObjectPart) error {
+		return s3IterChunks(ctx, p, fn)
+	})
+
+	if err != nil {
+		if err != mgo.ErrNotFound {
+			log.Errorf("s3: Can't find object data %s: %s", infoLong(object), err.Error())
+		}
+		return err
+	}
+
+	return nil
+}

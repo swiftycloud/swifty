@@ -10,6 +10,7 @@ import (
 	"gopkg.in/mgo.v2/bson"
 	"crypto/md5"
 	"context"
+	"errors"
 	"time"
 	"fmt"
 	"swifty/s3/mgo"
@@ -34,6 +35,28 @@ func s3ReadChunks(ctx context.Context, part *s3mgo.ObjectPart) ([]byte, error) {
 	}
 
 	return res, nil
+}
+
+func s3IterChunks(ctx context.Context, part *s3mgo.ObjectPart, fn IterChunksFn) error {
+	if len(part.Chunks) == 0 {
+		return errors.New("Rados cannot iter chunks yet")
+	}
+
+	for _, cid := range part.Chunks {
+		var ch s3mgo.DataChunk
+
+		err := dbS3FindOne(ctx, bson.M{"_id": cid}, &ch)
+		if err != nil {
+			return err
+		}
+
+		err = fn(&ch)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func s3WriteChunks(ctx context.Context, part *s3mgo.ObjectPart, data []byte) error {
@@ -203,6 +226,22 @@ func s3ObjectPartFindFull(ctx context.Context, refID bson.ObjectId) ([]*s3mgo.Ob
 	}
 
 	return res, nil
+}
+
+func s3ObjectPartsIter(ctx context.Context, refID bson.ObjectId, fn IterPartsFn) error {
+	var p s3mgo.ObjectPart
+
+	iter := dbS3IterAllSorted(ctx, bson.M{"ref-id": refID, "state": S3StateActive}, "part",  &p)
+	defer iter.Close()
+
+	for iter.Next(&p) {
+		err := fn(&p)
+		if err != nil {
+			return err
+		}
+	}
+
+	return iter.Err()
 }
 
 func s3ObjectPartAdd(ctx context.Context, refid bson.ObjectId, bucket_bid, object_bid string, part int, data []byte) (*s3mgo.ObjectPart, error) {

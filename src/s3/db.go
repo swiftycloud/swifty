@@ -369,6 +369,10 @@ func dbS3FindAllSorted(ctx context.Context, query bson.M, sort string, o interfa
 	return Dbs(ctx).DB(DBName).C(dbColl(o)).Find(query).Sort(sort).All(o)
 }
 
+func dbS3IterAllSorted(ctx context.Context, query bson.M, sort string, o interface{}) *mgo.Iter {
+	return Dbs(ctx).DB(DBName).C(dbColl(o)).Find(query).Sort(sort).Iter()
+}
+
 func dbS3FindOneTop(ctx context.Context, query bson.M, sort string, o interface{}) (error) {
 	return Dbs(ctx).DB(DBName).C(dbColl(o)).Find(query).Sort(sort).Limit(1).One(o)
 }
