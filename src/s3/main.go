@@ -539,6 +539,10 @@ func handleGetObject(ctx context.Context, oname string, bucket *s3mgo.Bucket, w 
 		return &S3Error{ ErrorCode: S3ErrMethodNotAllowed }
 	}
 
+	return handleGetObjectSlow(ctx, oname, bucket, w)
+}
+
+func handleGetObjectSlow(ctx context.Context, oname string, bucket *s3mgo.Bucket, w http.ResponseWriter) *S3Error {
 	body, err := ReadObject(ctx, bucket, oname, 0, 1)
 	if err != nil {
 		if err == mgo.ErrNotFound {
