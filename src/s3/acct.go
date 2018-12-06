@@ -101,12 +101,9 @@ er1:
 	return err
 }
 
-func checkDownload(ctx context.Context, nsid string) error {
+func acctDownload(ctx context.Context, nsid string, size int64) error {
 	/* XXX -- limit OutBytesTot here */
-	return nil
-}
 
-func acctDownload(ctx context.Context, nsid string, size int64) {
 	mn := "out-bytes"
 	if ctx.(*s3Context).id == "web" {
 		mn += "-web"
@@ -115,5 +112,8 @@ func acctDownload(ctx context.Context, nsid string, size int64) {
 	err := StatsAcctInt64(ctx, nsid, mn, size)
 	if err != nil {
 		log.Errorf("acct: Cannot account download: %s", err.Error())
+		return err
 	}
+
+	return nil
 }

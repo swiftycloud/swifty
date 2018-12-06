@@ -539,14 +539,7 @@ func handleGetObject(ctx context.Context, oname string, bucket *s3mgo.Bucket, w 
 		return &S3Error{ ErrorCode: S3ErrMethodNotAllowed }
 	}
 
-	err := checkDownload(ctx, bucket.NamespaceID)
-	if err != nil {
-		return &S3Error{ ErrorCode: S3ErrOperationAborted, Message: "Downloads are limited" }
-	}
-
-	var object *s3mgo.Object
-
-	object, err = FindCurObject(ctx, bucket, oname)
+	object, err := FindCurObject(ctx, bucket, oname)
 	if err != nil {
 		if err == mgo.ErrNotFound {
 			return &S3Error{ ErrorCode: S3ErrNoSuchKey }
@@ -554,6 +547,11 @@ func handleGetObject(ctx context.Context, oname string, bucket *s3mgo.Bucket, w 
 
 		log.Errorf("s3: Can't find object %s on %s: %s", oname, infoLong(bucket), err.Error())
 		return &S3Error{ ErrorCode: S3ErrInvalidRequest, Message: err.Error() }
+	}
+
+	err = acctDownload(ctx, bucket.NamespaceID, object.Size)
+	if err != nil {
+		return &S3Error{ ErrorCode: S3ErrOperationAborted, Message: "Downloads are limited" }
 	}
 
 	if m := ctx.(*s3Context).mime; m != "" {
@@ -569,10 +567,12 @@ func handleGetObject(ctx context.Context, oname string, bucket *s3mgo.Bucket, w 
 		w.WriteHeader(c)
 	}
 
+	var downloaded int64
+
 	err = s3ObjectPartsIter(ctx, object.ObjID, func(p *s3mgo.ObjectPart) error {
 		return s3IterChunks(ctx, p, func(ch *s3mgo.DataChunk) error {
-			acctDownload(ctx, bucket.NamespaceID, int64(len(ch.Bytes)))
 			w.Write(ch.Bytes)
+			downloaded += int64(len(ch.Bytes))
 			return nil
 		})
 	})
@@ -583,6 +583,11 @@ func handleGetObject(ctx context.Context, oname string, bucket *s3mgo.Bucket, w 
 		 * the ETag value against the received data.
 		 */
 		log.Errorf("s3: Can't complete object %s download: %s", infoLong(object), err.Error())
+	}
+
+	if downloaded != object.Size {
+		log.Errorf("s3: Object size != sum of its parts (%s), call fsck", infoLong(object))
+		requestFsck()
 	}
 
 	return nil
