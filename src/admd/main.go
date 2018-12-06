@@ -46,6 +46,11 @@ type YAMLConf struct {
 	kc		*xh.XCreds
 }
 
+func init() {
+	sysctl.AddStringSysctl("default_plan_name", &conf.DefaultPlan)
+	sysctl.AddRoSysctl("admd_version", func() string { return Version })
+}
+
 var conf YAMLConf
 var gatesrv *http.Server
 var log *zap.SugaredLogger
