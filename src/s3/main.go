@@ -545,6 +545,7 @@ func handleGetObject(ctx context.Context, oname string, bucket *s3mgo.Bucket, w 
 			return &S3Error{ ErrorCode: S3ErrNoSuchKey }
 		}
 
+		downloadErrors.WithLabelValues("db_obj").Inc()
 		log.Errorf("s3: Can't find object %s on %s: %s", oname, infoLong(bucket), err.Error())
 		return &S3Error{ ErrorCode: S3ErrInvalidRequest, Message: err.Error() }
 	}
@@ -582,10 +583,12 @@ func handleGetObject(ctx context.Context, oname string, bucket *s3mgo.Bucket, w 
 		 * Too late for download abort. Hope, that caller checks
 		 * the ETag value against the received data.
 		 */
+		downloadErrors.WithLabelValues("db_parts").Inc()
 		log.Errorf("s3: Can't complete object %s download: %s", infoLong(object), err.Error())
 	}
 
 	if downloaded != object.Size {
+		downloadErrors.WithLabelValues("miscount").Inc()
 		log.Errorf("s3: Object size != sum of its parts (%s), call fsck", infoLong(object))
 		requestFsck()
 	}
