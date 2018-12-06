@@ -51,6 +51,9 @@ for cmd in ['keygen']:
 for cmd in ['keydel']:
     spp = sp.add_parser(cmd, help = 'Delete keys')
 
+for cmd in ['sysctl']:
+    spp = sp.add_parser(cmd, help = 'Sysctl')
+
 for cmd in ['list-buckets']:
     spp = sp.add_parser(cmd, help = 'List buckets')
 
@@ -203,7 +206,7 @@ if creds != None:
     if not args.endpoint_url:
         args.endpoint_url = json_get('endpoint-url', creds)
 
-if args.conf != "":
+if args.conf != None:
     print("Will load creds from %s" % args.conf)
     for ln in open(args.conf):
         ls = [ x.strip() for x in ln.split() ]
@@ -261,10 +264,17 @@ def make_client(service_name, endpoint_url, access_key, secret_key):
                                           endpoint_url = endpoint_url,
                                           region_name = 'us-east-1')
 
-if args.cmd not in ['bucket-stat', 'keygen', 'keydel', 'keygetroot', 'notify']:
+if args.cmd not in ['bucket-stat', 'keygen', 'keydel', 'keygetroot', 'notify', 'sysctl' ]:
     s3 = make_client('s3', args.endpoint_url, args.access_key_id, args.secret_key_id)
     if s3 == None:
          resp_error(args.cmd, None)
+else:
+    if args.admin_secret == None:
+        print("Trying to guess admin token")
+        for ln in open(os.getenv('HOME') + '/.swysecrets/s3'):
+            if ln.startswith('"S3TOKEN":'):
+                args.admin_secret = ln.split()[1].strip().strip('"')
+                break
 
 if args.cmd == 'bucket-stat':
     try:
@@ -315,6 +325,20 @@ if args.cmd == 'keygen':
             saveCreds(args)
     else:
         resp_error(args.cmd, resp)
+
+if args.cmd == 'sysctl':
+    headers = {"X-SwyS3-Token": args.admin_secret}
+    try:
+        conn = http.client.HTTPConnection(args.endpoint_url)
+        conn.request('GET','/v1/sysctl', None, headers)
+        resp = conn.getresponse()
+        sysctls = json.loads(resp.read().decode('utf-8'))
+        for ctl in sysctls:
+            print('%16s = %s' % (ctl['name'], ctl['value']))
+    except ConnectionError as e:
+        print("ERROR: Can't process request (%s / %s): %s" % \
+              (cmd, repr(data), repr(e)))
+
 
 if args.cmd == 'keydel':
     resp = request_admin(args.cmd, {"access-key-id": args.access_key_id})
