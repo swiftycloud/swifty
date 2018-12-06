@@ -541,12 +541,16 @@ func handleGetObject(ctx context.Context, oname string, bucket *s3mgo.Bucket, w 
 		return &S3Error{ ErrorCode: S3ErrMethodNotAllowed }
 	}
 
+	err := checkDownload(ctx, bucket.NamespaceID)
+	if err != nil {
+		return &S3Error{ ErrorCode: S3ErrOperationAborted, Message: "Downloads are limited" }
+	}
+
 	if !iterOk {
 		return handleGetObjectSlow(ctx, oname, bucket, w)
 	}
 
 	var object *s3mgo.Object
-	var err error
 
 	object, err = FindCurObject(ctx, bucket, oname)
 	if err != nil {
@@ -562,6 +566,8 @@ func handleGetObject(ctx context.Context, oname string, bucket *s3mgo.Bucket, w 
 		w.Header().Set("Content-Type", m)
 	}
 
+	w.Header().Set("ETag", object.ETag)
+
 	if c := ctx.(*s3Context).errCode; c == 0 {
 		w.WriteHeader(http.StatusOK)
 	} else {
@@ -570,19 +576,18 @@ func handleGetObject(ctx context.Context, oname string, bucket *s3mgo.Bucket, w 
 
 	err = s3ObjectPartsIter(ctx, object.ObjID, func(p *s3mgo.ObjectPart) error {
 		return s3IterChunks(ctx, p, func(ch *s3mgo.DataChunk) error {
-			err = acctDownload(ctx, bucket.NamespaceID, int64(len(ch.Bytes)))
-			if err != nil {
-				return err
-			}
-
+			acctDownload(ctx, bucket.NamespaceID, int64(len(ch.Bytes)))
 			w.Write(ch.Bytes)
 			return nil
 		})
 	})
 
 	if err != nil {
-		log.Errorf("s3: Can't find object data %s: %s", infoLong(object), err.Error())
-		return &S3Error{ ErrorCode: S3ErrInternalError } /* XXX : Huh? */
+		/*
+		 * Too late for download abort. Hope, that caller checks
+		 * the ETag value against the received data.
+		 */
+		log.Errorf("s3: Can't complete object %s download: %s", infoLong(object), err.Error())
 	}
 
 	return nil
@@ -598,10 +603,7 @@ func handleGetObjectSlow(ctx context.Context, oname string, bucket *s3mgo.Bucket
 		}
 	}
 
-	err = acctDownload(ctx, bucket.NamespaceID, int64(len(body)))
-	if err != nil {
-		return &S3Error{ ErrorCode: S3ErrInternalError } /* XXX : Huh? */
-	}
+	acctDownload(ctx, bucket.NamespaceID, int64(len(body)))
 
 	if m := ctx.(*s3Context).mime; m != "" {
 		w.Header().Set("Content-Type", m)
