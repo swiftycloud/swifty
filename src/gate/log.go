@@ -10,6 +10,7 @@ import (
 	"go.uber.org/zap/zapcore"
 	"context"
 	"errors"
+	"swifty/common/xrest/sysctl"
 )
 
 var glog *zap.SugaredLogger
@@ -48,7 +49,7 @@ func setupLogger(conf *YAMLConf) {
 	l, _ := l2z(conf.Daemon.LogLevel)
 	lvl := zap.NewAtomicLevelAt(l)
 
-	addSysctl("gate_log_level",
+	sysctl.AddSysctl("gate_log_level",
 		func() string { return z2l(lvl.Level()) },
 		func(v string) error {
 			nl, er := l2z(v)

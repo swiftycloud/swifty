@@ -22,6 +22,7 @@ import (
 	"swifty/common/keystone"
 	"swifty/common/secrets"
 	"swifty/common/ratelimit"
+	"swifty/common/xrest/sysctl"
 )
 
 var ModeDevel bool
@@ -50,17 +51,17 @@ var (
 )
 
 func init() {
-	addTimeSysctl("pod_start_tmo",		&PodStartTmo)
-	addTimeSysctl("pod_start_relax",	&PodStartBase)
-	addTimeSysctl("pod_start_gain",		&PodStartGain)
-	addTimeSysctl("dep_scaleup_relax",	&DepScaleupRelax)
-	addTimeSysctl("dep_scaledown_step",	&DepScaledownStep)
-	addTimeSysctl("limits_update_period",	&TenantLimitsUpdPeriod)
+	sysctl.AddTimeSysctl("pod_start_tmo",		&PodStartTmo)
+	sysctl.AddTimeSysctl("pod_start_relax",	&PodStartBase)
+	sysctl.AddTimeSysctl("pod_start_gain",		&PodStartGain)
+	sysctl.AddTimeSysctl("dep_scaleup_relax",	&DepScaleupRelax)
+	sysctl.AddTimeSysctl("dep_scaledown_step",	&DepScaledownStep)
+	sysctl.AddTimeSysctl("limits_update_period",	&TenantLimitsUpdPeriod)
 
-	addTimeSysctl("ks_token_cache_exp",	&xkst.TokenCacheExpires)
-	addIntSysctl("pod_token_len",		&PodTokenLen)
+	sysctl.AddTimeSysctl("ks_token_cache_exp",	&xkst.TokenCacheExpires)
+	sysctl.AddIntSysctl("pod_token_len",		&PodTokenLen)
 
-	addRoSysctl("gate_mode", func() string {
+	sysctl.AddRoSysctl("gate_mode", func() string {
 		ret := "mode:"
 		if ModeDevel {
 			ret += "devel"
@@ -73,7 +74,7 @@ func init() {
 		return ret
 	})
 
-	addRoSysctl("gate_version", func() string { return Version })
+	sysctl.AddRoSysctl("gate_version", func() string { return Version })
 }
 
 var CORS_Headers = []string {

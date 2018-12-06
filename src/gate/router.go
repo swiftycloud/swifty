@@ -14,6 +14,7 @@ import (
 	"swifty/common"
 	"swifty/common/http"
 	"swifty/common/xrest"
+	"swifty/common/xrest/sysctl"
 	"gopkg.in/mgo.v2/bson"
 )
 
@@ -32,7 +33,7 @@ type Routers struct {}
 var TableKeyLenMax = 64
 
 func init() {
-	addIntSysctl("router_table_key_len_max", &TableKeyLenMax)
+	sysctl.AddIntSysctl("router_table_key_len_max", &TableKeyLenMax)
 }
 
 func ckTable(tbl []*swyapi.RouterEntry) *xrest.ReqErr {

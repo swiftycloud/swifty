@@ -702,6 +702,11 @@ func check_lang(args []string, opts [16]string) {
 }
 
 func sysctl(args []string, opts [16]string) {
+	if len(args) > 0 && args[0] == "admd" {
+		swyclient.ToAdmd(true)
+		args = args[1:]
+	}
+
 	if len(args) == 0 {
 		var ctls []map[string]string
 		swyclient.List("sysctl", http.StatusOK, &ctls)
@@ -1726,8 +1731,8 @@ func manage_login(args []string, opts [16]string) {
 
 func mkClient() {
 	swyclient = swyapi.MakeClient(conf.Login.User, conf.Login.Pass, conf.Login.Host, conf.Login.Port)
+	swyclient.Admd(conf.Login.AdmHost, conf.Login.AdmPort)
 	if curCmd.adm {
-		swyclient.Admd(conf.Login.AdmHost, conf.Login.AdmPort)
 		swyclient.ToAdmd(true)
 	}
 	if curRelay != "" {
@@ -2087,7 +2092,7 @@ var cmdMap = map[string]*cmdDesc {
 	CMD_LANGS:	&cmdDesc{ help: "Show supported languages",	call: languages		},
 	CMD_MTYPES:	&cmdDesc{ help: "Show supported mwares",	call: mware_types	},
 	CMD_LANG:	&cmdDesc{ help: "Detect file language",		call: check_lang	},
-	CMD_SYSCTL:	&cmdDesc{ help: "Work with gate variables",	call: sysctl		},
+	CMD_SYSCTL:	&cmdDesc{ help: "Work with gate/admd variables",	call: sysctl		},
 }
 
 func setupCommonCmd(cmd string, args ...string) {

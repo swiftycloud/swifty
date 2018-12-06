@@ -11,6 +11,7 @@ import (
 	"sync/atomic"
 	"swifty/apis"
 	"gopkg.in/mgo.v2"
+	"swifty/common/xrest/sysctl"
 )
 
 type gateContext struct {
@@ -25,7 +26,7 @@ type gateContext struct {
 var reqIds uint64
 
 func init() {
-	addRoSysctl("gate_req_rover", func() string { return strconv.FormatUint(reqIds, 10) } )
+	sysctl.AddRoSysctl("gate_req_rover", func() string { return strconv.FormatUint(reqIds, 10) } )
 }
 
 func mkContext3(desc, tenant, role string) (context.Context, func(context.Context)) {

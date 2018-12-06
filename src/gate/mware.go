@@ -17,6 +17,7 @@ import (
 	"swifty/apis"
 	"swifty/common"
 	"swifty/common/xrest"
+	"swifty/common/xrest/sysctl"
 )
 
 const (
@@ -589,6 +590,6 @@ func MwInit() {
 		if ModeDevel {
 			mh.Disabled = false
 		}
-		addBoolSysctl("mw_" + mw + "_disable", &mh.Disabled)
+		sysctl.AddBoolSysctl("mw_" + mw + "_disable", &mh.Disabled)
 	}
 }

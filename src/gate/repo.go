@@ -13,6 +13,7 @@ import (
 	"bytes"
 	"os/exec"
 	"errors"
+	"swifty/common/xrest/sysctl"
 	"net/url"
 	"net/http"
 	"bufio"
@@ -704,7 +705,7 @@ var repoSyncPeriod time.Duration
 var repoResyncOnError time.Duration = 5 * time.Minute
 
 func init() {
-	addTimeSysctl("repo_resync_on_error", &repoResyncOnError)
+	sysctl.AddTimeSysctl("repo_resync_on_error", &repoResyncOnError)
 }
 
 func periodicPullRepos() {

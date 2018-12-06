@@ -14,6 +14,7 @@ import (
 	"gopkg.in/mgo.v2/bson"
 	"swifty/common/http"
 	"swifty/common/xrest"
+	"swifty/common/xrest/sysctl"
 	"swifty/common"
 	"swifty/apis"
 )
@@ -118,7 +119,7 @@ var secretFields xh.StringsValues
 func init() {
 	secretFields = xh.MakeStringValues("token", "secret", "password", "key")
 
-	addSysctl("acc_secret_fields",
+	sysctl.AddSysctl("acc_secret_fields",
 		func() string { return secretFields.String() },
 		func (nv string) error {
 			secretFields = xh.ParseStringValues(nv)
@@ -301,7 +302,7 @@ func (ad *AccDesc)Upd(ctx context.Context, upd interface{}) *xrest.ReqErr {
 var secretTrim = 6
 
 func init() {
-	addIntSysctl("acc_secret_trim", &secretTrim)
+	sysctl.AddIntSysctl("acc_secret_trim", &secretTrim)
 }
 
 func (ad *AccDesc)toInfo(ctx context.Context, details bool) map[string]string {

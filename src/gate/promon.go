@@ -12,6 +12,7 @@ import (
 	"context"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"swifty/common/xrest/sysctl"
 )
 
 var (
@@ -335,7 +336,7 @@ func PrometheusInit(ctx context.Context) error {
 		}
 	}()
 
-	addSysctl("prometheus", func() string { return conf.Daemon.Prometheus },
+	sysctl.AddSysctl("prometheus", func() string { return conf.Daemon.Prometheus },
 		func(na string) error {
 			conf.Daemon.Prometheus = na
 			ac <-true

@@ -3,7 +3,7 @@
  * Info: info@swifty.cloud
  */
 
-package main
+package sysctl
 
 import (
 	"code.cloudfoundry.org/bytefmt"
@@ -14,7 +14,6 @@ import (
 	"time"
 	"net/http"
 	"net/url"
-	"swifty/apis"
 	"swifty/common/xrest"
 )
 
@@ -24,8 +23,13 @@ type Sysctl struct {
 	Name	string
 }
 
-func (_ *Sysctl)Add(ctx context.Context, _ interface{}) *xrest.ReqErr { return GateErrC(swyapi.GateNotAvail) }
-func (_ *Sysctl)Del(ctx context.Context) *xrest.ReqErr { return GateErrC(swyapi.GateNotAvail) }
+func (_ *Sysctl)Add(ctx context.Context, _ interface{}) *xrest.ReqErr {
+	return &xrest.ReqErr{xrest.BadRequest, ""}
+}
+
+func (_ *Sysctl)Del(ctx context.Context) *xrest.ReqErr {
+	return &xrest.ReqErr{xrest.BadRequest, ""}
+}
 
 func (ctl *Sysctl)Info(ctx context.Context, q url.Values, details bool) (interface{}, *xrest.ReqErr) {
 	return map[string]string {
@@ -37,7 +41,7 @@ func (ctl *Sysctl)Info(ctx context.Context, q url.Values, details bool) (interfa
 func (ctl *Sysctl)Upd(ctx context.Context, upd interface{}) *xrest.ReqErr {
 	err := ctl.Set(*upd.(*string))
 	if err != nil {
-		return GateErrE(swyapi.GateBadRequest, err)
+		return &xrest.ReqErr{xrest.BadRequest, err.Error()}
 	}
 
 	return nil
@@ -45,7 +49,7 @@ func (ctl *Sysctl)Upd(ctx context.Context, upd interface{}) *xrest.ReqErr {
 
 var sysctls = map[string]*Sysctl {}
 
-func addRoSysctl(name string, read func() string) {
+func AddRoSysctl(name string, read func() string) {
 	sysctls[name] = &Sysctl{
 		Name: name,
 		Get:  read,
@@ -53,7 +57,7 @@ func addRoSysctl(name string, read func() string) {
 	}
 }
 
-func addBoolSysctl(name string, b *bool) {
+func AddBoolSysctl(name string, b *bool) {
 	sysctls[name] = &Sysctl{
 		Name: name,
 		Get: func() string { if *b { return "true" } else { return "false" } },
@@ -71,7 +75,7 @@ func addBoolSysctl(name string, b *bool) {
 	}
 }
 
-func addTimeSysctl(name string, d *time.Duration) {
+func AddTimeSysctl(name string, d *time.Duration) {
 	sysctls[name] = &Sysctl{
 		Name: name,
 		Get: func() string { return (*d).String() },
@@ -87,7 +91,7 @@ func addTimeSysctl(name string, d *time.Duration) {
 	}
 }
 
-func addIntSysctl(name string, i *int) {
+func AddIntSysctl(name string, i *int) {
 	sysctls[name] = &Sysctl{
 		Name: name,
 		Get: func() string { return strconv.Itoa(*i) },
@@ -106,7 +110,7 @@ func addIntSysctl(name string, i *int) {
 	}
 }
 
-func addStringSysctl(name string, s *string) {
+func AddStringSysctl(name string, s *string) {
 	sysctls[name] = &Sysctl{
 		Name: name,
 		Get: func() string { return *s },
@@ -117,7 +121,7 @@ func addStringSysctl(name string, s *string) {
 	}
 }
 
-func addMemSysctl(name string, mem *uint64) {
+func AddMemSysctl(name string, mem *uint64) {
 	sysctls[name] = &Sysctl{
 		Name: name,
 		Get: func() string {
@@ -135,7 +139,7 @@ func addMemSysctl(name string, mem *uint64) {
 	}
 }
 
-func addSysctl(name string, get func() string, set func(string) error) {
+func AddSysctl(name string, get func() string, set func(string) error) {
 	sysctls[name] = &Sysctl{ Name: name, Get: get, Set: set }
 }
 
@@ -144,7 +148,7 @@ type Sysctls struct{}
 func (_ Sysctls)Get(ctx context.Context, r *http.Request) (xrest.Obj, *xrest.ReqErr) {
 	x, ok := sysctls[mux.Vars(r)["name"]]
 	if !ok {
-		return nil, GateErrM(swyapi.GateNotFound, "No such ctl")
+		return nil, &xrest.ReqErr{xrest.BadRequest, "No such ctl"}
 	}
 
 	return x, nil
@@ -161,6 +165,7 @@ func (_ Sysctls)Iterate(ctx context.Context, q url.Values, cb func(context.Conte
 }
 
 func (_ Sysctls)Create(ctx context.Context, _ interface{}) (xrest.Obj, *xrest.ReqErr) {
-	return nil, GateErrC(swyapi.GateNotAvail)
+	return nil, &xrest.ReqErr{xrest.BadRequest, ""}
 }
+
 

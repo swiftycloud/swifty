@@ -12,12 +12,13 @@ import (
 	"swifty/apis"
 	"swifty/common/http"
 	"swifty/common/xrest"
+	"swifty/common/xrest/sysctl"
 )
 
 var statsFlushPeriod = 8 * time.Second
 
 func init() {
-	addTimeSysctl("stats_fush_period", &statsFlushPeriod)
+	sysctl.AddTimeSysctl("stats_fush_period", &statsFlushPeriod)
 }
 
 type statsWriter interface {

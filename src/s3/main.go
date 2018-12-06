@@ -28,6 +28,7 @@ import (
 	"swifty/common"
 	"swifty/common/http"
 	"swifty/common/secrets"
+	"swifty/common/xrest/sysctl"
 	"swifty/apis/s3"
 )
 
@@ -1107,6 +1108,27 @@ func main() {
 		return
 	}
 
+	sysctl.AddRoSysctl("s3_version", func() string { return Version })
+	sysctl.AddRoSysctl("s3_mode", func() string {
+		ret := "mode:"
+		if S3ModeDevel {
+			ret += "devel"
+		} else {
+			ret += "prod"
+		}
+
+		ret += ", flavor:" + Flavor
+		ret += ", rados:"
+		if radosDisabled {
+			ret += "no"
+		} else {
+			ret += "yes"
+		}
+
+		return ret
+	})
+
+
 	// Service operations
 	rgatesrv := mux.NewRouter()
 	match_bucket := fmt.Sprintf("/{BucketName:%s*}",
@@ -1130,6 +1152,8 @@ func main() {
 	radminsrv.HandleFunc("/v1/api/notify", handleNotify).Methods("POST", "DELETE")
 	radminsrv.HandleFunc("/v1/api/stats/{ns}", handleStats).Methods("GET")
 	radminsrv.HandleFunc("/v1/api/stats/{ns}/limits", handleLimits).Methods("PUT")
+	radminsrv.HandleFunc("/v1/sysctl", handleSysctls).Methods("GET", "OPTIONS")
+	radminsrv.HandleFunc("/v1/sysctl/{name}", handleSysctl).Methods("GET", "PUT", "OPTIONS")
 
 	err = dbConnect(&conf)
 	if err != nil {
