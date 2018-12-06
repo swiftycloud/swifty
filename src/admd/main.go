@@ -1071,6 +1071,19 @@ func main() {
 	flag.BoolVar(&devel, "devel", false, "launch in development mode")
 	flag.Parse()
 
+	sysctl.AddRoSysctl("admd_mode", func() string {
+		ret := "mode:"
+		if devel {
+			ret += "devel"
+		} else {
+			ret += "prod"
+		}
+
+		ret += ", flavor:" + Flavor
+
+		return ret
+	})
+
 	if _, err := os.Stat(config_path); err == nil {
 		xh.ReadYamlConfig(config_path, &conf)
 		setupLogger(&conf)
