@@ -12,6 +12,7 @@ import (
 	"gopkg.in/mgo.v2/bson"
 	"github.com/gorilla/mux"
 
+	"context"
 	"strings"
 	"net/http"
 	"flag"
@@ -25,6 +26,8 @@ import (
 	"swifty/common/http"
 	"swifty/common/keystone"
 	"swifty/common/secrets"
+	"swifty/common/xrest"
+	"swifty/common/xrest/sysctl"
 )
 
 var admdSecrets xsecret.Store
@@ -314,6 +317,47 @@ func handlePlanUpdate(w http.ResponseWriter, r *http.Request, pid bson.ObjectId,
 
 out:
 	http.Error(w, err.Error(), code)
+}
+
+func handleSysctls(w http.ResponseWriter, r *http.Request) {
+	td, code, err := handleAdmdReq(r)
+	if err != nil {
+		http.Error(w, err.Error(), code)
+		return
+	}
+
+	if !xkst.HasRole(td, swyapi.AdminRole) {
+		http.Error(w, "Not allowed", http.StatusForbidden)
+		return
+	}
+
+	ctx := context.Background()
+
+	cer := xrest.HandleMany(ctx, w, r, sysctl.Sysctls{}, nil)
+	if cer != nil {
+		http.Error(w, cer.Message, http.StatusInternalServerError)
+	}
+}
+
+func handleSysctl(w http.ResponseWriter, r *http.Request) {
+	td, code, err := handleAdmdReq(r)
+	if err != nil {
+		http.Error(w, err.Error(), code)
+		return
+	}
+
+	if !xkst.HasRole(td, swyapi.AdminRole) {
+		http.Error(w, "Not allowed", http.StatusForbidden)
+		return
+	}
+
+	ctx := context.Background()
+
+	var upd string
+	cer := xrest.HandleOne(ctx, w, r, sysctl.Sysctls{}, &upd)
+	if cer != nil {
+		http.Error(w, cer.Message, http.StatusInternalServerError)
+	}
 }
 
 func handleUsers(w http.ResponseWriter, r *http.Request) {
@@ -1092,6 +1136,8 @@ func main() {
 	r.HandleFunc("/v1/users/{uid}/limits", handleUserLimits).Methods("PUT", "GET", "OPTIONS")
 	r.HandleFunc("/v1/plans", handlePlans).Methods("POST", "GET", "OPTIONS")
 	r.HandleFunc("/v1/plans/{pid}", handlePlan).Methods("GET", "DELETE", "PUT", "OPTIONS")
+	r.HandleFunc("/v1/sysctl", handleSysctls).Methods("GET", "OPTIONS")
+	r.HandleFunc("/v1/sysctl/{name}", handleSysctl).Methods("GET", "PUT", "OPTIONS")
 
 	err = xhttp.ListenAndServe(
 		&http.Server{
