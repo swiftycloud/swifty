@@ -50,11 +50,19 @@ var (
 			},
 		},
 	)
+
+	fsckReqs = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "swys3_fsck_reqs",
+			Help: "Number of fsck claims",
+		},
+	)
 )
 
 func PrometheusInit(conf *YAMLConf) error {
 	prometheus.MustRegister(apiCalls)
 	prometheus.MustRegister(ioSize)
+	prometheus.MustRegister(fsckReqs)
 
 	r := mux.NewRouter()
 	r.Handle("/metrics", promhttp.Handler())

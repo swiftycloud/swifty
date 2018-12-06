@@ -66,4 +66,5 @@ func s3CheckAccess(ctx context.Context, bname, oname string) error {
 }
 
 func requestFsck() {
+	fsckReqs.Inc()
 }
