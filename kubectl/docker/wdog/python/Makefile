@@ -15,8 +15,10 @@ layer.tar: .FORCE
 
 swifty/python: layer.tar
 	$(call msg-gen,$@)
-	$(Q) docker build -t $@ .
-	$(Q) docker tag $@ $@:$(GITID)
+	$(Q) docker build -t registry.gitlab.com/swiftyteam/$@ .
+	$(Q) docker tag registry.gitlab.com/swiftyteam/$@ registry.gitlab.com/swiftyteam/$@:$(GITID)
+	$(Q) docker tag registry.gitlab.com/swiftyteam/$@ registry.gitlab.com/swiftyteam/$@:$(SWIFTY_ENV)
+	$(Q) docker push registry.gitlab.com/swiftyteam/$@
 .PHONY: swifty/python
 
 all: swifty/python

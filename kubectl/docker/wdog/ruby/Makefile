@@ -13,8 +13,10 @@ layer.tar: .FORCE
 
 swifty/ruby: layer.tar
 	$(call msg-gen,$@)
-	$(Q) docker build --network=host -t $@ .
-	$(Q) docker tag $@ $@:$(GITID)
+	$(Q) docker build --network=host -t registry.gitlab.com/swiftyteam/$@ .
+	$(Q) docker tag registry.gitlab.com/swiftyteam/$@ registry.gitlab.com/swiftyteam/$@:$(GITID)
+	$(Q) docker tag registry.gitlab.com/swiftyteam/$@ registry.gitlab.com/swiftyteam/$@:$(SWIFTY_ENV)
+	$(Q) docker push registry.gitlab.com/swiftyteam/$@
 .PHONY: swifty/ruby
 
 all: swifty/ruby
