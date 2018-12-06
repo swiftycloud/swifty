@@ -102,17 +102,26 @@ er1:
 }
 
 func acctDownload(ctx context.Context, nsid string, size int64) error {
-	/* XXX -- limit OutBytesTot here */
-
 	mn := "out-bytes"
 	if ctx.(*s3Context).id == "web" {
 		mn += "-web"
 	}
 
-	err := StatsAcctInt64(ctx, nsid, mn, size)
+	nst, err := StatsAcct(ctx, nsid, bson.M{ mn: size })
 	if err != nil {
 		log.Errorf("acct: Cannot account download: %s", err.Error())
 		return err
+	}
+
+	if nst.Lim != nil && nst.Lim.OutBytesTot != 0 {
+		if nst.OutBytes + nst.OutBytesWeb + size > nst.Lim.OutBytesTot + nst.OutBytesTotOff {
+			err = StatsUnacct(ctx, nsid, bson.M{ mn: -size })
+			if err != nil {
+				log.Errorf("acct: Cannot unaccount download overflow: %s", err.Error())
+			}
+
+			return errors.New("Limit hit")
+		}
 	}
 
 	return nil
