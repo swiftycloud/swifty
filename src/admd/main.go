@@ -121,15 +121,31 @@ func handleAdmdReq(r *http.Request) (*xkst.KeystoneTokenData, int, error) {
 	return td, 0, nil
 }
 
-func handleUser(w http.ResponseWriter, r *http.Request) {
-	if xhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
+func genReqHandler(cb func(ctx context.Context, w http.ResponseWriter, r *http.Request, td *xkst.KeystoneTokenData) *xrest.ReqErr) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if xhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) {
+			return
+		}
 
-	td, code, err := handleAdmdReq(r)
-	if err != nil {
-		http.Error(w, err.Error(), code)
-		return
-	}
+		td, code, err := handleAdmdReq(r)
+		if err != nil {
+			http.Error(w, err.Error(), code)
+			return
+		}
 
+		ctx := context.Background()
+
+		log.Debugf("REQ %s %s.%s", td.Project.Name, r.Method, r.URL.Path)
+
+		cerr := cb(ctx, w, r, td)
+		if cerr != nil {
+			log.Errorf("Error: %s", cerr.Message)
+			http.Error(w, cerr.Message, int(cerr.Code))
+		}
+	})
+}
+
+func handleUser(ctx context.Context, w http.ResponseWriter, r *http.Request, td *xkst.KeystoneTokenData) *xrest.ReqErr {
 	uid := mux.Vars(r)["uid"]
 	if uid == "me" {
 		uid = td.User.Id
@@ -137,12 +153,14 @@ func handleUser(w http.ResponseWriter, r *http.Request) {
 
 	switch r.Method {
 	case "GET":
-		handleUserInfo(w, r, uid, td)
+		return handleUserInfo(ctx, w, r, uid, td)
 	case "PUT":
-		handleUserUpdate(w, r, uid, td)
+		return handleUserUpdate(ctx, w, r, uid, td)
 	case "DELETE":
-		handleDelUser(w, r, uid, td)
+		return handleDelUser(ctx, w, r, uid, td)
 	}
+
+	return &xrest.ReqErr{Code: http.StatusMethodNotAllowed}
 }
 
 func handlePlan(w http.ResponseWriter, r *http.Request) {
@@ -171,12 +189,12 @@ func handlePlan(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func handleUserUpdate(w http.ResponseWriter, r *http.Request, uid string, td *xkst.KeystoneTokenData) {
+func handleUserUpdate(ctx context.Context, w http.ResponseWriter, r *http.Request, uid string, td *xkst.KeystoneTokenData) *xrest.ReqErr {
 	var params swyapi.ModUser
 	var rui *swyapi.UserInfo
 	var err error
 
-	code := http.StatusForbidden
+	code := uint(http.StatusForbidden)
 
 	if uid == td.User.Id {
 		if !xkst.HasRole(td, swyapi.AdminRole, swyapi.UserRole) {
@@ -214,17 +232,17 @@ func handleUserUpdate(w http.ResponseWriter, r *http.Request, uid string, td *xk
 		goto out
 	}
 
-	return
+	return nil
 
 out:
-	http.Error(w, err.Error(), code)
+	return &xrest.ReqErr{Message: err.Error(), Code: code}
 }
 
-func handleUserInfo(w http.ResponseWriter, r *http.Request, uid string, td *xkst.KeystoneTokenData) {
+func handleUserInfo(ctx context.Context, w http.ResponseWriter, r *http.Request, uid string, td *xkst.KeystoneTokenData) *xrest.ReqErr {
 	var rui *swyapi.UserInfo
 	var err error
 
-	code := http.StatusForbidden
+	code := uint(http.StatusForbidden)
 
 	if uid == td.User.Id {
 		if !xkst.HasRole(td, swyapi.AdminRole, swyapi.UserRole) {
@@ -248,10 +266,10 @@ func handleUserInfo(w http.ResponseWriter, r *http.Request, uid string, td *xkst
 		goto out
 	}
 
-	return
+	return nil
 
 out:
-	http.Error(w, err.Error(), code)
+	return &xrest.ReqErr{Message: err.Error(), Code: code}
 }
 
 func handlePlanInfo(w http.ResponseWriter, r *http.Request, pid bson.ObjectId, td *xkst.KeystoneTokenData) {
@@ -365,21 +383,15 @@ func handleSysctl(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func handleUsers(w http.ResponseWriter, r *http.Request) {
-	if xhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
-
-	td, code, err := handleAdmdReq(r)
-	if err != nil {
-		http.Error(w, err.Error(), code)
-		return
-	}
-
+func handleUsers(ctx context.Context, w http.ResponseWriter, r *http.Request, td *xkst.KeystoneTokenData) *xrest.ReqErr {
 	switch r.Method {
 	case "GET":
-		handleListUsers(w, r, td)
+		return handleListUsers(ctx, w, r, td)
 	case "POST":
-		handleAddUser(w, r, td)
+		return handleAddUser(ctx, w, r, td)
 	}
+
+	return &xrest.ReqErr{Code: http.StatusMethodNotAllowed}
 }
 
 func handlePlans(w http.ResponseWriter, r *http.Request) {
@@ -399,11 +411,11 @@ func handlePlans(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func handleListUsers(w http.ResponseWriter, r *http.Request, td *xkst.KeystoneTokenData) {
+func handleListUsers(ctx context.Context, w http.ResponseWriter, r *http.Request, td *xkst.KeystoneTokenData) *xrest.ReqErr {
 	var result []*swyapi.UserInfo
 	var err error
 
-	code := http.StatusInternalServerError
+	code := uint(http.StatusInternalServerError)
 	if xkst.HasRole(td, swyapi.AdminRole, swyapi.MonitorRole) {
 		result, err = listUsers(conf.kc)
 		if err != nil {
@@ -427,10 +439,10 @@ func handleListUsers(w http.ResponseWriter, r *http.Request, td *xkst.KeystoneTo
 		goto out
 	}
 
-	return
+	return nil
 
 out:
-	http.Error(w, err.Error(), code)
+	return &xrest.ReqErr{Code: code, Message: err.Error()}
 }
 
 func (pl *PlanLimits)toInfo() *swyapi.PlanLimits {
@@ -533,7 +545,7 @@ func tryRemoveAllProjects(uid string, authToken string) error {
 	return err
 }
 
-func handleDelUser(w http.ResponseWriter, r *http.Request, uid string, td *xkst.KeystoneTokenData) {
+func handleDelUser(ctx context.Context, w http.ResponseWriter, r *http.Request, uid string, td *xkst.KeystoneTokenData) *xrest.ReqErr {
 	var rui *swyapi.UserInfo
 	var err error
 
@@ -542,7 +554,7 @@ func handleDelUser(w http.ResponseWriter, r *http.Request, uid string, td *xkst.
 
 	/* User can be deleted by admin or self only. Admin
 	 * cannot delete self */
-	code := http.StatusForbidden
+	code := uint(http.StatusForbidden)
 	if uid == td.User.Id {
 		if !xkst.HasRole(td, swyapi.UserRole) ||
 				xkst.HasRole(td, swyapi.AdminRole) {
@@ -582,10 +594,10 @@ func handleDelUser(w http.ResponseWriter, r *http.Request, uid string, td *xkst.
 
 	w.WriteHeader(http.StatusNoContent)
 
-	return
+	return nil
 
 out:
-	http.Error(w, err.Error(), code)
+	return &xrest.ReqErr{Message: err.Error(), Code: code}
 }
 
 func handleDelPlan(w http.ResponseWriter, r *http.Request, pid bson.ObjectId, td *xkst.KeystoneTokenData) {
@@ -646,7 +658,7 @@ func selectPlan(ses *mgo.Session, params *swyapi.AddUser) (*PlanLimits, error) {
 	return plim, nil
 }
 
-func handleAddUser(w http.ResponseWriter, r *http.Request, td *xkst.KeystoneTokenData) {
+func handleAddUser(ctx context.Context, w http.ResponseWriter, r *http.Request, td *xkst.KeystoneTokenData) *xrest.ReqErr {
 	var params swyapi.AddUser
 	var kid string
 	var err error
@@ -713,10 +725,10 @@ func handleAddUser(w http.ResponseWriter, r *http.Request, td *xkst.KeystoneToke
 		goto out
 	}
 
-	return
+	return nil
 
 out:
-	http.Error(w, err.Error(), code)
+	return &xrest.ReqErr{Message: err.Error(), Code: uint(code)}
 }
 
 type PlanLimits struct {
@@ -1135,8 +1147,8 @@ func main() {
 
 	r := mux.NewRouter()
 	r.HandleFunc("/v1/login", handleUserLogin).Methods("POST", "OPTIONS")
-	r.HandleFunc("/v1/users", handleUsers).Methods("POST", "GET", "OPTIONS")
-	r.HandleFunc("/v1/users/{uid}", handleUser).Methods("GET", "PUT", "DELETE", "OPTIONS")
+	r.Handle("/v1/users", genReqHandler(handleUsers)).Methods("POST", "GET", "OPTIONS")
+	r.Handle("/v1/users/{uid}", genReqHandler(handleUser)).Methods("GET", "PUT", "DELETE", "OPTIONS")
 	r.HandleFunc("/v1/users/{uid}/pass", handleSetPassword).Methods("PUT", "OPTIONS")
 	r.HandleFunc("/v1/users/{uid}/limits", handleUserLimits).Methods("PUT", "GET", "OPTIONS")
 	r.HandleFunc("/v1/plans", handlePlans).Methods("POST", "GET", "OPTIONS")
