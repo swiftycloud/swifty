@@ -100,3 +100,13 @@ er1:
 	requestFsck()
 	return err
 }
+
+func acctDownload(ctx context.Context, nsid string, size int64) error {
+	mn := "out-bytes"
+	if ctx.(*s3Context).id == "web" {
+		mn += "-web"
+	}
+
+	/* XXX -- limit OutBytesTot here */
+	return StatsAcctInt64(ctx, nsid, mn, size)
+}

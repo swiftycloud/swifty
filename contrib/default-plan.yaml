@@ -16,3 +16,4 @@ mware:
     number: 5
 s3:
   space_mb: 1024
+  download_mb: 512

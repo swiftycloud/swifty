@@ -41,6 +41,7 @@ func StatsFindFor(ctx context.Context, act *s3mgo.Account) (*s3mgo.AcctStats, er
 func LimitsSetFor(ctx context.Context, act *s3mgo.Account, lim *swys3api.AcctLimits) error {
 	limits := &s3mgo.AcctLimits {
 		CntBytes:	lim.CntBytes,
+		OutBytesTot:	lim.OutBytesTot,
 	}
 
 	return dbS3Upsert(ctx, bson.M{ "nsid": act.NamespaceID() },

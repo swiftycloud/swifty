@@ -823,6 +823,10 @@ func patchS3Limits(tgt **swyapi.S3Limits, from *swyapi.S3Limits) {
 	if from.SpaceMB != 0 {
 		into.SpaceMB = from.SpaceMB
 	}
+
+	if from.DownloadMB != 0 {
+		into.DownloadMB = from.DownloadMB
+	}
 }
 
 func handleSetLimits(w http.ResponseWriter, r *http.Request, uid string, td *xkst.KeystoneTokenData) {

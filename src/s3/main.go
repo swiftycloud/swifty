@@ -548,12 +548,7 @@ func handleGetObject(ctx context.Context, oname string, bucket *s3mgo.Bucket, w 
 		}
 	}
 
-	mn := "out-bytes"
-	if ctx.(*s3Context).id == "web" {
-		mn += "-web"
-	}
-
-	err = StatsAcctInt64(ctx, bucket.NamespaceID, mn, int64(len(body)))
+	err = acctDownload(ctx, bucket.NamespaceID, int64(len(body)))
 	if err != nil {
 		return &S3Error{ ErrorCode: S3ErrInternalError } /* XXX : Huh? */
 	}

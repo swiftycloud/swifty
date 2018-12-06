@@ -65,6 +65,7 @@ type MwareLimits struct {
 
 type S3Limits struct {
 	SpaceMB		uint64	`json:"space_mb" yaml:"space_mb"`
+	DownloadMB	uint64	`json:"download_mb yaml:"download_mb"`
 }
 
 type UserLimits struct {
