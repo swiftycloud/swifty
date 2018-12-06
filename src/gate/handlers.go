@@ -23,6 +23,7 @@ import (
 	"swifty/common"
 	"swifty/common/http"
 	"swifty/common/xrest"
+	"swifty/common/xrest/sysctl"
 	"swifty/common/keystone"
 )
 
@@ -966,7 +967,7 @@ func handleSysctls(ctx context.Context, w http.ResponseWriter, r *http.Request) 
 	if !gctx(ctx).Admin() {
 		return GateErrC(swyapi.GateNotAvail)
 	}
-	return xrest.HandleMany(ctx, w, r, Sysctls{}, nil)
+	return xrest.HandleMany(ctx, w, r, sysctl.Sysctls{}, nil)
 }
 
 func handleSysctl(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr {
@@ -974,5 +975,5 @@ func handleSysctl(ctx context.Context, w http.ResponseWriter, r *http.Request) *
 		return GateErrC(swyapi.GateNotAvail)
 	}
 	var upd string
-	return xrest.HandleOne(ctx, w, r, Sysctls{}, &upd)
+	return xrest.HandleOne(ctx, w, r, sysctl.Sysctls{}, &upd)
 }

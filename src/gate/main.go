@@ -22,7 +22,16 @@ import (
 	"swifty/common/keystone"
 	"swifty/common/secrets"
 	"swifty/common/ratelimit"
+	"swifty/common/xrest/sysctl"
 )
+
+func addSysctl(name string, get func() string, set func(string) error) { sysctl.AddSysctl(name, get, set) }
+func addRoSysctl(name string, read func() string) { sysctl.AddRoSysctl(name, read) }
+func addBoolSysctl(name string, b *bool) { sysctl.AddBoolSysctl(name, b) }
+func addTimeSysctl(name string, d *time.Duration) { sysctl.AddTimeSysctl(name, d) }
+func addIntSysctl(name string, i *int) { sysctl.AddIntSysctl(name, i) }
+func addStringSysctl(name string, s *string) { sysctl.AddStringSysctl(name, s) }
+func addMemSysctl(name string, mem *uint64) { sysctl.AddMemSysctl(name, mem) }
 
 var ModeDevel bool
 var gateSecrets xsecret.Store
