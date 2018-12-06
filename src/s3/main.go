@@ -534,8 +534,6 @@ func handleUploadAbort(ctx context.Context, uploadId, oname string, bucket *s3mg
 	return nil
 }
 
-var iterOk bool = false
-
 func handleGetObject(ctx context.Context, oname string, bucket *s3mgo.Bucket, w http.ResponseWriter, r *http.Request) *S3Error {
 	if !ctxAllowed(ctx, S3P_GetObject) {
 		return &S3Error{ ErrorCode: S3ErrMethodNotAllowed }
@@ -544,10 +542,6 @@ func handleGetObject(ctx context.Context, oname string, bucket *s3mgo.Bucket, w 
 	err := checkDownload(ctx, bucket.NamespaceID)
 	if err != nil {
 		return &S3Error{ ErrorCode: S3ErrOperationAborted, Message: "Downloads are limited" }
-	}
-
-	if !iterOk {
-		return handleGetObjectSlow(ctx, oname, bucket, w)
 	}
 
 	var object *s3mgo.Object
@@ -567,6 +561,7 @@ func handleGetObject(ctx context.Context, oname string, bucket *s3mgo.Bucket, w 
 	}
 
 	w.Header().Set("ETag", object.ETag)
+	w.Header().Set("Content-Length", strconv.FormatInt(object.Size, 10))
 
 	if c := ctx.(*s3Context).errCode; c == 0 {
 		w.WriteHeader(http.StatusOK)
@@ -590,32 +585,6 @@ func handleGetObject(ctx context.Context, oname string, bucket *s3mgo.Bucket, w 
 		log.Errorf("s3: Can't complete object %s download: %s", infoLong(object), err.Error())
 	}
 
-	return nil
-}
-
-func handleGetObjectSlow(ctx context.Context, oname string, bucket *s3mgo.Bucket, w http.ResponseWriter) *S3Error {
-	body, err := ReadObject(ctx, bucket, oname, 0, 1)
-	if err != nil {
-		if err == mgo.ErrNotFound {
-			return &S3Error{ ErrorCode: S3ErrNoSuchKey }
-		} else {
-			return &S3Error{ ErrorCode: S3ErrInvalidRequest, Message: err.Error() }
-		}
-	}
-
-	acctDownload(ctx, bucket.NamespaceID, int64(len(body)))
-
-	if m := ctx.(*s3Context).mime; m != "" {
-		w.Header().Set("Content-Type", m)
-	}
-
-	if c := ctx.(*s3Context).errCode; c == 0 {
-		w.WriteHeader(http.StatusOK)
-	} else {
-		w.WriteHeader(c)
-	}
-
-	w.Write(body)
 	return nil
 }
 
@@ -1081,7 +1050,6 @@ func main() {
 			"version",
 				false,
 				"show version and exit")
-	flag.BoolVar(&iterOk, "oiter", false, "getObjectIter works")
 	flag.Parse()
 
 	if showVersion {
