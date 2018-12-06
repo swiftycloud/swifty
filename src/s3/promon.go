@@ -50,11 +50,28 @@ var (
 			},
 		},
 	)
+
+	downloadErrors = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "swys3_download_err",
+			Help: "Number of download errors for various reasons",
+		},
+		[]string { "reason" },
+	)
+
+	fsckReqs = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "swys3_fsck_reqs",
+			Help: "Number of fsck claims",
+		},
+	)
 )
 
 func PrometheusInit(conf *YAMLConf) error {
 	prometheus.MustRegister(apiCalls)
 	prometheus.MustRegister(ioSize)
+	prometheus.MustRegister(fsckReqs)
+	prometheus.MustRegister(downloadErrors)
 
 	r := mux.NewRouter()
 	r.Handle("/metrics", promhttp.Handler())

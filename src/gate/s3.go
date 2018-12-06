@@ -348,6 +348,9 @@ func s3SetLimits(ctx context.Context, ten string, cache *swyapi.S3Limits, s3l *s
 		if cache.SpaceMB != s3l.SpaceMB {
 			goto set
 		}
+		if cache.DownloadMB != s3l.DownloadMB {
+			goto set
+		}
 
 		return cache
 	}
@@ -355,6 +358,7 @@ func s3SetLimits(ctx context.Context, ten string, cache *swyapi.S3Limits, s3l *s
 set:
 	ctxlog(ctx).Debugf("Update S3 limits for %s (%s)", ten, ns)
 	lim.CntBytes = int64(s3l.SpaceMB << 20)
+	lim.OutBytesTot = int64(s3l.DownloadMB << 20)
 
 	err := s3Call(
 		&xhttp.RestReq{

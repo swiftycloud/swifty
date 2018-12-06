@@ -44,4 +44,5 @@ type AcctStats struct {
 
 type AcctLimits struct {
 	CntBytes		int64		`json:"cnt-bytes"`
+	OutBytesTot		int64		`json:"out-bytes-tot"`
 }

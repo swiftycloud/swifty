@@ -446,25 +446,20 @@ if args.cmd == 'object-add':
         print("ERROR: Can't create object")
 
 if args.cmd == 'object-get':
-    if args.key == None:
-        args.key = genObjectName()
-    if args.file == None:
-        if args.size == None:
-            args.size = 64
-        else:
-            args.size = int(args.size)
-        body = genRandomData(args.size)
-    else:
-        with open(args.file, 'rb') as f:
-            body = f.read()
-            f.close()
     print("Getting object %s/%s" % (args.name, args.key))
     try:
         resp = s3.get_object(Bucket = args.name, Key = args.key)
         print("\tDone")
-        print(resp['Body'].read())
-    except:
-        print("ERROR: Can't get object")
+        etag = resp.get('ResponseMetadata',{}).get('HTTPHeaders',{}).get('etag', "")
+        if etag:
+            print("ETag: %r" % etag)
+        if args.file == None: 
+            print(resp['Body'].read())
+        else:
+            f = open(args.file, "wb")
+            f.write(resp['Body'].read())
+    except Exception as e:
+        print("ERROR: Can't get object: %r" % e)
 
 if args.cmd == 'object-copy':
     print("Copying object %s/%s -> %s/%s" % \

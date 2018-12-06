@@ -539,28 +539,28 @@ func handleGetObject(ctx context.Context, oname string, bucket *s3mgo.Bucket, w 
 		return &S3Error{ ErrorCode: S3ErrMethodNotAllowed }
 	}
 
-	body, err := ReadObject(ctx, bucket, oname, 0, 1)
+	object, err := FindCurObject(ctx, bucket, oname)
 	if err != nil {
 		if err == mgo.ErrNotFound {
 			return &S3Error{ ErrorCode: S3ErrNoSuchKey }
-		} else {
-			return &S3Error{ ErrorCode: S3ErrInvalidRequest, Message: err.Error() }
 		}
+
+		downloadErrors.WithLabelValues("db_obj").Inc()
+		log.Errorf("s3: Can't find object %s on %s: %s", oname, infoLong(bucket), err.Error())
+		return &S3Error{ ErrorCode: S3ErrInvalidRequest, Message: err.Error() }
 	}
 
-	mn := "out-bytes"
-	if ctx.(*s3Context).id == "web" {
-		mn += "-web"
-	}
-
-	err = StatsAcctInt64(ctx, bucket.NamespaceID, mn, int64(len(body)))
+	err = acctDownload(ctx, bucket.NamespaceID, object.Size)
 	if err != nil {
-		return &S3Error{ ErrorCode: S3ErrInternalError } /* XXX : Huh? */
+		return &S3Error{ ErrorCode: S3ErrOperationAborted, Message: "Downloads are limited" }
 	}
 
 	if m := ctx.(*s3Context).mime; m != "" {
 		w.Header().Set("Content-Type", m)
 	}
+
+	w.Header().Set("ETag", object.ETag)
+	w.Header().Set("Content-Length", strconv.FormatInt(object.Size, 10))
 
 	if c := ctx.(*s3Context).errCode; c == 0 {
 		w.WriteHeader(http.StatusOK)
@@ -568,7 +568,31 @@ func handleGetObject(ctx context.Context, oname string, bucket *s3mgo.Bucket, w 
 		w.WriteHeader(c)
 	}
 
-	w.Write(body)
+	var downloaded int64
+
+	err = s3ObjectPartsIter(ctx, object.ObjID, func(p *s3mgo.ObjectPart) error {
+		return s3IterChunks(ctx, p, func(ch *s3mgo.DataChunk) error {
+			w.Write(ch.Bytes)
+			downloaded += int64(len(ch.Bytes))
+			return nil
+		})
+	})
+
+	if err != nil {
+		/*
+		 * Too late for download abort. Hope, that caller checks
+		 * the ETag value against the received data.
+		 */
+		downloadErrors.WithLabelValues("db_parts").Inc()
+		log.Errorf("s3: Can't complete object %s download: %s", infoLong(object), err.Error())
+	}
+
+	if downloaded != object.Size {
+		downloadErrors.WithLabelValues("miscount").Inc()
+		log.Errorf("s3: Object size != sum of its parts (%s), call fsck", infoLong(object))
+		requestFsck()
+	}
+
 	return nil
 }
 
