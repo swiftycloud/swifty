@@ -53,6 +53,10 @@ for cmd in ['keydel']:
 
 for cmd in ['sysctl']:
     spp = sp.add_parser(cmd, help = 'Sysctl')
+    spp.add_argument('--name', dest = 'name',
+                     help = 'Sysctl name', required = False)
+    spp.add_argument('--value', dest = 'value',
+                     help = 'Sysctl value', required = False)
 
 for cmd in ['list-buckets']:
     spp = sp.add_parser(cmd, help = 'List buckets')
@@ -330,11 +334,22 @@ if args.cmd == 'sysctl':
     headers = {"X-SwyS3-Token": args.admin_secret}
     try:
         conn = http.client.HTTPConnection(args.endpoint_url)
-        conn.request('GET','/v1/sysctl', None, headers)
-        resp = conn.getresponse()
-        sysctls = json.loads(resp.read().decode('utf-8'))
-        for ctl in sysctls:
+        if args.name == None:
+            conn.request('GET','/v1/sysctl', None, headers)
+            resp = conn.getresponse()
+            sysctls = json.loads(resp.read().decode('utf-8'))
+            for ctl in sysctls:
+                print('%16s = %s' % (ctl['name'], ctl['value']))
+        elif args.value == None:
+            conn.request('GET','/v1/sysctl/' + args.name, None, headers)
+            resp = conn.getresponse()
+            ctl = json.loads(resp.read().decode('utf-8'))
             print('%16s = %s' % (ctl['name'], ctl['value']))
+        else:
+            headers['Content-Type'] = 'text/plain'
+            conn.request('PUT', '/v1/sysctl/' + args.name, '"' + args.value + '"', headers)
+            resp = conn.getresponse()
+            print(resp.status)
     except ConnectionError as e:
         print("ERROR: Can't process request (%s / %s): %s" % \
               (cmd, repr(data), repr(e)))
