@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"swifty/common/http"
 	"swifty/common/xrest"
+	"swifty/common/xrest/sysctl"
 	"context"
 )
 
@@ -120,7 +121,7 @@ func getLangInfos(wl string) {
 func RtInit() {
 	glog.Debugf("Will detect rt languages in the background")
 	go getLangInfos("*")
-	addSysctl("lang_info_refresh", func() string { return "set language name or * here" },
+	sysctl.AddSysctl("lang_info_refresh", func() string { return "set language name or * here" },
 		func(v string) error {
 			getLangInfos(v)
 			return nil
@@ -131,9 +132,9 @@ func RtInit() {
 		if ModeDevel {
 			d.Disabled = false
 		}
-		addBoolSysctl("rt_" + l + "_disable", &d.Disabled)
+		sysctl.AddBoolSysctl("rt_" + l + "_disable", &d.Disabled)
 		rd := d
-		addRoSysctl("rt_" + l + "_service", func() string { return rd.ServiceIP })
+		sysctl.AddRoSysctl("rt_" + l + "_service", func() string { return rd.ServiceIP })
 	}
 }
 

@@ -22,6 +22,7 @@ import (
 	"swifty/common"
 	"swifty/apis"
 	"swifty/common/xrest"
+	"swifty/common/xrest/sysctl"
 	"swifty/common/ratelimit"
 )
 
@@ -50,7 +51,7 @@ var dbStrict bool = true
 var dbwrl *xrl.RL
 
 func init() {
-	addBoolSysctl("db_strict_access", &dbStrict)
+	sysctl.AddBoolSysctl("db_strict_access", &dbStrict)
 	dbwrl = xrl.MakeRL(1, 1)
 }
 

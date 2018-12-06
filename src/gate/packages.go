@@ -8,6 +8,7 @@ package main
 import (
 	"github.com/gorilla/mux"
 	"swifty/common/xrest"
+	"swifty/common/xrest/sysctl"
 	"swifty/common"
 	"swifty/apis"
 	"net/http"
@@ -97,7 +98,7 @@ func (ps Packages)Iterate(ctx context.Context, q url.Values, cb func(context.Con
 var pkgLimitGap uint64 = uint64(32) << 10
 
 func init() {
-	addMemSysctl("pkg_disk_size_gap", &pkgLimitGap)
+	sysctl.AddMemSysctl("pkg_disk_size_gap", &pkgLimitGap)
 }
 
 func (pkg *PackageDesc)Add(ctx context.Context, _ interface{}) *xrest.ReqErr {

@@ -15,6 +15,7 @@ import (
 	"net/http"
 	"bytes"
 	"swifty/common/xrest"
+	"swifty/common/xrest/sysctl"
 	"swifty/common/http"
 	"swifty/apis"
 )
@@ -29,7 +30,7 @@ const (
 var maxIncludeDepth = 4 /* FIXME -- properly detect recursion */
 
 func init() {
-	addIntSysctl("deploy_include_depth_max", &maxIncludeDepth)
+	sysctl.AddIntSysctl("deploy_include_depth_max", &maxIncludeDepth)
 }
 
 var depStates = map[int]string {

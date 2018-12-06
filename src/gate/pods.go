@@ -8,6 +8,7 @@ package main
 import (
 	"context"
 	"sync"
+	"swifty/common/xrest/sysctl"
 )
 
 type fnPods struct {
@@ -52,7 +53,7 @@ func showPodsStore() string {
 }
 
 func init() {
-	addSysctl("pods_store", showPodsStore, func(nv string) error { show = nv; return nil })
+	sysctl.AddSysctl("pods_store", showPodsStore, func(nv string) error { show = nv; return nil })
 }
 
 func findFnPods(fnid string) *fnPods {

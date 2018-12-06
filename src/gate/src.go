@@ -20,6 +20,7 @@ import (
 	"strconv"
 	"errors"
 	"swifty/common"
+	"swifty/common/xrest/sysctl"
 	"swifty/common/xwait"
 	"swifty/apis"
 )
@@ -183,7 +184,7 @@ func putFileFromUrl(ctx context.Context, src *swyapi.FunctionSources, to, script
 var srcLeakTmo time.Duration = 16 * 60 * time.Second
 
 func init() {
-	addTimeSysctl("src_leak_tmo", &srcLeakTmo)
+	sysctl.AddTimeSysctl("src_leak_tmo", &srcLeakTmo)
 }
 
 func GCOldSources(ctx context.Context, fn *FunctionDesc, ver string) {

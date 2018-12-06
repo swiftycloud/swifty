@@ -14,6 +14,7 @@ import (
 	"encoding/hex"
 	"swifty/common"
 	"swifty/common/http"
+	"swifty/common/xrest/sysctl"
 )
 
 type YAMLConfWdog struct {
@@ -108,7 +109,7 @@ func (cw *YAMLConfWdog)Validate() error {
 		cw.ImgPref = "swifty"
 		fmt.Printf("'wdog.img-prefix' not set, using default\n")
 	}
-	addStringSysctl("wdog_image_prefix", &cw.ImgPref)
+	sysctl.AddStringSysctl("wdog_image_prefix", &cw.ImgPref)
 	if cw.Namespace == "" {
 		fmt.Printf("'wdog.k8s-namespace' not set, will use default\n")
 	}
@@ -134,11 +135,11 @@ func (cd *YAMLConfDaemon)Validate() error {
 	if cd.CallGate == "" {
 		fmt.Printf("'daemon.callgate' not set, gate is callgate\n")
 	}
-	addStringSysctl("gate_call", &cd.CallGate)
+	sysctl.AddStringSysctl("gate_call", &cd.CallGate)
 	if cd.ApiGate == "" {
 		fmt.Printf("'daemon.apigate' not set, gate is apigate\n")
 	}
-	addStringSysctl("gate_api", &cd.ApiGate)
+	sysctl.AddStringSysctl("gate_api", &cd.ApiGate)
 	if cd.LogLevel == "" {
 		fmt.Printf("'daemon.loglevel' not set, using \"warn\" one\n")
 	}
@@ -157,11 +158,11 @@ func (ck *YAMLConfKeystone)Validate() error {
 	if ck.Addr == "" {
 		return errors.New("'keystone.address' not set, want HOST:PORT value")
 	}
-	addStringSysctl("keystone_addr", &ck.Addr)
+	sysctl.AddStringSysctl("keystone_addr", &ck.Addr)
 	if ck.Domain == "" {
 		return errors.New("'keystone.domain' not set")
 	}
-	addStringSysctl("keystone_domain", &ck.Domain)
+	sysctl.AddStringSysctl("keystone_domain", &ck.Domain)
 	return nil
 }
 
@@ -231,15 +232,15 @@ func (cm *YAMLConfMw)Validate() error {
 			cm.S3.HiddenKeyTmo = 120
 			fmt.Printf("'middleware.s3.hidden-key-timeout' not set, using default 120sec\n")
 		}
-		addIntSysctl("s3_hidden_key_timeout_sec", &cm.S3.HiddenKeyTmo)
-		addStringSysctl("gate_s3api", &cm.S3.API)
+		sysctl.AddIntSysctl("s3_hidden_key_timeout_sec", &cm.S3.HiddenKeyTmo)
+		sysctl.AddStringSysctl("gate_s3api", &cm.S3.API)
 	}
 
 	if cm.WS != nil {
 		if cm.WS.API == "" {
 			fmt.Printf("'middleware.websocket.api' not set, gate is wsgate\n")
 		}
-		addStringSysctl("gate_ws", &cm.WS.API)
+		sysctl.AddStringSysctl("gate_ws", &cm.WS.API)
 	}
 
 	return nil
@@ -262,32 +263,32 @@ func (cr *YAMLConfRt)Validate() error {
 		cr.MaxReplicas = 32
 		fmt.Printf("'runtime.max-replicas' not set, using default 32\n")
 	}
-	addIntSysctl("fn_replicas_limit", &cr.MaxReplicas)
+	sysctl.AddIntSysctl("fn_replicas_limit", &cr.MaxReplicas)
 	if cr.Timeout.Max == 0 {
 		cr.Timeout.Max = 60
 		fmt.Printf("'runtime.timeout.max' not set, using default 1min\n")
 	}
-	addIntSysctl("fn_timeout_max_sec", &cr.Timeout.Max)
+	sysctl.AddIntSysctl("fn_timeout_max_sec", &cr.Timeout.Max)
 	if cr.Timeout.Def == 0 {
 		cr.Timeout.Def = 1
 		fmt.Printf("'runtime.timeout.def' not set, using default 1sec\n")
 	}
-	addIntSysctl("fn_timeout_def_sec", &cr.Timeout.Def)
+	sysctl.AddIntSysctl("fn_timeout_def_sec", &cr.Timeout.Def)
 	if cr.Memory.Min == 0 {
 		cr.Memory.Min = 64
 		fmt.Printf("'runtime.memory.min' not set, using default 64m\n")
 	}
-	addIntSysctl("fn_memory_min_mb", &cr.Memory.Min)
+	sysctl.AddIntSysctl("fn_memory_min_mb", &cr.Memory.Min)
 	if cr.Memory.Max == 0 {
 		cr.Memory.Max = 1024
 		fmt.Printf("'runtime.memory.max' not set, using default 1g\n")
 	}
-	addIntSysctl("fn_memory_max_mb", &cr.Memory.Max)
+	sysctl.AddIntSysctl("fn_memory_max_mb", &cr.Memory.Max)
 	if cr.Memory.Def == 0 {
 		cr.Memory.Def = 128
 		fmt.Printf("'runtime.memory.def' not set, using default 128m\n")
 	}
-	addIntSysctl("fn_memory_def_mb", &cr.Memory.Def)
+	sysctl.AddIntSysctl("fn_memory_def_mb", &cr.Memory.Def)
 	return nil
 }
 
@@ -306,12 +307,12 @@ func (dr *YAMLConfDemoRepo)Validate() error {
 		fmt.Printf("'demo-repo.aaas-dep' not set, using default\n")
 		dr.AAASDep = "swy-aaas.yaml"
 	}
-	addStringSysctl("aaas_dep_file", &dr.AAASDep)
+	sysctl.AddStringSysctl("aaas_dep_file", &dr.AAASDep)
 	if dr.EmptySources == "" {
 		fmt.Printf("'demo-repo.empty-sources' not set, using default\n")
 		dr.EmptySources = "functions/empty"
 	}
-	addStringSysctl("empty_sources_path", &dr.EmptySources)
+	sysctl.AddStringSysctl("empty_sources_path", &dr.EmptySources)
 
 	return nil
 }
@@ -365,19 +366,19 @@ func (c *YAMLConf)Validate() error {
 		}
 	}
 	repoSyncDelay = time.Duration(c.RepoSyncDelay) * time.Second
-	addTimeSysctl("repo_sync_delay", &repoSyncDelay)
+	sysctl.AddTimeSysctl("repo_sync_delay", &repoSyncDelay)
 	if c.RepoSyncPeriod == 0 {
 		fmt.Printf("'repo-sync-period' not set, using default 30min\n")
 		c.RepoSyncPeriod = 30
 	}
 	repoSyncPeriod = time.Duration(c.RepoSyncPeriod) * time.Minute
-	addTimeSysctl("repo_sync_period", &repoSyncPeriod)
+	sysctl.AddTimeSysctl("repo_sync_period", &repoSyncPeriod)
 	if c.RunRate == 0 {
 		fmt.Printf("'tryrun-rate' not set, using default 1/s\n")
 		c.RunRate = 1
 	}
 
-	addIntSysctl("fn_tryrun_rate", &c.RunRate)
+	sysctl.AddIntSysctl("fn_tryrun_rate", &c.RunRate)
 	return nil
 }
 

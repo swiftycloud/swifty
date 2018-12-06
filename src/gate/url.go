@@ -14,6 +14,7 @@ import (
 	"sync"
 	"net/http"
 	"swifty/common/ratelimit"
+	"swifty/common/xrest/sysctl"
 	"strconv"
 	"strings"
 )
@@ -131,7 +132,7 @@ var wrl *xrl.RL
 
 func init() {
 	wrl = xrl.MakeRL(5, 1)
-	addSysctl("fn_call_error_rate",
+	sysctl.AddSysctl("fn_call_error_rate",
 			func() string {
 				vs := wrl.If()
 				return strconv.Itoa(int(vs[2])) + ":" + strconv.Itoa(int(vs[1]))

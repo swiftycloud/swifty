@@ -32,7 +32,7 @@ type gateGenReq func(ctx context.Context, w http.ResponseWriter, r *http.Request
 var callCORS bool = true
 
 func init() {
-	addBoolSysctl("call_default_cors", &callCORS)
+	sysctl.AddBoolSysctl("call_default_cors", &callCORS)
 }
 
 func handleCall(w http.ResponseWriter, r *http.Request) {

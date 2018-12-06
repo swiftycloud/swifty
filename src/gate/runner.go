@@ -17,6 +17,7 @@ import (
 	"swifty/common"
 	"swifty/common/http"
 	"swifty/common/xrest"
+	"swifty/common/xrest/sysctl"
 	"swifty/common/ratelimit"
 )
 
@@ -25,7 +26,7 @@ var acceptedContent xh.StringsValues
 func init() {
 	acceptedContent = xh.MakeStringValues("application/json", "text/plain")
 
-	addSysctl("call_accepted_ctyp",
+	sysctl.AddSysctl("call_accepted_ctyp",
 		func() string { return acceptedContent.String() },
 		func (nv string) error {
 			acceptedContent = xh.ParseStringValues(nv)

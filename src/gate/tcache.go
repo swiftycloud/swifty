@@ -6,6 +6,7 @@
 package main
 
 import (
+	"swifty/common/xrest/sysctl"
 	"gopkg.in/mgo.v2/bson"
 	"swifty/apis"
 )
@@ -20,7 +21,7 @@ type TenantCache struct {
 }
 
 func init() {
-	addSysctl("ten_cache_flush", func() string { return "Set any value here" },
+	sysctl.AddSysctl("ten_cache_flush", func() string { return "Set any value here" },
 		func(_ string) error {
 			ctx, done := mkContext("::tcache-flush")
 			defer done(ctx)
