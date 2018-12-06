@@ -48,8 +48,8 @@ type YAMLConf struct {
 	Admd		string			`yaml:"admd"`
 	admd		*xh.XCreds
 
-	SA		YAMLConfSA		`yaml:"starch"`
-	Logs		YAMLConfLogs		`yaml:"logs"`
+	SA		*YAMLConfSA		`yaml:"starch,omitempty"`
+	Logs		*YAMLConfLogs		`yaml:"logs,omitempty"`
 }
 
 var conf YAMLConf
@@ -240,32 +240,51 @@ func main() {
 		return
 	}
 
-	if conf.Logs.Keep > 0 {
+	lock := make(chan chan bool)
+
+	if conf.Logs != nil {
 		log.Printf("Start logs cleaner (%d days old)\n", conf.Logs.Keep)
 		go func() {
 			for {
-				time.Sleep(LogsCleanPeriod)
-				log.Printf("Cleaner logs ...\n", conf.Logs.Keep)
+				done := <-lock
 
+				log.Printf("Cleaner logs ...\n", conf.Logs.Keep)
 				s := session.Copy()
 				logs := s.DB(DBName).C(ColLogs)
 				dur := time.Now().AddDate(0, 0, -conf.Logs.Keep)
 				logs.RemoveAll(bson.M{"ts": bson.M{"$lt": dur }})
 				log.Printf("`- ... cleaned < %s\n", dur.String())
 				s.Close()
+
+				done <-true
+
+				time.Sleep(LogsCleanPeriod)
 			}
 		}()
 	}
 
+	if conf.SA != nil {
+		log.Printf("Start stats archiver (%s)\n", conf.SA.Period)
+		go func() {
+			for {
+				done := <-lock
+
+				now := time.Now()
+				log.Printf("%s: Check stats\n", now.Format("Mon Jan 2 15:04:05 2006"))
+				doArchPass(now, session.Copy())
+				log.Printf("-----------8<--------------------------------\n")
+
+				done <-true
+
+				slp := nextPeriod(&now, conf.SA.Check).Sub(now)
+				<-time.After(slp)
+			}
+		}()
+	}
+
+	done := make(chan bool)
 	for {
-		now := time.Now()
-		log.Printf("%s: Check stats\n", now.Format("Mon Jan 2 15:04:05 2006"))
-
-		doArchPass(now, session.Copy())
-
-		log.Printf("-----------8<--------------------------------\n")
-
-		slp := nextPeriod(&now, conf.SA.Check).Sub(now)
-		<-time.After(slp)
+		lock <-done
+		<-done
 	}
 }
