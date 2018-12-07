@@ -422,7 +422,14 @@ out:
 	return nil, err
 }
 
-func DeleteParts(ctx context.Context, objp []*s3mgo.ObjectPart) (error) {
+func DeleteParts(ctx context.Context, object *s3mgo.Object) (error) {
+	objp, err := PartsFind(ctx, object.ObjID)
+	if err != nil {
+		log.Errorf("s3: Can't find object data %s: %s",
+			infoLong(object), err.Error())
+		return err
+	}
+
 	for _, od := range objp {
 		err := DeletePart(ctx, od)
 		if err != nil {

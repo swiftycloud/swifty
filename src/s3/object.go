@@ -197,8 +197,6 @@ func CopyObject(ctx context.Context, bucket *s3mgo.Bucket, oname string,
 	}
 
 
-	var objp *s3mgo.ObjectPart
-
 	object := &s3mgo.Object {
 		ObjID:		bson.NewObjectId(),
 		Size:		source.Size,
@@ -232,7 +230,7 @@ func CopyObject(ctx context.Context, bucket *s3mgo.Bucket, oname string,
 	return object, nil
 
 out_parts:
-	DeletePart(ctx, objp)
+	DeleteParts(ctx, object)
 out_acc:
 	unacctObj(ctx, bucket, object.Size, true)
 	dbS3Remove(ctx, object)
@@ -314,21 +312,12 @@ func s3DeleteObject(ctx context.Context, bucket *s3mgo.Bucket, oname string) err
 }
 
 func DropObject(ctx context.Context, bucket *s3mgo.Bucket, object *s3mgo.Object) error {
-	var objp []*s3mgo.ObjectPart
-
 	err := dbS3SetState(ctx, object, S3StateInactive, nil)
 	if err != nil {
 		return err
 	}
 
-	objp, err = PartsFind(ctx, object.ObjID)
-	if err != nil {
-		log.Errorf("s3: Can't find object data %s: %s",
-			infoLong(object), err.Error())
-		return err
-	}
-
-	err = DeleteParts(ctx, objp)
+	err = DeleteParts(ctx, object)
 	if err != nil {
 		return err
 	}
