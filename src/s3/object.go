@@ -159,6 +159,7 @@ out_remove:
 	dbS3Remove(ctx, object)
 	return nil, err
 }
+
 func AddObject(ctx context.Context, bucket *s3mgo.Bucket, oname string,
 		acl string, data *ChunkReader) (*s3mgo.Object, error) {
 	var objp *s3mgo.ObjectPart
@@ -254,7 +255,7 @@ func DropObject(ctx context.Context, bucket *s3mgo.Bucket, object *s3mgo.Object)
 		return err
 	}
 
-	objp, err = s3ObjectPartFind(ctx, object.ObjID)
+	objp, err = PartsFind(ctx, object.ObjID)
 	if err != nil {
 		log.Errorf("s3: Can't find object data %s: %s",
 			infoLong(object), err.Error())
@@ -284,7 +285,7 @@ func ReadData(ctx context.Context, bucket *s3mgo.Bucket, object *s3mgo.Object) (
 	var res []byte
 	var err error
 
-	objp, err = s3ObjectPartFindFull(ctx, object.ObjID)
+	objp, err = PartsFindForRead(ctx, object.ObjID)
 	if err != nil {
 		if err != mgo.ErrNotFound {
 			log.Errorf("s3: Can't find object data %s: %s",

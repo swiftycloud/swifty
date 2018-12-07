@@ -238,7 +238,7 @@ func s3DeactivateObjectData(ctx context.Context, refID bson.ObjectId) error {
 	return dbS3Update(ctx, query, update, false, &s3mgo.ObjectPart{})
 }
 
-func s3ObjectPartFind(ctx context.Context, refID bson.ObjectId) ([]*s3mgo.ObjectPart, error) {
+func PartsFind(ctx context.Context, refID bson.ObjectId) ([]*s3mgo.ObjectPart, error) {
 	var res []*s3mgo.ObjectPart
 
 	err := dbS3FindAllFields(ctx, bson.M{"ref-id": refID, "state": S3StateActive}, bson.M{"data": 0}, &res)
@@ -249,7 +249,7 @@ func s3ObjectPartFind(ctx context.Context, refID bson.ObjectId) ([]*s3mgo.Object
 	return res, nil
 }
 
-func s3ObjectPartFindFull(ctx context.Context, refID bson.ObjectId) ([]*s3mgo.ObjectPart, error) {
+func PartsFindForRead(ctx context.Context, refID bson.ObjectId) ([]*s3mgo.ObjectPart, error) {
 	var res []*s3mgo.ObjectPart
 
 	err := dbS3FindAllSorted(ctx, bson.M{"ref-id": refID, "state": S3StateActive}, "part",  &res)
