@@ -107,7 +107,7 @@ func Activate(ctx context.Context, b *s3mgo.Bucket, o *s3mgo.Object, etag string
 func UploadToObject(ctx context.Context, bucket *s3mgo.Bucket, upload *S3Upload) (*s3mgo.Object, error) {
 	var err error
 
-	size, etag, err := s3ObjectPartsResum(ctx, upload)
+	size, etag, err := ResumParts(ctx, upload)
 	if err != nil {
 		return nil, err
 	}
@@ -190,7 +190,7 @@ func AddObject(ctx context.Context, bucket *s3mgo.Bucket, oname string,
 		goto out_remove
 	}
 
-	objp, err = s3ObjectPartAdd(ctx, object.ObjID, bucket.BCookie, object.OCookie, 0, data)
+	objp, err = AddPart(ctx, object.ObjID, bucket.BCookie, object.OCookie, 0, data)
 	if err != nil {
 		goto out_acc
 	}
@@ -208,7 +208,7 @@ func AddObject(ctx context.Context, bucket *s3mgo.Bucket, oname string,
 	return object, nil
 
 out:
-	s3ObjectPartDelOne(ctx, bucket, object.OCookie, objp)
+	DeletePart(ctx, objp)
 out_acc:
 	unacctObj(ctx, bucket, object.Size, true)
 out_remove:
@@ -261,7 +261,7 @@ func DropObject(ctx context.Context, bucket *s3mgo.Bucket, object *s3mgo.Object)
 		return err
 	}
 
-	err = s3ObjectPartDel(ctx, bucket, object.OCookie, objp)
+	err = DeleteParts(ctx, objp)
 	if err != nil {
 		return err
 	}
@@ -295,7 +295,7 @@ func ReadData(ctx context.Context, bucket *s3mgo.Bucket, object *s3mgo.Object) (
 	}
 
 	/* FIXME -- push io.Writer and write data into it, do not carry bytes over */
-	res, err = s3ObjectPartRead(ctx, bucket, object.OCookie, objp)
+	res, err = ReadParts(ctx, bucket, object.OCookie, objp)
 	if err != nil {
 		return nil, err
 	}
@@ -339,7 +339,7 @@ func ObjectIterChunks(ctx context.Context, bucket *s3mgo.Bucket, oname string,
 		return err
 	}
 
-	err = s3ObjectPartsIter(ctx, object.ObjID, func(p *s3mgo.ObjectPart) error {
+	err = IterParts(ctx, object.ObjID, func(p *s3mgo.ObjectPart) error {
 		return IterChunks(ctx, p, fn)
 	})
 

@@ -260,7 +260,7 @@ func s3ObjectPartFindFull(ctx context.Context, refID bson.ObjectId) ([]*s3mgo.Ob
 	return res, nil
 }
 
-func s3ObjectPartsIter(ctx context.Context, refID bson.ObjectId, fn IterPartsFn) error {
+func IterParts(ctx context.Context, refID bson.ObjectId, fn IterPartsFn) error {
 	var p s3mgo.ObjectPart
 
 	iter := dbS3IterAllSorted(ctx, bson.M{"ref-id": refID, "state": S3StateActive}, "part",  &p)
@@ -276,7 +276,7 @@ func s3ObjectPartsIter(ctx context.Context, refID bson.ObjectId, fn IterPartsFn)
 	return iter.Err()
 }
 
-func s3ObjectPartAdd(ctx context.Context, refid bson.ObjectId, bucket_bid, object_bid string, part int,
+func AddPart(ctx context.Context, refid bson.ObjectId, bucket_bid, object_bid string, part int,
 		data *ChunkReader) (*s3mgo.ObjectPart, error) {
 	var objp *s3mgo.ObjectPart
 	var err error
@@ -316,9 +316,9 @@ out:
 	return nil, err
 }
 
-func s3ObjectPartDel(ctx context.Context, bucket *s3mgo.Bucket, ocookie string, objp []*s3mgo.ObjectPart) (error) {
+func DeleteParts(ctx context.Context, objp []*s3mgo.ObjectPart) (error) {
 	for _, od := range objp {
-		err := s3ObjectPartDelOne(ctx, bucket, ocookie, od)
+		err := DeletePart(ctx, od)
 		if err != nil {
 			return err
 		}
@@ -327,7 +327,7 @@ func s3ObjectPartDel(ctx context.Context, bucket *s3mgo.Bucket, ocookie string, 
 	return nil
 }
 
-func s3ObjectPartDelOne(ctx context.Context, bucket *s3mgo.Bucket, ocookie string, objp *s3mgo.ObjectPart) (error) {
+func DeletePart(ctx context.Context, objp *s3mgo.ObjectPart) (error) {
 	var err error
 
 	err = dbS3SetState(ctx, objp, S3StateInactive, nil)
@@ -348,7 +348,7 @@ func s3ObjectPartDelOne(ctx context.Context, bucket *s3mgo.Bucket, ocookie strin
 	return nil
 }
 
-func s3ObjectPartRead(ctx context.Context, bucket *s3mgo.Bucket, ocookie string, objp []*s3mgo.ObjectPart) ([]byte, error) {
+func ReadParts(ctx context.Context, bucket *s3mgo.Bucket, ocookie string, objp []*s3mgo.ObjectPart) ([]byte, error) {
 	var res []byte
 
 	for _, od := range objp {
@@ -363,7 +363,7 @@ func s3ObjectPartRead(ctx context.Context, bucket *s3mgo.Bucket, ocookie string,
 	return res, nil
 }
 
-func s3ObjectPartsResum(ctx context.Context, upload *S3Upload) (int64, string, error) {
+func ResumParts(ctx context.Context, upload *S3Upload) (int64, string, error) {
 	var objp *s3mgo.ObjectPart
 	var pipe *mgo.Pipe
 	var iter *mgo.Iter
