@@ -167,30 +167,39 @@ var CORS_Methods = []string {
 	http.MethodHead,
 }
 
+var logReqDetails int = 1
+
 func logRequest(r *http.Request) {
 	var request []string
+
+	if logReqDetails == 0 {
+		return
+	}
 
 	url := fmt.Sprintf("%v %v %v", r.Method, r.URL, r.Proto)
 	request = append(request, "\n---")
 	request = append(request, url)
 	request = append(request, fmt.Sprintf("Host: %v", r.Host))
 
-	for name, headers := range r.Header {
-		for _, h := range headers {
-			request = append(request, fmt.Sprintf("%v:%v", name, h))
+	if logReqDetails >= 2 {
+		for name, headers := range r.Header {
+			for _, h := range headers {
+				request = append(request, fmt.Sprintf("%v:%v", name, h))
+			}
 		}
-	}
 
-	content_type := r.Header.Get("Content-Type")
-	if content_type != "" {
-		if len(content_type) >= 21 &&
+		content_type := r.Header.Get("Content-Type")
+		if content_type != "" {
+			if len(content_type) >= 21 &&
 			string(content_type[0:20]) == "multipart/form-data;" {
-			r.ParseMultipartForm(0)
-			request = append(request, fmt.Sprintf("MultipartForm: %v", r.MultipartForm))
+				r.ParseMultipartForm(0)
+				request = append(request, fmt.Sprintf("MultipartForm: %v", r.MultipartForm))
+			}
 		}
 	}
 
 	request = append(request, "---")
+
 	log.Debug(strings.Join(request, "\n"))
 }
 
@@ -1108,6 +1117,7 @@ func main() {
 		return
 	}
 
+	sysctl.AddIntSysctl("s3_req_verb", &logReqDetails)
 	sysctl.AddRoSysctl("s3_version", func() string { return Version })
 	sysctl.AddRoSysctl("s3_mode", func() string {
 		ret := "mode:"
