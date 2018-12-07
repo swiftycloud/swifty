@@ -60,22 +60,18 @@ func s3IterChunks(ctx context.Context, part *s3mgo.ObjectPart, fn IterChunksFn) 
 	return nil
 }
 
-type chunkReader interface {
-	Size() int64
-	Next(sz int64)([]byte, error)
-}
-
-type ioChunkReader struct {
-	sz	int64
-	r	io.Reader
-
+type ChunkReader struct {
+	size	int64
 	read	int64
+	r	io.Reader
 }
 
-func (cr *ioChunkReader)Size() int64 { return cr.sz }
+func (cr *ChunkReader)Next(max int64) ([]byte, error) {
+	if max > cr.size - cr.read {
+		max = cr.size - cr.read
+	}
 
-func (cr *ioChunkReader)Next(sz int64) ([]byte, error) {
-	ret := make([]byte, sz)
+	ret := make([]byte, max)
 	ln, err := cr.r.Read(ret)
 	if ln != 0 {
 		cr.read += int64(ln)
@@ -89,7 +85,7 @@ func (cr *ioChunkReader)Next(sz int64) ([]byte, error) {
 	return nil, err
 }
 
-func s3WriteChunks(ctx context.Context, part *s3mgo.ObjectPart, data chunkReader) (string, error) {
+func s3WriteChunks(ctx context.Context, part *s3mgo.ObjectPart, data *ChunkReader) (string, error) {
 	var err error
 
 	if !radosDisabled && part.Size > S3StorageSizePerObj {
@@ -281,7 +277,7 @@ func s3ObjectPartsIter(ctx context.Context, refID bson.ObjectId, fn IterPartsFn)
 }
 
 func s3ObjectPartAdd(ctx context.Context, refid bson.ObjectId, bucket_bid, object_bid string, part int,
-		data chunkReader) (*s3mgo.ObjectPart, error) {
+		data *ChunkReader) (*s3mgo.ObjectPart, error) {
 	var objp *s3mgo.ObjectPart
 	var err error
 	var csum string
@@ -293,7 +289,7 @@ func s3ObjectPartAdd(ctx context.Context, refid bson.ObjectId, bucket_bid, objec
 		RefID:		refid,
 		BCookie:	bucket_bid,
 		OCookie:	object_bid,
-		Size:		data.Size(),
+		Size:		data.size,
 		Part:		uint(part),
 		CreationTime:	time.Now().Format(time.RFC3339),
 	}

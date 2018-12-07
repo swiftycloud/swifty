@@ -534,7 +534,7 @@ func handleUploadPart(ctx context.Context, uploadId, oname string, bucket *s3mgo
 		return &S3Error{ ErrorCode: S3ErrMissingContentLength, Message: "content-length header missing" }
 	}
 
-	etag, err := s3UploadPart(ctx, bucket, oname, uploadId, partno, &ioChunkReader{sz: sz, r: r.Body})
+	etag, err := s3UploadPart(ctx, bucket, oname, uploadId, partno, &ChunkReader{size: sz, r: r.Body})
 	if err != nil {
 		return &S3Error{ ErrorCode: S3ErrInvalidRequest, Message: err.Error() }
 	}
@@ -657,7 +657,7 @@ func handleCopyObject(ctx context.Context, copy_source, oname string, bucket *s3
 		return &S3Error{ ErrorCode: S3ErrInvalidRequest, Message: err.Error() }
 	}
 
-	object, err = AddObject(ctx, bucket, oname, canned_acl, &ioChunkReader{sz: int64(len(body)), r: bytes.NewReader(body)})
+	object, err = AddObject(ctx, bucket, oname, canned_acl, &ChunkReader{size: int64(len(body)), r: bytes.NewReader(body)})
 	if err != nil {
 		return &S3Error{ ErrorCode: S3ErrInvalidRequest, Message: err.Error() }
 	}
@@ -694,7 +694,7 @@ func handlePutObject(ctx context.Context, oname string, bucket *s3mgo.Bucket, w 
 		return &S3Error{ ErrorCode: S3ErrMissingContentLength, Message: "content-length header missing" }
 	}
 
-	cr := &ioChunkReader{sz: sz, r: r.Body}
+	cr := &ChunkReader{size: sz, r: r.Body}
 
 	o, err := AddObject(ctx, bucket, oname, canned_acl, cr)
 	if err != nil {

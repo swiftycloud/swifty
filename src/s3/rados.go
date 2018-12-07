@@ -123,7 +123,7 @@ func radosCreatePool(pool string, max_objects, max_bytes uint64) error {
 	return err
 }
 
-func radosWriteObject(pool, oname string, data chunkReader, offset uint64) (string, error) {
+func radosWriteObject(pool, oname string, data *ChunkReader, offset uint64) (string, error) {
 	var ioctx *rados.IOContext
 	var err error
 
