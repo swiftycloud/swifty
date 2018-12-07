@@ -20,6 +20,10 @@ import (
 func ReadChunks(ctx context.Context, part *s3mgo.ObjectPart) ([]byte, error) {
 	var res []byte
 
+	if part.Data != nil {
+		return part.Data, nil
+	}
+
 	if len(part.Chunks) == 0 {
 		return radosReadObject(part.BCookie, part.OCookie, uint64(part.Size), 0)
 	}
@@ -39,6 +43,10 @@ func ReadChunks(ctx context.Context, part *s3mgo.ObjectPart) ([]byte, error) {
 }
 
 func IterChunks(ctx context.Context, part *s3mgo.ObjectPart, fn IterChunksFn) error {
+	if part.Data != nil {
+		return fn(&s3mgo.DataChunk{Bytes: part.Data})
+	}
+
 	if len(part.Chunks) == 0 {
 		return errors.New("Rados cannot iter chunks yet")
 	}
@@ -137,7 +145,9 @@ out:
 func DeleteChunks(ctx context.Context, part *s3mgo.ObjectPart) error {
 	var err error
 
-	if len(part.Chunks) == 0 {
+	if part.Data != nil {
+		;
+	} else if len(part.Chunks) == 0 {
 		err = radosDeleteObject(part.BCookie, part.OCookie)
 	} else {
 		for _, ch := range part.Chunks {
@@ -294,13 +304,24 @@ func AddPart(ctx context.Context, refid bson.ObjectId, bucket_bid, object_bid st
 		CreationTime:	time.Now().Format(time.RFC3339),
 	}
 
+	if data.size <= S3InlineDataSize {
+		objp.Data, err = data.Next(data.size)
+		if err != nil {
+			goto out
+		}
+
+		csum = md5sum(objp.Data)
+	}
+
 	if err = dbS3Insert(ctx, objp); err != nil {
 		goto out
 	}
 
-	csum, err = WriteChunks(ctx, objp, data)
-	if err != nil {
-		goto out
+	if objp.Data == nil {
+		csum, err = WriteChunks(ctx, objp, data)
+		if err != nil {
+			goto out
+		}
 	}
 
 	if err = dbS3SetState2(ctx, objp, S3StateActive, bson.M{"etag": csum}); err != nil {
@@ -379,20 +400,25 @@ func ResumParts(ctx context.Context, upload *S3Upload) (int64, string, error) {
 		if objp.State != S3StateActive {
 			continue
 		}
-		if len(objp.Chunks) == 0 {
-			/* XXX Too bad :( */
-			return 0, "", fmt.Errorf("Can't finish upload")
-		}
 
-		for _, cid := range objp.Chunks {
-			var ch s3mgo.DataChunk
-
-			err := dbS3FindOne(ctx, bson.M{"_id": cid}, &ch)
-			if err != nil {
-				return 0, "", err
+		if objp.Data != nil {
+			hasher.Write(objp.Data)
+		} else {
+			if len(objp.Chunks) == 0 {
+				/* XXX Too bad :( */
+				return 0, "", fmt.Errorf("Can't finish upload")
 			}
 
-			hasher.Write(ch.Bytes)
+			for _, cid := range objp.Chunks {
+				var ch s3mgo.DataChunk
+
+				err := dbS3FindOne(ctx, bson.M{"_id": cid}, &ch)
+				if err != nil {
+					return 0, "", err
+				}
+
+				hasher.Write(ch.Bytes)
+			}
 		}
 		size += objp.Size
 	}
