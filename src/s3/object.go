@@ -10,7 +10,6 @@ import (
 	"gopkg.in/mgo.v2/bson"
 	"context"
 	"time"
-	"bytes"
 
 	"swifty/apis/s3"
 	"swifty/s3/mgo"
@@ -163,12 +162,75 @@ out_remove:
 
 func CopyObject(ctx context.Context, bucket *s3mgo.Bucket, oname string,
 		acl string, bucket_source *s3mgo.Bucket, oname_source string) (*s3mgo.Object, error) {
-	body, err := ReadObject(ctx, bucket_source, oname_source, 0, 1)
+	var source *s3mgo.Object
+	var err error
+
+	source, err = FindCurObject(ctx, bucket_source, oname_source)
 	if err != nil {
+		if err == mgo.ErrNotFound {
+			return nil, err
+		}
+		log.Errorf("s3: Can't find object %s on %s: %s",
+				oname, infoLong(bucket), err.Error())
 		return nil, err
 	}
 
-	return AddObject(ctx, bucket, oname, acl, &ChunkReader{size: int64(len(body)), r: bytes.NewReader(body)})
+
+	var objp *s3mgo.ObjectPart
+
+	object := &s3mgo.Object {
+		ObjID:		bson.NewObjectId(),
+		State:		S3StateNone,
+
+		ObjectProps: s3mgo.ObjectProps {
+			Key:		oname,
+			Acl:		acl,
+			CreationTime:	time.Now().Format(time.RFC3339),
+		},
+
+		Version:	1,
+		Size:		source.Size,
+		BucketObjID:	bucket.ObjID,
+		OCookie:	bucket.OCookie(oname, 1),
+	}
+
+	if err = dbS3Insert(ctx, object); err != nil {
+		return nil, err
+	}
+	log.Debugf("s3: Inserted copy %s", infoLong(object))
+
+	err = acctObj(ctx, bucket, object.Size)
+	if err != nil {
+		goto out_remove
+	}
+
+	err = IterParts(ctx, source.ObjID, func(p *s3mgo.ObjectPart) error {
+		_, err := CopyPart(ctx, object.ObjID, bucket.BCookie, object.OCookie, p)
+		return err
+	})
+	if err != nil {
+		goto out_acc
+	}
+
+	err = Activate(ctx, bucket, object, source.ETag)
+	if err != nil {
+		goto out
+	}
+
+	if bucket.BasicNotify != nil && bucket.BasicNotify.Put > 0 {
+		s3Notify(ctx, bucket, object, "put")
+	}
+
+	log.Debugf("s3: Added %s", infoLong(object))
+	return object, nil
+
+out:
+	DeletePart(ctx, objp)
+out_acc:
+	unacctObj(ctx, bucket, object.Size, true)
+out_remove:
+	dbS3Remove(ctx, object)
+	return nil, err
 }
 
 func AddObject(ctx context.Context, bucket *s3mgo.Bucket, oname string,

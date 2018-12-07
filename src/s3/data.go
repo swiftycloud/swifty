@@ -142,6 +142,47 @@ out:
 	return "", err
 }
 
+func CopyChunks(ctx context.Context, part *s3mgo.ObjectPart, source *s3mgo.ObjectPart) error {
+	var err error
+
+	if !radosDisabled && part.Size > S3StorageSizePerObj {
+		return errors.New("Raos doesn't copy chunks")
+	}
+
+	for _, cid := range source.Chunks {
+		var ch s3mgo.DataChunk
+
+		err := dbS3FindOne(ctx, bson.M{"_id": cid}, &ch)
+		if err != nil {
+			return err
+		}
+
+		/* XXX -- do the COW XXX */
+		ch.ObjID = bson.NewObjectId()
+		err = dbS3Insert(ctx, &ch)
+		if err != nil {
+			goto out
+		}
+
+		part.Chunks = append(part.Chunks, ch.ObjID)
+	}
+
+	err = dbS3Update(ctx, bson.M{"_id": part.ObjID},
+			bson.M{ "$set": bson.M{ "chunks": part.Chunks }},
+			false, &s3mgo.ObjectPart{})
+	if err != nil {
+		goto out
+	}
+
+	return nil
+
+out:
+	if len(part.Chunks) != 0 {
+		DeleteChunks(ctx, part)
+	}
+	return err
+}
+
 func DeleteChunks(ctx context.Context, part *s3mgo.ObjectPart) error {
 	var err error
 
@@ -284,6 +325,50 @@ func IterParts(ctx context.Context, refID bson.ObjectId, fn IterPartsFn) error {
 	}
 
 	return iter.Err()
+}
+
+func CopyPart(ctx context.Context, refid bson.ObjectId, bucket_bid, object_bid string, source *s3mgo.ObjectPart) (*s3mgo.ObjectPart, error) {
+	var objp *s3mgo.ObjectPart
+	var err error
+
+	objp = &s3mgo.ObjectPart {
+		ObjID:		bson.NewObjectId(),
+		State:		S3StateNone,
+
+		RefID:		refid,
+		BCookie:	bucket_bid,
+		OCookie:	object_bid,
+		Size:		source.Size,
+		Part:		source.Part,
+		CreationTime:	time.Now().Format(time.RFC3339),
+	}
+
+	if source.Data != nil {
+		objp.Data = source.Data
+	}
+
+	if err = dbS3Insert(ctx, objp); err != nil {
+		goto out
+	}
+
+	if objp.Data == nil {
+		err = CopyChunks(ctx, objp, source)
+		if err != nil {
+			goto out
+		}
+	}
+
+	if err = dbS3SetState2(ctx, objp, S3StateActive, bson.M{"etag": source.ETag}); err != nil {
+		DeleteChunks(ctx, objp)
+		goto out
+	}
+
+	log.Debugf("s3: Added %s", infoLong(objp))
+	return objp, nil
+
+out:
+	dbS3Remove(ctx, objp)
+	return nil, err
 }
 
 func AddPart(ctx context.Context, refid bson.ObjectId, bucket_bid, object_bid string, part int,
