@@ -187,6 +187,7 @@ type ObjectPart struct {
 	Size				int64		`bson:"size"`
 	Part				uint		`bson:"part"`
 	ETag				string		`bson:"etag"`
+	Data				[]byte		`bson:"data,omitempty"`
 	Chunks				[]bson.ObjectId	`bson:"chunks"`
 }
 

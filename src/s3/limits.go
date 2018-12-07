@@ -19,6 +19,9 @@ const (
 	// MongoDB itself
 	S3StorageSizePerObj		= int64(16 << 20)
 
+	// How many bytes we heep directly in part
+	S3InlineDataSize		= int64(1 << 20)
+
 	// Maximum ACL per bucket/object
 	S3BucketMaxACL			= int(100)
 )

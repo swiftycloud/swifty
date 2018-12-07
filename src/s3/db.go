@@ -322,6 +322,11 @@ func dbS3SetState(ctx context.Context, o interface{}, state uint32, query bson.M
 	return dbS3SetOnState(ctx, o, state, query, bson.M{"state": state})
 }
 
+func dbS3SetState2(ctx context.Context, o interface{}, state uint32, upd bson.M) (error) {
+	upd["state"] = state
+	return dbS3SetOnState(ctx, o, state, nil, upd)
+}
+
 func dbS3RemoveCond(ctx context.Context, o interface{}, query bson.M) (error) {
 	if query == nil { query = make(bson.M) }
 

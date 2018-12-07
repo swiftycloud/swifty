@@ -104,10 +104,44 @@ func Activate(ctx context.Context, b *s3mgo.Bucket, o *s3mgo.Object, etag string
 	return err
 }
 
+func createObjectPre(ctx context.Context, bucket *s3mgo.Bucket, o *s3mgo.Object) error {
+	o.State = S3StateNone
+	o.ObjectProps.CreationTime = time.Now().Format(time.RFC3339)
+	o.Version = 1
+	o.BucketObjID = bucket.ObjID
+	o.OCookie = bucket.OCookie(o.ObjectProps.Key, 1)
+
+	err := dbS3Insert(ctx, o);
+	if err != nil {
+		return err
+	}
+
+	err = acctObj(ctx, bucket, o.Size)
+	if err != nil {
+		dbS3Remove(ctx, o)
+		return err
+	}
+
+	return nil
+}
+
+func createObjectPost(ctx context.Context, bucket *s3mgo.Bucket, o *s3mgo.Object) error {
+	err := Activate(ctx, bucket, o, o.ETag)
+	if err != nil {
+		return err
+	}
+
+	if bucket.BasicNotify != nil && bucket.BasicNotify.Put > 0 {
+		s3Notify(ctx, bucket, o, "put")
+	}
+
+	return nil
+}
+
 func UploadToObject(ctx context.Context, bucket *s3mgo.Bucket, upload *S3Upload) (*s3mgo.Object, error) {
 	var err error
 
-	size, etag, err := s3ObjectPartsResum(ctx, upload)
+	size, etag, err := ResumParts(ctx, upload)
 	if err != nil {
 		return nil, err
 	}
@@ -117,102 +151,133 @@ func UploadToObject(ctx context.Context, bucket *s3mgo.Bucket, upload *S3Upload)
 		 * not to update all the data objects
 		 */
 		ObjID:		upload.ObjID,
-		State:		S3StateNone,
-
+		Size:		size,
 		ObjectProps: s3mgo.ObjectProps {
 			Key:		upload.Key,
 			Acl:		upload.Acl,
-			CreationTime:	time.Now().Format(time.RFC3339),
 		},
 
-		Version:	1,
-		Size:		size,
-		BucketObjID:	bucket.ObjID,
-		OCookie:	bucket.OCookie(upload.Key, 1),
 	}
 
-	if err = dbS3Insert(ctx, object); err != nil {
-		return nil, err
-	}
-	log.Debugf("s3: Converted %s", infoLong(object))
-
-	err = acctObj(ctx, bucket, object.Size)
+	err = createObjectPre(ctx, bucket, object)
 	if err != nil {
-		goto out_remove
+		goto out
 	}
 
-	err = Activate(ctx, bucket, object, etag)
+	object.ETag = etag
+
+	err = createObjectPost(ctx, bucket, object)
 	if err != nil {
 		goto out_acc
 	}
 
-	if bucket.BasicNotify != nil && bucket.BasicNotify.Put > 0 {
-		s3Notify(ctx, bucket, object, "put")
-	}
-
-	log.Debugf("s3: Added %s", infoLong(object))
+	log.Debugf("s3: Upgraded %s", infoLong(object))
 	return object, nil
 
 out_acc:
 	unacctObj(ctx, bucket, object.Size, true)
-out_remove:
 	dbS3Remove(ctx, object)
+out:
 	return nil, err
 }
+
+func CopyObject(ctx context.Context, bucket *s3mgo.Bucket, oname string,
+		acl string, bucket_source *s3mgo.Bucket, oname_source string) (*s3mgo.Object, error) {
+	var source *s3mgo.Object
+	var err error
+
+	source, err = FindCurObject(ctx, bucket_source, oname_source)
+	if err != nil {
+		if err == mgo.ErrNotFound {
+			return nil, err
+		}
+		log.Errorf("s3: Can't find object %s on %s: %s",
+				oname, infoLong(bucket), err.Error())
+		return nil, err
+	}
+
+
+	object := &s3mgo.Object {
+		ObjID:		bson.NewObjectId(),
+		Size:		source.Size,
+		ObjectProps: s3mgo.ObjectProps {
+			Key:		oname,
+			Acl:		acl,
+		},
+	}
+
+	err = createObjectPre(ctx, bucket, object)
+	if err != nil {
+		goto out
+	}
+
+	err = IterParts(ctx, source.ObjID, func(p *s3mgo.ObjectPart) error {
+		_, err := CopyPart(ctx, object.ObjID, bucket.BCookie, object.OCookie, p)
+		return err
+	})
+	if err != nil {
+		goto out_acc
+	}
+
+	object.ETag = source.ETag
+
+	err = createObjectPost(ctx, bucket, object)
+	if err != nil {
+		goto out_parts
+	}
+
+	log.Debugf("s3: Copied %s", infoLong(object))
+	return object, nil
+
+out_parts:
+	DeleteParts(ctx, object)
+out_acc:
+	unacctObj(ctx, bucket, object.Size, true)
+	dbS3Remove(ctx, object)
+out:
+	return nil, err
+}
+
 func AddObject(ctx context.Context, bucket *s3mgo.Bucket, oname string,
-		acl string, data []byte) (*s3mgo.Object, error) {
+		acl string, data *ChunkReader) (*s3mgo.Object, error) {
 	var objp *s3mgo.ObjectPart
 	var err error
 
 	object := &s3mgo.Object {
 		ObjID:		bson.NewObjectId(),
-		State:		S3StateNone,
-
+		Size:		data.size,
 		ObjectProps: s3mgo.ObjectProps {
 			Key:		oname,
 			Acl:		acl,
-			CreationTime:	time.Now().Format(time.RFC3339),
 		},
-
-		Version:	1,
-		Size:		int64(len(data)),
-		BucketObjID:	bucket.ObjID,
-		OCookie:	bucket.OCookie(oname, 1),
 	}
 
-	if err = dbS3Insert(ctx, object); err != nil {
-		return nil, err
-	}
-	log.Debugf("s3: Inserted %s", infoLong(object))
-
-	err = acctObj(ctx, bucket, object.Size)
-	if err != nil {
-		goto out_remove
-	}
-
-	objp, err = s3ObjectPartAdd(ctx, object.ObjID, bucket.BCookie, object.OCookie, 0, data)
-	if err != nil {
-		goto out_acc
-	}
-
-	err = Activate(ctx, bucket, object, objp.ETag)
+	err = createObjectPre(ctx, bucket, object)
 	if err != nil {
 		goto out
 	}
 
-	if bucket.BasicNotify != nil && bucket.BasicNotify.Put > 0 {
-		s3Notify(ctx, bucket, object, "put")
+	objp, err = AddPart(ctx, object.ObjID, bucket.BCookie, object.OCookie, 0, data)
+	if err != nil {
+		goto out_acc
+	}
+
+	object.ETag = objp.ETag
+
+	err = createObjectPost(ctx, bucket, object)
+	if err != nil {
+		goto out_parts
 	}
 
 	log.Debugf("s3: Added %s", infoLong(object))
 	return object, nil
 
-out:
-	s3ObjectPartDelOne(ctx, bucket, object.OCookie, objp)
+out_parts:
+	DeletePart(ctx, objp)
 out_acc:
 	unacctObj(ctx, bucket, object.Size, true)
-out_remove:
 	dbS3Remove(ctx, object)
+out:
 	return nil, err
 }
 
@@ -247,21 +312,12 @@ func s3DeleteObject(ctx context.Context, bucket *s3mgo.Bucket, oname string) err
 }
 
 func DropObject(ctx context.Context, bucket *s3mgo.Bucket, object *s3mgo.Object) error {
-	var objp []*s3mgo.ObjectPart
-
 	err := dbS3SetState(ctx, object, S3StateInactive, nil)
 	if err != nil {
 		return err
 	}
 
-	objp, err = s3ObjectPartFind(ctx, object.ObjID)
-	if err != nil {
-		log.Errorf("s3: Can't find object data %s: %s",
-			infoLong(object), err.Error())
-		return err
-	}
-
-	err = s3ObjectPartDel(ctx, bucket, object.OCookie, objp)
+	err = DeleteParts(ctx, object)
 	if err != nil {
 		return err
 	}
@@ -284,7 +340,7 @@ func ReadData(ctx context.Context, bucket *s3mgo.Bucket, object *s3mgo.Object) (
 	var res []byte
 	var err error
 
-	objp, err = s3ObjectPartFindFull(ctx, object.ObjID)
+	objp, err = PartsFindForRead(ctx, object.ObjID)
 	if err != nil {
 		if err != mgo.ErrNotFound {
 			log.Errorf("s3: Can't find object data %s: %s",
@@ -295,7 +351,7 @@ func ReadData(ctx context.Context, bucket *s3mgo.Bucket, object *s3mgo.Object) (
 	}
 
 	/* FIXME -- push io.Writer and write data into it, do not carry bytes over */
-	res, err = s3ObjectPartRead(ctx, bucket, object.OCookie, objp)
+	res, err = ReadParts(ctx, bucket, object.OCookie, objp)
 	if err != nil {
 		return nil, err
 	}
@@ -339,8 +395,8 @@ func ObjectIterChunks(ctx context.Context, bucket *s3mgo.Bucket, oname string,
 		return err
 	}
 
-	err = s3ObjectPartsIter(ctx, object.ObjID, func(p *s3mgo.ObjectPart) error {
-		return s3IterChunks(ctx, p, fn)
+	err = IterParts(ctx, object.ObjID, func(p *s3mgo.ObjectPart) error {
+		return IterChunks(ctx, p, fn)
 	})
 
 	if err != nil {

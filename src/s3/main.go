@@ -167,30 +167,39 @@ var CORS_Methods = []string {
 	http.MethodHead,
 }
 
+var logReqDetails int = 1
+
 func logRequest(r *http.Request) {
 	var request []string
+
+	if logReqDetails == 0 {
+		return
+	}
 
 	url := fmt.Sprintf("%v %v %v", r.Method, r.URL, r.Proto)
 	request = append(request, "\n---")
 	request = append(request, url)
 	request = append(request, fmt.Sprintf("Host: %v", r.Host))
 
-	for name, headers := range r.Header {
-		for _, h := range headers {
-			request = append(request, fmt.Sprintf("%v:%v", name, h))
+	if logReqDetails >= 2 {
+		for name, headers := range r.Header {
+			for _, h := range headers {
+				request = append(request, fmt.Sprintf("%v:%v", name, h))
+			}
 		}
-	}
 
-	content_type := r.Header.Get("Content-Type")
-	if content_type != "" {
-		if len(content_type) >= 21 &&
+		content_type := r.Header.Get("Content-Type")
+		if content_type != "" {
+			if len(content_type) >= 21 &&
 			string(content_type[0:20]) == "multipart/form-data;" {
-			r.ParseMultipartForm(0)
-			request = append(request, fmt.Sprintf("MultipartForm: %v", r.MultipartForm))
+				r.ParseMultipartForm(0)
+				request = append(request, fmt.Sprintf("MultipartForm: %v", r.MultipartForm))
+			}
 		}
 	}
 
 	request = append(request, "---")
+
 	log.Debug(strings.Join(request, "\n"))
 }
 
@@ -492,12 +501,25 @@ func handleUploadListParts(ctx context.Context, uploadId, oname string, bucket *
 	return nil
 }
 
+func getBodySize(r *http.Request) int64 {
+	cl := r.Header.Get("Content-Length")
+	if cl == "" {
+		return 0
+	}
+
+	sz, err := strconv.ParseUint(cl, 10, 64)
+	if err != nil {
+		return 0
+	}
+
+	return int64(sz)
+}
+
 func handleUploadPart(ctx context.Context, uploadId, oname string, bucket *s3mgo.Bucket, w http.ResponseWriter, r *http.Request) *S3Error {
 	if !ctxAllowed(ctx, S3P_PutObject) {
 		return &S3Error{ ErrorCode: S3ErrMethodNotAllowed }
 	}
 
-	var etag string
 	var partno int
 
 	if part, ok := getURLParam(r, "partNumber"); ok {
@@ -506,12 +528,12 @@ func handleUploadPart(ctx context.Context, uploadId, oname string, bucket *s3mgo
 		return &S3Error{ ErrorCode: S3ErrInvalidArgument }
 	}
 
-	body, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		return &S3Error{ ErrorCode: S3ErrIncompleteBody }
+	sz := getBodySize(r)
+	if sz == 0 {
+		return &S3Error{ ErrorCode: S3ErrMissingContentLength, Message: "content-length header missing" }
 	}
 
-	etag, err = s3UploadPart(ctx, bucket, oname, uploadId, partno, body)
+	etag, err := s3UploadPart(ctx, bucket, oname, uploadId, partno, &ChunkReader{size: sz, r: r.Body})
 	if err != nil {
 		return &S3Error{ ErrorCode: S3ErrInvalidRequest, Message: err.Error() }
 	}
@@ -571,8 +593,8 @@ func handleGetObject(ctx context.Context, oname string, bucket *s3mgo.Bucket, w 
 
 	var downloaded int64
 
-	err = s3ObjectPartsIter(ctx, object.ObjID, func(p *s3mgo.ObjectPart) error {
-		return s3IterChunks(ctx, p, func(ch *s3mgo.DataChunk) error {
+	err = IterParts(ctx, object.ObjID, func(p *s3mgo.ObjectPart) error {
+		return IterChunks(ctx, p, func(ch *s3mgo.DataChunk) error {
 			w.Write(ch.Bytes)
 			downloaded += int64(len(ch.Bytes))
 			return nil
@@ -629,12 +651,7 @@ func handleCopyObject(ctx context.Context, copy_source, oname string, bucket *s3
 		return &S3Error{ ErrorCode: S3ErrInvalidBucketName }
 	}
 
-	body, err := ReadObject(ctx, bucket_source, oname_source, 0, 1)
-	if err != nil {
-		return &S3Error{ ErrorCode: S3ErrInvalidRequest, Message: err.Error() }
-	}
-
-	object, err = AddObject(ctx, bucket, oname, canned_acl, body)
+	object, err = CopyObject(ctx, bucket, oname, canned_acl, bucket_source, oname_source)
 	if err != nil {
 		return &S3Error{ ErrorCode: S3ErrInvalidRequest, Message: err.Error() }
 	}
@@ -666,14 +683,21 @@ func handlePutObject(ctx context.Context, oname string, bucket *s3mgo.Bucket, w 
 		canned_acl = swys3api.S3BucketAclCannedPrivate
 	}
 
-	body, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		return &S3Error{ ErrorCode: S3ErrIncompleteBody }
+	sz := getBodySize(r)
+	if sz == 0 {
+		return &S3Error{ ErrorCode: S3ErrMissingContentLength, Message: "content-length header missing" }
 	}
 
-	o, err := AddObject(ctx, bucket, oname, canned_acl, body)
+	cr := &ChunkReader{size: sz, r: r.Body}
+
+	o, err := AddObject(ctx, bucket, oname, canned_acl, cr)
 	if err != nil {
 		return &S3Error{ ErrorCode: S3ErrInvalidRequest, Message: err.Error() }
+	}
+
+	if cr.read != sz {
+		s3DeleteObject(ctx, bucket, oname)
+		return &S3Error{ ErrorCode: S3ErrIncompleteBody, Message: "trimmed body" }
 	}
 
 	w.Header().Set("ETag", o.ETag)
@@ -1108,6 +1132,7 @@ func main() {
 		return
 	}
 
+	sysctl.AddIntSysctl("s3_req_verb", &logReqDetails)
 	sysctl.AddRoSysctl("s3_version", func() string { return Version })
 	sysctl.AddRoSysctl("s3_mode", func() string {
 		ret := "mode:"

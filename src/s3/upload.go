@@ -200,7 +200,7 @@ func s3UploadRemoveLocked(ctx context.Context, bucket *s3mgo.Bucket, upload *S3U
 			}
 		} else {
 			for _, od := range objp {
-				err = s3ObjectPartDelOne(ctx, bucket, od.OCookie, od)
+				err = DeletePart(ctx, od)
 				if err != nil {
 					return err
 				}
@@ -244,7 +244,7 @@ func s3UploadInit(ctx context.Context, bucket *s3mgo.Bucket, oname, acl string) 
 }
 
 func s3UploadPart(ctx context.Context, bucket *s3mgo.Bucket, oname,
-			uid string, partno int, data []byte) (string, error) {
+			uid string, partno int, data *ChunkReader) (string, error) {
 	var objp *s3mgo.ObjectPart
 	var upload S3Upload
 	var err error
@@ -265,7 +265,7 @@ func s3UploadPart(ctx context.Context, bucket *s3mgo.Bucket, oname,
 		return "", err
 	}
 
-	objp, err = s3ObjectPartAdd(ctx, upload.ObjID, bucket.BCookie, upload.UCookie(oname, partno), partno, data)
+	objp, err = AddPart(ctx, upload.ObjID, bucket.BCookie, upload.UCookie(oname, partno), partno, data)
 	if err != nil {
 		upload.dbRefDec(ctx)
 		log.Errorf("s3: Can't store data %s: %s", infoLong(objp), err.Error())
