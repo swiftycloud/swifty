@@ -13,6 +13,7 @@ import (
 	"errors"
 	"time"
 	"fmt"
+	"io"
 	"swifty/s3/mgo"
 )
 
@@ -59,7 +60,36 @@ func s3IterChunks(ctx context.Context, part *s3mgo.ObjectPart, fn IterChunksFn) 
 	return nil
 }
 
-func s3WriteChunks(ctx context.Context, part *s3mgo.ObjectPart, data []byte) (string, error) {
+type chunkReader interface {
+	Size() int64
+	Next(sz int64)([]byte, error)
+}
+
+type ioChunkReader struct {
+	sz	int64
+	r	io.Reader
+
+	read	int64
+}
+
+func (cr *ioChunkReader)Size() int64 { return cr.sz }
+
+func (cr *ioChunkReader)Next(sz int64) ([]byte, error) {
+	ret := make([]byte, sz)
+	ln, err := cr.r.Read(ret)
+	if ln != 0 {
+		cr.read += int64(ln)
+		return ret[:ln], nil
+	}
+
+	if err == io.EOF {
+		err = nil
+	}
+
+	return nil, err
+}
+
+func s3WriteChunks(ctx context.Context, part *s3mgo.ObjectPart, data chunkReader) (string, error) {
 	var err error
 
 	if !radosDisabled && part.Size > S3StorageSizePerObj {
@@ -68,16 +98,18 @@ func s3WriteChunks(ctx context.Context, part *s3mgo.ObjectPart, data []byte) (st
 
 	hasher := md5.New()
 
-	dlen := int64(len(data))
-	for off := int64(0); off < dlen; off += S3StorageSizePerObj {
-		l := S3StorageSizePerObj
-		if off + l >= dlen {
-			l = dlen - off /* Trailing chunk */
+	for {
+		chd, err := data.Next(S3StorageSizePerObj)
+		if err != nil {
+			goto out
+		}
+		if chd == nil {
+			break
 		}
 
 		chunk := &s3mgo.DataChunk {
 			ObjID:	bson.NewObjectId(),
-			Bytes:	data[off:off+l],
+			Bytes:	chd,
 		}
 
 		hasher.Write(chunk.Bytes)
@@ -248,7 +280,8 @@ func s3ObjectPartsIter(ctx context.Context, refID bson.ObjectId, fn IterPartsFn)
 	return iter.Err()
 }
 
-func s3ObjectPartAdd(ctx context.Context, refid bson.ObjectId, bucket_bid, object_bid string, part int, data []byte) (*s3mgo.ObjectPart, error) {
+func s3ObjectPartAdd(ctx context.Context, refid bson.ObjectId, bucket_bid, object_bid string, part int,
+		data chunkReader) (*s3mgo.ObjectPart, error) {
 	var objp *s3mgo.ObjectPart
 	var err error
 	var csum string
@@ -260,7 +293,7 @@ func s3ObjectPartAdd(ctx context.Context, refid bson.ObjectId, bucket_bid, objec
 		RefID:		refid,
 		BCookie:	bucket_bid,
 		OCookie:	object_bid,
-		Size:		int64(len(data)),
+		Size:		data.Size(),
 		Part:		uint(part),
 		CreationTime:	time.Now().Format(time.RFC3339),
 	}

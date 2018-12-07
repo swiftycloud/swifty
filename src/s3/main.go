@@ -16,6 +16,7 @@ import (
 	"net/http"
 	"net/url"
 	"context"
+	"bytes"
 	"strings"
 	"strconv"
 	"errors"
@@ -501,12 +502,25 @@ func handleUploadListParts(ctx context.Context, uploadId, oname string, bucket *
 	return nil
 }
 
+func getBodySize(r *http.Request) int64 {
+	cl := r.Header.Get("Content-Length")
+	if cl == "" {
+		return 0
+	}
+
+	sz, err := strconv.ParseUint(cl, 10, 64)
+	if err != nil {
+		return 0
+	}
+
+	return int64(sz)
+}
+
 func handleUploadPart(ctx context.Context, uploadId, oname string, bucket *s3mgo.Bucket, w http.ResponseWriter, r *http.Request) *S3Error {
 	if !ctxAllowed(ctx, S3P_PutObject) {
 		return &S3Error{ ErrorCode: S3ErrMethodNotAllowed }
 	}
 
-	var etag string
 	var partno int
 
 	if part, ok := getURLParam(r, "partNumber"); ok {
@@ -515,12 +529,12 @@ func handleUploadPart(ctx context.Context, uploadId, oname string, bucket *s3mgo
 		return &S3Error{ ErrorCode: S3ErrInvalidArgument }
 	}
 
-	body, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		return &S3Error{ ErrorCode: S3ErrIncompleteBody }
+	sz := getBodySize(r)
+	if sz == 0 {
+		return &S3Error{ ErrorCode: S3ErrMissingContentLength, Message: "content-length header missing" }
 	}
 
-	etag, err = s3UploadPart(ctx, bucket, oname, uploadId, partno, body)
+	etag, err := s3UploadPart(ctx, bucket, oname, uploadId, partno, &ioChunkReader{sz: sz, r: r.Body})
 	if err != nil {
 		return &S3Error{ ErrorCode: S3ErrInvalidRequest, Message: err.Error() }
 	}
@@ -643,7 +657,7 @@ func handleCopyObject(ctx context.Context, copy_source, oname string, bucket *s3
 		return &S3Error{ ErrorCode: S3ErrInvalidRequest, Message: err.Error() }
 	}
 
-	object, err = AddObject(ctx, bucket, oname, canned_acl, body)
+	object, err = AddObject(ctx, bucket, oname, canned_acl, &ioChunkReader{sz: int64(len(body)), r: bytes.NewReader(body)})
 	if err != nil {
 		return &S3Error{ ErrorCode: S3ErrInvalidRequest, Message: err.Error() }
 	}
@@ -675,14 +689,21 @@ func handlePutObject(ctx context.Context, oname string, bucket *s3mgo.Bucket, w 
 		canned_acl = swys3api.S3BucketAclCannedPrivate
 	}
 
-	body, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		return &S3Error{ ErrorCode: S3ErrIncompleteBody }
+	sz := getBodySize(r)
+	if sz == 0 {
+		return &S3Error{ ErrorCode: S3ErrMissingContentLength, Message: "content-length header missing" }
 	}
 
-	o, err := AddObject(ctx, bucket, oname, canned_acl, body)
+	cr := &ioChunkReader{sz: sz, r: r.Body}
+
+	o, err := AddObject(ctx, bucket, oname, canned_acl, cr)
 	if err != nil {
 		return &S3Error{ ErrorCode: S3ErrInvalidRequest, Message: err.Error() }
+	}
+
+	if cr.read != sz {
+		s3DeleteObject(ctx, bucket, oname)
+		return &S3Error{ ErrorCode: S3ErrIncompleteBody, Message: "trimmed body" }
 	}
 
 	w.Header().Set("ETag", o.ETag)

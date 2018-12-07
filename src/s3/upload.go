@@ -244,7 +244,7 @@ func s3UploadInit(ctx context.Context, bucket *s3mgo.Bucket, oname, acl string) 
 }
 
 func s3UploadPart(ctx context.Context, bucket *s3mgo.Bucket, oname,
-			uid string, partno int, data []byte) (string, error) {
+			uid string, partno int, data chunkReader) (string, error) {
 	var objp *s3mgo.ObjectPart
 	var upload S3Upload
 	var err error

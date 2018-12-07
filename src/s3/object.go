@@ -160,7 +160,7 @@ out_remove:
 	return nil, err
 }
 func AddObject(ctx context.Context, bucket *s3mgo.Bucket, oname string,
-		acl string, data []byte) (*s3mgo.Object, error) {
+		acl string, data chunkReader) (*s3mgo.Object, error) {
 	var objp *s3mgo.ObjectPart
 	var err error
 
@@ -175,7 +175,7 @@ func AddObject(ctx context.Context, bucket *s3mgo.Bucket, oname string,
 		},
 
 		Version:	1,
-		Size:		int64(len(data)),
+		Size:		data.Size(),
 		BucketObjID:	bucket.ObjID,
 		OCookie:	bucket.OCookie(oname, 1),
 	}

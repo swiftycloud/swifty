@@ -123,7 +123,7 @@ func radosCreatePool(pool string, max_objects, max_bytes uint64) error {
 	return err
 }
 
-func radosWriteObject(pool, oname string, data []byte, offset uint64) (string, error) {
+func radosWriteObject(pool, oname string, data chunkReader, offset uint64) (string, error) {
 	var ioctx *rados.IOContext
 	var err error
 
@@ -137,16 +137,29 @@ func radosWriteObject(pool, oname string, data []byte, offset uint64) (string, e
 				pool, oname, err.Error())
 	}
 
-	err = ioctx.Write(oname, data, offset)
-	if err != nil {
-		log.Errorf("rados: Can't write object for pool %s object %s size %d offset %d: %s",
-				pool, oname, len(data), offset, err.Error())
-		ioctx.Destroy()
-		return "", err
+	for {
+		bts, err := data.Next(S3StorageSizePerObj)
+		if err != nil {
+			ioctx.Destroy()
+			return "", err
+		}
+
+		if bts == nil {
+			break
+		}
+
+		err = ioctx.Write(oname, bts, offset)
+		if err != nil {
+			log.Errorf("rados: Can't write object for pool %s object %s offset %d: %s",
+				pool, oname, offset, err.Error())
+			ioctx.Destroy()
+			return "", err
+		}
+
+		offset += uint64(len(bts))
 	}
 
-	log.Debugf("rados: Wrote pool %s object %s size %d",
-			pool, oname, len(data))
+	log.Debugf("rados: Wrote pool %s object %s", pool, oname)
 
 	ioctx.Destroy()
 	return "", nil /* FIXME -- md5sub */
