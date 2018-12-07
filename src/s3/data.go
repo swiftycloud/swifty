@@ -59,12 +59,14 @@ func s3IterChunks(ctx context.Context, part *s3mgo.ObjectPart, fn IterChunksFn) 
 	return nil
 }
 
-func s3WriteChunks(ctx context.Context, part *s3mgo.ObjectPart, data []byte) error {
+func s3WriteChunks(ctx context.Context, part *s3mgo.ObjectPart, data []byte) (string, error) {
 	var err error
 
 	if !radosDisabled && part.Size > S3StorageSizePerObj {
 		return radosWriteObject(part.BCookie, part.OCookie, data, 0)
 	}
+
+	hasher := md5.New()
 
 	dlen := int64(len(data))
 	for off := int64(0); off < dlen; off += S3StorageSizePerObj {
@@ -77,6 +79,8 @@ func s3WriteChunks(ctx context.Context, part *s3mgo.ObjectPart, data []byte) err
 			ObjID:	bson.NewObjectId(),
 			Bytes:	data[off:off+l],
 		}
+
+		hasher.Write(chunk.Bytes)
 
 		err = dbS3Insert(ctx, chunk)
 		if err != nil {
@@ -93,13 +97,13 @@ func s3WriteChunks(ctx context.Context, part *s3mgo.ObjectPart, data []byte) err
 		goto out
 	}
 
-	return nil
+	return fmt.Sprintf("%x", hasher.Sum(nil)), nil
 
 out:
 	if len(part.Chunks) != 0 {
 		s3DeleteChunks(ctx, part)
 	}
-	return err
+	return "", err
 }
 
 func s3DeleteChunks(ctx context.Context, part *s3mgo.ObjectPart) error {
@@ -247,6 +251,7 @@ func s3ObjectPartsIter(ctx context.Context, refID bson.ObjectId, fn IterPartsFn)
 func s3ObjectPartAdd(ctx context.Context, refid bson.ObjectId, bucket_bid, object_bid string, part int, data []byte) (*s3mgo.ObjectPart, error) {
 	var objp *s3mgo.ObjectPart
 	var err error
+	var csum string
 
 	objp = &s3mgo.ObjectPart {
 		ObjID:		bson.NewObjectId(),
@@ -257,7 +262,6 @@ func s3ObjectPartAdd(ctx context.Context, refid bson.ObjectId, bucket_bid, objec
 		OCookie:	object_bid,
 		Size:		int64(len(data)),
 		Part:		uint(part),
-		ETag:		fmt.Sprintf("%x", md5.Sum(data)),
 		CreationTime:	time.Now().Format(time.RFC3339),
 	}
 
@@ -265,12 +269,12 @@ func s3ObjectPartAdd(ctx context.Context, refid bson.ObjectId, bucket_bid, objec
 		goto out
 	}
 
-	err = s3WriteChunks(ctx, objp, data)
+	csum, err = s3WriteChunks(ctx, objp, data)
 	if err != nil {
 		goto out
 	}
 
-	if err = dbS3SetState(ctx, objp, S3StateActive, nil); err != nil {
+	if err = dbS3SetState2(ctx, objp, S3StateActive, bson.M{"etag": csum}); err != nil {
 		s3DeleteChunks(ctx, objp)
 		goto out
 	}
