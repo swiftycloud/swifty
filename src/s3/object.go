@@ -10,6 +10,7 @@ import (
 	"gopkg.in/mgo.v2/bson"
 	"context"
 	"time"
+	"bytes"
 
 	"swifty/apis/s3"
 	"swifty/s3/mgo"
@@ -158,6 +159,16 @@ out_acc:
 out_remove:
 	dbS3Remove(ctx, object)
 	return nil, err
+}
+
+func CopyObject(ctx context.Context, bucket *s3mgo.Bucket, oname string,
+		acl string, bucket_source *s3mgo.Bucket, oname_source string) (*s3mgo.Object, error) {
+	body, err := ReadObject(ctx, bucket_source, oname_source, 0, 1)
+	if err != nil {
+		return nil, err
+	}
+
+	return AddObject(ctx, bucket, oname, acl, &ChunkReader{size: int64(len(body)), r: bytes.NewReader(body)})
 }
 
 func AddObject(ctx context.Context, bucket *s3mgo.Bucket, oname string,

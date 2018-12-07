@@ -16,7 +16,6 @@ import (
 	"net/http"
 	"net/url"
 	"context"
-	"bytes"
 	"strings"
 	"strconv"
 	"errors"
@@ -652,12 +651,7 @@ func handleCopyObject(ctx context.Context, copy_source, oname string, bucket *s3
 		return &S3Error{ ErrorCode: S3ErrInvalidBucketName }
 	}
 
-	body, err := ReadObject(ctx, bucket_source, oname_source, 0, 1)
-	if err != nil {
-		return &S3Error{ ErrorCode: S3ErrInvalidRequest, Message: err.Error() }
-	}
-
-	object, err = AddObject(ctx, bucket, oname, canned_acl, &ChunkReader{size: int64(len(body)), r: bytes.NewReader(body)})
+	object, err = CopyObject(ctx, bucket, oname, canned_acl, bucket_source, oname_source)
 	if err != nil {
 		return &S3Error{ ErrorCode: S3ErrInvalidRequest, Message: err.Error() }
 	}
