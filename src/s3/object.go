@@ -340,7 +340,7 @@ func ObjectIterChunks(ctx context.Context, bucket *s3mgo.Bucket, oname string,
 	}
 
 	err = s3ObjectPartsIter(ctx, object.ObjID, func(p *s3mgo.ObjectPart) error {
-		return s3IterChunks(ctx, p, fn)
+		return IterChunks(ctx, p, fn)
 	})
 
 	if err != nil {

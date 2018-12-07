@@ -17,7 +17,7 @@ import (
 	"swifty/s3/mgo"
 )
 
-func s3ReadChunks(ctx context.Context, part *s3mgo.ObjectPart) ([]byte, error) {
+func ReadChunks(ctx context.Context, part *s3mgo.ObjectPart) ([]byte, error) {
 	var res []byte
 
 	if len(part.Chunks) == 0 {
@@ -38,7 +38,7 @@ func s3ReadChunks(ctx context.Context, part *s3mgo.ObjectPart) ([]byte, error) {
 	return res, nil
 }
 
-func s3IterChunks(ctx context.Context, part *s3mgo.ObjectPart, fn IterChunksFn) error {
+func IterChunks(ctx context.Context, part *s3mgo.ObjectPart, fn IterChunksFn) error {
 	if len(part.Chunks) == 0 {
 		return errors.New("Rados cannot iter chunks yet")
 	}
@@ -85,7 +85,7 @@ func (cr *ChunkReader)Next(max int64) ([]byte, error) {
 	return nil, err
 }
 
-func s3WriteChunks(ctx context.Context, part *s3mgo.ObjectPart, data *ChunkReader) (string, error) {
+func WriteChunks(ctx context.Context, part *s3mgo.ObjectPart, data *ChunkReader) (string, error) {
 	var err error
 
 	if !radosDisabled && part.Size > S3StorageSizePerObj {
@@ -129,12 +129,12 @@ func s3WriteChunks(ctx context.Context, part *s3mgo.ObjectPart, data *ChunkReade
 
 out:
 	if len(part.Chunks) != 0 {
-		s3DeleteChunks(ctx, part)
+		DeleteChunks(ctx, part)
 	}
 	return "", err
 }
 
-func s3DeleteChunks(ctx context.Context, part *s3mgo.ObjectPart) error {
+func DeleteChunks(ctx context.Context, part *s3mgo.ObjectPart) error {
 	var err error
 
 	if len(part.Chunks) == 0 {
@@ -216,7 +216,7 @@ func s3RepairObjectData(ctx context.Context) error {
 
 		}
 
-		s3DeleteChunks(ctx, &objp)
+		DeleteChunks(ctx, &objp)
 
 		err = dbS3Remove(ctx, &objp)
 		if err != nil {
@@ -298,13 +298,13 @@ func s3ObjectPartAdd(ctx context.Context, refid bson.ObjectId, bucket_bid, objec
 		goto out
 	}
 
-	csum, err = s3WriteChunks(ctx, objp, data)
+	csum, err = WriteChunks(ctx, objp, data)
 	if err != nil {
 		goto out
 	}
 
 	if err = dbS3SetState2(ctx, objp, S3StateActive, bson.M{"etag": csum}); err != nil {
-		s3DeleteChunks(ctx, objp)
+		DeleteChunks(ctx, objp)
 		goto out
 	}
 
@@ -335,7 +335,7 @@ func s3ObjectPartDelOne(ctx context.Context, bucket *s3mgo.Bucket, ocookie strin
 		return err
 	}
 
-	err = s3DeleteChunks(ctx, objp)
+	err = DeleteChunks(ctx, objp)
 	if err != nil {
 		return err
 	}
@@ -352,7 +352,7 @@ func s3ObjectPartRead(ctx context.Context, bucket *s3mgo.Bucket, ocookie string,
 	var res []byte
 
 	for _, od := range objp {
-		x, err := s3ReadChunks(ctx, od)
+		x, err := ReadChunks(ctx, od)
 		if err != nil {
 			return nil, err
 		}

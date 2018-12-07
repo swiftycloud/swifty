@@ -595,7 +595,7 @@ func handleGetObject(ctx context.Context, oname string, bucket *s3mgo.Bucket, w 
 	var downloaded int64
 
 	err = s3ObjectPartsIter(ctx, object.ObjID, func(p *s3mgo.ObjectPart) error {
-		return s3IterChunks(ctx, p, func(ch *s3mgo.DataChunk) error {
+		return IterChunks(ctx, p, func(ch *s3mgo.DataChunk) error {
 			w.Write(ch.Bytes)
 			downloaded += int64(len(ch.Bytes))
 			return nil
