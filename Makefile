@@ -56,6 +56,7 @@ go-trace-y	+= src/tools/tracer.go
 go-s3fsck-y	+= src/tools/s3-fsck.go
 go-sg-y		+= src/tools/sg.go
 go-dbscr-y	+= src/tools/scraper.go
+go-dbscr-s3-y	+= src/tools/scraper-s3.go
 go-runtest-y	+= src/tools/runner-tester.go
 
 #$(eval $(call gen-gobuild,pgrest))
@@ -126,7 +127,7 @@ endef
 
 SRVCS = gate admd s3
 LANGS = python golang swift ruby nodejs csharp
-TOOLS = ctl trace s3fsck sg dbscr runtest
+TOOLS = ctl trace s3fsck sg dbscr dbscr-s3 runtest
 
 # Each service has its swifty/$name docker image
 $(foreach s,$(SRVCS),$(eval $(call gen-gobuild-daemon,$s)))
@@ -181,6 +182,7 @@ help:
 	@echo '      swys3fsck       - Build s3 databaase integrity checker'
 	@echo '      swysg           - Build secrets generator cli'
 	@echo '      swydbscr        - Build DB scraper tool'
+	@echo '      swydbscr-s3     - Build S3 DB scraper tool'
 	@echo '      swyruntest      - Build runner tester tool'
 	@echo '    Languages ($(LANGS)):'
 	@echo '      swifty/$$LANG    - Build $$LANG docker image'

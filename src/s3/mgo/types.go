@@ -7,6 +7,7 @@ package s3mgo
 
 import (
 	"gopkg.in/mgo.v2/bson"
+	"time"
 )
 
 type Account struct {
@@ -33,6 +34,7 @@ type AcctStats struct {
 
 	OutBytesTotOff			int64		`bson:"out-bytes-tot-off"`
 
+	Till				*time.Time	`bson:"till,omitempty"`
 	Lim				*AcctLimits	`bson:"limits,omitempty"`
 }
 
