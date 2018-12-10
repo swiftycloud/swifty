@@ -91,6 +91,25 @@ func AddTimeSysctl(name string, d *time.Duration) {
 	}
 }
 
+func AddInt64Sysctl(name string, i *int64) {
+	sysctls[name] = &Sysctl{
+		Name: name,
+		Get: func() string { return strconv.FormatInt(*i, 10) },
+		Set: func(v string) error {
+			ni, er := strconv.ParseInt(v, 10, 64)
+			if er != nil {
+				return er
+			}
+			if ni < 0 {
+				return errors.New("Negative value not allowed")
+			}
+
+			*i = ni
+			return nil
+		},
+	}
+}
+
 func AddIntSysctl(name string, i *int) {
 	sysctls[name] = &Sysctl{
 		Name: name,
