@@ -138,7 +138,7 @@ func radosWriteObject(pool, oname string, data *ChunkReader, offset uint64) (str
 	}
 
 	for {
-		bts, err := data.Next(S3StorageSizePerObj)
+		bts, err := data.Next(S3MaxChunkSize)
 		if err != nil {
 			ioctx.Destroy()
 			return "", err

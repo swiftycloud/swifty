@@ -34,6 +34,14 @@ type AcctStats struct {
 
 	OutBytesTotOff			int64		`bson:"out-bytes-tot-off"`
 
+	/* Ach stuff */
+	/*
+	 * Dirty -- it's the ID of the original stats object on which we
+	 * need to update offsets for increasing counters. Set on archive
+	 * at creation, and is cleaned once the offsets are update in
+	 * the original stats. See scraper code for details.
+	 */
+	Dirty				*bson.ObjectId	`bson:"dirty,omitempty"`
 	Till				*time.Time	`bson:"till,omitempty"`
 	Lim				*AcctLimits	`bson:"limits,omitempty"`
 }

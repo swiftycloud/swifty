@@ -96,14 +96,14 @@ func (cr *ChunkReader)Next(max int64) ([]byte, error) {
 func WriteChunks(ctx context.Context, part *s3mgo.ObjectPart, data *ChunkReader) (string, error) {
 	var err error
 
-	if !radosDisabled && part.Size > S3StorageSizePerObj {
+	if !radosDisabled && part.Size > S3MaxChunkSize {
 		return radosWriteObject(part.BCookie, part.OCookie, data, 0)
 	}
 
 	hasher := md5.New()
 
 	for {
-		chd, err := data.Next(S3StorageSizePerObj)
+		chd, err := data.Next(S3MaxChunkSize)
 		if err != nil {
 			goto out
 		}
@@ -145,7 +145,7 @@ out:
 func CopyChunks(ctx context.Context, part *s3mgo.ObjectPart, source *s3mgo.ObjectPart) error {
 	var err error
 
-	if !radosDisabled && part.Size > S3StorageSizePerObj {
+	if !radosDisabled && part.Size > S3MaxChunkSize {
 		return errors.New("Raos doesn't copy chunks")
 	}
 

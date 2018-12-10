@@ -6,23 +6,15 @@
 package main
 
 import (
+	"os"
 	"log"
 	"flag"
 	"time"
-	"strings"
-	"strconv"
-	"net/http"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 	"swifty/common"
-	"swifty/apis"
 	"swifty/s3/mgo"
-)
-
-const (
-	DBName		= "swifty-s3"
-	ColS3Stats	= "S3Stats"
-	ColS3StatsArch	= "S3StatsA"
+	"swifty/scrapers"
 )
 
 type YAMLConfSA struct {
@@ -43,41 +35,6 @@ var conf YAMLConf
 
 var created map[string]*time.Time
 
-func nextPeriod(since *time.Time, period string) time.Time {
-	/* Common sane types */
-	switch period {
-	case "hourly":
-		return since.Add(time.Hour)
-	case "daily":
-		return since.AddDate(0, 0, 1)
-	case "weekly":
-		return since.AddDate(0, 0, 7)
-	case "monthly":
-		return since.AddDate(0, 1, 0)
-	}
-
-	/* For debugging mostly */
-	var mult time.Duration
-	var dur string
-	if strings.HasSuffix(period, "s") {
-		dur = strings.TrimSuffix(period, "s")
-		mult = time.Second
-	} else if strings.HasSuffix(period, "m") {
-		dur = strings.TrimSuffix(period, "s")
-		mult = time.Minute
-	}
-
-	if mult != 0 {
-		i, err := strconv.Atoi(dur)
-		if err != nil {
-			goto out
-		}
-		return since.Add(time.Duration(i) * mult)
-	}
-out:
-	panic("Bad period value: " + period)
-}
-
 func s3NamespaceId(tenant string) string {
 	/* See gate's S3Namespace and s3's acct.NamespaceID */
 	s3ns := xh.Cookify(tenant + "/default")
@@ -90,29 +47,14 @@ func timePassed(since *time.Time, now time.Time, period string) bool {
 		return false
 	}
 
-	return nextPeriod(since, period).Before(now)
+	return dbscr.NextPeriod(since, period).Before(now)
 }
 
 func getByUserCreationTime(nsid string) (*time.Time, error) {
 	if created == nil {
-		cln := swyapi.MakeClient(conf.admd.User, conf.admd.Pass, conf.admd.Host, conf.admd.Port)
-		cln.Admd("", conf.admd.Port)
-		cln.ToAdmd(true)
-		if conf.admd.Domn == "direct" {
-			cln.NoTLS()
-			cln.Direct()
-		}
-
-		err := cln.Login()
+		ifs, err := dbscr.GetTenants(conf.admd)
 		if err != nil {
-			log.Printf("  cannot login to admd: %s\n", err.Error())
-			return nil, err
-		}
-
-		var ifs []*swyapi.UserInfo
-		err = cln.Req1("GET", "users", http.StatusOK, nil, &ifs)
-		if err != nil {
-			log.Printf("  error getting users: %s\n", err.Error())
+			log.Printf("Cannot get tenants: %s\n", err.Error())
 			return nil, err
 		}
 
@@ -136,13 +78,16 @@ func getByUserCreationTime(nsid string) (*time.Time, error) {
 	return created[nsid], nil
 }
 
-func getLastStats(arch *mgo.Collection, nsid string) *time.Time {
+func getLastStats(curr *mgo.Collection, arch *mgo.Collection, nsid string) *time.Time {
 	var ast s3mgo.AcctStats
 	var last *time.Time
 
 	err := arch.Find(bson.M{"nsid": nsid}).Sort("-till").Limit(1).One(&ast)
 	if err == nil {
 		last = ast.Till
+		if ast.Dirty != nil {
+			updateStatsAfterArch(curr, arch, &ast)
+		}
 	} else if err == mgo.ErrNotFound {
 		log.Printf("\t\tNo archive - requesting creation time\n")
 		ct, err := getByUserCreationTime(nsid)
@@ -160,19 +105,30 @@ func getLastStats(arch *mgo.Collection, nsid string) *time.Time {
 	return last
 }
 
+func updateStatsAfterArch(curr *mgo.Collection, arch *mgo.Collection, st *s3mgo.AcctStats) {
+	upd := bson.M{"out-bytes-tot-off": st.OutBytes + st.OutBytesWeb}
+	err := curr.Update(bson.M{"_id": *st.Dirty}, bson.M{"$set": upd})
+	if err != nil {
+		log.Printf("\t\tERR: error updating orig stats: %s\n", err.Error())
+		return
+	}
+
+	arch.Update(bson.M{"_id": st.ObjID}, bson.M{"$unset": bson.M{"dirty": ""}})
+}
+
 func doArchPass(now time.Time, s *mgo.Session) {
 	defer s.Close()
 	defer func() { created = nil } ()
 
-	curr := s.DB(DBName).C(ColS3Stats)
-	arch := s.DB(DBName).C(ColS3StatsArch)
+	curr := s.DB(s3mgo.DBName).C(s3mgo.DBColS3Stats)
+	arch := s.DB(s3mgo.DBName).C(s3mgo.DBColS3StatsArch)
 
 	var st s3mgo.AcctStats
 
 	iter := curr.Find(nil).Iter()
 	for iter.Next(&st) {
 		log.Printf("\tFound stats for %s, checking archive\n", st.NamespaceID)
-		last := getLastStats(arch, st.NamespaceID)
+		last := getLastStats(curr, arch, st.NamespaceID)
 		if last == nil {
 			continue
 		}
@@ -188,16 +144,13 @@ func doArchPass(now time.Time, s *mgo.Session) {
 		st.ObjID = bson.NewObjectId()
 		st.Till = &now
 		st.Lim = nil
+		st.Dirty = &oid
 		err := arch.Insert(&st)
 		if err != nil {
 			log.Printf("\t\tERR: error archiving: %s\n", err.Error())
 		}
 
-		upd := bson.M{"out-bytes-tot-off": st.OutBytes + st.OutBytesWeb}
-		err = curr.Update(bson.M{"_id": oid}, bson.M{"$set": upd})
-		if err != nil {
-			log.Printf("\t\tERR: error updating orig stats: %s\n", err.Error())
-		}
+		updateStatsAfterArch(curr, arch, &st)
 	}
 
 	err := iter.Close()
@@ -225,12 +178,20 @@ func main() {
 
 	conf.gateDB = xh.ParseXCreds(conf.GateDB)
 	conf.gateDB.Resolve()
+	p := os.Getenv("SCRDBPASS")
+	if p != "" {
+		conf.gateDB.Pass = p
+	}
 
 	conf.admd = xh.ParseXCreds(conf.Admd)
+	p = os.Getenv("SCRADPASS")
+	if p != "" {
+		conf.admd.Pass = p
+	}
 
 	info := mgo.DialInfo{
 		Addrs:		[]string{conf.gateDB.Addr()},
-		Database:	DBName,
+		Database:	s3mgo.DBName,
 		Timeout:	60 * time.Second,
 		Username:	conf.gateDB.User,
 		Password:	conf.gateDB.Pass,
@@ -257,7 +218,7 @@ func main() {
 
 				done <-true
 
-				slp := nextPeriod(&now, conf.SA.Check).Sub(now)
+				slp := dbscr.NextPeriod(&now, conf.SA.Check).Sub(now)
 				<-time.After(slp)
 			}
 		}()

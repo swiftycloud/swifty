@@ -20,6 +20,7 @@ import (
 	"io"
 
 	"swifty/apis"
+	"swifty/gate/mgo"
 	"swifty/common"
 	"swifty/common/http"
 	"swifty/common/xrest"
@@ -382,7 +383,7 @@ func handleFunctionsTree(ctx context.Context, w http.ResponseWriter, r *http.Req
 	}
 	leafs := (q.Get("leafs") != "")
 
-	iter := dbCol(ctx, DBColFunc).Find(listReq(ctx, project, []string{})).Select(bson.M{"name": 1}).Iter()
+	iter := dbCol(ctx, gmgo.DBColFunc).Find(listReq(ctx, project, []string{})).Select(bson.M{"name": 1}).Iter()
 	root := FName{Name: "/", Kids: []*FName{}}
 
 	var fn FName

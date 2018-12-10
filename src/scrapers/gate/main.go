@@ -9,21 +9,15 @@ import (
 	"log"
 	"flag"
 	"time"
-	"strings"
-	"strconv"
-	"net/http"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 	"swifty/common"
 	"swifty/apis"
 	"swifty/gate/mgo"
+	"swifty/scrapers"
 )
 
 const (
-	DBName		= "swifty"
-	ColTenStats	= "TenantStats"
-	ColTenStatsA	= "TenantStatsArch"
-	ColLogs		= "Logs"
 	LogsCleanPeriod = 30 * 60 * time.Second
 )
 
@@ -56,69 +50,19 @@ var conf YAMLConf
 
 var uis map[string]*swyapi.UserInfo
 
-func nextPeriod(since *time.Time, period string) time.Time {
-	/* Common sane types */
-	switch period {
-	case "hourly":
-		return since.Add(time.Hour)
-	case "daily":
-		return since.AddDate(0, 0, 1)
-	case "weekly":
-		return since.AddDate(0, 0, 7)
-	case "monthly":
-		return since.AddDate(0, 1, 0)
-	}
-
-	/* For debugging mostly */
-	var mult time.Duration
-	var dur string
-	if strings.HasSuffix(period, "s") {
-		dur = strings.TrimSuffix(period, "s")
-		mult = time.Second
-	} else if strings.HasSuffix(period, "m") {
-		dur = strings.TrimSuffix(period, "s")
-		mult = time.Minute
-	}
-
-	if mult != 0 {
-		i, err := strconv.Atoi(dur)
-		if err != nil {
-			goto out
-		}
-		return since.Add(time.Duration(i) * mult)
-	}
-out:
-	panic("Bad period value: " + period)
-}
-
 func timePassed(since *time.Time, now time.Time, period string) bool {
 	if now.Before(*since) {
 		return false
 	}
 
-	return nextPeriod(since, period).Before(now)
+	return dbscr.NextPeriod(since, period).Before(now)
 }
 
 func getUserInfo(ten string) (*swyapi.UserInfo, error) {
 	if uis == nil {
-		cln := swyapi.MakeClient(conf.admd.User, conf.admd.Pass, conf.admd.Host, conf.admd.Port)
-		cln.Admd("", conf.admd.Port)
-		cln.ToAdmd(true)
-		if conf.admd.Domn == "direct" {
-			cln.NoTLS()
-			cln.Direct()
-		}
-
-		err := cln.Login()
+		ifs, err := dbscr.GetTenants(conf.admd)
 		if err != nil {
-			log.Printf("  cannot login to admd: %s\n", err.Error())
-			return nil, err
-		}
-
-		var ifs []*swyapi.UserInfo
-		err = cln.Req1("GET", "users", http.StatusOK, nil, &ifs)
-		if err != nil {
-			log.Printf("  error getting users: %s\n", err.Error())
+			log.Printf("Cannot get tenants: %s\n", err.Error())
 			return nil, err
 		}
 
@@ -172,8 +116,8 @@ func doArchPass(now time.Time, s *mgo.Session) {
 	defer s.Close()
 	defer func() { uis = nil } ()
 
-	curr := s.DB(DBName).C(ColTenStats)
-	arch := s.DB(DBName).C(ColTenStatsA)
+	curr := s.DB(gmgo.DBStateDB).C(gmgo.DBColTenStats)
+	arch := s.DB(gmgo.DBStateDB).C(gmgo.DBColTenStatsA)
 
 	var st TenStats
 	iter := curr.Find(nil).Iter()
@@ -223,12 +167,20 @@ func main() {
 
 	conf.gateDB = xh.ParseXCreds(conf.GateDB)
 	conf.gateDB.Resolve()
+	p := os.Getenv("SCRDBPASS")
+	if p != "" {
+		conf.gateDB.Pass = p
+	}
 
 	conf.admd = xh.ParseXCreds(conf.Admd)
+	p = os.Getenv("SCRADPASS")
+	if p != "" {
+		conf.admd.Pass = p
+	}
 
 	info := mgo.DialInfo{
 		Addrs:		[]string{conf.gateDB.Addr()},
-		Database:	DBName,
+		Database:	gmgo.DBStateDB,
 		Timeout:	60 * time.Second,
 		Username:	conf.gateDB.User,
 		Password:	conf.gateDB.Pass,
@@ -250,7 +202,7 @@ func main() {
 
 				log.Printf("Cleaner logs ...\n", conf.Logs.Keep)
 				s := session.Copy()
-				logs := s.DB(DBName).C(ColLogs)
+				logs := s.DB(gmgo.DBStateDB).C(gmgo.DBColLogs)
 				dur := time.Now().AddDate(0, 0, -conf.Logs.Keep)
 				logs.RemoveAll(bson.M{"ts": bson.M{"$lt": dur }})
 				log.Printf("`- ... cleaned < %s\n", dur.String())
@@ -276,7 +228,7 @@ func main() {
 
 				done <-true
 
-				slp := nextPeriod(&now, conf.SA.Check).Sub(now)
+				slp := dbscr.NextPeriod(&now, conf.SA.Check).Sub(now)
 				<-time.After(slp)
 			}
 		}()
