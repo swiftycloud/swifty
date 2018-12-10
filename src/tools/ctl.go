@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"strings"
 	"strconv"
+	"errors"
 	"regexp"
 	"time"
 	"flag"
@@ -63,15 +64,20 @@ func user_list(args []string, opts [16]string) {
 	var uss []swyapi.UserInfo
 	swyclient.List("users", http.StatusOK, &uss)
 
-	for _, u := range uss {
-		en := ""
-		if u.Created != "" {
-			en += " since " + u.Created
+	switch opts[0] {
+	case "":
+		for _, u := range uss {
+			en := ""
+			if u.Created != "" {
+				en += " since " + u.Created
+			}
+			if !u.Enabled {
+				en += " [X]"
+			}
+			fmt.Printf("%s: %s (%s)%s\n", u.ID, u.UId, u.Name, en)
 		}
-		if !u.Enabled {
-			en += " [X]"
-		}
-		fmt.Printf("%s: %s (%s)%s\n", u.ID, u.UId, u.Name, en)
+	default:
+		fatal(errors.New("bad format"))
 	}
 }
 
@@ -2244,6 +2250,7 @@ func main() {
 	setupCommonCmd(CMD_PKS)
 
 	setupCommonCmd(CMD_UL)
+	cmdMap[CMD_UA].opts.StringVar(&opts[0], "f", "", "Format (csv)")
 	setupCommonCmd(CMD_UA, "UID")
 	cmdMap[CMD_UA].opts.StringVar(&opts[0], "name", "", "User name")
 	cmdMap[CMD_UA].opts.StringVar(&opts[1], "pass", "", "User password")
