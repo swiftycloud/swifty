@@ -9,6 +9,10 @@ import (
 	"time"
 	"strings"
 	"strconv"
+	"swifty/common"
+	"swifty/apis"
+	"fmt"
+	"net/http"
 )
 
 func NextPeriod(since *time.Time, period string) time.Time {
@@ -46,3 +50,25 @@ out:
 	panic("Bad period value: " + period)
 }
 
+func GetTenants(admd *xh.XCreds) ([]*swyapi.UserInfo, error) {
+	cln := swyapi.MakeClient(admd.User, admd.Pass, admd.Host, admd.Port)
+	cln.Admd("", admd.Port)
+	cln.ToAdmd(true)
+	if admd.Domn == "direct" {
+		cln.NoTLS()
+		cln.Direct()
+	}
+
+	err := cln.Login()
+	if err != nil {
+		return nil, fmt.Errorf("cannot loging to admd: %s", err.Error())
+	}
+
+	var ifs []*swyapi.UserInfo
+	err = cln.Req1("GET", "users", http.StatusOK, nil, &ifs)
+	if err != nil {
+		return nil, fmt.Errorf("error getting users: %s", err.Error())
+	}
+
+	return ifs, nil
+}

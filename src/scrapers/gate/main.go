@@ -9,7 +9,6 @@ import (
 	"log"
 	"flag"
 	"time"
-	"net/http"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 	"swifty/common"
@@ -61,24 +60,9 @@ func timePassed(since *time.Time, now time.Time, period string) bool {
 
 func getUserInfo(ten string) (*swyapi.UserInfo, error) {
 	if uis == nil {
-		cln := swyapi.MakeClient(conf.admd.User, conf.admd.Pass, conf.admd.Host, conf.admd.Port)
-		cln.Admd("", conf.admd.Port)
-		cln.ToAdmd(true)
-		if conf.admd.Domn == "direct" {
-			cln.NoTLS()
-			cln.Direct()
-		}
-
-		err := cln.Login()
+		ifs, err := dbscr.GetTenants(conf.admd)
 		if err != nil {
-			log.Printf("  cannot login to admd: %s\n", err.Error())
-			return nil, err
-		}
-
-		var ifs []*swyapi.UserInfo
-		err = cln.Req1("GET", "users", http.StatusOK, nil, &ifs)
-		if err != nil {
-			log.Printf("  error getting users: %s\n", err.Error())
+			log.Printf("Cannot get tenants: %s\n", err.Error())
 			return nil, err
 		}
 
