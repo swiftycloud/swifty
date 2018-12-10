@@ -14,11 +14,9 @@ import (
 	"net/http"
 	"context"
 	"strings"
-	"strconv"
 	"errors"
 	"time"
 	"flag"
-	"math"
 	"fmt"
 	"os"
 
@@ -199,58 +197,6 @@ func logRequest(r *http.Request) {
 	request = append(request, "---")
 
 	log.Debug(strings.Join(request, "\n"))
-}
-
-func getBodySize(r *http.Request) int64 {
-	cl := r.Header.Get("Content-Length")
-	if cl == "" {
-		return 0
-	}
-
-	sz, err := strconv.ParseUint(cl, 10, 64)
-	if err != nil {
-		return 0
-	}
-
-	return int64(sz)
-}
-
-func parseRange(rng string) (int64, int64, error) {
-	if !strings.HasPrefix(rng, "bytes=") {
-		return 0, 0, errors.New("Only bytes range supported")
-	}
-
-	rng = strings.TrimPrefix(rng, "bytes=")
-	rgs := strings.Split(rng, ",")
-	if len(rgs) != 1 {
-		return 0, 0, errors.New("Only one range supported")
-	}
-
-	rg := strings.Split(strings.TrimSpace(rgs[0]), "-")
-	if len(rg) != 2 {
-		return 0, 0, errors.New("Bad range")
-	}
-
-	from, err := strconv.ParseInt(rg[0], 10, 64)
-	if err != nil {
-		return 0, 0, err
-	}
-
-	var to int64
-	if rg[1] == "" {
-		to = math.MaxInt64 - 1
-	} else {
-		to, err = strconv.ParseInt(rg[1], 10, 64)
-		if err != nil {
-			return 0, 0, err
-		}
-	}
-
-	if to < from || to < 0 || from < 0 {
-		return 0, 0, errors.New("Negative range")
-	}
-
-	return from, to + 1, nil
 }
 
 func s3AuthorizeGetKey(ctx context.Context, r *http.Request) (*s3mgo.AccessKey, int, error) {

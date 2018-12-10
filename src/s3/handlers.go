@@ -20,6 +20,7 @@ import (
 
 	"swifty/s3/mgo"
 	"swifty/apis/s3"
+	"swifty/common/http"
 )
 
 func handleBucketCloudWatch(ctx context.Context, w http.ResponseWriter, r *http.Request) *S3Error {
@@ -333,7 +334,7 @@ func handleUploadPart(ctx context.Context, uploadId, oname string, bucket *s3mgo
 		return &S3Error{ ErrorCode: S3ErrInvalidArgument }
 	}
 
-	sz := getBodySize(r)
+	sz := xhttp.BodySize(r)
 	if sz == 0 {
 		return &S3Error{ ErrorCode: S3ErrMissingContentLength, Message: "content-length header missing" }
 	}
@@ -373,7 +374,7 @@ func handleGetObject(ctx context.Context, oname string, bucket *s3mgo.Bucket, w 
 	rng := r.Header.Get("Range")
 	if rng != "" {
 		var err error
-		from, to, err = parseRange(rng)
+		from, to, err = xhttp.ParseRange(rng)
 		if err != nil {
 			return &S3Error{ ErrorCode: S3ErrInvalidRange, Message: err.Error() }
 		}
@@ -543,7 +544,7 @@ func handlePutObject(ctx context.Context, oname string, bucket *s3mgo.Bucket, w 
 		canned_acl = swys3api.S3BucketAclCannedPrivate
 	}
 
-	sz := getBodySize(r)
+	sz := xhttp.BodySize(r)
 	if sz == 0 {
 		return &S3Error{ ErrorCode: S3ErrMissingContentLength, Message: "content-length header missing" }
 	}
