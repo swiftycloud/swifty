@@ -137,6 +137,24 @@ func user_enabled(args []string, opts [16]string) {
 	swyclient.Mod("users/" + args[0], http.StatusOK, &swyapi.ModUser{Enabled: &enabled})
 }
 
+func user_creds_list(args []string, opts [16]string) {
+	var cs []swyapi.Creds
+	swyclient.Get("users/" + args[0] + "/creds", http.StatusOK, &cs)
+	for _, c := range cs {
+		fmt.Printf("%30s: %s\n", c.ID, c.Name)
+	}
+}
+
+func user_creds_add(args []string, opts [16]string) {
+	var cs swyapi.Creds
+	swyclient.Add("users/" + args[0] + "/creds", http.StatusOK, &swyapi.Creds{Name: args[1]}, &cs)
+	fmt.Printf("Created %s creds, secret: %s SAVE IT, IT WILL NOT BE SHOWN ANY MORE)\n", cs.ID, cs.Secret)
+}
+
+func user_creds_del(args []string, opts [16]string) {
+	swyclient.Del("users/" + args[0] + "/creds/" + args[1], http.StatusOK)
+}
+
 func user_pass(args []string, opts [16]string) {
 	rq := &swyapi.ChangePass{}
 	rq.Password = opts[0]
@@ -1917,6 +1935,9 @@ const (
 	CMD_UPASS string	= "upass"
 	CMD_ULIM string		= "ulim"
 	CMD_UEN string		= "uen"
+	CMD_UCL string		= "ucl"
+	CMD_UCA string		= "uca"
+	CMD_UCD string		= "ucd"
 
 	CMD_TL string		= "tl"
 	CMD_TA string		= "ta"
@@ -2003,6 +2024,9 @@ var cmdOrder = []string {
 	CMD_UPASS,
 	CMD_ULIM,
 	CMD_UEN,
+	CMD_UCL,
+	CMD_UCA,
+	CMD_UCD,
 
 	CMD_TL,
 	CMD_TA,
@@ -2109,6 +2133,10 @@ var cmdMap = map[string]*cmdDesc {
 	CMD_UPASS:	&cmdDesc{ help: "Change password",	call: user_pass,	adm: true },
 	CMD_UEN:	&cmdDesc{ help: "Enable/disable user",	call: user_enabled,	adm: true },
 	CMD_ULIM:	&cmdDesc{ help: "Configure user limits",call: user_limits,	adm: true },
+
+	CMD_UCL:	&cmdDesc{ help: "List user creds",	call: user_creds_list,	adm: true },
+	CMD_UCA:	&cmdDesc{ help: "Add user creds",	call: user_creds_add,	adm: true },
+	CMD_UCD:	&cmdDesc{ help: "Del user creds",	call: user_creds_del,	adm: true },
 
 	CMD_TL:		&cmdDesc{ help: "List plans",		call: tplan_list,	adm: true },
 	CMD_TA:		&cmdDesc{ help: "Add plan",		call: tplan_add,	adm: true },
@@ -2292,6 +2320,10 @@ func main() {
 	cmdMap[CMD_ULIM].opts.StringVar(&opts[4], "bo", "", "Maximum outgoing network bytes")
 	cmdMap[CMD_ULIM].opts.StringVar(&opts[5], "pkgs", "", "Disk size for packages")
 	cmdMap[CMD_ULIM].opts.StringVar(&opts[6], "reps", "", "Maximum number of repos")
+
+	setupCommonCmd(CMD_UCL, "UID")
+	setupCommonCmd(CMD_UCA, "UID", "NAME")
+	setupCommonCmd(CMD_UCD, "UID", "ID")
 
 	setupCommonCmd(CMD_TL)
 	setupCommonCmd(CMD_TA, "NAME", "FILE")

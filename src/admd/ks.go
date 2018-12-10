@@ -141,7 +141,7 @@ func ksAddUserAndProject(c *xh.XCreds, user *swyapi.AddUser) (string, error, int
 				Name: user.UId,
 				DomainId: ksSwyDomainId,
 			},
-		}, &presp)
+		}, &presp, nil)
 
 	if err != nil {
 		return "", fmt.Errorf("Can't add KS project: %s", err.Error()), code
@@ -373,6 +373,84 @@ func ksDelUserAndProject(c *xh.XCreds, kuid, kproj string) error {
 	}
 
 	return nil
+}
+
+func ksCreateCreds(c *xh.XCreds, uid string, params *swyapi.Creds, r *http.Request) error {
+	ksc := xkst.KeystoneAppCreds {
+		Ac: xkst.KeystoneApplictionCredentials {
+			Name: params.Name,
+		},
+	}
+
+	err, code := ksClient.MakeReq2(
+		&xkst.KeystoneReq {
+			Type:	"POST",
+			URL:	"users/" + uid + "/application_credentials",
+			Succ:	http.StatusCreated,
+			CToken:	r.Header.Get("X-Auth-Token"), /* Users crete creds only for self */
+		}, &ksc, &ksc, func(m string) { log.Debugf("KS: %s", m) })
+	if err != nil {
+		log.Debugf("Cannot create creds for %s: %d", uid, code)
+		return err
+	}
+
+	params.ID = ksc.Ac.Id
+	params.Secret = ksc.Ac.Secret
+	return nil
+}
+
+func ksListCreds(c *xh.XCreds, uid string) ([]*swyapi.Creds, error) {
+	var creds xkst.KeystoneAppCredsList
+
+	err, code := ksClient.MakeReq2(
+		&xkst.KeystoneReq {
+			Type:	"GET",
+			URL:	"users/" + uid + "/application_credentials",
+			Succ:	http.StatusOK, }, nil, &creds, nil)
+	if err != nil {
+		log.Errorf("List creds for %s failed: %d", uid, code)
+		return nil, err
+	}
+
+	var ret []*swyapi.Creds
+	for _, ksc := range creds.Acs {
+		ret = append(ret, &swyapi.Creds {
+			ID:	ksc.Id,
+			Name:	ksc.Name,
+		})
+	}
+
+	return ret, nil
+}
+
+func ksGetCred(c *xh.XCreds, uid,cid string) (*swyapi.Creds, error) {
+	var cr xkst.KeystoneAppCreds
+
+	err, code := ksClient.MakeReq2(
+		&xkst.KeystoneReq {
+			Type:	"GET",
+			URL:	"users/" + uid + "/application_credentials/" + cid,
+			Succ:	http.StatusOK, }, nil, &cr, nil)
+	if err != nil {
+		log.Errorf("Get creds for %s failed: %d", uid, code)
+		return nil, err
+	}
+
+	return &swyapi.Creds { ID: cr.Ac.Id, Name: cr.Ac.Name }, nil
+}
+
+func ksRemoveCred(c *xh.XCreds, uid,cid string) (error, int) {
+	err, code := ksClient.MakeReq2(
+		&xkst.KeystoneReq {
+			Type:	"DELETE",
+			URL:	"users/" + uid + "/application_credentials/" + cid,
+			Succ:	http.StatusNoContent, }, nil, nil, nil)
+	if err != nil {
+		log.Errorf("Get Del for %s failed: %d", uid, code)
+		return err, code
+	}
+
+	return nil, 0
 }
 
 func ksInit(c *xh.XCreds) error {

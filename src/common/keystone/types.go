@@ -98,3 +98,17 @@ type KeystoneUsersResp struct {
 type KeystoneUserResp struct {
 	User		KeystoneUser		`json:"user"`
 }
+
+type KeystoneApplictionCredentials struct {
+	Id		string			`json:"id,omitempty"`
+	Name		string			`json:"name"`
+	Secret		string			`json:"secret,omitempty"`
+}
+
+type KeystoneAppCreds struct {
+	Ac		KeystoneApplictionCredentials	`json:"application_credential"`
+}
+
+type KeystoneAppCredsList struct {
+	Acs		[]KeystoneApplictionCredentials	`json:"application_credentials"`
+}
