@@ -21,19 +21,6 @@ var dbColMap map[reflect.Type]string
 var session *mgo.Session
 
 const (
-	DBName					= "swifty-s3"
-	DBColS3Iams				= "S3Iams"
-	DBColS3Stats				= "S3Stats"
-	DBColS3Buckets				= "S3Buckets"
-	DBColS3Objects				= "S3Objects"
-	DBColS3Uploads				= "S3Uploads"
-	DBColS3ObjectData			= "S3ObjectData"
-	DBColS3DataChunks			= "S3DataChunks"
-	DBColS3AccessKeys			= "S3AccessKeys"
-	DBColS3Websites				= "S3Websites"
-)
-
-const (
 	S3StateNone			= 0
 	S3StateActive			= 1
 	S3StateInactive			= 2
@@ -61,7 +48,7 @@ func dbConnect(conf *YAMLConf) error {
 
 	info := mgo.DialInfo{
 		Addrs:		[]string{dbc.Addr()},
-		Database:	DBName,
+		Database:	s3mgo.DBName,
 		Timeout:	60 * time.Second,
 		Username:	dbc.User,
 		Password:	pwd,
@@ -70,7 +57,7 @@ func dbConnect(conf *YAMLConf) error {
 	session, err = mgo.DialWithInfo(&info);
 	if err != nil {
 		log.Errorf("dbConnect: Can't dial to %s with db %s (%s)",
-				conf.DB, DBName, err.Error())
+				conf.DB, s3mgo.DBName, err.Error())
 		return err
 	}
 
@@ -87,69 +74,69 @@ func dbConnect(conf *YAMLConf) error {
 			Sparse:		true}
 
 	index.Key = []string{"namespace"}
-	s.DB(DBName).C(DBColS3Iams).EnsureIndex(index)
+	s.DB(s3mgo.DBName).C(s3mgo.DBColS3Iams).EnsureIndex(index)
 
 	index.Key = []string{"user"}
-	s.DB(DBName).C(DBColS3Iams).EnsureIndex(index)
+	s.DB(s3mgo.DBName).C(s3mgo.DBColS3Iams).EnsureIndex(index)
 
 	index.Key = []string{"bcookie"}
-	s.DB(DBName).C(DBColS3Buckets).EnsureIndex(index)
-	s.DB(DBName).C(DBColS3Websites).EnsureIndex(index)
+	s.DB(s3mgo.DBName).C(s3mgo.DBColS3Buckets).EnsureIndex(index)
+	s.DB(s3mgo.DBName).C(s3mgo.DBColS3Websites).EnsureIndex(index)
 
 	index.Key = []string{"uid"}
-	s.DB(DBName).C(DBColS3Uploads).EnsureIndex(index)
+	s.DB(s3mgo.DBName).C(s3mgo.DBColS3Uploads).EnsureIndex(index)
 
 	index.Key = []string{"ucookie"}
-	s.DB(DBName).C(DBColS3Uploads).EnsureIndex(index)
+	s.DB(s3mgo.DBName).C(s3mgo.DBColS3Uploads).EnsureIndex(index)
 
 	index.Key = []string{"access-key-id"}
-	s.DB(DBName).C(DBColS3AccessKeys).EnsureIndex(index)
+	s.DB(s3mgo.DBName).C(s3mgo.DBColS3AccessKeys).EnsureIndex(index)
 
 	index.Unique = false
 	index.Key = []string{"ocookie"}
-	s.DB(DBName).C(DBColS3Objects).EnsureIndex(index)
+	s.DB(s3mgo.DBName).C(s3mgo.DBColS3Objects).EnsureIndex(index)
 
 	dbColMap = make(map[reflect.Type]string)
-	dbColMap[reflect.TypeOf(s3mgo.Iam{})] = DBColS3Iams
-	dbColMap[reflect.TypeOf(&s3mgo.Iam{})] = DBColS3Iams
-	dbColMap[reflect.TypeOf([]s3mgo.Iam{})] = DBColS3Iams
-	dbColMap[reflect.TypeOf(&[]s3mgo.Iam{})] = DBColS3Iams
-	dbColMap[reflect.TypeOf(s3mgo.Account{})] = DBColS3Iams
-	dbColMap[reflect.TypeOf(&s3mgo.Account{})] = DBColS3Iams
-	dbColMap[reflect.TypeOf([]s3mgo.Account{})] = DBColS3Iams
-	dbColMap[reflect.TypeOf(&[]s3mgo.Account{})] = DBColS3Iams
-	dbColMap[reflect.TypeOf(&s3mgo.AcctStats{})] = DBColS3Stats
-	dbColMap[reflect.TypeOf(s3mgo.AccessKey{})] = DBColS3AccessKeys
-	dbColMap[reflect.TypeOf(&s3mgo.AccessKey{})] = DBColS3AccessKeys
-	dbColMap[reflect.TypeOf([]s3mgo.AccessKey{})] = DBColS3AccessKeys
-	dbColMap[reflect.TypeOf(&[]s3mgo.AccessKey{})] = DBColS3AccessKeys
-	dbColMap[reflect.TypeOf([]*s3mgo.AccessKey{})] = DBColS3AccessKeys
-	dbColMap[reflect.TypeOf(&[]*s3mgo.AccessKey{})] = DBColS3AccessKeys
-	dbColMap[reflect.TypeOf(s3mgo.Bucket{})] = DBColS3Buckets
-	dbColMap[reflect.TypeOf(&s3mgo.Bucket{})] = DBColS3Buckets
-	dbColMap[reflect.TypeOf([]s3mgo.Bucket{})] = DBColS3Buckets
-	dbColMap[reflect.TypeOf(&[]s3mgo.Bucket{})] = DBColS3Buckets
-	dbColMap[reflect.TypeOf(s3mgo.Object{})] = DBColS3Objects
-	dbColMap[reflect.TypeOf(&s3mgo.Object{})] = DBColS3Objects
-	dbColMap[reflect.TypeOf([]s3mgo.Object{})] = DBColS3Objects
-	dbColMap[reflect.TypeOf(&[]s3mgo.Object{})] = DBColS3Objects
-	dbColMap[reflect.TypeOf(S3Upload{})] = DBColS3Uploads
-	dbColMap[reflect.TypeOf(&S3Upload{})] = DBColS3Uploads
-	dbColMap[reflect.TypeOf([]S3Upload{})] = DBColS3Uploads
-	dbColMap[reflect.TypeOf(&[]S3Upload{})] = DBColS3Uploads
-	dbColMap[reflect.TypeOf(s3mgo.ObjectPart{})] = DBColS3ObjectData
-	dbColMap[reflect.TypeOf(&s3mgo.ObjectPart{})] = DBColS3ObjectData
-	dbColMap[reflect.TypeOf([]s3mgo.ObjectPart{})] = DBColS3ObjectData
-	dbColMap[reflect.TypeOf(&[]s3mgo.ObjectPart{})] = DBColS3ObjectData
-	dbColMap[reflect.TypeOf([]*s3mgo.ObjectPart{})] = DBColS3ObjectData
-	dbColMap[reflect.TypeOf(&[]*s3mgo.ObjectPart{})] = DBColS3ObjectData
-	dbColMap[reflect.TypeOf(s3mgo.DataChunk{})] = DBColS3DataChunks
-	dbColMap[reflect.TypeOf(&s3mgo.DataChunk{})] = DBColS3DataChunks
-	dbColMap[reflect.TypeOf([]s3mgo.DataChunk{})] = DBColS3DataChunks
-	dbColMap[reflect.TypeOf(&[]s3mgo.DataChunk{})] = DBColS3DataChunks
-	dbColMap[reflect.TypeOf([]*s3mgo.DataChunk{})] = DBColS3DataChunks
-	dbColMap[reflect.TypeOf(&[]*s3mgo.DataChunk{})] = DBColS3DataChunks
-	dbColMap[reflect.TypeOf(&S3Website{})] = DBColS3Websites
+	dbColMap[reflect.TypeOf(s3mgo.Iam{})] = s3mgo.DBColS3Iams
+	dbColMap[reflect.TypeOf(&s3mgo.Iam{})] = s3mgo.DBColS3Iams
+	dbColMap[reflect.TypeOf([]s3mgo.Iam{})] = s3mgo.DBColS3Iams
+	dbColMap[reflect.TypeOf(&[]s3mgo.Iam{})] = s3mgo.DBColS3Iams
+	dbColMap[reflect.TypeOf(s3mgo.Account{})] = s3mgo.DBColS3Iams
+	dbColMap[reflect.TypeOf(&s3mgo.Account{})] = s3mgo.DBColS3Iams
+	dbColMap[reflect.TypeOf([]s3mgo.Account{})] = s3mgo.DBColS3Iams
+	dbColMap[reflect.TypeOf(&[]s3mgo.Account{})] = s3mgo.DBColS3Iams
+	dbColMap[reflect.TypeOf(&s3mgo.AcctStats{})] = s3mgo.DBColS3Stats
+	dbColMap[reflect.TypeOf(s3mgo.AccessKey{})] = s3mgo.DBColS3AccessKeys
+	dbColMap[reflect.TypeOf(&s3mgo.AccessKey{})] = s3mgo.DBColS3AccessKeys
+	dbColMap[reflect.TypeOf([]s3mgo.AccessKey{})] = s3mgo.DBColS3AccessKeys
+	dbColMap[reflect.TypeOf(&[]s3mgo.AccessKey{})] = s3mgo.DBColS3AccessKeys
+	dbColMap[reflect.TypeOf([]*s3mgo.AccessKey{})] = s3mgo.DBColS3AccessKeys
+	dbColMap[reflect.TypeOf(&[]*s3mgo.AccessKey{})] = s3mgo.DBColS3AccessKeys
+	dbColMap[reflect.TypeOf(s3mgo.Bucket{})] = s3mgo.DBColS3Buckets
+	dbColMap[reflect.TypeOf(&s3mgo.Bucket{})] = s3mgo.DBColS3Buckets
+	dbColMap[reflect.TypeOf([]s3mgo.Bucket{})] = s3mgo.DBColS3Buckets
+	dbColMap[reflect.TypeOf(&[]s3mgo.Bucket{})] = s3mgo.DBColS3Buckets
+	dbColMap[reflect.TypeOf(s3mgo.Object{})] = s3mgo.DBColS3Objects
+	dbColMap[reflect.TypeOf(&s3mgo.Object{})] = s3mgo.DBColS3Objects
+	dbColMap[reflect.TypeOf([]s3mgo.Object{})] = s3mgo.DBColS3Objects
+	dbColMap[reflect.TypeOf(&[]s3mgo.Object{})] = s3mgo.DBColS3Objects
+	dbColMap[reflect.TypeOf(S3Upload{})] = s3mgo.DBColS3Uploads
+	dbColMap[reflect.TypeOf(&S3Upload{})] = s3mgo.DBColS3Uploads
+	dbColMap[reflect.TypeOf([]S3Upload{})] = s3mgo.DBColS3Uploads
+	dbColMap[reflect.TypeOf(&[]S3Upload{})] = s3mgo.DBColS3Uploads
+	dbColMap[reflect.TypeOf(s3mgo.ObjectPart{})] = s3mgo.DBColS3ObjectData
+	dbColMap[reflect.TypeOf(&s3mgo.ObjectPart{})] = s3mgo.DBColS3ObjectData
+	dbColMap[reflect.TypeOf([]s3mgo.ObjectPart{})] = s3mgo.DBColS3ObjectData
+	dbColMap[reflect.TypeOf(&[]s3mgo.ObjectPart{})] = s3mgo.DBColS3ObjectData
+	dbColMap[reflect.TypeOf([]*s3mgo.ObjectPart{})] = s3mgo.DBColS3ObjectData
+	dbColMap[reflect.TypeOf(&[]*s3mgo.ObjectPart{})] = s3mgo.DBColS3ObjectData
+	dbColMap[reflect.TypeOf(s3mgo.DataChunk{})] = s3mgo.DBColS3DataChunks
+	dbColMap[reflect.TypeOf(&s3mgo.DataChunk{})] = s3mgo.DBColS3DataChunks
+	dbColMap[reflect.TypeOf([]s3mgo.DataChunk{})] = s3mgo.DBColS3DataChunks
+	dbColMap[reflect.TypeOf(&[]s3mgo.DataChunk{})] = s3mgo.DBColS3DataChunks
+	dbColMap[reflect.TypeOf([]*s3mgo.DataChunk{})] = s3mgo.DBColS3DataChunks
+	dbColMap[reflect.TypeOf(&[]*s3mgo.DataChunk{})] = s3mgo.DBColS3DataChunks
+	dbColMap[reflect.TypeOf(&S3Website{})] = s3mgo.DBColS3Websites
 
 	return nil
 }
@@ -266,7 +253,7 @@ func dbS3SetMTime(o interface{}) {
 func dbS3Insert(ctx context.Context, o interface{}) (error) {
 	dbS3SetMTime(o)
 
-	err := Dbs(ctx).DB(DBName).C(dbColl(o)).Insert(o)
+	err := Dbs(ctx).DB(s3mgo.DBName).C(dbColl(o)).Insert(o)
 	if err != nil {
 		log.Errorf("dbS3Insert: %s: %s", infoLong(o), err.Error())
 	}
@@ -279,7 +266,7 @@ func dbS3Update(ctx context.Context, query bson.M, update bson.M, retnew bool, o
 	dbS3SetObjID(o, query)
 	dbS3UpdateMTime(update)
 
-	c := Dbs(ctx).DB(DBName).C(dbColl(o))
+	c := Dbs(ctx).DB(s3mgo.DBName).C(dbColl(o))
 	change := mgo.Change{
 		Upsert:		false,
 		Remove:		false,
@@ -293,7 +280,7 @@ func dbS3Update(ctx context.Context, query bson.M, update bson.M, retnew bool, o
 func dbS3Upsert(ctx context.Context, query bson.M, update bson.M, o interface{}) (error) {
 	if query == nil { query = make(bson.M) }
 
-	c := Dbs(ctx).DB(DBName).C(dbColl(o))
+	c := Dbs(ctx).DB(s3mgo.DBName).C(dbColl(o))
 	change := mgo.Change{
 		Upsert:		true,
 		Remove:		false,
@@ -332,7 +319,7 @@ func dbS3RemoveCond(ctx context.Context, o interface{}, query bson.M) (error) {
 
 	dbS3SetObjID(o, query)
 
-	c := Dbs(ctx).DB(DBName).C(dbColl(o))
+	c := Dbs(ctx).DB(s3mgo.DBName).C(dbColl(o))
 	change := mgo.Change{
 		Upsert:		false,
 		Remove:		true,
@@ -359,31 +346,31 @@ func dbS3Remove(ctx context.Context, o interface{}) (error) {
 }
 
 func dbS3FindOne(ctx context.Context, query bson.M, o interface{}) (error) {
-	return Dbs(ctx).DB(DBName).C(dbColl(o)).Find(query).One(o)
+	return Dbs(ctx).DB(s3mgo.DBName).C(dbColl(o)).Find(query).One(o)
 }
 
 func dbS3FindOneFields(ctx context.Context, query bson.M, sel bson.M, o interface{}) (error) {
-	return Dbs(ctx).DB(DBName).C(dbColl(o)).Find(query).Select(sel).One(o)
+	return Dbs(ctx).DB(s3mgo.DBName).C(dbColl(o)).Find(query).Select(sel).One(o)
 }
 
 func dbS3FindAllFields(ctx context.Context, query bson.M, sel bson.M, o interface{}) (error) {
-	return Dbs(ctx).DB(DBName).C(dbColl(o)).Find(query).Select(sel).All(o)
+	return Dbs(ctx).DB(s3mgo.DBName).C(dbColl(o)).Find(query).Select(sel).All(o)
 }
 
 func dbS3FindAllSorted(ctx context.Context, query bson.M, sort string, o interface{}) (error) {
-	return Dbs(ctx).DB(DBName).C(dbColl(o)).Find(query).Sort(sort).All(o)
+	return Dbs(ctx).DB(s3mgo.DBName).C(dbColl(o)).Find(query).Sort(sort).All(o)
 }
 
 func dbS3IterAllSorted(ctx context.Context, query bson.M, sort string, o interface{}) *mgo.Iter {
-	return Dbs(ctx).DB(DBName).C(dbColl(o)).Find(query).Sort(sort).Iter()
+	return Dbs(ctx).DB(s3mgo.DBName).C(dbColl(o)).Find(query).Sort(sort).Iter()
 }
 
 func dbS3FindOneTop(ctx context.Context, query bson.M, sort string, o interface{}) (error) {
-	return Dbs(ctx).DB(DBName).C(dbColl(o)).Find(query).Sort(sort).Limit(1).One(o)
+	return Dbs(ctx).DB(s3mgo.DBName).C(dbColl(o)).Find(query).Sort(sort).Limit(1).One(o)
 }
 
 func dbS3FindAll(ctx context.Context, query bson.M, o interface{}) (error) {
-	return Dbs(ctx).DB(DBName).C(dbColl(o)).Find(query).All(o)
+	return Dbs(ctx).DB(s3mgo.DBName).C(dbColl(o)).Find(query).All(o)
 }
 
 func dbS3FindAllInactive(ctx context.Context, o interface{}) (error) {
@@ -394,5 +381,5 @@ func dbS3FindAllInactive(ctx context.Context, o interface{}) (error) {
 }
 
 func dbS3Pipe(ctx context.Context, o interface{}, pipeline interface{}) (*mgo.Pipe) {
-	return Dbs(ctx).DB(DBName).C(dbColl(o)).Pipe(pipeline)
+	return Dbs(ctx).DB(s3mgo.DBName).C(dbColl(o)).Pipe(pipeline)
 }

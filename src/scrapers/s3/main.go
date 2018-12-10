@@ -19,12 +19,6 @@ import (
 	"swifty/s3/mgo"
 )
 
-const (
-	DBName		= "swifty-s3"
-	ColS3Stats	= "S3Stats"
-	ColS3StatsArch	= "S3StatsA"
-)
-
 type YAMLConfSA struct {
 	Check		string			`yaml:"check"`
 	Period		string			`yaml:"period"`
@@ -164,8 +158,8 @@ func doArchPass(now time.Time, s *mgo.Session) {
 	defer s.Close()
 	defer func() { created = nil } ()
 
-	curr := s.DB(DBName).C(ColS3Stats)
-	arch := s.DB(DBName).C(ColS3StatsArch)
+	curr := s.DB(s3mgo.DBName).C(s3mgo.DBColS3Stats)
+	arch := s.DB(s3mgo.DBName).C(s3mgo.DBColS3StatsArch)
 
 	var st s3mgo.AcctStats
 
@@ -230,7 +224,7 @@ func main() {
 
 	info := mgo.DialInfo{
 		Addrs:		[]string{conf.gateDB.Addr()},
-		Database:	DBName,
+		Database:	s3mgo.DBName,
 		Timeout:	60 * time.Second,
 		Username:	conf.gateDB.User,
 		Password:	conf.gateDB.Pass,
