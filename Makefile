@@ -132,25 +132,23 @@ endef
 SRVCS = gate admd s3
 LANGS = python golang swift ruby nodejs csharp
 TOOLS = ctl trace s3fsck sg runtest
+SCRPR = gate s3
 
 # BUILD
 $(foreach s,$(SRVCS),$(eval $(call gen-gobuild-daemon,$s)))
+$(foreach s,$(SCRPR),$(eval $(call gen-gobuild-daemon-n,scrapers/$s,dbscr-$s)))
 $(foreach t,$(TOOLS),$(eval $(call gen-gobuild-tool,$t)))
 $(eval $(call gen-gobuild-daemon,wdog))
 # The swy-mongoproxy is a daemon for now, will move it to SRVCS soon
 $(eval $(call gen-gobuild-daemon,mongoproxy))
-$(eval $(call gen-gobuild-daemon-n,scrapers/gate,dbscr))
-$(eval $(call gen-gobuild-daemon-n,scrapers/s3,dbscr-s3))
 
 # Each service has its swifty/$name docker image
 $(foreach s,$(SRVCS),$(eval $(call gen-pack-service,$s)))
+$(foreach s,$(SCRPR),$(eval $(call gen-pack-service,dbscr-$s)))
 # Each lang has its swifty/$lang docker image
 $(foreach l,$(LANGS),$(eval $(call gen-pack-lang,$l)))
 # Wdog is packed into swifty/proxy image
 $(eval $(call gen-pack-service-n,proxy,wdog))
-# The swydbscr tools is packed into image too
-$(eval $(call gen-pack-service,dbscr))
-$(eval $(call gen-pack-service,dbscr-s3))
 
 # Default target
 all: $(all-y)
