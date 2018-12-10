@@ -21,6 +21,7 @@ import (
 	"errors"
 	"time"
 	"flag"
+	"math"
 	"fmt"
 	"os"
 
@@ -557,9 +558,59 @@ func handleUploadAbort(ctx context.Context, uploadId, oname string, bucket *s3mg
 	return nil
 }
 
+func parseRange(rng string) (int64, int64, error) {
+	if !strings.HasPrefix(rng, "bytes=") {
+		return 0, 0, errors.New("Only bytes range supported")
+	}
+
+	rng = strings.TrimPrefix(rng, "bytes=")
+	rgs := strings.Split(rng, ",")
+	if len(rgs) != 1 {
+		return 0, 0, errors.New("Only one range supported")
+	}
+
+	rg := strings.Split(strings.TrimSpace(rgs[0]), "-")
+	if len(rg) != 2 {
+		return 0, 0, errors.New("Bad range")
+	}
+
+	from, err := strconv.ParseInt(rg[0], 10, 64)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	var to int64
+	if rg[1] == "" {
+		to = math.MaxInt64 - 1
+	} else {
+		to, err = strconv.ParseInt(rg[1], 10, 64)
+		if err != nil {
+			return 0, 0, err
+		}
+	}
+
+	if to < from || to < 0 || from < 0 {
+		return 0, 0, errors.New("Negative range")
+	}
+
+	return from, to + 1, nil
+}
+
 func handleGetObject(ctx context.Context, oname string, bucket *s3mgo.Bucket, w http.ResponseWriter, r *http.Request) *S3Error {
 	if !ctxAllowed(ctx, S3P_GetObject) {
 		return &S3Error{ ErrorCode: S3ErrMethodNotAllowed }
+	}
+
+	var from, to int64
+	to = math.MaxInt64
+
+	rng := r.Header.Get("Range")
+	if rng != "" {
+		var err error
+		from, to, err = parseRange(rng)
+		if err != nil {
+			return &S3Error{ ErrorCode: S3ErrInvalidRange, Message: err.Error() }
+		}
 	}
 
 	object, err := FindCurObject(ctx, bucket, oname)
@@ -573,7 +624,19 @@ func handleGetObject(ctx context.Context, oname string, bucket *s3mgo.Bucket, w 
 		return &S3Error{ ErrorCode: S3ErrInvalidRequest, Message: err.Error() }
 	}
 
-	err = acctDownload(ctx, bucket.NamespaceID, object.Size)
+	if from > object.Size {
+		return &S3Error{ ErrorCode: S3ErrInvalidRange, Message: "Object is too smal" }
+	}
+
+	if to > object.Size {
+		to = object.Size
+	}
+	ds := to - from
+	if ds > object.Size {
+		ds = object.Size
+	}
+
+	err = acctDownload(ctx, bucket.NamespaceID, ds)
 	if err != nil {
 		return &S3Error{ ErrorCode: S3ErrOperationAborted, Message: "Downloads are limited" }
 	}
@@ -583,7 +646,7 @@ func handleGetObject(ctx context.Context, oname string, bucket *s3mgo.Bucket, w 
 	}
 
 	w.Header().Set("ETag", object.ETag)
-	w.Header().Set("Content-Length", strconv.FormatInt(object.Size, 10))
+	w.Header().Set("Content-Length", strconv.FormatInt(ds, 10))
 
 	if c := ctx.(*s3Context).errCode; c == 0 {
 		w.WriteHeader(http.StatusOK)
@@ -592,11 +655,42 @@ func handleGetObject(ctx context.Context, oname string, bucket *s3mgo.Bucket, w 
 	}
 
 	var downloaded int64
+	var rover int64
 
 	err = IterParts(ctx, object.ObjID, func(p *s3mgo.ObjectPart) error {
+		re := rover + p.Size
+		if re  < from {
+			rover = re
+			return nil
+		}
+
+		if rover >= to {
+			rover = re
+			return nil /* FIXME -- report "STOP" marker */
+		}
+
 		return IterChunks(ctx, p, func(ch *s3mgo.DataChunk) error {
-			w.Write(ch.Bytes)
-			downloaded += int64(len(ch.Bytes))
+			re := rover + int64(len(ch.Bytes))
+			if re  < from {
+				rover = re
+				return nil
+			}
+			if rover >= to {
+				rover = re
+				return nil /* FIXME -- repot "STOP" marker */
+			}
+
+			s_off := 0
+			if from > rover {
+				s_off = int(from - rover)
+			}
+			e_off := len(ch.Bytes)
+			if to <= re {
+				e_off = int(to - rover)
+			}
+
+			w.Write(ch.Bytes[s_off:e_off])
+			downloaded += int64(e_off - s_off)
 			return nil
 		})
 	})
@@ -610,7 +704,7 @@ func handleGetObject(ctx context.Context, oname string, bucket *s3mgo.Bucket, w 
 		log.Errorf("s3: Can't complete object %s download: %s", infoLong(object), err.Error())
 	}
 
-	if downloaded != object.Size {
+	if downloaded != ds {
 		downloadErrors.WithLabelValues("miscount").Inc()
 		log.Errorf("s3: Object size != sum of its parts (%s), call fsck", infoLong(object))
 		requestFsck()
