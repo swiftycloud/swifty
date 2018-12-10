@@ -20,8 +20,8 @@ swyctl
 swytrace
 swys3fsck
 swysg
-swydbscr
-swydbscr-s3
+swy-dbscr
+swy-dbscr-s3
 swyruntest
 go-sca
 validation

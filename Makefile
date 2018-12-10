@@ -108,11 +108,11 @@ S_IMAGES =
 S_BINARIES =
 
 define gen-pack-service-n
-swifty/$(1): swy$(2) kubectl/docker/$(1)/Dockerfile
+swifty/$(1): swy-$(2) kubectl/docker/$(1)/Dockerfile
 
 swifty/$(1):
 	$$(call msg-gen, $$@)
-	$$(Q) $$(CP) swy$(2) kubectl/docker/$(1)/swy$(2)
+	$$(Q) $$(CP) swy-$(2) kubectl/docker/$(1)/swy-$(2)
 	$$(Q) $$(MAKE) -C kubectl/docker/$(1) all
 
 .PHONY: swifty/$(1)
@@ -122,7 +122,7 @@ define gen-pack-service
 S_IMAGES += swifty/$(1)
 S_BINARIES += swy-$(1)
 
-$(eval $(call gen-pack-service-n,$(1),-$(1)))
+$(eval $(call gen-pack-service-n,$(1),$(1)))
 endef
 
 #
@@ -131,7 +131,7 @@ endef
 
 SRVCS = gate admd s3
 LANGS = python golang swift ruby nodejs csharp
-TOOLS = ctl trace s3fsck sg dbscr dbscr-s3 runtest
+TOOLS = ctl trace s3fsck sg runtest
 
 # BUILD
 $(foreach s,$(SRVCS),$(eval $(call gen-gobuild-daemon,$s)))
@@ -139,6 +139,8 @@ $(foreach t,$(TOOLS),$(eval $(call gen-gobuild-tool,$t)))
 $(eval $(call gen-gobuild-daemon,wdog))
 # The swy-mongoproxy is a daemon for now, will move it to SRVCS soon
 $(eval $(call gen-gobuild-daemon,mongoproxy))
+$(eval $(call gen-gobuild-daemon-n,scrapers/gate,dbscr))
+$(eval $(call gen-gobuild-daemon-n,scrapers/s3,dbscr-s3))
 
 # Each service has its swifty/$name docker image
 $(foreach s,$(SRVCS),$(eval $(call gen-pack-service,$s)))
@@ -147,7 +149,8 @@ $(foreach l,$(LANGS),$(eval $(call gen-pack-lang,$l)))
 # Wdog is packed into swifty/proxy image
 $(eval $(call gen-pack-service-n,proxy,wdog))
 # The swydbscr tools is packed into image too
-$(eval $(call gen-pack-service-n,dbscr,dbscr))
+$(eval $(call gen-pack-service,dbscr))
+$(eval $(call gen-pack-service,dbscr-s3))
 
 # Default target
 all: $(all-y)
