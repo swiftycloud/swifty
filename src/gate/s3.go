@@ -246,7 +246,9 @@ func s3GenBucketKeys(ctx context.Context, fid *SwoId, bucket string) (map[string
 func enforceS3Limits(ctx context.Context) {
 	/* FIXME The best way for doing this is to push the tendat into memory :( */
 	go func() {
-		tendatGet(ctx)
+		cctx, done := mkContext("::s3enforce")
+		tendatGet(cctx)
+		done(cctx)
 	}()
 }
 
