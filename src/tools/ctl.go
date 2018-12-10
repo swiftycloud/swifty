@@ -141,14 +141,14 @@ func user_creds_list(args []string, opts [16]string) {
 	var cs []swyapi.Creds
 	swyclient.Get("users/" + args[0] + "/creds", http.StatusOK, &cs)
 	for _, c := range cs {
-		fmt.Printf("%30s: %s\n", c.ID, c.Name)
+		fmt.Printf("%-16s: %s\n", c.Name, c.Key)
 	}
 }
 
 func user_creds_add(args []string, opts [16]string) {
 	var cs swyapi.Creds
 	swyclient.Add("users/" + args[0] + "/creds", http.StatusOK, &swyapi.Creds{Name: args[1]}, &cs)
-	fmt.Printf("Created %s creds, secret: %s SAVE IT, IT WILL NOT BE SHOWN ANY MORE)\n", cs.ID, cs.Secret)
+	fmt.Printf("Created creds\nkey: %s\nsecret: %s\nSAVE IT, IT WILL NOT BE SHOWN ANY MORE)\n", cs.Key, cs.Secret)
 }
 
 func user_creds_del(args []string, opts [16]string) {

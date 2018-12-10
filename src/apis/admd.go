@@ -15,7 +15,7 @@ type UserInfo struct {
 }
 
 type Creds struct {
-	ID	string		`json:"id"`
+	Key	string		`json:"key"`
 	Name	string		`json:"name"`
 	Secret	string		`json:"secret,omitempty"`
 }

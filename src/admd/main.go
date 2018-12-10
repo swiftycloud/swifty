@@ -1092,13 +1092,13 @@ func handleUserCred(ctx context.Context, w http.ResponseWriter, r *http.Request,
 		}
 	}
 
-	cid := mux.Vars(r)["cid"]
+	key := mux.Vars(r)["key"]
 
 	switch r.Method {
 	case "GET":
-		return handleShowCred(ctx, w, r, uid, cid)
+		return handleShowCred(ctx, w, r, uid, key)
 	case "DELETE":
-		return handleDeleteCred(ctx, w, r, uid, cid)
+		return handleDeleteCred(ctx, w, r, uid, key)
 	}
 
 	return admdErr(http.StatusMethodNotAllowed)
@@ -1139,8 +1139,8 @@ func handleListCreds(ctx context.Context, w http.ResponseWriter, r *http.Request
 	return nil
 }
 
-func handleShowCred(ctx context.Context, w http.ResponseWriter, r *http.Request, uid,cid string) *xrest.ReqErr {
-	cred, err := ksGetCred(conf.kc, uid, cid)
+func handleShowCred(ctx context.Context, w http.ResponseWriter, r *http.Request, uid,key string) *xrest.ReqErr {
+	cred, err := ksGetCred(conf.kc, uid, key)
 	if err != nil {
 		return admdErrM("Cannot get cred", http.StatusInternalServerError)
 	}
@@ -1153,8 +1153,8 @@ func handleShowCred(ctx context.Context, w http.ResponseWriter, r *http.Request,
 	return nil
 }
 
-func handleDeleteCred(ctx context.Context, w http.ResponseWriter, r *http.Request, uid,cid string) *xrest.ReqErr {
-	err, code := ksRemoveCred(conf.kc, uid, cid)
+func handleDeleteCred(ctx context.Context, w http.ResponseWriter, r *http.Request, uid,key string) *xrest.ReqErr {
+	err, code := ksRemoveCred(conf.kc, uid, key)
 	if err != nil {
 		return admdErrM("Cannot remove cred", code)
 	}
@@ -1248,7 +1248,7 @@ func main() {
 	r.Handle("/v1/users/{uid}/pass", genReqHandler(handleSetPassword)).Methods("PUT", "OPTIONS")
 	r.Handle("/v1/users/{uid}/limits", genReqHandler(handleUserLimits)).Methods("PUT", "GET", "OPTIONS")
 	r.Handle("/v1/users/{uid}/creds", genReqHandler(handleUserCreds)).Methods("GET", "POST", "OPTIONS")
-	r.Handle("/v1/users/{uid}/creds/{cid}", genReqHandler(handleUserCred)).Methods("GET", "DELETE", "OPTIONS")
+	r.Handle("/v1/users/{uid}/creds/{key}", genReqHandler(handleUserCred)).Methods("GET", "DELETE", "OPTIONS")
 	r.Handle("/v1/plans", genReqHandler(handlePlans)).Methods("POST", "GET", "OPTIONS")
 	r.Handle("/v1/plans/{pid}", genReqHandler(handlePlan)).Methods("GET", "DELETE", "PUT", "OPTIONS")
 	r.Handle("/v1/sysctl", genReqHandler(handleSysctls)).Methods("GET", "OPTIONS")

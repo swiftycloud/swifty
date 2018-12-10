@@ -394,7 +394,7 @@ func ksCreateCreds(c *xh.XCreds, uid string, params *swyapi.Creds, r *http.Reque
 		return err
 	}
 
-	params.ID = ksc.Ac.Id
+	params.Key = ksc.Ac.Id
 	params.Secret = ksc.Ac.Secret
 	return nil
 }
@@ -415,7 +415,7 @@ func ksListCreds(c *xh.XCreds, uid string) ([]*swyapi.Creds, error) {
 	var ret []*swyapi.Creds
 	for _, ksc := range creds.Acs {
 		ret = append(ret, &swyapi.Creds {
-			ID:	ksc.Id,
+			Key:	ksc.Id,
 			Name:	ksc.Name,
 		})
 	}
@@ -436,7 +436,7 @@ func ksGetCred(c *xh.XCreds, uid,cid string) (*swyapi.Creds, error) {
 		return nil, err
 	}
 
-	return &swyapi.Creds { ID: cr.Ac.Id, Name: cr.Ac.Name }, nil
+	return &swyapi.Creds { Key: cr.Ac.Id, Name: cr.Ac.Name }, nil
 }
 
 func ksRemoveCred(c *xh.XCreds, uid,cid string) (error, int) {
