@@ -196,6 +196,29 @@ func KeystoneAuthWithPass(addr, domain string, up *swyapi.UserLogin) (string, st
 	return req.outToken, out.Token.Expires, err
 }
 
+func KeystoneAuthWithAC(addr, domain string, up *swyapi.UserLogin) (string, string, error) {
+	var out KeystoneAuthResp
+
+	kc := &KsClient { addr: addr, }
+
+	req := KeystoneReq {
+		Type:		"POST",
+		URL:		"auth/tokens",
+		Succ:		201,
+	}
+
+	err := kc.MakeReq(&req, &KeystoneAuthReq {
+		Auth: KeystoneAuth{
+			Identity: KeystoneIdentity{
+				Methods: []string{"application_credential"},
+				AC: &KeystoneApplictionCredentials{
+					Id: up.CredsKey,
+					Secret: up.CredsSecret,
+				},},},}, &out)
+
+	return req.outToken, out.Token.Expires, err
+}
+
 func KeystoneConnect(addr, domain string, up *swyapi.UserLogin) (*KsClient, error) {
 	token, _, err := KeystoneAuthWithPass(addr, domain, up)
 	if err != nil {

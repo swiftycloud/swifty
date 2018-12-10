@@ -29,6 +29,8 @@ type WdogFunctionRunResult struct {
 type UserLogin struct {
 	UserName	string			`json:"username,omitempty"`
 	Password	string			`json:"password,omitempty"`
+	CredsKey	string			`json:"cred_key,omitempty"`
+	CredsSecret	string			`json:"cred_secret,omitempty"`
 }
 
 type UserToken struct {

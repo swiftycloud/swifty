@@ -83,10 +83,23 @@ func handleUserLogin(w http.ResponseWriter, r *http.Request) {
 		goto out
 	}
 
-	glog.Debugf("Trying to login user %s", params.UserName)
+	if params.UserName != "" {
+		glog.Debugf("Trying to login user %s", params.UserName)
 
-	token, td.Expires, err = xkst.KeystoneAuthWithPass(conf.Keystone.Addr, conf.Keystone.Domain, &params)
-	if err != nil {
+		token, td.Expires, err = xkst.KeystoneAuthWithPass(conf.Keystone.Addr, conf.Keystone.Domain, &params)
+		if err != nil {
+			resp = http.StatusUnauthorized
+			goto out
+		}
+	} else if params.CredsKey != "" {
+		glog.Debugf("Trying to loging by creds %s", params.CredsKey)
+
+		token, td.Expires, err = xkst.KeystoneAuthWithAC(conf.Keystone.Addr, conf.Keystone.Domain, &params)
+		if err != nil {
+			resp = http.StatusUnauthorized
+			goto out
+		}
+	} else {
 		resp = http.StatusUnauthorized
 		goto out
 	}

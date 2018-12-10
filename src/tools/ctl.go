@@ -41,6 +41,7 @@ type YAMLConf struct {
 	Login		LoginInfo	`yaml:"login"`
 	TLS		bool		`yaml:"tls"`
 	Direct		bool		`yaml:"direct"`
+	Creds		bool		`yaml:"creds"`
 	Certs		string		`yaml:"x509crtfile"`
 	Relay		string		`yaml:"relay,omitempty"`
 	Token		string		`yaml:"token"`
@@ -1796,6 +1797,9 @@ func mkClient() {
 	if conf.Direct {
 		swyclient.Direct()
 	}
+	if conf.Creds {
+		swyclient.ViaCreds()
+	}
 
 	swyclient.OnError(func(err error) { fatal(err) })
 	swyclient.TokSaver(func(tok string) { conf.Token = tok; save_config() })
@@ -1840,6 +1844,12 @@ func make_login(creds string, opts [16]string) {
 		conf.Direct = true
 	} else {
 		conf.Direct = false
+	}
+
+	if opts[5] == "yes" {
+		conf.Creds = true
+	} else {
+		conf.Creds = false
 	}
 
 	mkClient()
@@ -2181,6 +2191,7 @@ func main() {
 	cmdMap[CMD_LOGIN].opts.StringVar(&opts[2], "admd", "", "Admd address:port")
 	cmdMap[CMD_LOGIN].opts.StringVar(&opts[3], "proxy", "", "Proxy mode")
 	cmdMap[CMD_LOGIN].opts.StringVar(&opts[4], "pass", "", "Password (optional)")
+	cmdMap[CMD_LOGIN].opts.StringVar(&opts[5], "creds", "", "This is creds login, not user/pass one")
 
 	setupCommonCmd(CMD_ME, "ACTION")
 
