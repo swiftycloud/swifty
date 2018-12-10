@@ -9,6 +9,7 @@ import (
 	"code.cloudfoundry.org/bytefmt"
 	"gopkg.in/yaml.v2"
 	"encoding/base64"
+	"encoding/csv"
 	"io/ioutil"
 	"net/http"
 	"strings"
@@ -60,6 +61,26 @@ func gateProto() string {
 	}
 }
 
+func user_list_csv(uss []swyapi.UserInfo) {
+	w := csv.NewWriter(os.Stdout)
+
+	for _, u := range uss {
+		err := w.Write([]string {
+			u.UId,
+			u.Name,
+			u.Created,
+		})
+		if err != nil {
+			fatal(err)
+		}
+	}
+
+	w.Flush()
+	if err := w.Error(); err != nil {
+		fatal(err)
+	}
+}
+
 func user_list(args []string, opts [16]string) {
 	var uss []swyapi.UserInfo
 	swyclient.List("users", http.StatusOK, &uss)
@@ -76,6 +97,8 @@ func user_list(args []string, opts [16]string) {
 			}
 			fmt.Printf("%s: %s (%s)%s\n", u.ID, u.UId, u.Name, en)
 		}
+	case "csv":
+		user_list_csv(uss)
 	default:
 		fatal(errors.New("bad format"))
 	}
@@ -2250,7 +2273,7 @@ func main() {
 	setupCommonCmd(CMD_PKS)
 
 	setupCommonCmd(CMD_UL)
-	cmdMap[CMD_UA].opts.StringVar(&opts[0], "f", "", "Format (csv)")
+	cmdMap[CMD_UL].opts.StringVar(&opts[0], "f", "", "Format (csv)")
 	setupCommonCmd(CMD_UA, "UID")
 	cmdMap[CMD_UA].opts.StringVar(&opts[0], "name", "", "User name")
 	cmdMap[CMD_UA].opts.StringVar(&opts[1], "pass", "", "User password")
