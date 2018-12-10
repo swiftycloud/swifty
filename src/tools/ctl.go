@@ -42,7 +42,7 @@ type YAMLConf struct {
 	TLS		bool		`yaml:"tls"`
 	Direct		bool		`yaml:"direct"`
 	Creds		bool		`yaml:"creds"`
-	Certs		string		`yaml:"x509crtfile"`
+	Certs		string		`yaml:"x509crtfile,omitempty"`
 	Relay		string		`yaml:"relay,omitempty"`
 	Token		string		`yaml:"token"`
 }
