@@ -6,6 +6,7 @@
 package main
 
 import (
+	"os"
 	"log"
 	"flag"
 	"time"
@@ -177,8 +178,16 @@ func main() {
 
 	conf.gateDB = xh.ParseXCreds(conf.GateDB)
 	conf.gateDB.Resolve()
+	p := os.Getenv("SCRDBPASS")
+	if p != "" {
+		conf.gateDB.Pass = p
+	}
 
 	conf.admd = xh.ParseXCreds(conf.Admd)
+	p = os.Getenv("SCRADPASS")
+	if p != "" {
+		conf.admd.Pass = p
+	}
 
 	info := mgo.DialInfo{
 		Addrs:		[]string{conf.gateDB.Addr()},

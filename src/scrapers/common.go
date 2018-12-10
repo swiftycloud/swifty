@@ -35,7 +35,7 @@ func NextPeriod(since *time.Time, period string) time.Time {
 		dur = strings.TrimSuffix(period, "s")
 		mult = time.Second
 	} else if strings.HasSuffix(period, "m") {
-		dur = strings.TrimSuffix(period, "s")
+		dur = strings.TrimSuffix(period, "m")
 		mult = time.Minute
 	}
 

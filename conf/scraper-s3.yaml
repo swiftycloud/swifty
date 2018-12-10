@@ -1,0 +1,6 @@
+---
+gate-db: "swifty-s3:XXXXXXX@127.0.0.1:27017"
+admd: "swyadmin:YYYYYY@api.dev.swifty.cloud:443"
+starch:
+        check: "10s"
+        period: "40s"
