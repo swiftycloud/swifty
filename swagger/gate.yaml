@@ -172,7 +172,6 @@ paths:
             type: array
             items:
               $ref: '#/definitions/LogEntry'
-  
         '400':
           description: Bad request
           schema:
@@ -2139,9 +2138,6 @@ paths:
           description: Bad authentication token
 definitions:
   UserLogin:
-    required:
-      - username
-      - password
     properties:
       username:
         type: string
@@ -2149,6 +2145,12 @@ definitions:
       password:
         type: string
         example: secretpass123
+      creds_key:
+        type: string
+        example: 123abc456
+      creds_secret:
+        type: string
+        example: fo1o_b2ar@buz3z
   UserToken:
     properties:
       expires:
