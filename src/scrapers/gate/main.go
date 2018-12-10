@@ -20,10 +20,6 @@ import (
 )
 
 const (
-	DBName		= "swifty"
-	ColTenStats	= "TenantStats"
-	ColTenStatsA	= "TenantStatsArch"
-	ColLogs		= "Logs"
 	LogsCleanPeriod = 30 * 60 * time.Second
 )
 
@@ -172,8 +168,8 @@ func doArchPass(now time.Time, s *mgo.Session) {
 	defer s.Close()
 	defer func() { uis = nil } ()
 
-	curr := s.DB(DBName).C(ColTenStats)
-	arch := s.DB(DBName).C(ColTenStatsA)
+	curr := s.DB(gmgo.DBStateDB).C(gmgo.DBColTenStats)
+	arch := s.DB(gmgo.DBStateDB).C(gmgo.DBColTenStatsA)
 
 	var st TenStats
 	iter := curr.Find(nil).Iter()
@@ -228,7 +224,7 @@ func main() {
 
 	info := mgo.DialInfo{
 		Addrs:		[]string{conf.gateDB.Addr()},
-		Database:	DBName,
+		Database:	gmgo.DBStateDB,
 		Timeout:	60 * time.Second,
 		Username:	conf.gateDB.User,
 		Password:	conf.gateDB.Pass,
@@ -250,7 +246,7 @@ func main() {
 
 				log.Printf("Cleaner logs ...\n", conf.Logs.Keep)
 				s := session.Copy()
-				logs := s.DB(DBName).C(ColLogs)
+				logs := s.DB(gmgo.DBStateDB).C(gmgo.DBColLogs)
 				dur := time.Now().AddDate(0, 0, -conf.Logs.Keep)
 				logs.RemoveAll(bson.M{"ts": bson.M{"$lt": dur }})
 				log.Printf("`- ... cleaned < %s\n", dur.String())

@@ -26,25 +26,6 @@ import (
 	"swifty/common/ratelimit"
 )
 
-const (
-	DBStateDB	= "swifty"
-	DBTenantDB	= "swifty-tenant"
-	DBColFunc	= "Function"
-	DBColMware	= "Mware"
-	DBColLogs	= "Logs"
-	DBColFnStats	= "FnStats"
-	DBColFnStatsA	= "FnStatsArch"
-	DBColTenStats	= "TenantStats"
-	DBColTenStatsA	= "TenantStatsArch"
-	DBColDeploy	= "Deploy"
-	DBColLimits	= "Limits"
-	DBColEvents	= "Events"
-	DBColRepos	= "Repos"
-	DBColAccounts	= "Accounts"
-	DBColRouters	= "Routers"
-	DBColTCache	= "TCache"
-)
-
 var dbColMap map[reflect.Type]string
 var dbNotAllowed = errors.New("Not allowed")
 var dbStrict bool = true
@@ -87,38 +68,38 @@ func dbMayUpdate(ctx context.Context) bool {
 
 func init() {
 	dbColMap = make(map[reflect.Type]string)
-	dbColMap[reflect.TypeOf(MwareDesc{})] = DBColMware
-	dbColMap[reflect.TypeOf(&MwareDesc{})] = DBColMware
-	dbColMap[reflect.TypeOf([]*MwareDesc{})] = DBColMware
-	dbColMap[reflect.TypeOf(&[]*MwareDesc{})] = DBColMware
-	dbColMap[reflect.TypeOf(FunctionDesc{})] = DBColFunc
-	dbColMap[reflect.TypeOf(&FunctionDesc{})] = DBColFunc
-	dbColMap[reflect.TypeOf([]*FunctionDesc{})] = DBColFunc
-	dbColMap[reflect.TypeOf(&[]*FunctionDesc{})] = DBColFunc
-	dbColMap[reflect.TypeOf(DeployDesc{})] = DBColDeploy
-	dbColMap[reflect.TypeOf(&DeployDesc{})] = DBColDeploy
-	dbColMap[reflect.TypeOf([]*DeployDesc{})] = DBColDeploy
-	dbColMap[reflect.TypeOf(&[]*DeployDesc{})] = DBColDeploy
-	dbColMap[reflect.TypeOf(FnEventDesc{})] = DBColEvents
-	dbColMap[reflect.TypeOf(&FnEventDesc{})] = DBColEvents
-	dbColMap[reflect.TypeOf([]*FnEventDesc{})] = DBColEvents
-	dbColMap[reflect.TypeOf(&[]*FnEventDesc{})] = DBColEvents
-	dbColMap[reflect.TypeOf(RepoDesc{})] = DBColRepos
-	dbColMap[reflect.TypeOf(&RepoDesc{})] = DBColRepos
-	dbColMap[reflect.TypeOf([]*RepoDesc{})] = DBColRepos
-	dbColMap[reflect.TypeOf(&[]*RepoDesc{})] = DBColRepos
-	dbColMap[reflect.TypeOf(AccDesc{})] = DBColAccounts
-	dbColMap[reflect.TypeOf(&AccDesc{})] = DBColAccounts
-	dbColMap[reflect.TypeOf([]*AccDesc{})] = DBColAccounts
-	dbColMap[reflect.TypeOf(&[]*AccDesc{})] = DBColAccounts
-	dbColMap[reflect.TypeOf(RouterDesc{})] = DBColRouters
-	dbColMap[reflect.TypeOf(&RouterDesc{})] = DBColRouters
-	dbColMap[reflect.TypeOf([]*RouterDesc{})] = DBColRouters
-	dbColMap[reflect.TypeOf(&[]*RouterDesc{})] = DBColRouters
+	dbColMap[reflect.TypeOf(MwareDesc{})] = gmgo.DBColMware
+	dbColMap[reflect.TypeOf(&MwareDesc{})] = gmgo.DBColMware
+	dbColMap[reflect.TypeOf([]*MwareDesc{})] = gmgo.DBColMware
+	dbColMap[reflect.TypeOf(&[]*MwareDesc{})] = gmgo.DBColMware
+	dbColMap[reflect.TypeOf(FunctionDesc{})] = gmgo.DBColFunc
+	dbColMap[reflect.TypeOf(&FunctionDesc{})] = gmgo.DBColFunc
+	dbColMap[reflect.TypeOf([]*FunctionDesc{})] = gmgo.DBColFunc
+	dbColMap[reflect.TypeOf(&[]*FunctionDesc{})] = gmgo.DBColFunc
+	dbColMap[reflect.TypeOf(DeployDesc{})] = gmgo.DBColDeploy
+	dbColMap[reflect.TypeOf(&DeployDesc{})] = gmgo.DBColDeploy
+	dbColMap[reflect.TypeOf([]*DeployDesc{})] = gmgo.DBColDeploy
+	dbColMap[reflect.TypeOf(&[]*DeployDesc{})] = gmgo.DBColDeploy
+	dbColMap[reflect.TypeOf(FnEventDesc{})] = gmgo.DBColEvents
+	dbColMap[reflect.TypeOf(&FnEventDesc{})] = gmgo.DBColEvents
+	dbColMap[reflect.TypeOf([]*FnEventDesc{})] = gmgo.DBColEvents
+	dbColMap[reflect.TypeOf(&[]*FnEventDesc{})] = gmgo.DBColEvents
+	dbColMap[reflect.TypeOf(RepoDesc{})] = gmgo.DBColRepos
+	dbColMap[reflect.TypeOf(&RepoDesc{})] = gmgo.DBColRepos
+	dbColMap[reflect.TypeOf([]*RepoDesc{})] = gmgo.DBColRepos
+	dbColMap[reflect.TypeOf(&[]*RepoDesc{})] = gmgo.DBColRepos
+	dbColMap[reflect.TypeOf(AccDesc{})] = gmgo.DBColAccounts
+	dbColMap[reflect.TypeOf(&AccDesc{})] = gmgo.DBColAccounts
+	dbColMap[reflect.TypeOf([]*AccDesc{})] = gmgo.DBColAccounts
+	dbColMap[reflect.TypeOf(&[]*AccDesc{})] = gmgo.DBColAccounts
+	dbColMap[reflect.TypeOf(RouterDesc{})] = gmgo.DBColRouters
+	dbColMap[reflect.TypeOf(&RouterDesc{})] = gmgo.DBColRouters
+	dbColMap[reflect.TypeOf([]*RouterDesc{})] = gmgo.DBColRouters
+	dbColMap[reflect.TypeOf(&[]*RouterDesc{})] = gmgo.DBColRouters
 }
 
 func dbCol(ctx context.Context, col string) *mgo.Collection {
-	return gctx(ctx).S.DB(DBStateDB).C(col)
+	return gctx(ctx).S.DB(gmgo.DBStateDB).C(col)
 }
 
 func dbColSlow(ctx context.Context, object interface{}) *mgo.Collection {
@@ -133,19 +114,19 @@ func dbColSlow(ctx context.Context, object interface{}) *mgo.Collection {
 func objcni(o interface{}) (string, bson.ObjectId) {
 	switch o := o.(type) {
 	case *AccDesc:
-		return DBColAccounts, o.ObjID
+		return gmgo.DBColAccounts, o.ObjID
 	case *RepoDesc:
-		return DBColRepos, o.ObjID
+		return gmgo.DBColRepos, o.ObjID
 	case *MwareDesc:
-		return DBColMware, o.ObjID
+		return gmgo.DBColMware, o.ObjID
 	case *DeployDesc:
-		return DBColDeploy, o.ObjID
+		return gmgo.DBColDeploy, o.ObjID
 	case *FunctionDesc:
-		return DBColFunc, o.ObjID
+		return gmgo.DBColFunc, o.ObjID
 	case *FnEventDesc:
-		return DBColEvents, o.ObjID
+		return gmgo.DBColEvents, o.ObjID
 	case *RouterDesc:
-		return DBColRouters, o.ObjID
+		return gmgo.DBColRouters, o.ObjID
 	default:
 		glog.Fatalf("Unmapped object %s", reflect.TypeOf(o).String())
 		return "", ""
@@ -311,7 +292,7 @@ func maybe(err error) error {
 }
 
 func dbTenantGetLimits(ctx context.Context, tenant string) (*swyapi.UserLimits, error) {
-	c := gctx(ctx).S.DB(DBTenantDB).C(DBColLimits)
+	c := gctx(ctx).S.DB(gmgo.DBTenantDB).C(gmgo.DBColLimits)
 	var v swyapi.UserLimits
 	err := maybe(c.Find(bson.M{"uid":tenant}).One(&v))
 	return &v, err
@@ -323,7 +304,7 @@ func dbMwareCount(ctx context.Context) (map[string]int, error) {
 		Count	int	`bson:"count"`
 	}
 
-	err := dbCol(ctx, DBColMware).Pipe([]bson.M{
+	err := dbCol(ctx, gmgo.DBColMware).Pipe([]bson.M{
 			bson.M{"$group": bson.M{
 				"_id":"$mwaretype",
 				"count":bson.M{"$sum": 1},
@@ -347,7 +328,7 @@ func dbAccCount(ctx context.Context) (map[string]int, error) {
 		Count	int	`bson:"count"`
 	}
 
-	err := dbCol(ctx, DBColAccounts).Pipe([]bson.M{
+	err := dbCol(ctx, gmgo.DBColAccounts).Pipe([]bson.M{
 			bson.M{"$group": bson.M{
 				"_id":"$type",
 				"count":bson.M{"$sum": 1},
@@ -366,15 +347,15 @@ func dbAccCount(ctx context.Context) (map[string]int, error) {
 }
 
 func dbFuncCount(ctx context.Context) (int, error) {
-	return dbCol(ctx, DBColFunc).Count()
+	return dbCol(ctx, gmgo.DBColFunc).Count()
 }
 
 func dbFuncCountTen(ctx context.Context) (int, error) {
-	return dbCol(ctx, DBColFunc).Find(bson.M{"tenant": gctx(ctx).Tenant}).Count()
+	return dbCol(ctx, gmgo.DBColFunc).Find(bson.M{"tenant": gctx(ctx).Tenant}).Count()
 }
 
 func dbMwareCountTen(ctx context.Context, mt string) (int, error) {
-	return dbCol(ctx, DBColFunc).Find(bson.M{"tenant": gctx(ctx).Tenant, "mwaretype": mt}).Count()
+	return dbCol(ctx, gmgo.DBColFunc).Find(bson.M{"tenant": gctx(ctx).Tenant, "mwaretype": mt}).Count()
 }
 
 func dbFuncUpdate(ctx context.Context, q, ch bson.M) (error) {
@@ -382,33 +363,33 @@ func dbFuncUpdate(ctx context.Context, q, ch bson.M) (error) {
 		return dbNotAllowed
 	}
 
-	return dbCol(ctx, DBColFunc).Update(q, ch)
+	return dbCol(ctx, gmgo.DBColFunc).Update(q, ch)
 }
 
 func dbRouterCount(ctx context.Context) (int, error) {
-	return dbCol(ctx, DBColRouters).Count()
+	return dbCol(ctx, gmgo.DBColRouters).Count()
 }
 
 func dbRepoCount(ctx context.Context) (int, error) {
-	return dbCol(ctx, DBColRepos).Count()
+	return dbCol(ctx, gmgo.DBColRepos).Count()
 }
 
 func dbRepoCountTen(ctx context.Context) (int, error) {
-	return dbCol(ctx, DBColRepos).Find(bson.M{"tenant": gctx(ctx).Tenant}).Count()
+	return dbCol(ctx, gmgo.DBColRepos).Find(bson.M{"tenant": gctx(ctx).Tenant}).Count()
 }
 
 
 func dbDeployCount(ctx context.Context) (int, error) {
-	return dbCol(ctx, DBColDeploy).Count()
+	return dbCol(ctx, gmgo.DBColDeploy).Count()
 }
 
 func dbTenStatsGet(ctx context.Context, tenant string, st *TenStats) error {
-	return maybe(dbCol(ctx, DBColTenStats).Find(bson.M{"tenant": tenant}).One(st))
+	return maybe(dbCol(ctx, gmgo.DBColTenStats).Find(bson.M{"tenant": tenant}).One(st))
 }
 
 func dbTenStatsGetArch(ctx context.Context, tenant string, nr int) ([]TenStats, error) {
 	var ret []TenStats
-	err := maybe(dbCol(ctx, DBColTenStatsA).Find(bson.M{"tenant": tenant}).Sort("-till").Limit(nr).All(&ret))
+	err := maybe(dbCol(ctx, gmgo.DBColTenStatsA).Find(bson.M{"tenant": tenant}).Sort("-till").Limit(nr).All(&ret))
 	return ret, err
 }
 
@@ -426,7 +407,7 @@ func dbTenStatsUpdate(ctx context.Context, tenant string, delta *gmgo.TenStatVal
 		return dbNotAllowed
 	}
 
-	_, err := dbCol(ctx, DBColTenStats).Upsert(bson.M{"tenant": tenant}, bson.M{
+	_, err := dbCol(ctx, gmgo.DBColTenStats).Upsert(bson.M{"tenant": tenant}, bson.M{
 			"$set": bson.M{"tenant": tenant},
 			"$inc": bson.M{
 				"called":	delta.Called,
@@ -441,7 +422,7 @@ func dbTenStatsUpdate(ctx context.Context, tenant string, delta *gmgo.TenStatVal
 func dbTCacheFind(ctx context.Context) (*TenantCache, error) {
 	cookie := xh.Cookify(gctx(ctx).Tenant)
 	var pc TenantCache
-	err := dbCol(ctx, DBColTCache).Find(bson.M{"cookie": cookie}).One(&pc)
+	err := dbCol(ctx, gmgo.DBColTCache).Find(bson.M{"cookie": cookie}).One(&pc)
 	if err != nil {
 		return nil, err
 	}
@@ -456,7 +437,7 @@ func dbTCacheUpdatePackages(ctx context.Context, lang string, pkl []*swyapi.Pack
 
 	ten := gctx(ctx).Tenant
 	cookie := xh.Cookify(ten)
-	dbCol(ctx, DBColTCache).Upsert(bson.M{"cookie": cookie},
+	dbCol(ctx, gmgo.DBColTCache).Upsert(bson.M{"cookie": cookie},
 			bson.M{"$set": bson.M{
 				"tenant": ten,
 				"packages." + lang: pkl,
@@ -469,7 +450,7 @@ func dbTCacheUpdatePkgDU(ctx context.Context, ten, lang string, du uint64) error
 	}
 
 	cookie := xh.Cookify(ten)
-	_, err := dbCol(ctx, DBColTCache).Upsert(bson.M{"cookie": cookie},
+	_, err := dbCol(ctx, gmgo.DBColTCache).Upsert(bson.M{"cookie": cookie},
 			bson.M{"$set": bson.M{
 				"tenant": ten,
 				"pkg_stats." + lang + ".du": du,
@@ -484,7 +465,7 @@ func dbTCacheFlushList(ctx context.Context, lang string) {
 
 	ten := gctx(ctx).Tenant
 	cookie := xh.Cookify(ten)
-	dbCol(ctx, DBColTCache).Update(bson.M{"cookie": cookie}, bson.M{"$unset": bson.M{"packages." + lang: ""}})
+	dbCol(ctx, gmgo.DBColTCache).Update(bson.M{"cookie": cookie}, bson.M{"$unset": bson.M{"packages." + lang: ""}})
 }
 
 func dbTCacheFlushAll(ctx context.Context) {
@@ -492,16 +473,16 @@ func dbTCacheFlushAll(ctx context.Context) {
 		return
 	}
 
-	dbCol(ctx, DBColTCache).RemoveAll(bson.M{})
+	dbCol(ctx, gmgo.DBColTCache).RemoveAll(bson.M{})
 }
 
 func dbFnStatsGet(ctx context.Context, cookie string, st *FnStats) error {
-	return maybe(dbCol(ctx, DBColFnStats).Find(bson.M{"cookie": cookie}).One(st))
+	return maybe(dbCol(ctx, gmgo.DBColFnStats).Find(bson.M{"cookie": cookie}).One(st))
 }
 
 func dbFnStatsGetArch(ctx context.Context, id string, nr int) ([]FnStats, error) {
 	var ret []FnStats
-	err := maybe(dbCol(ctx, DBColFnStatsA).Find(bson.M{"cookie": id}).Sort("-till").Limit(nr).All(&ret))
+	err := maybe(dbCol(ctx, gmgo.DBColFnStatsA).Find(bson.M{"cookie": id}).Sort("-till").Limit(nr).All(&ret))
 	return ret, err
 }
 
@@ -510,7 +491,7 @@ func dbFnStatsUpdate(ctx context.Context, cookie string, delta *gmgo.FnStatValue
 		return dbNotAllowed
 	}
 
-	_, err := dbCol(ctx, DBColFnStats).Upsert(bson.M{"cookie": cookie}, bson.M{
+	_, err := dbCol(ctx, gmgo.DBColFnStats).Upsert(bson.M{"cookie": cookie}, bson.M{
 			"$set": bson.M{"cookie": cookie},
 			"$inc": bson.M{
 				"called":	delta.Called,
@@ -536,17 +517,17 @@ func dbFnStatsDrop(ctx context.Context, cookie string, st *FnStats) error {
 		st.Dropped = &n
 		st.Till = &n
 
-		err := dbCol(ctx, DBColFnStatsA).Insert(st)
+		err := dbCol(ctx, gmgo.DBColFnStatsA).Insert(st)
 		if err != nil {
 			return err
 		}
 	}
 
-	return maybe(dbCol(ctx, DBColFnStats).Remove(bson.M{"cookie": cookie}))
+	return maybe(dbCol(ctx, gmgo.DBColFnStats).Remove(bson.M{"cookie": cookie}))
 }
 
 func logSaveResult(ctx context.Context, cookie, event, stdout, stderr string) {
-	c := dbCol(ctx, DBColLogs)
+	c := dbCol(ctx, gmgo.DBColLogs)
 	tm := time.Now()
 
 	if stdout != "" {
@@ -573,7 +554,7 @@ func logSaveEvent(ctx context.Context, cookie, text string) {
 		return
 	}
 
-	dbCol(ctx, DBColLogs).Insert(DBLogRec{
+	dbCol(ctx, gmgo.DBColLogs).Insert(DBLogRec{
 		Cookie:		cookie,
 		Event:		"event",
 		Time:		time.Now(),
@@ -587,7 +568,7 @@ func logGetFor(ctx context.Context, cookie string, since *time.Time) ([]DBLogRec
 	if since != nil {
 		q["ts"] = bson.M{"$gt": since}
 	}
-	err := dbCol(ctx, DBColLogs).Find(q).Sort("ts").All(&logs)
+	err := dbCol(ctx, gmgo.DBColLogs).Find(q).Sort("ts").All(&logs)
 	return logs, err
 }
 
@@ -596,17 +577,17 @@ func logRemove(ctx context.Context, fn *FunctionDesc) error {
 		return dbNotAllowed
 	}
 
-	_, err := dbCol(ctx, DBColLogs).RemoveAll(bson.M{"cookie": fn.Cookie})
+	_, err := dbCol(ctx, gmgo.DBColLogs).RemoveAll(bson.M{"cookie": fn.Cookie})
 	return maybe(err)
 }
 
 func dbProjectListAll(ctx context.Context, ten string) (fn []string, mw []string, err error) {
-	err = dbCol(ctx, DBColFunc).Find(bson.M{"tennant": ten}).Distinct("project", &fn)
+	err = dbCol(ctx, gmgo.DBColFunc).Find(bson.M{"tennant": ten}).Distinct("project", &fn)
 	if err != nil {
 		return
 	}
 
-	err = dbCol(ctx, DBColMware).Find(bson.M{"tennant": ten}).Distinct("project", &mw)
+	err = dbCol(ctx, gmgo.DBColMware).Find(bson.M{"tennant": ten}).Distinct("project", &mw)
 	return
 }
 
@@ -622,7 +603,7 @@ func dbConnect() error {
 
 	info := mgo.DialInfo{
 		Addrs:		[]string{dbc.Addr()},
-		Database:	DBStateDB,
+		Database:	gmgo.DBStateDB,
 		Timeout:	60 * time.Second,
 		Username:	dbc.User,
 		Password:	pwd,
@@ -631,7 +612,7 @@ func dbConnect() error {
 	session, err = mgo.DialWithInfo(&info);
 	if err != nil {
 		glog.Errorf("dbConnect: Can't dial to %s with db %s (%s)",
-				conf.DB, DBStateDB, err.Error())
+				conf.DB, gmgo.DBStateDB, err.Error())
 		return err
 	}
 
@@ -648,23 +629,23 @@ func dbConnect() error {
 			Sparse:		true}
 
 	index.Key = []string{"cookie"}
-	err = dbs.DB(DBStateDB).C(DBColFunc).EnsureIndex(index)
+	err = dbs.DB(gmgo.DBStateDB).C(gmgo.DBColFunc).EnsureIndex(index)
 	if err != nil {
 		return fmt.Errorf("No cookie index for functions: %s", err.Error())
 	}
-	err = dbs.DB(DBStateDB).C(DBColMware).EnsureIndex(index)
+	err = dbs.DB(gmgo.DBStateDB).C(gmgo.DBColMware).EnsureIndex(index)
 	if err != nil {
 		return fmt.Errorf("No cookie index for mware: %s", err.Error())
 	}
-	err = dbs.DB(DBStateDB).C(DBColAccounts).EnsureIndex(index)
+	err = dbs.DB(gmgo.DBStateDB).C(gmgo.DBColAccounts).EnsureIndex(index)
 	if err != nil {
 		return fmt.Errorf("No cookie index for mware: %s", err.Error())
 	}
-	err = dbs.DB(DBStateDB).C(DBColRouters).EnsureIndex(index)
+	err = dbs.DB(gmgo.DBStateDB).C(gmgo.DBColRouters).EnsureIndex(index)
 	if err != nil {
 		return fmt.Errorf("No cookie index for mware: %s", err.Error())
 	}
-	err = dbs.DB(DBStateDB).C(DBColTCache).EnsureIndex(index)
+	err = dbs.DB(gmgo.DBStateDB).C(gmgo.DBColTCache).EnsureIndex(index)
 	if err != nil {
 		return fmt.Errorf("No cookie index for ten cache: %s", err.Error())
 	}
@@ -673,24 +654,24 @@ func dbConnect() error {
 	index.DropDups = false
 
 	index.Key = []string{"src.repo"}
-	err = dbs.DB(DBStateDB).C(DBColFunc).EnsureIndex(index)
+	err = dbs.DB(gmgo.DBStateDB).C(gmgo.DBColFunc).EnsureIndex(index)
 	if err != nil {
 		return fmt.Errorf("No src.repo index for functions: %s", err.Error())
 	}
 
 	index.Key = []string{"name"}
-	err = dbs.DB(DBStateDB).C(DBColRepos).EnsureIndex(index)
+	err = dbs.DB(gmgo.DBStateDB).C(gmgo.DBColRepos).EnsureIndex(index)
 	if err != nil {
 		return fmt.Errorf("No name index for repos: %s", err.Error())
 	}
 
 	index.Key = []string{"key"}
-	err = dbs.DB(DBStateDB).C(DBColEvents).EnsureIndex(index)
+	err = dbs.DB(gmgo.DBStateDB).C(gmgo.DBColEvents).EnsureIndex(index)
 	if err != nil {
 		return fmt.Errorf("No name index for repos: %s", err.Error())
 	}
 
-	_, err = dbs.DB(DBStateDB).C(DBColLogs).UpdateAll(bson.M{}, bson.M{"$rename":bson.M{"fnid":"cookie"}})
+	_, err = dbs.DB(gmgo.DBStateDB).C(gmgo.DBColLogs).UpdateAll(bson.M{}, bson.M{"$rename":bson.M{"fnid":"cookie"}})
 	if err != nil {
 		return fmt.Errorf("Cannot update logs field fnid to cookie")
 	}
