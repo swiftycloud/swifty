@@ -42,6 +42,7 @@ type KeystoneReq struct {
 	Succ		int
 	Headers		map[string]string
 	NoTok		bool
+	CToken		string
 
 	outToken	string
 }
@@ -65,15 +66,23 @@ func tryRefreshToken(kc *KsClient, token string) error {
 }
 
 func (kc *KsClient)MakeReq(ksreq *KeystoneReq, in interface{}, out interface{}) error {
-	err, _ := kc.MakeReq2(ksreq, in, out)
+	err, _ := kc.MakeReq2(ksreq, in, out, nil)
 	return err
 }
 
-func (kc *KsClient)MakeReq2(ksreq *KeystoneReq, in interface{}, out interface{}) (error, int) {
+func (kc *KsClient)MakeReq2(ksreq *KeystoneReq, in interface{}, out interface{}, flog func(string)) (error, int) {
 	var cToken string
 	headers := make(map[string]string)
 retry:
-	if kc.Token != "" && !ksreq.NoTok {
+	if ksreq.CToken != "" {
+		if flog != nil {
+			flog("Use provided token")
+		}
+		headers["X-Auth-Token"] = ksreq.CToken
+	} else if kc.Token != "" && !ksreq.NoTok {
+		if flog != nil {
+			flog("Use my token")
+		}
 		cToken = kc.Token
 		headers["X-Auth-Token"] = cToken
 	}
@@ -141,7 +150,7 @@ func KeystoneGetTokenData(addr, token string) (*KeystoneTokenData, int) {
 		},
 	}
 
-	err, code := kc.MakeReq2(&req, nil, &out)
+	err, code := kc.MakeReq2(&req, nil, &out, nil)
 	if err != nil {
 		switch code {
 		case http.StatusUnauthorized, http.StatusNotFound:
@@ -183,6 +192,29 @@ func KeystoneAuthWithPass(addr, domain string, up *swyapi.UserLogin) (string, st
 						Password: up.Password,
 					}, }, }, },
 				}, &out)
+
+	return req.outToken, out.Token.Expires, err
+}
+
+func KeystoneAuthWithAC(addr, domain string, up *swyapi.UserLogin) (string, string, error) {
+	var out KeystoneAuthResp
+
+	kc := &KsClient { addr: addr, }
+
+	req := KeystoneReq {
+		Type:		"POST",
+		URL:		"auth/tokens",
+		Succ:		201,
+	}
+
+	err := kc.MakeReq(&req, &KeystoneAuthReq {
+		Auth: KeystoneAuth{
+			Identity: KeystoneIdentity{
+				Methods: []string{"application_credential"},
+				AC: &KeystoneApplictionCredentials{
+					Id: up.CredsKey,
+					Secret: up.CredsSecret,
+				},},},}, &out)
 
 	return req.outToken, out.Token.Expires, err
 }

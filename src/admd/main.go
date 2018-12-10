@@ -1040,6 +1040,129 @@ func handleUserLimits(ctx context.Context, w http.ResponseWriter, r *http.Reques
 	}
 }
 
+func handleUserCreds(ctx context.Context, w http.ResponseWriter, r *http.Request, td *xkst.KeystoneTokenData) *xrest.ReqErr {
+	uid := mux.Vars(r)["uid"]
+	if uid == "me" {
+		uid = td.User.Id
+	}
+
+	if uid == td.User.Id {
+		if !xkst.HasRole(td, swyapi.AdminRole, swyapi.UserRole) {
+			return admdErr(http.StatusForbidden)
+		}
+	} else {
+		if r.Method != "GET" {
+			/* Keystone doesn't allow such anyway */
+			return admdErr(http.StatusForbidden)
+		}
+
+		if !xkst.HasRole(td, swyapi.AdminRole) {
+			return admdErr(http.StatusForbidden)
+		}
+	}
+
+	switch r.Method {
+	case "GET":
+		return handleListCreds(ctx, w, r, uid)
+	case "POST":
+		return handleCreateCreds(ctx, w, r, uid)
+	}
+
+	return admdErr(http.StatusMethodNotAllowed)
+}
+
+func handleUserCred(ctx context.Context, w http.ResponseWriter, r *http.Request, td *xkst.KeystoneTokenData) *xrest.ReqErr {
+	uid := mux.Vars(r)["uid"]
+	if uid == "me" {
+		uid = td.User.Id
+	}
+
+	if uid == td.User.Id {
+		if !xkst.HasRole(td, swyapi.AdminRole, swyapi.UserRole) {
+			return admdErr(http.StatusForbidden)
+		}
+	} else {
+		if r.Method != "GET" {
+			/* Keystone doesn't allow such */
+			return admdErr(http.StatusForbidden)
+		}
+
+		if !xkst.HasRole(td, swyapi.AdminRole) {
+			return admdErr(http.StatusForbidden)
+		}
+	}
+
+	key := mux.Vars(r)["key"]
+
+	switch r.Method {
+	case "GET":
+		return handleShowCred(ctx, w, r, uid, key)
+	case "DELETE":
+		return handleDeleteCred(ctx, w, r, uid, key)
+	}
+
+	return admdErr(http.StatusMethodNotAllowed)
+}
+
+func handleCreateCreds(ctx context.Context, w http.ResponseWriter, r *http.Request, uid string) *xrest.ReqErr {
+	var params swyapi.Creds
+
+	err := xhttp.RReq(r, &params)
+	if err != nil {
+		return admdErrE(err, http.StatusBadRequest)
+	}
+
+	err = ksCreateCreds(conf.kc, uid, &params, r)
+	if err != nil {
+		return admdErrM("Cannot create creds", http.StatusInternalServerError)
+	}
+
+	err = xhttp.Respond(w, &params)
+	if err != nil {
+		return admdErrE(err, http.StatusInternalServerError)
+	}
+
+	return nil
+}
+
+func handleListCreds(ctx context.Context, w http.ResponseWriter, r *http.Request, uid string) *xrest.ReqErr {
+	creds, err := ksListCreds(conf.kc, uid)
+	if err != nil {
+		return admdErrM("Cannot list creds", http.StatusInternalServerError)
+	}
+
+	err = xhttp.Respond(w, creds)
+	if err != nil {
+		return admdErrE(err, http.StatusInternalServerError)
+	}
+
+	return nil
+}
+
+func handleShowCred(ctx context.Context, w http.ResponseWriter, r *http.Request, uid,key string) *xrest.ReqErr {
+	cred, err := ksGetCred(conf.kc, uid, key)
+	if err != nil {
+		return admdErrM("Cannot get cred", http.StatusInternalServerError)
+	}
+
+	err = xhttp.Respond(w, cred)
+	if err != nil {
+		return admdErrE(err, http.StatusInternalServerError)
+	}
+
+	return nil
+}
+
+func handleDeleteCred(ctx context.Context, w http.ResponseWriter, r *http.Request, uid,key string) *xrest.ReqErr {
+	err, code := ksRemoveCred(conf.kc, uid, key)
+	if err != nil {
+		return admdErrM("Cannot remove cred", code)
+	}
+
+	w.WriteHeader(http.StatusOK)
+	return nil
+}
+
 func setupLogger(conf *YAMLConf) {
 	lvl := zap.DebugLevel
 
@@ -1124,6 +1247,8 @@ func main() {
 	r.Handle("/v1/users/{uid}", genReqHandler(handleUser)).Methods("GET", "PUT", "DELETE", "OPTIONS")
 	r.Handle("/v1/users/{uid}/pass", genReqHandler(handleSetPassword)).Methods("PUT", "OPTIONS")
 	r.Handle("/v1/users/{uid}/limits", genReqHandler(handleUserLimits)).Methods("PUT", "GET", "OPTIONS")
+	r.Handle("/v1/users/{uid}/creds", genReqHandler(handleUserCreds)).Methods("GET", "POST", "OPTIONS")
+	r.Handle("/v1/users/{uid}/creds/{key}", genReqHandler(handleUserCred)).Methods("GET", "DELETE", "OPTIONS")
 	r.Handle("/v1/plans", genReqHandler(handlePlans)).Methods("POST", "GET", "OPTIONS")
 	r.Handle("/v1/plans/{pid}", genReqHandler(handlePlan)).Methods("GET", "DELETE", "PUT", "OPTIONS")
 	r.Handle("/v1/sysctl", genReqHandler(handleSysctls)).Methods("GET", "OPTIONS")

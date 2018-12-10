@@ -14,6 +14,12 @@ type UserInfo struct {
 	Roles	[]string	`json:"roles,omitempty"`
 }
 
+type Creds struct {
+	Key	string		`json:"key"`
+	Name	string		`json:"name"`
+	Secret	string		`json:"secret,omitempty"`
+}
+
 type ModUser struct {
 	Enabled	*bool		`json:"enabled,omitempty"`
 }

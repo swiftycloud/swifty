@@ -9,10 +9,12 @@ import (
 	"code.cloudfoundry.org/bytefmt"
 	"gopkg.in/yaml.v2"
 	"encoding/base64"
+	"encoding/csv"
 	"io/ioutil"
 	"net/http"
 	"strings"
 	"strconv"
+	"errors"
 	"regexp"
 	"time"
 	"flag"
@@ -39,6 +41,7 @@ type YAMLConf struct {
 	Login		LoginInfo	`yaml:"login"`
 	TLS		bool		`yaml:"tls"`
 	Direct		bool		`yaml:"direct"`
+	Creds		bool		`yaml:"creds"`
 	Certs		string		`yaml:"x509crtfile"`
 	Relay		string		`yaml:"relay,omitempty"`
 	Token		string		`yaml:"token"`
@@ -59,19 +62,46 @@ func gateProto() string {
 	}
 }
 
+func user_list_csv(uss []swyapi.UserInfo) {
+	w := csv.NewWriter(os.Stdout)
+
+	for _, u := range uss {
+		err := w.Write([]string {
+			u.UId,
+			u.Name,
+			u.Created,
+		})
+		if err != nil {
+			fatal(err)
+		}
+	}
+
+	w.Flush()
+	if err := w.Error(); err != nil {
+		fatal(err)
+	}
+}
+
 func user_list(args []string, opts [16]string) {
 	var uss []swyapi.UserInfo
 	swyclient.List("users", http.StatusOK, &uss)
 
-	for _, u := range uss {
-		en := ""
-		if u.Created != "" {
-			en += " since " + u.Created
+	switch opts[0] {
+	case "":
+		for _, u := range uss {
+			en := ""
+			if u.Created != "" {
+				en += " since " + u.Created
+			}
+			if !u.Enabled {
+				en += " [X]"
+			}
+			fmt.Printf("%s: %s (%s)%s\n", u.ID, u.UId, u.Name, en)
 		}
-		if !u.Enabled {
-			en += " [X]"
-		}
-		fmt.Printf("%s: %s (%s)%s\n", u.ID, u.UId, u.Name, en)
+	case "csv":
+		user_list_csv(uss)
+	default:
+		fatal(errors.New("bad format"))
 	}
 }
 
@@ -106,6 +136,24 @@ func user_enabled(args []string, opts [16]string) {
 	}
 
 	swyclient.Mod("users/" + args[0], http.StatusOK, &swyapi.ModUser{Enabled: &enabled})
+}
+
+func user_creds_list(args []string, opts [16]string) {
+	var cs []swyapi.Creds
+	swyclient.Get("users/" + args[0] + "/creds", http.StatusOK, &cs)
+	for _, c := range cs {
+		fmt.Printf("%-16s: %s\n", c.Name, c.Key)
+	}
+}
+
+func user_creds_add(args []string, opts [16]string) {
+	var cs swyapi.Creds
+	swyclient.Add("users/" + args[0] + "/creds", http.StatusOK, &swyapi.Creds{Name: args[1]}, &cs)
+	fmt.Printf("Created creds\nkey: %s\nsecret: %s\nSAVE IT, IT WILL NOT BE SHOWN ANY MORE)\n", cs.Key, cs.Secret)
+}
+
+func user_creds_del(args []string, opts [16]string) {
+	swyclient.Del("users/" + args[0] + "/creds/" + args[1], http.StatusOK)
 }
 
 func user_pass(args []string, opts [16]string) {
@@ -1749,6 +1797,9 @@ func mkClient() {
 	if conf.Direct {
 		swyclient.Direct()
 	}
+	if conf.Creds {
+		swyclient.ViaCreds()
+	}
 
 	swyclient.OnError(func(err error) { fatal(err) })
 	swyclient.TokSaver(func(tok string) { conf.Token = tok; save_config() })
@@ -1793,6 +1844,12 @@ func make_login(creds string, opts [16]string) {
 		conf.Direct = true
 	} else {
 		conf.Direct = false
+	}
+
+	if opts[5] == "yes" {
+		conf.Creds = true
+	} else {
+		conf.Creds = false
 	}
 
 	mkClient()
@@ -1888,6 +1945,9 @@ const (
 	CMD_UPASS string	= "upass"
 	CMD_ULIM string		= "ulim"
 	CMD_UEN string		= "uen"
+	CMD_UCL string		= "ucl"
+	CMD_UCA string		= "uca"
+	CMD_UCD string		= "ucd"
 
 	CMD_TL string		= "tl"
 	CMD_TA string		= "ta"
@@ -1974,6 +2034,9 @@ var cmdOrder = []string {
 	CMD_UPASS,
 	CMD_ULIM,
 	CMD_UEN,
+	CMD_UCL,
+	CMD_UCA,
+	CMD_UCD,
 
 	CMD_TL,
 	CMD_TA,
@@ -2081,6 +2144,10 @@ var cmdMap = map[string]*cmdDesc {
 	CMD_UEN:	&cmdDesc{ help: "Enable/disable user",	call: user_enabled,	adm: true },
 	CMD_ULIM:	&cmdDesc{ help: "Configure user limits",call: user_limits,	adm: true },
 
+	CMD_UCL:	&cmdDesc{ help: "List user creds",	call: user_creds_list,	adm: true },
+	CMD_UCA:	&cmdDesc{ help: "Add user creds",	call: user_creds_add,	adm: true },
+	CMD_UCD:	&cmdDesc{ help: "Del user creds",	call: user_creds_del,	adm: true },
+
 	CMD_TL:		&cmdDesc{ help: "List plans",		call: tplan_list,	adm: true },
 	CMD_TA:		&cmdDesc{ help: "Add plan",		call: tplan_add,	adm: true },
 	CMD_TU:		&cmdDesc{ help: "Update plan",		call: tplan_update,	adm: true },
@@ -2124,6 +2191,7 @@ func main() {
 	cmdMap[CMD_LOGIN].opts.StringVar(&opts[2], "admd", "", "Admd address:port")
 	cmdMap[CMD_LOGIN].opts.StringVar(&opts[3], "proxy", "", "Proxy mode")
 	cmdMap[CMD_LOGIN].opts.StringVar(&opts[4], "pass", "", "Password (optional)")
+	cmdMap[CMD_LOGIN].opts.StringVar(&opts[5], "creds", "", "This is creds login, not user/pass one")
 
 	setupCommonCmd(CMD_ME, "ACTION")
 
@@ -2244,6 +2312,7 @@ func main() {
 	setupCommonCmd(CMD_PKS)
 
 	setupCommonCmd(CMD_UL)
+	cmdMap[CMD_UL].opts.StringVar(&opts[0], "f", "", "Format (csv)")
 	setupCommonCmd(CMD_UA, "UID")
 	cmdMap[CMD_UA].opts.StringVar(&opts[0], "name", "", "User name")
 	cmdMap[CMD_UA].opts.StringVar(&opts[1], "pass", "", "User password")
@@ -2262,6 +2331,10 @@ func main() {
 	cmdMap[CMD_ULIM].opts.StringVar(&opts[4], "bo", "", "Maximum outgoing network bytes")
 	cmdMap[CMD_ULIM].opts.StringVar(&opts[5], "pkgs", "", "Disk size for packages")
 	cmdMap[CMD_ULIM].opts.StringVar(&opts[6], "reps", "", "Maximum number of repos")
+
+	setupCommonCmd(CMD_UCL, "UID")
+	setupCommonCmd(CMD_UCA, "UID", "NAME")
+	setupCommonCmd(CMD_UCD, "UID", "ID")
 
 	setupCommonCmd(CMD_TL)
 	setupCommonCmd(CMD_TA, "NAME", "FILE")

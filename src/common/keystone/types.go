@@ -34,6 +34,7 @@ type KeystoneIdentity struct {
 	Methods		[]string		`json:"methods"`
 	Password	*KeystonePassword	`json:"password,omitempty"`
 	Token		*KeystoneToken		`json:"token,omitempty"`
+	AC		*KeystoneApplictionCredentials `json:"application_credential,omitempty"`
 }
 
 type KeystoneAuth struct {
@@ -97,4 +98,18 @@ type KeystoneUsersResp struct {
 
 type KeystoneUserResp struct {
 	User		KeystoneUser		`json:"user"`
+}
+
+type KeystoneApplictionCredentials struct {
+	Id		string			`json:"id,omitempty"`
+	Name		string			`json:"name,omitempty"`
+	Secret		string			`json:"secret,omitempty"`
+}
+
+type KeystoneAppCreds struct {
+	Ac		KeystoneApplictionCredentials	`json:"application_credential"`
+}
+
+type KeystoneAppCredsList struct {
+	Acs		[]KeystoneApplictionCredentials	`json:"application_credentials"`
 }

@@ -25,6 +25,7 @@ type Client struct {
 	verb	bool
 	direct	bool
 	admd	bool
+	creds	bool
 	user	string
 	pass	string
 	stok	func(tok string)
@@ -50,6 +51,7 @@ func (cln *Client)Admd(addr, port string) { cln.aaddr = addr; cln.aport = port }
 func (cln *Client)NoTLS() { cln.proto = "http" }
 func (cln *Client)Direct() { cln.direct = true }
 func (cln *Client)ToAdmd(v bool) { cln.admd = v }
+func (cln *Client)ViaCreds() { cln.creds = true }
 
 func (cln *Client)endpoint() string {
 	var ep string
@@ -121,9 +123,19 @@ func (cln *Client)req(method, url string, in interface{}, succ_code int, tmo uin
 }
 
 func (cln *Client)Login() error {
-	resp, err := cln.req("POST", "login", UserLogin {
-			UserName: cln.user, Password: cln.pass,
-		}, http.StatusOK, 0)
+	var ul *UserLogin
+	if cln.creds {
+		ul = &UserLogin{
+			CredsKey: cln.user,
+			CredsSecret: cln.pass,
+		}
+	} else {
+		ul = &UserLogin{
+			UserName: cln.user,
+			Password: cln.pass,
+		}
+	}
+	resp, err := cln.req("POST", "login", ul, http.StatusOK, 0)
 	if err != nil {
 		return err
 	}

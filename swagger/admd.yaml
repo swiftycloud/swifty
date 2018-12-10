@@ -150,6 +150,97 @@ paths:
           description: Need to authenticate
         '403':
           description: Bad auth token
+  '/users/{uid}/creds':
+    parameters:
+      - in: path
+        name: uid
+        type: string
+        required: true
+        description: 'User ID (id, not uid)'
+    get:
+      summary: Get list of user creds
+      parameters:
+        - in: header
+          name: X-Auth-Token
+          type: string
+          required: true
+      responses:
+        '200':
+          description: OK
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/Creds'
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad auth token
+    post:
+      summary: Create user creds
+      parameters:
+        - in: header
+          name: X-Auth-Token
+          type: string
+          required: true
+        - in: body
+          name: data
+          description: User description (username is ignored)
+          schema:
+            $ref: '#/definitions/Creds'
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/Creds'
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad auth token
+          
+  '/users/{uid}/creds/{key}':
+    parameters:
+      - in: path
+        name: uid
+        type: string
+        required: true
+        description: 'User ID (id, not uid)'
+      - in: path
+        name: key
+        type: string
+        required: true
+        description: 'Creds key value'
+    get:
+      summary: Get info about creds
+      parameters:
+        - in: header
+          name: X-Auth-Token
+          type: string
+          required: true
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/Creds'
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad auth token
+    delete:
+      summary: Delete creds entry
+      parameters:
+        - in: header
+          name: X-Auth-Token
+          type: string
+          required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad auth token
+
+
   '/users/{uid}/limits':
     parameters:
       - in: path
@@ -414,3 +505,15 @@ definitions:
       bytesout:
         type: integer
         description: maximum bytes-out (outgoing network traffic) value per billing period
+  Creds:
+    description: Delegation of users rights to login into gate
+    properties:
+      name:
+        type: string
+        description: Just a random identifier
+      key:
+        type: string
+        description: A creds ID, used to reference one
+      secret:
+        type: string
+        description: A secret creds entry value, shown only once after cretion
