@@ -119,6 +119,7 @@ for cmd in ['object-get']:
     spp.add_argument('--key', dest = 'key', help = 'Object name')
     spp.add_argument('--file', dest = 'file', help = 'Content from file')
     spp.add_argument('--size', dest = 'size', help = 'Object size')
+    spp.add_argument('--range', dest = 'range', help = 'Range')
 
 for cmd in ['object-copy']:
     spp = sp.add_parser(cmd, help = 'Copy object')
@@ -487,7 +488,10 @@ if args.cmd == 'object-add':
 if args.cmd == 'object-get':
     print("Getting object %s/%s" % (args.name, args.key))
     try:
-        resp = s3.get_object(Bucket = args.name, Key = args.key)
+        ga = {}
+        if args.range:
+                ga["Range"] = args.range
+        resp = s3.get_object(Bucket = args.name, Key = args.key, **ga)
         print("\tDone")
         etag = resp.get('ResponseMetadata',{}).get('HTTPHeaders',{}).get('etag', "")
         if etag:
