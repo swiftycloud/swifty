@@ -77,13 +77,16 @@ func getByUserCreationTime(nsid string) (*time.Time, error) {
 	return created[nsid], nil
 }
 
-func getLastStats(arch *mgo.Collection, nsid string) *time.Time {
+func getLastStats(curr *mgo.Collection, arch *mgo.Collection, nsid string) *time.Time {
 	var ast s3mgo.AcctStats
 	var last *time.Time
 
 	err := arch.Find(bson.M{"nsid": nsid}).Sort("-till").Limit(1).One(&ast)
 	if err == nil {
 		last = ast.Till
+		if ast.Dirty != nil {
+			updateStatsAfterArch(curr, arch, &ast)
+		}
 	} else if err == mgo.ErrNotFound {
 		log.Printf("\t\tNo archive - requesting creation time\n")
 		ct, err := getByUserCreationTime(nsid)
@@ -101,6 +104,17 @@ func getLastStats(arch *mgo.Collection, nsid string) *time.Time {
 	return last
 }
 
+func updateStatsAfterArch(curr *mgo.Collection, arch *mgo.Collection, st *s3mgo.AcctStats) {
+	upd := bson.M{"out-bytes-tot-off": st.OutBytes + st.OutBytesWeb}
+	err := curr.Update(bson.M{"_id": *st.Dirty}, bson.M{"$set": upd})
+	if err != nil {
+		log.Printf("\t\tERR: error updating orig stats: %s\n", err.Error())
+		return
+	}
+
+	arch.Update(bson.M{"_id": st.ObjID}, bson.M{"$unset": bson.M{"dirty": ""}})
+}
+
 func doArchPass(now time.Time, s *mgo.Session) {
 	defer s.Close()
 	defer func() { created = nil } ()
@@ -113,7 +127,7 @@ func doArchPass(now time.Time, s *mgo.Session) {
 	iter := curr.Find(nil).Iter()
 	for iter.Next(&st) {
 		log.Printf("\tFound stats for %s, checking archive\n", st.NamespaceID)
-		last := getLastStats(arch, st.NamespaceID)
+		last := getLastStats(curr, arch, st.NamespaceID)
 		if last == nil {
 			continue
 		}
@@ -129,16 +143,13 @@ func doArchPass(now time.Time, s *mgo.Session) {
 		st.ObjID = bson.NewObjectId()
 		st.Till = &now
 		st.Lim = nil
+		st.Dirty = &oid
 		err := arch.Insert(&st)
 		if err != nil {
 			log.Printf("\t\tERR: error archiving: %s\n", err.Error())
 		}
 
-		upd := bson.M{"out-bytes-tot-off": st.OutBytes + st.OutBytesWeb}
-		err = curr.Update(bson.M{"_id": oid}, bson.M{"$set": upd})
-		if err != nil {
-			log.Printf("\t\tERR: error updating orig stats: %s\n", err.Error())
-		}
+		updateStatsAfterArch(curr, arch, &st)
 	}
 
 	err := iter.Close()
