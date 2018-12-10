@@ -1,5 +1,6 @@
 BROOT=$(CURDIR)/../../../../
 include $(BROOT)/Makefile.inc
+include $(BROOT)/kubectl/docker/Makefile.inc
 
 layer.tar: .FORCE
 	$(call msg-gen,$@)
@@ -13,10 +14,10 @@ layer.tar: .FORCE
 
 swifty/nodejs: layer.tar
 	$(call msg-gen,$@)
-	$(Q) docker build --network=host -t registry.gitlab.com/swiftyteam/$@ .
-	$(Q) docker tag registry.gitlab.com/swiftyteam/$@ registry.gitlab.com/swiftyteam/$@:$(GITID)
-	$(Q) docker tag registry.gitlab.com/swiftyteam/$@ registry.gitlab.com/swiftyteam/$@:$(SWIFTY_ENV)
-	$(Q) docker push registry.gitlab.com/swiftyteam/$@
+	$(Q) docker build --network=host -t $(IMG_PREFIX)$@ .
+	$(Q) docker tag $(IMG_PREFIX)$@ $(IMG_PREFIX)$@:$(GITID)
+	$(Q) docker tag $(IMG_PREFIX)$@ $(IMG_PREFIX)$@:$(SWIFTY_ENV)
+	$(Q) docker push $(IMG_PREFIX)$@
 .PHONY: swifty/nodejs
 
 all: swifty/nodejs
