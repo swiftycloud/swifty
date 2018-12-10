@@ -9,14 +9,13 @@ import (
 	"log"
 	"flag"
 	"time"
-	"strings"
-	"strconv"
 	"net/http"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 	"swifty/common"
 	"swifty/apis"
 	"swifty/gate/mgo"
+	"swifty/scrapers"
 )
 
 const (
@@ -52,47 +51,12 @@ var conf YAMLConf
 
 var uis map[string]*swyapi.UserInfo
 
-func nextPeriod(since *time.Time, period string) time.Time {
-	/* Common sane types */
-	switch period {
-	case "hourly":
-		return since.Add(time.Hour)
-	case "daily":
-		return since.AddDate(0, 0, 1)
-	case "weekly":
-		return since.AddDate(0, 0, 7)
-	case "monthly":
-		return since.AddDate(0, 1, 0)
-	}
-
-	/* For debugging mostly */
-	var mult time.Duration
-	var dur string
-	if strings.HasSuffix(period, "s") {
-		dur = strings.TrimSuffix(period, "s")
-		mult = time.Second
-	} else if strings.HasSuffix(period, "m") {
-		dur = strings.TrimSuffix(period, "s")
-		mult = time.Minute
-	}
-
-	if mult != 0 {
-		i, err := strconv.Atoi(dur)
-		if err != nil {
-			goto out
-		}
-		return since.Add(time.Duration(i) * mult)
-	}
-out:
-	panic("Bad period value: " + period)
-}
-
 func timePassed(since *time.Time, now time.Time, period string) bool {
 	if now.Before(*since) {
 		return false
 	}
 
-	return nextPeriod(since, period).Before(now)
+	return dbscr.NextPeriod(since, period).Before(now)
 }
 
 func getUserInfo(ten string) (*swyapi.UserInfo, error) {
@@ -272,7 +236,7 @@ func main() {
 
 				done <-true
 
-				slp := nextPeriod(&now, conf.SA.Check).Sub(now)
+				slp := dbscr.NextPeriod(&now, conf.SA.Check).Sub(now)
 				<-time.After(slp)
 			}
 		}()
