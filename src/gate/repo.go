@@ -934,14 +934,14 @@ func ctxRepoName(ctx context.Context, name string) bson.M {
 	}
 }
 
-func repoReadFile(ctx context.Context, rf string) ([]byte, bool, error) {
-	fname, trusted, err := repoFilePath(ctx, rf)
+func repoReadFile(ctx context.Context, rf string) ([]byte, *RepoDesc, error) {
+	fname, rd, err := repoFilePath(ctx, rf)
 	if err != nil {
-		return nil, false, err
+		return nil, nil, err
 	}
 
 	data, err := ioutil.ReadFile(fname)
-	return data, trusted, err
+	return data, rd, err
 }
 
 func repoOpenFile(ctx context.Context, rf string) (io.ReadCloser, error) {
@@ -957,17 +957,17 @@ func (rd *RepoDesc)trusted() bool {
 	return rd.ObjID == demoRep.ObjID
 }
 
-func repoFilePath(ctx context.Context, rf string) (string, bool, error) {
+func repoFilePath(ctx context.Context, rf string) (string, *RepoDesc, error) {
 	var rd RepoDesc
 
 	ids := strings.SplitN(rf, "/", 2)
 	if len(ids) == 2 && bson.IsObjectIdHex(ids[0]) {
 		err := dbFind(ctx, ctxRepoId(ctx, ids[0]), &rd)
 		if err != nil {
-			return "", false, err
+			return "", nil, err
 		}
 
-		return rd.clonePath() + "/" + ids[1], rd.trusted(), nil
+		return rd.clonePath() + "/" + ids[1], &rd, nil
 
 	}
 
@@ -975,11 +975,11 @@ func repoFilePath(ctx context.Context, rf string) (string, bool, error) {
 	if len(ids) == 3 {
 		err := dbFind(ctx, ctxRepoName(ctx, ids[0] + "//" + ids[1]), &rd)
 		if err != nil {
-			return "", false, err
+			return "", nil, err
 		}
 
-		return rd.clonePath() + "/" + ids[2], rd.trusted(), nil
+		return rd.clonePath() + "/" + ids[2], &rd, nil
 	}
 
-	return "", false, errors.New("Bad repo file ID")
+	return "", nil, errors.New("Bad repo file ID")
 }

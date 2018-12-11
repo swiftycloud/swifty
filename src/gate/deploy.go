@@ -337,10 +337,15 @@ func (dep *DeployDesc)getItemsParams(ctx context.Context, from *swyapi.DeploySou
 			return GateErrE(swyapi.GateGenErr, err)
 		}
 	case from.Repo != "":
-		desc, trusted, err = repoReadFile(ctx, from.Repo)
+		var rd *RepoDesc
+
+		desc, rd, err = repoReadFile(ctx, from.Repo)
 		if err != nil {
 			return GateErrE(swyapi.GateGenErr, err)
 		}
+
+		trusted = rd.trusted()
+		desc = bytes.Replace(desc, []byte("%repo%"), []byte(rd.ObjID.Hex()), -1)
 	case from.URL != "":
 		desc, err = xhttp.ReadFromURL(from.URL)
 		if err != nil {
