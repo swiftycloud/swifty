@@ -203,7 +203,7 @@ func genReqHandler(cb gateGenReq) http.Handler {
 			return
 		}
 
-		ctxlog(ctx).Debugf("REQ %s %s.%s", gctx(ctx).Tenant, r.Method, r.URL.Path)
+		ctxlog(ctx).Debugf("REQ %s %s.%s from %s", gctx(ctx).Tenant, r.Method, r.URL.Path, r.RemoteAddr)
 		defer done(ctx)
 
 		traceRequest(ctx, r)
