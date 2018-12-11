@@ -265,6 +265,7 @@ func handleAdmin(cb func(ctx context.Context, w http.ResponseWriter, r *http.Req
 
 		err := s3VerifyAdmin(r)
 		if err != nil {
+			log.Warnf("Failed admin authorization from %s", r.RemoteAddr)
 			http.Error(w, err.Error(), http.StatusUnauthorized)
 			return
 		}
