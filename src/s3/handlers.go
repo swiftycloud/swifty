@@ -458,6 +458,8 @@ func handleGetObject(ctx context.Context, oname string, bucket *s3mgo.Bucket, w 
 
 			w.Write(ch.Bytes[s_off:e_off])
 			downloaded += int64(e_off - s_off)
+			rover += int64(e_off)
+
 			return nil
 		})
 	})
