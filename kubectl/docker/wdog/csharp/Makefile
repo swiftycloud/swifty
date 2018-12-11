@@ -15,19 +15,7 @@ layer.tar: .FORCE
 	$(Q) $(TAR) cf layer.tar --xform='s#.layer##' .layer/
 	$(Q) $(RM) -rf .layer
 
-
-image: layer.tar
-	$(call msg-gen,$(IMAGE))
-	$(Q) docker build --network=host -t $(IMG_PREFIX)$(IMAGE) .
-	$(Q) docker tag $(IMG_PREFIX)$(IMAGE) $(IMG_PREFIX)$(IMAGE):$(GITID)
-	$(Q) docker tag $(IMG_PREFIX)$(IMAGE) $(IMG_PREFIX)$(IMAGE):$(SWIFTY_ENV)
-.PHONY: image
-
-push: image
-	$(call msg-gen,$@)
-	$(Q) docker push $(IMG_PREFIX)$(IMAGE)
-.PHONY: push
-
+$(eval $(call gen-docker-targets,$(IMAGE)))
 
 all: image push
 	@true
