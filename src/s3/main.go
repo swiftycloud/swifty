@@ -255,6 +255,26 @@ func handleS3API(cb func(ctx context.Context, w http.ResponseWriter, r *http.Req
 	})
 }
 
+func handleAdmin(cb func(ctx context.Context, w http.ResponseWriter, r *http.Request)) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		defer r.Body.Close()
+
+		logRequest(r)
+
+		if xhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
+
+		err := s3VerifyAdmin(r)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusUnauthorized)
+			return
+		}
+
+		ctx, done := mkContext("admin")
+		cb(ctx, w, r)
+		done(ctx)
+	})
+}
+
 func makeAdminURL(clienturl, admport string) string {
 	return strings.Split(clienturl, ":")[0] + ":" + admport
 }
@@ -367,12 +387,12 @@ func main() {
 
 	// Admin operations
 	radminsrv := mux.NewRouter()
-	radminsrv.HandleFunc("/v1/api/keys", handleKeys).Methods("POST", "DELETE")
-	radminsrv.HandleFunc("/v1/api/notify", handleNotify).Methods("POST", "DELETE")
-	radminsrv.HandleFunc("/v1/api/stats/{ns}", handleStats).Methods("GET")
-	radminsrv.HandleFunc("/v1/api/stats/{ns}/limits", handleLimits).Methods("PUT")
-	radminsrv.HandleFunc("/v1/sysctl", handleSysctls).Methods("GET", "OPTIONS")
-	radminsrv.HandleFunc("/v1/sysctl/{name}", handleSysctl).Methods("GET", "PUT", "OPTIONS")
+	radminsrv.Handle("/v1/api/keys",		handleAdmin(handleKeys)).Methods("POST", "DELETE")
+	radminsrv.Handle("/v1/api/notify",		handleAdmin(handleNotify)).Methods("POST", "DELETE")
+	radminsrv.Handle("/v1/api/stats/{ns}",		handleAdmin(handleStats)).Methods("GET")
+	radminsrv.Handle("/v1/api/stats/{ns}/limits",	handleAdmin(handleLimits)).Methods("PUT")
+	radminsrv.Handle("/v1/sysctl",			handleAdmin(handleSysctls)).Methods("GET", "OPTIONS")
+	radminsrv.Handle("/v1/sysctl/{name}",		handleAdmin(handleSysctl)).Methods("GET", "PUT", "OPTIONS")
 
 	err = dbConnect(&conf)
 	if err != nil {
