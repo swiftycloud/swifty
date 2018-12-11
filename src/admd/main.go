@@ -124,6 +124,7 @@ func handleUserLogin(w http.ResponseWriter, r *http.Request) {
 	return
 
 out:
+	log.Warnf("Failed login attempt from %s", r.RemoteAddr)
 	http.Error(w, err.Error(), resp)
 }
 

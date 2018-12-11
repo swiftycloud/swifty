@@ -15,20 +15,7 @@ import (
 	"swifty/apis/s3"
 )
 
-func handleKeys(w http.ResponseWriter, r *http.Request) {
-	var err error
-
-	ctx, done := mkContext("keysreq")
-	defer done(ctx)
-
-	if xhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
-
-	err = s3VerifyAdmin(r)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusUnauthorized)
-		return
-	}
-
+func handleKeys(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "POST":
 		handleKeygen(ctx, w, r)
@@ -98,22 +85,10 @@ out:
 	http.Error(w, err.Error(), http.StatusBadRequest)
 }
 
-func handleNotify(w http.ResponseWriter, r *http.Request) {
+func handleNotify(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	var params swys3api.Subscribe
 
-	if xhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
-
-	ctx, done := mkContext("notifyreq")
-	defer done(ctx)
-
-	/* For now make it admin-only op */
-	err := s3VerifyAdmin(r)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusUnauthorized)
-		return
-	}
-
-	err = xhttp.RReq(r, &params)
+	err := xhttp.RReq(r, &params)
 	if err != nil {
 		goto out
 	}
@@ -136,19 +111,9 @@ out:
 	http.Error(w, err.Error(), http.StatusBadRequest)
 }
 
-func handleStats(w http.ResponseWriter, r *http.Request) {
+func handleStats(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	var st *s3mgo.AcctStats
 
-	if xhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
-
-	err := s3VerifyAdmin(r)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusUnauthorized)
-		return
-	}
-
-	ctx, done := mkContext("statsreq")
-	defer done(ctx)
 	ns := mux.Vars(r)["ns"]
 	log.Debugf("Getting stats for %s", ns)
 
@@ -175,25 +140,15 @@ func handleStats(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func handleLimits(w http.ResponseWriter, r *http.Request) {
+func handleLimits(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	var lim swys3api.AcctLimits
 
-	if xhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
-
-	err := s3VerifyAdmin(r)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusUnauthorized)
-		return
-	}
-
-	err = xhttp.RReq(r, &lim)
+	err := xhttp.RReq(r, &lim)
 	if err != nil {
 		http.Error(w, "Cannot read limits", http.StatusBadRequest)
 		return
 	}
 
-	ctx, done := mkContext("statsreq")
-	defer done(ctx)
 	ns := mux.Vars(r)["ns"]
 	log.Debugf("Setting limits for %s", ns)
 
