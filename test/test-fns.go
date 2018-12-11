@@ -37,6 +37,7 @@ func doRun(cln *swyapi.Client, id string, src *swyapi.FunctionSources, retrt str
 	}
 
 	if res.Return != retrt {
+		fmt.Printf("\t want [%s] have [%s]\n", retrt, res.Return)
 		fatal(errors.New("Return not match"))
 	}
 }
@@ -53,7 +54,7 @@ func runFunction(cln *swyapi.Client, prj string, lang string, ld *lDesc) error {
 
 	fmt.Printf("---- Adding FN\n")
 	cln.Functions().Add(&swyapi.FunctionAdd {
-		Name:		"test.echo",
+		Name:		"test.echo." + lang,
 		Project:	prj,
 		Code:		swyapi.FunctionCode { Lang: lang, },
 	}, &ifo)
@@ -92,9 +93,9 @@ type lDesc struct {
 var langs = map[string]*lDesc {
 	"golang": &lDesc{ echo_result: "\"Hello, world\"" },
 	"python": &lDesc{ echo_result: "\"Hello, world\"" },
-	"nodejs": &lDesc{},
+	"nodejs": &lDesc{ echo_result: "\"Hello, world\"" },
 	"ruby":   &lDesc{ echo_result: "\"Hello, world\"" },
-	"swift":  &lDesc{ echo_result: "{\"msg\":\"Hello, world\"" },
+	"swift":  &lDesc{ echo_result: "{\"msg\":\"Hello, world\"}" },
 	"csharp": &lDesc{ echo_result: "{\"msg\":\"Hello, world!\"}" },
 }
 
