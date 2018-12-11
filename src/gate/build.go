@@ -25,6 +25,7 @@ func buildFunction(ctx context.Context, rh *langInfo, fn *FunctionDesc, suf stri
 	var wd_result swyapi.WdogFunctionRunResult
 
 	traceFnEvent(ctx, "build", fn)
+	ctxlog(ctx).Debugf("Building %s (%s)", fn.SwoId.Str(), suf)
 
 	breq := &swyapi.WdogFunctionBuild {
 		Sources:	fn.srcDir(""),
