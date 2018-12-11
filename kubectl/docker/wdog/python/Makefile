@@ -1,3 +1,4 @@
+IMAGE="swifty/python"
 BROOT=$(CURDIR)/../../../../
 include $(BROOT)/Makefile.inc
 include $(BROOT)/kubectl/docker/Makefile.inc
@@ -14,14 +15,17 @@ layer.tar: .FORCE
 	$(Q) $(TAR) cf layer.tar --xform='s#.layer##' .layer/
 	$(Q) $(RM) -rf .layer
 
-swifty/python: layer.tar
-	$(call msg-gen,$@)
-	$(Q) docker build -t $(IMG_PREFIX)$@ .
-	$(Q) docker tag $(IMG_PREFIX)$@ $(IMG_PREFIX)$@:$(GITID)
-	$(Q) docker tag $(IMG_PREFIX)$@ $(IMG_PREFIX)$@:$(SWIFTY_ENV)
-	$(Q) docker push $(IMG_PREFIX)$@
+image: layer.tar
+	$(call msg-gen,$(IMAGE))
+	$(Q) docker build -t $(IMG_PREFIX)$(IMAGE) .
+	$(Q) docker tag $(IMG_PREFIX)$(IMAGE) $(IMG_PREFIX)$(IMAGE):$(GITID)
+	$(Q) docker tag $(IMG_PREFIX)$(IMAGE) $(IMG_PREFIX)$(IMAGE):$(SWIFTY_ENV)
 .PHONY: swifty/python
 
-all: swifty/python
+push: image
+	$(call msg-gen,$@)
+	$(Q) docker push $(IMG_PREFIX)$(IMAGE)
+
+all: image push
 	@true
 .PHONY: all

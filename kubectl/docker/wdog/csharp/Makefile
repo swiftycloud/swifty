@@ -1,3 +1,4 @@
+IMAGE="swifty/csharp"
 BROOT=$(CURDIR)/../../../../
 include $(BROOT)/Makefile.inc
 include $(BROOT)/kubectl/docker/Makefile.inc
@@ -15,14 +16,19 @@ layer.tar: .FORCE
 	$(Q) $(RM) -rf .layer
 
 
-swifty/csharp: layer.tar
-	$(call msg-gen,$@)
-	$(Q) docker build --network=host -t $(IMG_PREFIX)$@ .
-	$(Q) docker tag $(IMG_PREFIX)$@ $(IMG_PREFIX)$@:$(GITID)
-	$(Q) docker tag $(IMG_PREFIX)$@ $(IMG_PREFIX)$@:$(SWIFTY_ENV)
-	$(Q) docker push $(IMG_PREFIX)$@
-.PHONY: swifty/csharp
+image: layer.tar
+	$(call msg-gen,$(IMAGE))
+	$(Q) docker build --network=host -t $(IMG_PREFIX)$(IMAGE) .
+	$(Q) docker tag $(IMG_PREFIX)$(IMAGE) $(IMG_PREFIX)$(IMAGE):$(GITID)
+	$(Q) docker tag $(IMG_PREFIX)$(IMAGE) $(IMG_PREFIX)$(IMAGE):$(SWIFTY_ENV)
+.PHONY: image
 
-all: swifty/csharp
+push: image
+	$(call msg-gen,$@)
+	$(Q) docker push $(IMG_PREFIX)$(IMAGE)
+.PHONY: push
+
+
+all: image push
 	@true
 .PHONY: all

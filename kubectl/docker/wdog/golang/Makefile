@@ -1,3 +1,4 @@
+IMAGE="swifty/golang"
 BROOT=$(CURDIR)/../../../../
 include $(BROOT)/Makefile.inc
 include $(BROOT)/kubectl/docker/Makefile.inc
@@ -17,14 +18,18 @@ layer.tar: .FORCE
 	$(Q) $(TAR) cf layer.tar --xform='s#.layer##' .layer/
 	$(Q) $(RM) -rf .layer
 
-swifty/golang: layer.tar
-	$(call msg-gen,$@)
-	$(Q) docker build --network=host -t $(IMG_PREFIX)$@ .
-	$(Q) docker tag $(IMG_PREFIX)$@ $(IMG_PREFIX)$@:$(GITID)
-	$(Q) docker tag $(IMG_PREFIX)$@ $(IMG_PREFIX)$@:$(SWIFTY_ENV)
-	$(Q) docker push $(IMG_PREFIX)$@
-.PHONY: swifty/golang
+image: layer.tar
+	$(call msg-gen,$(IMAGE))
+	$(Q) docker build --network=host -t $(IMG_PREFIX)$(IMAGE) .
+	$(Q) docker tag $(IMG_PREFIX)$(IMAGE) $(IMG_PREFIX)$(IMAGE):$(GITID)
+	$(Q) docker tag $(IMG_PREFIX)$(IMAGE) $(IMG_PREFIX)$(IMAGE):$(SWIFTY_ENV)
+.PHONY: image
 
-all: swifty/golang
+push: image
+	$(call msg-gen,$@)
+	$(Q) docker push $(IMG_PREFIX)$(IMAGE)
+.PHONY: push
+
+all: image push
 	@true
 .PHONY: all

@@ -77,7 +77,11 @@ swifty/$(1): swy-wdog swy-runner kubectl/docker/wdog/$(1)/Dockerfile
 
 swifty/$(1):
 	$$(call msg-gen, $$@)
-	$$(Q) $$(MAKE) -C kubectl/docker/wdog/$(1) all
+	$$(Q) $$(MAKE) -C kubectl/docker/wdog/$(1) image
+
+swifty/$(1)-push:
+	$$(call msg-gen, $$@)
+	$$(Q) $$(MAKE) -C kubectl/docker/wdog/$(1) push
 
 .PHONY: swifty/$(1)
 endef
@@ -158,6 +162,11 @@ images: $(IMAGES)
 
 .PHONY: images
 
+images-push: $(foreach i,$(IMAGES),$(i)-push)
+	@true
+
+.PHONY: images-push
+
 simages: $(S_IMAGES)
 	@true
 
@@ -176,6 +185,7 @@ tools: $(TOOL_BINS)
 help:
 	@echo '    Targets:'
 	@echo '      images          - Build all wdog docker images'
+	@echo '      images-push     - Push all wdog docker images'
 	@echo '      simages         - Build add services images'
 	@echo '      docs            - Build documentation'
 	@echo '    Services ($(SRVCS)):'
