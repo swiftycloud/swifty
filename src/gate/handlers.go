@@ -105,7 +105,7 @@ func handleUserLogin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	td.Endpoint = apiGate()
-	glog.Debugf("Login passed, token %s (exp %s)", token[:16], td.Expires)
+	glog.Debugf("Login passed, token till %s", td.Expires)
 
 	w.Header().Set("X-Subject-Token", token)
 	err = xhttp.Respond(w, &td)
@@ -117,6 +117,7 @@ func handleUserLogin(w http.ResponseWriter, r *http.Request) {
 	return
 
 out:
+	glog.Warnf("Failed login attempt from %s", r.RemoteAddr)
 	http.Error(w, err.Error(), resp)
 }
 
