@@ -1,0 +1,17 @@
+When called a function is equipped with a set of env variables
+describing attached mwares and accounts
+
+For mware type X (e.g. mongo) named Y (e.g. my) there will be
+several variables looking like
+
+MWARE_XY_ADDR
+MWARE_XY_USER
+MWARE_XY_PASS
+
+the exact set of it is reported by /v1/info/mwares/<type> API call.
+
+For account the situation is very similar, the env var is created
+for every account property specified during creation and they look
+like
+
+ACC_TYPENAME_PROPERTY
