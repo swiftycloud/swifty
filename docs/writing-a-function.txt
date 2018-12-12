@@ -71,6 +71,33 @@ exports.Main = function(rq) {
 }
 
 == Swift ==
-func Main(rq: Request) -> (Encodable, Response?) {
-	return ( rq.args!["foo"], nil )
+struct Resp: Encodable {
+	var msg: String
 }
+
+func Main(rq: Request) -> (Encodable, Response?) {
+	let result = Resp(msg: "Hello, world")
+	return ( result, nil )
+}
+
+== CSarp ==
+This thing is, well, a bit more complicated as no functions
+may exist w/o classes.
+
+using System;
+
+class Message
+{
+	public string msg;
+}
+
+class Function
+{
+	static public (Message, Response) Main (Request req)
+	{
+		var ret = new Message();
+		ret.msg = "Hello, world!";
+		return (ret, null);
+	}
+}
+
