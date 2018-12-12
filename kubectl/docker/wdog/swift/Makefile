@@ -1,4 +1,4 @@
-IMAGE="swifty/images"
+IMAGE="swifty/swift"
 BROOT=$(CURDIR)/../../../../
 include $(BROOT)/Makefile.inc
 include $(BROOT)/kubectl/docker/Makefile.inc
