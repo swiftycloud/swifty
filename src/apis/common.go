@@ -5,6 +5,10 @@
 
 package swyapi
 
+import (
+	"encoding/json"
+)
+
 const (
 	AdminRole	string	= "swifty.admin"
 	UserRole	string	= "swifty.owner"
@@ -24,6 +28,7 @@ type WdogFunctionRunResult struct {
 	Stdout		string		`json:"stdout"`
 	Stderr		string		`json:"stderr"`
 	Time		uint		`json:"time"` /* usec */
+	Then		json.RawMessage	`json:"then"`
 }
 
 type UserLogin struct {

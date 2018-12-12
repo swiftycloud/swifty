@@ -15,6 +15,7 @@ public class Request {
 
 public class Response {
 	public int status;
+	// The "then" thing is here
 }
 
 class RunnerRes {

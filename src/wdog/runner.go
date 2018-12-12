@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 	"fmt"
+	"encoding/json"
 	"syscall"
 	"strconv"
 	"net/http"
@@ -29,6 +30,8 @@ type RunnerRes struct {
 	Status	int
 	/* JSON-encoded return value of a function */
 	Ret	string
+	/* List of actions to be taken after the funciton is called */
+	Then	json.RawMessage
 }
 
 func doRun(runner *Runner, body []byte) (*swyapi.WdogFunctionRunResult, error) {
@@ -49,6 +52,7 @@ func doRun(runner *Runner, body []byte) (*swyapi.WdogFunctionRunResult, error) {
 		Stdout: readLines(runner.fin),
 		Stderr: readLines(runner.fine),
 		Time: uint(time.Since(start) / time.Microsecond),
+		Then: out.Then,
 	}
 
 	if err == nil {
