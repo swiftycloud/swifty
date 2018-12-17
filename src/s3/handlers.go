@@ -559,6 +559,7 @@ func handlePutObject(ctx context.Context, oname string, bucket *s3mgo.Bucket, w 
 	}
 
 	if cr.read != sz {
+		log.Debugf("Saved %d, want %d bytes", cr.read, sz)
 		s3DeleteObject(ctx, bucket, oname)
 		return &S3Error{ ErrorCode: S3ErrIncompleteBody, Message: "trimmed body" }
 	}
