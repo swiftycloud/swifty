@@ -74,25 +74,34 @@ type ChunkReader struct {
 	r	io.Reader
 }
 
-func (cr *ChunkReader)Next(max int64, into []byte) ([]byte, error) {
+func (cr *ChunkReader)Next(max int64) ([]byte, error) {
 	if max > cr.size - cr.read {
 		max = cr.size - cr.read
+		if max == 0 {
+			return nil, nil
+		}
 	}
 
-	if into == nil {
-		into = make([]byte, max)
-	}
-	ln, err := cr.r.Read(into)
-	if ln != 0 {
-		cr.read += int64(ln)
-		return into[:ln], nil
-	}
+	ret := make([]byte, max)
+	off := int64(0)
 
-	if err == io.EOF {
-		err = nil
-	}
+	for {
+		ln, err := cr.r.Read(ret[off:])
+		if ln != 0 {
+			off += int64(ln)
+			continue
+		}
 
-	return nil, err
+		if err == io.EOF {
+			err = nil
+		}
+		if off == 0 {
+			ret = nil
+		}
+
+		cr.read += off
+		return ret, err
+	}
 }
 
 func WriteChunks(ctx context.Context, part *s3mgo.ObjectPart, data *ChunkReader) (string, error) {
@@ -105,7 +114,7 @@ func WriteChunks(ctx context.Context, part *s3mgo.ObjectPart, data *ChunkReader)
 	hasher := md5.New()
 
 	for {
-		chd, err := data.Next(S3MaxChunkSize, nil)
+		chd, err := data.Next(S3MaxChunkSize)
 		if err != nil {
 			goto out
 		}
@@ -392,21 +401,11 @@ func AddPart(ctx context.Context, refid bson.ObjectId, bucket_bid, object_bid st
 	}
 
 	if data.size <= S3InlineDataSize {
-		dat := make([]byte, data.size)
-		off := 0
-		for {
-			nd, err := data.Next(data.size - int64(off), dat[off:])
-			if err != nil {
-				goto out
-			}
-			if nd == nil {
-				break
-			}
-
-			off += len(nd)
+		objp.Data, err = data.Next(data.size)
+		if err != nil {
+			goto out
 		}
 
-		objp.Data = dat
 		csum = md5sum(objp.Data)
 	}
 
