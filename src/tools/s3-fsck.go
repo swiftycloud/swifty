@@ -329,13 +329,22 @@ func checkChunks() error {
 		return err
 	}
 
+	chunks := map[string]*s3mgo.ObjectPart{}
 	fmt.Printf("   Chunks:\n")
 	for _, c := range(cks) {
-		_, ok := pchunks[c.ObjID.Hex()]
+		ch, ok := pchunks[c.ObjID.Hex()]
 		if !ok {
-			fmt.Printf("\tDangling chunk %s\n", c.ObjID.Hex())
+			fmt.Printf("!\tDangling chunk %s\n", c.ObjID.Hex())
+		} else {
+			chunks[c.ObjID.Hex()] = ch
+			delete(pchunks, c.ObjID.Hex())
 		}
 	}
+
+	for cid, _ := range pchunks {
+		fmt.Printf("!!!\tMissing chunk %s\n", cid)
+	}
+	pchunks = chunks
 
 	return nil
 }
