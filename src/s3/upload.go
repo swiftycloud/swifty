@@ -98,7 +98,7 @@ func s3RepairPartsInactive(ctx context.Context) error {
 			}
 		}
 
-		err = dbS3Remove(ctx, &od)
+		err = dbS3Remove(ctx, od)
 		if err != nil {
 			log.Debugf("s3: Can't remove part %s", infoLong(&od))
 			return err
