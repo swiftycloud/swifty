@@ -17,6 +17,7 @@ import (
 	"net/http"
 	"flag"
 	"time"
+	"encoding/csv"
 	"os"
 	"fmt"
 	"errors"
@@ -395,6 +396,25 @@ func handlePlans(ctx context.Context, w http.ResponseWriter, r *http.Request, td
 	return admdErr(http.StatusMethodNotAllowed)
 }
 
+func writeULCSV(w http.ResponseWriter, users []*swyapi.UserInfo) error {
+	w.Header().Set("Content-Type", "text/csv; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+
+	bw := csv.NewWriter(w)
+	for _, u := range users {
+		err := bw.Write([]string {
+			u.UId,
+			u.Name,
+			u.Created,
+		})
+		if err != nil {
+			return err
+		}
+	}
+	bw.Flush()
+	return bw.Error()
+}
+
 func handleListUsers(ctx context.Context, w http.ResponseWriter, r *http.Request, td *xkst.KeystoneTokenData) *xrest.ReqErr {
 	var result []*swyapi.UserInfo
 	var err error
@@ -418,7 +438,14 @@ func handleListUsers(ctx context.Context, w http.ResponseWriter, r *http.Request
 		goto out
 	}
 
-	err = xhttp.Respond(w, result)
+	switch r.URL.Query().Get("as") {
+	case "", "json":
+		err = xhttp.Respond(w, result)
+	case "csv":
+		err = writeULCSV(w, result)
+	default:
+		err = errors.New("Invalid as type")
+	}
 	if err != nil {
 		goto out
 	}
