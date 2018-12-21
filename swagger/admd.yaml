@@ -42,6 +42,12 @@ paths:
         required: true
     get:
       summary: List users
+      parameters:
+        - in: query
+          name: as
+          type: string
+          description: Format to get users in (default is json). Options: csv
+          required: false
       responses:
         '200':
           description: OK
