@@ -3,7 +3,7 @@
  * Info: info@swifty.cloud
  */
 
-package main
+package tcproxy
 
 import (
 	"io"
@@ -40,7 +40,7 @@ func (f *collector)dataReady(data []byte) error {
 	f.collected = append(f.collected, data...)
 
 	for {
-		cl, err := f.cons.try(f.sender.id, f.collected)
+		cl, err := f.cons.Try(f.sender.id, f.collected)
 		if cl == 0 {
 			return err
 		}
@@ -55,14 +55,14 @@ func (f *collector)dataReady(data []byte) error {
 	}
 }
 
-type consumer interface {
-	try(string, []byte) (int, error)
+type Consumer interface {
+	Try(string, []byte) (int, error)
 }
 
 type collector struct {
 	sender
 	collected	[]byte
-	cons		consumer
+	cons		Consumer
 }
 
 func forward(conid string, from *net.TCPConn, prc processor, done chan bool) {
@@ -91,7 +91,7 @@ func forward(conid string, from *net.TCPConn, prc processor, done chan bool) {
 	}
 }
 
-func handle(conid string, con *net.TCPConn, to *net.TCPAddr, cons consumer) {
+func handle(conid string, con *net.TCPConn, to *net.TCPAddr, cons Consumer) {
 	log.Printf("%s: Accepted conn from %s\n", conid, con.RemoteAddr())
 
 	defer con.Close()
@@ -132,10 +132,10 @@ func handle(conid string, con *net.TCPConn, to *net.TCPAddr, cons consumer) {
 type Proxy struct {
 	ls	*net.TCPListener
 	tgt	*net.TCPAddr
-	cons	consumer
+	cons	Consumer
 }
 
-func makeProxy(from, to string, cons consumer) *Proxy {
+func MakeProxy(from, to string, cons Consumer) *Proxy {
 	x, err := net.ResolveTCPAddr("tcp", from)
 	if err != nil {
 		log.Printf("Error resolving local: %s\n", err.Error())

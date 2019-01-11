@@ -9,6 +9,7 @@ import (
 	"log"
 	"flag"
 	"swifty/common"
+	"swifty/common/tcproxy"
 )
 
 type DBConf struct {
@@ -49,7 +50,7 @@ func main() {
 		return
 	}
 
-	p := makeProxy(config.Listen, config.Target.Addr, &mgoConsumer{})
+	p := tcproxy.MakeProxy(config.Listen, config.Target.Addr, &mgoConsumer{})
 	if p == nil {
 		return
 	}
