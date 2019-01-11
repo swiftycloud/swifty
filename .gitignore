@@ -14,14 +14,13 @@ swy-runner
 swy-admd
 swy-pgrest
 swy-mquotad
-swy-mongoproxy
+swy-proxy-*
 swy-s3
 swyctl
 swytrace
 swys3fsck
 swysg
-swy-dbscr-gate
-swy-dbscr-s3
+swy-dbscr-*
 swyruntest
 go-sca
 validation

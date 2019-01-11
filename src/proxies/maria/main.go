@@ -9,6 +9,7 @@ import (
 	"log"
 	"flag"
 	"swifty/common"
+	"swifty/common/tcproxy"
 )
 
 type DBConf struct {
@@ -28,18 +29,12 @@ func main() {
 	var conf string
 	var config Config
 
-	flag.StringVar(&conf, "conf", "/etc/swifty/conf/mongo_proxy.yaml", "Path to config file")
+	flag.StringVar(&conf, "conf", "/etc/swifty/conf/maria_proxy.yaml", "Path to config file")
 	flag.Parse()
 
 	err := xh.ReadYamlConfig(conf, &config)
 	if err != nil {
 		log.Printf("Error reading config: %s\n", err.Error())
-		return
-	}
-
-	err = configureSession(&config)
-	if err != nil {
-		log.Printf("Error configuring session: %s\n", err.Error())
 		return
 	}
 
@@ -49,7 +44,7 @@ func main() {
 		return
 	}
 
-	p := makeProxy(config.Listen, config.Target.Addr, &mgoConsumer{})
+	p := tcproxy.MakeProxy(config.Listen, config.Target.Addr, &mariaConsumer{})
 	if p == nil {
 		return
 	}
