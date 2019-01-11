@@ -59,8 +59,6 @@ go-ctl-y	+= src/tools/ctl.go $(TOLVER)
 go-trace-y	+= src/tools/tracer.go
 go-s3fsck-y	+= src/tools/s3-fsck.go
 go-sg-y		+= src/tools/sg.go
-go-dbscr-y	+= src/tools/scraper.go
-go-dbscr-s3-y	+= src/tools/scraper-s3.go
 go-runtest-y	+= src/tools/runner-tester.go
 
 #$(eval $(call gen-gobuild,pgrest))
@@ -137,14 +135,14 @@ SRVCS = gate admd s3
 LANGS = python golang swift ruby nodejs csharp
 TOOLS = ctl trace s3fsck sg runtest
 SCRPR = gate s3
+PROXY = mgo
 
 # BUILD
 $(foreach s,$(SRVCS),$(eval $(call gen-gobuild-daemon,$s)))
 $(foreach s,$(SCRPR),$(eval $(call gen-gobuild-daemon-n,scrapers/$s,dbscr-$s)))
+$(foreach s,$(PROXY),$(eval $(call gen-gobuild-daemon-n,proxies/$s,proxy-$s)))
 $(foreach t,$(TOOLS),$(eval $(call gen-gobuild-tool,$t)))
 $(eval $(call gen-gobuild-daemon,wdog))
-# The swy-mongoproxy is a daemon for now, will move it to SRVCS soon
-$(eval $(call gen-gobuild-daemon,mongoproxy))
 
 # Each service has its swifty/$name docker image
 $(foreach s,$(SRVCS),$(eval $(call gen-pack-service,$s)))

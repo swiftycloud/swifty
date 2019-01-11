@@ -14,7 +14,7 @@ swy-runner
 swy-admd
 swy-pgrest
 swy-mquotad
-swy-mongoproxy
+swy-proxy-mgo
 swy-s3
 swyctl
 swytrace
