@@ -135,7 +135,7 @@ SRVCS = gate admd s3
 LANGS = python golang swift ruby nodejs csharp
 TOOLS = ctl trace s3fsck sg runtest
 SCRPR = gate s3
-PROXY = mgo
+PROXY = mgo maria
 
 # BUILD
 $(foreach s,$(SRVCS),$(eval $(call gen-gobuild-daemon,$s)))
