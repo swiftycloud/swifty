@@ -31,6 +31,10 @@ func (*rqShow)request(conid string, rq *maria_req) error {
 }
 
 func (rq *maria_req)show(conid string) {
+	if rq.schema != "" {
+		conid += "[" + rq.schema + "]"
+	}
+
 	if rq.cmd != 0xff {
 		if showAll {
 			switch rq.cmd {

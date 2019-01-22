@@ -12,6 +12,10 @@ import (
 	"strconv"
 )
 
+const (
+	fwdSize = 1024
+)
+
 type processor interface {
 	dataReady([]byte) error
 }
@@ -20,7 +24,7 @@ func (fw *sender)dataReady(data []byte) error {
 	for {
 		w, err := fw.to.Write(data)
 		if err != nil {
-			log.Printf("%s: Error writing: %s\n", fw.id, err.Error())
+			log.Printf("%s: Error writing: %s\n", fw.pc.Id, err.Error())
 			return err
 		}
 
@@ -32,7 +36,7 @@ func (fw *sender)dataReady(data []byte) error {
 }
 
 type sender struct {
-	id	string
+	pc	*Conn
 	to	*net.TCPConn
 }
 
@@ -40,7 +44,7 @@ func (f *collector)dataReady(data []byte) error {
 	f.collected = append(f.collected, data...)
 
 	for {
-		cl, err := f.cons.Try(f.sender.id, f.collected)
+		cl, err := f.cons.Try(f.sender.pc, f.collected)
 		if cl == 0 {
 			return err
 		}
@@ -55,8 +59,15 @@ func (f *collector)dataReady(data []byte) error {
 	}
 }
 
+type Conn struct {
+	Id	string
+	Data	interface{}
+}
+
 type Consumer interface {
-	Try(string, []byte) (int, error)
+	Try(*Conn, []byte) (int, error)
+	New(*Conn)
+	Done(*Conn)
 }
 
 type collector struct {
@@ -66,7 +77,7 @@ type collector struct {
 }
 
 func forward(conid string, from *net.TCPConn, prc processor, done chan bool) {
-	data := make([]byte, 1024)
+	data := make([]byte, fwdSize)
 
 	for {
 		r, err := from.Read(data)
@@ -104,17 +115,20 @@ func handle(conid string, con *net.TCPConn, to *net.TCPAddr, cons Consumer) {
 
 	defer tgt.Close()
 
+	pc := &Conn{Id: conid}
+	cons.New(pc)
+
 	done_ing := make(chan bool)
 	done_oug := make(chan bool)
 
 	ing := &collector {
-		sender:		sender { id: conid, to: tgt },
+		sender:		sender { pc: pc, to: tgt },
 		collected:	[]byte{},
 		cons:		cons,
 	}
 	go forward(conid + ".ing", con, ing, done_ing)
 
-	oug := &sender { id: conid, to: con }
+	oug := &sender { pc: pc, to: con }
 	go forward(conid + ".oug", tgt, oug, done_oug)
 
 	select {
@@ -126,6 +140,7 @@ func handle(conid string, con *net.TCPConn, to *net.TCPAddr, cons Consumer) {
 		<-done_ing
 	}
 
+	cons.Done(pc)
 	log.Printf("%s: Proxy done\n", conid)
 }
 

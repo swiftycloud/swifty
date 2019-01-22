@@ -7,6 +7,7 @@ package main
 
 import (
 	"encoding/binary"
+	"swifty/common/tcproxy"
 )
 
 const (
@@ -51,6 +52,7 @@ type maria_req struct {
 	err	string
 
 	cmd	byte
+	schema	string
 }
 
 func decode_maria_req(data []byte) *maria_req {
@@ -80,18 +82,43 @@ func decode_maria_req(data []byte) *maria_req {
 	return rq
 }
 
-func (*mariaConsumer)Try(conid string, data []byte) (int, error) {
+type mariaConData struct {
+	schema	string
+	rqnr uint
+}
+
+func (*mariaConsumer)Try(pc *tcproxy.Conn, data []byte) (int, error) {
 	rq := decode_maria_req(data)
 	if rq == nil {
 		return 0, nil
 	}
 
-	err := pipelineRun(conid, rq)
+	cd := pc.Data.(*mariaConData)
+
+	if rq.cmd == COM_INIT_DB && cd.schema == "" {
+		/* FIXME -- client may select DB in Auth phase :( */
+		cd.schema = string(rq.data)
+	}
+
+	if cd.schema != "" {
+		rq.schema = cd.schema
+	}
+
+	cd.rqnr++
+
+	err := pipelineRun(pc.Id, rq)
 	if err != nil {
 		return 0, err
 	}
 
 	return rq.rlen, nil
+}
+
+func (*mariaConsumer)New(con *tcproxy.Conn) {
+	con.Data = &mariaConData{}
+}
+
+func (*mariaConsumer)Done(con *tcproxy.Conn) {
 }
 
 type mariaConsumer struct { }
