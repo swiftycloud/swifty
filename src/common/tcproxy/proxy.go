@@ -12,6 +12,10 @@ import (
 	"strconv"
 )
 
+const (
+	fwdSize = 1024
+)
+
 type processor interface {
 	dataReady([]byte) error
 }
@@ -73,7 +77,7 @@ type collector struct {
 }
 
 func forward(conid string, from *net.TCPConn, prc processor, done chan bool) {
-	data := make([]byte, 1024)
+	data := make([]byte, fwdSize)
 
 	for {
 		r, err := from.Read(data)
