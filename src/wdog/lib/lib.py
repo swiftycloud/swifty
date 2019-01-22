@@ -7,13 +7,16 @@ import pymysql.cursors
 from pymongo import MongoClient
 import os
 
+def mwareName(mwn):
+    return mwn.upper().replace(".", "")
+
 _swiftyMariaConns = {}
 
 def MariaConn(mwname):
     global _swiftyMariaConns
     conn = _swiftyMariaConns.get(mwname, None)
     if conn == None:
-        mwn = mwname.upper()
+        mwn = mwareName(mwname)
         x = os.getenv('MWARE_MARIA' + mwn + '_ADDR')
         if x == None:
             raise Exception("Middleware not attached")
@@ -34,7 +37,7 @@ _swiftyMongoClients = {}
 
 def MongoDatabase(mwname):
     global _swiftyMongoClients
-    mwn = mwname.upper()
+    mwn = mwareName(mwname)
     dbname = os.getenv('MWARE_MONGO' + mwn + '_DBNAME')
     if dbname == None:
         raise Exception("Middleware not attached")

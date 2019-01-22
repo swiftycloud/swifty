@@ -62,7 +62,7 @@ while True:
                     req.b = type('body', (object,), b)
 
             res, resb = swycode.Main(req)
-            res = { "res": 0, "ret": json.dumps(res) }
+            res = { "res": 0, "ret": json.dumps(res, ensure_ascii=False) }
             if resb != None:
                 try:
                     res["status"] = int(resb["status"])

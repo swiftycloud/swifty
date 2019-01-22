@@ -25,12 +25,16 @@ import (
 	"github.com/aws/aws-sdk-go/aws/credentials"
 )
 
+func mwareName(mwn string) string {
+	return strings.ToUpper(strings.Replace(mwn, ".", "", -1))
+}
+
 var _mgoSessions sync.Map
 
 func MongoDatabase(mwn string) (*mgo.Database, error) {
 	var ses *mgo.Session
 
-	mwn = strings.ToUpper(mwn)
+	mwn = mwareName(mwn)
 	dbn := os.Getenv("MWARE_MONGO" + mwn + "_DBNAME")
 	if dbn == "" {
 		return nil, errors.New("Middleware not attached")
@@ -69,7 +73,7 @@ var _mariaDBS sync.Map
 var db *sql.DB
 
 func MariaConn(mwn string) (*sql.DB, error) {
-	mwn = strings.ToUpper(mwn)
+	mwn = mwareName(mwn)
 	dbv, ok := _mariaDBS.Load(mwn)
 	if !ok {
 		dbn := os.Getenv("MWARE_MARIA" + mwn + "_DBNAME")
@@ -124,7 +128,7 @@ func AuthContext() (*AuthCtx, error) {
 			return nil, errors.New("No mongo for authjwn found")
 		}
 
-		key := os.Getenv("MWARE_AUTHJWT" + strings.ToUpper(aun + "_jwt") + "_SIGNKEY")
+		key := os.Getenv("MWARE_AUTHJWT" + mwareName(aun + "_jwt") + "_SIGNKEY")
 		if key == "" {
 			return nil, errors.New("No authjwt key found")
 		}
@@ -164,7 +168,7 @@ func S3Bucket(bname string) (*s3.S3, error) {
 }
 
 func S3BucketProt(bname, prot string) (*s3.S3, error) {
-	bname = strings.ToUpper(bname)
+	bname = mwareName(bname)
 	addr := os.Getenv("MWARE_S3" + bname + "_ADDR")
 	akey := os.Getenv("MWARE_S3" + bname + "_KEY")
 	asec := os.Getenv("MWARE_S3" + bname + "_SECRET")
