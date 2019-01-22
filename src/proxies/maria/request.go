@@ -52,6 +52,7 @@ type maria_req struct {
 	err	string
 
 	cmd	byte
+	schema	string
 }
 
 func decode_maria_req(data []byte) *maria_req {
@@ -85,6 +86,14 @@ func (*mariaConsumer)Try(pc *tcproxy.Conn, data []byte) (int, error) {
 	rq := decode_maria_req(data)
 	if rq == nil {
 		return 0, nil
+	}
+
+	if rq.cmd == COM_INIT_DB {
+		pc.Data = string(rq.data)
+	}
+
+	if pc.Data != nil {
+		rq.schema = pc.Data.(string)
 	}
 
 	err := pipelineRun(pc.Id, rq)
