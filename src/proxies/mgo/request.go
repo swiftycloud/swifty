@@ -6,6 +6,7 @@
 package main
 
 import (
+	"swifty/common/tcproxy"
 	"strings"
 	"encoding/binary"
 	"gopkg.in/mgo.v2/bson"
@@ -213,13 +214,13 @@ func decode_mongo_req(data []byte) *mongo_req {
 	return rq
 }
 
-func (*mgoConsumer)Try(conid string, data []byte) (int, error) {
+func (*mgoConsumer)Try(pc *tcproxy.Conn, data []byte) (int, error) {
 	rq := decode_mongo_req(data)
 	if rq == nil {
 		return 0, nil
 	}
 
-	err := pipelineRun(conid, rq)
+	err := pipelineRun(pc.Id, rq)
 	if err != nil {
 		return 0, err
 	}
@@ -227,7 +228,7 @@ func (*mgoConsumer)Try(conid string, data []byte) (int, error) {
 	return rq.rlen, nil
 }
 
-func (*mgoConsumer)Done(conid string) {
-}
+func (*mgoConsumer)New(con *tcproxy.Conn) { }
+func (*mgoConsumer)Done(con *tcproxy.Conn) { }
 
 type mgoConsumer struct { }

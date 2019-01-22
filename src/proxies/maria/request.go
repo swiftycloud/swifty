@@ -7,6 +7,7 @@ package main
 
 import (
 	"encoding/binary"
+	"swifty/common/tcproxy"
 )
 
 const (
@@ -80,13 +81,13 @@ func decode_maria_req(data []byte) *maria_req {
 	return rq
 }
 
-func (*mariaConsumer)Try(conid string, data []byte) (int, error) {
+func (*mariaConsumer)Try(pc *tcproxy.Conn, data []byte) (int, error) {
 	rq := decode_maria_req(data)
 	if rq == nil {
 		return 0, nil
 	}
 
-	err := pipelineRun(conid, rq)
+	err := pipelineRun(pc.Id, rq)
 	if err != nil {
 		return 0, err
 	}
@@ -94,7 +95,10 @@ func (*mariaConsumer)Try(conid string, data []byte) (int, error) {
 	return rq.rlen, nil
 }
 
-func (*mariaConsumer)Done(conid string) {
+func (*mariaConsumer)New(con *tcproxy.Conn) {
+}
+
+func (*mariaConsumer)Done(con *tcproxy.Conn) {
 }
 
 type mariaConsumer struct { }
