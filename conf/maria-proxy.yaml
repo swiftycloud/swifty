@@ -1,0 +1,7 @@
+---
+listen: ":3307"
+target:
+  address: "10.133.43.31:3306"
+modules:
+  show:
+    all: true
