@@ -17,6 +17,7 @@ type module interface {
 
 var modules map[string]module = map[string]module {
 	"show":	&rqShow{},
+	"quota": &quota{},
 }
 
 func loadModules(config *Config) error {

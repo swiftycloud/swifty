@@ -89,6 +89,7 @@ func (*mariaConsumer)Try(pc *tcproxy.Conn, data []byte) (int, error) {
 	}
 
 	if rq.cmd == COM_INIT_DB {
+		/* FIXME -- client may select DB in Auth phase :( */
 		pc.Data = string(rq.data)
 	}
 

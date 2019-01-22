@@ -1,7 +1,13 @@
 ---
 listen: ":3307"
 target:
+  db: "swifty"
   address: "10.133.43.31:3306"
+  user: "root"
+  password: "CkZAy42zuykED9Nb"
 modules:
   show:
     all: true
+  quota:
+    check_thresh: 4
+    unlock_period: "2m"
