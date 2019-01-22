@@ -57,6 +57,7 @@ func (f *collector)dataReady(data []byte) error {
 
 type Consumer interface {
 	Try(string, []byte) (int, error)
+	Done(string)
 }
 
 type collector struct {
@@ -126,6 +127,7 @@ func handle(conid string, con *net.TCPConn, to *net.TCPAddr, cons Consumer) {
 		<-done_ing
 	}
 
+	cons.Done(conid)
 	log.Printf("%s: Proxy done\n", conid)
 }
 

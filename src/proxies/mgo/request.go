@@ -227,4 +227,7 @@ func (*mgoConsumer)Try(conid string, data []byte) (int, error) {
 	return rq.rlen, nil
 }
 
+func (*mgoConsumer)Done(conid string) {
+}
+
 type mgoConsumer struct { }

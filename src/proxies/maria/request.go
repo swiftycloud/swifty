@@ -94,4 +94,7 @@ func (*mariaConsumer)Try(conid string, data []byte) (int, error) {
 	return rq.rlen, nil
 }
 
+func (*mariaConsumer)Done(conid string) {
+}
+
 type mariaConsumer struct { }
