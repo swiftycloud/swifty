@@ -82,19 +82,24 @@ func decode_maria_req(data []byte) *maria_req {
 	return rq
 }
 
+type mariaConData struct {
+	schema	string
+}
+
 func (*mariaConsumer)Try(pc *tcproxy.Conn, data []byte) (int, error) {
 	rq := decode_maria_req(data)
 	if rq == nil {
 		return 0, nil
 	}
 
-	if rq.cmd == COM_INIT_DB {
+	if pc.Data == nil && rq.cmd == COM_INIT_DB {
 		/* FIXME -- client may select DB in Auth phase :( */
-		pc.Data = string(rq.data)
+		pc.Data = &mariaConData{ schema: string(rq.data) }
 	}
 
 	if pc.Data != nil {
-		rq.schema = pc.Data.(string)
+		cd := pc.Data.(*mariaConData)
+		rq.schema = cd.schema
 	}
 
 	err := pipelineRun(pc.Id, rq)
