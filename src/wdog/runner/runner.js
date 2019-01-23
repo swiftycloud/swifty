@@ -39,6 +39,12 @@ for (;;) {
 	var req = JSON.parse(str)
 	var res
 	try {
+		if (req.content == "application/json") {
+			try {
+				req.b = JSON.parse(req.body)
+			} catch (err) {
+			}
+		}
 		var [ ret, resp ] = script.Main(req)
 		res = { res: 0, ret: JSON.stringify(ret) }
 		if (resp != null) {
