@@ -141,8 +141,11 @@ func readLines(f *os.File) string {
 }
 
 type RunnerRes struct {
+	/* Runner return code. 0 for OK, non zero for code-run error (e.g. exception) */
 	Res	int
+	/* Status the code wants to propagate back to caller */
 	Status	int
+	/* JSON-encoded return value of a function */
 	Ret	string
 }
 
