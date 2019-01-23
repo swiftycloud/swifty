@@ -25,6 +25,7 @@ type Request struct {
 
 type Response struct {
 	Status	int
+	// The "then" thing is here
 }
 
 type RunnerRes struct {

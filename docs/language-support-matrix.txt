@@ -5,6 +5,7 @@ The text file describes what we have and want to have in languages
 Imports -- libraries to access a specific middleware are installed
 Lib -- swifty/lib that provides helper functions is available
 Response -- Main can return back "control" object
+Thens -- post (async) actions
 
 Feature				go py ru js sw c#
 Imports
@@ -20,3 +21,4 @@ Lib				+  +
 Response			+  +  +  +  +  +
    Code				+  +  +  +  +  +
 Auto-unmarshal body		+  +  +  +
+Thens				

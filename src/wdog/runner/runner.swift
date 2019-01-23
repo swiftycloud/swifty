@@ -28,6 +28,7 @@ struct Result: Codable {
 
 struct Response {
 	var status: Int
+	// The "then" thing is here
 }
 
 func load(data: [Byte]) -> Request {
