@@ -68,6 +68,11 @@ while True:
                     res["status"] = int(resb["status"])
                 except:
                     pass
+                try:
+                    if "then" in resb:
+                        res["then"] = resb["then"]
+                except:
+                    pass
         except:
             print("Exception running FN:")
             traceback.print_exc()

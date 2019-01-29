@@ -203,7 +203,7 @@ func (fmd *FnMemData)Handle(ctx context.Context, w http.ResponseWriter, r *http.
 	}
 
 	if res.Code >= 0 {
-		if res.Then != nil {
+		if res.Then != nil && string(res.Then) != "null" {
 			noteThens(ctx, fmd, res.Then)
 		}
 
