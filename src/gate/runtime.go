@@ -26,7 +26,7 @@ type langInfo struct {
 	LInfo		*swyapi.LangInfo
 
 	BuildPkgPath	func(SwoId) string
-	RunPkgPath	func(SwoId) (string, string)
+	RunPackages	string
 }
 
 var rt_handlers = map[string]*langInfo {
@@ -56,25 +56,19 @@ func goPkgPath(id SwoId) string {
 var py_info = langInfo {
 	Ext:		"py",
 	CodePath:	"/function",
-	RunPkgPath:	pyPackages,
-}
-
-func pyPackages(id SwoId) (string, string) {
-	/* Python runner adds /packages/* to sys.path for every dir met in there */
-	return packagesDir() + "/" + id.Tennant + "/python", "/packages"
+	/*
+	 * Python runner adds /packages/* to sys.path for every dir met in there
+	 */
+	RunPackages:	"/packages",
 }
 
 var nodejs_info = langInfo {
 	Ext:		"js",
 	CodePath:	"/function",
-	RunPkgPath:	nodeModules,
-}
-
-func nodeModules(id SwoId) (string, string) {
 	/*
 	 * Node's runner-js.sh sets /home/packages/node_modules as NODE_PATH
 	 */
-	return packagesDir() + "/" + id.Tennant + "/nodejs", "/home/packages"
+	RunPackages:	"/home/packages",
 }
 
 var ruby_info = langInfo {
@@ -253,9 +247,8 @@ func rtScriptName(scr *FnCodeDesc, suff string) string {
 
 func rtPackages(id SwoId, lang string)  (string, string, bool) {
 	h := rt_handlers[lang]
-	if h.RunPkgPath != nil {
-		h, m := h.RunPkgPath(id)
-		return h, m, true
+	if h.RunPackages != "" {
+		return packagesDir() + "/" + id.Tennant + "/" + lang, h.RunPackages, true
 	} else {
 		return "", "", false
 	}

@@ -28,7 +28,7 @@ type WdogFunctionRunResult struct {
 	Stdout		string		`json:"stdout"`
 	Stderr		string		`json:"stderr"`
 	Time		uint		`json:"time"` /* usec */
-	Then		json.RawMessage	`json:"then"`
+	Then		json.RawMessage	`json:"then,omitempty"`
 }
 
 type UserLogin struct {

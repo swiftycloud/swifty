@@ -25,13 +25,25 @@ type Request struct {
 
 type Response struct {
 	Status	int
-	// The "then" thing is here
+	Then	*Then
 }
 
+/* FIXME -- import from APIs */
+type Then struct {
+	Call		*ThenCall		`json:"call,omitempty"`
+}
+
+type ThenCall struct {
+	Name		string			`json:"name"`
+	Args		map[string]string	`json:"args"`
+}
+
+/* FIXME -- share with wdog/runner.go */
 type RunnerRes struct {
 	Res	int
 	Ret	string
 	Status	int
+	Then	*Then
 }
 
 func use(resp *Response) {}
@@ -75,6 +87,7 @@ func main() {
 
 		if resp != nil {
 			out.Status = resp.Status
+			out.Then = resp.Then
 		}
 
 		err = q.Send(out)
