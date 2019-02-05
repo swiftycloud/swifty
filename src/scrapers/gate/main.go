@@ -6,6 +6,7 @@
 package main
 
 import (
+        "os"
 	"log"
 	"flag"
 	"time"

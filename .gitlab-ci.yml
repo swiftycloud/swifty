@@ -1,0 +1,61 @@
+image: "registry.gitlab.com/swiftyteam/swifty-infrastructure/gitlab-runner:latest"
+
+variables:
+  ANSIBLE_HOST_KEY_CHECKING: "False"
+
+before_script:
+  - eval $(ssh-agent -s)
+  - echo "$REPO_ACCESS_KEY" | tr -d '\r' | ssh-add - > /dev/null
+
+stages:
+  - infrastructure
+  - deploy
+  - cleanup
+  - build
+
+.infrastructure:
+  stage: infrastructure
+  artifacts:
+    name: "terraform-${CI_COMMIT_SHA:0:8}"
+    paths:
+      - terraform.tf
+      - terraform.tfstate
+      - output.json
+  script:
+    - . /home/.env/bin/activate
+    - pip install -r requirements.txt
+    - python tfgen.py ${CI_COMMIT_SHA:0:8}
+    - terraform init
+    - terraform apply -auto-approve
+    - terraform output -json > output.json
+    - chmod +x ansible_inventory.py
+
+.deploy:
+  stage: deploy
+  script:
+    - git clone https://$INFRA_ACCESS_TOKEN_USERNAME:$INFRA_ACCESS_TOKEN_PASSWORD@gitlab.com/swiftyteam/swifty-infrastructure.git $CI_JOB_NAME
+    - ansible-playbook -i ansible_inventory.py $CI_JOB_NAME/swifty-ansible/swifty.yml --extra-vars="$(python ansible_inventory.py -e)"
+    - rm -rf $CI_JOB_NAME
+
+#ui-show-url:
+#  stage: test
+#  script:
+#    - git clone git@gitlab.com:swiftyteam/swifty-infrastructure.git $CI_JOB_NAME
+#    - ansible-playbook -i ansible_inventory.py $CI_JOB_NAME/swifty-full-aws/swifty.yml --skip-tags="tinc,swy-gw,swy-mw,swy-worker,swy-ui"
+#    - rm -rf $CI_JOB_NAME
+#    - sleep 600
+
+.cleanup:
+  stage: cleanup
+  script:
+    - terraform destroy -auto-approve
+
+build:
+  stage: build
+  only:
+    - master
+  #tags:
+  #  - swifty
+  script:
+    - git clone https://$INFRA_ACCESS_TOKEN_USERNAME:$INFRA_ACCESS_TOKEN_PASSWORD@gitlab.com/swiftyteam/swifty-infrastructure.git $CI_JOB_NAME
+    - ansible-playbook -i gitlab-runner.ci.swifty.cloud, $CI_JOB_NAME/swifty-build/tasks/main.yml --extra-vars="basedir=/home/fedora/swifty"
