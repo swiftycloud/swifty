@@ -11,6 +11,7 @@ import (
 	"math/rand"
 	"time"
 	"encoding/hex"
+	"encoding/base64"
 	"flag"
 )
 
@@ -21,14 +22,22 @@ func init() {
 var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 var symbols = []rune("0123456789_.-=+!@#$%^&*?:;")
 
-func randBytes(n int) (string, error) {
+func code(data []byte, b64 bool) string {
+	if b64 {
+		return base64.StdEncoding.EncodeToString(data)
+	} else {
+		return hex.EncodeToString(data)
+	}
+}
+
+func randBytes(n int, b64 bool) (string, error) {
 	idx := make([]byte, n)
 	_, err := rand.Read(idx)
 	if err != nil {
 		return "", err
 	}
 
-	return hex.EncodeToString(idx), nil
+	return code(idx, b64), nil
 }
 
 func randString(n int) (string, error) {
@@ -51,18 +60,24 @@ func randString(n int) (string, error) {
 }
 
 func main() {
-	var bytes bool
+	var bytes, b64 bool
 	var length int
-	var name, str string
+	var name, str, rec string
 	var err error
 
 	flag.BoolVar(&bytes, "b", false, "gen bytes secret")
+	flag.BoolVar(&b64, "B", false, "use base64 encoding")
 	flag.IntVar(&length, "l", 16, "len of the key")
 	flag.StringVar(&name, "n", "SECRET", "name of the key")
+	flag.StringVar(&rec, "r", "EXISTING", "existing secret (to recode)")
 	flag.Parse()
 
-	if bytes {
-		str, err = randBytes(length)
+	if rec != "" {
+		var d []byte
+		d, err = hex.DecodeString(rec)
+		str = code(d, b64)
+	} else if bytes {
+		str, err = randBytes(length, b64)
 	} else {
 		str, err = randString(length)
 	}
