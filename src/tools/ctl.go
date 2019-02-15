@@ -45,6 +45,8 @@ type YAMLConf struct {
 	Certs		string		`yaml:"x509crtfile,omitempty"`
 	Relay		string		`yaml:"relay,omitempty"`
 	Token		string		`yaml:"token"`
+
+	temp		bool		`yamp:"-"` // do not save config
 }
 
 var conf YAMLConf
@@ -1730,7 +1732,28 @@ func mware_types(args []string, opts [16]string) {
 	}
 }
 
+func maybe_auto_login() bool {
+	creds, found := os.LookupEnv("SWIFTY_LOGIN")
+	if !found {
+		return false
+	}
+
+	opts := [16]string{}
+	opts[4] = os.Getenv("SWIFTY_PASSWORD")
+
+// Uncomment these two for local login
+//	opts[3] = "no"
+//	opts[0] = "no"
+
+	make_login(creds, opts, true)
+	return true
+}
+
 func login() {
+	if maybe_auto_login() {
+		return
+	}
+
 	home := home()
 
 	err := xh.ReadYamlConfig(config(home), &conf)
@@ -1805,7 +1828,7 @@ func mkClient() {
 	swyclient.Token(conf.Token)
 }
 
-func make_login(creds string, opts [16]string) {
+func make_login(creds string, opts [16]string, temp bool) {
 	//
 	// Login string is user:pass@host:port
 	//
@@ -1849,6 +1872,8 @@ func make_login(creds string, opts [16]string) {
 		conf.Creds = false
 	}
 
+	conf.temp = temp
+
 	mkClient()
 
 	err := swyclient.Login()
@@ -1858,6 +1883,10 @@ func make_login(creds string, opts [16]string) {
 }
 
 func save_config() {
+	if conf.temp {
+		return
+	}
+
 	home := home()
 
 	err := xh.WriteYamlConfig(config(home), &conf)
@@ -2403,7 +2432,7 @@ func main() {
 
 	if os.Args[1] == CMD_LOGIN {
 		curCmd = cd
-		make_login(os.Args[2], opts)
+		make_login(os.Args[2], opts, false)
 		return
 	}
 
