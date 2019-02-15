@@ -274,3 +274,38 @@ Set new table into router
 And finally -- remove the router
 
     # swyctl rtd <name>
+
+
+== 8. Packages ==
+
+Add a package
+
+    # swyctl pka <language> <package-name>
+
+Installing a package is done with language-specific package management tool:
+
+ - python: pip
+ - golang: go get
+ - node:   npm
+
+List packages
+
+    # swyctl pkl <language>
+
+This will show not only installed packages, but also all the deps that were
+brought by the install procedure
+
+Remove a package
+
+   # swyctl pkd <language> <package>
+
+This may or may not remove dependencies, depending on the language package
+management tool.
+
+See stats about packages
+
+   # swyctl pks
+
+This will show some stats about packages, mainly the disk usage.
+The installed packages are ready to use in functions as they all get added
+to the language-specific PATH-s.

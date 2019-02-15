@@ -45,6 +45,8 @@ type YAMLConf struct {
 	Certs		string		`yaml:"x509crtfile,omitempty"`
 	Relay		string		`yaml:"relay,omitempty"`
 	Token		string		`yaml:"token"`
+
+	temp		bool		`yamp:"-"` // do not save config
 }
 
 var conf YAMLConf
@@ -1730,11 +1732,29 @@ func mware_types(args []string, opts [16]string) {
 	}
 }
 
-func login() {
-	home, found := os.LookupEnv("HOME")
+func maybe_auto_login() bool {
+	creds, found := os.LookupEnv("SWIFTY_LOGIN")
 	if !found {
-		fatal(fmt.Errorf("No HOME dir set"))
+		return false
 	}
+
+	opts := [16]string{}
+	opts[4] = os.Getenv("SWIFTY_PASSWORD")
+
+// Uncomment these two for local login
+//	opts[3] = "no"
+//	opts[0] = "no"
+
+	make_login(creds, opts, true)
+	return true
+}
+
+func login() {
+	if maybe_auto_login() {
+		return
+	}
+
+	home := home()
 
 	err := xh.ReadYamlConfig(config(home), &conf)
 	if err != nil {
@@ -1808,7 +1828,7 @@ func mkClient() {
 	swyclient.Token(conf.Token)
 }
 
-func make_login(creds string, opts [16]string) {
+func make_login(creds string, opts [16]string, temp bool) {
 	//
 	// Login string is user:pass@host:port
 	//
@@ -1852,6 +1872,8 @@ func make_login(creds string, opts [16]string) {
 		conf.Creds = false
 	}
 
+	conf.temp = temp
+
 	mkClient()
 
 	err := swyclient.Login()
@@ -1861,10 +1883,11 @@ func make_login(creds string, opts [16]string) {
 }
 
 func save_config() {
-	home, found := os.LookupEnv("HOME")
-	if !found {
-		fatal(fmt.Errorf("No HOME dir set"))
+	if conf.temp {
+		return
 	}
+
+	home := home()
 
 	err := xh.WriteYamlConfig(config(home), &conf)
 	if err != nil {
@@ -2064,6 +2087,21 @@ var curProj string
 var curRelay string
 var verbose bool
 var profile string
+
+func home() string {
+	home, found := os.LookupEnv("SWIFTY_HOME")
+	if found {
+		return home
+	}
+
+	home, found = os.LookupEnv("HOME")
+	if found {
+		return home
+	}
+
+	fatal(fmt.Errorf("No HOME dir set"))
+	return "/tmp"
+}
 
 func config(home string) string {
 	r := home + "/.swifty.conf"
@@ -2394,7 +2432,7 @@ func main() {
 
 	if os.Args[1] == CMD_LOGIN {
 		curCmd = cd
-		make_login(os.Args[2], opts)
+		make_login(os.Args[2], opts, false)
 		return
 	}
 

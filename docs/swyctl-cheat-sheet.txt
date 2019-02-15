@@ -69,3 +69,7 @@ See router URL and table      # swyctl rti %rname
 Update router table           # swyctl rtu %rname -table 'GET:path:%fname;POST:path:%fname'
 Delete router                 # swyctl rtd %rname
 
+List packages                 # swyctl pkl
+Add package                   # swyctl pka %lang %name // use swyctl lng for the list of langs
+Remove package                # swyctl pkd %lang %name
+Show package stats            # swyctl pks 

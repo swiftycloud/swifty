@@ -127,6 +127,11 @@ S_BINARIES += swy-$(1)
 $(eval $(call gen-pack-service-n,$(1),$(1)))
 endef
 
+swifty/client:
+	$(call msg-gen $@)
+	$(Q) $(CP) swyctl kubectl/docker/client/
+	$(Q) $(MAKE)   -C kubectl/docker/client all
+
 #
 # Core rules generation
 #
