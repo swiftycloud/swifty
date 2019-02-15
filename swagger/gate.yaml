@@ -2034,6 +2034,130 @@ paths:
           description: Need to authenticate
         '403':
           description: Bad authentication token
+          
+  /packages:
+    parameters:
+      - in: header
+        name: X-Auth-Token
+        type: string
+        required: true
+    get:
+      tags:
+        - packages
+      summary: Show stats about installed packages
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/PackagesStats'
+        '400':
+          description: Bad request
+          schema:
+            $ref: '#/definitions/GateError'
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad authentication token
+          
+  '/packages/{lang}':
+    parameters:
+      - in: header
+        name: X-Auth-Token
+        type: string
+        required: true
+      - in: path
+        type: string
+        name: lang
+        description: Language
+        required: true
+    get:
+      tags:
+        - packages
+      summary: List packages
+      responses:
+        '200':
+          description: OK
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/PackageInfo'
+        '400':
+          description: Bad request
+          schema:
+            $ref: '#/definitions/GateError'
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad authentication token
+    post:
+      tags:
+        - packages
+      summary: Install package
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/PackageAdd'
+        '400':
+          description: Bad request
+          schema:
+            $ref: '#/definitions/GateError'
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad authentication token
+          
+  '/packages/{lang}/{package}':
+    parameters:
+      - in: header
+        name: X-Auth-Token
+        type: string
+        required: true
+      - in: path
+        type: string
+        name: lang
+        description: Language
+        required: true
+      - in: path
+        type: string
+        name: package
+        description: package name
+        required: true
+    get:
+      tags:
+        - packages
+      summary: Get info about package
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/PackageInfo'
+        '400':
+          description: Bad request
+          schema:
+            $ref: '#/definitions/GateError'
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad authentication token
+    delete:
+      tags:
+        - packages
+      summary: Remove package
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+          schema:
+            $ref: '#/definitions/GateError'
+        '401':
+          description: Need to authenticate
+        '403':
+          description: Bad authentication token
+    
+
+
   /info/langs:
     get:
       summary: Show supported languages
@@ -2988,3 +3112,29 @@ definitions:
         items:
           type: string
           description: Name (and version) of a package in tool-specific format
+          
+  PackagesStats:
+    type: object
+    description: Stats about packages
+    properties:
+      disk_usage:
+        type: integer
+        description: Total space occupied in Kb
+      lang:
+        type: object
+        description: Per-lang dict of PackagesStats (w/o lang field)
+        additionalProperties:
+          $ref: '#/definitions/PackagesStats'
+  PackageInfo:
+    type: object
+    properties:
+      id:
+        type: string
+        description: Package name
+  PackageAdd:
+    type: object
+    required:
+      - name
+    properties:
+      name:
+        type: string
