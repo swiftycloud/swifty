@@ -1731,10 +1731,7 @@ func mware_types(args []string, opts [16]string) {
 }
 
 func login() {
-	home, found := os.LookupEnv("HOME")
-	if !found {
-		fatal(fmt.Errorf("No HOME dir set"))
-	}
+	home := home()
 
 	err := xh.ReadYamlConfig(config(home), &conf)
 	if err != nil {
@@ -1861,10 +1858,7 @@ func make_login(creds string, opts [16]string) {
 }
 
 func save_config() {
-	home, found := os.LookupEnv("HOME")
-	if !found {
-		fatal(fmt.Errorf("No HOME dir set"))
-	}
+	home := home()
 
 	err := xh.WriteYamlConfig(config(home), &conf)
 	if err != nil {
@@ -2064,6 +2058,21 @@ var curProj string
 var curRelay string
 var verbose bool
 var profile string
+
+func home() string {
+	home, found := os.LookupEnv("SWIFTY_HOME")
+	if found {
+		return home
+	}
+
+	home, found = os.LookupEnv("HOME")
+	if found {
+		return home
+	}
+
+	fatal(fmt.Errorf("No HOME dir set"))
+	return "/tmp"
+}
 
 func config(home string) string {
 	r := home + "/.swifty.conf"
