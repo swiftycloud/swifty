@@ -29,8 +29,14 @@ func main() {
 	var conf string
 	var config Config
 
+	lm := flag.Bool("modules", false, "List modules")
 	flag.StringVar(&conf, "conf", "/etc/swifty/conf/maria_proxy.yaml", "Path to config file")
 	flag.Parse()
+
+	if *lm {
+		listModules()
+		return
+	}
 
 	err := xh.ReadYamlConfig(conf, &config)
 	if err != nil {

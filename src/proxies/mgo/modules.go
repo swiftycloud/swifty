@@ -14,10 +14,16 @@ type module interface {
 	config(map[string]interface{}) error
 }
 
-var modules map[string]module = map[string]module {
-	"show":	&rqShow{},
-	"quota": &quota{},
-	"rate": &ratelimit{},
+var modules map[string]module = map[string]module {}
+
+func addModule(name string, mod module) {
+	modules[name] = mod
+}
+
+func listModules() {
+	for m, _ := range modules {
+		fmt.Printf("%s\n", m)
+	}
 }
 
 func loadModules(config *Config) error {
