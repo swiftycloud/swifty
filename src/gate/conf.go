@@ -149,20 +149,15 @@ func (cd *YAMLConfDaemon)Validate() error {
 	return nil
 }
 
-type YAMLConfKeystone struct {
+type YAMLConfAdmd struct {
 	Addr		string			`yaml:"address"`
-	Domain		string			`yaml:"domain"`
 }
 
-func (ck *YAMLConfKeystone)Validate() error {
-	if ck.Addr == "" {
-		return errors.New("'keystone.address' not set, want HOST:PORT value")
+func (ac *YAMLConfAdmd)Validate() error {
+	if ac.Addr == "" {
+		return errors.New("'admd.address' not set, want HOST:PORT value")
 	}
-	sysctl.AddStringSysctl("keystone_addr", &ck.Addr)
-	if ck.Domain == "" {
-		return errors.New("'keystone.domain' not set")
-	}
-	sysctl.AddStringSysctl("keystone_domain", &ck.Domain)
+	sysctl.AddStringSysctl("admd_addr", &ac.Addr)
 	return nil
 }
 
@@ -321,7 +316,7 @@ type YAMLConf struct {
 	Home		string			`yaml:"home"`
 	DB		string			`yaml:"db"`
 	Daemon		YAMLConfDaemon		`yaml:"daemon"`
-	Keystone	YAMLConfKeystone	`yaml:"keystone"`
+	Admd		YAMLConfAdmd		`yaml:"admd"`
 	Mware		YAMLConfMw		`yaml:"middleware"`
 	Runtime		YAMLConfRt		`yaml:"runtime"`
 	Wdog		YAMLConfWdog		`yaml:"wdog"`
@@ -336,7 +331,7 @@ func (c *YAMLConf)Validate() error {
 	if err != nil {
 		return err
 	}
-	err = c.Keystone.Validate()
+	err = c.Admd.Validate()
 	if err != nil {
 		return err
 	}

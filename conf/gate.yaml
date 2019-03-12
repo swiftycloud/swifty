@@ -1,9 +1,8 @@
 ---
 home: "/home/swifty"
 db: "swygate:DBPASS@127.0.0.1:27017"
-keystone:
-        address: "swy0:5000"
-        domain: "swifty"
+admd:
+        address: "https://swy0:8687"
 daemon:
         address: "swy0-web:8686"
         apigate: "swy0-web:8686"

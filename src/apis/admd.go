@@ -14,6 +14,11 @@ type UserInfo struct {
 	Roles	[]string	`json:"roles,omitempty"`
 }
 
+type TokenData struct {
+	Tenant	string		`json:"tenant"`
+	Role	string		`json:"role"`
+}
+
 type Creds struct {
 	Key	string		`json:"key"`
 	Name	string		`json:"name"`
