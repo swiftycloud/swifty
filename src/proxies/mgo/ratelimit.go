@@ -16,6 +16,10 @@ import (
 
 type ratelimit struct {}
 
+func init() {
+	addModule("rate", &ratelimit{})
+}
+
 var colRates string = "Rates"
 var ratesCacheDuration time.Duration = 10 * time.Minute
 

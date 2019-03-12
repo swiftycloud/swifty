@@ -15,6 +15,10 @@ import (
 type rqShow struct {}
 var showAll bool
 
+func init() {
+	addModule("show", &rqShow{})
+}
+
 func (*rqShow)config(mc map[string]interface{}) error {
 	x, ok := mc["all"].(bool)
 	if !ok {

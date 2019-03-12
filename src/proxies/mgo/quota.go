@@ -62,6 +62,10 @@ var growOps = map[string]bool {
 
 type quota struct {}
 
+func init() {
+	addModule("quota", &quota{})
+}
+
 func (*quota)config(mc map[string]interface{}) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
