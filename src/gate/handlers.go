@@ -25,7 +25,6 @@ import (
 	"swifty/common/http"
 	"swifty/common/xrest"
 	"swifty/common/xrest/sysctl"
-	"swifty/common/keystone"
 )
 
 type gateGenReq func(ctx context.Context, w http.ResponseWriter, r *http.Request) *xrest.ReqErr
@@ -71,55 +70,15 @@ func apiGate() string {
 }
 
 func handleUserLogin(w http.ResponseWriter, r *http.Request) {
-	var params swyapi.UserLogin
-	var token string
-	var resp = http.StatusBadRequest
-	var td swyapi.UserToken
-
-	if xhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) { return }
-
-	err := xhttp.RReq(r, &params)
-	if err != nil {
-		goto out
+	if xhttp.HandleCORS(w, r, CORS_Methods, CORS_Headers) {
+		return
 	}
 
-	if params.UserName != "" {
-		glog.Debugf("Trying to login user %s", params.UserName)
-
-		token, td.Expires, err = xkst.KeystoneAuthWithPass(conf.Keystone.Addr, conf.Keystone.Domain, &params)
-		if err != nil {
-			resp = http.StatusUnauthorized
-			goto out
-		}
-	} else if params.CredsKey != "" {
-		glog.Debugf("Trying to loging by creds %s", params.CredsKey)
-
-		token, td.Expires, err = xkst.KeystoneAuthWithAC(conf.Keystone.Addr, conf.Keystone.Domain, &params)
-		if err != nil {
-			resp = http.StatusUnauthorized
-			goto out
-		}
-	} else {
-		resp = http.StatusUnauthorized
-		goto out
-	}
-
-	td.Endpoint = apiGate()
-	glog.Debugf("Login passed, token till %s", td.Expires)
-
-	w.Header().Set("X-Subject-Token", token)
-	err = xhttp.Respond(w, &td)
-	if err != nil {
-		resp = http.StatusInternalServerError
-		goto out
-	}
-
-	return
-
-out:
-	glog.Warnf("Failed login attempt from %s", r.RemoteAddr)
-	http.Error(w, err.Error(), resp)
+	/* golang client replaces method with GET for 30[123] codes */
+	http.Redirect(w, r, conf.Admd.Addr + "/v1/login", http.StatusPermanentRedirect)
 }
+
+
 
 /******************************* PROJECTS *************************************/
 func delAll(ctx context.Context, q url.Values, f xrest.Factory) *xrest.ReqErr {

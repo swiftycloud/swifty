@@ -14,12 +14,12 @@ import (
 	"strings"
 	"context"
 	"time"
+	"sync"
 	"fmt"
 
 	"swifty/apis"
 	"swifty/common"
 	"swifty/common/http"
-	"swifty/common/keystone"
 	"swifty/common/secrets"
 	"swifty/common/ratelimit"
 	"swifty/common/xrest/sysctl"
@@ -47,6 +47,7 @@ var (
 	DepScaleupRelax time.Duration		= 16 * time.Second
 	DepScaledownStep time.Duration		= 8 * time.Second
 	TenantLimitsUpdPeriod time.Duration	= 120 * time.Second
+	TokenCacheExpires			= 60 * time.Second
 	PodTokenLen int				= 64
 )
 
@@ -58,7 +59,7 @@ func init() {
 	sysctl.AddTimeSysctl("dep_scaledown_step",	&DepScaledownStep)
 	sysctl.AddTimeSysctl("limits_update_period",	&TenantLimitsUpdPeriod)
 
-	sysctl.AddTimeSysctl("ks_token_cache_exp",	&xkst.TokenCacheExpires)
+	sysctl.AddTimeSysctl("token_cache_exp",		&TokenCacheExpires)
 	sysctl.AddIntSysctl("pod_token_len",		&PodTokenLen)
 
 	sysctl.AddRoSysctl("gate_mode", func() string {
@@ -146,34 +147,44 @@ func makeContextFor(r *http.Request, tenant, role string) (context.Context, func
 	return mkContext3("::r", tenant, role)
 }
 
-func tryKeystoneAuth(token string) (string, string, int) {
-	td, code := xkst.KeystoneGetTokenData(conf.Keystone.Addr, token)
-	if code != 0 {
-		return "", "", code
+var tdCache sync.Map
+
+func admdValidateToken(token string) (*swyapi.TokenData, int) {
+	td, ok := tdCache.Load(token)
+	if ok {
+		return td.(*swyapi.TokenData), 0
 	}
 
-	var role string
-
-	/*
-	 * Find the most powerful role the current client has.
-	 * All the checks in gate give admin the same rights
-	 * as to regular user PLUS more.
-	 */
-	for _, r := range td.Roles {
-		if r.Name == swyapi.AdminRole {
-			role = r.Name
-			break
+	resp, err := xhttp.Req(
+			&xhttp.RestReq{
+				Method: "GET",
+				Address: conf.Admd.Addr + "/v1/token",
+				Timeout: uint(conf.Runtime.Timeout.Max),
+				Headers: map[string]string {
+					"X-Subject-Token": token,
+				},
+			}, nil)
+	if err != nil {
+		if resp == nil {
+			return nil, http.StatusInternalServerError
+		} else {
+			return nil, resp.StatusCode
 		}
-		if r.Name == swyapi.UserRole {
-			role = r.Name
-		}
 	}
 
-	if role == "" {
-		return "", "", http.StatusForbidden
+	var res swyapi.TokenData
+
+	err = xhttp.RResp(resp, &res)
+	if err != nil {
+		return nil, http.StatusInternalServerError
 	}
 
-	return td.Project.Name, role, 0
+	td, ok = tdCache.LoadOrStore(token, &res)
+	if !ok {
+		time.AfterFunc(TokenCacheExpires, func() { tdCache.Delete(token) })
+	}
+
+	return td.(*swyapi.TokenData), 0
 }
 
 func getReqContext(w http.ResponseWriter, r *http.Request) (context.Context, func(context.Context)) {
@@ -183,13 +194,13 @@ func getReqContext(w http.ResponseWriter, r *http.Request) (context.Context, fun
 		return nil, nil
 	}
 
-	tenant, role, code := tryKeystoneAuth(token)
-	if tenant == "" {
-		http.Error(w, "Keystone authentication error", code)
+	td, code := admdValidateToken(token)
+	if td == nil {
+		http.Error(w, "Token validation error", code)
 		return nil, nil
 	}
 
-	return makeContextFor(r, tenant, role)
+	return makeContextFor(r, td.Tenant, td.Role)
 }
 
 func genReqHandler(cb gateGenReq) http.Handler {

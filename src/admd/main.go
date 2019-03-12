@@ -125,8 +125,51 @@ func handleUserLogin(w http.ResponseWriter, r *http.Request) {
 	return
 
 out:
-	log.Warnf("Failed login attempt from %s", r.RemoteAddr)
+	log.Warnf("Failed login attempt from %s (%s)", r.RemoteAddr, err.Error())
 	http.Error(w, err.Error(), resp)
+}
+
+func handleToken(w http.ResponseWriter, r *http.Request) {
+	token := r.Header.Get("X-Subject-Token")
+	if token == "" {
+		http.Error(w, "Subject token not provided", http.StatusBadRequest)
+		return
+	}
+
+	td, code := xkst.KeystoneGetTokenData(conf.kc.Addr(), token)
+	if code != 0 {
+		http.Error(w, "Keystone auth error", code)
+		return
+	}
+
+	var res swyapi.TokenData
+
+	res.Tenant = td.Project.Name
+
+	/*
+	 * Find the most powerful role the current client has.
+	 * All the checks in gate give admin the same rights
+	 * as to regular user PLUS more.
+	 */
+	for _, r := range td.Roles {
+		if r.Name == swyapi.AdminRole {
+			res.Role = r.Name
+			break
+		}
+		if r.Name == swyapi.UserRole {
+			res.Role = r.Name
+		}
+	}
+
+	if res.Role == "" {
+		http.Error(w, "No role assigned", http.StatusUnauthorized)
+		return
+	}
+
+	err := xhttp.Respond(w, &res)
+	if err != nil {
+		http.Error(w, "Nad resp", http.StatusInternalServerError)
+	}
 }
 
 func handleAdmdReq(r *http.Request) (*xkst.KeystoneTokenData, int, error) {
@@ -1271,6 +1314,7 @@ func main() {
 
 	r := mux.NewRouter()
 	r.HandleFunc("/v1/login", handleUserLogin).Methods("POST", "OPTIONS")
+	r.HandleFunc("/v1/token", handleToken).Methods("GET", "OPTIONS")
 	r.Handle("/v1/users", genReqHandler(handleUsers)).Methods("POST", "GET", "OPTIONS")
 	r.Handle("/v1/users/{uid}", genReqHandler(handleUser)).Methods("GET", "PUT", "DELETE", "OPTIONS")
 	r.Handle("/v1/users/{uid}/pass", genReqHandler(handleSetPassword)).Methods("PUT", "OPTIONS")
