@@ -1,5 +1,21 @@
+## Swifty - serverless platform for application development
 
-## Common for all environments
+### What is Swifty?
+
+Swifty is the serverless platform that allows startups, developers and enterprises to develop and run backend for applications and websites with minimal time-to-market, costs and without infrastructure management.
+Swifty is available as a service here https://swifty.cloud and you can check how it works.
+
+It is also available as an Open Source and you are free to use it for all our projects non- or commercial.
+
+### You are welcome to contribute
+
+Swifty is available with AGPL licenses and you are welcome to contribute and share any ideas you want to implement in a project.
+
+## How to install Swifty on your server
+
+### Requirements
+
+You just need a single server to run Swifty backend and fronend. We recommend to use server with 4 vCPU and 8 GB of RAM at least. If you want to run many cuncurrent functions you obviously need to add more resources.
 
 ### clone swifty project
 ```
