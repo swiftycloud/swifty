@@ -13,7 +13,12 @@ It is also available as an Open Source and you are free to use it for all our pr
 
 Swifty is available with AGPL licenses and you are welcome to contribute and share any ideas you want to implement in a project.
 
-## How to install Swifty on your server
+## How to install Swifty using Ansible
+
+Please use swifty-infrastructure guide here:
+https://github.com/swiftycloud/swifty-infrastructure
+
+## How to install Swifty on your server from source
 
 ### Requirements
 
@@ -21,7 +26,7 @@ You just need a single server to run Swifty backend and fronend. We recommend to
 
 ### clone swifty project
 ```
-git clone git@github.com:bbelky/swifty.git
+git clone https://github.com/swiftycloud/swifty
 ```
 
 ### configure GOPATH
