@@ -5,6 +5,8 @@
 Swifty is the serverless platform that allows startups, developers and enterprises to develop and run backend for applications and websites with minimal time-to-market, costs and without infrastructure management.
 Swifty is available as a service here https://swifty.cloud and you can check how it works.
 
+Swifty Dashboard is available here https://github.com/swiftycloud/swifty-dashboard
+
 It is also available as an Open Source and you are free to use it for all our projects non- or commercial.
 
 ### You are welcome to contribute
