@@ -74,4 +74,4 @@ docker restart swygate
 ```
 
 # swifty
-(С)SwiftyCloud OU, 2018
+(С) SwiftyCloud OU, 2019
