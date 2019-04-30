@@ -95,6 +95,8 @@ kubectl apply -f gobuild-dep.yaml (or for the first time kubectl create -f gobui
 kubectl apply -f swiftbuild-dep.yaml (or for the first time kubectl create -f swiftbuild-dep.yaml)
 docker restart swygate
 ```
+# Contact
+mailto:vp@swifty.cloud
 
 # swifty
 (С) SwiftyCloud OU, 2019
